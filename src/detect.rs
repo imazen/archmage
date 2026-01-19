@@ -2,16 +2,51 @@
 //!
 //! These macros combine compile-time and runtime feature detection,
 //! avoiding redundant runtime checks when features are compile-time known.
+//!
+//! # Important Limitation
+//!
+//! `cfg!(target_feature)` is evaluated at **crate level**, not function level.
+//! This means the compile-time optimization does NOT work inside functions
+//! marked with `#[target_feature(enable = "...")]` unless the feature is
+//! also enabled globally via `-C target-feature` or `-C target-cpu`.
+//!
+//! For eliminating checks inside multiversioned functions, use **tokens**
+//! instead - they provide type-level proof that a feature is available.
 
 /// Checks if an x86 CPU feature is available, with compile-time optimization.
 ///
 /// Unlike `is_x86_feature_detected!` from std, this macro first checks
 /// `cfg!(target_feature)` at compile time. If the feature is compile-time
-/// known (e.g., compiled with `-C target-feature=+avx2`), no runtime check
-/// is performed.
+/// known (e.g., compiled with `-C target-feature=+avx2` or `-C target-cpu=x86-64-v3`),
+/// no runtime check is performed.
 ///
-/// This is critical for avoiding nested dispatch overhead when used inside
-/// `#[multiversed]` functions - the runtime check is completely eliminated.
+/// # When Compile-Time Optimization Works
+///
+/// - ✅ Compiled with `-C target-feature=+avx2`
+/// - ✅ Compiled with `-C target-cpu=native` (if CPU has AVX2)
+/// - ✅ Compiled with `-C target-cpu=x86-64-v3` (implies AVX2)
+/// - ❌ Inside `#[target_feature(enable = "avx2")]` without global flag
+/// - ❌ Inside `#[multiversion]` or `#[multiversed]` function variants
+///
+/// # For Multiversioned Code
+///
+/// Use tokens instead of this macro to avoid repeated detection:
+///
+/// ```ignore
+/// // BAD: Check happens every time
+/// fn process(data: &[f32]) {
+///     if is_x86_feature_available!("avx2") {
+///         inner(data);  // inner might check AGAIN
+///     }
+/// }
+///
+/// // GOOD: Check once, pass token
+/// fn process(data: &[f32]) {
+///     if let Some(token) = Avx2Token::try_new() {
+///         inner(token, data);  // inner KNOWS avx2 is available
+///     }
+/// }
+/// ```
 ///
 /// # Example
 ///

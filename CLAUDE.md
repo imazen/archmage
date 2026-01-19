@@ -398,14 +398,25 @@ ret
 archmage provides `is_x86_feature_available!` that combines compile-time and runtime detection:
 
 ```rust
-// Standard approach - ALWAYS runtime, even in multiversioned code
+// Standard approach - ALWAYS runtime
 if is_x86_feature_detected!("avx2") { ... }  // Runtime check
 
-// archmage approach - compile-time when possible, runtime fallback
+// archmage approach - compile-time when globally enabled, runtime fallback
 if is_x86_feature_available!("avx2") { ... }
 ```
 
-Inside a `#[target_feature(enable = "avx2")]` function or when compiled with `-C target-cpu=x86-64-v3`:
+**Important:** `cfg!(target_feature)` is evaluated at **crate level**, not function level.
+The compile-time optimization only works when compiled with global flags:
+
+| Scenario | `is_x86_feature_available!("avx2")` |
+|----------|-------------------------------------|
+| `-C target-cpu=x86-64-v3` | Compiles to `true` |
+| `-C target-feature=+avx2` | Compiles to `true` |
+| Inside `#[target_feature(enable = "avx2")]` | **Still runtime check!** |
+| Inside `#[multiversed]` variant | **Still runtime check!** |
+
+For avoiding checks inside multiversioned code, use **tokens** instead.
+When compiled with `-C target-cpu=x86-64-v3`:
 ```asm
 ; is_x86_feature_available!("avx2") compiles to:
 mov al, 1
