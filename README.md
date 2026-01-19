@@ -1,29 +1,57 @@
 # archmage
 
-Type-safe SIMD capability tokens for Rust. Isolates `unsafe` to token construction, enabling safe SIMD code at usage sites.
+Type-safe SIMD capability tokens for Rust. Isolates `unsafe` to token construction, enabling safe raw intrinsic usage.
 
-## The Problem
+## Understanding the SIMD Landscape
 
-Using SIMD safely in Rust is hard:
+### The `cfg!` Problem
 
-1. **`#[target_feature]` functions require unsafe to call** - even from multiversioned functions
-2. **`cfg!(target_feature)` is crate-level** - doesn't optimize inside `#[target_feature]` functions
-3. **Runtime dispatch loses type safety** - no compile-time proof features are available
-4. **Crates like `wide` use cfg-gating** - they emit SSE even inside AVX2-enabled functions
+Rust's `cfg!(target_feature = "avx2")` is evaluated at **crate compile time**, not at function level. This has important implications:
 
-## The Solution: Capability Tokens + `#[simd_fn]`
+```rust
+// wide crate's f32x8 implementation (simplified):
+pick! {
+    if #[cfg(target_feature = "avx")] {
+        pub struct f32x8 { avx: __m256 }      // 256-bit
+    } else {
+        pub struct f32x8 { a: f32x4, b: f32x4 }  // 2x 128-bit
+    }
+}
+```
 
-Tokens are zero-sized proof types. The `#[simd_fn]` macro makes raw intrinsics safe:
+**Consequence**: Even if you call `wide::f32x8` from inside a `#[target_feature(enable = "avx2")]` function, wide still uses 128-bit operations because the `cfg!` was already evaluated when wide was compiled.
+
+### When to Use What
+
+| Approach | Use When | Tradeoffs |
+|----------|----------|-----------|
+| **Global RUSTFLAGS + wide** | Single target CPU (servers, embedded) | Simplest; requires `-C target-feature=+avx2` or `-C target-cpu=native` |
+| **pulp** | Need abstraction + runtime dispatch | Write generic `S: Simd` code; pulp handles dispatch |
+| **archmage + raw intrinsics** | Need exact instruction control | Full control; tokens make raw intrinsics safe |
+
+### archmage's Niche
+
+archmage is for when you need **raw intrinsics with safety**. It:
+
+- Makes `_mm256_*` intrinsics safe via token proof
+- Works with `#[target_feature]` functions (compiler generates correct instructions)
+- Integrates with multiversion crates (`multiversed`, `multiversion`)
+- Does **NOT** help `wide` or `safe_arch` (they need global compile flags)
+
+## Quick Start
 
 ```rust
 use archmage::{Avx2Token, SimdToken, simd_fn};
 use std::arch::x86_64::*;
 
-// #[simd_fn] makes raw intrinsics safe - token proves AVX2 is available!
 #[simd_fn]
 fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };  // load needs unsafe (pointer)
-    let doubled = _mm256_add_ps(v, v);                   // arithmetic is safe!
+    // Loads/stores need unsafe (raw pointers)
+    let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+
+    // Arithmetic intrinsics are safe - token proves AVX2 available!
+    let doubled = _mm256_add_ps(v, v);
+
     let mut out = [0.0f32; 8];
     unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
     out
@@ -31,14 +59,13 @@ fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
 
 fn main() {
     if let Some(token) = Avx2Token::try_new() {
-        let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let output = double_avx2(token, &input);
-        // output = [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]
+        let result = double_avx2(token, &[1.0; 8]);
+        // result = [2.0; 8]
     }
 }
 ```
 
-The macro expands to:
+The `#[simd_fn]` macro expands to:
 ```rust
 fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
     #[target_feature(enable = "avx2")]
@@ -48,14 +75,59 @@ fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
+## Why Tokens + Raw Intrinsics?
+
+With raw intrinsics inside `#[target_feature]` functions, the compiler **will** generate the correct instructions:
+
+```asm
+; Without #[target_feature] - wide uses 128-bit ops
+movaps (%rsi),%xmm0        ; Load 128-bit
+movaps 0x10(%rsi),%xmm1    ; Load another 128-bit
+mulps  (%rdx),%xmm0        ; Multiply first half
+mulps  0x10(%rdx),%xmm1    ; Multiply second half
+
+; With #[target_feature(enable = "avx2")] - raw intrinsics use 256-bit
+vmovaps (%rsi),%ymm0       ; Load 256-bit
+vmulps (%rdx),%ymm0,%ymm0  ; Multiply all 8 floats at once
+```
+
+The token proves you're in the right context to call the function safely.
+
+## Token Types
+
+### Feature Tokens
+
+| Token | Features | Runtime Check |
+|-------|----------|---------------|
+| `Sse2Token` | SSE2 | Always on x86-64 |
+| `Sse41Token` | SSE4.1 | `is_x86_feature_detected!("sse4.1")` |
+| `AvxToken` | AVX | `is_x86_feature_detected!("avx")` |
+| `Avx2Token` | AVX2 | `is_x86_feature_detected!("avx2")` |
+| `FmaToken` | FMA | `is_x86_feature_detected!("fma")` |
+| `Avx2FmaToken` | AVX2 + FMA | Both checks |
+
+### Profile Tokens (x86-64 microarchitecture levels)
+
+| Token | Features | Hardware |
+|-------|----------|----------|
+| `X64V2Token` | SSE4.2 + POPCNT | Nehalem 2008+, Bulldozer 2011+ |
+| `X64V3Token` | AVX2 + FMA + BMI2 | Haswell 2013+, Zen 1 2017+ |
+| `X64V4Token` | AVX-512 (F/BW/CD/DQ/VL) | Xeon 2017+, Zen 4 2022+ |
+
+### ARM Tokens
+
+| Token | Features | Hardware |
+|-------|----------|----------|
+| `NeonToken` | NEON | All AArch64 (always available) |
+| `SveToken` | SVE | Graviton 3, Apple M-series, A64FX |
+| `Sve2Token` | SVE2 | ARMv9: Cortex-X2+, Graviton 4 |
+
 ## Usage Patterns
 
-### Pattern 1: `#[simd_fn]` with Raw Intrinsics (Most Ergonomic)
-
-Use `#[simd_fn]` to write raw intrinsics with token-based safety:
+### Pattern 1: `#[simd_fn]` (Recommended)
 
 ```rust
-use archmage::{Avx2FmaToken, SimdToken, simd_fn};
+use archmage::{Avx2FmaToken, simd_fn};
 use std::arch::x86_64::*;
 
 #[simd_fn]
@@ -64,8 +136,7 @@ fn fma_kernel(token: Avx2FmaToken, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> 
     let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
     let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
 
-    // FMA intrinsic is safe - #[simd_fn] adds target_feature
-    let result = _mm256_fmadd_ps(va, vb, vc);  // a * b + c
+    let result = _mm256_fmadd_ps(va, vb, vc);  // Safe! Token proves FMA available
 
     let mut out = [0.0f32; 8];
     unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
@@ -73,209 +144,91 @@ fn fma_kernel(token: Avx2FmaToken, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> 
 }
 ```
 
-Profile tokens automatically enable all required features:
+### Pattern 2: Profile Tokens
 
 ```rust
 #[simd_fn]
 fn v3_kernel(token: X64V3Token, data: &mut [f32]) {
-    // AVX2 + FMA + BMI1 + BMI2 all enabled!
+    // AVX2 + FMA + BMI1 + BMI2 all enabled automatically!
+    // ...
 }
 ```
 
-### Pattern 2: Token-Gated Wrapper Operations
+### Pattern 3: With Multiversion Crates
+
+```rust
+use archmage::{x64v3_token, SimdToken};
+use multiversed::multiversed;
+
+#[multiversed]
+fn process(data: &mut [f32]) {
+    let token = x64v3_token!();  // Safe inside multiversed context
+    // Use token for operations...
+}
+```
+
+### Pattern 4: Token-Gated Operations
 
 archmage provides wrapped operations that require tokens:
 
 ```rust
-use archmage::{Avx2Token, Avx2FmaToken, SimdToken, ops};
+use archmage::{Avx2Token, SimdToken, ops};
 
 fn example() {
-    if let Some(token) = Avx2FmaToken::try_new() {
-        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let b = [2.0f32; 8];
-
-        // Load (safe via token)
-        let va = ops::load_f32x8(token.avx2(), &a);
-        let vb = ops::load_f32x8(token.avx2(), &b);
-
-        // Arithmetic (safe via token)
-        let sum = ops::add_f32x8(token.avx2(), va, vb);
-        let product = ops::mul_f32x8(token.avx2(), va, vb);
-
-        // FMA: a * b + c (safe via token)
-        let ones = ops::set1_f32x8(token.avx2(), 1.0);
-        let fma_result = ops::fmadd_f32x8(token.fma(), va, vb, ones);
-
-        // Shuffle/permute (safe via token)
-        let shuffled = ops::shuffle_f32x8::<0b00_01_10_11>(token.avx2(), va, vb);
-        let blended = ops::blend_f32x8::<0b10101010>(token.avx2(), va, vb);
-
-        // Store result
+    if let Some(token) = Avx2Token::try_new() {
+        let a = [1.0f32; 8];
+        let va = ops::load_f32x8(token, &a);
+        let doubled = ops::add_f32x8(token, va, va);
         let mut out = [0.0f32; 8];
-        ops::store_f32x8(token.avx2(), &mut out, fma_result);
+        ops::store_f32x8(token, &mut out, doubled);
     }
 }
 ```
 
-### Pattern 2: Profile Tokens (match multiversed presets)
+## Comparison with Alternatives
 
-Use profile tokens for x86-64 microarchitecture levels:
+### vs. `wide`
 
 ```rust
-use archmage::{X64V3Token, SimdToken, ops};
+// wide: Uses cfg! at compile time - always 128-bit without global flags
+let result = wide::f32x8::from(data) * wide::f32x8::splat(2.0);
 
-fn process_v3(data: &mut [f32]) {
-    // X64V3 = AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
-    if let Some(v3) = X64V3Token::try_new() {
-        // Extract any sub-token you need
-        let avx2 = v3.avx2();
-        let fma = v3.fma();
-        let avx2_fma = v3.avx2_fma();  // Combined token
-
-        for chunk in data.chunks_exact_mut(8) {
-            let v = ops::load_f32x8(avx2, chunk.try_into().unwrap());
-            let squared = ops::mul_f32x8(avx2, v, v);
-            ops::store_f32x8(avx2, chunk.try_into().unwrap(), squared);
-        }
-    }
+// archmage: Raw intrinsics inside #[simd_fn] - guaranteed 256-bit
+#[simd_fn]
+fn double(token: Avx2Token, data: &[f32; 8]) -> __m256 {
+    let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+    _mm256_add_ps(v, v)  // Actually uses ymm registers
 }
 ```
 
-Available profile tokens:
-| Token | Features | Hardware |
-|-------|----------|----------|
-| `X64V2Token` | SSE4.2 + POPCNT | Nehalem 2008+, Bulldozer 2011+ |
-| `X64V3Token` | AVX2 + FMA + BMI2 | Haswell 2013+, Zen 1 2017+ |
-| `X64V4Token` | AVX-512 (F/BW/CD/DQ/VL) | Xeon 2017+, Zen 4 2022+ |
+**Use wide when**: You can set global RUSTFLAGS (`-C target-feature=+avx2`)
+**Use archmage when**: You need runtime dispatch with guaranteed instruction selection
 
-### Pattern 3: Inside Multiversioned Functions
-
-Use token macros inside `#[multiversed]` functions:
+### vs. `pulp`
 
 ```rust
-use archmage::{x64v3_token, ops};
-use multiversed::multiversed;
+// pulp: Generic over Simd trait, runtime dispatch
+arch.dispatch(|simd: S| {
+    let v = simd.splat_f64s(2.0);
+    // ...
+});
 
-#[multiversed]
-fn kernel(data: &mut [f32]) {
-    // Token creation - justified by multiversed context
-    let token = x64v3_token!();
-    let avx2 = token.avx2();
-
-    for chunk in data.chunks_exact_mut(8) {
-        let v = ops::load_f32x8(avx2, chunk.try_into().unwrap());
-        let result = ops::mul_f32x8(avx2, v, v);
-        ops::store_f32x8(avx2, chunk.try_into().unwrap(), result);
-    }
+// archmage: Direct intrinsics, token proves capability
+#[simd_fn]
+fn kernel(token: Avx2Token, ...) {
+    let v = _mm256_set1_ps(2.0);  // Exact instruction control
+    // ...
 }
 ```
 
-### Pattern 4: Raw Intrinsics (Manual Alternative)
-
-If you can't use `#[simd_fn]`, you can write the pattern manually:
-
-```rust
-use archmage::{Avx2Token, SimdToken};
-use std::arch::x86_64::*;
-
-fn advanced_shuffle(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-    #[target_feature(enable = "avx2")]
-    unsafe fn inner(data: &[f32; 8]) -> [f32; 8] {
-        let v = _mm256_loadu_ps(data.as_ptr());
-        let permuted = _mm256_permute_ps::<0b00_01_10_11>(v);
-        let shuffled = _mm256_shuffle_ps::<0b10_11_00_01>(v, permuted);
-        let mut out = [0.0f32; 8];
-        _mm256_storeu_ps(out.as_mut_ptr(), shuffled);
-        out
-    }
-    let _ = token;  // proves AVX2 available
-    unsafe { inner(data) }
-}
-```
-
-**Prefer `#[simd_fn]`** - it does this automatically and is less error-prone.
-
-### Pattern 5: With `wide` Crate
-
-Enable the `wide` feature for portable SIMD types:
-
-```rust
-use archmage::{Avx2Token, Avx2FmaToken, SimdToken};
-use wide::f32x8;
-
-fn with_wide() {
-    if let Some(token) = Avx2FmaToken::try_new() {
-        let a = f32x8::splat(2.0);
-        let b = f32x8::splat(3.0);
-        let c = f32x8::splat(1.0);
-
-        // Token-gated wide operations
-        let sum = token.add_f32x8_wide(a, b);      // 5.0
-        let product = token.mul_f32x8_wide(a, b);  // 6.0
-        let fma = token.fma_f32x8_wide(a, b, c);   // 2*3+1 = 7.0
-    }
-}
-```
-
-### Pattern 6: Composite Operations
-
-High-level operations built on tokens:
-
-```rust
-use archmage::{Avx2Token, Avx2FmaToken, SimdToken, composite};
-
-fn composites() {
-    if let Some(token) = Avx2FmaToken::try_new() {
-        // 8x8 matrix transpose
-        let mut matrix: [f32; 64] = core::array::from_fn(|i| i as f32);
-        composite::transpose_8x8(token.avx2(), &mut matrix);
-
-        // Dot product with FMA
-        let a: Vec<f32> = (0..1024).map(|i| i as f32).collect();
-        let b: Vec<f32> = vec![1.0; 1024];
-        let dot = composite::dot_product_f32(token, &a, &b);
-
-        // Horizontal operations
-        let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let sum = composite::hsum_f32x8(token.avx2(), &data);   // 36.0
-        let max = composite::hmax_f32x8(token.avx2(), &data);   // 8.0
-        let min = composite::hmin_f32x8(token.avx2(), &data);   // 1.0
-    }
-}
-```
-
-## Available Operations
-
-### Memory Operations
-- `load_f32x8`, `store_f32x8` - 8-wide float load/store
-- `load_i32x8`, `store_i32x8` - 8-wide int load/store
-
-### Arithmetic
-- `add_f32x8`, `sub_f32x8`, `mul_f32x8`, `div_f32x8`
-- `add_i32x8`, `sub_i32x8`, `mullo_i32x8`
-- `fmadd_f32x8`, `fmsub_f32x8`, `fnmadd_f32x8` (FMA)
-- `min_f32x8`, `max_f32x8`
-
-### Shuffle/Permute
-- `shuffle_f32x8`, `permute_f32x8`, `permute2_f32x8`
-- `blend_f32x8`, `unpacklo_f32x8`, `unpackhi_f32x8`
-- `hadd_f32x8` - horizontal add
-
-### Bitwise
-- `and_f32x8`, `or_f32x8`, `xor_f32x8`, `andnot_f32x8`
-
-### Conversion
-- `cvt_i32x8_f32x8` - int to float
-- `cvtt_f32x8_i32x8` - float to int (truncate)
-
-### Creation
-- `zero_f32x8`, `set1_f32x8` - create vectors
+**Use pulp when**: You want abstraction and don't need exact instruction control
+**Use archmage when**: You need specific intrinsics (shuffles, permutes, specialized ops)
 
 ## Feature Flags
 
 ```toml
 [dependencies]
-archmage = { version = "0.1", features = ["wide", "safe-simd"] }
+archmage = { version = "0.1", features = ["wide"] }
 ```
 
 | Feature | Description |
@@ -284,44 +237,6 @@ archmage = { version = "0.1", features = ["wide", "safe-simd"] }
 | `macros` (default) | Enable `#[simd_fn]` attribute macro |
 | `wide` | Integration with `wide` crate |
 | `safe-simd` | Integration with `safe_unaligned_simd` |
-
-## Why Not Just Use...
-
-### `wide` crate directly?
-`wide` uses `cfg!(target_feature)` which is evaluated at **crate level**. Inside a multiversioned function, `wide` still emits SSE code even when AVX2 is available.
-
-### `safe_arch` crate?
-Same problem - cfg-gated at crate level, incompatible with runtime dispatch.
-
-### Raw intrinsics?
-Every call site needs `unsafe`. With tokens, unsafe is isolated to token creation.
-
-### `pulp` crate?
-Runtime dispatch, but still unsafe at call sites. Tokens provide type-level proof.
-
-## ARM Support
-
-ARM tokens follow the same pattern:
-
-```rust
-use archmage::{NeonToken, SveToken, Sve2Token, SimdToken};
-
-fn arm_example() {
-    // NEON is baseline for AArch64 (always available)
-    let neon = NeonToken::try_new().unwrap();
-
-    // SVE (Graviton 3, Apple M-series, A64FX)
-    if let Some(sve) = SveToken::try_new() {
-        let neon = sve.neon();  // Extract sub-token
-    }
-
-    // SVE2 (ARMv9: Cortex-X2/A710+, Graviton 4)
-    if let Some(sve2) = Sve2Token::try_new() {
-        let sve = sve2.sve();
-        let neon = sve2.neon();
-    }
-}
-```
 
 ## License
 

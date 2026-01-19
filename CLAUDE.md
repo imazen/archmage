@@ -455,12 +455,58 @@ ret
 
 This eliminates nested dispatch overhead in multiversioned code.
 
+## archmage vs Alternatives
+
+### vs. `wide` Crate
+
+**The `cfg!` limitation**: wide uses `cfg!(target_feature = "avx")` which is evaluated at **crate compile time**. Even calling wide from inside a `#[target_feature(enable = "avx2")]` function, wide still uses 128-bit operations.
+
+Verified 2026-01-18 with assembly inspection:
+```asm
+; wide::f32x8::mul_add WITHOUT global flags (default compile)
+movaps (%rsi),%xmm0        ; Load 128-bit
+movaps 0x10(%rsi),%xmm1    ; Load another 128-bit
+mulps  (%rdx),%xmm0        ; Multiply first half
+addps  (%rcx),%xmm0        ; Add first half
+mulps  0x10(%rdx),%xmm1    ; Multiply second half
+addps  0x10(%rcx),%xmm1    ; Add second half
+
+; wide::f32x8::mul_add WITH -C target-feature=+avx,+fma
+vmovaps (%rsi),%ymm0       ; Load 256-bit
+vmovaps (%rdx),%ymm1       ; Load 256-bit
+vfmadd213ps (%rcx),%ymm0,%ymm1  ; Fused multiply-add!
+```
+
+**When to use wide**: Set global RUSTFLAGS (`-C target-feature=+avx2` or `-C target-cpu=native`).
+**When to use archmage**: Need runtime dispatch with guaranteed instruction selection.
+
+### vs. `pulp` Crate
+
+pulp provides abstraction over SIMD via a `Simd` trait with runtime dispatch:
+```rust
+arch.dispatch(|simd: S| {
+    let v = simd.splat_f64s(2.0);
+    // Generic code over S: Simd
+});
+```
+
+**When to use pulp**: Want abstraction, don't need exact instruction control.
+**When to use archmage**: Need specific intrinsics (shuffles, permutes, specialized ops).
+
+### Summary
+
+| Approach | Use When |
+|----------|----------|
+| **Global flags + wide** | Single target CPU, want simplicity |
+| **pulp** | Want abstraction + runtime dispatch |
+| **archmage + raw intrinsics** | Need exact instruction control |
+
 ## Related Work
 
 - **simd-compare**: Research project that developed this pattern (`~/work/simd-compare`)
-- **pulp**: Runtime dispatch, but unsafe at call sites
+- **pulp**: Runtime dispatch with Simd trait abstraction
 - **safe_arch**: Compile-time cfg gating, incompatible with multiversion
-- **wide**: Portable types, needs target features for performance
+- **wide**: Portable types, needs global compile flags for optimal performance
 - **safe_unaligned_simd**: Safe load/store via references, zero overhead, integrates with tokens
 
 ## Known Limitations
@@ -469,6 +515,7 @@ This eliminates nested dispatch overhead in multiversioned code.
 2. **Macros hide unsafe** - `avx2_token!()` contains unsafe, but justified by multiversion context
 3. **No automatic feature detection in const** - `try_new()` can't be const
 4. **Some intrinsics genuinely unsafe** - Memory ops with raw pointers can't be made safe
+5. **Tokens don't help `wide` or `safe_arch`** - These crates use `cfg!` which is compile-time only; they need global RUSTFLAGS, not runtime tokens
 
 ## Error Handling
 
