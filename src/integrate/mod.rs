@@ -11,5 +11,8 @@ pub mod wide_ops;
 pub mod safe_simd;
 
 #[cfg(any(feature = "multiversion", feature = "multiversed"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "multiversion", feature = "multiversed"))))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "multiversion", feature = "multiversed")))
+)]
 pub mod multiversion_support;

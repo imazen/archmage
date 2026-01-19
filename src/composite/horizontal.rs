@@ -75,8 +75,8 @@ pub fn sum_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
     let mut result = hsum_f32x8(token, sum);
 
     // Handle remainder
-    for i in (chunks * 8)..data.len() {
-        result += data[i];
+    for &val in &data[chunks * 8..] {
+        result += val;
     }
 
     result
@@ -100,9 +100,9 @@ pub fn max_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
     let mut result = hmax_f32x8(token, max_vec);
 
     // Handle remainder
-    for i in (chunks * 8)..data.len() {
-        if data[i] > result {
-            result = data[i];
+    for &val in &data[chunks * 8..] {
+        if val > result {
+            result = val;
         }
     }
 
@@ -127,9 +127,9 @@ pub fn min_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
     let mut result = hmin_f32x8(token, min_vec);
 
     // Handle remainder
-    for i in (chunks * 8)..data.len() {
-        if data[i] < result {
-            result = data[i];
+    for &val in &data[chunks * 8..] {
+        if val < result {
+            result = val;
         }
     }
 

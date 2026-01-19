@@ -1,0 +1,456 @@
+//! Optimized feature detection macros.
+//!
+//! These macros combine compile-time and runtime feature detection,
+//! avoiding redundant runtime checks when features are compile-time known.
+
+/// Checks if an x86 CPU feature is available, with compile-time optimization.
+///
+/// Unlike `is_x86_feature_detected!` from std, this macro first checks
+/// `cfg!(target_feature)` at compile time. If the feature is compile-time
+/// known (e.g., compiled with `-C target-feature=+avx2`), no runtime check
+/// is performed.
+///
+/// This is critical for avoiding nested dispatch overhead when used inside
+/// `#[multiversed]` functions - the runtime check is completely eliminated.
+///
+/// # Example
+///
+/// ```rust
+/// use archmage::is_x86_feature_available;
+///
+/// // Inside a function compiled with +avx2, this is just `true`
+/// // Inside a function without +avx2, this does runtime detection
+/// if is_x86_feature_available!("avx2") {
+///     println!("AVX2 is available");
+/// }
+/// ```
+///
+/// # Supported Features
+///
+/// All features supported by `is_x86_feature_detected!` are supported:
+/// - SSE family: `"sse"`, `"sse2"`, `"sse3"`, `"ssse3"`, `"sse4.1"`, `"sse4.2"`
+/// - AVX family: `"avx"`, `"avx2"`, `"avx512f"`, `"avx512bw"`, etc.
+/// - Other: `"fma"`, `"bmi1"`, `"bmi2"`, `"popcnt"`, `"lzcnt"`, etc.
+#[macro_export]
+macro_rules! is_x86_feature_available {
+    ("sse") => {
+        $crate::__impl_feature_check!("sse")
+    };
+    ("sse2") => {
+        $crate::__impl_feature_check!("sse2")
+    };
+    ("sse3") => {
+        $crate::__impl_feature_check!("sse3")
+    };
+    ("ssse3") => {
+        $crate::__impl_feature_check!("ssse3")
+    };
+    ("sse4.1") => {
+        $crate::__impl_feature_check!("sse4.1")
+    };
+    ("sse4.2") => {
+        $crate::__impl_feature_check!("sse4.2")
+    };
+    ("avx") => {
+        $crate::__impl_feature_check!("avx")
+    };
+    ("avx2") => {
+        $crate::__impl_feature_check!("avx2")
+    };
+    ("fma") => {
+        $crate::__impl_feature_check!("fma")
+    };
+    ("avx512f") => {
+        $crate::__impl_feature_check!("avx512f")
+    };
+    ("avx512bw") => {
+        $crate::__impl_feature_check!("avx512bw")
+    };
+    ("avx512cd") => {
+        $crate::__impl_feature_check!("avx512cd")
+    };
+    ("avx512dq") => {
+        $crate::__impl_feature_check!("avx512dq")
+    };
+    ("avx512vl") => {
+        $crate::__impl_feature_check!("avx512vl")
+    };
+    ("bmi1") => {
+        $crate::__impl_feature_check!("bmi1")
+    };
+    ("bmi2") => {
+        $crate::__impl_feature_check!("bmi2")
+    };
+    ("popcnt") => {
+        $crate::__impl_feature_check!("popcnt")
+    };
+    ("lzcnt") => {
+        $crate::__impl_feature_check!("lzcnt")
+    };
+    ("pclmulqdq") => {
+        $crate::__impl_feature_check!("pclmulqdq")
+    };
+    ("aes") => {
+        $crate::__impl_feature_check!("aes")
+    };
+    ("sha") => {
+        $crate::__impl_feature_check!("sha")
+    };
+    // Fallback for unknown features - runtime only
+    ($feature:tt) => {
+        $crate::__impl_runtime_only_check!($feature)
+    };
+}
+
+/// Implementation macro for feature check with compile-time optimization.
+/// Not intended for direct use.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_feature_check {
+    ("sse") => {{
+        #[cfg(target_feature = "sse")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sse"))]
+        {
+            $crate::__impl_runtime_only_check!("sse")
+        }
+    }};
+    ("sse2") => {{
+        #[cfg(target_feature = "sse2")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sse2"))]
+        {
+            $crate::__impl_runtime_only_check!("sse2")
+        }
+    }};
+    ("sse3") => {{
+        #[cfg(target_feature = "sse3")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sse3"))]
+        {
+            $crate::__impl_runtime_only_check!("sse3")
+        }
+    }};
+    ("ssse3") => {{
+        #[cfg(target_feature = "ssse3")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "ssse3"))]
+        {
+            $crate::__impl_runtime_only_check!("ssse3")
+        }
+    }};
+    ("sse4.1") => {{
+        #[cfg(target_feature = "sse4.1")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sse4.1"))]
+        {
+            $crate::__impl_runtime_only_check!("sse4.1")
+        }
+    }};
+    ("sse4.2") => {{
+        #[cfg(target_feature = "sse4.2")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sse4.2"))]
+        {
+            $crate::__impl_runtime_only_check!("sse4.2")
+        }
+    }};
+    ("avx") => {{
+        #[cfg(target_feature = "avx")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avx"))]
+        {
+            $crate::__impl_runtime_only_check!("avx")
+        }
+    }};
+    ("avx2") => {{
+        #[cfg(target_feature = "avx2")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avx2"))]
+        {
+            $crate::__impl_runtime_only_check!("avx2")
+        }
+    }};
+    ("fma") => {{
+        #[cfg(target_feature = "fma")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "fma"))]
+        {
+            $crate::__impl_runtime_only_check!("fma")
+        }
+    }};
+    ("avx512f") => {{
+        #[cfg(target_feature = "avx512f")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avx512f"))]
+        {
+            $crate::__impl_runtime_only_check!("avx512f")
+        }
+    }};
+    ("avx512bw") => {{
+        #[cfg(target_feature = "avx512bw")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avx512bw"))]
+        {
+            $crate::__impl_runtime_only_check!("avx512bw")
+        }
+    }};
+    ("avx512cd") => {{
+        #[cfg(target_feature = "avx512cd")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avx512cd"))]
+        {
+            $crate::__impl_runtime_only_check!("avx512cd")
+        }
+    }};
+    ("avx512dq") => {{
+        #[cfg(target_feature = "avx512dq")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avx512dq"))]
+        {
+            $crate::__impl_runtime_only_check!("avx512dq")
+        }
+    }};
+    ("avx512vl") => {{
+        #[cfg(target_feature = "avx512vl")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avx512vl"))]
+        {
+            $crate::__impl_runtime_only_check!("avx512vl")
+        }
+    }};
+    ("bmi1") => {{
+        #[cfg(target_feature = "bmi1")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "bmi1"))]
+        {
+            $crate::__impl_runtime_only_check!("bmi1")
+        }
+    }};
+    ("bmi2") => {{
+        #[cfg(target_feature = "bmi2")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "bmi2"))]
+        {
+            $crate::__impl_runtime_only_check!("bmi2")
+        }
+    }};
+    ("popcnt") => {{
+        #[cfg(target_feature = "popcnt")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "popcnt"))]
+        {
+            $crate::__impl_runtime_only_check!("popcnt")
+        }
+    }};
+    ("lzcnt") => {{
+        #[cfg(target_feature = "lzcnt")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "lzcnt"))]
+        {
+            $crate::__impl_runtime_only_check!("lzcnt")
+        }
+    }};
+    ("pclmulqdq") => {{
+        #[cfg(target_feature = "pclmulqdq")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "pclmulqdq"))]
+        {
+            $crate::__impl_runtime_only_check!("pclmulqdq")
+        }
+    }};
+    ("aes") => {{
+        #[cfg(target_feature = "aes")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "aes"))]
+        {
+            $crate::__impl_runtime_only_check!("aes")
+        }
+    }};
+    ("sha") => {{
+        #[cfg(target_feature = "sha")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sha"))]
+        {
+            $crate::__impl_runtime_only_check!("sha")
+        }
+    }};
+}
+
+/// Runtime-only feature check. Used when compile-time detection not possible.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_runtime_only_check {
+    ($feature:tt) => {{
+        #[cfg(target_arch = "x86_64")]
+        {
+            #[cfg(feature = "std")]
+            {
+                std::arch::is_x86_feature_detected!($feature)
+            }
+            #[cfg(not(feature = "std"))]
+            {
+                // In no_std, we can't do runtime detection without std
+                // Fall back to compile-time only
+                false
+            }
+        }
+        #[cfg(target_arch = "x86")]
+        {
+            #[cfg(feature = "std")]
+            {
+                std::arch::is_x86_feature_detected!($feature)
+            }
+            #[cfg(not(feature = "std"))]
+            {
+                false
+            }
+        }
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+        {
+            false
+        }
+    }};
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    /// Test that the macro compiles for all supported features
+    #[test]
+    fn test_all_features_compile() {
+        let _ = is_x86_feature_available!("sse");
+        let _ = is_x86_feature_available!("sse2");
+        let _ = is_x86_feature_available!("sse3");
+        let _ = is_x86_feature_available!("ssse3");
+        let _ = is_x86_feature_available!("sse4.1");
+        let _ = is_x86_feature_available!("sse4.2");
+        let _ = is_x86_feature_available!("avx");
+        let _ = is_x86_feature_available!("avx2");
+        let _ = is_x86_feature_available!("fma");
+        let _ = is_x86_feature_available!("avx512f");
+        let _ = is_x86_feature_available!("avx512bw");
+        let _ = is_x86_feature_available!("bmi1");
+        let _ = is_x86_feature_available!("bmi2");
+        let _ = is_x86_feature_available!("popcnt");
+        let _ = is_x86_feature_available!("lzcnt");
+        let _ = is_x86_feature_available!("aes");
+    }
+
+    /// Test that SSE2 is always available on x86_64
+    #[test]
+    #[cfg(target_arch = "x86_64")]
+    fn test_sse2_always_available() {
+        assert!(is_x86_feature_available!("sse2"));
+    }
+
+    /// Test consistency with std's is_x86_feature_detected
+    #[test]
+    #[cfg(all(target_arch = "x86_64", feature = "std"))]
+    fn test_matches_std_detection() {
+        use std::arch::is_x86_feature_detected;
+
+        assert_eq!(
+            is_x86_feature_available!("avx2"),
+            is_x86_feature_detected!("avx2")
+        );
+        assert_eq!(
+            is_x86_feature_available!("fma"),
+            is_x86_feature_detected!("fma")
+        );
+        assert_eq!(
+            is_x86_feature_available!("avx512f"),
+            is_x86_feature_detected!("avx512f")
+        );
+    }
+
+    /// Test that compile-time known features return true
+    /// This test is compiled with +avx2, so avx2 should be compile-time true
+    #[test]
+    #[cfg(target_feature = "avx2")]
+    fn test_compile_time_avx2() {
+        // This should compile to just `true`
+        assert!(is_x86_feature_available!("avx2"));
+    }
+
+    /// Test that compile-time known features return true for SSE2
+    /// SSE2 is baseline for x86_64, so always compile-time true
+    #[test]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+    fn test_compile_time_sse2() {
+        assert!(is_x86_feature_available!("sse2"));
+    }
+}
+
+// ============================================================================
+// Assembly verification helpers
+// ============================================================================
+
+/// Helper function for verifying assembly output.
+/// When compiled with +avx2, this should contain no cpuid or function calls.
+#[cfg(target_arch = "x86_64")]
+#[inline(never)]
+pub fn check_avx2_available() -> bool {
+    is_x86_feature_available!("avx2")
+}
+
+/// Helper function for verifying assembly output.
+/// When compiled with +fma, this should contain no cpuid or function calls.
+#[cfg(target_arch = "x86_64")]
+#[inline(never)]
+pub fn check_fma_available() -> bool {
+    is_x86_feature_available!("fma")
+}
+
+/// Helper function for verifying assembly output.
+/// When compiled with +avx512f, this should contain no cpuid or function calls.
+#[cfg(target_arch = "x86_64")]
+#[inline(never)]
+pub fn check_avx512f_available() -> bool {
+    is_x86_feature_available!("avx512f")
+}

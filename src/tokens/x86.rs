@@ -1,6 +1,11 @@
 //! x86_64 SIMD capability tokens
 //!
 //! Provides tokens for SSE2, SSE4.1, AVX, AVX2, AVX-512, and FMA.
+//!
+//! Token construction uses [`is_x86_feature_available!`] which combines
+//! compile-time and runtime detection. When compiled with a target feature
+//! enabled (e.g., in a `#[multiversed]` function), the runtime check is
+//! completely eliminated.
 
 use super::{CompositeToken, SimdToken};
 
@@ -47,19 +52,11 @@ pub struct Sse41Token {
 impl SimdToken for Sse41Token {
     const NAME: &'static str = "SSE4.1";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("sse4.1") {
-                // SAFETY: Just verified SSE4.1 is available
-                Some(unsafe { Self::new_unchecked() })
-            } else {
-                None
-            }
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
+        if crate::is_x86_feature_available!("sse4.1") {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
             None
         }
     }
@@ -94,18 +91,11 @@ pub struct AvxToken {
 impl SimdToken for AvxToken {
     const NAME: &'static str = "AVX";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx") {
-                Some(unsafe { Self::new_unchecked() })
-            } else {
-                None
-            }
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
+        if crate::is_x86_feature_available!("avx") {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
             None
         }
     }
@@ -146,18 +136,11 @@ pub struct Avx2Token {
 impl SimdToken for Avx2Token {
     const NAME: &'static str = "AVX2";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") {
-                Some(unsafe { Self::new_unchecked() })
-            } else {
-                None
-            }
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
+        if crate::is_x86_feature_available!("avx2") {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
             None
         }
     }
@@ -204,18 +187,11 @@ pub struct FmaToken {
 impl SimdToken for FmaToken {
     const NAME: &'static str = "FMA";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("fma") {
-                Some(unsafe { Self::new_unchecked() })
-            } else {
-                None
-            }
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
+        if crate::is_x86_feature_available!("fma") {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
             None
         }
     }
@@ -243,18 +219,12 @@ pub struct Avx2FmaToken {
 impl SimdToken for Avx2FmaToken {
     const NAME: &'static str = "AVX2+FMA";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
-                Some(unsafe { Self::new_unchecked() })
-            } else {
-                None
-            }
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
+        // Both checks use compile-time optimization when features are known
+        if crate::is_x86_feature_available!("avx2") && crate::is_x86_feature_available!("fma") {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
             None
         }
     }
@@ -324,18 +294,11 @@ pub struct Avx512fToken {
 impl SimdToken for Avx512fToken {
     const NAME: &'static str = "AVX-512F";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx512f") {
-                Some(unsafe { Self::new_unchecked() })
-            } else {
-                None
-            }
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
+        if crate::is_x86_feature_available!("avx512f") {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
             None
         }
     }
@@ -375,18 +338,11 @@ pub struct Avx512bwToken {
 impl SimdToken for Avx512bwToken {
     const NAME: &'static str = "AVX-512BW";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx512bw") {
-                Some(unsafe { Self::new_unchecked() })
-            } else {
-                None
-            }
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
+        if crate::is_x86_feature_available!("avx512bw") {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
             None
         }
     }
@@ -403,6 +359,23 @@ impl Avx512bwToken {
     pub fn avx512f(self) -> Avx512fToken {
         unsafe { Avx512fToken::new_unchecked() }
     }
+}
+
+// ============================================================================
+// Assembly verification helpers
+// ============================================================================
+
+/// Helper to verify Avx2Token::try_new assembly.
+/// Without +avx2: runtime detection. With +avx2: just returns Some.
+#[inline(never)]
+pub fn verify_avx2_try_new() -> Option<Avx2Token> {
+    Avx2Token::try_new()
+}
+
+/// Helper to verify Avx2FmaToken::try_new assembly.
+#[inline(never)]
+pub fn verify_avx2_fma_try_new() -> Option<Avx2FmaToken> {
+    Avx2FmaToken::try_new()
 }
 
 // ============================================================================

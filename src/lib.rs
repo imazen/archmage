@@ -42,6 +42,10 @@ extern crate std;
 
 extern crate alloc;
 
+// Optimized feature detection
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub mod detect;
+
 // Core token types and traits
 pub mod tokens;
 
@@ -50,7 +54,12 @@ pub mod tokens;
 pub mod ops;
 
 // Integration layers
-#[cfg(any(feature = "wide", feature = "safe-simd", feature = "multiversion", feature = "multiversed"))]
+#[cfg(any(
+    feature = "wide",
+    feature = "safe-simd",
+    feature = "multiversion",
+    feature = "multiversed"
+))]
 pub mod integrate;
 
 // Composite operations (transpose, dot product, etc.)
@@ -102,9 +111,7 @@ macro_rules! avx2_token {
 /// Create an FMA token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! fma_token {
-    () => {{
-        unsafe { $crate::tokens::x86::FmaToken::new_unchecked() }
-    }};
+    () => {{ unsafe { $crate::tokens::x86::FmaToken::new_unchecked() } }};
 }
 
 /// Create a combined AVX2+FMA token inside a `#[multiversed]` function.
@@ -112,40 +119,30 @@ macro_rules! fma_token {
 /// This is the most common token for floating-point SIMD work.
 #[macro_export]
 macro_rules! avx2_fma_token {
-    () => {{
-        unsafe { $crate::tokens::x86::Avx2FmaToken::new_unchecked() }
-    }};
+    () => {{ unsafe { $crate::tokens::x86::Avx2FmaToken::new_unchecked() } }};
 }
 
 /// Create an SSE2 token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! sse2_token {
-    () => {{
-        unsafe { $crate::tokens::x86::Sse2Token::new_unchecked() }
-    }};
+    () => {{ unsafe { $crate::tokens::x86::Sse2Token::new_unchecked() } }};
 }
 
 /// Create an SSE4.1 token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! sse41_token {
-    () => {{
-        unsafe { $crate::tokens::x86::Sse41Token::new_unchecked() }
-    }};
+    () => {{ unsafe { $crate::tokens::x86::Sse41Token::new_unchecked() } }};
 }
 
 /// Create an AVX token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! avx_token {
-    () => {{
-        unsafe { $crate::tokens::x86::AvxToken::new_unchecked() }
-    }};
+    () => {{ unsafe { $crate::tokens::x86::AvxToken::new_unchecked() } }};
 }
 
 #[cfg(target_arch = "aarch64")]
 /// Create a NEON token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! neon_token {
-    () => {{
-        unsafe { $crate::tokens::arm::NeonToken::new_unchecked() }
-    }};
+    () => {{ unsafe { $crate::tokens::arm::NeonToken::new_unchecked() } }};
 }

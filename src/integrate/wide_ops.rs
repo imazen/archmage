@@ -104,11 +104,6 @@ impl Avx2Token {
         a.ceil()
     }
 
-    /// Truncate towards zero
-    #[inline(always)]
-    pub fn trunc_f32x8_wide(self, a: f32x8) -> f32x8 {
-        a.trunc()
-    }
 }
 
 #[cfg(all(feature = "wide", target_arch = "x86_64"))]
@@ -148,6 +143,7 @@ impl Avx2FmaToken {
 #[cfg(all(test, feature = "wide", target_arch = "x86_64"))]
 mod tests {
     use super::*;
+    use crate::tokens::SimdToken;
 
     #[test]
     fn test_wide_arithmetic() {

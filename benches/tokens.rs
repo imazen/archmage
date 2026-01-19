@@ -1,10 +1,10 @@
 //! Benchmarks for archmage tokens and operations
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 #[cfg(target_arch = "x86_64")]
 fn bench_token_overhead(c: &mut Criterion) {
-    use archmage::{composite, ops, Avx2FmaToken, Avx2Token};
+    use archmage::{Avx2FmaToken, Avx2Token, composite, ops};
 
     let mut group = c.benchmark_group("token_overhead");
 
@@ -34,7 +34,7 @@ fn bench_token_overhead(c: &mut Criterion) {
 
 #[cfg(target_arch = "x86_64")]
 fn bench_composite_ops(c: &mut Criterion) {
-    use archmage::{composite, Avx2FmaToken, Avx2Token};
+    use archmage::{Avx2FmaToken, Avx2Token, composite};
 
     let mut group = c.benchmark_group("composite");
 
@@ -54,7 +54,11 @@ fn bench_composite_ops(c: &mut Criterion) {
 
         group.bench_function("dot_product_1024", |b_iter| {
             b_iter.iter(|| {
-                black_box(composite::dot_product_f32(token, black_box(&a), black_box(&b)))
+                black_box(composite::dot_product_f32(
+                    token,
+                    black_box(&a),
+                    black_box(&b),
+                ))
             })
         });
     }
