@@ -459,14 +459,14 @@ This eliminates nested dispatch overhead in multiversioned code.
 
 ### vs. `wide` Crate
 
-**wide is a SIMD floor**: Even without global compile flags, wide guarantees SIMD execution via explicit 128-bit operations. This is **4-6x faster than scalar** because:
+**wide is a SIMD floor**: Compile-time implementation selection via `cfg!`, no runtime dispatch. Even without global compile flags, wide guarantees SIMD execution via explicit 128-bit operations. This is **4-6x faster than scalar** because:
 - Parallelism is explicit - no reliance on LLVM autovectorization
 - Memory patterns are predictable and aligned
 - LLVM autovectorization can fail on complex code; wide always works
 
-**The `cfg!` limitation**: wide uses `cfg!(target_feature = "avx")` evaluated at crate compile time. Inside `#[target_feature(enable = "avx2")]` functions, wide still uses 128-bit ops (LLVM doesn't combine them).
+**The `cfg!` limitation**: wide uses `cfg!(target_feature = "avx")` evaluated at crate compile time, not function level. Inside `#[target_feature(enable = "avx2")]` functions, wide still uses its compile-time-selected 128-bit ops (LLVM doesn't combine them, just uses VEX encoding).
 
-**`#[target_feature]` helps scalar code**: LLVM CAN autovectorize scalar loops to 256-bit inside target_feature functions. So wide's explicit parallelism makes LLVM's job easier even when wide itself uses 128-bit.
+**`#[target_feature]` helps scalar code**: LLVM CAN autovectorize scalar loops to 256-bit inside target_feature functions. wide's explicit parallelism also makes LLVM's optimization job easier.
 
 Verified 2026-01-18 with assembly inspection:
 ```asm

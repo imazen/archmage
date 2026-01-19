@@ -6,12 +6,12 @@ Type-safe SIMD capability tokens for Rust. Isolates `unsafe` to token constructi
 
 ### The Approaches
 
-**wide crate**: Portable SIMD types (`f32x8`, `i32x8`, etc.) that guarantee SIMD execution. Without global compile flags, wide uses 128-bit operations (two `f32x4`), but this is still **4-6x faster than scalar** because:
+**wide crate**: Portable SIMD types (`f32x8`, `i32x8`, etc.) with compile-time implementation selection via `cfg!`. No runtime dispatch. Without global compile flags, wide uses 128-bit operations (two `f32x4`), but this is still **4-6x faster than scalar** because:
 - Parallelism is explicit - no reliance on LLVM autovectorization
 - Memory access patterns are predictable and aligned
 - You get a SIMD floor even when LLVM's autovectorizer would fail
 
-With global flags (`-C target-feature=+avx2`), wide uses native 256-bit operations.
+With global flags (`-C target-feature=+avx2`), wide's `cfg!` selects native 256-bit implementations at compile time.
 
 **Scalar + `#[target_feature]`**: LLVM can autovectorize scalar loops to 256-bit inside `#[target_feature]` functions. Works well for simple patterns, but LLVM may not vectorize complex code.
 
