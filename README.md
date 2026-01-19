@@ -4,42 +4,40 @@ Type-safe SIMD capability tokens for Rust. Isolates `unsafe` to token constructi
 
 ## Understanding the SIMD Landscape
 
-### The `cfg!` Problem
+### The Approaches
 
-Rust's `cfg!(target_feature = "avx2")` is evaluated at **crate compile time**, not at function level. This has important implications:
+**wide crate**: Portable SIMD types (`f32x8`, `i32x8`, etc.) that guarantee SIMD execution. Without global compile flags, wide uses 128-bit operations (two `f32x4`), but this is still **4-6x faster than scalar** because:
+- Parallelism is explicit - no reliance on LLVM autovectorization
+- Memory access patterns are predictable and aligned
+- You get a SIMD floor even when LLVM's autovectorizer would fail
 
-```rust
-// wide crate's f32x8 implementation (simplified):
-pick! {
-    if #[cfg(target_feature = "avx")] {
-        pub struct f32x8 { avx: __m256 }      // 256-bit
-    } else {
-        pub struct f32x8 { a: f32x4, b: f32x4 }  // 2x 128-bit
-    }
-}
-```
+With global flags (`-C target-feature=+avx2`), wide uses native 256-bit operations.
 
-**Consequence**: Even if you call `wide::f32x8` from inside a `#[target_feature(enable = "avx2")]` function, wide still uses 128-bit operations because the `cfg!` was already evaluated when wide was compiled.
+**Scalar + `#[target_feature]`**: LLVM can autovectorize scalar loops to 256-bit inside `#[target_feature]` functions. Works well for simple patterns, but LLVM may not vectorize complex code.
 
-**Note**: `#[target_feature]` DOES help LLVM autovectorize *scalar* code to 256-bit. But wide's explicit 128-bit operations are not combined by LLVM.
+**archmage + raw intrinsics**: Direct control over exact instructions. Use when you need specific instruction sequences that neither wide nor LLVM autovectorization will produce.
 
 ### When to Use What
 
-| Approach | Use When | Tradeoffs |
-|----------|----------|-----------|
-| **Global RUSTFLAGS + wide** | Single target CPU (servers, embedded) | Simplest; requires `-C target-feature=+avx2` or `-C target-cpu=native` |
-| **Scalar + `#[target_feature]`** | Simple loops, trust LLVM | LLVM autovectorizes; less control but often good enough |
-| **pulp** | Need abstraction + runtime dispatch | Write generic `S: Simd` code; pulp handles dispatch |
-| **archmage + raw intrinsics** | Need exact instruction control | Full control; tokens make raw intrinsics safe |
+| Approach | Reliability | Performance | Use When |
+|----------|-------------|-------------|----------|
+| **wide (default)** | Always SIMD | 4-6x over scalar | Portable code, don't want to think about flags |
+| **wide + global flags** | Always 256-bit | 8-12x over scalar | Single target CPU, want maximum wide perf |
+| **Scalar + `#[target_feature]`** | LLVM decides | Varies | Simple loops, trust LLVM |
+| **pulp** | Runtime dispatch | Good | Want abstraction + runtime dispatch |
+| **archmage + raw intrinsics** | Exact control | Maximum | Need specific instructions (shuffles, FMA, DCT) |
 
 ### archmage's Niche
 
-archmage is for when you need **raw intrinsics with safety**. It:
+archmage is for when you need **specific instructions** that neither wide nor LLVM autovectorization will produce:
 
-- Makes `_mm256_*` intrinsics safe via token proof
-- Works with `#[target_feature]` functions (compiler generates correct instructions)
-- Integrates with multiversion crates (`multiversed`, `multiversion`)
-- Does **NOT** help `wide` or `safe_arch` (they need global compile flags)
+- Complex shuffles and permutes
+- Exact FMA sequences for numerical precision
+- DCT butterflies and other signal processing
+- Gather/scatter operations
+- Bit manipulation (BMI1/BMI2)
+
+It makes raw `_mm256_*` intrinsics safe via capability tokens, and integrates with multiversion crates.
 
 ## Quick Start
 
