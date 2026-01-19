@@ -391,6 +391,34 @@ macro_rules! __impl_runtime_only_check {
 }
 
 // ============================================================================
+// Assembly verification helpers
+// ============================================================================
+
+/// Helper function for verifying assembly output.
+/// When compiled with +avx2, this should contain no cpuid or function calls.
+#[cfg(target_arch = "x86_64")]
+#[inline(never)]
+pub fn check_avx2_available() -> bool {
+    is_x86_feature_available!("avx2")
+}
+
+/// Helper function for verifying assembly output.
+/// When compiled with +fma, this should contain no cpuid or function calls.
+#[cfg(target_arch = "x86_64")]
+#[inline(never)]
+pub fn check_fma_available() -> bool {
+    is_x86_feature_available!("fma")
+}
+
+/// Helper function for verifying assembly output.
+/// When compiled with +avx512f, this should contain no cpuid or function calls.
+#[cfg(target_arch = "x86_64")]
+#[inline(never)]
+pub fn check_avx512f_available() -> bool {
+    is_x86_feature_available!("avx512f")
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -421,7 +449,8 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_sse2_always_available() {
-        assert!(is_x86_feature_available!("sse2"));
+        let has_sse2 = is_x86_feature_available!("sse2");
+        assert!(has_sse2);
     }
 
     /// Test consistency with std's is_x86_feature_detected
@@ -458,34 +487,7 @@ mod tests {
     #[test]
     #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     fn test_compile_time_sse2() {
-        assert!(is_x86_feature_available!("sse2"));
+        let has_sse2 = is_x86_feature_available!("sse2");
+        assert!(has_sse2);
     }
-}
-
-// ============================================================================
-// Assembly verification helpers
-// ============================================================================
-
-/// Helper function for verifying assembly output.
-/// When compiled with +avx2, this should contain no cpuid or function calls.
-#[cfg(target_arch = "x86_64")]
-#[inline(never)]
-pub fn check_avx2_available() -> bool {
-    is_x86_feature_available!("avx2")
-}
-
-/// Helper function for verifying assembly output.
-/// When compiled with +fma, this should contain no cpuid or function calls.
-#[cfg(target_arch = "x86_64")]
-#[inline(never)]
-pub fn check_fma_available() -> bool {
-    is_x86_feature_available!("fma")
-}
-
-/// Helper function for verifying assembly output.
-/// When compiled with +avx512f, this should contain no cpuid or function calls.
-#[cfg(target_arch = "x86_64")]
-#[inline(never)]
-pub fn check_avx512f_available() -> bool {
-    is_x86_feature_available!("avx512f")
 }

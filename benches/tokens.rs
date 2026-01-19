@@ -4,7 +4,7 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 #[cfg(target_arch = "x86_64")]
 fn bench_token_overhead(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, Avx2Token, composite, ops};
+    use archmage::{Avx2FmaToken, Avx2Token, SimdToken, ops};
 
     let mut group = c.benchmark_group("token_overhead");
 
@@ -34,7 +34,7 @@ fn bench_token_overhead(c: &mut Criterion) {
 
 #[cfg(target_arch = "x86_64")]
 fn bench_composite_ops(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, Avx2Token, composite};
+    use archmage::{Avx2FmaToken, Avx2Token, SimdToken, composite};
 
     let mut group = c.benchmark_group("composite");
 

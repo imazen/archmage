@@ -140,6 +140,37 @@ macro_rules! avx_token {
     () => {{ unsafe { $crate::tokens::x86::AvxToken::new_unchecked() } }};
 }
 
+/// Create an SSE4.2 token inside a `#[multiversed]` function.
+#[macro_export]
+macro_rules! sse42_token {
+    () => {{ unsafe { $crate::tokens::x86::Sse42Token::new_unchecked() } }};
+}
+
+/// Create an x86-64-v2 profile token inside a `#[multiversed]` function.
+///
+/// v2 implies: SSE4.2 + POPCNT (Nehalem 2008+, Bulldozer 2011+).
+#[macro_export]
+macro_rules! x64v2_token {
+    () => {{ unsafe { $crate::tokens::x86::X64V2Token::new_unchecked() } }};
+}
+
+/// Create an x86-64-v3 profile token inside a `#[multiversed]` function.
+///
+/// v3 implies: v2 + AVX2 + FMA + BMI1/2 (Haswell 2013+, Zen 1 2017+).
+/// This is the most common target for high-performance SIMD code.
+#[macro_export]
+macro_rules! x64v3_token {
+    () => {{ unsafe { $crate::tokens::x86::X64V3Token::new_unchecked() } }};
+}
+
+/// Create an x86-64-v4 profile token inside a `#[multiversed]` function.
+///
+/// v4 implies: v3 + AVX-512 (F/BW/CD/DQ/VL) (Xeon 2017+, Zen 4 2022+).
+#[macro_export]
+macro_rules! x64v4_token {
+    () => {{ unsafe { $crate::tokens::x86::X64V4Token::new_unchecked() } }};
+}
+
 #[cfg(target_arch = "aarch64")]
 /// Create a NEON token inside a `#[multiversed]` function.
 #[macro_export]

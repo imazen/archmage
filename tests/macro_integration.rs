@@ -16,8 +16,11 @@ mod x86_tests {
     #[test]
     fn test_feature_detection_macro() {
         // These should work on any x86_64 machine (SSE2 is baseline)
-        assert!(is_x86_feature_available!("sse"));
-        assert!(is_x86_feature_available!("sse2"));
+        // Use let bindings to avoid clippy::assertions_on_constants
+        let has_sse = is_x86_feature_available!("sse");
+        let has_sse2 = is_x86_feature_available!("sse2");
+        assert!(has_sse);
+        assert!(has_sse2);
 
         // These might or might not be available depending on CPU
         let has_avx = is_x86_feature_available!("avx");
@@ -96,7 +99,7 @@ mod x86_tests {
 
             // Verify they produce results (not checking exact values, just that they work)
             let result = archmage::ops::x86::to_array_f32x8(shuffled);
-            assert!(result.iter().all(|&x| x >= 1.0 && x <= 16.0));
+            assert!(result.iter().all(|&x| (1.0..=16.0).contains(&x)));
         }
     }
 
