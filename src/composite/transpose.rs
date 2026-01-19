@@ -1,0 +1,195 @@
+//! 8x8 Matrix Transpose
+//!
+//! Efficient AVX2 transpose using the unpack/shuffle/permute pattern.
+//! Critical for DCT transforms in JPEG encoding.
+
+use crate::ops::x86::*;
+use crate::tokens::x86::Avx2Token;
+
+/// Transpose an 8x8 f32 matrix in-place using AVX2.
+///
+/// Uses the Highway-style 3-stage transpose:
+/// 1. `unpacklo/hi` - interleave pairs within 128-bit lanes
+/// 2. `shuffle` - reorder within lanes
+/// 3. `permute2f128` - exchange 128-bit halves
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use archmage::{Avx2Token, composite::transpose_8x8};
+///
+/// if let Some(token) = Avx2Token::try_new() {
+///     let mut block: [f32; 64] = core::array::from_fn(|i| i as f32);
+///     transpose_8x8(token, &mut block);
+///     // block[col * 8 + row] now equals original block[row * 8 + col]
+/// }
+/// ```
+#[inline]
+pub fn transpose_8x8(token: Avx2Token, block: &mut [f32; 64]) {
+    // Load 8 rows
+    let mut r0 = load_f32x8(token, block[0..8].try_into().unwrap());
+    let mut r1 = load_f32x8(token, block[8..16].try_into().unwrap());
+    let mut r2 = load_f32x8(token, block[16..24].try_into().unwrap());
+    let mut r3 = load_f32x8(token, block[24..32].try_into().unwrap());
+    let mut r4 = load_f32x8(token, block[32..40].try_into().unwrap());
+    let mut r5 = load_f32x8(token, block[40..48].try_into().unwrap());
+    let mut r6 = load_f32x8(token, block[48..56].try_into().unwrap());
+    let mut r7 = load_f32x8(token, block[56..64].try_into().unwrap());
+
+    // Stage 1: Interleave pairs within 128-bit lanes
+    let t0 = unpacklo_f32x8(token, r0, r1);
+    let t1 = unpackhi_f32x8(token, r0, r1);
+    let t2 = unpacklo_f32x8(token, r2, r3);
+    let t3 = unpackhi_f32x8(token, r2, r3);
+    let t4 = unpacklo_f32x8(token, r4, r5);
+    let t5 = unpackhi_f32x8(token, r4, r5);
+    let t6 = unpacklo_f32x8(token, r6, r7);
+    let t7 = unpackhi_f32x8(token, r6, r7);
+
+    // Stage 2: Shuffle to get 4-element groups
+    r0 = shuffle_f32x8::<0x44>(token, t0, t2); // 0b01_00_01_00
+    r1 = shuffle_f32x8::<0xEE>(token, t0, t2); // 0b11_10_11_10
+    r2 = shuffle_f32x8::<0x44>(token, t1, t3);
+    r3 = shuffle_f32x8::<0xEE>(token, t1, t3);
+    r4 = shuffle_f32x8::<0x44>(token, t4, t6);
+    r5 = shuffle_f32x8::<0xEE>(token, t4, t6);
+    r6 = shuffle_f32x8::<0x44>(token, t5, t7);
+    r7 = shuffle_f32x8::<0xEE>(token, t5, t7);
+
+    // Stage 3: Exchange 128-bit halves
+    let c0 = permute2_f32x8::<0x20>(token, r0, r4);
+    let c1 = permute2_f32x8::<0x20>(token, r1, r5);
+    let c2 = permute2_f32x8::<0x20>(token, r2, r6);
+    let c3 = permute2_f32x8::<0x20>(token, r3, r7);
+    let c4 = permute2_f32x8::<0x31>(token, r0, r4);
+    let c5 = permute2_f32x8::<0x31>(token, r1, r5);
+    let c6 = permute2_f32x8::<0x31>(token, r2, r6);
+    let c7 = permute2_f32x8::<0x31>(token, r3, r7);
+
+    // Store transposed rows
+    store_f32x8(token, (&mut block[0..8]).try_into().unwrap(), c0);
+    store_f32x8(token, (&mut block[8..16]).try_into().unwrap(), c1);
+    store_f32x8(token, (&mut block[16..24]).try_into().unwrap(), c2);
+    store_f32x8(token, (&mut block[24..32]).try_into().unwrap(), c3);
+    store_f32x8(token, (&mut block[32..40]).try_into().unwrap(), c4);
+    store_f32x8(token, (&mut block[40..48]).try_into().unwrap(), c5);
+    store_f32x8(token, (&mut block[48..56]).try_into().unwrap(), c6);
+    store_f32x8(token, (&mut block[56..64]).try_into().unwrap(), c7);
+}
+
+/// Transpose an 8x8 f32 matrix from input to output using AVX2.
+///
+/// Non-destructive version that reads from one buffer and writes to another.
+#[inline]
+pub fn transpose_8x8_copy(token: Avx2Token, input: &[f32; 64], output: &mut [f32; 64]) {
+    // Load 8 rows from input
+    let mut r0 = load_f32x8(token, input[0..8].try_into().unwrap());
+    let mut r1 = load_f32x8(token, input[8..16].try_into().unwrap());
+    let mut r2 = load_f32x8(token, input[16..24].try_into().unwrap());
+    let mut r3 = load_f32x8(token, input[24..32].try_into().unwrap());
+    let mut r4 = load_f32x8(token, input[32..40].try_into().unwrap());
+    let mut r5 = load_f32x8(token, input[40..48].try_into().unwrap());
+    let mut r6 = load_f32x8(token, input[48..56].try_into().unwrap());
+    let mut r7 = load_f32x8(token, input[56..64].try_into().unwrap());
+
+    // Stage 1
+    let t0 = unpacklo_f32x8(token, r0, r1);
+    let t1 = unpackhi_f32x8(token, r0, r1);
+    let t2 = unpacklo_f32x8(token, r2, r3);
+    let t3 = unpackhi_f32x8(token, r2, r3);
+    let t4 = unpacklo_f32x8(token, r4, r5);
+    let t5 = unpackhi_f32x8(token, r4, r5);
+    let t6 = unpacklo_f32x8(token, r6, r7);
+    let t7 = unpackhi_f32x8(token, r6, r7);
+
+    // Stage 2
+    r0 = shuffle_f32x8::<0x44>(token, t0, t2);
+    r1 = shuffle_f32x8::<0xEE>(token, t0, t2);
+    r2 = shuffle_f32x8::<0x44>(token, t1, t3);
+    r3 = shuffle_f32x8::<0xEE>(token, t1, t3);
+    r4 = shuffle_f32x8::<0x44>(token, t4, t6);
+    r5 = shuffle_f32x8::<0xEE>(token, t4, t6);
+    r6 = shuffle_f32x8::<0x44>(token, t5, t7);
+    r7 = shuffle_f32x8::<0xEE>(token, t5, t7);
+
+    // Stage 3
+    let c0 = permute2_f32x8::<0x20>(token, r0, r4);
+    let c1 = permute2_f32x8::<0x20>(token, r1, r5);
+    let c2 = permute2_f32x8::<0x20>(token, r2, r6);
+    let c3 = permute2_f32x8::<0x20>(token, r3, r7);
+    let c4 = permute2_f32x8::<0x31>(token, r0, r4);
+    let c5 = permute2_f32x8::<0x31>(token, r1, r5);
+    let c6 = permute2_f32x8::<0x31>(token, r2, r6);
+    let c7 = permute2_f32x8::<0x31>(token, r3, r7);
+
+    // Store to output
+    store_f32x8(token, (&mut output[0..8]).try_into().unwrap(), c0);
+    store_f32x8(token, (&mut output[8..16]).try_into().unwrap(), c1);
+    store_f32x8(token, (&mut output[16..24]).try_into().unwrap(), c2);
+    store_f32x8(token, (&mut output[24..32]).try_into().unwrap(), c3);
+    store_f32x8(token, (&mut output[32..40]).try_into().unwrap(), c4);
+    store_f32x8(token, (&mut output[40..48]).try_into().unwrap(), c5);
+    store_f32x8(token, (&mut output[48..56]).try_into().unwrap(), c6);
+    store_f32x8(token, (&mut output[56..64]).try_into().unwrap(), c7);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::SimdToken;
+
+    #[test]
+    fn test_transpose_8x8() {
+        if let Some(token) = Avx2Token::try_new() {
+            let original: [f32; 64] = core::array::from_fn(|i| i as f32);
+            let mut block = original;
+
+            transpose_8x8(token, &mut block);
+
+            // Verify: transposed[col][row] == original[row][col]
+            for row in 0..8 {
+                for col in 0..8 {
+                    let orig_val = original[row * 8 + col];
+                    let trans_val = block[col * 8 + row];
+                    assert_eq!(
+                        orig_val, trans_val,
+                        "Mismatch at ({}, {}): expected {}, got {}",
+                        row, col, orig_val, trans_val
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_transpose_8x8_copy() {
+        if let Some(token) = Avx2Token::try_new() {
+            let input: [f32; 64] = core::array::from_fn(|i| i as f32);
+            let mut output = [0.0f32; 64];
+
+            transpose_8x8_copy(token, &input, &mut output);
+
+            for row in 0..8 {
+                for col in 0..8 {
+                    let orig_val = input[row * 8 + col];
+                    let trans_val = output[col * 8 + row];
+                    assert_eq!(orig_val, trans_val);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_double_transpose() {
+        if let Some(token) = Avx2Token::try_new() {
+            let original: [f32; 64] = core::array::from_fn(|i| i as f32);
+            let mut block = original;
+
+            // Transpose twice should give original
+            transpose_8x8(token, &mut block);
+            transpose_8x8(token, &mut block);
+
+            assert_eq!(original, block);
+        }
+    }
+}
