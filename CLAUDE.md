@@ -101,23 +101,50 @@ src/
 
 ### Token Hierarchy (x86_64)
 
+**Granular Tokens** (fine-grained feature control):
 ```
 Sse2Token (baseline for x86_64)
     │
-    ├── Sse3Token
-    │   └── Ssse3Token
-    │       └── Sse41Token
-    │           └── Sse42Token
-    │               └── AvxToken
-    │                   └── Avx2Token
-    │                       └── Avx512Token (various sub-features)
+    ├── Sse41Token
+    │   └── Sse42Token
+    │       └── AvxToken
+    │           └── Avx2Token
+    │               └── Avx512fToken → Avx512bwToken
     │
     └── FmaToken (independent, usually paired with Avx2)
 ```
 
+**Profile Tokens** (match x86-64 psABI microarchitecture levels):
+```
+X64V2Token (SSE4.2 + POPCNT) - Nehalem 2008+
+    │
+    └── X64V3Token (AVX2 + FMA + BMI2) - Haswell 2013+, Zen 1+
+            │
+            └── X64V4Token (AVX-512 F/BW/CD/DQ/VL) - Xeon 2017+, Zen 4+
+```
+
+Each profile token can extract sub-tokens:
+```rust
+let v3 = X64V3Token::try_new().unwrap();
+let avx2_fma = v3.avx2_fma();  // Avx2FmaToken
+let avx2 = v3.avx2();          // Avx2Token
+let v2 = v3.v2();              // X64V2Token
+```
+
 Combined tokens for common cases:
 - `Avx2FmaToken` - AVX2 + FMA (most common for float ops)
-- `Avx512FToken` - AVX-512 Foundation
+- `Avx512fToken` - AVX-512 Foundation
+
+### Token Hierarchy (AArch64)
+
+ARM uses feature-based profiles rather than psABI levels:
+```
+NeonToken (baseline for AArch64 - always available)
+    │
+    └── SveToken (Graviton 3, Apple M-series, A64FX)
+            │
+            └── Sve2Token (ARMv9: Cortex-X2/A710+, Graviton 4)
+```
 
 ### Token Trait
 
@@ -203,24 +230,25 @@ fn my_kernel(data: &mut [f32]) {
 ## Implementation Plan
 
 ### Phase 1: Core Tokens (x86_64)
-- [ ] Token trait definition
-- [ ] Sse2Token, Sse41Token, AvxToken, Avx2Token, FmaToken
-- [ ] Combined tokens (Avx2FmaToken)
-- [ ] Runtime detection via `is_x86_feature_detected!`
-- [ ] Basic ops: load, store, zero, set1
+- [x] Token trait definition
+- [x] Sse2Token, Sse41Token, Sse42Token, AvxToken, Avx2Token, FmaToken
+- [x] Combined tokens (Avx2FmaToken)
+- [x] Profile tokens (X64V2Token, X64V3Token, X64V4Token)
+- [x] Runtime detection via `is_x86_feature_available!`
+- [x] Basic ops: load, store, zero, set1
 
 ### Phase 2: Full x86_64 Operations
-- [ ] Arithmetic: add, sub, mul, div, fma
-- [ ] Shuffle: unpacklo/hi, shuffle, permute, blend
-- [ ] Compare: cmp, min, max
-- [ ] Bitwise: and, or, xor, andnot
-- [ ] Convert: cvt between types
+- [x] Arithmetic: add, sub, mul, div, fma
+- [x] Shuffle: unpacklo/hi, shuffle, permute, blend
+- [x] Compare: cmp, min, max
+- [x] Bitwise: and, or, xor, andnot
+- [x] Convert: cvt between types
 
 ### Phase 3: Integrations
-- [ ] `wide` feature integration
-- [ ] `safe-simd` feature integration
-- [ ] `multiversion` macros
-- [ ] `multiversed` macros
+- [x] `wide` feature integration
+- [x] `safe-simd` feature integration
+- [x] Token creation macros (avx2_token!, x64v3_token!, etc.)
+- [ ] `multiversed` macro integration
 
 ### Phase 4: Composite Operations
 - [x] 8x8 transpose (`src/composite/transpose.rs`)
@@ -256,13 +284,15 @@ Based on halide-kernels benchmarking (2026-01-18), these operations provide sign
 - AAN produces scaled output - fold scaling into quant tables to eliminate multiplies
 
 ### Phase 5: ARM Support
-- [ ] NeonToken
-- [ ] SveToken, Sve2Token
+- [x] NeonToken (baseline for AArch64)
+- [x] SveToken, Sve2Token
+- [x] Token hierarchy tests
+- [x] Token creation macros (neon_token!, sve_token!, sve2_token!)
 - [ ] Neon operations
 - [ ] SVE operations
 
 ### Phase 6: WASM Support
-- [ ] Simd128Token
+- [x] Simd128Token (defined)
 - [ ] WASM SIMD operations
 
 ## Key Decisions
