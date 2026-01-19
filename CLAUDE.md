@@ -276,13 +276,124 @@ Measure:
 - Operation overhead vs raw intrinsics (should be zero)
 - Composite operation performance
 
+## Intrinsic Safety in Rust 1.92
+
+As of Rust 1.92, intrinsics have nuanced safety rules:
+
+### SAFE in `#[target_feature]` Context
+
+All **value-based operations** are safe when called from a function with the appropriate `#[target_feature(enable = "...")]`:
+
+```rust
+#[target_feature(enable = "avx2", enable = "fma")]
+fn safe_target_feature_fn() {
+    // Creation - SAFE
+    let zero = _mm256_setzero_ps();
+    let ones = _mm256_set1_ps(1.0);
+    let vals = _mm256_set_ps(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0);
+    let undefined = _mm256_undefined_ps();  // even this!
+
+    // Arithmetic - SAFE
+    let add = _mm256_add_ps(zero, ones);
+    let mul = _mm256_mul_ps(add, ones);
+    let fma = _mm256_fmadd_ps(add, ones, zero);
+
+    // Shuffle/Blend/Permute - SAFE
+    let shuf = _mm256_shuffle_ps::<0b00_01_10_11>(add, ones);
+    let blend = _mm256_blend_ps::<0b10101010>(add, ones);
+
+    // Comparison - SAFE
+    let cmp = _mm256_cmp_ps::<0>(add, ones);
+
+    // Conversion - SAFE
+    let to_int = _mm256_cvtps_epi32(add);
+    let to_float = _mm256_cvtepi32_ps(to_int);
+
+    // Bitwise - SAFE
+    let and = _mm256_and_ps(add, ones);
+}
+```
+
+### UNSAFE: Pointer-Based Operations
+
+**All memory operations with raw pointers remain unsafe**, even in `#[target_feature]` context:
+
+```rust
+#[target_feature(enable = "avx2")]
+fn still_needs_unsafe() {
+    let arr = [1.0f32; 8];
+    let mut out = [0.0f32; 8];
+
+    // These ALL require unsafe blocks:
+    let load_aligned = unsafe { _mm256_load_ps(arr.as_ptr()) };
+    let load_unaligned = unsafe { _mm256_loadu_ps(arr.as_ptr()) };
+    unsafe { _mm256_store_ps(out.as_mut_ptr(), load_aligned) };
+    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), load_unaligned) };
+
+    // Masked and gather operations too:
+    let mask = _mm256_set1_epi32(-1);
+    let maskload = unsafe { _mm256_maskload_ps(arr.as_ptr(), mask) };
+    let idx = _mm256_set1_epi32(0);
+    let gather = unsafe { _mm256_i32gather_ps::<4>(arr.as_ptr(), idx) };
+}
+```
+
+### Why safe_unaligned_simd Works
+
+The `safe_unaligned_simd` crate makes loads/stores safe by using **references instead of raw pointers**:
+
+```rust
+// Raw intrinsic (unsafe - pointer could be invalid)
+unsafe fn _mm256_loadu_ps(ptr: *const f32) -> __m256;
+
+// safe_unaligned_simd (safe - reference guarantees valid memory)
+#[target_feature(enable = "avx")]
+fn _mm256_loadu_ps(mem_addr: &[f32; 8]) -> __m256 {
+    unsafe { arch::_mm256_loadu_ps(mem_addr.as_ptr()) }
+}
+```
+
+The reference-based API:
+1. **Guarantees valid memory** - References in Rust are always valid
+2. **Guarantees size** - `&[f32; 8]` is exactly 8 floats
+3. **Zero overhead** - Generates identical `vmovups` instructions
+
+Verified assembly (identical for both APIs):
+```asm
+vmovups ymm0, ymmword ptr [rsp - 64]  ; unaligned load
+vmovups ymmword ptr [rsp - 32], ymm0  ; unaligned store
+vzeroupper
+ret
+```
+
+## Optimized Feature Detection
+
+archmage provides `is_x86_feature_available!` that combines compile-time and runtime detection:
+
+```rust
+// Standard approach - ALWAYS runtime, even in multiversioned code
+if is_x86_feature_detected!("avx2") { ... }  // Runtime check
+
+// archmage approach - compile-time when possible, runtime fallback
+if is_x86_feature_available!("avx2") { ... }
+```
+
+Inside a `#[target_feature(enable = "avx2")]` function or when compiled with `-C target-cpu=x86-64-v3`:
+```asm
+; is_x86_feature_available!("avx2") compiles to:
+mov al, 1
+ret
+```
+
+This eliminates nested dispatch overhead in multiversioned code.
+
 ## Related Work
 
 - **simd-compare**: Research project that developed this pattern (`~/work/simd-compare`)
 - **pulp**: Runtime dispatch, but unsafe at call sites
 - **safe_arch**: Compile-time cfg gating, incompatible with multiversion
 - **wide**: Portable types, needs target features for performance
-- **safe_unaligned_simd**: Safe load/store, but still needs unsafe for other ops
+- **safe_unaligned_simd**: Safe load/store via references, zero overhead, integrates with tokens
 
 ## Known Limitations
 
