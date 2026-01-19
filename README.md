@@ -186,45 +186,6 @@ fn example() {
 }
 ```
 
-## Comparison with Alternatives
-
-### vs. `wide`
-
-```rust
-// wide: Uses cfg! at compile time - always 128-bit without global flags
-let result = wide::f32x8::from(data) * wide::f32x8::splat(2.0);
-
-// archmage: Raw intrinsics inside #[simd_fn] - guaranteed 256-bit
-#[simd_fn]
-fn double(token: Avx2Token, data: &[f32; 8]) -> __m256 {
-    let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
-    _mm256_add_ps(v, v)  // Actually uses ymm registers
-}
-```
-
-**Use wide when**: You can set global RUSTFLAGS (`-C target-feature=+avx2`)
-**Use archmage when**: You need runtime dispatch with guaranteed instruction selection
-
-### vs. `pulp`
-
-```rust
-// pulp: Generic over Simd trait, runtime dispatch
-arch.dispatch(|simd: S| {
-    let v = simd.splat_f64s(2.0);
-    // ...
-});
-
-// archmage: Direct intrinsics, token proves capability
-#[simd_fn]
-fn kernel(token: Avx2Token, ...) {
-    let v = _mm256_set1_ps(2.0);  // Exact instruction control
-    // ...
-}
-```
-
-**Use pulp when**: You want abstraction and don't need exact instruction control
-**Use archmage when**: You need specific intrinsics (shuffles, permutes, specialized ops)
-
 ## Feature Flags
 
 ```toml
