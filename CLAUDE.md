@@ -223,10 +223,37 @@ fn my_kernel(data: &mut [f32]) {
 - [ ] `multiversed` macros
 
 ### Phase 4: Composite Operations
-- [ ] 8x8 transpose
-- [ ] Dot product
-- [ ] Interleave/deinterleave
-- [ ] Horizontal sum
+- [x] 8x8 transpose (`src/composite/transpose.rs`)
+- [x] Dot product (`src/composite/dot_product.rs`)
+- [ ] Interleave/deinterleave (planar <-> interleaved)
+- [x] Horizontal sum (`src/composite/horizontal.rs`)
+
+### Phase 4b: JPEG Composite Operations (from halide-kernels)
+
+Based on halide-kernels benchmarking (2026-01-18), these operations provide significant speedups for jpegli-rs:
+
+**AAN DCT (2.2-2.9x faster than matrix multiply)**:
+- [ ] Forward DCT 8x8 (AAN algorithm, float)
+- [ ] Inverse DCT 8x8 (AAN algorithm, float)
+- [ ] Forward DCT 8x8 (12-bit fixed-point integer)
+- [ ] Inverse DCT 8x8 (12-bit fixed-point integer)
+
+**Fused DCT Pipeline (12-18x faster than separate operations)**:
+- [ ] Fused DCT + quantization + zigzag reorder
+- [ ] Fused dequant + zigzag inverse + IDCT
+
+**Color Conversion (FMA pattern, 10-27% faster than integer)**:
+- [ ] RGB→YCbCr planar (f32x8 with FMA: `r.mul_add(Yr, g.mul_add(Yg, b * Yb))`)
+- [ ] YCbCr→RGB planar (inverse with FMA)
+- [ ] Planar→interleaved conversion (critical for I/O)
+- [ ] Interleaved→planar conversion (critical for I/O)
+
+**Key insights from halide-kernels**:
+- Float+FMA beats 15-bit fixed-point integer by 10-27% on modern CPUs
+- Planar layout is 7x faster than interleaved for SIMD color conversion
+- Fusing DCT+quant+zigzag eliminates intermediate memory traffic
+- AAN DCT uses 5 multiplies per 1D vs 64 for matrix multiply
+- AAN produces scaled output - fold scaling into quant tables to eliminate multiplies
 
 ### Phase 5: ARM Support
 - [ ] NeonToken
