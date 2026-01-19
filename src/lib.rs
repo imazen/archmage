@@ -173,7 +173,28 @@ macro_rules! x64v4_token {
 
 #[cfg(target_arch = "aarch64")]
 /// Create a NEON token inside a `#[multiversed]` function.
+///
+/// NEON is the baseline SIMD for AArch64 - always available on 64-bit ARM.
 #[macro_export]
 macro_rules! neon_token {
     () => {{ unsafe { $crate::tokens::arm::NeonToken::new_unchecked() } }};
+}
+
+#[cfg(target_arch = "aarch64")]
+/// Create an SVE token inside a `#[multiversed]` function.
+///
+/// SVE (Scalable Vector Extension) is available on Graviton 3, Apple M-series,
+/// Fujitsu A64FX, and ARMv8.2+ cores with SVE support.
+#[macro_export]
+macro_rules! sve_token {
+    () => {{ unsafe { $crate::tokens::arm::SveToken::new_unchecked() } }};
+}
+
+#[cfg(target_arch = "aarch64")]
+/// Create an SVE2 token inside a `#[multiversed]` function.
+///
+/// SVE2 is available on ARMv9 cores (Cortex-X2/A710+, Graviton 4, etc.).
+#[macro_export]
+macro_rules! sve2_token {
+    () => {{ unsafe { $crate::tokens::arm::Sve2Token::new_unchecked() } }};
 }

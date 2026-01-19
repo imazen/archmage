@@ -123,6 +123,10 @@ impl Sve2Token {
     }
 }
 
+// ============================================================================
+// Tests
+// ============================================================================
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,5 +136,59 @@ mod tests {
         assert_eq!(core::mem::size_of::<NeonToken>(), 0);
         assert_eq!(core::mem::size_of::<SveToken>(), 0);
         assert_eq!(core::mem::size_of::<Sve2Token>(), 0);
+    }
+
+    #[test]
+    fn test_token_is_copy() {
+        fn assert_copy<T: Copy>() {}
+        assert_copy::<NeonToken>();
+        assert_copy::<SveToken>();
+        assert_copy::<Sve2Token>();
+    }
+
+    #[test]
+    fn test_token_names() {
+        assert_eq!(NeonToken::NAME, "NEON");
+        assert_eq!(SveToken::NAME, "SVE");
+        assert_eq!(Sve2Token::NAME, "SVE2");
+    }
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_neon_always_available() {
+        // NEON is baseline for AArch64
+        assert!(NeonToken::try_new().is_some());
+    }
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_token_hierarchy() {
+        // If SVE2 is available, SVE and NEON must also be available
+        if Sve2Token::try_new().is_some() {
+            assert!(SveToken::try_new().is_some(), "SVE2 implies SVE");
+            assert!(NeonToken::try_new().is_some(), "SVE2 implies NEON");
+        }
+
+        // If SVE is available, NEON must also be available
+        if SveToken::try_new().is_some() {
+            assert!(NeonToken::try_new().is_some(), "SVE implies NEON");
+        }
+    }
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_sve2_token_extraction() {
+        if let Some(sve2) = Sve2Token::try_new() {
+            let _sve = sve2.sve();
+            let _neon = sve2.neon();
+        }
+    }
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_sve_token_extraction() {
+        if let Some(sve) = SveToken::try_new() {
+            let _neon = sve.neon();
+        }
     }
 }
