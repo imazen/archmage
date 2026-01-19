@@ -11,35 +11,78 @@ Using SIMD safely in Rust is hard:
 3. **Runtime dispatch loses type safety** - no compile-time proof features are available
 4. **Crates like `wide` use cfg-gating** - they emit SSE even inside AVX2-enabled functions
 
-## The Solution: Capability Tokens
+## The Solution: Capability Tokens + `#[simd_fn]`
 
-Tokens are zero-sized proof types. Create once (unsafe), use everywhere (safe):
+Tokens are zero-sized proof types. The `#[simd_fn]` macro makes raw intrinsics safe:
 
 ```rust
-use archmage::{Avx2Token, SimdToken, ops};
+use archmage::{Avx2Token, SimdToken, simd_fn};
+use std::arch::x86_64::*;
 
-fn process(data: &mut [f32]) {
-    // Runtime detection - the ONLY check needed
-    if let Some(token) = Avx2Token::try_new() {
-        process_avx2(token, data);
-    } else {
-        process_scalar(data);
-    }
+// #[simd_fn] makes raw intrinsics safe - token proves AVX2 is available!
+#[simd_fn]
+fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+    let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };  // load needs unsafe (pointer)
+    let doubled = _mm256_add_ps(v, v);                   // arithmetic is safe!
+    let mut out = [0.0f32; 8];
+    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+    out
 }
 
-fn process_avx2(token: Avx2Token, data: &mut [f32]) {
-    // All operations are SAFE - token proves AVX2 is available
-    for chunk in data.chunks_exact_mut(8) {
-        let v = ops::load_f32x8(token, chunk.try_into().unwrap());
-        let doubled = ops::add_f32x8(token, v, v);
-        ops::store_f32x8(token, chunk.try_into().unwrap(), doubled);
+fn main() {
+    if let Some(token) = Avx2Token::try_new() {
+        let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let output = double_avx2(token, &input);
+        // output = [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]
     }
+}
+```
+
+The macro expands to:
+```rust
+fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+    #[target_feature(enable = "avx2")]
+    unsafe fn __inner(data: &[f32; 8]) -> [f32; 8] { /* body */ }
+    let _ = &token;  // prove we have the token
+    unsafe { __inner(data) }  // SAFETY: token proves avx2 available
 }
 ```
 
 ## Usage Patterns
 
-### Pattern 1: Token-Gated Operations
+### Pattern 1: `#[simd_fn]` with Raw Intrinsics (Most Ergonomic)
+
+Use `#[simd_fn]` to write raw intrinsics with token-based safety:
+
+```rust
+use archmage::{Avx2FmaToken, SimdToken, simd_fn};
+use std::arch::x86_64::*;
+
+#[simd_fn]
+fn fma_kernel(token: Avx2FmaToken, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
+    let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
+    let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
+
+    // FMA intrinsic is safe - #[simd_fn] adds target_feature
+    let result = _mm256_fmadd_ps(va, vb, vc);  // a * b + c
+
+    let mut out = [0.0f32; 8];
+    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+    out
+}
+```
+
+Profile tokens automatically enable all required features:
+
+```rust
+#[simd_fn]
+fn v3_kernel(token: X64V3Token, data: &mut [f32]) {
+    // AVX2 + FMA + BMI1 + BMI2 all enabled!
+}
+```
+
+### Pattern 2: Token-Gated Wrapper Operations
 
 archmage provides wrapped operations that require tokens:
 
@@ -127,34 +170,30 @@ fn kernel(data: &mut [f32]) {
 }
 ```
 
-### Pattern 4: Raw Intrinsics with Token Proof
+### Pattern 4: Raw Intrinsics (Manual Alternative)
 
-For intrinsics not wrapped by archmage, use tokens to prove feature availability, then call intrinsics directly:
+If you can't use `#[simd_fn]`, you can write the pattern manually:
 
 ```rust
 use archmage::{Avx2Token, SimdToken};
 use std::arch::x86_64::*;
 
 fn advanced_shuffle(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-    // Token proves AVX2 is available
-    // In Rust 1.92+, value-based intrinsics are safe in target_feature context
-
     #[target_feature(enable = "avx2")]
     unsafe fn inner(data: &[f32; 8]) -> [f32; 8] {
-        // These are SAFE in target_feature context (Rust 1.92+):
-        let v = _mm256_loadu_ps(data.as_ptr());  // load still needs unsafe (pointer)
-        let permuted = _mm256_permute_ps::<0b00_01_10_11>(v);  // safe! (value op)
-        let shuffled = _mm256_shuffle_ps::<0b10_11_00_01>(v, permuted);  // safe!
-
+        let v = _mm256_loadu_ps(data.as_ptr());
+        let permuted = _mm256_permute_ps::<0b00_01_10_11>(v);
+        let shuffled = _mm256_shuffle_ps::<0b10_11_00_01>(v, permuted);
         let mut out = [0.0f32; 8];
-        _mm256_storeu_ps(out.as_mut_ptr(), shuffled);  // store needs unsafe (pointer)
+        _mm256_storeu_ps(out.as_mut_ptr(), shuffled);
         out
     }
-
-    // SAFETY: token proves AVX2 is available
+    let _ = token;  // proves AVX2 available
     unsafe { inner(data) }
 }
 ```
+
+**Prefer `#[simd_fn]`** - it does this automatically and is less error-prone.
 
 ### Pattern 5: With `wide` Crate
 
@@ -242,6 +281,7 @@ archmage = { version = "0.1", features = ["wide", "safe-simd"] }
 | Feature | Description |
 |---------|-------------|
 | `std` (default) | Enable std library support |
+| `macros` (default) | Enable `#[simd_fn]` attribute macro |
 | `wide` | Integration with `wide` crate |
 | `safe-simd` | Integration with `safe_unaligned_simd` |
 

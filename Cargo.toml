@@ -10,8 +10,9 @@ keywords = ["simd", "avx", "neon", "performance", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
-default = ["std"]
+default = ["std", "macros"]
 std = []
+macros = ["dep:archmage-macros"]
 # Integration features - enable separately or together
 wide = ["dep:wide"]
 safe-simd = ["dep:safe_unaligned_simd"]
@@ -22,9 +23,11 @@ x86 = []
 arm = []
 wasm = []
 # All integrations
-full = ["wide", "safe-simd", "multiversion", "multiversed"]
+full = ["wide", "safe-simd", "multiversion", "multiversed", "macros"]
 
 [dependencies]
+# Proc-macro crate for simd_fn attribute
+archmage-macros = { version = "0.1.0", path = "archmage-macros", optional = true }
 # Optional integrations
 wide = { version = "1.1.1", optional = true }
 safe_unaligned_simd = { version = "0.2.3", optional = true }

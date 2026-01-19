@@ -1,0 +1,17 @@
+[package]
+name = "archmage-macros"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Proc-macros for archmage SIMD capability tokens"
+repository = "https://github.com/imazen/archmage"
+keywords = ["simd", "macro", "avx", "neon"]
+categories = ["development-tools::procedural-macro-helpers"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2.0", features = ["full", "parsing", "printing"] }
+quote = "1.0"
+proc-macro2 = "1.0"

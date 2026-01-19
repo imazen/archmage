@@ -6,7 +6,7 @@
 //! ## Quick Example
 //!
 //! ```rust,ignore
-//! use archmage::{Avx2Token, ops};
+//! use archmage::{Avx2Token, SimdToken, simd_fn, ops};
 //!
 //! // Runtime detection path
 //! if let Some(token) = Avx2Token::try_new() {
@@ -15,17 +15,23 @@
 //!     let result = ops::add_f32x8(token, v, v);  // Safe!
 //! }
 //!
-//! // Or with multiversed (single unsafe point)
-//! #[multiversed]
-//! fn my_kernel(data: &[f32]) -> f32 {
-//!     let token = avx2_fma_token!();  // Unsafe isolated here
-//!     // ... all operations safe via token
+//! // Use #[simd_fn] to make raw intrinsics safe via token
+//! #[simd_fn]
+//! fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+//!     use std::arch::x86_64::*;
+//!     // Raw intrinsics are safe here - token proves AVX2 available!
+//!     let v = _mm256_loadu_ps(data.as_ptr());
+//!     let doubled = _mm256_add_ps(v, v);
+//!     let mut out = [0.0f32; 8];
+//!     _mm256_storeu_ps(out.as_mut_ptr(), doubled);
+//!     out
 //! }
 //! ```
 //!
 //! ## Feature Flags
 //!
 //! - `std` (default): Enable std library support
+//! - `macros` (default): Enable `#[simd_fn]` attribute macro
 //! - `wide`: Integration with the `wide` crate
 //! - `safe-simd`: Integration with `safe_unaligned_simd`
 //! - `multiversion`: Integration with `multiversion` crate
@@ -41,6 +47,11 @@
 extern crate std;
 
 extern crate alloc;
+
+// Re-export simd_fn macro from archmage-macros
+#[cfg(feature = "macros")]
+#[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
+pub use archmage_macros::simd_fn;
 
 // Optimized feature detection
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
