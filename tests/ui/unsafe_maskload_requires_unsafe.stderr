@@ -1,0 +1,7 @@
+error[E0133]: call to unsafe function `std::arch::x86_64::_mm256_maskload_ps` is unsafe and requires unsafe block
+  --> tests/ui/unsafe_maskload_requires_unsafe.rs:17:18
+   |
+17 |     let loaded = _mm256_maskload_ps(data.as_ptr(), mask);
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ call to unsafe function
+   |
+   = note: consult the function's documentation for information on how to avoid undefined behavior

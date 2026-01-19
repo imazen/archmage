@@ -1,0 +1,7 @@
+error[E0133]: call to unsafe function `std::arch::x86_64::_mm256_loadu_ps` is unsafe and requires unsafe block
+  --> tests/ui/unsafe_load_requires_unsafe.rs:16:18
+   |
+16 |     let loaded = _mm256_loadu_ps(data.as_ptr());
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ call to unsafe function
+   |
+   = note: consult the function's documentation for information on how to avoid undefined behavior
