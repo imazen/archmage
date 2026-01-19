@@ -461,6 +461,8 @@ This eliminates nested dispatch overhead in multiversioned code.
 
 **The `cfg!` limitation**: wide uses `cfg!(target_feature = "avx")` which is evaluated at **crate compile time**. Even calling wide from inside a `#[target_feature(enable = "avx2")]` function, wide still uses 128-bit operations.
 
+**Note**: `#[target_feature]` DOES help LLVM autovectorize scalar code to 256-bit. But wide's explicit 128-bit operations are not combined by LLVM - it just switches to VEX encoding while keeping XMM registers.
+
 Verified 2026-01-18 with assembly inspection:
 ```asm
 ; wide::f32x8::mul_add WITHOUT global flags (default compile)
@@ -475,9 +477,20 @@ addps  0x10(%rcx),%xmm1    ; Add second half
 vmovaps (%rsi),%ymm0       ; Load 256-bit
 vmovaps (%rdx),%ymm1       ; Load 256-bit
 vfmadd213ps (%rcx),%ymm0,%ymm1  ; Fused multiply-add!
+
+; wide::f32x8 inside #[target_feature(enable = "avx2")] - still 128-bit!
+vmovaps (%rsi),%xmm0       ; VEX-encoded but still XMM
+vmovaps 0x10(%rsi),%xmm1   ; Two separate 128-bit loads
+vaddps (%rdx),%xmm0,%xmm0  ; Two separate 128-bit adds
+vaddps 0x10(%rdx),%xmm1,%xmm1
+
+; Scalar code inside #[target_feature(enable = "avx2")] - LLVM autovectorizes to 256-bit
+vmovups (%rsi),%ymm0       ; 256-bit load
+vaddps (%rdi),%ymm0,%ymm0  ; 256-bit add
+vmovups %ymm0,(%rdi)       ; 256-bit store
 ```
 
-**When to use wide**: Set global RUSTFLAGS (`-C target-feature=+avx2` or `-C target-cpu=native`).
+**When to use wide**: Set global RUSTFLAGS (`-C target-feature=+avx2` or `-C target-cpu=native`), OR write scalar code and rely on LLVM autovectorization inside `#[target_feature]` functions.
 **When to use archmage**: Need runtime dispatch with guaranteed instruction selection.
 
 ### vs. `pulp` Crate

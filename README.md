@@ -21,11 +21,14 @@ pick! {
 
 **Consequence**: Even if you call `wide::f32x8` from inside a `#[target_feature(enable = "avx2")]` function, wide still uses 128-bit operations because the `cfg!` was already evaluated when wide was compiled.
 
+**Note**: `#[target_feature]` DOES help LLVM autovectorize *scalar* code to 256-bit. But wide's explicit 128-bit operations are not combined by LLVM.
+
 ### When to Use What
 
 | Approach | Use When | Tradeoffs |
 |----------|----------|-----------|
 | **Global RUSTFLAGS + wide** | Single target CPU (servers, embedded) | Simplest; requires `-C target-feature=+avx2` or `-C target-cpu=native` |
+| **Scalar + `#[target_feature]`** | Simple loops, trust LLVM | LLVM autovectorizes; less control but often good enough |
 | **pulp** | Need abstraction + runtime dispatch | Write generic `S: Simd` code; pulp handles dispatch |
 | **archmage + raw intrinsics** | Need exact instruction control | Full control; tokens make raw intrinsics safe |
 
