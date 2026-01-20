@@ -9,6 +9,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
 
+
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -16,15 +17,17 @@ use core::arch::x86_64::*;
 
 #[cfg(target_arch = "x86")]
 use safe_unaligned_simd::x86::{
-    Is16BitsUnaligned, Is16CellUnaligned, Is32BitsUnaligned, Is32CellUnaligned, Is64BitsUnaligned,
-    Is64CellUnaligned, Is128BitsUnaligned, Is128CellUnaligned, Is256BitsUnaligned,
-    Is256CellUnaligned, Is512BitsUnaligned,
+    Is16BitsUnaligned, Is32BitsUnaligned, Is64BitsUnaligned,
+    Is128BitsUnaligned, Is256BitsUnaligned, Is512BitsUnaligned,
+    Is16CellUnaligned, Is32CellUnaligned, Is64CellUnaligned,
+    Is128CellUnaligned, Is256CellUnaligned,
 };
 #[cfg(target_arch = "x86_64")]
 use safe_unaligned_simd::x86_64::{
-    Is16BitsUnaligned, Is16CellUnaligned, Is32BitsUnaligned, Is32CellUnaligned, Is64BitsUnaligned,
-    Is64CellUnaligned, Is128BitsUnaligned, Is128CellUnaligned, Is256BitsUnaligned,
-    Is256CellUnaligned, Is512BitsUnaligned,
+    Is16BitsUnaligned, Is32BitsUnaligned, Is64BitsUnaligned,
+    Is128BitsUnaligned, Is256BitsUnaligned, Is512BitsUnaligned,
+    Is16CellUnaligned, Is32CellUnaligned, Is64CellUnaligned,
+    Is128CellUnaligned, Is256CellUnaligned,
 };
 
 use crate::tokens::x86::SseToken;
@@ -37,10 +40,10 @@ use crate::tokens::x86::SseToken;
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load1_ps)
 #[inline(always)]
-pub fn _mm_load1_ps(_token: SseToken, mem_addr: &f32) -> __m128 {
+pub fn _mm_load1_ps(_token: SseToken, mem_addr: & f32) -> __m128 {
     #[inline]
     #[target_feature(enable = "sse")]
-    unsafe fn inner(mem_addr: &f32) -> __m128 {
+    unsafe fn inner(mem_addr: & f32) -> __m128 {
         safe_unaligned_simd::x86_64::_mm_load1_ps(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -51,10 +54,10 @@ pub fn _mm_load1_ps(_token: SseToken, mem_addr: &f32) -> __m128 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load_ps1)
 #[inline(always)]
-pub fn _mm_load_ps1(_token: SseToken, mem_addr: &f32) -> __m128 {
+pub fn _mm_load_ps1(_token: SseToken, mem_addr: & f32) -> __m128 {
     #[inline]
     #[target_feature(enable = "sse")]
-    unsafe fn inner(mem_addr: &f32) -> __m128 {
+    unsafe fn inner(mem_addr: & f32) -> __m128 {
         safe_unaligned_simd::x86_64::_mm_load_ps1(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -68,10 +71,10 @@ pub fn _mm_load_ps1(_token: SseToken, mem_addr: &f32) -> __m128 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load_ss)
 #[inline(always)]
-pub fn _mm_load_ss(_token: SseToken, mem_addr: &f32) -> __m128 {
+pub fn _mm_load_ss(_token: SseToken, mem_addr: & f32) -> __m128 {
     #[inline]
     #[target_feature(enable = "sse")]
-    unsafe fn inner(mem_addr: &f32) -> __m128 {
+    unsafe fn inner(mem_addr: & f32) -> __m128 {
         safe_unaligned_simd::x86_64::_mm_load_ss(mem_addr)
     }
     // SAFETY: Token proves the target features are available

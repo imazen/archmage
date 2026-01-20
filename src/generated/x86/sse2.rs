@@ -9,6 +9,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
 
+
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -16,15 +17,17 @@ use core::arch::x86_64::*;
 
 #[cfg(target_arch = "x86")]
 use safe_unaligned_simd::x86::{
-    Is16BitsUnaligned, Is16CellUnaligned, Is32BitsUnaligned, Is32CellUnaligned, Is64BitsUnaligned,
-    Is64CellUnaligned, Is128BitsUnaligned, Is128CellUnaligned, Is256BitsUnaligned,
-    Is256CellUnaligned, Is512BitsUnaligned,
+    Is16BitsUnaligned, Is32BitsUnaligned, Is64BitsUnaligned,
+    Is128BitsUnaligned, Is256BitsUnaligned, Is512BitsUnaligned,
+    Is16CellUnaligned, Is32CellUnaligned, Is64CellUnaligned,
+    Is128CellUnaligned, Is256CellUnaligned,
 };
 #[cfg(target_arch = "x86_64")]
 use safe_unaligned_simd::x86_64::{
-    Is16BitsUnaligned, Is16CellUnaligned, Is32BitsUnaligned, Is32CellUnaligned, Is64BitsUnaligned,
-    Is64CellUnaligned, Is128BitsUnaligned, Is128CellUnaligned, Is256BitsUnaligned,
-    Is256CellUnaligned, Is512BitsUnaligned,
+    Is16BitsUnaligned, Is32BitsUnaligned, Is64BitsUnaligned,
+    Is128BitsUnaligned, Is256BitsUnaligned, Is512BitsUnaligned,
+    Is16CellUnaligned, Is32CellUnaligned, Is64CellUnaligned,
+    Is128CellUnaligned, Is256CellUnaligned,
 };
 
 use crate::tokens::x86::Sse2Token;
@@ -34,10 +37,10 @@ use crate::tokens::x86::Sse2Token;
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load_pd1)
 #[inline(always)]
-pub fn _mm_load_pd1(_token: Sse2Token, mem_addr: &f64) -> __m128d {
+pub fn _mm_load_pd1(_token: Sse2Token, mem_addr: & f64) -> __m128d {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner(mem_addr: &f64) -> __m128d {
+    unsafe fn inner(mem_addr: & f64) -> __m128d {
         safe_unaligned_simd::x86_64::_mm_load_pd1(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -49,10 +52,10 @@ pub fn _mm_load_pd1(_token: Sse2Token, mem_addr: &f64) -> __m128d {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load_sd)
 #[inline(always)]
-pub fn _mm_load_sd(_token: Sse2Token, mem_addr: &f64) -> __m128d {
+pub fn _mm_load_sd(_token: Sse2Token, mem_addr: & f64) -> __m128d {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner(mem_addr: &f64) -> __m128d {
+    unsafe fn inner(mem_addr: & f64) -> __m128d {
         safe_unaligned_simd::x86_64::_mm_load_sd(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -64,10 +67,10 @@ pub fn _mm_load_sd(_token: Sse2Token, mem_addr: &f64) -> __m128d {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load1_pd)
 #[inline(always)]
-pub fn _mm_load1_pd(_token: Sse2Token, mem_addr: &f64) -> __m128d {
+pub fn _mm_load1_pd(_token: Sse2Token, mem_addr: & f64) -> __m128d {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner(mem_addr: &f64) -> __m128d {
+    unsafe fn inner(mem_addr: & f64) -> __m128d {
         safe_unaligned_simd::x86_64::_mm_load1_pd(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -80,10 +83,10 @@ pub fn _mm_load1_pd(_token: Sse2Token, mem_addr: &f64) -> __m128d {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_loadh_pd)
 #[inline(always)]
-pub fn _mm_loadh_pd(_token: Sse2Token, a: __m128d, mem_addr: &f64) -> __m128d {
+pub fn _mm_loadh_pd(_token: Sse2Token, a: __m128d, mem_addr: & f64) -> __m128d {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner(a: __m128d, mem_addr: &f64) -> __m128d {
+    unsafe fn inner(a: __m128d, mem_addr: & f64) -> __m128d {
         safe_unaligned_simd::x86_64::_mm_loadh_pd(a, mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -94,10 +97,10 @@ pub fn _mm_loadh_pd(_token: Sse2Token, a: __m128d, mem_addr: &f64) -> __m128d {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_loadl_epi64)
 #[inline(always)]
-pub fn _mm_loadl_epi64<T: Is128BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -> __m128i {
+pub fn _mm_loadl_epi64<T: Is128BitsUnaligned>(_token: Sse2Token, mem_addr: & T) -> __m128i {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner<T: Is128BitsUnaligned>(mem_addr: &T) -> __m128i {
+    unsafe fn inner<T: Is128BitsUnaligned>(mem_addr: & T) -> __m128i {
         safe_unaligned_simd::x86_64::_mm_loadl_epi64::<T>(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -110,10 +113,10 @@ pub fn _mm_loadl_epi64<T: Is128BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_loadl_pd)
 #[inline(always)]
-pub fn _mm_loadl_pd(_token: Sse2Token, a: __m128d, mem_addr: &f64) -> __m128d {
+pub fn _mm_loadl_pd(_token: Sse2Token, a: __m128d, mem_addr: & f64) -> __m128d {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner(a: __m128d, mem_addr: &f64) -> __m128d {
+    unsafe fn inner(a: __m128d, mem_addr: & f64) -> __m128d {
         safe_unaligned_simd::x86_64::_mm_loadl_pd(a, mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -139,10 +142,10 @@ pub fn _mm_loadu_pd(_token: Sse2Token, mem_addr: &[f64; 2]) -> __m128d {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_loadu_si128)
 #[inline(always)]
-pub fn _mm_loadu_si128<T: Is128BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -> __m128i {
+pub fn _mm_loadu_si128<T: Is128BitsUnaligned>(_token: Sse2Token, mem_addr: & T) -> __m128i {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner<T: Is128BitsUnaligned>(mem_addr: &T) -> __m128i {
+    unsafe fn inner<T: Is128BitsUnaligned>(mem_addr: & T) -> __m128i {
         safe_unaligned_simd::x86_64::_mm_loadu_si128::<T>(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -153,10 +156,10 @@ pub fn _mm_loadu_si128<T: Is128BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_loadu_si16)
 #[inline(always)]
-pub fn _mm_loadu_si16<T: Is16BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -> __m128i {
+pub fn _mm_loadu_si16<T: Is16BitsUnaligned>(_token: Sse2Token, mem_addr: & T) -> __m128i {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner<T: Is16BitsUnaligned>(mem_addr: &T) -> __m128i {
+    unsafe fn inner<T: Is16BitsUnaligned>(mem_addr: & T) -> __m128i {
         safe_unaligned_simd::x86_64::_mm_loadu_si16::<T>(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -167,10 +170,10 @@ pub fn _mm_loadu_si16<T: Is16BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -> 
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_loadu_si32)
 #[inline(always)]
-pub fn _mm_loadu_si32<T: Is32BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -> __m128i {
+pub fn _mm_loadu_si32<T: Is32BitsUnaligned>(_token: Sse2Token, mem_addr: & T) -> __m128i {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner<T: Is32BitsUnaligned>(mem_addr: &T) -> __m128i {
+    unsafe fn inner<T: Is32BitsUnaligned>(mem_addr: & T) -> __m128i {
         safe_unaligned_simd::x86_64::_mm_loadu_si32::<T>(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -181,10 +184,10 @@ pub fn _mm_loadu_si32<T: Is32BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -> 
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_loadu_si64)
 #[inline(always)]
-pub fn _mm_loadu_si64<T: Is64BitsUnaligned>(_token: Sse2Token, mem_addr: &T) -> __m128i {
+pub fn _mm_loadu_si64<T: Is64BitsUnaligned>(_token: Sse2Token, mem_addr: & T) -> __m128i {
     #[inline]
     #[target_feature(enable = "sse2")]
-    unsafe fn inner<T: Is64BitsUnaligned>(mem_addr: &T) -> __m128i {
+    unsafe fn inner<T: Is64BitsUnaligned>(mem_addr: & T) -> __m128i {
         safe_unaligned_simd::x86_64::_mm_loadu_si64::<T>(mem_addr)
     }
     // SAFETY: Token proves the target features are available

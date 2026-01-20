@@ -9,6 +9,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
 
+
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -16,15 +17,17 @@ use core::arch::x86_64::*;
 
 #[cfg(target_arch = "x86")]
 use safe_unaligned_simd::x86::{
-    Is16BitsUnaligned, Is16CellUnaligned, Is32BitsUnaligned, Is32CellUnaligned, Is64BitsUnaligned,
-    Is64CellUnaligned, Is128BitsUnaligned, Is128CellUnaligned, Is256BitsUnaligned,
-    Is256CellUnaligned, Is512BitsUnaligned,
+    Is16BitsUnaligned, Is32BitsUnaligned, Is64BitsUnaligned,
+    Is128BitsUnaligned, Is256BitsUnaligned, Is512BitsUnaligned,
+    Is16CellUnaligned, Is32CellUnaligned, Is64CellUnaligned,
+    Is128CellUnaligned, Is256CellUnaligned,
 };
 #[cfg(target_arch = "x86_64")]
 use safe_unaligned_simd::x86_64::{
-    Is16BitsUnaligned, Is16CellUnaligned, Is32BitsUnaligned, Is32CellUnaligned, Is64BitsUnaligned,
-    Is64CellUnaligned, Is128BitsUnaligned, Is128CellUnaligned, Is256BitsUnaligned,
-    Is256CellUnaligned, Is512BitsUnaligned,
+    Is16BitsUnaligned, Is32BitsUnaligned, Is64BitsUnaligned,
+    Is128BitsUnaligned, Is256BitsUnaligned, Is512BitsUnaligned,
+    Is16CellUnaligned, Is32CellUnaligned, Is64CellUnaligned,
+    Is128CellUnaligned, Is256CellUnaligned,
 };
 
 use crate::tokens::x86::AvxToken;
@@ -34,10 +37,10 @@ use crate::tokens::x86::AvxToken;
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_broadcast_pd)
 #[inline(always)]
-pub fn _mm256_broadcast_pd(_token: AvxToken, mem_addr: &__m128d) -> __m256d {
+pub fn _mm256_broadcast_pd(_token: AvxToken, mem_addr: & __m128d) -> __m256d {
     #[inline]
     #[target_feature(enable = "avx")]
-    unsafe fn inner(mem_addr: &__m128d) -> __m256d {
+    unsafe fn inner(mem_addr: & __m128d) -> __m256d {
         safe_unaligned_simd::x86_64::_mm256_broadcast_pd(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -49,10 +52,10 @@ pub fn _mm256_broadcast_pd(_token: AvxToken, mem_addr: &__m128d) -> __m256d {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_broadcast_ps)
 #[inline(always)]
-pub fn _mm256_broadcast_ps(_token: AvxToken, mem_addr: &__m128) -> __m256 {
+pub fn _mm256_broadcast_ps(_token: AvxToken, mem_addr: & __m128) -> __m256 {
     #[inline]
     #[target_feature(enable = "avx")]
-    unsafe fn inner(mem_addr: &__m128) -> __m256 {
+    unsafe fn inner(mem_addr: & __m128) -> __m256 {
         safe_unaligned_simd::x86_64::_mm256_broadcast_ps(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -64,10 +67,10 @@ pub fn _mm256_broadcast_ps(_token: AvxToken, mem_addr: &__m128) -> __m256 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_broadcast_sd)
 #[inline(always)]
-pub fn _mm256_broadcast_sd(_token: AvxToken, mem_addr: &f64) -> __m256d {
+pub fn _mm256_broadcast_sd(_token: AvxToken, mem_addr: & f64) -> __m256d {
     #[inline]
     #[target_feature(enable = "avx")]
-    unsafe fn inner(mem_addr: &f64) -> __m256d {
+    unsafe fn inner(mem_addr: & f64) -> __m256d {
         safe_unaligned_simd::x86_64::_mm256_broadcast_sd(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -79,10 +82,10 @@ pub fn _mm256_broadcast_sd(_token: AvxToken, mem_addr: &f64) -> __m256d {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_broadcast_ss)
 #[inline(always)]
-pub fn _mm_broadcast_ss(_token: AvxToken, mem_addr: &f32) -> __m128 {
+pub fn _mm_broadcast_ss(_token: AvxToken, mem_addr: & f32) -> __m128 {
     #[inline]
     #[target_feature(enable = "avx")]
-    unsafe fn inner(mem_addr: &f32) -> __m128 {
+    unsafe fn inner(mem_addr: & f32) -> __m128 {
         safe_unaligned_simd::x86_64::_mm_broadcast_ss(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -94,10 +97,10 @@ pub fn _mm_broadcast_ss(_token: AvxToken, mem_addr: &f32) -> __m128 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_broadcast_ss)
 #[inline(always)]
-pub fn _mm256_broadcast_ss(_token: AvxToken, mem_addr: &f32) -> __m256 {
+pub fn _mm256_broadcast_ss(_token: AvxToken, mem_addr: & f32) -> __m256 {
     #[inline]
     #[target_feature(enable = "avx")]
-    unsafe fn inner(mem_addr: &f32) -> __m256 {
+    unsafe fn inner(mem_addr: & f32) -> __m256 {
         safe_unaligned_simd::x86_64::_mm256_broadcast_ss(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -138,10 +141,10 @@ pub fn _mm256_loadu_ps(_token: AvxToken, mem_addr: &[f32; 8]) -> __m256 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_loadu_si256)
 #[inline(always)]
-pub fn _mm256_loadu_si256<T: Is256BitsUnaligned>(_token: AvxToken, mem_addr: &T) -> __m256i {
+pub fn _mm256_loadu_si256<T: Is256BitsUnaligned>(_token: AvxToken, mem_addr: & T) -> __m256i {
     #[inline]
     #[target_feature(enable = "avx")]
-    unsafe fn inner<T: Is256BitsUnaligned>(mem_addr: &T) -> __m256i {
+    unsafe fn inner<T: Is256BitsUnaligned>(mem_addr: & T) -> __m256i {
         safe_unaligned_simd::x86_64::_mm256_loadu_si256::<T>(mem_addr)
     }
     // SAFETY: Token proves the target features are available
@@ -185,14 +188,10 @@ pub fn _mm256_loadu2_m128d(_token: AvxToken, hiaddr: &[f64; 2], loaddr: &[f64; 2
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_loadu2_m128i)
 #[inline(always)]
-pub fn _mm256_loadu2_m128i<T: Is128BitsUnaligned>(
-    _token: AvxToken,
-    hiaddr: &T,
-    loaddr: &T,
-) -> __m256i {
+pub fn _mm256_loadu2_m128i<T: Is128BitsUnaligned>(_token: AvxToken, hiaddr: & T, loaddr: & T) -> __m256i {
     #[inline]
     #[target_feature(enable = "avx")]
-    unsafe fn inner<T: Is128BitsUnaligned>(hiaddr: &T, loaddr: &T) -> __m256i {
+    unsafe fn inner<T: Is128BitsUnaligned>(hiaddr: & T, loaddr: & T) -> __m256i {
         safe_unaligned_simd::x86_64::_mm256_loadu2_m128i::<T>(hiaddr, loaddr)
     }
     // SAFETY: Token proves the target features are available
@@ -250,12 +249,7 @@ pub fn _mm256_storeu_si256<T: Is256BitsUnaligned>(_token: AvxToken, mem_addr: &m
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_storeu2_m128)
 #[inline(always)]
-pub fn _mm256_storeu2_m128(
-    _token: AvxToken,
-    hiaddr: &mut [f32; 4],
-    loaddr: &mut [f32; 4],
-    a: __m256,
-) {
+pub fn _mm256_storeu2_m128(_token: AvxToken, hiaddr: &mut [f32; 4], loaddr: &mut [f32; 4], a: __m256) {
     #[inline]
     #[target_feature(enable = "avx")]
     unsafe fn inner(hiaddr: &mut [f32; 4], loaddr: &mut [f32; 4], a: __m256) {
@@ -271,12 +265,7 @@ pub fn _mm256_storeu2_m128(
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_storeu2_m128d)
 #[inline(always)]
-pub fn _mm256_storeu2_m128d(
-    _token: AvxToken,
-    hiaddr: &mut [f64; 2],
-    loaddr: &mut [f64; 2],
-    a: __m256d,
-) {
+pub fn _mm256_storeu2_m128d(_token: AvxToken, hiaddr: &mut [f64; 2], loaddr: &mut [f64; 2], a: __m256d) {
     #[inline]
     #[target_feature(enable = "avx")]
     unsafe fn inner(hiaddr: &mut [f64; 2], loaddr: &mut [f64; 2], a: __m256d) {
@@ -291,12 +280,7 @@ pub fn _mm256_storeu2_m128d(
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_storeu2_m128i)
 #[inline(always)]
-pub fn _mm256_storeu2_m128i<T: Is128BitsUnaligned>(
-    _token: AvxToken,
-    hiaddr: &mut T,
-    loaddr: &mut T,
-    a: __m256i,
-) {
+pub fn _mm256_storeu2_m128i<T: Is128BitsUnaligned>(_token: AvxToken, hiaddr: &mut T, loaddr: &mut T, a: __m256i) {
     #[inline]
     #[target_feature(enable = "avx")]
     unsafe fn inner<T: Is128BitsUnaligned>(hiaddr: &mut T, loaddr: &mut T, a: __m256i) {

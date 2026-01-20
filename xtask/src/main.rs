@@ -18,35 +18,54 @@ use walkdir::WalkDir;
 /// Version of safe_unaligned_simd we're generating from
 const SAFE_SIMD_VERSION: &str = "0.2.3";
 
+/// Architecture for code generation
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Arch {
+    X86,
+    Aarch64,
+}
+
 /// Mapping from target_feature strings to archmage token types
-fn feature_to_token(features: &str) -> Option<(&'static str, &'static str)> {
-    match features {
-        "sse" => Some(("SseToken", "sse")),
-        "sse2" => Some(("Sse2Token", "sse2")),
-        "avx" => Some(("AvxToken", "avx")),
-        "avx512f" => Some(("Avx512fToken", "avx512f")),
-        "avx512f,avx512vl" => Some(("Avx512fVlToken", "avx512f,avx512vl")),
-        "avx512bw" => Some(("Avx512bwToken", "avx512bw")),
-        "avx512bw,avx512vl" => Some(("Avx512bwVlToken", "avx512bw,avx512vl")),
-        "avx512vbmi2" => Some(("Avx512Vbmi2Token", "avx512vbmi2")),
-        "avx512vbmi2,avx512vl" => Some(("Avx512Vbmi2VlToken", "avx512vbmi2,avx512vl")),
-        _ => None,
+fn feature_to_token(features: &str, arch: Arch) -> Option<(&'static str, &'static str)> {
+    match arch {
+        Arch::X86 => match features {
+            "sse" => Some(("SseToken", "sse")),
+            "sse2" => Some(("Sse2Token", "sse2")),
+            "avx" => Some(("AvxToken", "avx")),
+            "avx512f" => Some(("Avx512fToken", "avx512f")),
+            "avx512f,avx512vl" => Some(("Avx512fVlToken", "avx512f,avx512vl")),
+            "avx512bw" => Some(("Avx512bwToken", "avx512bw")),
+            "avx512bw,avx512vl" => Some(("Avx512bwVlToken", "avx512bw,avx512vl")),
+            "avx512vbmi2" => Some(("Avx512Vbmi2Token", "avx512vbmi2")),
+            "avx512vbmi2,avx512vl" => Some(("Avx512Vbmi2VlToken", "avx512vbmi2,avx512vl")),
+            _ => None,
+        },
+        Arch::Aarch64 => match features {
+            "neon" => Some(("NeonToken", "neon")),
+            _ => None,
+        },
     }
 }
 
 /// Module name for a given feature set
-fn feature_to_module(features: &str) -> &'static str {
-    match features {
-        "sse" => "sse",
-        "sse2" => "sse2",
-        "avx" => "avx",
-        "avx512f" => "avx512f",
-        "avx512f,avx512vl" => "avx512f_vl",
-        "avx512bw" => "avx512bw",
-        "avx512bw,avx512vl" => "avx512bw_vl",
-        "avx512vbmi2" => "avx512vbmi2",
-        "avx512vbmi2,avx512vl" => "avx512vbmi2_vl",
-        _ => "unknown",
+fn feature_to_module(features: &str, arch: Arch) -> &'static str {
+    match arch {
+        Arch::X86 => match features {
+            "sse" => "sse",
+            "sse2" => "sse2",
+            "avx" => "avx",
+            "avx512f" => "avx512f",
+            "avx512f,avx512vl" => "avx512f_vl",
+            "avx512bw" => "avx512bw",
+            "avx512bw,avx512vl" => "avx512bw_vl",
+            "avx512vbmi2" => "avx512vbmi2",
+            "avx512vbmi2,avx512vl" => "avx512vbmi2_vl",
+            _ => "unknown",
+        },
+        Arch::Aarch64 => match features {
+            "neon" => "neon",
+            _ => "unknown",
+        },
     }
 }
 
@@ -195,16 +214,23 @@ fn find_safe_simd_path() -> Result<PathBuf> {
 fn type_to_string(ty: &Type) -> String {
     use quote::ToTokens;
     let s = ty.to_token_stream().to_string();
-    // Normalize whitespace but keep `& mut` as `&mut`
+    // Normalize whitespace to match rustfmt style
     s.replace(" ,", ",")
         .replace("< ", "<")
         .replace(" >", ">")
         .replace("& mut ", "&mut ")
+        .replace("& [", "&[")
+        .replace(" ; ", "; ")
         .replace(": :", "::")
 }
 
 /// Generate a single wrapper function as a formatted string
-fn generate_wrapper_string(func: &ParsedFunction, token_name: &str, features: &str) -> String {
+fn generate_wrapper_string(
+    func: &ParsedFunction,
+    token_name: &str,
+    features: &str,
+    arch: Arch,
+) -> String {
     let mut out = String::new();
 
     // Doc comment
@@ -304,7 +330,11 @@ fn generate_wrapper_string(func: &ParsedFunction, token_name: &str, features: &s
     writeln!(out, " {{").unwrap();
 
     // Call to safe_unaligned_simd
-    write!(out, "        safe_unaligned_simd::x86_64::{}", func.name).unwrap();
+    let simd_module = match arch {
+        Arch::X86 => "x86_64",
+        Arch::Aarch64 => "aarch64",
+    };
+    write!(out, "        safe_unaligned_simd::{}::{}", simd_module, func.name).unwrap();
 
     // Turbofish for type params
     let type_params: Vec<String> = func
@@ -346,7 +376,12 @@ fn generate_wrapper_string(func: &ParsedFunction, token_name: &str, features: &s
 }
 
 /// Generate a module for a specific feature set
-fn generate_module(token_name: &str, features: &str, functions: &[ParsedFunction]) -> String {
+fn generate_module(
+    token_name: &str,
+    features: &str,
+    functions: &[ParsedFunction],
+    arch: Arch,
+) -> String {
     let mut out = String::new();
 
     // Header
@@ -362,7 +397,20 @@ fn generate_module(token_name: &str, features: &str, functions: &[ParsedFunction
 #![allow(unused_imports)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
+"#,
+        features,
+        functions.len(),
+        token_name,
+        SAFE_SIMD_VERSION,
+    )
+    .unwrap();
 
+    // Architecture-specific imports
+    match arch {
+        Arch::X86 => {
+            writeln!(
+                out,
+                r#"
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -383,20 +431,27 @@ use safe_unaligned_simd::x86_64::{{
     Is128CellUnaligned, Is256CellUnaligned,
 }};
 
-use crate::tokens::x86::{};
-"#,
-        features,
-        functions.len(),
-        token_name,
-        SAFE_SIMD_VERSION,
-        token_name
-    )
-    .unwrap();
+use crate::tokens::x86::{};"#,
+                token_name
+            )
+            .unwrap();
+        }
+        Arch::Aarch64 => {
+            writeln!(
+                out,
+                r#"
+use core::arch::aarch64::*;
+use crate::tokens::arm::{};"#,
+                token_name
+            )
+            .unwrap();
+        }
+    }
 
     // Generate each function
     for func in functions {
         writeln!(out).unwrap();
-        out.push_str(&generate_wrapper_string(func, token_name, features));
+        out.push_str(&generate_wrapper_string(func, token_name, features, arch));
     }
 
     out
@@ -428,9 +483,7 @@ fn generate_mod_rs(modules: &[(&str, &str, usize)]) -> String {
     code.push_str(
         r#"
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod x86;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub use x86::*;
+pub mod x86;
 "#,
     );
 
@@ -529,11 +582,11 @@ fn generate_wrappers() -> Result<()> {
 
     // Generate each module
     for (feature, functions) in &by_feature {
-        if let Some((token_name, features)) = feature_to_token(feature) {
-            let module_name = feature_to_module(feature);
+        if let Some((token_name, features)) = feature_to_token(feature, Arch::X86) {
+            let module_name = feature_to_module(feature, Arch::X86);
             println!("\nGenerating {}...", module_name);
 
-            let code = generate_module(token_name, features, functions);
+            let code = generate_module(token_name, features, functions, Arch::X86);
             let out_path = out_dir.join(format!("{}.rs", module_name));
             fs::write(&out_path, &code)?;
             println!("  Wrote {} ({} bytes)", out_path.display(), code.len());

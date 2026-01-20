@@ -81,6 +81,24 @@
 //!
 //! The wrappers in this module are auto-generated from `safe_unaligned_simd`.
 //! See `xtask/src/main.rs` for the generator.
+//!
+//! ## AArch64 / NEON Support
+//!
+//! AArch64 wrappers are not yet generated. Since NEON is baseline on AArch64 (always
+//! available), you can use `safe_unaligned_simd::aarch64::*` functions directly inside
+//! a `#[simd_fn]` function with a `NeonToken`:
+//!
+//! ```rust,ignore
+//! use archmage::{NeonToken, SimdToken, simd_fn};
+//!
+//! #[simd_fn]
+//! fn process(token: NeonToken, data: &[f32; 4]) -> float32x4_t {
+//!     safe_unaligned_simd::aarch64::vld1q_f32(data)
+//! }
+//! ```
+//!
+//! The generator cannot parse the macro-based aarch64 functions in `safe_unaligned_simd`.
+//! Token-gated wrappers may be added manually in the future if needed.
 
 // Re-export auto-generated wrappers
 #[path = "generated/mod.rs"]
