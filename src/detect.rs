@@ -435,6 +435,20 @@ macro_rules! is_aarch64_feature_available {
     ("sve2") => {{
         $crate::__impl_aarch64_feature_check!("sve2")
     }};
+    // Crypto features (stable intrinsics)
+    ("aes") => {{
+        $crate::__impl_aarch64_feature_check!("aes")
+    }};
+    ("sha2") => {{
+        $crate::__impl_aarch64_feature_check!("sha2")
+    }};
+    ("sha3") => {{
+        $crate::__impl_aarch64_feature_check!("sha3")
+    }};
+    ("crc") => {{
+        // Note: std uses "crc" but target_feature uses "crc"
+        $crate::__impl_aarch64_feature_check!("crc")
+    }};
     // Fallback for other features - runtime only
     ($feature:tt) => {{
         $crate::__impl_aarch64_runtime_only_check!($feature)
@@ -464,6 +478,46 @@ macro_rules! __impl_aarch64_feature_check {
         #[cfg(not(target_feature = "sve2"))]
         {
             $crate::__impl_aarch64_runtime_only_check!("sve2")
+        }
+    }};
+    ("aes") => {{
+        #[cfg(target_feature = "aes")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "aes"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("aes")
+        }
+    }};
+    ("sha2") => {{
+        #[cfg(target_feature = "sha2")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sha2"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("sha2")
+        }
+    }};
+    ("sha3") => {{
+        #[cfg(target_feature = "sha3")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sha3"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("sha3")
+        }
+    }};
+    ("crc") => {{
+        #[cfg(target_feature = "crc")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "crc"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("crc")
         }
     }};
 }
