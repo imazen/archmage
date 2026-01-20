@@ -5,14 +5,14 @@
 #[cfg(target_arch = "x86_64")]
 use crate::tokens::x86::*;
 
-#[cfg(all(feature = "wide", target_arch = "x86_64"))]
+#[cfg(all(feature = "__wide", target_arch = "x86_64"))]
 use wide::f32x8;
 
 // ============================================================================
 // Token-gated wide::f32x8 operations
 // ============================================================================
 
-#[cfg(all(feature = "wide", target_arch = "x86_64"))]
+#[cfg(all(feature = "__wide", target_arch = "x86_64"))]
 impl Avx2Token {
     /// Load wide::f32x8 from slice - token proves AVX2 generates SIMD
     #[inline(always)]
@@ -105,7 +105,7 @@ impl Avx2Token {
     }
 }
 
-#[cfg(all(feature = "wide", target_arch = "x86_64"))]
+#[cfg(all(feature = "__wide", target_arch = "x86_64"))]
 impl Avx2FmaToken {
     /// Fused multiply-add on wide types: a * b + c
     ///
@@ -139,7 +139,7 @@ impl Avx2FmaToken {
 // Tests
 // ============================================================================
 
-#[cfg(all(test, feature = "wide", target_arch = "x86_64"))]
+#[cfg(all(test, feature = "__wide", target_arch = "x86_64"))]
 mod tests {
     use super::*;
     use crate::tokens::SimdToken;

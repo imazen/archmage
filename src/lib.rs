@@ -70,12 +70,12 @@ pub mod detect;
 pub mod tokens;
 
 // Integration layers
-#[cfg(any(feature = "wide", feature = "safe_unaligned_simd"))]
+#[cfg(any(feature = "__wide", feature = "safe_unaligned_simd"))]
 pub mod integrate;
 
-// Composite operations (requires "composite" feature)
-#[cfg(feature = "composite")]
-#[cfg_attr(docsrs, doc(cfg(feature = "composite")))]
+// Composite operations (requires "__composite" feature, unstable API)
+#[cfg(feature = "__composite")]
+#[cfg_attr(docsrs, doc(cfg(feature = "__composite")))]
 pub mod composite;
 
 // Safe unaligned memory operations (requires "safe_unaligned_simd" feature)

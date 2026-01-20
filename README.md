@@ -120,7 +120,7 @@ if let Some(token) = Avx2Token::try_new() {
 }
 ```
 
-### 3. Composite Operations (feature = "composite")
+### 3. Composite Operations (feature = "__composite", unstable)
 
 High-level SIMD algorithms built on tokens:
 
@@ -193,10 +193,14 @@ archmage = "0.1"
 | `std` (default) | Enable std library support (required for `f32::sqrt` in norm functions) |
 | `macros` (default) | Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`) |
 | `safe_unaligned_simd` | Safe load/store via `safe_unaligned_simd` crate (exposed as `mem` module) |
-| `composite` | Higher-level ops (transpose, dot product) - implies `safe_unaligned_simd` |
-| `wide` | Integration with the `wide` crate |
-| `full` | Enable all optional features |
-| `nightly-inline-always` | Use `#[inline(always)]` with `#[target_feature]` (requires nightly) |
+
+**Unstable features** (API may change, prefixed with `__`):
+
+| Feature | Description |
+|---------|-------------|
+| `__composite` | Higher-level ops (transpose, dot product) - implies `safe_unaligned_simd` |
+| `__wide` | Integration with the `wide` crate |
+| `__nightly-inline-always` | Use `#[inline(always)]` with `#[target_feature]` (requires nightly) |
 
 ## License
 

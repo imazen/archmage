@@ -1037,10 +1037,10 @@ impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
 
 // ============================================================================
 // SIMD Operation Trait Implementations (simd_ops module)
-// These require the "composite" feature since they delegate to composite ops.
+// These require the "__composite" feature since they delegate to composite ops.
 // ============================================================================
 
-#[cfg(feature = "composite")]
+#[cfg(feature = "__composite")]
 mod simd_ops_impls {
     use super::*;
     use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
@@ -1226,7 +1226,7 @@ impl HorizontalOpsOrScalar for Sse42Token {}
 impl HorizontalOpsOrScalar for X64V2Token {}
 
 // Tokens WITH 256-bit SIMD: use scalar defaults when composite is disabled
-#[cfg(not(feature = "composite"))]
+#[cfg(not(feature = "__composite"))]
 mod scalar_fallbacks_no_composite {
     use super::*;
     // When composite feature is disabled, all tokens use scalar defaults
@@ -1273,7 +1273,7 @@ impl DotProductOrScalar for AvxToken {}
 impl HorizontalOpsOrScalar for AvxToken {}
 
 // Tokens WITH 256-bit SIMD override with optimized code (when composite feature enabled)
-#[cfg(feature = "composite")]
+#[cfg(feature = "__composite")]
 mod simd_or_scalar_impls {
     use super::*;
     use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
@@ -1777,7 +1777,7 @@ mod tests {
     // ========================================================================
     // Operation Trait Tests (require composite feature)
     // ========================================================================
-    #[cfg(feature = "composite")]
+    #[cfg(feature = "__composite")]
     mod simd_ops_tests {
         use super::*;
         use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};

@@ -16,17 +16,17 @@ categories = ["development-tools", "hardware-support", "no-std"]
 default = ["std", "macros"]
 std = []
 macros = ["dep:archmage-macros"]
-# Optional modules
-composite = ["safe_unaligned_simd"]    # Transpose, dot product, horizontal ops
-# Integration features
-wide = ["dep:wide"]
+# Safe load/store wrappers (stable)
 safe_unaligned_simd = ["dep:safe_unaligned_simd"]
-# All optional modules
-full = ["composite", "wide", "safe_unaligned_simd"]
+
+# Unstable features (API may change, prefixed with __)
+# Transpose, dot product, horizontal ops - implies safe_unaligned_simd
+__composite = ["safe_unaligned_simd"]
+# Integration with wide crate
+__wide = ["dep:wide"]
 # Nightly-only: use #[inline(always)] with #[target_feature] in generated wrappers.
 # Requires #![feature(target_feature_inline_always)] in the crate using archmage.
-# Can reduce register spills in hot SIMD code by 10-20%.
-nightly-inline-always = []
+__nightly-inline-always = []
 
 [dependencies]
 # Proc-macro crate for #[arcane] attribute
