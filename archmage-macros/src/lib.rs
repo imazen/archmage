@@ -60,11 +60,11 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
 
         // x86_64 profile tokens
         "X64V2Token" => Some(&["sse4.2", "popcnt"]),
-        "X64V3Token" => Some(&["avx2", "fma", "bmi1", "bmi2"]),
-        "X64V4Token" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]),
+        "X64V3Token" | "Desktop64" => Some(&["avx2", "fma", "bmi1", "bmi2"]),
+        "X64V4Token" | "Server64" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]),
 
         // ARM tokens
-        "NeonToken" => Some(&["neon"]),
+        "NeonToken" | "Arm64" => Some(&["neon"]),
         "SveToken" => Some(&["sve"]),
         "Sve2Token" => Some(&["sve2"]),
 

@@ -4,7 +4,7 @@
 
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
-    use archmage::{Avx2FmaToken, Avx2Token, HasAvx, HasAvx2, HasFma, SimdToken, X64V3Token, simd_fn};
+    use archmage::{Avx2FmaToken, Avx2Token, HasAvx, HasAvx2, HasFma, SimdToken, X64V3Token, Desktop64, Server64, simd_fn};
     use std::arch::x86_64::*;
 
     /// Basic test: simd_fn with Avx2Token
@@ -283,6 +283,98 @@ mod x86_tests {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = lower_bound_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
+
+    // =====================================================================
+    // Tests for friendly aliases (Desktop64, Server64)
+    // =====================================================================
+
+    /// Test Desktop64 alias with simd_fn macro
+    #[simd_fn]
+    fn desktop64_test(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+        // Use both AVX2 and FMA (Desktop64 = X64V3Token = AVX2+FMA+BMI2)
+        let result = _mm256_fmadd_ps(v, v, v); // v*v + v
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+        out
+    }
+
+    #[test]
+    fn test_simd_fn_desktop64_alias() {
+        if let Some(token) = Desktop64::try_new() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = desktop64_test(token, &input);
+            // v*v + v
+            let expected: [f32; 8] = input.map(|x| x * x + x);
+            assert_eq!(output, expected);
+        }
+    }
+
+    /// Test that Desktop64 is interchangeable with X64V3Token
+    #[test]
+    fn test_desktop64_is_x64v3() {
+        // Desktop64 is a type alias for X64V3Token, so they should be interchangeable
+        if let Some(token) = Desktop64::try_new() {
+            // Can pass Desktop64 to function expecting X64V3Token
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = profile_token_test(token, &input);
+            let expected: [f32; 8] = input.map(|x| 2.0 * x * x);
+            assert_eq!(output, expected);
+        }
+    }
+
+    /// Test that Desktop64 works with impl HasAvx2 bounds
+    #[test]
+    fn test_desktop64_with_impl_trait() {
+        if let Some(token) = Desktop64::try_new() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            // Desktop64 implements HasAvx2
+            let output = impl_trait_test(token, &input);
+            assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
+
+    /// Test Server64 alias (only runs on machines with AVX-512)
+    #[simd_fn]
+    fn server64_test(token: Server64, data: &[f32; 8]) -> [f32; 8] {
+        // Server64 = X64V4Token = AVX-512, but we'll just use AVX2 ops for simplicity
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+        let doubled = _mm256_add_ps(v, v);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+        out
+    }
+
+    #[test]
+    fn test_simd_fn_server64_alias() {
+        // This test only runs on machines with AVX-512
+        if let Some(token) = Server64::try_new() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = server64_test(token, &input);
+            assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
+
+    // =====================================================================
+    // Tests for summon() alias
+    // =====================================================================
+
+    /// Test that summon() works as an alias for try_new()
+    #[test]
+    fn test_summon_alias() {
+        // summon() should behave identically to try_new()
+        let via_try_new = Desktop64::try_new();
+        let via_summon = Desktop64::summon();
+
+        assert_eq!(via_try_new.is_some(), via_summon.is_some());
+
+        if let Some(token) = Desktop64::summon() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = desktop64_test(token, &input);
+            let expected: [f32; 8] = input.map(|x| x * x + x);
+            assert_eq!(output, expected);
         }
     }
 }

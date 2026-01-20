@@ -121,11 +121,13 @@ pub use tokens::x86::{
     Avx2FmaToken, Avx2Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken, Avx512bwToken, Avx512bwVlToken,
     Avx512fToken, Avx512fVlToken, AvxToken, FmaToken, Sse2Token, Sse41Token, Sse42Token, SseToken,
     X64V2Token, X64V3Token, X64V4Token,
+    // Friendly aliases
+    Desktop64, Server64,
 };
 
 // aarch64 tokens (when on ARM)
 #[cfg(target_arch = "aarch64")]
-pub use tokens::arm::{NeonToken, Sve2Token, SveToken};
+pub use tokens::arm::{NeonToken, Sve2Token, SveToken, Arm64};
 
 // wasm tokens (when on WASM)
 #[cfg(target_arch = "wasm32")]

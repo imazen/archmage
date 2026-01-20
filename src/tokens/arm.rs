@@ -233,6 +233,39 @@ impl Sve2Token {
 }
 
 // ============================================================================
+// Friendly Aliases
+// ============================================================================
+
+/// The baseline for AArch64 (NEON).
+///
+/// This is an alias for [`NeonToken`], covering all 64-bit ARM CPUs. NEON is
+/// always available on AArch64, making this the universal starting point for
+/// ARM code.
+///
+/// # Why Arm64?
+///
+/// - **Universal**: Every AArch64 CPU has NEON - it's the baseline
+/// - **128-bit vectors**: Like SSE2 on x86_64, NEON provides 128-bit SIMD
+/// - **FMA included**: ARM NEON includes fused multiply-add instructions
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use archmage::{Arm64, SimdToken, arcane};
+///
+/// #[arcane]
+/// fn process(token: Arm64, data: &mut [f32; 4]) {
+///     // NEON intrinsics safe here
+/// }
+///
+/// // Always succeeds on AArch64
+/// if let Some(token) = Arm64::try_new() {
+///     process(token, &mut data);
+/// }
+/// ```
+pub type Arm64 = NeonToken;
+
+// ============================================================================
 // Capability Marker Trait Implementations
 // ============================================================================
 

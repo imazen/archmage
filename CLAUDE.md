@@ -2,6 +2,18 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
+## CRITICAL: Documentation Examples
+
+**ALWAYS use `archmage::mem` for load/store in examples.** The entire point of this crate is to make SIMD safe. Never write examples with `unsafe { _mm256_loadu_ps(ptr) }` - that defeats the purpose.
+
+```rust
+// WRONG - bypasses the safety archmage provides
+let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+
+// CORRECT - use the safe mem wrappers
+let v = avx::_mm256_loadu_ps(token, data);
+```
+
 ## Quick Start
 
 ```bash
@@ -60,7 +72,7 @@ fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
 1. `inner()` has `#[target_feature]`, so intrinsics are safe inside
 2. Calling `inner()` is unsafe, but valid because:
    - The function requires a token parameter
-   - Tokens can only be created via `try_new()` which checks CPUID
+   - Tokens can only be created via `summon()` which checks CPUID
    - If you have a token, the CPU supports the features
 
 ## Generic Token Bounds
@@ -79,7 +91,35 @@ fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32
 }
 ```
 
-**Recommended starting point:** `X64V3Token` (AVX2 + FMA + BMI2, covers Haswell 2013+ and Zen 1+)
+**Recommended starting point:** `Desktop64` (alias for `X64V3Token`)
+
+## Friendly Aliases
+
+Use these intuitive names instead of memorizing microarchitecture levels:
+
+| Alias | Target | What it means |
+|-------|--------|---------------|
+| `Desktop64` | x86_64 desktops | AVX2 + FMA (Haswell 2013+, Zen 1+) |
+| `Server64` | x86_64 servers | + AVX-512 (Xeon 2017+, Zen 4+) |
+| `Arm64` | AArch64 | NEON (all 64-bit ARM) |
+
+**Why these names?**
+- `Desktop64` - Universal on modern desktops. Intel removed AVX-512 from consumer chips (12th-14th gen), so this is the safe choice.
+- `Server64` - AVX-512 is reliable on Xeon servers, Intel HEDT, and AMD Zen 4+.
+- `Arm64` - NEON is baseline on all AArch64, always available.
+
+```rust
+use archmage::{Desktop64, SimdToken, arcane};
+
+#[arcane]
+fn process(token: Desktop64, data: &mut [f32; 8]) {
+    // AVX2 + FMA intrinsics safe here
+}
+
+if let Some(token) = Desktop64::summon() {
+    process(token, &mut data);
+}
+```
 
 ## Directory Structure
 
@@ -111,18 +151,23 @@ xtask/
 
 ## Token Hierarchy
 
-**Profile Tokens (recommended):**
-- `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here**
-- `X64V4Token` - + AVX-512 (Skylake-X 2017+, Zen 4+)
+**Recommended (friendly aliases):**
+- `Desktop64` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here for x86**
+- `Server64` - + AVX-512 (Xeon 2017+, Zen 4+)
+- `Arm64` - NEON baseline **← Start here for ARM**
+
+**x86 Profile Tokens (same as aliases):**
+- `X64V3Token` = `Desktop64`
+- `X64V4Token` = `Server64`
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
 
-**Feature Tokens:**
+**x86 Feature Tokens:**
 - `Sse2Token` → `Sse41Token` → `Sse42Token` → `AvxToken` → `Avx2Token`
 - `FmaToken` (independent), `Avx2FmaToken` (combined)
 - `Avx512fToken`, `Avx512bwToken`, `Avx512Vbmi2Token` + VL variants
 
 **ARM:**
-- `NeonToken` (baseline), `SveToken`, `Sve2Token`
+- `NeonToken` = `Arm64` (baseline), `SveToken`, `Sve2Token`
 
 ## Marker Traits
 
@@ -143,9 +188,9 @@ fn requires_both<T: HasAvx2 + HasFma>(token: T) { ... }
 With `safe_unaligned_simd` feature, the `mem` module provides reference-based load/store:
 
 ```rust
-use archmage::mem::avx;
+use archmage::{Desktop64, SimdToken, mem::avx};
 
-if let Some(token) = X64V3Token::try_new() {
+if let Some(token) = Desktop64::summon() {
     let v = avx::_mm256_loadu_ps(token, &data);  // Safe! Reference, not pointer
     avx::_mm256_storeu_ps(token, &mut out, v);
 }

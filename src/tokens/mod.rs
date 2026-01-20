@@ -50,6 +50,25 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// ```
     fn try_new() -> Option<Self>;
 
+    /// Summon a token if the CPU supports this feature.
+    ///
+    /// This is a thematic alias for [`try_new()`](Self::try_new). Summoning may fail
+    /// if the required power (CPU features) is not available.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use archmage::{Desktop64, SimdToken};
+    ///
+    /// if let Some(token) = Desktop64::summon() {
+    ///     // The power is yours
+    /// }
+    /// ```
+    #[inline(always)]
+    fn summon() -> Option<Self> {
+        Self::try_new()
+    }
+
     /// Create a token without runtime checks.
     ///
     /// # Safety

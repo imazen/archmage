@@ -1036,6 +1036,71 @@ impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
 
 
 // ============================================================================
+// Friendly Aliases
+// ============================================================================
+
+/// The recommended baseline for desktop x86_64 (AVX2 + FMA + BMI2).
+///
+/// This is an alias for [`X64V3Token`], covering all Intel Haswell (2013+) and
+/// AMD Zen 1 (2017+) desktop CPUs. Use this as your starting point for desktop
+/// applications.
+///
+/// # Why Desktop64?
+///
+/// - **Universal on modern desktops**: Every x86_64 desktop/laptop CPU since 2013
+/// - **Best performance/compatibility tradeoff**: AVX2 gives 256-bit vectors, FMA
+///   enables fused multiply-add
+/// - **Excludes AVX-512**: Intel removed AVX-512 from consumer chips (12th-14th gen)
+///   due to hybrid P+E core architecture, making it unreliable for desktop targeting
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use archmage::{Desktop64, SimdToken, arcane};
+///
+/// #[arcane]
+/// fn process(token: Desktop64, data: &mut [f32; 8]) {
+///     // AVX2 + FMA intrinsics safe here
+/// }
+///
+/// if let Some(token) = Desktop64::try_new() {
+///     process(token, &mut data);
+/// }
+/// ```
+pub type Desktop64 = X64V3Token;
+
+/// Server/workstation baseline with AVX-512 (x86-64-v4).
+///
+/// This is an alias for [`X64V4Token`], covering Xeon servers (Skylake-SP 2017+),
+/// Intel HEDT workstations, and AMD Zen 4+ CPUs. Use this for server workloads
+/// or when you know AVX-512 is available.
+///
+/// # When to use Server64
+///
+/// - **Cloud servers**: AWS (Xeon, Graviton doesn't apply here), GCP, Azure Xeon instances
+/// - **Workstations**: Intel i9-X series, AMD Threadripper Zen 4+
+/// - **AMD Zen 4+**: Ryzen 7000+ series desktop CPUs do have AVX-512
+///
+/// # When NOT to use Server64
+///
+/// - **Intel consumer laptops/desktops**: 12th-14th gen Core chips lack AVX-512
+/// - **Unknown hardware**: Fall back to [`Desktop64`] for broader compatibility
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use archmage::{Server64, Desktop64, SimdToken, arcane};
+///
+/// // Try server features first, fall back to desktop
+/// if let Some(token) = Server64::try_new() {
+///     process_avx512(token, &mut data);
+/// } else if let Some(token) = Desktop64::try_new() {
+///     process_avx2(token, &mut data);
+/// }
+/// ```
+pub type Server64 = X64V4Token;
+
+// ============================================================================
 // Assembly verification helpers
 // ============================================================================
 

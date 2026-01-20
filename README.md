@@ -7,8 +7,8 @@
 ## Quick Start
 
 ```rust
-use archmage::{X64V3Token, HasAvx2, SimdToken, arcane};
-use archmage::mem::avx;  // Safe load/store (requires safe_unaligned_simd feature)
+use archmage::{X64V3Token, HasAvx2, arcane};
+use archmage::mem::avx;  // requires safe_unaligned_simd feature
 use std::arch::x86_64::*;
 
 #[arcane]
@@ -101,26 +101,40 @@ Functions accept any token that provides the required capabilities:
 
 ```rust
 use archmage::{HasAvx2, HasFma, arcane};
+use archmage::mem::avx;
+use std::arch::x86_64::*;
 
 // Accept any token with AVX2 (Avx2Token, X64V3Token, X64V4Token, etc.)
 #[arcane]
-fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
-    // Works with any AVX2-capable token
+fn double(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    let v = avx::_mm256_loadu_ps(token, data);
+    let doubled = _mm256_add_ps(v, v);
+    let mut out = [0.0f32; 8];
+    avx::_mm256_storeu_ps(token, &mut out, doubled);
+    out
 }
 
-// Require multiple features
+// Require multiple features with inline bounds
 #[arcane]
-fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // Has access to both AVX2 and FMA intrinsics
+fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    let va = avx::_mm256_loadu_ps(token, a);
+    let vb = avx::_mm256_loadu_ps(token, b);
+    let vc = avx::_mm256_loadu_ps(token, c);
+    let result = _mm256_fmadd_ps(va, vb, vc);  // a * b + c
+    let mut out = [0.0f32; 8];
+    avx::_mm256_storeu_ps(token, &mut out, result);
+    out
 }
 
-// Where clause syntax also works
+// Where clause syntax
 #[arcane]
-fn complex_kernel<T>(token: T, data: &mut [f32])
+fn square<T>(token: T, data: &mut [f32; 8])
 where
-    T: HasAvx2 + HasFma
+    T: HasAvx2
 {
-    // ...
+    let v = avx::_mm256_loadu_ps(token, data);
+    let squared = _mm256_mul_ps(v, v);
+    avx::_mm256_storeu_ps(token, data, squared);
 }
 ```
 
@@ -151,8 +165,8 @@ The trait hierarchy means broader tokens satisfy narrower bounds:
 
 | Token | Features | Hardware |
 |-------|----------|----------|
-| `NeonToken` | NEON | All AArch64 (baseline) |
-| `SveToken` | SVE | Graviton 3, Apple M-series |
+| `NeonToken` | NEON | All AArch64 (baseline, including Apple M-series) |
+| `SveToken` | SVE | Graviton 3, A64FX |
 | `Sve2Token` | SVE2 | ARMv9: Graviton 4, Cortex-X2+ |
 
 ## Safe Memory Operations
@@ -160,6 +174,7 @@ The trait hierarchy means broader tokens satisfy narrower bounds:
 With the `safe_unaligned_simd` feature, load/store uses references instead of raw pointers:
 
 ```rust
+use archmage::{X64V3Token, SimdToken};
 use archmage::mem::avx;
 
 if let Some(token) = X64V3Token::try_new() {
