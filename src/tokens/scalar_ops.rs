@@ -56,6 +56,9 @@ pub trait DotProductOrScalar: SimdToken {
     }
 
     /// Compute L2 norm.
+    ///
+    /// Requires `std` feature (uses `f32::sqrt`).
+    #[cfg(feature = "std")]
     #[inline(always)]
     fn norm_f32_or_scalar(&self, a: &[f32]) -> f32 {
         self.norm_squared_f32_or_scalar(a).sqrt()

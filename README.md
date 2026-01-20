@@ -44,6 +44,26 @@ fn main() {
 
 The `#[arcane]` macro wraps your function with `#[target_feature]`, making all value-based intrinsics safe. The token proves the caller verified feature availability.
 
+### Generic Functions
+
+Write functions that accept any token with specific capabilities:
+
+```rust
+use archmage::{HasAvx2, HasFma, arcane};
+
+// Accept any token that provides AVX2
+#[arcane]
+fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    // Works with Avx2Token, X64V3Token, X64V4Token, etc.
+}
+
+// Multiple trait bounds
+#[arcane]
+fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    // Requires both AVX2 and FMA
+}
+```
+
 ## What archmage Provides
 
 ### 1. Capability Tokens
@@ -170,12 +190,13 @@ archmage = "0.1"
 
 | Feature | Description |
 |---------|-------------|
-| `std` (default) | Enable std library support |
+| `std` (default) | Enable std library support (required for `f32::sqrt` in norm functions) |
 | `macros` (default) | Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`) |
 | `safe_unaligned_simd` | Safe load/store via `safe_unaligned_simd` crate (exposed as `mem` module) |
 | `composite` | Higher-level ops (transpose, dot product) - implies `safe_unaligned_simd` |
 | `wide` | Integration with the `wide` crate |
 | `full` | Enable all optional features |
+| `nightly-inline-always` | Use `#[inline(always)]` with `#[target_feature]` (requires nightly) |
 
 ## License
 

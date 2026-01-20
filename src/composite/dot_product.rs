@@ -119,6 +119,9 @@ pub fn norm_squared_f32(token: Avx2FmaToken, a: &[f32]) -> f32 {
 }
 
 /// Compute L2 norm using AVX2+FMA.
+///
+/// Requires `std` feature (uses `f32::sqrt`).
+#[cfg(feature = "std")]
 #[inline]
 pub fn norm_f32(token: Avx2FmaToken, a: &[f32]) -> f32 {
     norm_squared_f32(token, a).sqrt()
@@ -185,6 +188,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_norm() {
         if let Some(token) = Avx2FmaToken::try_new() {
             let a = vec![3.0f32, 4.0];

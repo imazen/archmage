@@ -31,6 +31,9 @@ pub trait DotProduct: SimdToken {
     }
 
     /// Compute L2 norm.
+    ///
+    /// Requires `std` feature (uses `f32::sqrt`).
+    #[cfg(feature = "std")]
     #[inline(always)]
     fn norm_f32(&self, a: &[f32]) -> f32 {
         self.norm_squared_f32(a).sqrt()
