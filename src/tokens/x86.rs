@@ -851,8 +851,6 @@ impl Sse42Token {
 // ============================================================================
 
 use super::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
-#[cfg(feature = "composite")]
-use super::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 
 // 128-bit SIMD: SSE, SSE2, SSE4.1, SSE4.2
@@ -1136,207 +1134,6 @@ mod scalar_fallbacks_no_composite {
     impl HorizontalOpsOrScalar for Avx512Vbmi2VlToken {}
 }
 
-// Tokens WITH 256-bit SIMD override with optimized code (when composite feature enabled)
-#[cfg(feature = "composite")]
-impl Transpose8x8OrScalar for Avx2Token {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        crate::tokens::simd_ops::Transpose8x8::transpose_8x8(self, block)
-    }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        crate::tokens::simd_ops::Transpose8x8::transpose_8x8_copy(self, input, output)
-    }
-}
-
-impl Transpose8x8OrScalar for Avx2FmaToken {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.transpose_8x8(block)
-    }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.transpose_8x8_copy(input, output)
-    }
-}
-
-impl Transpose8x8OrScalar for X64V3Token {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.transpose_8x8(block)
-    }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.transpose_8x8_copy(input, output)
-    }
-}
-
-impl Transpose8x8OrScalar for X64V4Token {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.transpose_8x8(block)
-    }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.transpose_8x8_copy(input, output)
-    }
-}
-
-impl DotProductOrScalar for Avx2Token {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.dot_product_f32(a, b)
-    }
-}
-
-impl DotProductOrScalar for Avx2FmaToken {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.dot_product_f32(a, b)
-    }
-}
-
-impl DotProductOrScalar for X64V3Token {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.dot_product_f32(a, b)
-    }
-}
-
-impl DotProductOrScalar for X64V4Token {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.dot_product_f32(a, b)
-    }
-}
-
-impl HorizontalOpsOrScalar for Avx2Token {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.sum_f32(data)
-    }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.min_f32(data)
-    }
-}
-
-impl HorizontalOpsOrScalar for Avx2FmaToken {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.sum_f32(data)
-    }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.min_f32(data)
-    }
-}
-
-impl HorizontalOpsOrScalar for X64V3Token {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.sum_f32(data)
-    }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.min_f32(data)
-    }
-}
-
-impl HorizontalOpsOrScalar for X64V4Token {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.sum_f32(data)
-    }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.min_f32(data)
-    }
-}
-
-// AVX-512 tokens
-impl Transpose8x8OrScalar for Avx512fToken {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.avx2().transpose_8x8(block)
-    }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.avx2().transpose_8x8_copy(input, output)
-    }
-}
-
-impl Transpose8x8OrScalar for Avx512bwToken {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.avx512f().avx2().transpose_8x8(block)
-    }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.avx512f().avx2().transpose_8x8_copy(input, output)
-    }
-}
-
-impl DotProductOrScalar for Avx512fToken {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.avx2_fma().dot_product_f32(a, b)
-    }
-}
-
-impl DotProductOrScalar for Avx512bwToken {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.avx512f().avx2_fma().dot_product_f32(a, b)
-    }
-}
-
-impl HorizontalOpsOrScalar for Avx512fToken {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx2().sum_f32(data)
-    }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx2().max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx2().min_f32(data)
-    }
-}
-
-impl HorizontalOpsOrScalar for Avx512bwToken {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512f().avx2().sum_f32(data)
-    }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512f().avx2().max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512f().avx2().min_f32(data)
-    }
-}
-
 // FMA token (no 256-bit guarantee, use scalar)
 impl Transpose8x8OrScalar for FmaToken {}
 impl DotProductOrScalar for FmaToken {}
@@ -1347,146 +1144,346 @@ impl Transpose8x8OrScalar for AvxToken {}
 impl DotProductOrScalar for AvxToken {}
 impl HorizontalOpsOrScalar for AvxToken {}
 
-// AVX-512 + VL tokens (delegate to underlying capabilities)
-impl Transpose8x8OrScalar for Avx512fVlToken {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.avx2().transpose_8x8(block)
-    }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.avx2().transpose_8x8_copy(input, output)
-    }
-}
+// Tokens WITH 256-bit SIMD override with optimized code (when composite feature enabled)
+#[cfg(feature = "composite")]
+mod simd_or_scalar_impls {
+    use super::*;
+    use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 
-impl DotProductOrScalar for Avx512fVlToken {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.avx512f().avx2_fma().dot_product_f32(a, b)
+    impl Transpose8x8OrScalar for Avx2Token {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(self, block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(self, input, output)
+        }
     }
-}
 
-impl HorizontalOpsOrScalar for Avx512fVlToken {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx2().sum_f32(data)
+    impl Transpose8x8OrScalar for Avx2FmaToken {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(self, block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(self, input, output)
+        }
     }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx2().max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx2().min_f32(data)
-    }
-}
 
-impl Transpose8x8OrScalar for Avx512bwVlToken {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.avx512f_vl().avx2().transpose_8x8(block)
+    impl Transpose8x8OrScalar for X64V3Token {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(self, block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(self, input, output)
+        }
     }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.avx512f_vl().avx2().transpose_8x8_copy(input, output)
-    }
-}
 
-impl DotProductOrScalar for Avx512bwVlToken {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.avx512f_vl().avx512f().avx2_fma().dot_product_f32(a, b)
+    impl Transpose8x8OrScalar for X64V4Token {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(self, block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(self, input, output)
+        }
     }
-}
 
-impl HorizontalOpsOrScalar for Avx512bwVlToken {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512f_vl().avx2().sum_f32(data)
+    impl DotProductOrScalar for Avx2Token {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(self, a, b)
+        }
     }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512f_vl().avx2().max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512f_vl().avx2().min_f32(data)
-    }
-}
 
-impl Transpose8x8OrScalar for Avx512Vbmi2Token {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.avx512bw().avx512f().avx2().transpose_8x8(block)
+    impl DotProductOrScalar for Avx2FmaToken {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(self, a, b)
+        }
     }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.avx512bw()
-            .avx512f()
-            .avx2()
-            .transpose_8x8_copy(input, output)
-    }
-}
 
-impl DotProductOrScalar for Avx512Vbmi2Token {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.avx512bw().avx512f().avx2_fma().dot_product_f32(a, b)
+    impl DotProductOrScalar for X64V3Token {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(self, a, b)
+        }
     }
-}
 
-impl HorizontalOpsOrScalar for Avx512Vbmi2Token {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512bw().avx512f().avx2().sum_f32(data)
+    impl DotProductOrScalar for X64V4Token {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(self, a, b)
+        }
     }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512bw().avx512f().avx2().max_f32(data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512bw().avx512f().avx2().min_f32(data)
-    }
-}
 
-impl Transpose8x8OrScalar for Avx512Vbmi2VlToken {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.avx512bw_vl().avx512f_vl().avx2().transpose_8x8(block)
+    impl HorizontalOpsOrScalar for Avx2Token {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(self, data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(self, data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(self, data)
+        }
     }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.avx512bw_vl()
-            .avx512f_vl()
-            .avx2()
-            .transpose_8x8_copy(input, output)
-    }
-}
 
-impl DotProductOrScalar for Avx512Vbmi2VlToken {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        self.avx512bw_vl()
-            .avx512f_vl()
-            .avx512f()
-            .avx2_fma()
-            .dot_product_f32(a, b)
+    impl HorizontalOpsOrScalar for Avx2FmaToken {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(self, data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(self, data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(self, data)
+        }
     }
-}
 
-impl HorizontalOpsOrScalar for Avx512Vbmi2VlToken {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512bw_vl().avx512f_vl().avx2().sum_f32(data)
+    impl HorizontalOpsOrScalar for X64V3Token {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(self, data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(self, data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(self, data)
+        }
     }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512bw_vl().avx512f_vl().avx2().max_f32(data)
+
+    impl HorizontalOpsOrScalar for X64V4Token {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(self, data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(self, data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(self, data)
+        }
     }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        self.avx512bw_vl().avx512f_vl().avx2().min_f32(data)
+
+    // AVX-512 tokens (delegate to AVX2 implementation)
+    impl Transpose8x8OrScalar for Avx512fToken {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(&self.avx2(), block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(&self.avx2(), input, output)
+        }
+    }
+
+    impl Transpose8x8OrScalar for Avx512bwToken {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(&self.avx512f().avx2(), block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(&self.avx512f().avx2(), input, output)
+        }
+    }
+
+    impl DotProductOrScalar for Avx512fToken {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(&self.avx2_fma(), a, b)
+        }
+    }
+
+    impl DotProductOrScalar for Avx512bwToken {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(&self.avx512f().avx2_fma(), a, b)
+        }
+    }
+
+    impl HorizontalOpsOrScalar for Avx512fToken {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(&self.avx2(), data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(&self.avx2(), data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(&self.avx2(), data)
+        }
+    }
+
+    impl HorizontalOpsOrScalar for Avx512bwToken {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(&self.avx512f().avx2(), data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(&self.avx512f().avx2(), data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(&self.avx512f().avx2(), data)
+        }
+    }
+
+    // AVX-512 + VL tokens (delegate to underlying capabilities)
+    impl Transpose8x8OrScalar for Avx512fVlToken {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(&self.avx2(), block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(&self.avx2(), input, output)
+        }
+    }
+
+    impl DotProductOrScalar for Avx512fVlToken {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(&self.avx512f().avx2_fma(), a, b)
+        }
+    }
+
+    impl HorizontalOpsOrScalar for Avx512fVlToken {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(&self.avx2(), data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(&self.avx2(), data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(&self.avx2(), data)
+        }
+    }
+
+    impl Transpose8x8OrScalar for Avx512bwVlToken {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(&self.avx512f_vl().avx2(), block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(&self.avx512f_vl().avx2(), input, output)
+        }
+    }
+
+    impl DotProductOrScalar for Avx512bwVlToken {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(&self.avx512f_vl().avx512f().avx2_fma(), a, b)
+        }
+    }
+
+    impl HorizontalOpsOrScalar for Avx512bwVlToken {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(&self.avx512f_vl().avx2(), data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(&self.avx512f_vl().avx2(), data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(&self.avx512f_vl().avx2(), data)
+        }
+    }
+
+    impl Transpose8x8OrScalar for Avx512Vbmi2Token {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(&self.avx512bw().avx512f().avx2(), block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(&self.avx512bw().avx512f().avx2(), input, output)
+        }
+    }
+
+    impl DotProductOrScalar for Avx512Vbmi2Token {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(&self.avx512bw().avx512f().avx2_fma(), a, b)
+        }
+    }
+
+    impl HorizontalOpsOrScalar for Avx512Vbmi2Token {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(&self.avx512bw().avx512f().avx2(), data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(&self.avx512bw().avx512f().avx2(), data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(&self.avx512bw().avx512f().avx2(), data)
+        }
+    }
+
+    impl Transpose8x8OrScalar for Avx512Vbmi2VlToken {
+        #[inline(always)]
+        fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8(&self.avx512bw_vl().avx512f_vl().avx2(), block)
+        }
+        #[inline(always)]
+        fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+            Transpose8x8::transpose_8x8_copy(&self.avx512bw_vl().avx512f_vl().avx2(), input, output)
+        }
+    }
+
+    impl DotProductOrScalar for Avx512Vbmi2VlToken {
+        #[inline(always)]
+        fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+            DotProduct::dot_product_f32(
+                &self.avx512bw_vl().avx512f_vl().avx512f().avx2_fma(),
+                a,
+                b,
+            )
+        }
+    }
+
+    impl HorizontalOpsOrScalar for Avx512Vbmi2VlToken {
+        #[inline(always)]
+        fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::sum_f32(&self.avx512bw_vl().avx512f_vl().avx2(), data)
+        }
+        #[inline(always)]
+        fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::max_f32(&self.avx512bw_vl().avx512f_vl().avx2(), data)
+        }
+        #[inline(always)]
+        fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+            HorizontalOps::min_f32(&self.avx512bw_vl().avx512f_vl().avx2(), data)
+        }
     }
 }
 
@@ -1650,103 +1647,108 @@ mod tests {
     }
 
     // ========================================================================
-    // Operation Trait Tests
+    // Operation Trait Tests (require composite feature)
     // ========================================================================
+    #[cfg(feature = "composite")]
+    mod simd_ops_tests {
+        use super::*;
+        use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 
-    #[test]
-    fn test_transpose_trait() {
-        if let Some(token) = Avx2Token::try_new() {
-            let original: [f32; 64] = core::array::from_fn(|i| i as f32);
-            let mut block = original;
+        #[test]
+        fn test_transpose_trait() {
+            if let Some(token) = Avx2Token::try_new() {
+                let original: [f32; 64] = core::array::from_fn(|i| i as f32);
+                let mut block = original;
 
-            // Use trait method
-            token.transpose_8x8(&mut block);
+                // Use trait method
+                token.transpose_8x8(&mut block);
 
-            // Verify transpose
-            for row in 0..8 {
-                for col in 0..8 {
-                    assert_eq!(original[row * 8 + col], block[col * 8 + row]);
+                // Verify transpose
+                for row in 0..8 {
+                    for col in 0..8 {
+                        assert_eq!(original[row * 8 + col], block[col * 8 + row]);
+                    }
                 }
             }
         }
-    }
 
-    #[test]
-    fn test_transpose_trait_via_profile() {
-        if let Some(token) = X64V3Token::try_new() {
-            let original: [f32; 64] = core::array::from_fn(|i| i as f32);
-            let mut block = original;
+        #[test]
+        fn test_transpose_trait_via_profile() {
+            if let Some(token) = X64V3Token::try_new() {
+                let original: [f32; 64] = core::array::from_fn(|i| i as f32);
+                let mut block = original;
 
-            // Use trait method via profile token
-            token.transpose_8x8(&mut block);
+                // Use trait method via profile token
+                token.transpose_8x8(&mut block);
 
-            for row in 0..8 {
-                for col in 0..8 {
-                    assert_eq!(original[row * 8 + col], block[col * 8 + row]);
+                for row in 0..8 {
+                    for col in 0..8 {
+                        assert_eq!(original[row * 8 + col], block[col * 8 + row]);
+                    }
                 }
             }
         }
-    }
 
-    #[test]
-    fn test_dot_product_trait() {
-        if let Some(token) = Avx2FmaToken::try_new() {
-            let a: Vec<f32> = (0..64).map(|i| i as f32).collect();
-            let b: Vec<f32> = vec![1.0; 64];
+        #[test]
+        fn test_dot_product_trait() {
+            if let Some(token) = Avx2FmaToken::try_new() {
+                let a: Vec<f32> = (0..64).map(|i| i as f32).collect();
+                let b: Vec<f32> = vec![1.0; 64];
 
-            // Use trait method
-            let result = token.dot_product_f32(&a, &b);
-            let expected: f32 = (0..64).map(|i| i as f32).sum();
+                // Use trait method
+                let result = token.dot_product_f32(&a, &b);
+                let expected: f32 = (0..64).map(|i| i as f32).sum();
 
-            assert!((result - expected).abs() < 0.001);
-        }
-    }
-
-    #[test]
-    fn test_horizontal_ops_trait() {
-        if let Some(token) = Avx2Token::try_new() {
-            let data: Vec<f32> = (1..=100).map(|i| i as f32).collect();
-
-            // Use trait methods
-            let sum = token.sum_f32(&data);
-            let max = token.max_f32(&data);
-            let min = token.min_f32(&data);
-
-            assert!((sum - 5050.0).abs() < 0.001);
-            assert!((max - 100.0).abs() < 0.001);
-            assert!((min - 1.0).abs() < 0.001);
-        }
-    }
-
-    #[test]
-    fn test_generic_trait_bounds() {
-        // This tests that we can write generic code over tokens
-        fn process_transpose<T: Transpose8x8>(token: T) {
-            let mut block: [f32; 64] = core::array::from_fn(|i| i as f32);
-            token.transpose_8x8(&mut block);
+                assert!((result - expected).abs() < 0.001);
+            }
         }
 
-        fn process_dot<T: DotProduct>(token: T, a: &[f32], b: &[f32]) -> f32 {
-            token.dot_product_f32(a, b)
+        #[test]
+        fn test_horizontal_ops_trait() {
+            if let Some(token) = Avx2Token::try_new() {
+                let data: Vec<f32> = (1..=100).map(|i| i as f32).collect();
+
+                // Use trait methods
+                let sum = token.sum_f32(&data);
+                let max = token.max_f32(&data);
+                let min = token.min_f32(&data);
+
+                assert!((sum - 5050.0).abs() < 0.001);
+                assert!((max - 100.0).abs() < 0.001);
+                assert!((min - 1.0).abs() < 0.001);
+            }
         }
 
-        fn process_horizontal<T: HorizontalOps>(token: T, data: &[f32]) -> f32 {
-            token.sum_f32(data)
-        }
+        #[test]
+        fn test_generic_trait_bounds() {
+            // This tests that we can write generic code over tokens
+            fn process_transpose<T: Transpose8x8>(token: T) {
+                let mut block: [f32; 64] = core::array::from_fn(|i| i as f32);
+                token.transpose_8x8(&mut block);
+            }
 
-        // These compile, proving the traits work
-        if let Some(token) = Avx2Token::try_new() {
-            process_transpose(token);
-            let data = vec![1.0f32; 16];
-            let _sum = process_horizontal(token, &data);
-            let _dot = process_dot(token, &data, &data);
-        }
+            fn process_dot<T: DotProduct>(token: T, a: &[f32], b: &[f32]) -> f32 {
+                token.dot_product_f32(a, b)
+            }
 
-        if let Some(token) = X64V3Token::try_new() {
-            process_transpose(token);
-            let data = vec![1.0f32; 16];
-            let _sum = process_horizontal(token, &data);
-            let _dot = process_dot(token, &data, &data);
+            fn process_horizontal<T: HorizontalOps>(token: T, data: &[f32]) -> f32 {
+                token.sum_f32(data)
+            }
+
+            // These compile, proving the traits work
+            if let Some(token) = Avx2Token::try_new() {
+                process_transpose(token);
+                let data = vec![1.0f32; 16];
+                let _sum = process_horizontal(token, &data);
+                let _dot = process_dot(token, &data, &data);
+            }
+
+            if let Some(token) = X64V3Token::try_new() {
+                process_transpose(token);
+                let data = vec![1.0f32; 16];
+                let _sum = process_horizontal(token, &data);
+                let _dot = process_dot(token, &data, &data);
+            }
         }
     }
 }
