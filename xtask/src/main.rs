@@ -260,7 +260,7 @@ fn generate_aarch64_neon_rs(safe_simd_path: &Path) -> Result<String> {
     output.push_str(&format!(
         r#"//! Token-gated wrappers for `#[target_feature(enable = "neon")]` functions.
 //!
-//! This module contains {} NEON load/store functions that are safe to call when you have a [`NeonToken`].
+//! This module contains {} NEON load/store functions that are safe to call when you have a token implementing [`HasNeon`].
 //!
 //! **Auto-generated** from safe_unaligned_simd v{} - do not edit manually.
 //! Run `cargo xtask generate` to regenerate.
@@ -274,13 +274,14 @@ fn generate_aarch64_neon_rs(safe_simd_path: &Path) -> Result<String> {
 #![allow(clippy::missing_safety_doc)]
 
 use core::arch::aarch64::*;
-use crate::tokens::arm::NeonToken;
+use crate::tokens::HasNeon;
 
 // Macro for aarch64 SIMD functions - requires #[target_feature] wrapper for safety.
 // Even NEON requires this because aarch64 targets without NEON exist (e.g., softfloat).
+// Uses `impl $trait_bound` for generic token acceptance.
 macro_rules! aarch64_load_store {{
     (
-        token: $token:ty;
+        token: $trait_bound:path;
         feature: $feature:literal;
         unsafe: $kind:ident;
         size: $size:ident;
@@ -290,14 +291,14 @@ macro_rules! aarch64_load_store {{
         )*
     ) => {{
         $(
-            aarch64_load_store!(@ $kind $token $feature $(#[$meta])* $intrinsic [$realty] [$ret]);
+            aarch64_load_store!(@ $kind $trait_bound $feature $(#[$meta])* $intrinsic [$realty] [$ret]);
         )*
     }};
 
-    (@ load $token:ty, $feature:literal, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
+    (@ load $trait_bound:path, $feature:literal, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
         $(#[$meta])*
         #[inline(always)]
-        pub fn $intrinsic(_token: $token, from: &$realty) -> $ret {{
+        pub fn $intrinsic(_token: impl $trait_bound, from: &$realty) -> $ret {{
             #[inline]
             #[target_feature(enable = $feature)]
             unsafe fn inner(from: &$realty) -> $ret {{
@@ -307,10 +308,10 @@ macro_rules! aarch64_load_store {{
         }}
     }};
 
-    (@ store $token:ty, $feature:literal, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
+    (@ store $trait_bound:path, $feature:literal, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
         $(#[$meta])*
         #[inline(always)]
-        pub fn $intrinsic(_token: $token, into: &mut $realty, val: $ret) {{
+        pub fn $intrinsic(_token: impl $trait_bound, into: &mut $realty, val: $ret) {{
             #[inline]
             #[target_feature(enable = $feature)]
             unsafe fn inner(into: &mut $realty, val: $ret) {{
@@ -329,14 +330,14 @@ macro_rules! aarch64_load_store {{
         fn_count, SAFE_SIMD_VERSION
     ));
 
-    // Add the macro blocks, converting to aarch64_load_store! with NeonToken
+    // Add the macro blocks, converting to aarch64_load_store! with HasNeon trait bound
     for block in macro_blocks {
         // Replace macro name and inject token/feature parameters
         let renamed = block
             .replace("vld_n_replicate_k!", "aarch64_load_store!")
             .replace(
                 "aarch64_load_store! {\n    unsafe:",
-                "aarch64_load_store! {\n    token: NeonToken;\n    feature: \"neon\";\n    unsafe:",
+                "aarch64_load_store! {\n    token: HasNeon;\n    feature: \"neon\";\n    unsafe:",
             );
         output.push_str(&renamed);
         output.push('\n');
