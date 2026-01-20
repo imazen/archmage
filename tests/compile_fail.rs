@@ -4,6 +4,9 @@
 //! Pointer-based SIMD operations (load, store, gather, masked ops) must always
 //! require unsafe blocks, even inside #[target_feature] functions.
 
+// These tests only apply to x86_64 (the UI tests use x86_64 intrinsics)
+#![cfg(target_arch = "x86_64")]
+
 #[test]
 fn ui_tests() {
     let t = trybuild::TestCases::new();

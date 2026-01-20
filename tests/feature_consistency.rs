@@ -4,7 +4,8 @@
 //! the corresponding instructions actually work. If feature detection lies about
 //! capabilities, these tests will crash (SIGILL).
 
-#![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+// Note: These tests use core::arch::x86_64 intrinsics directly
+#![cfg(target_arch = "x86_64")]
 
 use archmage::SimdToken;
 use archmage::tokens::x86::*;

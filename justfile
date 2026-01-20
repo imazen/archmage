@@ -56,6 +56,49 @@ test-icelake:
 test-all-cpus: test-p4 test-nehalem test-haswell test-skylake test-icelake
 
 # ============================================================================
+# Cross-compilation testing (requires cargo-cross)
+# Install: cargo install cross --git https://github.com/cross-rs/cross
+# ============================================================================
+
+# Test on 32-bit x86 (via QEMU)
+test-i686:
+    cross test --all-features --target i686-unknown-linux-gnu
+
+# Test on aarch64 (via QEMU)
+test-aarch64:
+    cross test --all-features --target aarch64-unknown-linux-gnu
+
+# Test on armv7 (via QEMU)
+test-armv7:
+    cross test --all-features --target armv7-unknown-linux-gnueabihf
+
+# Build for all cross targets (faster than running tests)
+build-cross:
+    cross build --all-features --target i686-unknown-linux-gnu
+    cross build --all-features --target aarch64-unknown-linux-gnu
+    cross build --all-features --target armv7-unknown-linux-gnueabihf
+
+# Run tests on all cross targets
+test-cross: test-i686 test-aarch64 test-armv7
+    @echo "All cross-compilation tests passed!"
+
+# Clippy for x86_64
+clippy-x86_64:
+    cargo clippy --all-features --target x86_64-unknown-linux-gnu -- -D warnings
+
+# Clippy for aarch64
+clippy-aarch64:
+    cargo clippy --all-features --target aarch64-unknown-linux-gnu -- -D warnings
+
+# Clippy for i686
+clippy-i686:
+    cargo clippy --all-features --target i686-unknown-linux-gnu -- -D warnings
+
+# Clippy for all targets
+clippy-all: clippy-x86_64 clippy-aarch64 clippy-i686
+    @echo "All clippy checks passed!"
+
+# ============================================================================
 # CI-style comprehensive test
 # ============================================================================
 
@@ -66,3 +109,7 @@ ci: fmt-check lint test miri
 # Full validation with SDE (for local development)
 validate: ci test-all-cpus
     @echo "Full validation complete!"
+
+# Full validation including cross-compilation
+validate-all: ci test-cross clippy-all
+    @echo "Full cross-platform validation complete!"

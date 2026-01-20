@@ -105,7 +105,8 @@
 #[path = "generated/mod.rs"]
 mod generated;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+// Note: safe_unaligned_simd only provides x86_64 module, not x86 (i686)
+#[cfg(target_arch = "x86_64")]
 pub use generated::x86::*;
 
 #[cfg(target_arch = "aarch64")]

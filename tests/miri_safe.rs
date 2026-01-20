@@ -3,10 +3,11 @@
 //! These tests verify the token system's logic without executing
 //! actual SIMD instructions.
 
-use archmage::SimdToken;
+// Only run these tests on x86_64 where the tokens are available
+#![cfg(target_arch = "x86_64")]
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 use archmage::tokens::x86::*;
+use archmage::SimdToken;
 
 /// Verify all tokens are zero-sized types.
 #[test]
@@ -35,7 +36,6 @@ fn tokens_are_copy() {
 
 /// Verify SSE2 is always available on x86_64 (baseline).
 #[test]
-#[cfg(target_arch = "x86_64")]
 fn sse2_always_available() {
     // SSE2 is baseline on x86_64, must always succeed
     assert!(Sse2Token::try_new().is_some());
