@@ -2,168 +2,179 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
-**archmage** provides capability tokens that prove CPU feature availability at compile time, making raw SIMD intrinsics safe to call via the `#[arcane]` macro.
+**archmage** provides capability tokens that prove CPU feature availability at runtime, making raw SIMD intrinsics safe to call via the `#[arcane]` macro.
 
-## The Problem
-
-Raw SIMD intrinsics in Rust have two safety concerns:
-
-1. **Feature availability**: Calling `_mm256_add_ps` on a CPU without AVX2 is undefined behavior
-2. **Memory safety**: `_mm256_loadu_ps(ptr)` dereferences a raw pointer
-
-Rust 1.85+ made value-based intrinsics safe inside `#[target_feature]` functions, but:
-- Calling those functions is still `unsafe`
-- Memory operations remain unsafe regardless
-
-## The Solution: Capability Tokens
+## Quick Start
 
 ```rust
-use archmage::{Avx2Token, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 use std::arch::x86_64::*;
 
 #[arcane]
-fn double(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-    // Memory ops need unsafe (raw pointers)
-    let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+fn multiply_add(token: impl archmage::HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    // Safe memory operations via archmage::mem (with safe_unaligned_simd feature)
+    let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
+    let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
 
-    // Arithmetic intrinsics are SAFE - token proves AVX2!
-    let doubled = _mm256_add_ps(v, v);
+    // Value-based intrinsics are SAFE inside #[arcane]!
+    let result = _mm256_add_ps(va, vb);
+    let result = _mm256_mul_ps(result, result);
 
     let mut out = [0.0f32; 8];
-    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
     out
 }
 
 fn main() {
-    if let Some(token) = Avx2Token::try_new() {
-        let result = double(token, &[1.0; 8]);
-        // result = [2.0; 8]
+    // X64V3Token is the recommended starting point:
+    // - AVX2 + FMA + BMI2
+    // - Works on Intel Haswell (2013+) and AMD Zen 1 (2017+)
+    // - Covers ~95% of desktop/server CPUs in use today
+    if let Some(token) = X64V3Token::try_new() {
+        let result = multiply_add(token, &[1.0; 8], &[2.0; 8]);
+        println!("{:?}", result);
     }
 }
 ```
 
-The `#[arcane]` macro wraps your function with `#[target_feature]`, making all value-based intrinsics safe. The token proves the caller verified feature availability.
+## How It Works
 
-### Generic Functions
+### The Problem
 
-Write functions that accept any token with specific capabilities:
+Raw SIMD intrinsics have two safety concerns:
+
+1. **Feature availability**: Calling `_mm256_add_ps` on a CPU without AVX is undefined behavior
+2. **Memory safety**: `_mm256_loadu_ps(ptr)` dereferences a raw pointer
+
+Rust 1.85+ made value-based intrinsics safe inside `#[target_feature]` functions, but calling those functions is still `unsafe` because the compiler can't verify the CPU supports the features.
+
+### The Solution: Tokens + `#[arcane]`
+
+archmage solves this with two components:
+
+**1. Capability Tokens** - Zero-sized proof types created only after runtime CPU detection:
+
+```rust
+// try_new() checks CPUID and returns Some only if features are available
+if let Some(token) = X64V3Token::try_new() {
+    // Token exists = CPU definitely has AVX2 + FMA + BMI2
+}
+```
+
+**2. The `#[arcane]` Macro** - Transforms your function to enable `#[target_feature]`:
+
+```rust
+#[arcane]
+fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    // Intrinsics are safe here!
+    let v = _mm256_setzero_ps();
+    // ...
+}
+```
+
+The macro generates:
+
+```rust
+fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    #[target_feature(enable = "avx2")]
+    unsafe fn inner(data: &[f32; 8]) -> [f32; 8] {
+        let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
+        // ...
+    }
+    // SAFETY: The token parameter proves the caller verified CPU support
+    unsafe { inner(data) }
+}
+```
+
+**Why is this safe?**
+
+1. `inner()` has `#[target_feature(enable = "avx2")]`, so Rust allows intrinsics without `unsafe`
+2. Calling `inner()` is unsafe, but we know it's valid because:
+   - The function requires a token parameter
+   - Tokens can only be created via `try_new()` which checks CPU features
+   - Therefore, if you have a token, the CPU supports the features
+
+### Generic Token Bounds
+
+Functions accept any token that provides the required capabilities:
 
 ```rust
 use archmage::{HasAvx2, HasFma, arcane};
 
-// Accept any token that provides AVX2
+// Accept any token with AVX2 (Avx2Token, X64V3Token, X64V4Token, etc.)
 #[arcane]
 fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
-    // Works with Avx2Token, X64V3Token, X64V4Token, etc.
+    // Works with any AVX2-capable token
 }
 
-// Multiple trait bounds
+// Require multiple features
 #[arcane]
 fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // Requires both AVX2 and FMA
+    // Has access to both AVX2 and FMA intrinsics
+}
+
+// Where clause syntax also works
+#[arcane]
+fn complex_kernel<T>(token: T, data: &mut [f32])
+where
+    T: HasAvx2 + HasFma
+{
+    // ...
 }
 ```
 
-## What archmage Provides
+The trait hierarchy means broader tokens satisfy narrower bounds:
+- `X64V3Token` implements `HasAvx2`, `HasFma`, `HasSse42`, etc.
+- `X64V4Token` implements everything `X64V3Token` does, plus `HasAvx512f`, etc.
 
-### 1. Capability Tokens
+## Choosing a Token
 
-Zero-sized proof types that verify CPU features at runtime:
+**Start with `X64V3Token`** - it's the sweet spot for modern x86-64:
 
-```rust
-// Runtime detection
-if let Some(token) = Avx2Token::try_new() {
-    // AVX2 guaranteed available
-}
-```
+| Token | Features | Hardware Coverage |
+|-------|----------|-------------------|
+| `X64V3Token` | AVX2 + FMA + BMI2 | Intel Haswell 2013+, AMD Zen 1 2017+ (~95% of x86-64) |
+| `X64V4Token` | + AVX-512 | Intel Skylake-X 2017+, AMD Zen 4 2022+ |
+| `X64V2Token` | SSE4.2 + POPCNT | Intel Nehalem 2008+, AMD Bulldozer 2011+ |
 
-**Feature Tokens:**
-| Token | Features |
+**For specific features:**
+
+| Token | Use Case |
 |-------|----------|
-| `Sse2Token` | SSE2 (baseline x86-64) |
-| `Sse41Token` | SSE4.1 |
-| `AvxToken` | AVX |
-| `Avx2Token` | AVX2 |
-| `FmaToken` | FMA |
-| `Avx2FmaToken` | AVX2 + FMA |
+| `Avx2Token` | Need AVX2 but not FMA |
+| `Avx2FmaToken` | AVX2 + FMA (most floating-point SIMD) |
+| `FmaToken` | FMA only |
+| `Sse2Token` | Baseline x86-64 (always available) |
 
-**Profile Tokens (x86-64 microarchitecture levels):**
+**ARM tokens:**
+
 | Token | Features | Hardware |
 |-------|----------|----------|
-| `X64V2Token` | SSE4.2 + POPCNT | Nehalem 2008+ |
-| `X64V3Token` | AVX2 + FMA + BMI2 | Haswell 2013+, Zen 1+ |
-| `X64V4Token` | AVX-512 (F/BW/CD/DQ/VL) | Xeon 2017+, Zen 4+ |
-
-**ARM Tokens:**
-| Token | Features | Hardware |
-|-------|----------|----------|
-| `NeonToken` | NEON | All AArch64 |
+| `NeonToken` | NEON | All AArch64 (baseline) |
 | `SveToken` | SVE | Graviton 3, Apple M-series |
-| `Sve2Token` | SVE2 | ARMv9: Cortex-X2+, Graviton 4 |
+| `Sve2Token` | SVE2 | ARMv9: Graviton 4, Cortex-X2+ |
 
-### 2. Safe Load/Store (feature = "safe_unaligned_simd")
+## Safe Memory Operations
 
-Memory operations use references instead of raw pointers:
+With the `safe_unaligned_simd` feature, load/store uses references instead of raw pointers:
 
 ```rust
-use archmage::mem::avx::{_mm256_loadu_ps, _mm256_storeu_ps};
+use archmage::mem::avx;
 
-if let Some(token) = Avx2Token::try_new() {
+if let Some(token) = X64V3Token::try_new() {
     let data = [1.0f32; 8];
-    let v = _mm256_loadu_ps(token.avx(), &data);  // Safe!
+    let v = avx::_mm256_loadu_ps(token, &data);  // Safe! Reference, not pointer
 
     let mut out = [0.0f32; 8];
-    _mm256_storeu_ps(token.avx(), &mut out, v);   // Safe!
+    avx::_mm256_storeu_ps(token, &mut out, v);   // Safe!
 }
 ```
 
-### 3. Composite Operations (feature = "__composite", unstable)
-
-High-level SIMD algorithms built on tokens:
-
-```rust
-use archmage::composite::{transpose_8x8, dot_product_f32, hsum_f32x8};
-
-if let Some(token) = Avx2FmaToken::try_new() {
-    // 8x8 matrix transpose (critical for DCT)
-    let mut block = [0.0f32; 64];
-    transpose_8x8(token.avx2(), &mut block);
-
-    // Dot product with FMA
-    let a = vec![1.0f32; 1024];
-    let b = vec![2.0f32; 1024];
-    let result = dot_product_f32(token, &a, &b);
-}
-```
-
-### 4. Generic API with Operation Traits
-
-Write generic code that works with any implementing token:
-
-```rust
-use archmage::simd_ops::{Transpose8x8, DotProduct, HorizontalOps};
-
-fn process<T: Transpose8x8 + DotProduct + HorizontalOps>(
-    token: T,
-    block: &mut [f32; 64],
-    data: &[f32],
-) {
-    token.transpose_8x8(block);                // Specialized per token
-    let dot = token.dot_product_f32(data, data);
-    let sum = token.sum_f32(data);
-}
-
-// Works with Avx2Token, X64V3Token, etc.
-if let Some(token) = X64V3Token::try_new() {
-    process(token, &mut block, &data);
-}
-```
-
-The compiler selects the optimized implementation for each token at compile time.
+The `mem` module wrappers accept `impl HasAvx`, `impl HasSse2`, etc., so any compatible token works.
 
 ## When to Use archmage
 
-archmage is for when you need **specific instructions** that neither `wide` nor LLVM autovectorization will produce:
+archmage is for when you need **specific instructions** that autovectorization won't produce:
 
 - Complex shuffles and permutes
 - Exact FMA sequences for numerical precision
@@ -175,8 +186,8 @@ For portable SIMD without manual intrinsics, use the `wide` crate instead.
 
 | Approach | When to Use |
 |----------|-------------|
-| **wide** | Portable code, don't want to think about target features |
-| **archmage + intrinsics** | Need specific instructions, complex algorithms |
+| **wide** | Portable code, let the compiler choose instructions |
+| **archmage** | Need specific instructions, complex algorithms |
 
 ## Feature Flags
 
@@ -187,17 +198,30 @@ archmage = "0.1"
 
 | Feature | Description |
 |---------|-------------|
-| `std` (default) | Enable std library support (required for `f32::sqrt` in norm functions) |
-| `macros` (default) | Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`) |
-| `safe_unaligned_simd` | Safe load/store via `safe_unaligned_simd` crate (exposed as `mem` module) |
+| `std` (default) | Enable std library support |
+| `macros` (default) | Enable `#[arcane]` macro (alias: `#[simd_fn]`) |
+| `safe_unaligned_simd` | Safe load/store via references (exposed as `mem` module) |
 
-**Unstable features** (API may change, prefixed with `__`):
+**Unstable features** (API may change):
 
 | Feature | Description |
 |---------|-------------|
-| `__composite` | Higher-level ops (transpose, dot product) - implies `safe_unaligned_simd` |
+| `__composite` | Higher-level ops (transpose, dot product) |
 | `__wide` | Integration with the `wide` crate |
-| `__nightly-inline-always` | Use `#[inline(always)]` with `#[target_feature]` (requires nightly) |
+
+## Limitations
+
+**Self receivers not supported in `#[arcane]`:**
+
+```rust
+// This won't work - inner functions can't have `self`
+#[arcane]
+fn process(&self, token: impl HasAvx2) { ... }
+
+// Instead, take self as a regular parameter or use free functions
+#[arcane]
+fn process(state: &MyStruct, token: impl HasAvx2) { ... }
+```
 
 ## License
 

@@ -8,6 +8,7 @@
 cargo test                    # Run tests
 cargo test --all-features     # Test with all integrations
 cargo clippy --all-features   # Lint
+cargo run -p xtask -- generate # Regenerate safe_unaligned_simd wrappers
 ```
 
 ## Core Insight: Rust 1.85+ Changed Everything
@@ -28,266 +29,155 @@ unsafe fn example() {
 
 This means we **don't need to wrap** arithmetic, shuffle, compare, bitwise, or other value-based intrinsics. Only:
 1. **Tokens** - Prove CPU features are available
-2. **Safe load/store** - Reference-based memory operations
-3. **`#[simd_fn]` macro** - Enable `#[target_feature]` via token proof
-4. **Composite operations** - Higher-level algorithms using `#[simd_fn]`
+2. **`#[arcane]` macro** - Enable `#[target_feature]` via token proof
+3. **Safe load/store** - Reference-based memory operations (optional)
 
-## What archmage Provides
+## How `#[arcane]` Works
 
-### 1. Capability Tokens
-
-Zero-sized proof types for runtime dispatch:
+The macro generates an inner function with `#[target_feature]`:
 
 ```rust
-if let Some(token) = Avx2Token::try_new() {
-    process_avx2(token, data);  // Safe to call
+// You write:
+#[arcane]
+fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    let v = _mm256_setzero_ps();  // Safe!
+    // ...
+}
+
+// Macro generates:
+fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    #[target_feature(enable = "avx2")]
+    unsafe fn inner(data: &[f32; 8]) -> [f32; 8] {
+        let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
+        // ...
+    }
+    // SAFETY: Token proves CPU support was verified via try_new()
+    unsafe { inner(data) }
 }
 ```
 
-### 2. The `#[simd_fn]` Macro (Core Feature)
+**Why is this safe?**
+1. `inner()` has `#[target_feature]`, so intrinsics are safe inside
+2. Calling `inner()` is unsafe, but valid because:
+   - The function requires a token parameter
+   - Tokens can only be created via `try_new()` which checks CPUID
+   - If you have a token, the CPU supports the features
 
-Makes raw intrinsics safe via token proof:
+## Generic Token Bounds
+
+Use trait bounds to accept any compatible token:
 
 ```rust
-#[simd_fn]
-fn kernel(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-    // Memory ops still need unsafe (raw pointers)
-    let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+#[arcane]
+fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    // Works with Avx2Token, X64V3Token, X64V4Token, etc.
+}
 
-    // ALL value-based intrinsics are SAFE here!
-    let doubled = _mm256_add_ps(v, v);
-
-    let mut out = [0.0f32; 8];
-    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
-    out
+#[arcane]
+fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    // Requires both AVX2 and FMA
 }
 ```
 
-The macro expands to an inner `#[target_feature]` function, making intrinsics safe.
-
-The token IS passed through to the inner function, so you can call other token-taking functions:
-
-```rust
-use archmage::mem::avx::_mm256_loadu_ps;
-
-#[simd_fn]
-fn outer(token: Avx2Token, data: &mut [f32; 64]) {
-    // Can call other token-taking functions
-    transpose_8x8(token, data);
-    let v = _mm256_loadu_ps(token.avx(), (&data[0..8]).try_into().unwrap());
-}
-```
-
-### 3. Safe Load/Store
-
-Reference-based memory operations via `mem` module (requires `safe_unaligned_simd` feature):
-
-```rust
-use archmage::mem::avx::{_mm256_loadu_ps, _mm256_storeu_ps};
-
-let v = _mm256_loadu_ps(token.avx(), &data);   // Safe! Uses reference
-_mm256_storeu_ps(token.avx(), &mut out, v);    // Safe! Uses reference
-```
-
-### 4. Composite Operations
-
-Higher-level SIMD algorithms using `#[simd_fn]`:
-
-- `transpose_8x8` - 8x8 matrix transpose (critical for DCT)
-- `dot_product_f32` - Dot product with FMA
-- `hsum_f32x8`, `hmax_f32x8`, `hmin_f32x8` - Horizontal reductions
-- `sum_f32_slice`, `max_f32_slice`, `min_f32_slice` - Slice operations
+**Recommended starting point:** `X64V3Token` (AVX2 + FMA + BMI2, covers Haswell 2013+ and Zen 1+)
 
 ## Directory Structure
 
 ```
 src/
-├── lib.rs              # Main exports, #[simd_fn] macro re-export
+├── lib.rs              # Main exports
 ├── tokens/
-│   ├── mod.rs          # SimdToken trait
-│   ├── x86.rs          # Sse2, Avx2, Fma, X64V2/V3/V4, AVX-512 tokens
-│   ├── arm.rs          # Neon, Sve, Sve2 tokens
-│   └── wasm.rs         # Simd128Token
-├── integrate/
-│   ├── safe_simd.rs    # safe_unaligned_simd integration
-│   └── wide_ops.rs     # wide crate integration
-├── generated/          # AUTO-GENERATED - token-gated safe_unaligned_simd wrappers
+│   ├── mod.rs          # SimdToken trait, marker traits (HasAvx2, etc.)
+│   ├── x86.rs          # x86 token types
+│   ├── arm.rs          # ARM token types
+│   └── wasm.rs         # WASM token types
+├── composite/          # Higher-level operations (__composite feature)
 │   ├── mod.rs
-│   ├── VERSION         # Tracks source version
-│   ├── x86/            # x86_64 wrappers (235 functions)
-│   │   ├── sse.rs      # SSE functions (6)
-│   │   ├── sse2.rs     # SSE2 functions (20)
-│   │   ├── avx.rs      # AVX functions (17)
-│   │   ├── avx512f.rs  # AVX-512F functions (49)
-│   │   ├── avx512f_vl.rs   # AVX-512F+VL functions (86)
-│   │   ├── avx512bw.rs     # AVX-512BW functions (13)
-│   │   ├── avx512bw_vl.rs  # AVX-512BW+VL functions (26)
-│   │   ├── avx512vbmi2.rs  # AVX-512VBMI2 functions (6)
-│   │   └── avx512vbmi2_vl.rs # AVX-512VBMI2+VL functions (12)
-│   └── aarch64/        # AArch64 wrappers (240 functions)
-│       └── neon.rs     # NEON load/store functions
-├── composite/
-│   ├── transpose.rs    # 8x8 transpose
-│   ├── dot_product.rs  # Dot product with FMA
-│   └── horizontal.rs   # Horizontal sum/max/min
+│   ├── simd_ops.rs     # SIMD operation traits
+│   ├── scalar_ops.rs   # Scalar fallback traits
+│   ├── x86_impls.rs    # Token trait implementations
+│   ├── transpose.rs    # 8x8 matrix transpose
+│   ├── dot_product.rs  # Dot product
+│   └── horizontal.rs   # Horizontal reductions
+├── integrate/
+│   └── wide_ops.rs     # wide crate integration (__wide feature)
+├── mem.rs              # Re-exports generated wrappers
+└── generated/          # AUTO-GENERATED (safe_unaligned_simd feature)
+    ├── x86/            # 235 x86_64 functions
+    └── aarch64/        # 240 NEON functions
 xtask/
-└── src/main.rs         # Generator for safe_unaligned_simd wrappers
+└── src/main.rs         # Wrapper generator
 ```
-
-## Generated Wrappers (safe_unaligned_simd feature)
-
-The `src/generated/` directory contains **auto-generated** token-gated wrappers for all
-`safe_unaligned_simd` functions. These wrappers make the functions truly safe by requiring
-a capability token as the first parameter.
-
-**To regenerate after updating safe_unaligned_simd:**
-```bash
-cargo run -p xtask -- generate
-```
-
-**CI automatically checks for updates** weekly and creates PRs when new versions are available.
-
-The generator in `xtask/src/main.rs`:
-1. Parses safe_unaligned_simd source from cargo cache
-2. For x86: extracts function signatures and `#[target_feature]` attributes
-3. For aarch64: parses macro invocations that define NEON load/store functions
-4. Generates wrapper functions that take a token + call the original
-5. Groups by feature set (sse, sse2, avx, avx512f, neon, etc.)
 
 ## Token Hierarchy
 
-### x86_64
+**Profile Tokens (recommended):**
+- `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here**
+- `X64V4Token` - + AVX-512 (Skylake-X 2017+, Zen 4+)
+- `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
 
 **Feature Tokens:**
-- `SseToken` - SSE (rarely needed, SSE2 is baseline)
-- `Sse2Token` - SSE2 (baseline on x86_64)
-- `Sse41Token` → `Sse42Token` → `AvxToken` → `Avx2Token` → `Avx512fToken`
-- `FmaToken` (independent)
-- `Avx2FmaToken` (combined)
+- `Sse2Token` → `Sse41Token` → `Sse42Token` → `AvxToken` → `Avx2Token`
+- `FmaToken` (independent), `Avx2FmaToken` (combined)
+- `Avx512fToken`, `Avx512bwToken`, `Avx512Vbmi2Token` + VL variants
 
-**AVX-512 Tokens (for safe_unaligned_simd feature):**
-- `Avx512fToken` - AVX-512 Foundation (512-bit only)
-- `Avx512fVlToken` - AVX-512F + VL (128/256/512-bit operations)
-- `Avx512bwToken` - AVX-512 Byte/Word
-- `Avx512bwVlToken` - AVX-512BW + VL
-- `Avx512Vbmi2Token` - AVX-512 VBMI2 (Ice Lake+, Zen 4+)
-- `Avx512Vbmi2VlToken` - AVX-512 VBMI2 + VL
+**ARM:**
+- `NeonToken` (baseline), `SveToken`, `Sve2Token`
 
-**Profile Tokens (x86-64 psABI levels):**
-- `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
-- `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
-- `X64V4Token` - AVX-512F/BW/CD/DQ/VL (Xeon 2017+, Zen 4+)
+## Marker Traits
 
-### AArch64
+Enable generic bounds:
 
-- `NeonToken` - NEON (baseline, always available)
-- `SveToken` - SVE (Graviton 3, A64FX)
-- `Sve2Token` - SVE2 (ARMv9, Graviton 4)
-
-See `~/work/multiversed` for feature set details used by the multiversion integration.
-
-## Key Design Decisions
-
-### Why Not Wrap Value-Based Intrinsics?
-
-Rust 1.85+ made them safe inside `#[target_feature]`. Wrapping them adds no safety value and creates API bloat. The `#[simd_fn]` macro enables `#[target_feature]` based on the token parameter.
-
-### Why `#[simd_fn]` Creates an Inner Function?
-
-The outer function takes the token (proving features are available), then calls an inner `#[target_feature]` function. This makes the call to the inner function safe because we've proven the features exist.
-
-The token IS passed through to the inner function, enabling composability:
-- You can call other token-taking functions from inside `#[simd_fn]`
-- The safe load/store functions require the token
-- Composite operations can call other composites
-
-### Why Reference-Based Load/Store?
-
-Memory operations are still unsafe with raw pointers. By using `&[f32; 8]` instead of `*const f32`, we get:
-- Memory validity guaranteed by Rust's borrow checker
-- Correct size guaranteed by the array type
-- Token proves feature availability
-- Zero overhead - compiles to same assembly
-
-## Capability Marker Traits
-
-The following marker traits enable generic code to constrain which tokens are accepted:
-
-- `Has128BitSimd` - SSE2, NEON, WASM SIMD128
-- `Has256BitSimd` - AVX, AVX2, X64V3 (implies Has128BitSimd)
-- `Has512BitSimd` - AVX-512, X64V4 (implies Has256BitSimd)
-- `HasFma` - FMA, AVX2+FMA, X64V3, X64V4, NEON
-- `HasScalableVectors` - SVE, SVE2
-
-Example:
 ```rust
-fn requires_fma<T: HasFma>(token: T) { ... }
-fn requires_256<T: Has256BitSimd>(token: T) { ... }
+fn requires_avx2(token: impl HasAvx2) { ... }
+fn requires_fma(token: impl HasFma) { ... }
+fn requires_both<T: HasAvx2 + HasFma>(token: T) { ... }
 ```
 
-## Operation Traits (Generic API)
+**Width traits:** `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
+**Feature traits:** `HasSse`, `HasSse2`, `HasAvx`, `HasAvx2`, `HasFma`, `HasAvx512f`, etc.
+**ARM traits:** `HasNeon`, `HasSve`, `HasSve2`
 
-Operation traits provide a generic interface with specialized implementations per token:
+## Safe Memory Operations
 
-- `Transpose8x8` - 8x8 matrix transpose (critical for DCT)
-- `DotProduct` - dot product, norm_squared, norm
-- `HorizontalOps` - sum, max, min reductions
+With `safe_unaligned_simd` feature, the `mem` module provides reference-based load/store:
 
-Usage:
 ```rust
-fn process<T: Transpose8x8 + DotProduct>(token: T, block: &mut [f32; 64], data: &[f32]) {
-    token.transpose_8x8(block);        // Uses optimized impl for T
-    let dot = token.dot_product_f32(data, data);
-}
+use archmage::mem::avx;
 
-// Works with any implementing token
 if let Some(token) = X64V3Token::try_new() {
-    process(token, &mut block, &data);
+    let v = avx::_mm256_loadu_ps(token, &data);  // Safe! Reference, not pointer
+    avx::_mm256_storeu_ps(token, &mut out, v);
 }
 ```
 
-Each token provides its own optimized implementation - the compiler selects the right one at compile time.
+## Limitations
 
-## Future Work
-
-- [x] Make `#[simd_fn]` pass token through for composability
-- [x] Capability marker traits for generic bounds
-- [x] aarch64 `mem` wrappers via xtask generation (240 NEON functions)
-- [x] `is_aarch64_feature_available!` macro for compile-time elision
-- [x] Generic trait bounds in `#[simd_fn]` (`impl HasAvx2`, `T: HasAvx2`)
-- [ ] `#[simd_fn]` support for self receivers (see below)
-- [ ] NEON/SVE composite operations for aarch64
-- [ ] DCT, color conversion, and other JPEG primitives (see halide-kernels)
-
-### Self Receiver Limitation
-
-`#[simd_fn]` does **not** support methods with `self`, `&self`, `&mut self`, or `mut self` receivers.
-
-**Why:** The macro generates an inner function with `#[target_feature]`. Rust's inner functions
-cannot have `self` parameters—`self` only works in associated functions (methods in impl blocks).
-
-**Workaround:** Delegate to a free function:
+**Self receivers not supported:**
 
 ```rust
-impl MyProcessor {
-    fn process(&mut self, data: &[f32; 8]) -> [f32; 8] {
-        process_impl(self.token, data)  // Delegate to free function
-    }
-}
+// Won't work - inner functions can't have self
+#[arcane]
+fn process(&self, token: impl HasAvx2) { ... }
 
-#[simd_fn]
-fn process_impl(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
-    // SIMD intrinsics safe here
-}
+// Workaround: use free function
+#[arcane]
+fn process_impl(state: &MyState, token: impl HasAvx2) { ... }
 ```
 
-**To implement self receiver support would require:**
-1. Adding a type parameter `__Self` to the inner function generics
-2. Converting the receiver to a regular parameter (`&self` → `__self: &__Self`)
-3. Walking the function body AST to replace all `self` → `__self` and `Self` → `__Self`
-4. Copying and transforming where clauses with the type substitution
+## Generated Wrappers
 
-This is feasible with `syn::visit_mut::VisitMut` but adds significant complexity.
+The `mem` module wraps `safe_unaligned_simd` with token requirements:
+
+```bash
+cargo run -p xtask -- generate  # Regenerate after safe_unaligned_simd updates
+```
+
+The generator:
+1. Parses safe_unaligned_simd source from cargo cache
+2. Extracts function signatures and `#[target_feature]` attributes
+3. Generates wrappers with `impl HasXxx` bounds
+4. Groups by feature set (sse, sse2, avx, neon, etc.)
 
 ## License
 

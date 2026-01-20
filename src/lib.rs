@@ -3,49 +3,57 @@
 //! > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 //! > Cast primitive magics faster than any mage alive.
 //!
-//! archmage provides capability tokens that prove CPU feature availability,
+//! archmage provides capability tokens that prove CPU feature availability at runtime,
 //! making raw SIMD intrinsics safe to call via the `#[arcane]` macro.
 //!
 //! ## Quick Example
 //!
 //! ```rust,ignore
-//! use archmage::{Avx2Token, SimdToken, arcane};
+//! use archmage::{X64V3Token, HasAvx2, SimdToken, arcane};
 //! use std::arch::x86_64::*;
 //!
 //! #[arcane]
-//! fn double(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-//!     // Memory ops need unsafe (raw pointers)
-//!     let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+//! fn multiply_add(token: impl HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+//!     let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
+//!     let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
 //!
-//!     // Arithmetic intrinsics are SAFE - token proves AVX2!
-//!     let doubled = _mm256_add_ps(v, v);
+//!     // Value-based intrinsics are SAFE inside #[arcane]!
+//!     let result = _mm256_add_ps(va, vb);
+//!     let result = _mm256_mul_ps(result, result);
 //!
 //!     let mut out = [0.0f32; 8];
-//!     unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+//!     unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
 //!     out
 //! }
 //!
 //! fn main() {
-//!     if let Some(token) = Avx2Token::try_new() {
-//!         let result = double(token, &[1.0; 8]);
-//!         // result = [2.0; 8]
+//!     // X64V3Token: AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
+//!     if let Some(token) = X64V3Token::try_new() {
+//!         let result = multiply_add(token, &[1.0; 8], &[2.0; 8]);
 //!     }
 //! }
 //! ```
 //!
 //! ## How It Works
 //!
-//! The `#[arcane]` macro wraps your function with `#[target_feature]`,
-//! making all value-based intrinsics safe. The token parameter proves
-//! the caller verified feature availability.
+//! **Capability Tokens** are zero-sized proof types created via `try_new()`, which
+//! performs runtime CPU detection. If `try_new()` returns `Some(token)`, the CPU
+//! definitely supports the required features.
+//!
+//! **The `#[arcane]` macro** generates an inner function with `#[target_feature]`,
+//! making intrinsics safe inside. The outer function calls this inner function -
+//! this is safe because the token parameter proves CPU support was verified.
+//!
+//! **Generic bounds** like `impl HasAvx2` let functions accept any token that
+//! provides AVX2 (e.g., `Avx2Token`, `X64V3Token`, `X64V4Token`).
 //!
 //! ## Feature Flags
 //!
 //! - `std` (default): Enable std library support
-//! - `macros` (default): Enable `#[arcane]` attribute macro (also available as `#[simd_fn]`)
-//! - `composite`: Higher-level operations (transpose, dot product, etc.) - implies `safe_unaligned_simd`
-//! - `wide`: Integration with the `wide` crate
-//! - `safe_unaligned_simd`: Safe load/store via `safe_unaligned_simd` crate (exposed as `mem` module)
+//! - `macros` (default): Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`)
+//! - `safe_unaligned_simd`: Safe load/store via references (exposed as `mem` module)
+//! - `__composite`: Higher-level ops (transpose, dot product) - unstable API
+//! - `__wide`: Integration with the `wide` crate - unstable API
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
