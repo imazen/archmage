@@ -10,15 +10,20 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  # ==========================================================================
+  # Native x64 testing
+  # ==========================================================================
+  test-x64:
+    name: Test x64 (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-13]
         rust: [stable, 1.89]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -34,26 +39,203 @@ jobs:
       - name: Run tests
         run: cargo test --all-features
 
-  clippy:
-    runs-on: ubuntu-latest
+  # ==========================================================================
+  # Native ARM64 testing
+  # ==========================================================================
+  test-aarch64-linux:
+    name: Test aarch64 (Linux)
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, 1.89]
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --all-features
+
+      - name: Run tests
+        run: cargo test --all-features
+
+  test-aarch64-macos:
+    name: Test aarch64 (macOS)
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, 1.89]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --all-features
+
+      - name: Run tests
+        run: cargo test --all-features
+
+  test-aarch64-windows:
+    name: Test aarch64 (Windows)
+    runs-on: windows-11-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, 1.89]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --all-features
+
+      - name: Run tests
+        run: cargo test --all-features
+
+  # ==========================================================================
+  # Cross-compiled 32-bit testing (via QEMU)
+  # ==========================================================================
+  test-cross-i686:
+    name: Test i686 (cross)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: i686-unknown-linux-gnu
+
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build (cross)
+        run: cross build --all-features --target i686-unknown-linux-gnu
+
+      - name: Test (cross)
+        run: cross test --all-features --target i686-unknown-linux-gnu
+
+  # ==========================================================================
+  # Cross-compiled aarch64 testing from x64 (via QEMU)
+  # Useful for testing when native ARM runners are unavailable
+  # ==========================================================================
+  test-cross-aarch64:
+    name: Test aarch64 (cross/QEMU)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build (cross)
+        run: cross build --all-features --target aarch64-unknown-linux-gnu
+
+      - name: Test (cross)
+        run: cross test --all-features --target aarch64-unknown-linux-gnu
+
+  # ==========================================================================
+  # Cross-compiled ARM 32-bit testing (via QEMU)
+  # ==========================================================================
+  test-cross-armv7:
+    name: Test armv7 (cross)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-unknown-linux-gnueabihf
+
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build (cross)
+        run: cross build --all-features --target armv7-unknown-linux-gnueabihf
+
+      - name: Test (cross)
+        run: cross test --all-features --target armv7-unknown-linux-gnueabihf
+
+  # ==========================================================================
+  # Clippy (lint on multiple architectures)
+  # ==========================================================================
+  clippy:
+    name: Clippy (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+          targets: ${{ matrix.target }}
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
       - name: Clippy
-        run: cargo clippy --all-features -- -D warnings
+        run: cargo clippy --all-features --target ${{ matrix.target }} -- -D warnings
 
+  # ==========================================================================
+  # Format check
+  # ==========================================================================
   fmt:
+    name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -63,10 +245,14 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
 
+  # ==========================================================================
+  # Documentation
+  # ==========================================================================
   docs:
+    name: Docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -78,3 +264,23 @@ jobs:
         run: cargo doc --all-features --no-deps
         env:
           RUSTDOCFLAGS: -Dwarnings
+
+  # ==========================================================================
+  # MSRV check
+  # ==========================================================================
+  msrv:
+    name: MSRV (1.89)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.89
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.89"
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check MSRV
+        run: cargo check --all-features
