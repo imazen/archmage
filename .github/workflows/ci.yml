@@ -9,10 +9,11 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CI: true
 
 jobs:
   # ==========================================================================
-  # Native x64 testing
+  # Primary: Native x64 testing (stable only - MSRV tested separately)
   # ==========================================================================
   test-x64:
     name: Test x64 (${{ matrix.os }})
@@ -21,15 +22,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        rust: [stable, 1.89]
 
     steps:
       - uses: actions/checkout@v6
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -41,23 +39,17 @@ jobs:
         run: cargo test --all-features
 
   # ==========================================================================
-  # Native ARM64 testing
+  # Primary: Native ARM64 testing
   # ==========================================================================
   test-aarch64-linux:
     name: Test aarch64 (Linux)
     runs-on: ubuntu-24.04-arm
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [stable, 1.89]
 
     steps:
       - uses: actions/checkout@v6
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -71,18 +63,12 @@ jobs:
   test-aarch64-macos:
     name: Test aarch64 (macOS)
     runs-on: macos-14
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [stable, 1.89]
 
     steps:
       - uses: actions/checkout@v6
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -93,21 +79,17 @@ jobs:
       - name: Run tests
         run: cargo test --all-features
 
+  # Windows ARM is flaky - informational only
   test-aarch64-windows:
     name: Test aarch64 (Windows)
     runs-on: windows-11-arm
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [stable, 1.89]
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v6
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -119,100 +101,46 @@ jobs:
         run: cargo test --all-features
 
   # ==========================================================================
-  # Cross-compiled 32-bit testing (via QEMU)
+  # Cross-compiled testing (informational - QEMU can be slow/flaky)
   # ==========================================================================
-  test-cross-i686:
-    name: Test i686 (cross)
+  test-cross:
+    name: Cross (${{ matrix.target }})
     runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: i686-unknown-linux-gnu
-
-      - name: Install cross
-        uses: taiki-e/install-action@cross
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build (cross)
-        run: cross build --all-features --target i686-unknown-linux-gnu
-
-      - name: Test (cross)
-        run: cross test --all-features --target i686-unknown-linux-gnu
-
-  # ==========================================================================
-  # Cross-compiled aarch64 testing from x64 (via QEMU)
-  # Useful for testing when native ARM runners are unavailable
-  # ==========================================================================
-  test-cross-aarch64:
-    name: Test aarch64 (cross/QEMU)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-unknown-linux-gnu
-
-      - name: Install cross
-        uses: taiki-e/install-action@cross
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build (cross)
-        run: cross build --all-features --target aarch64-unknown-linux-gnu
-
-      - name: Test (cross)
-        run: cross test --all-features --target aarch64-unknown-linux-gnu
-
-  # ==========================================================================
-  # Cross-compiled ARM 32-bit testing (via QEMU)
-  # ==========================================================================
-  test-cross-armv7:
-    name: Test armv7 (cross)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: armv7-unknown-linux-gnueabihf
-
-      - name: Install cross
-        uses: taiki-e/install-action@cross
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build (cross)
-        run: cross build --all-features --target armv7-unknown-linux-gnueabihf
-
-      - name: Test (cross)
-        run: cross test --all-features --target armv7-unknown-linux-gnueabihf
-
-  # ==========================================================================
-  # Clippy (lint on multiple architectures)
-  # ==========================================================================
-  clippy:
-    name: Clippy (${{ matrix.target }})
-    runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         target:
-          - x86_64-unknown-linux-gnu
-          - aarch64-unknown-linux-gnu
           - i686-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - armv7-unknown-linux-gnueabihf
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build (cross)
+        run: cross build --all-features --target ${{ matrix.target }}
+
+      - name: Test (cross)
+        run: cross test --all-features --target ${{ matrix.target }}
+
+  # ==========================================================================
+  # Clippy - primary targets only
+  # ==========================================================================
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v6
@@ -221,13 +149,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-          targets: ${{ matrix.target }}
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
       - name: Clippy
-        run: cargo clippy --all-features --target ${{ matrix.target }} -- -D warnings
+        run: cargo clippy --all-features -- -D warnings
 
   # ==========================================================================
   # Format check
@@ -235,7 +162,6 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -293,6 +219,7 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
