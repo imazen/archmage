@@ -1,0 +1,121 @@
+name: Update safe_unaligned_simd wrappers
+
+on:
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force regeneration even if version unchanged'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.check.outputs.new_version }}
+      current_version: ${{ steps.check.outputs.current_version }}
+      needs_update: ${{ steps.check.outputs.needs_update }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check for updates
+        id: check
+        run: |
+          # Get current pinned version from xtask
+          CURRENT=$(grep 'SAFE_SIMD_VERSION.*=' xtask/src/main.rs | sed 's/.*"\(.*\)".*/\1/')
+          echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+
+          # Get latest version from crates.io
+          LATEST=$(cargo search safe_unaligned_simd --limit 1 | head -1 | sed 's/.*= "\(.*\)".*/\1/')
+          echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+
+          # Check if update needed
+          if [ "$CURRENT" != "$LATEST" ] || [ "${{ inputs.force_update }}" == "true" ]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "Update needed: $CURRENT -> $LATEST"
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+            echo "Already up to date: $CURRENT"
+          fi
+
+  update:
+    needs: check-update
+    if: needs.check-update.outputs.needs_update == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Update version constant
+        run: |
+          NEW_VERSION="${{ needs.check-update.outputs.new_version }}"
+          sed -i "s/SAFE_SIMD_VERSION: &str = \"[^\"]*\"/SAFE_SIMD_VERSION: \&str = \"$NEW_VERSION\"/" xtask/src/main.rs
+
+          # Also update Cargo.toml dependency
+          sed -i "s/safe_unaligned_simd = { version = \"[^\"]*\"/safe_unaligned_simd = { version = \"$NEW_VERSION\"/" Cargo.toml
+
+      - name: Fetch new version
+        run: cargo fetch
+
+      - name: Build generator
+        run: cargo build -p xtask
+
+      - name: Regenerate wrappers
+        run: cargo run -p xtask -- generate
+
+      - name: Run tests
+        run: cargo test --features safe-simd
+
+      - name: Run clippy
+        run: cargo clippy --features safe-simd -- -D warnings
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "feat: update safe_unaligned_simd to ${{ needs.check-update.outputs.new_version }}"
+          title: "Update safe_unaligned_simd to ${{ needs.check-update.outputs.new_version }}"
+          body: |
+            ## Summary
+            Auto-generated update of safe_unaligned_simd wrappers.
+
+            - Previous version: ${{ needs.check-update.outputs.current_version }}
+            - New version: ${{ needs.check-update.outputs.new_version }}
+
+            ## Changes
+            - Updated version constant in `xtask/src/main.rs`
+            - Updated dependency in `Cargo.toml`
+            - Regenerated wrapper modules in `src/generated/`
+
+            ## Test Plan
+            - [ ] CI tests pass
+            - [ ] Manual review of generated code changes
+          branch: update-safe-simd-${{ needs.check-update.outputs.new_version }}
+          delete-branch: true
+          labels: |
+            dependencies
+            auto-generated

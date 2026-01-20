@@ -1,6 +1,7 @@
 //! Proc-macros for archmage SIMD capability tokens.
 //!
-//! Provides `#[simd_fn]` attribute to make raw intrinsics safe via token proof.
+//! Provides `#[arcane]` attribute (with `#[simd_fn]` alias) to make raw intrinsics
+//! safe via token proof.
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
@@ -75,83 +76,19 @@ fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
     None
 }
 
-/// Attribute macro that enables safe use of SIMD intrinsics based on token type.
-///
-/// This macro looks at the first token parameter of the function and generates
-/// an inner function with the appropriate `#[target_feature(enable = "...")]`
-/// attributes. The outer function calls the inner function unsafely, which is
-/// justified because the token parameter proves the features are available.
-///
-/// **The token is passed through to the inner function**, so you can call other
-/// token-taking functions from inside `#[simd_fn]`.
-///
-/// # Example
-///
-/// ```ignore
-/// use archmage::{Avx2Token, simd_fn};
-/// use std::arch::x86_64::*;
-///
-/// #[simd_fn]
-/// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-///     // Raw intrinsics are safe here - token proves AVX2 is available!
-///     let v = _mm256_loadu_ps(data.as_ptr());
-///     let doubled = _mm256_add_ps(v, v);
-///     let mut out = [0.0f32; 8];
-///     _mm256_storeu_ps(out.as_mut_ptr(), doubled);
-///     out
-/// }
-/// ```
-///
-/// This expands to approximately:
-///
-/// ```ignore
-/// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-///     #[target_feature(enable = "avx2")]
-///     #[inline]
-///     unsafe fn __simd_inner(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-///         let v = _mm256_loadu_ps(data.as_ptr());
-///         let doubled = _mm256_add_ps(v, v);
-///         let mut out = [0.0f32; 8];
-///         _mm256_storeu_ps(out.as_mut_ptr(), doubled);
-///         out
-///     }
-///     // SAFETY: Token proves the required features are available
-///     unsafe { __simd_inner(token, data) }
-/// }
-/// ```
-///
-/// # Profile Tokens
-///
-/// Profile tokens automatically enable all required features:
-///
-/// ```ignore
-/// #[simd_fn]
-/// fn kernel(token: X64V3Token, data: &mut [f32]) {
-///     // AVX2 + FMA + BMI1 + BMI2 intrinsics all safe here!
-/// }
-/// ```
-///
-/// # Supported Tokens
-///
-/// - **x86_64**: `Sse2Token`, `Sse41Token`, `Sse42Token`, `AvxToken`, `Avx2Token`,
-///   `FmaToken`, `Avx2FmaToken`, `Avx512fToken`, `Avx512bwToken`
-/// - **x86_64 profiles**: `X64V2Token`, `X64V3Token`, `X64V4Token`
-/// - **ARM**: `NeonToken`, `SveToken`, `Sve2Token`
-/// - **WASM**: `Simd128Token`
-#[proc_macro_attribute]
-pub fn simd_fn(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input_fn = parse_macro_input!(item as ItemFn);
-
+/// Shared implementation for arcane/simd_fn macros.
+fn arcane_impl(input_fn: ItemFn, macro_name: &str) -> TokenStream {
     // Find the token parameter and its features
     let (_token_ident, features) = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
-            return syn::Error::new_spanned(
-                &input_fn.sig,
-                "simd_fn requires a token parameter (e.g., `token: Avx2Token`)",
-            )
-            .to_compile_error()
-            .into();
+            let msg = format!(
+                "{} requires a token parameter (e.g., `token: Avx2Token`)",
+                macro_name
+            );
+            return syn::Error::new_spanned(&input_fn.sig, msg)
+                .to_compile_error()
+                .into();
         }
     };
 
@@ -212,4 +149,82 @@ pub fn simd_fn(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     expanded.into()
+}
+
+/// Mark a function as an arcane SIMD function.
+///
+/// This macro enables safe use of SIMD intrinsics by generating an inner function
+/// with the appropriate `#[target_feature(enable = "...")]` attributes based on
+/// the token parameter type. The outer function calls the inner function unsafely,
+/// which is justified because the token parameter proves the features are available.
+///
+/// **The token is passed through to the inner function**, so you can call other
+/// token-taking functions from inside `#[arcane]`.
+///
+/// # Example
+///
+/// ```ignore
+/// use archmage::{Avx2Token, arcane};
+/// use std::arch::x86_64::*;
+///
+/// #[arcane]
+/// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+///     // Raw intrinsics are safe here - token proves AVX2 is available!
+///     let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+///     let doubled = _mm256_add_ps(v, v);  // SAFE - value operation
+///     let mut out = [0.0f32; 8];
+///     unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+///     out
+/// }
+/// ```
+///
+/// This expands to approximately:
+///
+/// ```ignore
+/// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+///     #[target_feature(enable = "avx2")]
+///     #[inline]
+///     unsafe fn __simd_inner_process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+///         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+///         let doubled = _mm256_add_ps(v, v);
+///         let mut out = [0.0f32; 8];
+///         unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+///         out
+///     }
+///     // SAFETY: Token proves the required features are available
+///     unsafe { __simd_inner_process(token, data) }
+/// }
+/// ```
+///
+/// # Profile Tokens
+///
+/// Profile tokens automatically enable all required features:
+///
+/// ```ignore
+/// #[arcane]
+/// fn kernel(token: X64V3Token, data: &mut [f32]) {
+///     // AVX2 + FMA + BMI1 + BMI2 intrinsics all safe here!
+/// }
+/// ```
+///
+/// # Supported Tokens
+///
+/// - **x86_64**: `Sse2Token`, `Sse41Token`, `Sse42Token`, `AvxToken`, `Avx2Token`,
+///   `FmaToken`, `Avx2FmaToken`, `Avx512fToken`, `Avx512bwToken`
+/// - **x86_64 profiles**: `X64V2Token`, `X64V3Token`, `X64V4Token`
+/// - **ARM**: `NeonToken`, `SveToken`, `Sve2Token`
+/// - **WASM**: `Simd128Token`
+#[proc_macro_attribute]
+pub fn arcane(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input_fn = parse_macro_input!(item as ItemFn);
+    arcane_impl(input_fn, "arcane")
+}
+
+/// Alias for [`arcane`] - mark a function as an arcane SIMD function.
+///
+/// See [`arcane`] for full documentation.
+#[proc_macro_attribute]
+pub fn simd_fn(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input_fn = parse_macro_input!(item as ItemFn);
+    arcane_impl(input_fn, "simd_fn")
 }

@@ -2,7 +2,7 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
-**archmage** provides capability tokens that prove CPU feature availability at compile time, making raw SIMD intrinsics safe to call. It also provides safe load/store operations and composite SIMD algorithms.
+**archmage** provides capability tokens that prove CPU feature availability at compile time, making raw SIMD intrinsics safe to call via the `#[arcane]` macro.
 
 ## The Problem
 
@@ -18,10 +18,10 @@ Rust 1.85+ made value-based intrinsics safe inside `#[target_feature]` functions
 ## The Solution: Capability Tokens
 
 ```rust
-use archmage::{Avx2Token, SimdToken, simd_fn};
+use archmage::{Avx2Token, SimdToken, arcane};
 use std::arch::x86_64::*;
 
-#[simd_fn]
+#[arcane]
 fn double(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
     // Memory ops need unsafe (raw pointers)
     let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
@@ -42,7 +42,7 @@ fn main() {
 }
 ```
 
-The `#[simd_fn]` macro wraps your function with `#[target_feature]`, making all value-based intrinsics safe. The token proves the caller verified feature availability.
+The `#[arcane]` macro wraps your function with `#[target_feature]`, making all value-based intrinsics safe. The token proves the caller verified feature availability.
 
 ## What archmage Provides
 
@@ -84,7 +84,7 @@ let token = avx2_token!();  // Safe in multiversion context
 | `SveToken` | SVE | Graviton 3, Apple M-series |
 | `Sve2Token` | SVE2 | ARMv9: Cortex-X2+, Graviton 4 |
 
-### 2. Safe Load/Store
+### 2. Safe Load/Store (feature = "ops")
 
 Memory operations use references instead of raw pointers:
 
@@ -100,7 +100,7 @@ if let Some(token) = Avx2Token::try_new() {
 }
 ```
 
-### 3. Composite Operations
+### 3. Composite Operations (feature = "composite")
 
 High-level SIMD algorithms built on tokens:
 
@@ -124,7 +124,7 @@ if let Some(token) = Avx2FmaToken::try_new() {
 Write generic code that works with any implementing token:
 
 ```rust
-use archmage::{Transpose8x8, DotProduct, HorizontalOps};
+use archmage::simd_ops::{Transpose8x8, DotProduct, HorizontalOps};
 
 fn process<T: Transpose8x8 + DotProduct + HorizontalOps>(
     token: T,
@@ -165,14 +165,18 @@ For portable SIMD without manual intrinsics, use the `wide` crate instead.
 
 ```toml
 [dependencies]
-archmage = { version = "0.1", features = ["macros"] }
+archmage = "0.1"
 ```
 
 | Feature | Description |
 |---------|-------------|
 | `std` (default) | Enable std library support |
-| `macros` (default) | Enable `#[simd_fn]` attribute macro |
-| `safe-simd` | Integration with `safe_unaligned_simd` for more safe load/store variants |
+| `macros` (default) | Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`) |
+| `ops` | Safe load/store operations |
+| `composite` | Higher-level ops (transpose, dot product) - implies `ops` |
+| `wide` | Integration with the `wide` crate |
+| `safe-simd` | Integration with `safe_unaligned_simd` |
+| `full` | Enable all optional features |
 
 ## License
 

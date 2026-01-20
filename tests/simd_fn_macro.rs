@@ -4,7 +4,7 @@
 
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
-    use archmage::{simd_fn, Avx2Token, Avx2FmaToken, X64V3Token, SimdToken};
+    use archmage::{Avx2FmaToken, Avx2Token, SimdToken, X64V3Token, simd_fn};
     use std::arch::x86_64::*;
 
     /// Basic test: simd_fn with Avx2Token
@@ -57,7 +57,7 @@ mod x86_tests {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         // Use both AVX2 and FMA instructions
         let squared = _mm256_mul_ps(v, v);
-        let result = _mm256_fmadd_ps(v, v, squared);  // v*v + v*v = 2*v*v
+        let result = _mm256_fmadd_ps(v, v, squared); // v*v + v*v = 2*v*v
         let mut out = [0.0f32; 8];
         unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
         out
@@ -117,7 +117,7 @@ mod x86_tests {
         if let Some(token) = Avx2Token::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let sum = horizontal_sum(token, &input);
-            assert_eq!(sum, 36.0);  // 1+2+3+4+5+6+7+8 = 36
+            assert_eq!(sum, 36.0); // 1+2+3+4+5+6+7+8 = 36
         }
     }
 

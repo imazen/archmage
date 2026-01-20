@@ -362,6 +362,203 @@ impl Avx512bwToken {
 }
 
 // ============================================================================
+// SSE Token (for functions that only need SSE, not SSE2)
+// ============================================================================
+
+/// Proof that SSE is available.
+///
+/// SSE is implied by SSE2, which is baseline on x86_64. This token exists
+/// for completeness when wrapping functions that only require SSE.
+#[derive(Clone, Copy, Debug)]
+pub struct SseToken {
+    _private: (),
+}
+
+impl SimdToken for SseToken {
+    const NAME: &'static str = "SSE";
+
+    #[inline(always)]
+    fn try_new() -> Option<Self> {
+        // SSE is always available on x86_64 (implied by SSE2)
+        Some(Self { _private: () })
+    }
+
+    #[inline(always)]
+    unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+// ============================================================================
+// AVX-512 + VL Tokens (for 128/256-bit variants of AVX-512 instructions)
+// ============================================================================
+
+/// Proof that AVX-512F + AVX-512VL are available.
+///
+/// AVX-512VL (Vector Length) extensions allow AVX-512 instructions to operate
+/// on 128-bit and 256-bit vectors, not just 512-bit. This is required for
+/// functions like `_mm_loadu_epi32` and `_mm256_loadu_epi32`.
+#[derive(Clone, Copy, Debug)]
+pub struct Avx512fVlToken {
+    _private: (),
+}
+
+impl SimdToken for Avx512fVlToken {
+    const NAME: &'static str = "AVX-512F+VL";
+
+    #[inline(always)]
+    fn try_new() -> Option<Self> {
+        if crate::is_x86_feature_available!("avx512f")
+            && crate::is_x86_feature_available!("avx512vl")
+        {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Avx512fVlToken {
+    /// Get an AVX-512F token
+    #[inline(always)]
+    pub fn avx512f(self) -> Avx512fToken {
+        unsafe { Avx512fToken::new_unchecked() }
+    }
+
+    /// Get an AVX2 token
+    #[inline(always)]
+    pub fn avx2(self) -> Avx2Token {
+        unsafe { Avx2Token::new_unchecked() }
+    }
+}
+
+/// Proof that AVX-512BW + AVX-512VL are available.
+///
+/// Required for byte/word operations on 128-bit and 256-bit vectors,
+/// such as `_mm_loadu_epi8`, `_mm256_loadu_epi16`, etc.
+#[derive(Clone, Copy, Debug)]
+pub struct Avx512bwVlToken {
+    _private: (),
+}
+
+impl SimdToken for Avx512bwVlToken {
+    const NAME: &'static str = "AVX-512BW+VL";
+
+    #[inline(always)]
+    fn try_new() -> Option<Self> {
+        if crate::is_x86_feature_available!("avx512bw")
+            && crate::is_x86_feature_available!("avx512vl")
+        {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Avx512bwVlToken {
+    /// Get an AVX-512BW token
+    #[inline(always)]
+    pub fn avx512bw(self) -> Avx512bwToken {
+        unsafe { Avx512bwToken::new_unchecked() }
+    }
+
+    /// Get an AVX-512F+VL token
+    #[inline(always)]
+    pub fn avx512f_vl(self) -> Avx512fVlToken {
+        unsafe { Avx512fVlToken::new_unchecked() }
+    }
+}
+
+/// Proof that AVX-512 VBMI2 is available.
+///
+/// AVX-512 VBMI2 (Vector Byte Manipulation Instructions 2) provides
+/// compress/expand operations for byte and word elements.
+/// Available on Ice Lake+, Zen 4+.
+#[derive(Clone, Copy, Debug)]
+pub struct Avx512Vbmi2Token {
+    _private: (),
+}
+
+impl SimdToken for Avx512Vbmi2Token {
+    const NAME: &'static str = "AVX-512VBMI2";
+
+    #[inline(always)]
+    fn try_new() -> Option<Self> {
+        if crate::is_x86_feature_available!("avx512vbmi2") {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Avx512Vbmi2Token {
+    /// Get an AVX-512BW token (VBMI2 implies BW)
+    #[inline(always)]
+    pub fn avx512bw(self) -> Avx512bwToken {
+        unsafe { Avx512bwToken::new_unchecked() }
+    }
+}
+
+/// Proof that AVX-512 VBMI2 + VL are available.
+///
+/// Required for compress/expand operations on 128-bit and 256-bit vectors.
+#[derive(Clone, Copy, Debug)]
+pub struct Avx512Vbmi2VlToken {
+    _private: (),
+}
+
+impl SimdToken for Avx512Vbmi2VlToken {
+    const NAME: &'static str = "AVX-512VBMI2+VL";
+
+    #[inline(always)]
+    fn try_new() -> Option<Self> {
+        if crate::is_x86_feature_available!("avx512vbmi2")
+            && crate::is_x86_feature_available!("avx512vl")
+        {
+            Some(unsafe { Self::new_unchecked() })
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Avx512Vbmi2VlToken {
+    /// Get an AVX-512 VBMI2 token
+    #[inline(always)]
+    pub fn avx512vbmi2(self) -> Avx512Vbmi2Token {
+        unsafe { Avx512Vbmi2Token::new_unchecked() }
+    }
+
+    /// Get an AVX-512BW+VL token
+    #[inline(always)]
+    pub fn avx512bw_vl(self) -> Avx512bwVlToken {
+        unsafe { Avx512bwVlToken::new_unchecked() }
+    }
+}
+
+// ============================================================================
 // x86-64 Microarchitecture Level Tokens (Profiles)
 // ============================================================================
 //
@@ -390,8 +587,7 @@ impl SimdToken for X64V2Token {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         // v2 requires SSE4.2 and POPCNT (SSE4.2 implies earlier SSE versions)
-        if crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("popcnt")
+        if crate::is_x86_feature_available!("sse4.2") && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::new_unchecked() })
         } else {
@@ -654,11 +850,12 @@ impl Sse42Token {
 // Capability Marker Trait Implementations
 // ============================================================================
 
-use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 use super::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
 use super::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
+use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 
-// 128-bit SIMD: SSE2, SSE4.1, SSE4.2
+// 128-bit SIMD: SSE, SSE2, SSE4.1, SSE4.2
+impl Has128BitSimd for SseToken {}
 impl Has128BitSimd for Sse2Token {}
 impl Has128BitSimd for Sse41Token {}
 impl Has128BitSimd for Sse42Token {}
@@ -685,11 +882,31 @@ impl Has128BitSimd for X64V4Token {}
 impl Has256BitSimd for X64V4Token {}
 impl Has512BitSimd for X64V4Token {}
 
+// AVX-512 + VL tokens (have all three widths)
+impl Has128BitSimd for Avx512fVlToken {}
+impl Has256BitSimd for Avx512fVlToken {}
+impl Has512BitSimd for Avx512fVlToken {}
+impl Has128BitSimd for Avx512bwVlToken {}
+impl Has256BitSimd for Avx512bwVlToken {}
+impl Has512BitSimd for Avx512bwVlToken {}
+impl Has128BitSimd for Avx512Vbmi2Token {}
+impl Has256BitSimd for Avx512Vbmi2Token {}
+impl Has512BitSimd for Avx512Vbmi2Token {}
+impl Has128BitSimd for Avx512Vbmi2VlToken {}
+impl Has256BitSimd for Avx512Vbmi2VlToken {}
+impl Has512BitSimd for Avx512Vbmi2VlToken {}
+
 // FMA support
 impl HasFma for FmaToken {}
 impl HasFma for Avx2FmaToken {}
 impl HasFma for X64V3Token {}
 impl HasFma for X64V4Token {}
+impl HasFma for Avx512fToken {}
+impl HasFma for Avx512fVlToken {}
+impl HasFma for Avx512bwToken {}
+impl HasFma for Avx512bwVlToken {}
+impl HasFma for Avx512Vbmi2Token {}
+impl HasFma for Avx512Vbmi2VlToken {}
 
 // ============================================================================
 // SIMD Operation Trait Implementations (simd_ops module)
@@ -857,14 +1074,17 @@ impl HorizontalOps for X64V4Token {
 // SIMD tokens override with optimized code, others use default scalar methods.
 
 // Tokens WITHOUT 256-bit SIMD use scalar defaults
+impl Transpose8x8OrScalar for SseToken {}
 impl Transpose8x8OrScalar for Sse2Token {}
 impl Transpose8x8OrScalar for Sse41Token {}
 impl Transpose8x8OrScalar for Sse42Token {}
 impl Transpose8x8OrScalar for X64V2Token {}
+impl DotProductOrScalar for SseToken {}
 impl DotProductOrScalar for Sse2Token {}
 impl DotProductOrScalar for Sse41Token {}
 impl DotProductOrScalar for Sse42Token {}
 impl DotProductOrScalar for X64V2Token {}
+impl HorizontalOpsOrScalar for SseToken {}
 impl HorizontalOpsOrScalar for Sse2Token {}
 impl HorizontalOpsOrScalar for Sse41Token {}
 impl HorizontalOpsOrScalar for Sse42Token {}
@@ -1079,6 +1299,149 @@ impl HorizontalOpsOrScalar for FmaToken {}
 impl Transpose8x8OrScalar for AvxToken {}
 impl DotProductOrScalar for AvxToken {}
 impl HorizontalOpsOrScalar for AvxToken {}
+
+// AVX-512 + VL tokens (delegate to underlying capabilities)
+impl Transpose8x8OrScalar for Avx512fVlToken {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.avx2().transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx2().transpose_8x8_copy(input, output)
+    }
+}
+
+impl DotProductOrScalar for Avx512fVlToken {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.avx512f().avx2_fma().dot_product_f32(a, b)
+    }
+}
+
+impl HorizontalOpsOrScalar for Avx512fVlToken {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx2().sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx2().max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx2().min_f32(data)
+    }
+}
+
+impl Transpose8x8OrScalar for Avx512bwVlToken {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.avx512f_vl().avx2().transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx512f_vl().avx2().transpose_8x8_copy(input, output)
+    }
+}
+
+impl DotProductOrScalar for Avx512bwVlToken {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.avx512f_vl().avx512f().avx2_fma().dot_product_f32(a, b)
+    }
+}
+
+impl HorizontalOpsOrScalar for Avx512bwVlToken {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512f_vl().avx2().sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512f_vl().avx2().max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512f_vl().avx2().min_f32(data)
+    }
+}
+
+impl Transpose8x8OrScalar for Avx512Vbmi2Token {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.avx512bw().avx512f().avx2().transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx512bw()
+            .avx512f()
+            .avx2()
+            .transpose_8x8_copy(input, output)
+    }
+}
+
+impl DotProductOrScalar for Avx512Vbmi2Token {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.avx512bw().avx512f().avx2_fma().dot_product_f32(a, b)
+    }
+}
+
+impl HorizontalOpsOrScalar for Avx512Vbmi2Token {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512bw().avx512f().avx2().sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512bw().avx512f().avx2().max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512bw().avx512f().avx2().min_f32(data)
+    }
+}
+
+impl Transpose8x8OrScalar for Avx512Vbmi2VlToken {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.avx512bw_vl().avx512f_vl().avx2().transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx512bw_vl()
+            .avx512f_vl()
+            .avx2()
+            .transpose_8x8_copy(input, output)
+    }
+}
+
+impl DotProductOrScalar for Avx512Vbmi2VlToken {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.avx512bw_vl()
+            .avx512f_vl()
+            .avx512f()
+            .avx2_fma()
+            .dot_product_f32(a, b)
+    }
+}
+
+impl HorizontalOpsOrScalar for Avx512Vbmi2VlToken {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512bw_vl().avx512f_vl().avx2().sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512bw_vl().avx512f_vl().avx2().max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512bw_vl().avx512f_vl().avx2().min_f32(data)
+    }
+}
 
 // ============================================================================
 // Assembly verification helpers

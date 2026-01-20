@@ -103,7 +103,6 @@ impl Avx2Token {
     pub fn ceil_f32x8_wide(self, a: f32x8) -> f32x8 {
         a.ceil()
     }
-
 }
 
 #[cfg(all(feature = "wide", target_arch = "x86_64"))]

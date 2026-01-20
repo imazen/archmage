@@ -1,8 +1,11 @@
+[workspace]
+members = [".", "archmage-macros", "xtask"]
+
 [package]
 name = "archmage"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.89"
 license = "MIT OR Apache-2.0"
 description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive."
 repository = "https://github.com/imazen/archmage"
@@ -13,26 +16,21 @@ categories = ["development-tools", "hardware-support", "no-std"]
 default = ["std", "macros"]
 std = []
 macros = ["dep:archmage-macros"]
-# Integration features - enable separately or together
+# Optional modules
+ops = []                               # Safe load/store operations
+composite = ["ops"]                    # Transpose, dot product, horizontal ops
+# Integration features
 wide = ["dep:wide"]
 safe-simd = ["dep:safe_unaligned_simd"]
-multiversion = ["dep:multiversion"]
-multiversed = ["dep:multiversed"]
-# Architecture features
-x86 = []
-arm = []
-wasm = []
-# All integrations
-full = ["wide", "safe-simd", "multiversion", "multiversed", "macros"]
+# All optional modules
+full = ["ops", "composite", "wide", "safe-simd"]
 
 [dependencies]
-# Proc-macro crate for simd_fn attribute
+# Proc-macro crate for #[arcane] attribute
 archmage-macros = { version = "0.1.0", path = "archmage-macros", optional = true }
 # Optional integrations
 wide = { version = "1.1.1", optional = true }
-safe_unaligned_simd = { version = "0.2.3", optional = true }
-multiversion = { version = "0.8.0", optional = true }
-multiversed = { version = "0.1.0", optional = true }
+safe_unaligned_simd = { version = "0.2.3", optional = true, features = ["avx512"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

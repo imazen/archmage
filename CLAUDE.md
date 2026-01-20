@@ -101,7 +101,7 @@ src/
 ├── lib.rs              # Main exports, #[simd_fn] macro re-export
 ├── tokens/
 │   ├── mod.rs          # SimdToken trait
-│   ├── x86.rs          # Sse2, Avx2, Fma, X64V2/V3/V4 tokens
+│   ├── x86.rs          # Sse2, Avx2, Fma, X64V2/V3/V4, AVX-512 tokens
 │   ├── arm.rs          # Neon, Sve, Sve2 tokens
 │   └── wasm.rs         # Simd128Token
 ├── ops/
@@ -109,26 +109,69 @@ src/
 ├── integrate/
 │   ├── safe_simd.rs    # safe_unaligned_simd integration
 │   └── wide_ops.rs     # wide crate integration
-└── composite/
-    ├── transpose.rs    # 8x8 transpose
-    ├── dot_product.rs  # Dot product with FMA
-    └── horizontal.rs   # Horizontal sum/max/min
+├── generated/          # AUTO-GENERATED - token-gated safe_unaligned_simd wrappers
+│   ├── mod.rs
+│   ├── VERSION         # Tracks source version
+│   └── x86/
+│       ├── sse.rs      # SSE functions (6)
+│       ├── sse2.rs     # SSE2 functions (20)
+│       ├── avx.rs      # AVX functions (17)
+│       ├── avx512f.rs  # AVX-512F functions (49)
+│       ├── avx512f_vl.rs   # AVX-512F+VL functions (86)
+│       ├── avx512bw.rs     # AVX-512BW functions (13)
+│       ├── avx512bw_vl.rs  # AVX-512BW+VL functions (26)
+│       ├── avx512vbmi2.rs  # AVX-512VBMI2 functions (6)
+│       └── avx512vbmi2_vl.rs # AVX-512VBMI2+VL functions (12)
+├── composite/
+│   ├── transpose.rs    # 8x8 transpose
+│   ├── dot_product.rs  # Dot product with FMA
+│   └── horizontal.rs   # Horizontal sum/max/min
+xtask/
+└── src/main.rs         # Generator for safe_unaligned_simd wrappers
 ```
+
+## Generated Wrappers (safe-simd feature)
+
+The `src/generated/` directory contains **auto-generated** token-gated wrappers for all
+`safe_unaligned_simd` functions. These wrappers make the functions truly safe by requiring
+a capability token as the first parameter.
+
+**To regenerate after updating safe_unaligned_simd:**
+```bash
+cargo run -p xtask -- generate
+```
+
+**CI automatically checks for updates** weekly and creates PRs when new versions are available.
+
+The generator in `xtask/src/main.rs`:
+1. Parses safe_unaligned_simd source from cargo cache
+2. Extracts function signatures and `#[target_feature]` attributes
+3. Generates wrapper functions that take a token + call the original
+4. Groups by feature set (sse, sse2, avx, avx512f, etc.)
 
 ## Token Hierarchy
 
 ### x86_64
 
 **Feature Tokens:**
-- `Sse2Token` - SSE2 (baseline)
+- `SseToken` - SSE (rarely needed, SSE2 is baseline)
+- `Sse2Token` - SSE2 (baseline on x86_64)
 - `Sse41Token` → `Sse42Token` → `AvxToken` → `Avx2Token` → `Avx512fToken`
 - `FmaToken` (independent)
 - `Avx2FmaToken` (combined)
 
+**AVX-512 Tokens (for safe-simd feature):**
+- `Avx512fToken` - AVX-512 Foundation (512-bit only)
+- `Avx512fVlToken` - AVX-512F + VL (128/256/512-bit operations)
+- `Avx512bwToken` - AVX-512 Byte/Word
+- `Avx512bwVlToken` - AVX-512BW + VL
+- `Avx512Vbmi2Token` - AVX-512 VBMI2 (Ice Lake+, Zen 4+)
+- `Avx512Vbmi2VlToken` - AVX-512 VBMI2 + VL
+
 **Profile Tokens (x86-64 psABI levels):**
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
 - `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
-- `X64V4Token` - AVX-512 (Xeon 2017+, Zen 4+)
+- `X64V4Token` - AVX-512F/BW/CD/DQ/VL (Xeon 2017+, Zen 4+)
 
 ### AArch64
 

@@ -57,11 +57,11 @@ mod neon_tests {
         let clt = vcltq_f32(add, set1_f32x4);
 
         // === ROUND f32x4 (all safe) ===
-        let rndp = vrndpq_f32(add);  // ceil
-        let rndm = vrndmq_f32(add);  // floor
-        let rndn = vrndnq_f32(add);  // round to nearest
-        let rndz = vrndaq_f32(add);  // round away from zero
-        let rndi = vrndiq_f32(add);  // round using current mode
+        let rndp = vrndpq_f32(add); // ceil
+        let rndm = vrndmq_f32(add); // floor
+        let rndn = vrndnq_f32(add); // round to nearest
+        let rndz = vrndaq_f32(add); // round away from zero
+        let rndi = vrndiq_f32(add); // round using current mode
 
         // === ARITHMETIC f32x2 (all safe) ===
         let add2 = vadd_f32(zero_f32x2, set1_f32x2);
@@ -136,11 +136,11 @@ mod neon_tests {
         let sub = vsubq_s8(add, set1_i8x16);
         let neg = vnegq_s8(add);
         let abs = vabsq_s8(add);
-        let qadd = vqaddq_s8(add, set1_i8x16);  // saturating
+        let qadd = vqaddq_s8(add, set1_i8x16); // saturating
         let qsub = vqsubq_s8(add, set1_i8x16);
-        let hadd = vhaddq_s8(add, set1_i8x16);  // halving
+        let hadd = vhaddq_s8(add, set1_i8x16); // halving
         let hsub = vhsubq_s8(add, set1_i8x16);
-        let rhadd = vrhaddq_s8(add, set1_i8x16);  // rounding halving
+        let rhadd = vrhaddq_s8(add, set1_i8x16); // rounding halving
         let min = vminq_s8(add, set1_i8x16);
         let max = vmaxq_s8(add, set1_i8x16);
         let abd = vabdq_s8(add, set1_i8x16);
@@ -171,8 +171,8 @@ mod neon_tests {
         let and = vandq_s8(add, set1_i8x16);
         let or = vorrq_s8(add, set1_i8x16);
         let xor = veorq_s8(add, set1_i8x16);
-        let bic = vbicq_s8(add, set1_i8x16);  // and-not
-        let orn = vornq_s8(add, set1_i8x16);  // or-not
+        let bic = vbicq_s8(add, set1_i8x16); // and-not
+        let orn = vornq_s8(add, set1_i8x16); // or-not
         let not = vmvnq_s8(add);
 
         // === TABLE LOOKUP (all safe - no pointers) ===
@@ -224,16 +224,16 @@ mod neon_tests {
         let mls = vmlsq_s16(add, set1_i16x8, set1_i16x8);
 
         // === WIDENING (all safe) ===
-        let addl = vaddl_s16(zero_i16x4, set1_i16x4);  // i16x4 -> i32x4
+        let addl = vaddl_s16(zero_i16x4, set1_i16x4); // i16x4 -> i32x4
         let subl = vsubl_s16(zero_i16x4, set1_i16x4);
         let mull = vmull_s16(zero_i16x4, set1_i16x4);
         let abdl = vabdl_s16(zero_i16x4, set1_i16x4);
-        let addw = vaddw_s16(vdupq_n_s32(0), zero_i16x4);  // i32x4 + i16x4 -> i32x4
+        let addw = vaddw_s16(vdupq_n_s32(0), zero_i16x4); // i32x4 + i16x4 -> i32x4
 
         // === NARROWING (all safe) ===
-        let movn = vmovn_s32(vdupq_n_s32(0));  // i32x4 -> i16x4
-        let qmovn = vqmovn_s32(vdupq_n_s32(0));  // saturating
-        let qmovun = vqmovun_s32(vdupq_n_s32(0));  // saturating unsigned
+        let movn = vmovn_s32(vdupq_n_s32(0)); // i32x4 -> i16x4
+        let qmovn = vqmovn_s32(vdupq_n_s32(0)); // saturating
+        let qmovun = vqmovun_s32(vdupq_n_s32(0)); // saturating unsigned
 
         // === COMPARISON i16x8 (all safe) ===
         let ceq = vceqq_s16(add, set1_i16x8);
@@ -241,11 +241,11 @@ mod neon_tests {
         let cgt = vcgtq_s16(add, set1_i16x8);
 
         // === SHIFT (all safe) ===
-        let shl = vshlq_s16(add, set1_i16x8);  // variable shift
-        let shr_n = vshrq_n_s16::<1>(add);     // immediate shift right
-        let shl_n = vshlq_n_s16::<1>(add);     // immediate shift left
-        let qshl = vqshlq_s16(add, set1_i16x8);  // saturating
-        let rshr = vrshrq_n_s16::<1>(add);     // rounding
+        let shl = vshlq_s16(add, set1_i16x8); // variable shift
+        let shr_n = vshrq_n_s16::<1>(add); // immediate shift right
+        let shl_n = vshlq_n_s16::<1>(add); // immediate shift left
+        let qshl = vqshlq_s16(add, set1_i16x8); // saturating
+        let rshr = vrshrq_n_s16::<1>(add); // rounding
     }
 
     #[target_feature(enable = "neon")]
@@ -277,7 +277,7 @@ mod neon_tests {
         let mls = vmlsq_s32(add, set1_i32x4, set1_i32x4);
 
         // === WIDENING (all safe) ===
-        let addl = vaddl_s32(zero_i32x2, set1_i32x2);  // i32x2 -> i64x2
+        let addl = vaddl_s32(zero_i32x2, set1_i32x2); // i32x2 -> i64x2
         let subl = vsubl_s32(zero_i32x2, set1_i32x2);
         let mull = vmull_s32(zero_i32x2, set1_i32x2);
         let abdl = vabdl_s32(zero_i32x2, set1_i32x2);
@@ -302,16 +302,16 @@ mod neon_tests {
         let pmin = vpminq_s32(add, set1_i32x4);
 
         // === REDUCE (all safe) ===
-        let addv = vaddvq_s32(add);  // horizontal sum
+        let addv = vaddvq_s32(add); // horizontal sum
         let maxv = vmaxvq_s32(add);
         let minv = vminvq_s32(add);
 
         // === CONVERSION (all safe) ===
         let cvt_f32 = vcvtq_f32_s32(add);
         let cvt_s32 = vcvtq_s32_f32(vdupq_n_f32(1.0));
-        let cvtn = vcvtnq_s32_f32(vdupq_n_f32(1.5));  // round to nearest
-        let cvtm = vcvtmq_s32_f32(vdupq_n_f32(1.5));  // floor
-        let cvtp = vcvtpq_s32_f32(vdupq_n_f32(1.5));  // ceil
+        let cvtn = vcvtnq_s32_f32(vdupq_n_f32(1.5)); // round to nearest
+        let cvtm = vcvtmq_s32_f32(vdupq_n_f32(1.5)); // floor
+        let cvtp = vcvtpq_s32_f32(vdupq_n_f32(1.5)); // ceil
     }
 
     #[target_feature(enable = "neon")]
