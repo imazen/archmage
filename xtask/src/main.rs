@@ -282,7 +282,6 @@ macro_rules! neon_load_store {{
         $(#[$meta])*
         #[inline(always)]
         pub fn $intrinsic<T>(_: T, from: &$realty) -> $ret {{
-            // SAFETY: NEON is baseline on aarch64
             unsafe {{ safe_unaligned_simd::aarch64::$intrinsic(from) }}
         }}
     }};
@@ -291,7 +290,6 @@ macro_rules! neon_load_store {{
         $(#[$meta])*
         #[inline(always)]
         pub fn $intrinsic<T>(_: T, into: &mut $realty, val: $ret) {{
-            // SAFETY: NEON is baseline on aarch64
             unsafe {{ safe_unaligned_simd::aarch64::$intrinsic(into, val) }}
         }}
     }};
