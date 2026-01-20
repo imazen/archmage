@@ -17,13 +17,12 @@ default = ["std", "macros"]
 std = []
 macros = ["dep:archmage-macros"]
 # Optional modules
-ops = []                               # Safe load/store operations
 composite = ["safe_unaligned_simd"]    # Transpose, dot product, horizontal ops
 # Integration features
 wide = ["dep:wide"]
 safe_unaligned_simd = ["dep:safe_unaligned_simd"]
 # All optional modules
-full = ["ops", "composite", "wide", "safe_unaligned_simd"]
+full = ["composite", "wide", "safe_unaligned_simd"]
 # Nightly-only: use #[inline(always)] with #[target_feature] in generated wrappers.
 # Requires #![feature(target_feature_inline_always)] in the crate using archmage.
 # Can reduce register spills in hot SIMD code by 10-20%.

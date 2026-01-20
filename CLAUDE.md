@@ -89,15 +89,6 @@ let v = _mm256_loadu_ps(token.avx(), &data);   // Safe! Uses reference
 _mm256_storeu_ps(token.avx(), &mut out, v);    // Safe! Uses reference
 ```
 
-Or via `ops` module (no external deps, requires `ops` feature):
-
-```rust
-use archmage::ops::x86::{load_f32x8, store_f32x8};
-
-let v = load_f32x8(token, &data);   // Safe! Uses reference
-store_f32x8(token, &mut out, v);    // Safe! Uses reference
-```
-
 ### 4. Composite Operations
 
 Higher-level SIMD algorithms using `#[simd_fn]`:
@@ -117,8 +108,6 @@ src/
 │   ├── x86.rs          # Sse2, Avx2, Fma, X64V2/V3/V4, AVX-512 tokens
 │   ├── arm.rs          # Neon, Sve, Sve2 tokens
 │   └── wasm.rs         # Simd128Token
-├── ops/
-│   └── x86/mod.rs      # Safe load/store only (reference-based)
 ├── integrate/
 │   ├── safe_simd.rs    # safe_unaligned_simd integration
 │   └── wide_ops.rs     # wide crate integration

@@ -43,10 +43,9 @@
 //!
 //! - `std` (default): Enable std library support
 //! - `macros` (default): Enable `#[arcane]` attribute macro (also available as `#[simd_fn]`)
-//! - `ops`: Safe load/store operations
-//! - `composite`: Higher-level operations (transpose, dot product, etc.) - implies `ops`
+//! - `composite`: Higher-level operations (transpose, dot product, etc.) - implies `safe_unaligned_simd`
 //! - `wide`: Integration with the `wide` crate
-//! - `safe_unaligned_simd`: Integration with `safe_unaligned_simd` crate for additional safe load/store
+//! - `safe_unaligned_simd`: Safe load/store via `safe_unaligned_simd` crate (exposed as `mem` module)
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -70,16 +69,11 @@ pub mod detect;
 // Core token types and traits
 pub mod tokens;
 
-// Safe load/store operations (requires "ops" feature)
-#[cfg(all(target_arch = "x86_64", feature = "ops"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "ops")))]
-pub mod ops;
-
 // Integration layers
 #[cfg(any(feature = "wide", feature = "safe_unaligned_simd"))]
 pub mod integrate;
 
-// Composite operations (requires "composite" feature, implies "ops")
+// Composite operations (requires "composite" feature)
 #[cfg(feature = "composite")]
 #[cfg_attr(docsrs, doc(cfg(feature = "composite")))]
 pub mod composite;
@@ -118,15 +112,6 @@ pub use tokens::arm::{NeonToken, Sve2Token, SveToken};
 // wasm tokens (when on WASM)
 #[cfg(target_arch = "wasm32")]
 pub use tokens::wasm::Simd128Token;
-
-// Re-export safe load/store operations (requires "ops" feature)
-#[cfg(all(target_arch = "x86_64", feature = "ops"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "ops")))]
-pub use ops::x86::{
-    load_f32x4, load_f32x8, load_f64x2, load_f64x4, load_i32x4, load_i32x8, store_f32x4,
-    store_f32x8, store_f64x2, store_f64x4, store_i32x4, store_i32x8, to_array_f32x4,
-    to_array_f32x8, to_array_i32x8,
-};
 
 // ============================================================================
 // Token creation macros for use inside multiversioned functions

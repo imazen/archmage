@@ -4,7 +4,7 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 #[cfg(target_arch = "x86_64")]
 fn bench_token_overhead(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, Avx2Token, SimdToken, ops};
+    use archmage::{Avx2FmaToken, Avx2Token, SimdToken, mem};
 
     let mut group = c.benchmark_group("token_overhead");
 
@@ -23,7 +23,7 @@ fn bench_token_overhead(c: &mut Criterion) {
 
         group.bench_function("load_with_token", |b| {
             b.iter(|| {
-                let v = ops::x86::load_f32x8(token, black_box(&data));
+                let v = mem::avx::_mm256_loadu_ps(token.avx(), black_box(&data));
                 black_box(v)
             })
         });

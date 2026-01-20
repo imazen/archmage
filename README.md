@@ -84,19 +84,19 @@ let token = avx2_token!();  // Safe in multiversion context
 | `SveToken` | SVE | Graviton 3, Apple M-series |
 | `Sve2Token` | SVE2 | ARMv9: Cortex-X2+, Graviton 4 |
 
-### 2. Safe Load/Store (feature = "ops")
+### 2. Safe Load/Store (feature = "safe_unaligned_simd")
 
 Memory operations use references instead of raw pointers:
 
 ```rust
-use archmage::ops;
+use archmage::mem::avx::{_mm256_loadu_ps, _mm256_storeu_ps};
 
 if let Some(token) = Avx2Token::try_new() {
     let data = [1.0f32; 8];
-    let v = ops::load_f32x8(token, &data);  // Safe!
+    let v = _mm256_loadu_ps(token.avx(), &data);  // Safe!
 
     let mut out = [0.0f32; 8];
-    ops::store_f32x8(token, &mut out, v);   // Safe!
+    _mm256_storeu_ps(token.avx(), &mut out, v);   // Safe!
 }
 ```
 
@@ -172,10 +172,9 @@ archmage = "0.1"
 |---------|-------------|
 | `std` (default) | Enable std library support |
 | `macros` (default) | Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`) |
-| `ops` | Safe load/store operations |
-| `composite` | Higher-level ops (transpose, dot product) - implies `ops` |
+| `safe_unaligned_simd` | Safe load/store via `safe_unaligned_simd` crate (exposed as `mem` module) |
+| `composite` | Higher-level ops (transpose, dot product) - implies `safe_unaligned_simd` |
 | `wide` | Integration with the `wide` crate |
-| `safe-simd` | Integration with `safe_unaligned_simd` |
 | `full` | Enable all optional features |
 
 ## License
