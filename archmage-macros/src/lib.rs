@@ -232,24 +232,34 @@ fn traits_to_features(trait_names: &[String]) -> Option<Vec<&'static str>> {
 /// Find the first token parameter and return its name and features.
 fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
     for arg in &sig.inputs {
-        if let FnArg::Typed(PatType { pat, ty, .. }) = arg {
-            if let Some(info) = extract_token_type_info(ty) {
-                let features = match info {
-                    TokenTypeInfo::Concrete(name) => {
-                        token_to_features(&name).map(|f| f.to_vec())
-                    }
-                    TokenTypeInfo::ImplTrait(trait_names) => traits_to_features(&trait_names),
-                    TokenTypeInfo::Generic(type_name) => {
-                        // Look up the generic parameter's bounds
-                        find_generic_bounds(sig, &type_name)
-                            .and_then(|traits| traits_to_features(&traits))
-                    }
-                };
+        match arg {
+            FnArg::Receiver(_) => {
+                // Self receivers (self, &self, &mut self) are not yet supported.
+                // The macro creates an inner function, and Rust's inner functions
+                // cannot have `self` parameters. Supporting this would require
+                // AST rewriting to replace `self` with a regular parameter.
+                // See the module docs for the workaround.
+                continue;
+            }
+            FnArg::Typed(PatType { pat, ty, .. }) => {
+                if let Some(info) = extract_token_type_info(ty) {
+                    let features = match info {
+                        TokenTypeInfo::Concrete(name) => {
+                            token_to_features(&name).map(|f| f.to_vec())
+                        }
+                        TokenTypeInfo::ImplTrait(trait_names) => traits_to_features(&trait_names),
+                        TokenTypeInfo::Generic(type_name) => {
+                            // Look up the generic parameter's bounds
+                            find_generic_bounds(sig, &type_name)
+                                .and_then(|traits| traits_to_features(&traits))
+                        }
+                    };
 
-                if let Some(features) = features {
-                    // Extract parameter name
-                    if let syn::Pat::Ident(pat_ident) = pat.as_ref() {
-                        return Some((pat_ident.ident.clone(), features));
+                    if let Some(features) = features {
+                        // Extract parameter name
+                        if let syn::Pat::Ident(pat_ident) = pat.as_ref() {
+                            return Some((pat_ident.ident.clone(), features));
+                        }
                     }
                 }
             }
@@ -268,7 +278,8 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
                 "{} requires a token parameter. Supported forms:\n\
                  - Concrete: `token: Avx2Token`\n\
                  - impl Trait: `token: impl HasAvx2`\n\
-                 - Generic: `fn foo<T: HasAvx2>(token: T, ...)`",
+                 - Generic: `fn foo<T: HasAvx2>(token: T, ...)`\n\
+                 Note: self receivers (&self, &mut self) are not yet supported.",
                 macro_name
             );
             return syn::Error::new_spanned(&input_fn.sig, msg)
@@ -355,7 +366,7 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// # Token Parameter Forms
 ///
-/// The macro supports three forms of token parameters:
+/// The macro supports four forms of token parameters:
 ///
 /// ## Concrete Token Types
 ///
@@ -392,6 +403,37 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///     // ...
 /// }
 /// ```
+///
+/// ## Methods with Self Receivers (NOT YET SUPPORTED)
+///
+/// Methods with `self`, `&self`, `&mut self` receivers are **not currently supported**.
+///
+/// **Why:** The macro works by creating an inner function with `#[target_feature]`.
+/// Rust's inner functions cannot have `self` parameters—`self` only works in
+/// associated functions. Supporting this would require rewriting the function body
+/// to replace `self` with a regular parameter, which adds significant complexity.
+///
+/// **Workaround:** Use a free function with the token as an explicit parameter:
+///
+/// ```ignore
+/// impl MyProcessor {
+///     fn process(&mut self, data: &[f32; 8]) -> [f32; 8] {
+///         // Delegate to a free function
+///         process_impl(self.token, data)
+///     }
+/// }
+///
+/// #[arcane]
+/// fn process_impl(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+///     // SIMD intrinsics safe here
+/// }
+/// ```
+///
+/// **Future work:** Supporting `self` receivers would require:
+/// 1. Adding a type parameter `__Self` to the inner function
+/// 2. Converting the receiver to a regular parameter (`&self` → `__self: &__Self`)
+/// 3. Walking the AST to replace all `self` with `__self` and `Self` with `__Self`
+/// 4. Copying where clauses with the type substitution
 ///
 /// # Multiple Trait Bounds
 ///

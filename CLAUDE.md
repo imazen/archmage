@@ -254,8 +254,40 @@ Each token provides its own optimized implementation - the compiler selects the 
 - [x] Capability marker traits for generic bounds
 - [x] aarch64 `mem` wrappers via xtask generation (240 NEON functions)
 - [x] `is_aarch64_feature_available!` macro for compile-time elision
+- [x] Generic trait bounds in `#[simd_fn]` (`impl HasAvx2`, `T: HasAvx2`)
+- [ ] `#[simd_fn]` support for self receivers (see below)
 - [ ] NEON/SVE composite operations for aarch64
 - [ ] DCT, color conversion, and other JPEG primitives (see halide-kernels)
+
+### Self Receiver Limitation
+
+`#[simd_fn]` does **not** support methods with `self`, `&self`, `&mut self`, or `mut self` receivers.
+
+**Why:** The macro generates an inner function with `#[target_feature]`. Rust's inner functions
+cannot have `self` parameters—`self` only works in associated functions (methods in impl blocks).
+
+**Workaround:** Delegate to a free function:
+
+```rust
+impl MyProcessor {
+    fn process(&mut self, data: &[f32; 8]) -> [f32; 8] {
+        process_impl(self.token, data)  // Delegate to free function
+    }
+}
+
+#[simd_fn]
+fn process_impl(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    // SIMD intrinsics safe here
+}
+```
+
+**To implement self receiver support would require:**
+1. Adding a type parameter `__Self` to the inner function generics
+2. Converting the receiver to a regular parameter (`&self` → `__self: &__Self`)
+3. Walking the function body AST to replace all `self` → `__self` and `Self` → `__Self`
+4. Copying and transforming where clauses with the type substitution
+
+This is feasible with `syn::visit_mut::VisitMut` but adds significant complexity.
 
 ## License
 
