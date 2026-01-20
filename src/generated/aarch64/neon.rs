@@ -5,6 +5,9 @@
 //! **Auto-generated** from safe_unaligned_simd v0.2.3 - do not edit manually.
 //! Run `cargo xtask generate` to regenerate.
 
+// Guard against rare aarch64 targets without NEON (e.g., aarch64-unknown-none-softfloat)
+#![cfg(target_feature = "neon")]
+
 #![allow(unused_imports)]
 #![allow(unused_macros)] // aarch64_load_store reserved for future SVE/SVE2
 #![allow(clippy::too_many_arguments)]
