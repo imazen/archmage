@@ -1,15 +1,7 @@
-warning: unused import: `AvxToken`
- --> tests/compile_fail/safe_simd_wrong_token.rs:4:40
-  |
-4 | use archmage::tokens::x86::{Sse2Token, AvxToken};
-  |                                        ^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
-
 error[E0277]: the trait bound `Sse2Token: HasAvx` is not satisfied
-  --> tests/compile_fail/safe_simd_wrong_token.rs:11:53
+  --> tests/compile_fail/safe_simd_wrong_token.rs:10:53
    |
-11 |         let _ = archmage::mem::avx::_mm256_loadu_ps(sse2, &data);
+10 |         let _ = archmage::mem::avx::_mm256_loadu_ps(sse2, &data);
    |                 ----------------------------------- ^^^^ the trait `HasAvx` is not implemented for `Sse2Token`
    |                 |
    |                 required by a bound introduced by this call

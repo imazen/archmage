@@ -1,7 +1,7 @@
 //! Test that safe-simd wrappers reject wrong tokens at compile time.
 
 use archmage::SimdToken;
-use archmage::tokens::x86::{Sse2Token, AvxToken};
+use archmage::tokens::x86::Sse2Token;
 
 fn main() {
     // This should fail: SSE2 token cannot be used for AVX functions
