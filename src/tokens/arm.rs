@@ -1,6 +1,9 @@
 //! ARM SIMD capability tokens
 //!
 //! Provides tokens for NEON, SVE, and SVE2.
+//!
+//! Token construction uses runtime feature detection via `std::arch::is_aarch64_feature_detected!`
+//! combined with compile-time checks. On AArch64, NEON is always available (baseline).
 
 use super::SimdToken;
 
@@ -53,15 +56,19 @@ impl SimdToken for SveToken {
 
     #[inline]
     fn try_new() -> Option<Self> {
+        #[cfg(all(target_arch = "aarch64", feature = "std"))]
+        {
+            if std::arch::is_aarch64_feature_detected!("sve") {
+                return Some(unsafe { Self::new_unchecked() });
+            }
+        }
         #[cfg(all(target_arch = "aarch64", target_feature = "sve"))]
         {
-            Some(unsafe { Self::new_unchecked() })
+            // Compile-time guarantee
+            return Some(unsafe { Self::new_unchecked() });
         }
-        #[cfg(not(all(target_arch = "aarch64", target_feature = "sve")))]
-        {
-            // TODO: Runtime detection when stable
-            None
-        }
+        #[allow(unreachable_code)]
+        None
     }
 
     #[inline(always)]
@@ -93,14 +100,19 @@ impl SimdToken for Sve2Token {
 
     #[inline]
     fn try_new() -> Option<Self> {
+        #[cfg(all(target_arch = "aarch64", feature = "std"))]
+        {
+            if std::arch::is_aarch64_feature_detected!("sve2") {
+                return Some(unsafe { Self::new_unchecked() });
+            }
+        }
         #[cfg(all(target_arch = "aarch64", target_feature = "sve2"))]
         {
-            Some(unsafe { Self::new_unchecked() })
+            // Compile-time guarantee
+            return Some(unsafe { Self::new_unchecked() });
         }
-        #[cfg(not(all(target_arch = "aarch64", target_feature = "sve2")))]
-        {
-            None
-        }
+        #[allow(unreachable_code)]
+        None
     }
 
     #[inline(always)]
