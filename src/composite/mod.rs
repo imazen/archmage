@@ -16,6 +16,10 @@ pub mod dot_product;
 #[cfg(target_arch = "x86_64")]
 pub mod horizontal;
 
+// Token trait implementations
+#[cfg(target_arch = "x86_64")]
+mod x86_impls;
+
 // Re-export traits
 pub use simd_ops::*;
 pub use scalar_ops::*;
