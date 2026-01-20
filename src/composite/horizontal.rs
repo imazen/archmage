@@ -5,74 +5,84 @@
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
 
-use crate::ops::x86::*;
+use crate::simd_fn;
 use crate::tokens::x86::Avx2Token;
 
 /// Horizontal sum of 8 f32s using AVX2.
 ///
 /// Reduces a 256-bit vector to a single f32 sum.
+#[simd_fn]
 #[inline]
-pub fn hsum_f32x8(token: Avx2Token, v: __m256) -> f32 {
+pub fn hsum_f32x8(_token: Avx2Token, v: __m256) -> f32 {
     // Extract high and low 128-bit lanes
-    let lo = extractf128_f32x8::<0>(token, v);
-    let hi = extractf128_f32x8::<1>(token, v);
+    let lo = _mm256_extractf128_ps::<0>(v);
+    let hi = _mm256_extractf128_ps::<1>(v);
 
     // Add the two lanes
-    let sum128 = unsafe { _mm_add_ps(lo, hi) };
+    let sum128 = _mm_add_ps(lo, hi);
 
     // Horizontal add within 128 bits
-    let sum64 = unsafe { _mm_hadd_ps(sum128, sum128) };
-    let sum32 = unsafe { _mm_hadd_ps(sum64, sum64) };
+    let sum64 = _mm_hadd_ps(sum128, sum128);
+    let sum32 = _mm_hadd_ps(sum64, sum64);
 
     // Extract scalar
-    unsafe { _mm_cvtss_f32(sum32) }
+    _mm_cvtss_f32(sum32)
 }
 
 /// Horizontal maximum of 8 f32s using AVX2.
+#[simd_fn]
 #[inline]
-pub fn hmax_f32x8(token: Avx2Token, v: __m256) -> f32 {
-    let lo = extractf128_f32x8::<0>(token, v);
-    let hi = extractf128_f32x8::<1>(token, v);
+pub fn hmax_f32x8(_token: Avx2Token, v: __m256) -> f32 {
+    let lo = _mm256_extractf128_ps::<0>(v);
+    let hi = _mm256_extractf128_ps::<1>(v);
 
-    let max128 = unsafe { _mm_max_ps(lo, hi) };
+    let max128 = _mm_max_ps(lo, hi);
 
     // Shuffle and max to reduce
-    let shuf = unsafe { _mm_movehdup_ps(max128) }; // [1,1,3,3]
-    let max64 = unsafe { _mm_max_ps(max128, shuf) };
-    let shuf2 = unsafe { _mm_movehl_ps(max64, max64) }; // [2,3,2,3]
-    let max32 = unsafe { _mm_max_ss(max64, shuf2) };
+    let shuf = _mm_movehdup_ps(max128); // [1,1,3,3]
+    let max64 = _mm_max_ps(max128, shuf);
+    let shuf2 = _mm_movehl_ps(max64, max64); // [2,3,2,3]
+    let max32 = _mm_max_ss(max64, shuf2);
 
-    unsafe { _mm_cvtss_f32(max32) }
+    _mm_cvtss_f32(max32)
 }
 
 /// Horizontal minimum of 8 f32s using AVX2.
+#[simd_fn]
 #[inline]
-pub fn hmin_f32x8(token: Avx2Token, v: __m256) -> f32 {
-    let lo = extractf128_f32x8::<0>(token, v);
-    let hi = extractf128_f32x8::<1>(token, v);
+pub fn hmin_f32x8(_token: Avx2Token, v: __m256) -> f32 {
+    let lo = _mm256_extractf128_ps::<0>(v);
+    let hi = _mm256_extractf128_ps::<1>(v);
 
-    let min128 = unsafe { _mm_min_ps(lo, hi) };
+    let min128 = _mm_min_ps(lo, hi);
 
-    let shuf = unsafe { _mm_movehdup_ps(min128) };
-    let min64 = unsafe { _mm_min_ps(min128, shuf) };
-    let shuf2 = unsafe { _mm_movehl_ps(min64, min64) };
-    let min32 = unsafe { _mm_min_ss(min64, shuf2) };
+    let shuf = _mm_movehdup_ps(min128);
+    let min64 = _mm_min_ps(min128, shuf);
+    let shuf2 = _mm_movehl_ps(min64, min64);
+    let min32 = _mm_min_ss(min64, shuf2);
 
-    unsafe { _mm_cvtss_f32(min32) }
+    _mm_cvtss_f32(min32)
 }
 
 /// Sum all elements of an f32 slice using AVX2.
+#[simd_fn]
 #[inline]
-pub fn sum_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
-    let mut sum = zero_f32x8(token);
+pub fn sum_f32_slice(_token: Avx2Token, data: &[f32]) -> f32 {
+    let mut sum = _mm256_setzero_ps();
 
     let chunks = data.len() / 8;
     for i in 0..chunks {
-        let v = load_f32x8(token, data[i * 8..][..8].try_into().unwrap());
-        sum = add_f32x8(token, sum, v);
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr().add(i * 8)) };
+        sum = _mm256_add_ps(sum, v);
     }
 
-    let mut result = hsum_f32x8(token, sum);
+    // Horizontal sum
+    let lo = _mm256_extractf128_ps::<0>(sum);
+    let hi = _mm256_extractf128_ps::<1>(sum);
+    let sum128 = _mm_add_ps(lo, hi);
+    let sum64 = _mm_hadd_ps(sum128, sum128);
+    let sum32 = _mm_hadd_ps(sum64, sum64);
+    let mut result = _mm_cvtss_f32(sum32);
 
     // Handle remainder
     for &val in &data[chunks * 8..] {
@@ -83,21 +93,30 @@ pub fn sum_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
 }
 
 /// Find maximum element in an f32 slice using AVX2.
+#[simd_fn]
 #[inline]
-pub fn max_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
+pub fn max_f32_slice(_token: Avx2Token, data: &[f32]) -> f32 {
     if data.is_empty() {
         return f32::NEG_INFINITY;
     }
 
-    let mut max_vec = set1_f32x8(token, f32::NEG_INFINITY);
+    let mut max_vec = _mm256_set1_ps(f32::NEG_INFINITY);
 
     let chunks = data.len() / 8;
     for i in 0..chunks {
-        let v = load_f32x8(token, data[i * 8..][..8].try_into().unwrap());
-        max_vec = max_f32x8(token, max_vec, v);
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr().add(i * 8)) };
+        max_vec = _mm256_max_ps(max_vec, v);
     }
 
-    let mut result = hmax_f32x8(token, max_vec);
+    // Horizontal max
+    let lo = _mm256_extractf128_ps::<0>(max_vec);
+    let hi = _mm256_extractf128_ps::<1>(max_vec);
+    let max128 = _mm_max_ps(lo, hi);
+    let shuf = _mm_movehdup_ps(max128);
+    let max64 = _mm_max_ps(max128, shuf);
+    let shuf2 = _mm_movehl_ps(max64, max64);
+    let max32 = _mm_max_ss(max64, shuf2);
+    let mut result = _mm_cvtss_f32(max32);
 
     // Handle remainder
     for &val in &data[chunks * 8..] {
@@ -110,21 +129,30 @@ pub fn max_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
 }
 
 /// Find minimum element in an f32 slice using AVX2.
+#[simd_fn]
 #[inline]
-pub fn min_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
+pub fn min_f32_slice(_token: Avx2Token, data: &[f32]) -> f32 {
     if data.is_empty() {
         return f32::INFINITY;
     }
 
-    let mut min_vec = set1_f32x8(token, f32::INFINITY);
+    let mut min_vec = _mm256_set1_ps(f32::INFINITY);
 
     let chunks = data.len() / 8;
     for i in 0..chunks {
-        let v = load_f32x8(token, data[i * 8..][..8].try_into().unwrap());
-        min_vec = min_f32x8(token, min_vec, v);
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr().add(i * 8)) };
+        min_vec = _mm256_min_ps(min_vec, v);
     }
 
-    let mut result = hmin_f32x8(token, min_vec);
+    // Horizontal min
+    let lo = _mm256_extractf128_ps::<0>(min_vec);
+    let hi = _mm256_extractf128_ps::<1>(min_vec);
+    let min128 = _mm_min_ps(lo, hi);
+    let shuf = _mm_movehdup_ps(min128);
+    let min64 = _mm_min_ps(min128, shuf);
+    let shuf2 = _mm_movehl_ps(min64, min64);
+    let min32 = _mm_min_ss(min64, shuf2);
+    let mut result = _mm_cvtss_f32(min32);
 
     // Handle remainder
     for &val in &data[chunks * 8..] {
@@ -139,6 +167,7 @@ pub fn min_f32_slice(token: Avx2Token, data: &[f32]) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ops::x86::load_f32x8;
     use crate::tokens::SimdToken;
 
     #[test]

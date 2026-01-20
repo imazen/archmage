@@ -1,56 +1,32 @@
 # archmage
 
-Type-safe SIMD capability tokens for Rust. Isolates `unsafe` to token construction, enabling safe raw intrinsic usage.
+> Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
-## Understanding the SIMD Landscape
+**archmage** provides capability tokens that prove CPU feature availability at compile time, making raw SIMD intrinsics safe to call. It also provides safe load/store operations and composite SIMD algorithms.
 
-### The Approaches
+## The Problem
 
-**wide crate**: Portable SIMD types (`f32x8`, `i32x8`, etc.) with compile-time implementation selection via `cfg!`. No runtime dispatch. Without global compile flags, wide uses 128-bit operations (two `f32x4`), but this is still **4-6x faster than scalar** because:
-- Parallelism is explicit - no reliance on LLVM autovectorization
-- Memory access patterns are predictable and aligned
-- You get a SIMD floor even when LLVM's autovectorizer would fail
+Raw SIMD intrinsics in Rust have two safety concerns:
 
-With global flags (`-C target-feature=+avx2`), wide's `cfg!` selects native 256-bit implementations at compile time.
+1. **Feature availability**: Calling `_mm256_add_ps` on a CPU without AVX2 is undefined behavior
+2. **Memory safety**: `_mm256_loadu_ps(ptr)` dereferences a raw pointer
 
-**Scalar + `#[target_feature]`**: LLVM can autovectorize scalar loops to 256-bit inside `#[target_feature]` functions. Works well for simple patterns, but LLVM may not vectorize complex code.
+Rust 1.85+ made value-based intrinsics safe inside `#[target_feature]` functions, but:
+- Calling those functions is still `unsafe`
+- Memory operations remain unsafe regardless
 
-**archmage + raw intrinsics**: Direct control over exact instructions. Use when you need specific instruction sequences that neither wide nor LLVM autovectorization will produce.
-
-### When to Use What
-
-| Approach | Reliability | Performance | Use When |
-|----------|-------------|-------------|----------|
-| **wide (default)** | Always SIMD | 4-6x over scalar | Portable code, don't want to think about flags |
-| **wide + global flags** | Always 256-bit | 8-12x over scalar | Single target CPU, want maximum wide perf |
-| **Scalar + `#[target_feature]`** | LLVM decides | Varies | Simple loops, trust LLVM |
-| **pulp** | Runtime dispatch | Good | Want abstraction + runtime dispatch |
-| **archmage + raw intrinsics** | Exact control | Maximum | Need specific instructions (shuffles, FMA, DCT) |
-
-### archmage's Niche
-
-archmage is for when you need **specific instructions** that neither wide nor LLVM autovectorization will produce:
-
-- Complex shuffles and permutes
-- Exact FMA sequences for numerical precision
-- DCT butterflies and other signal processing
-- Gather/scatter operations
-- Bit manipulation (BMI1/BMI2)
-
-It makes raw `_mm256_*` intrinsics safe via capability tokens, and integrates with multiversion crates.
-
-## Quick Start
+## The Solution: Capability Tokens
 
 ```rust
 use archmage::{Avx2Token, SimdToken, simd_fn};
 use std::arch::x86_64::*;
 
 #[simd_fn]
-fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-    // Loads/stores need unsafe (raw pointers)
+fn double(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+    // Memory ops need unsafe (raw pointers)
     let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
 
-    // Arithmetic intrinsics are safe - token proves AVX2 available!
+    // Arithmetic intrinsics are SAFE - token proves AVX2!
     let doubled = _mm256_add_ps(v, v);
 
     let mut out = [0.0f32; 8];
@@ -60,145 +36,118 @@ fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
 
 fn main() {
     if let Some(token) = Avx2Token::try_new() {
-        let result = double_avx2(token, &[1.0; 8]);
+        let result = double(token, &[1.0; 8]);
         // result = [2.0; 8]
     }
 }
 ```
 
-The `#[simd_fn]` macro expands to:
+The `#[simd_fn]` macro wraps your function with `#[target_feature]`, making all value-based intrinsics safe. The token proves the caller verified feature availability.
+
+## What archmage Provides
+
+### 1. Capability Tokens
+
+Zero-sized proof types that verify CPU features at runtime:
+
 ```rust
-fn double_avx2(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-    #[target_feature(enable = "avx2")]
-    unsafe fn __inner(data: &[f32; 8]) -> [f32; 8] { /* body */ }
-    let _ = &token;  // prove we have the token
-    unsafe { __inner(data) }  // SAFETY: token proves avx2 available
+// Runtime detection
+if let Some(token) = Avx2Token::try_new() {
+    // AVX2 guaranteed available
 }
+
+// Inside multiversioned code
+let token = avx2_token!();  // Safe in multiversion context
 ```
 
-## Why Tokens + Raw Intrinsics?
+**Feature Tokens:**
+| Token | Features |
+|-------|----------|
+| `Sse2Token` | SSE2 (baseline x86-64) |
+| `Sse41Token` | SSE4.1 |
+| `AvxToken` | AVX |
+| `Avx2Token` | AVX2 |
+| `FmaToken` | FMA |
+| `Avx2FmaToken` | AVX2 + FMA |
 
-With raw intrinsics inside `#[target_feature]` functions, the compiler **will** generate the correct instructions:
-
-```asm
-; Without #[target_feature] - wide uses 128-bit ops
-movaps (%rsi),%xmm0        ; Load 128-bit
-movaps 0x10(%rsi),%xmm1    ; Load another 128-bit
-mulps  (%rdx),%xmm0        ; Multiply first half
-mulps  0x10(%rdx),%xmm1    ; Multiply second half
-
-; With #[target_feature(enable = "avx2")] - raw intrinsics use 256-bit
-vmovaps (%rsi),%ymm0       ; Load 256-bit
-vmulps (%rdx),%ymm0,%ymm0  ; Multiply all 8 floats at once
-```
-
-The token proves you're in the right context to call the function safely.
-
-## Token Types
-
-### Feature Tokens
-
-| Token | Features | Runtime Check |
-|-------|----------|---------------|
-| `Sse2Token` | SSE2 | Always on x86-64 |
-| `Sse41Token` | SSE4.1 | `is_x86_feature_detected!("sse4.1")` |
-| `AvxToken` | AVX | `is_x86_feature_detected!("avx")` |
-| `Avx2Token` | AVX2 | `is_x86_feature_detected!("avx2")` |
-| `FmaToken` | FMA | `is_x86_feature_detected!("fma")` |
-| `Avx2FmaToken` | AVX2 + FMA | Both checks |
-
-### Profile Tokens (x86-64 microarchitecture levels)
-
+**Profile Tokens (x86-64 microarchitecture levels):**
 | Token | Features | Hardware |
 |-------|----------|----------|
-| `X64V2Token` | SSE4.2 + POPCNT | Nehalem 2008+, Bulldozer 2011+ |
-| `X64V3Token` | AVX2 + FMA + BMI2 | Haswell 2013+, Zen 1 2017+ |
-| `X64V4Token` | AVX-512 (F/BW/CD/DQ/VL) | Xeon 2017+, Zen 4 2022+ |
+| `X64V2Token` | SSE4.2 + POPCNT | Nehalem 2008+ |
+| `X64V3Token` | AVX2 + FMA + BMI2 | Haswell 2013+, Zen 1+ |
+| `X64V4Token` | AVX-512 (F/BW/CD/DQ/VL) | Xeon 2017+, Zen 4+ |
 
-### ARM Tokens
-
+**ARM Tokens:**
 | Token | Features | Hardware |
 |-------|----------|----------|
-| `NeonToken` | NEON | All AArch64 (always available) |
-| `SveToken` | SVE | Graviton 3, Apple M-series, A64FX |
+| `NeonToken` | NEON | All AArch64 |
+| `SveToken` | SVE | Graviton 3, Apple M-series |
 | `Sve2Token` | SVE2 | ARMv9: Cortex-X2+, Graviton 4 |
 
-## Usage Patterns
+### 2. Safe Load/Store
 
-### Pattern 1: `#[simd_fn]` (Recommended)
+Memory operations use references instead of raw pointers:
 
 ```rust
-use archmage::{Avx2FmaToken, simd_fn};
-use std::arch::x86_64::*;
+use archmage::ops;
 
-#[simd_fn]
-fn fma_kernel(token: Avx2FmaToken, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
-    let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
-    let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
-    let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
-
-    let result = _mm256_fmadd_ps(va, vb, vc);  // Safe! Token proves FMA available
+if let Some(token) = Avx2Token::try_new() {
+    let data = [1.0f32; 8];
+    let v = ops::load_f32x8(token, &data);  // Safe!
 
     let mut out = [0.0f32; 8];
-    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
-    out
+    ops::store_f32x8(token, &mut out, v);   // Safe!
 }
 ```
 
-### Pattern 2: Profile Tokens
+### 3. Composite Operations
+
+High-level SIMD algorithms built on tokens:
 
 ```rust
-#[simd_fn]
-fn v3_kernel(token: X64V3Token, data: &mut [f32]) {
-    // AVX2 + FMA + BMI1 + BMI2 all enabled automatically!
-    // ...
+use archmage::composite::{transpose_8x8, dot_product_f32, hsum_f32x8};
+
+if let Some(token) = Avx2FmaToken::try_new() {
+    // 8x8 matrix transpose (critical for DCT)
+    let mut block = [0.0f32; 64];
+    transpose_8x8(token.avx2(), &mut block);
+
+    // Dot product with FMA
+    let a = vec![1.0f32; 1024];
+    let b = vec![2.0f32; 1024];
+    let result = dot_product_f32(token, &a, &b);
 }
 ```
 
-### Pattern 3: With Multiversion Crates
+## When to Use archmage
 
-```rust
-use archmage::{x64v3_token, SimdToken};
-use multiversed::multiversed;
+archmage is for when you need **specific instructions** that neither `wide` nor LLVM autovectorization will produce:
 
-#[multiversed]
-fn process(data: &mut [f32]) {
-    let token = x64v3_token!();  // Safe inside multiversed context
-    // Use token for operations...
-}
-```
+- Complex shuffles and permutes
+- Exact FMA sequences for numerical precision
+- DCT butterflies and signal processing
+- Gather/scatter operations
+- Bit manipulation (BMI1/BMI2)
 
-### Pattern 4: Token-Gated Operations
+For portable SIMD without manual intrinsics, use the `wide` crate instead.
 
-archmage provides wrapped operations that require tokens:
-
-```rust
-use archmage::{Avx2Token, SimdToken, ops};
-
-fn example() {
-    if let Some(token) = Avx2Token::try_new() {
-        let a = [1.0f32; 8];
-        let va = ops::load_f32x8(token, &a);
-        let doubled = ops::add_f32x8(token, va, va);
-        let mut out = [0.0f32; 8];
-        ops::store_f32x8(token, &mut out, doubled);
-    }
-}
-```
+| Approach | When to Use |
+|----------|-------------|
+| **wide** | Portable code, don't want to think about target features |
+| **archmage + intrinsics** | Need specific instructions, complex algorithms |
 
 ## Feature Flags
 
 ```toml
 [dependencies]
-archmage = { version = "0.1", features = ["wide"] }
+archmage = { version = "0.1", features = ["macros"] }
 ```
 
 | Feature | Description |
 |---------|-------------|
 | `std` (default) | Enable std library support |
 | `macros` (default) | Enable `#[simd_fn]` attribute macro |
-| `wide` | Integration with `wide` crate |
-| `safe-simd` | Integration with `safe_unaligned_simd` |
+| `safe-simd` | Integration with `safe_unaligned_simd` for more safe load/store variants |
 
 ## License
 

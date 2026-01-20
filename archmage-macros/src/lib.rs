@@ -3,10 +3,9 @@
 //! Provides `#[simd_fn]` attribute to make raw intrinsics safe via token proof.
 
 use proc_macro::TokenStream;
-use quote::{quote, format_ident};
+use quote::{format_ident, quote};
 use syn::{
-    parse_macro_input, parse_quote, ItemFn, FnArg, PatType, Type,
-    Ident, Signature, Attribute,
+    parse_macro_input, parse_quote, Attribute, FnArg, Ident, ItemFn, PatType, Signature, Type,
 };
 
 /// Maps a token type name to its required target features.
@@ -45,7 +44,11 @@ fn extract_token_type_name(ty: &Type) -> Option<String> {
     match ty {
         Type::Path(type_path) => {
             // Get the last segment of the path (e.g., "Avx2Token" from "archmage::Avx2Token")
-            type_path.path.segments.last().map(|seg| seg.ident.to_string())
+            type_path
+                .path
+                .segments
+                .last()
+                .map(|seg| seg.ident.to_string())
         }
         Type::Reference(type_ref) => {
             // Handle &Token or &mut Token
@@ -79,6 +82,9 @@ fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
 /// attributes. The outer function calls the inner function unsafely, which is
 /// justified because the token parameter proves the features are available.
 ///
+/// **The token is passed through to the inner function**, so you can call other
+/// token-taking functions from inside `#[simd_fn]`.
+///
 /// # Example
 ///
 /// ```ignore
@@ -102,16 +108,15 @@ fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
 /// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
 ///     #[target_feature(enable = "avx2")]
 ///     #[inline]
-///     unsafe fn __simd_inner(data: &[f32; 8]) -> [f32; 8] {
+///     unsafe fn __simd_inner(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
 ///         let v = _mm256_loadu_ps(data.as_ptr());
 ///         let doubled = _mm256_add_ps(v, v);
 ///         let mut out = [0.0f32; 8];
 ///         _mm256_storeu_ps(out.as_mut_ptr(), doubled);
 ///         out
 ///     }
-///     let _ = token; // Use token to prove we have it
 ///     // SAFETY: Token proves the required features are available
-///     unsafe { __simd_inner(data) }
+///     unsafe { __simd_inner(token, data) }
 /// }
 /// ```
 ///
@@ -138,22 +143,22 @@ pub fn simd_fn(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
     // Find the token parameter and its features
-    let (token_ident, features) = match find_token_param(&input_fn.sig) {
+    let (_token_ident, features) = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
             return syn::Error::new_spanned(
                 &input_fn.sig,
-                "simd_fn requires a token parameter (e.g., `token: Avx2Token`)"
-            ).to_compile_error().into();
+                "simd_fn requires a token parameter (e.g., `token: Avx2Token`)",
+            )
+            .to_compile_error()
+            .into();
         }
     };
 
     // Build target_feature attributes
     let target_feature_attrs: Vec<Attribute> = features
         .iter()
-        .map(|feature| {
-            parse_quote!(#[target_feature(enable = #feature)])
-        })
+        .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
         .collect();
 
     // Extract function components
@@ -167,41 +172,22 @@ pub fn simd_fn(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let body = &input_fn.block;
     let attrs = &input_fn.attrs;
 
-    // Build inner function parameters (excluding the token)
-    let inner_params: Vec<_> = inputs
-        .iter()
-        .filter_map(|arg| {
-            if let FnArg::Typed(pat_type) = arg {
-                if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
-                    if pat_ident.ident != token_ident {
-                        return Some(arg.clone());
-                    }
-                }
-            }
-            // Keep receiver (self) if present
-            if let FnArg::Receiver(_) = arg {
-                return Some(arg.clone());
-            }
-            None
-        })
-        .collect();
+    // Build inner function parameters (ALL parameters including token)
+    let inner_params: Vec<_> = inputs.iter().cloned().collect();
 
-    // Build inner function call arguments (excluding the token)
+    // Build inner function call arguments (ALL arguments including token)
     let inner_args: Vec<_> = inputs
         .iter()
-        .filter_map(|arg| {
-            match arg {
-                FnArg::Typed(pat_type) => {
-                    if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
-                        if pat_ident.ident != token_ident {
-                            let ident = &pat_ident.ident;
-                            return Some(quote!(#ident));
-                        }
-                    }
+        .filter_map(|arg| match arg {
+            FnArg::Typed(pat_type) => {
+                if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
+                    let ident = &pat_ident.ident;
+                    Some(quote!(#ident))
+                } else {
                     None
                 }
-                FnArg::Receiver(_) => Some(quote!(self)),
             }
+            FnArg::Receiver(_) => Some(quote!(self)),
         })
         .collect();
 
@@ -217,9 +203,6 @@ pub fn simd_fn(_attr: TokenStream, item: TokenStream) -> TokenStream {
             #[inline]
             unsafe fn #inner_fn_name #generics (#(#inner_params),*) #output #where_clause
             #body
-
-            // Use token to silence unused warning and prove we have it
-            let _ = &#token_ident;
 
             // SAFETY: The token parameter proves the required CPU features are available.
             // Tokens can only be constructed when features are verified (via try_new()
