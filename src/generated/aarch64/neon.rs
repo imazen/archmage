@@ -9,54 +9,15 @@
 #![cfg(target_feature = "neon")]
 
 #![allow(unused_imports)]
-#![allow(unused_macros)] // aarch64_load_store reserved for future SVE/SVE2
+#![allow(unused_macros)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
 
 use core::arch::aarch64::*;
 use crate::tokens::arm::NeonToken;
 
-// Macro for NEON functions - NEON is baseline on aarch64, so no inner function needed.
-// The unsafe block is required because safe_unaligned_simd functions are marked with
-// #[target_feature], but the operations themselves are safe (they use references).
-// Token exists for API consistency with x86.
-macro_rules! neon_load_store {
-    (
-        unsafe: $kind:ident;
-        size: $size:ident;
-
-        $(
-            $(#[$meta:meta])* fn $intrinsic:ident(_: &[$base_ty:ty; $n:literal][..$len:literal] as $realty:ty) -> $ret:ty;
-        )*
-    ) => {
-        $(
-            neon_load_store!(@ $kind $(#[$meta])* $intrinsic [$realty] [$ret]);
-        )*
-    };
-
-    (@ load $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {
-        $(#[$meta])*
-        #[inline(always)]
-        pub fn $intrinsic(_token: NeonToken, from: &$realty) -> $ret {
-            // SAFETY: NEON is always available on aarch64. The function is safe
-            // (uses references), the unsafe is only due to #[target_feature] annotation.
-            unsafe { safe_unaligned_simd::aarch64::$intrinsic(from) }
-        }
-    };
-
-    (@ store $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {
-        $(#[$meta])*
-        #[inline(always)]
-        pub fn $intrinsic(_token: NeonToken, into: &mut $realty, val: $ret) {
-            // SAFETY: NEON is always available on aarch64. The function is safe
-            // (uses references), the unsafe is only due to #[target_feature] annotation.
-            unsafe { safe_unaligned_simd::aarch64::$intrinsic(into, val) }
-        }
-    };
-}
-
-// Macro for non-baseline features (SVE, SVE2) - requires #[target_feature] wrapper.
-// Use this for any aarch64 feature that needs runtime detection.
+// Macro for aarch64 SIMD functions - requires #[target_feature] wrapper for safety.
+// Even NEON requires this because aarch64 targets without NEON exist (e.g., softfloat).
 macro_rules! aarch64_load_store {
     (
         token: $token:ty;
@@ -104,7 +65,9 @@ macro_rules! aarch64_load_store {
 // Auto-extracted macro invocations from safe_unaligned_simd
 // ============================================================================
 
-neon_load_store! {
+aarch64_load_store! {
+    token: NeonToken;
+    feature: "neon";
     unsafe: load;
     // Loads full registers, so 8 bytes per register
     size: assert_size_8bytes;
@@ -194,7 +157,9 @@ neon_load_store! {
     fn vld1_f64_x4(_: &[f64; 1][..4] as [f64; 4]) -> float64x1x4_t;
 }
 
-neon_load_store! {
+aarch64_load_store! {
+    token: NeonToken;
+    feature: "neon";
     unsafe: load;
     // Loads full registers, so 16 bytes per register
     size: assert_size_16bytes;
@@ -284,7 +249,9 @@ neon_load_store! {
     fn vld1q_f64_x4(_: &[f64; 2][..4] as [[f64; 2]; 4]) -> float64x2x4_t;
 }
 
-neon_load_store! {
+aarch64_load_store! {
+    token: NeonToken;
+    feature: "neon";
     unsafe: store;
     // Stores full registers, so 8 bytes per register
     size: assert_size_8bytes;
@@ -374,7 +341,9 @@ neon_load_store! {
     fn vst1_f64_x4(_: &[f64; 1][..4] as [f64; 4]) -> float64x1x4_t;
 }
 
-neon_load_store! {
+aarch64_load_store! {
+    token: NeonToken;
+    feature: "neon";
     unsafe: store;
     // Stores full registers, so 16 bytes per register
     size: assert_size_16bytes;
@@ -464,7 +433,9 @@ neon_load_store! {
     fn vst1q_f64_x4(_: &[f64; 2][..4] as [[f64; 2]; 4]) -> float64x2x4_t;
 }
 
-neon_load_store! {
+aarch64_load_store! {
+    token: NeonToken;
+    feature: "neon";
     unsafe: load;
     size: various_sizes;
 
@@ -559,7 +530,9 @@ neon_load_store! {
     fn vld4_dup_f64(_: &[f64; 4][..1] as [f64; 4]) -> float64x1x4_t;
 }
 
-neon_load_store! {
+aarch64_load_store! {
+    token: NeonToken;
+    feature: "neon";
     unsafe: load;
     size: various_sizes;
 

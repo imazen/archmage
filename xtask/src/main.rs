@@ -204,7 +204,7 @@ fn parse_file_functions(path: &Path) -> Result<Vec<ParsedFunction>> {
 ///
 /// This is much simpler than parsing - we just:
 /// 1. Extract all `vld_n_replicate_k! { ... }` blocks
-/// 2. Replace `vld_n_replicate_k!` with `neon_load_store!`
+/// 2. Replace `vld_n_replicate_k!` with `aarch64_load_store!` and inject token/feature params
 /// 3. Prepend our header with the macro definition
 fn generate_aarch64_neon_rs(safe_simd_path: &Path) -> Result<String> {
     let aarch64_path = safe_simd_path.join("src/aarch64.rs");
@@ -269,54 +269,15 @@ fn generate_aarch64_neon_rs(safe_simd_path: &Path) -> Result<String> {
 #![cfg(target_feature = "neon")]
 
 #![allow(unused_imports)]
-#![allow(unused_macros)] // aarch64_load_store reserved for future SVE/SVE2
+#![allow(unused_macros)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
 
 use core::arch::aarch64::*;
 use crate::tokens::arm::NeonToken;
 
-// Macro for NEON functions - NEON is baseline on aarch64, so no inner function needed.
-// The unsafe block is required because safe_unaligned_simd functions are marked with
-// #[target_feature], but the operations themselves are safe (they use references).
-// Token exists for API consistency with x86.
-macro_rules! neon_load_store {{
-    (
-        unsafe: $kind:ident;
-        size: $size:ident;
-
-        $(
-            $(#[$meta:meta])* fn $intrinsic:ident(_: &[$base_ty:ty; $n:literal][..$len:literal] as $realty:ty) -> $ret:ty;
-        )*
-    ) => {{
-        $(
-            neon_load_store!(@ $kind $(#[$meta])* $intrinsic [$realty] [$ret]);
-        )*
-    }};
-
-    (@ load $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
-        $(#[$meta])*
-        #[inline(always)]
-        pub fn $intrinsic(_token: NeonToken, from: &$realty) -> $ret {{
-            // SAFETY: NEON is always available on aarch64. The function is safe
-            // (uses references), the unsafe is only due to #[target_feature] annotation.
-            unsafe {{ safe_unaligned_simd::aarch64::$intrinsic(from) }}
-        }}
-    }};
-
-    (@ store $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
-        $(#[$meta])*
-        #[inline(always)]
-        pub fn $intrinsic(_token: NeonToken, into: &mut $realty, val: $ret) {{
-            // SAFETY: NEON is always available on aarch64. The function is safe
-            // (uses references), the unsafe is only due to #[target_feature] annotation.
-            unsafe {{ safe_unaligned_simd::aarch64::$intrinsic(into, val) }}
-        }}
-    }};
-}}
-
-// Macro for non-baseline features (SVE, SVE2) - requires #[target_feature] wrapper.
-// Use this for any aarch64 feature that needs runtime detection.
+// Macro for aarch64 SIMD functions - requires #[target_feature] wrapper for safety.
+// Even NEON requires this because aarch64 targets without NEON exist (e.g., softfloat).
 macro_rules! aarch64_load_store {{
     (
         token: $token:ty;
@@ -368,9 +329,15 @@ macro_rules! aarch64_load_store {{
         fn_count, SAFE_SIMD_VERSION
     ));
 
-    // Add the macro blocks with renamed macro
+    // Add the macro blocks, converting to aarch64_load_store! with NeonToken
     for block in macro_blocks {
-        let renamed = block.replace("vld_n_replicate_k!", "neon_load_store!");
+        // Replace macro name and inject token/feature parameters
+        let renamed = block
+            .replace("vld_n_replicate_k!", "aarch64_load_store!")
+            .replace(
+                "aarch64_load_store! {\n    unsafe:",
+                "aarch64_load_store! {\n    token: NeonToken;\n    feature: \"neon\";\n    unsafe:",
+            );
         output.push_str(&renamed);
         output.push('\n');
     }
