@@ -9,6 +9,7 @@ rust-version = "1.89"
 license = "MIT OR Apache-2.0"
 description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive."
 repository = "https://github.com/imazen/archmage"
+documentation = "https://docs.rs/archmage"
 keywords = ["simd", "avx", "neon", "performance", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 

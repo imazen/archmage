@@ -2,7 +2,7 @@
 //!
 //! Provides tokens for SSE2, SSE4.1, AVX, AVX2, AVX-512, and FMA.
 //!
-//! Token construction uses [`is_x86_feature_available!`] which combines
+//! Token construction uses [`crate::is_x86_feature_available!`] which combines
 //! compile-time and runtime detection. When compiled with a target feature
 //! enabled (e.g., in a `#[multiversed]` function), the runtime check is
 //! completely eliminated.

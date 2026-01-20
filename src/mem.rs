@@ -84,9 +84,9 @@
 //!
 //! ## AArch64 / NEON Support
 //!
-//! AArch64 NEON wrappers are available via [`neon`]:
+//! AArch64 NEON wrappers are available via `aarch64::neon`:
 //!
-//! - [`neon`] - NEON load/store (160 functions)
+//! - `aarch64::neon` - NEON load/store (160 functions)
 //!
 //! ```rust,ignore
 //! use archmage::{NeonToken, SimdToken};

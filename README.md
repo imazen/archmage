@@ -1,5 +1,11 @@
 # archmage
 
+[![Crates.io](https://img.shields.io/crates/v/archmage.svg)](https://crates.io/crates/archmage)
+[![Documentation](https://docs.rs/archmage/badge.svg)](https://docs.rs/archmage)
+[![CI](https://github.com/imazen/archmage/actions/workflows/ci.yml/badge.svg)](https://github.com/imazen/archmage/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/imazen/archmage/branch/main/graph/badge.svg)](https://codecov.io/gh/imazen/archmage)
+[![License](https://img.shields.io/crates/l/archmage.svg)](https://github.com/imazen/archmage#license)
+
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
 **archmage** provides capability tokens that prove CPU feature availability at runtime, making raw SIMD intrinsics safe to call via the `#[arcane]` macro.
