@@ -7,8 +7,8 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote, Attribute, FnArg, Ident, ItemFn, PatType, Signature, Token,
-    Type,
+    parse_macro_input, parse_quote, Attribute, FnArg, GenericParam, Ident, ItemFn, PatType,
+    Signature, Token, Type, TypeParamBound,
 };
 
 /// Arguments to the `#[arcane]` macro.
@@ -75,8 +75,49 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
     }
 }
 
-/// Extract the token type name from a type.
-fn extract_token_type_name(ty: &Type) -> Option<String> {
+/// Maps a trait bound name to its required target features.
+/// Used for `impl HasAvx2` and `T: HasAvx2` style parameters.
+fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {
+    match trait_name {
+        // x86 feature marker traits
+        "HasSse" => Some(&["sse"]),
+        "HasSse2" => Some(&["sse2"]),
+        "HasSse41" => Some(&["sse4.1"]),
+        "HasSse42" => Some(&["sse4.2"]),
+        "HasAvx" => Some(&["avx"]),
+        "HasAvx2" => Some(&["avx2"]),
+        "HasAvx512f" => Some(&["avx512f"]),
+        "HasAvx512vl" => Some(&["avx512f", "avx512vl"]),
+        "HasAvx512bw" => Some(&["avx512bw"]),
+        "HasAvx512vbmi2" => Some(&["avx512vbmi2"]),
+
+        // Capability marker traits - use most specific features that satisfy them
+        "HasFma" => Some(&["fma"]),
+        "Has128BitSimd" => Some(&["sse2"]),
+        "Has256BitSimd" => Some(&["avx"]),
+        "Has512BitSimd" => Some(&["avx512f"]),
+
+        // ARM feature marker traits
+        "HasNeon" => Some(&["neon"]),
+        "HasSve" => Some(&["sve"]),
+        "HasSve2" => Some(&["sve2"]),
+
+        _ => None,
+    }
+}
+
+/// Result of extracting token info from a type.
+enum TokenTypeInfo {
+    /// Concrete token type (e.g., `Avx2Token`)
+    Concrete(String),
+    /// impl Trait with the trait names (e.g., `impl HasAvx2`)
+    ImplTrait(Vec<String>),
+    /// Generic type parameter name (e.g., `T`)
+    Generic(String),
+}
+
+/// Extract token type information from a type.
+fn extract_token_type_info(ty: &Type) -> Option<TokenTypeInfo> {
     match ty {
         Type::Path(type_path) => {
             // Get the last segment of the path (e.g., "Avx2Token" from "archmage::Avx2Token")
@@ -84,13 +125,107 @@ fn extract_token_type_name(ty: &Type) -> Option<String> {
                 .path
                 .segments
                 .last()
-                .map(|seg| seg.ident.to_string())
+                .map(|seg| {
+                    let name = seg.ident.to_string();
+                    // Check if it's a known concrete token type
+                    if token_to_features(&name).is_some() {
+                        TokenTypeInfo::Concrete(name)
+                    } else {
+                        // Might be a generic type parameter like `T`
+                        TokenTypeInfo::Generic(name)
+                    }
+                })
         }
         Type::Reference(type_ref) => {
             // Handle &Token or &mut Token
-            extract_token_type_name(&type_ref.elem)
+            extract_token_type_info(&type_ref.elem)
+        }
+        Type::ImplTrait(impl_trait) => {
+            // Handle `impl HasAvx2` or `impl HasAvx2 + HasFma`
+            let traits: Vec<String> = extract_trait_names_from_bounds(&impl_trait.bounds);
+            if traits.is_empty() {
+                None
+            } else {
+                Some(TokenTypeInfo::ImplTrait(traits))
+            }
         }
         _ => None,
+    }
+}
+
+/// Extract trait names from type param bounds.
+fn extract_trait_names_from_bounds(
+    bounds: &syn::punctuated::Punctuated<TypeParamBound, Token![+]>,
+) -> Vec<String> {
+    bounds
+        .iter()
+        .filter_map(|bound| {
+            if let TypeParamBound::Trait(trait_bound) = bound {
+                trait_bound
+                    .path
+                    .segments
+                    .last()
+                    .map(|seg| seg.ident.to_string())
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Look up a generic type parameter in the function's generics.
+fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Vec<String>> {
+    // Check inline bounds first (e.g., `fn foo<T: HasAvx2>(token: T)`)
+    for param in &sig.generics.params {
+        if let GenericParam::Type(type_param) = param {
+            if type_param.ident == type_name {
+                let traits = extract_trait_names_from_bounds(&type_param.bounds);
+                if !traits.is_empty() {
+                    return Some(traits);
+                }
+            }
+        }
+    }
+
+    // Check where clause (e.g., `fn foo<T>(token: T) where T: HasAvx2`)
+    if let Some(where_clause) = &sig.generics.where_clause {
+        for predicate in &where_clause.predicates {
+            if let syn::WherePredicate::Type(pred_type) = predicate {
+                if let Type::Path(type_path) = &pred_type.bounded_ty {
+                    if let Some(seg) = type_path.path.segments.last() {
+                        if seg.ident == type_name {
+                            let traits = extract_trait_names_from_bounds(&pred_type.bounds);
+                            if !traits.is_empty() {
+                                return Some(traits);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Convert trait names to features, collecting all features from all traits.
+fn traits_to_features(trait_names: &[String]) -> Option<Vec<&'static str>> {
+    let mut all_features = Vec::new();
+
+    for trait_name in trait_names {
+        if let Some(features) = trait_to_features(trait_name) {
+            for &feature in features {
+                if !all_features.contains(&feature) {
+                    all_features.push(feature);
+                }
+            }
+        }
+    }
+
+    if all_features.is_empty() {
+        None
+    } else {
+        Some(all_features)
     }
 }
 
@@ -98,11 +233,23 @@ fn extract_token_type_name(ty: &Type) -> Option<String> {
 fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
     for arg in &sig.inputs {
         if let FnArg::Typed(PatType { pat, ty, .. }) = arg {
-            if let Some(token_name) = extract_token_type_name(ty) {
-                if let Some(features) = token_to_features(&token_name) {
+            if let Some(info) = extract_token_type_info(ty) {
+                let features = match info {
+                    TokenTypeInfo::Concrete(name) => {
+                        token_to_features(&name).map(|f| f.to_vec())
+                    }
+                    TokenTypeInfo::ImplTrait(trait_names) => traits_to_features(&trait_names),
+                    TokenTypeInfo::Generic(type_name) => {
+                        // Look up the generic parameter's bounds
+                        find_generic_bounds(sig, &type_name)
+                            .and_then(|traits| traits_to_features(&traits))
+                    }
+                };
+
+                if let Some(features) = features {
                     // Extract parameter name
                     if let syn::Pat::Ident(pat_ident) = pat.as_ref() {
-                        return Some((pat_ident.ident.clone(), features.to_vec()));
+                        return Some((pat_ident.ident.clone(), features));
                     }
                 }
             }
@@ -118,7 +265,10 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
         Some(result) => result,
         None => {
             let msg = format!(
-                "{} requires a token parameter (e.g., `token: Avx2Token`)",
+                "{} requires a token parameter. Supported forms:\n\
+                 - Concrete: `token: Avx2Token`\n\
+                 - impl Trait: `token: impl HasAvx2`\n\
+                 - Generic: `fn foo<T: HasAvx2>(token: T, ...)`",
                 macro_name
             );
             return syn::Error::new_spanned(&input_fn.sig, msg)
@@ -203,24 +353,61 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// **The token is passed through to the inner function**, so you can call other
 /// token-taking functions from inside `#[arcane]`.
 ///
-/// # Example
+/// # Token Parameter Forms
+///
+/// The macro supports three forms of token parameters:
+///
+/// ## Concrete Token Types
 ///
 /// ```ignore
-/// use archmage::{Avx2Token, arcane};
-/// use std::arch::x86_64::*;
-///
 /// #[arcane]
 /// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-///     // Raw intrinsics are safe here - token proves AVX2 is available!
-///     let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
-///     let doubled = _mm256_add_ps(v, v);  // SAFE - value operation
-///     let mut out = [0.0f32; 8];
-///     unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
-///     out
+///     // AVX2 intrinsics safe here
 /// }
 /// ```
 ///
-/// This expands to approximately:
+/// ## impl Trait Bounds
+///
+/// ```ignore
+/// #[arcane]
+/// fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+///     // Accepts any token that provides AVX2
+/// }
+/// ```
+///
+/// ## Generic Type Parameters
+///
+/// ```ignore
+/// #[arcane]
+/// fn process<T: HasAvx2>(token: T, data: &[f32; 8]) -> [f32; 8] {
+///     // Generic over any AVX2-capable token
+/// }
+///
+/// // Also works with where clauses:
+/// #[arcane]
+/// fn process<T>(token: T, data: &[f32; 8]) -> [f32; 8]
+/// where
+///     T: HasAvx2
+/// {
+///     // ...
+/// }
+/// ```
+///
+/// # Multiple Trait Bounds
+///
+/// When using `impl Trait` or generic bounds with multiple traits,
+/// all required features are enabled:
+///
+/// ```ignore
+/// #[arcane]
+/// fn fma_kernel(token: impl HasAvx2 + HasFma, data: &[f32; 8]) -> [f32; 8] {
+///     // Both AVX2 and FMA intrinsics are safe here
+/// }
+/// ```
+///
+/// # Expansion
+///
+/// The macro expands to approximately:
 ///
 /// ```ignore
 /// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
@@ -256,6 +443,13 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// - **x86_64 profiles**: `X64V2Token`, `X64V3Token`, `X64V4Token`
 /// - **ARM**: `NeonToken`, `SveToken`, `Sve2Token`
 /// - **WASM**: `Simd128Token`
+///
+/// # Supported Trait Bounds
+///
+/// - **x86_64**: `HasSse`, `HasSse2`, `HasSse41`, `HasSse42`, `HasAvx`, `HasAvx2`,
+///   `HasAvx512f`, `HasAvx512vl`, `HasAvx512bw`, `HasAvx512vbmi2`, `HasFma`
+/// - **ARM**: `HasNeon`, `HasSve`, `HasSve2`
+/// - **Generic**: `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
 ///
 /// # Options
 ///

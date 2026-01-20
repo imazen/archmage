@@ -4,7 +4,7 @@
 
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
-    use archmage::{Avx2FmaToken, Avx2Token, SimdToken, X64V3Token, simd_fn};
+    use archmage::{Avx2FmaToken, Avx2Token, HasAvx, HasAvx2, HasFma, SimdToken, X64V3Token, simd_fn};
     use std::arch::x86_64::*;
 
     /// Basic test: simd_fn with Avx2Token
@@ -138,6 +138,151 @@ mod x86_tests {
             let b = unsafe { _mm256_set1_ps(2.0) };
             let _result = safe_value_ops(token, a, b);
             // Just verify it compiles and runs
+        }
+    }
+
+    // =====================================================================
+    // Tests for impl Trait and generic type parameters
+    // =====================================================================
+
+    /// Test with impl Trait bound
+    #[simd_fn]
+    fn impl_trait_test(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+        let doubled = _mm256_add_ps(v, v);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+        out
+    }
+
+    #[test]
+    fn test_simd_fn_impl_trait() {
+        if let Some(token) = Avx2Token::try_new() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = impl_trait_test(token, &input);
+            assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
+
+    /// Test that impl Trait accepts different concrete tokens
+    #[test]
+    fn test_simd_fn_impl_trait_accepts_x64v3() {
+        if let Some(token) = X64V3Token::try_new() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            // X64V3Token implements HasAvx2, so this should work
+            let output = impl_trait_test(token, &input);
+            assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
+
+    /// Test with generic type parameter (inline bounds)
+    #[simd_fn]
+    fn generic_inline_bounds<T: HasAvx2>(token: T, data: &[f32; 8]) -> [f32; 8] {
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+        let doubled = _mm256_add_ps(v, v);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+        out
+    }
+
+    #[test]
+    fn test_simd_fn_generic_inline_bounds() {
+        if let Some(token) = Avx2Token::try_new() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = generic_inline_bounds(token, &input);
+            assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
+
+    /// Test with generic type parameter (where clause)
+    #[simd_fn]
+    fn generic_where_clause<T>(token: T, data: &[f32; 8]) -> [f32; 8]
+    where
+        T: HasAvx2,
+    {
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+        let doubled = _mm256_add_ps(v, v);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+        out
+    }
+
+    #[test]
+    fn test_simd_fn_generic_where_clause() {
+        if let Some(token) = Avx2Token::try_new() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = generic_where_clause(token, &input);
+            assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
+
+    /// Test with multiple trait bounds using impl Trait
+    #[simd_fn]
+    fn impl_trait_multi_bounds(token: impl HasAvx2 + HasFma, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+        let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
+        let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
+        let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
+        // a * b + c using FMA
+        let result = _mm256_fmadd_ps(va, vb, vc);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+        out
+    }
+
+    #[test]
+    fn test_simd_fn_impl_trait_multi_bounds() {
+        // X64V3Token provides both HasAvx2 and HasFma
+        if let Some(token) = X64V3Token::try_new() {
+            let a = [2.0f32; 8];
+            let b = [3.0f32; 8];
+            let c = [1.0f32; 8];
+            let output = impl_trait_multi_bounds(token, &a, &b, &c);
+            // 2 * 3 + 1 = 7
+            assert_eq!(output, [7.0f32; 8]);
+        }
+    }
+
+    /// Test with multiple trait bounds using generic type parameter
+    #[simd_fn]
+    fn generic_multi_bounds<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+        let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
+        let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
+        let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
+        let result = _mm256_fmadd_ps(va, vb, vc);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+        out
+    }
+
+    #[test]
+    fn test_simd_fn_generic_multi_bounds() {
+        if let Some(token) = X64V3Token::try_new() {
+            let a = [2.0f32; 8];
+            let b = [3.0f32; 8];
+            let c = [1.0f32; 8];
+            let output = generic_multi_bounds(token, &a, &b, &c);
+            assert_eq!(output, [7.0f32; 8]);
+        }
+    }
+
+    /// Test using HasAvx (lower bound) with AVX2 token
+    #[simd_fn]
+    fn lower_bound_test(token: impl HasAvx, data: &[f32; 8]) -> [f32; 8] {
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+        // AVX instruction (not AVX2)
+        let doubled = _mm256_add_ps(v, v);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+        out
+    }
+
+    #[test]
+    fn test_simd_fn_lower_bound_accepts_higher_token() {
+        // Avx2Token should work with HasAvx bound
+        if let Some(token) = Avx2Token::try_new() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = lower_bound_test(token, &input);
+            assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
         }
     }
 }
