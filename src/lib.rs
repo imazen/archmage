@@ -9,7 +9,7 @@
 //! ## Quick Example
 //!
 //! ```rust,ignore
-//! use archmage::{X64V3Token, HasAvx2, SimdToken, arcane};
+//! use archmage::{Desktop64, HasAvx2, SimdToken, arcane};
 //! use archmage::mem::avx;  // Safe load/store (requires safe_unaligned_simd feature)
 //! use std::arch::x86_64::*;
 //!
@@ -29,8 +29,9 @@
 //! }
 //!
 //! fn main() {
-//!     // X64V3Token: AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
-//!     if let Some(token) = X64V3Token::try_new() {
+//!     // Desktop64: AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
+//!     // CPUID check elided if compiled with -C target-cpu=native
+//!     if let Some(token) = Desktop64::summon() {
 //!         let result = multiply_add(token, &[1.0; 8], &[2.0; 8]);
 //!     }
 //! }
@@ -38,16 +39,14 @@
 //!
 //! ## How It Works
 //!
-//! **Capability Tokens** are zero-sized proof types created via `try_new()`, which
-//! performs runtime CPU detection. If `try_new()` returns `Some(token)`, the CPU
-//! definitely supports the required features.
+//! **Capability Tokens** are zero-sized proof types created via `summon()`, which
+//! checks CPUID at runtime (elided if compiled with target features enabled).
 //!
 //! **The `#[arcane]` macro** generates an inner function with `#[target_feature]`,
-//! making intrinsics safe inside. The outer function calls this inner function -
-//! this is safe because the token parameter proves CPU support was verified.
+//! making intrinsics safe inside. The token parameter proves CPU support was verified.
 //!
 //! **Generic bounds** like `impl HasAvx2` let functions accept any token that
-//! provides AVX2 (e.g., `Avx2Token`, `X64V3Token`, `X64V4Token`).
+//! provides AVX2 (e.g., `Avx2Token`, `Desktop64`, `Server64`).
 //!
 //! ## Feature Flags
 //!
@@ -118,10 +117,12 @@ pub use tokens::{HasNeon, HasSve, HasSve2};
 // x86 tokens (when on x86)
 #[cfg(target_arch = "x86_64")]
 pub use tokens::x86::{
+    // Feature tokens
     Avx2FmaToken, Avx2Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken, Avx512bwToken, Avx512bwVlToken,
     Avx512fToken, Avx512fVlToken, AvxToken, FmaToken, Sse2Token, Sse41Token, Sse42Token, SseToken,
+    // Profile tokens (raw names)
     X64V2Token, X64V3Token, X64V4Token,
-    // Friendly aliases
+    // Friendly aliases (recommended)
     Desktop64, Server64,
 };
 

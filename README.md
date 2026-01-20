@@ -7,7 +7,7 @@
 ## Quick Start
 
 ```rust
-use archmage::{X64V3Token, HasAvx2, arcane};
+use archmage::{Desktop64, HasAvx2, SimdToken, arcane};
 use archmage::mem::avx;  // requires safe_unaligned_simd feature
 use std::arch::x86_64::*;
 
@@ -27,11 +27,11 @@ fn multiply_add(token: impl HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 }
 
 fn main() {
-    // X64V3Token is the recommended starting point:
+    // Desktop64 is the recommended starting point:
     // - AVX2 + FMA + BMI2
     // - Works on Intel Haswell (2013+) and AMD Zen 1 (2017+)
     // - Covers ~95% of desktop/server CPUs in use today
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = Desktop64::summon() {
         let result = multiply_add(token, &[1.0; 8], &[2.0; 8]);
         println!("{:?}", result);
     }
@@ -53,11 +53,14 @@ Rust 1.85+ made value-based intrinsics safe inside `#[target_feature]` functions
 
 archmage solves this with two components:
 
-**1. Capability Tokens** - Zero-sized proof types created only after runtime CPU detection:
+**1. Capability Tokens** - Zero-sized proof types created after runtime CPU detection:
 
 ```rust
-// try_new() checks CPUID and returns Some only if features are available
-if let Some(token) = X64V3Token::try_new() {
+use archmage::{Desktop64, SimdToken};
+
+// summon() checks CPUID and returns Some only if features are available
+// (check is elided if compiled with -C target-cpu=native or similar)
+if let Some(token) = Desktop64::summon() {
     // Token exists = CPU definitely has AVX2 + FMA + BMI2
 }
 ```
@@ -92,7 +95,7 @@ fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
 1. `inner()` has `#[target_feature(enable = "avx2")]`, so Rust allows intrinsics without `unsafe`
 2. Calling `inner()` is unsafe, but we know it's valid because:
    - The function requires a token parameter
-   - Tokens can only be created via `try_new()` which checks CPU features
+   - Tokens can only be created via `summon()` which checks CPU features
    - Therefore, if you have a token, the CPU supports the features
 
 ### Generic Token Bounds
@@ -104,7 +107,7 @@ use archmage::{HasAvx2, HasFma, arcane};
 use archmage::mem::avx;
 use std::arch::x86_64::*;
 
-// Accept any token with AVX2 (Avx2Token, X64V3Token, X64V4Token, etc.)
+// Accept any token with AVX2 (Avx2Token, Desktop64, Server64, etc.)
 #[arcane]
 fn double(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
     let v = avx::_mm256_loadu_ps(token, data);
@@ -139,17 +142,17 @@ where
 ```
 
 The trait hierarchy means broader tokens satisfy narrower bounds:
-- `X64V3Token` implements `HasAvx2`, `HasFma`, `HasSse42`, etc.
-- `X64V4Token` implements everything `X64V3Token` does, plus `HasAvx512f`, etc.
+- `Desktop64` implements `HasAvx2`, `HasFma`, `HasSse42`, etc.
+- `Server64` implements everything `Desktop64` does, plus `HasAvx512f`, etc.
 
 ## Choosing a Token
 
-**Start with `X64V3Token`** - it's the sweet spot for modern x86-64:
+**Start with `Desktop64`** - it's the sweet spot for modern x86-64:
 
 | Token | Features | Hardware Coverage |
 |-------|----------|-------------------|
-| `X64V3Token` | AVX2 + FMA + BMI2 | Intel Haswell 2013+, AMD Zen 1 2017+ (~95% of x86-64) |
-| `X64V4Token` | + AVX-512 | Intel Skylake-X 2017+, AMD Zen 4 2022+ |
+| `Desktop64` | AVX2 + FMA + BMI2 | Intel Haswell 2013+, AMD Zen 1 2017+ (~95% of x86-64) |
+| `Server64` | + AVX-512 | Intel Skylake-X 2017+, AMD Zen 4 2022+ |
 | `X64V2Token` | SSE4.2 + POPCNT | Intel Nehalem 2008+, AMD Bulldozer 2011+ |
 
 **For specific features:**
@@ -174,10 +177,10 @@ The trait hierarchy means broader tokens satisfy narrower bounds:
 With the `safe_unaligned_simd` feature, load/store uses references instead of raw pointers:
 
 ```rust
-use archmage::{X64V3Token, SimdToken};
+use archmage::{Desktop64, SimdToken};
 use archmage::mem::avx;
 
-if let Some(token) = X64V3Token::try_new() {
+if let Some(token) = Desktop64::summon() {
     let data = [1.0f32; 8];
     let v = avx::_mm256_loadu_ps(token, &data);  // Safe! Reference, not pointer
 
