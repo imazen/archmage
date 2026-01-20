@@ -1,6 +1,6 @@
 //! Token-gated wrappers for `#[target_feature(enable = "avx512bw")]` functions.
 //!
-//! This module contains 13 functions that are safe to call when you have a [`Avx512bwToken`].
+//! This module contains 13 functions that are safe to call when you have a [`HasAvx512bw`].
 //!
 //! **Auto-generated** from safe_unaligned_simd v0.2.3 - do not edit manually.
 //! See `xtask/src/main.rs` for the generator.
@@ -30,13 +30,13 @@ use safe_unaligned_simd::x86_64::{
     Is128CellUnaligned, Is256CellUnaligned,
 };
 
-use crate::tokens::x86::Avx512bwToken;
+use crate::tokens::{HasAvx512bw};
 
 /// Load 512-bits (composed of 32 packed 16-bit integers) from memory into dst. mem_addr does not need to be aligned on any particular boundary.
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_loadu_epi16)
 #[inline(always)]
-pub fn _mm512_loadu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_addr: & T) -> __m512i {
+pub fn _mm512_loadu_epi16<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, mem_addr: & T) -> __m512i {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(mem_addr: & T) -> __m512i {
@@ -52,7 +52,7 @@ pub fn _mm512_loadu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_addr
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_loadu_epi16)
 #[inline(always)]
-pub fn _mm512_mask_loadu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, src: __m512i, k: __mmask32, mem_addr: & T) -> __m512i {
+pub fn _mm512_mask_loadu_epi16<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, src: __m512i, k: __mmask32, mem_addr: & T) -> __m512i {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(src: __m512i, k: __mmask32, mem_addr: & T) -> __m512i {
@@ -68,7 +68,7 @@ pub fn _mm512_mask_loadu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, src
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_maskz_loadu_epi16)
 #[inline(always)]
-pub fn _mm512_maskz_loadu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, k: __mmask32, mem_addr: & T) -> __m512i {
+pub fn _mm512_maskz_loadu_epi16<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, k: __mmask32, mem_addr: & T) -> __m512i {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(k: __mmask32, mem_addr: & T) -> __m512i {
@@ -82,7 +82,7 @@ pub fn _mm512_maskz_loadu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, k:
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_loadu_epi8)
 #[inline(always)]
-pub fn _mm512_loadu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_addr: & T) -> __m512i {
+pub fn _mm512_loadu_epi8<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, mem_addr: & T) -> __m512i {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(mem_addr: & T) -> __m512i {
@@ -98,7 +98,7 @@ pub fn _mm512_loadu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_addr:
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_loadu_epi8)
 #[inline(always)]
-pub fn _mm512_mask_loadu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, src: __m512i, k: __mmask64, mem_addr: & T) -> __m512i {
+pub fn _mm512_mask_loadu_epi8<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, src: __m512i, k: __mmask64, mem_addr: & T) -> __m512i {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(src: __m512i, k: __mmask64, mem_addr: & T) -> __m512i {
@@ -114,7 +114,7 @@ pub fn _mm512_mask_loadu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, src:
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_maskz_loadu_epi8)
 #[inline(always)]
-pub fn _mm512_maskz_loadu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, k: __mmask64, mem_addr: & T) -> __m512i {
+pub fn _mm512_maskz_loadu_epi8<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, k: __mmask64, mem_addr: & T) -> __m512i {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(k: __mmask64, mem_addr: & T) -> __m512i {
@@ -128,7 +128,7 @@ pub fn _mm512_maskz_loadu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, k: 
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_cvtepi16_storeu_epi8)
 #[inline(always)]
-pub fn _mm512_mask_cvtepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: Avx512bwToken, base_addr: &mut T, k: __mmask32, a: __m512i) {
+pub fn _mm512_mask_cvtepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: impl HasAvx512bw, base_addr: &mut T, k: __mmask32, a: __m512i) {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is256BitsUnaligned>(base_addr: &mut T, k: __mmask32, a: __m512i) {
@@ -142,7 +142,7 @@ pub fn _mm512_mask_cvtepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: Avx512bwT
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_cvtsepi16_storeu_epi8)
 #[inline(always)]
-pub fn _mm512_mask_cvtsepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: Avx512bwToken, base_addr: &mut T, k: __mmask32, a: __m512i) {
+pub fn _mm512_mask_cvtsepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: impl HasAvx512bw, base_addr: &mut T, k: __mmask32, a: __m512i) {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is256BitsUnaligned>(base_addr: &mut T, k: __mmask32, a: __m512i) {
@@ -156,7 +156,7 @@ pub fn _mm512_mask_cvtsepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: Avx512bw
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_cvtusepi16_storeu_epi8)
 #[inline(always)]
-pub fn _mm512_mask_cvtusepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: Avx512bwToken, base_addr: &mut T, k: __mmask32, a: __m512i) {
+pub fn _mm512_mask_cvtusepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: impl HasAvx512bw, base_addr: &mut T, k: __mmask32, a: __m512i) {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is256BitsUnaligned>(base_addr: &mut T, k: __mmask32, a: __m512i) {
@@ -171,7 +171,7 @@ pub fn _mm512_mask_cvtusepi16_storeu_epi8<T: Is256BitsUnaligned>(_token: Avx512b
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_storeu_epi16)
 #[inline(always)]
-pub fn _mm512_mask_storeu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_addr: &mut T, k: __mmask32, a: __m512i) {
+pub fn _mm512_mask_storeu_epi16<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, mem_addr: &mut T, k: __mmask32, a: __m512i) {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(mem_addr: &mut T, k: __mmask32, a: __m512i) {
@@ -185,7 +185,7 @@ pub fn _mm512_mask_storeu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, me
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_storeu_epi16)
 #[inline(always)]
-pub fn _mm512_storeu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_addr: &mut T, a: __m512i) {
+pub fn _mm512_storeu_epi16<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, mem_addr: &mut T, a: __m512i) {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(mem_addr: &mut T, a: __m512i) {
@@ -200,7 +200,7 @@ pub fn _mm512_storeu_epi16<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_add
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_storeu_epi8)
 #[inline(always)]
-pub fn _mm512_mask_storeu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_addr: &mut T, k: __mmask64, a: __m512i) {
+pub fn _mm512_mask_storeu_epi8<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, mem_addr: &mut T, k: __mmask64, a: __m512i) {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(mem_addr: &mut T, k: __mmask64, a: __m512i) {
@@ -214,7 +214,7 @@ pub fn _mm512_mask_storeu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_storeu_epi8)
 #[inline(always)]
-pub fn _mm512_storeu_epi8<T: Is512BitsUnaligned>(_token: Avx512bwToken, mem_addr: &mut T, a: __m512i) {
+pub fn _mm512_storeu_epi8<T: Is512BitsUnaligned>(_token: impl HasAvx512bw, mem_addr: &mut T, a: __m512i) {
     #[inline]
     #[target_feature(enable = "avx512bw")]
     unsafe fn inner<T: Is512BitsUnaligned>(mem_addr: &mut T, a: __m512i) {

@@ -6,16 +6,26 @@ warning: unused import: `AvxToken`
   |
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
-error[E0308]: mismatched types
+error[E0277]: the trait bound `Sse2Token: HasAvx` is not satisfied
   --> tests/compile_fail/safe_simd_wrong_token.rs:11:53
    |
 11 |         let _ = archmage::mem::avx::_mm256_loadu_ps(sse2, &data);
-   |                 ----------------------------------- ^^^^ expected `AvxToken`, found `Sse2Token`
+   |                 ----------------------------------- ^^^^ the trait `HasAvx` is not implemented for `Sse2Token`
    |                 |
-   |                 arguments to this function are incorrect
+   |                 required by a bound introduced by this call
    |
-note: function defined here
+   = help: the following other types implement trait `HasAvx`:
+             Avx2FmaToken
+             Avx2Token
+             Avx512Vbmi2Token
+             Avx512Vbmi2VlToken
+             Avx512bwToken
+             Avx512bwVlToken
+             Avx512fToken
+             Avx512fVlToken
+           and $N others
+note: required by a bound in `archmage::mem::avx::_mm256_loadu_ps`
   --> src/generated/x86/avx.rs
    |
-   | pub fn _mm256_loadu_ps(_token: AvxToken, mem_addr: &[f32; 8]) -> __m256 {
-   |        ^^^^^^^^^^^^^^^
+   | pub fn _mm256_loadu_ps(_token: impl HasAvx, mem_addr: &[f32; 8]) -> __m256 {
+   |                                     ^^^^^^ required by this bound in `_mm256_loadu_ps`

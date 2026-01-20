@@ -97,6 +97,14 @@ pub use tokens::CompositeToken;
 // Capability marker traits
 pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma, HasScalableVectors};
 
+// x86 feature marker traits (for generic bounds)
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub use tokens::{HasSse, HasSse2, HasSse41, HasSse42, HasAvx, HasAvx2, HasAvx512f, HasAvx512vl, HasAvx512bw, HasAvx512vbmi2};
+
+// aarch64 feature marker traits
+#[cfg(target_arch = "aarch64")]
+pub use tokens::{HasNeon, HasSve, HasSve2};
+
 // x86 tokens (when on x86)
 #[cfg(target_arch = "x86_64")]
 pub use tokens::x86::{

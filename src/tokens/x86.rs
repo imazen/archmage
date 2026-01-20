@@ -852,6 +852,7 @@ impl Sse42Token {
 
 use super::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
+use super::{HasSse, HasSse2, HasSse41, HasSse42, HasAvx, HasAvx2, HasAvx512f, HasAvx512vl, HasAvx512bw, HasAvx512vbmi2};
 
 // 128-bit SIMD: SSE, SSE2, SSE4.1, SSE4.2
 impl Has128BitSimd for SseToken {}
@@ -906,6 +907,133 @@ impl HasFma for Avx512bwToken {}
 impl HasFma for Avx512bwVlToken {}
 impl HasFma for Avx512Vbmi2Token {}
 impl HasFma for Avx512Vbmi2VlToken {}
+
+// ============================================================================
+// x86 Feature Marker Trait Implementations
+// ============================================================================
+//
+// These allow any token that implies a feature to be used where that feature
+// is required. E.g., Avx2Token implements HasAvx, so it can be passed to
+// functions that accept `impl HasAvx`.
+
+// HasSse: All x86 tokens have SSE
+impl HasSse for SseToken {}
+impl HasSse for Sse2Token {}
+impl HasSse for Sse41Token {}
+impl HasSse for Sse42Token {}
+impl HasSse for AvxToken {}
+impl HasSse for Avx2Token {}
+impl HasSse for Avx2FmaToken {}
+impl HasSse for FmaToken {}
+impl HasSse for Avx512fToken {}
+impl HasSse for Avx512fVlToken {}
+impl HasSse for Avx512bwToken {}
+impl HasSse for Avx512bwVlToken {}
+impl HasSse for Avx512Vbmi2Token {}
+impl HasSse for Avx512Vbmi2VlToken {}
+impl HasSse for X64V2Token {}
+impl HasSse for X64V3Token {}
+impl HasSse for X64V4Token {}
+
+// HasSse2: All tokens except SseToken (SSE2 is baseline on x86_64)
+impl HasSse2 for Sse2Token {}
+impl HasSse2 for Sse41Token {}
+impl HasSse2 for Sse42Token {}
+impl HasSse2 for AvxToken {}
+impl HasSse2 for Avx2Token {}
+impl HasSse2 for Avx2FmaToken {}
+impl HasSse2 for FmaToken {}
+impl HasSse2 for Avx512fToken {}
+impl HasSse2 for Avx512fVlToken {}
+impl HasSse2 for Avx512bwToken {}
+impl HasSse2 for Avx512bwVlToken {}
+impl HasSse2 for Avx512Vbmi2Token {}
+impl HasSse2 for Avx512Vbmi2VlToken {}
+impl HasSse2 for X64V2Token {}
+impl HasSse2 for X64V3Token {}
+impl HasSse2 for X64V4Token {}
+
+// HasSse41: SSE4.1 and above
+impl HasSse41 for Sse41Token {}
+impl HasSse41 for Sse42Token {}
+impl HasSse41 for AvxToken {}
+impl HasSse41 for Avx2Token {}
+impl HasSse41 for Avx2FmaToken {}
+impl HasSse41 for Avx512fToken {}
+impl HasSse41 for Avx512fVlToken {}
+impl HasSse41 for Avx512bwToken {}
+impl HasSse41 for Avx512bwVlToken {}
+impl HasSse41 for Avx512Vbmi2Token {}
+impl HasSse41 for Avx512Vbmi2VlToken {}
+impl HasSse41 for X64V2Token {}
+impl HasSse41 for X64V3Token {}
+impl HasSse41 for X64V4Token {}
+
+// HasSse42: SSE4.2 and above
+impl HasSse42 for Sse42Token {}
+impl HasSse42 for AvxToken {}
+impl HasSse42 for Avx2Token {}
+impl HasSse42 for Avx2FmaToken {}
+impl HasSse42 for Avx512fToken {}
+impl HasSse42 for Avx512fVlToken {}
+impl HasSse42 for Avx512bwToken {}
+impl HasSse42 for Avx512bwVlToken {}
+impl HasSse42 for Avx512Vbmi2Token {}
+impl HasSse42 for Avx512Vbmi2VlToken {}
+impl HasSse42 for X64V2Token {}
+impl HasSse42 for X64V3Token {}
+impl HasSse42 for X64V4Token {}
+
+// HasAvx: AVX and above
+impl HasAvx for AvxToken {}
+impl HasAvx for Avx2Token {}
+impl HasAvx for Avx2FmaToken {}
+impl HasAvx for Avx512fToken {}
+impl HasAvx for Avx512fVlToken {}
+impl HasAvx for Avx512bwToken {}
+impl HasAvx for Avx512bwVlToken {}
+impl HasAvx for Avx512Vbmi2Token {}
+impl HasAvx for Avx512Vbmi2VlToken {}
+impl HasAvx for X64V3Token {}
+impl HasAvx for X64V4Token {}
+
+// HasAvx2: AVX2 and above
+impl HasAvx2 for Avx2Token {}
+impl HasAvx2 for Avx2FmaToken {}
+impl HasAvx2 for Avx512fToken {}
+impl HasAvx2 for Avx512fVlToken {}
+impl HasAvx2 for Avx512bwToken {}
+impl HasAvx2 for Avx512bwVlToken {}
+impl HasAvx2 for Avx512Vbmi2Token {}
+impl HasAvx2 for Avx512Vbmi2VlToken {}
+impl HasAvx2 for X64V3Token {}
+impl HasAvx2 for X64V4Token {}
+
+// HasAvx512f: AVX-512F and above
+impl HasAvx512f for Avx512fToken {}
+impl HasAvx512f for Avx512fVlToken {}
+impl HasAvx512f for Avx512bwToken {}
+impl HasAvx512f for Avx512bwVlToken {}
+impl HasAvx512f for Avx512Vbmi2Token {}
+impl HasAvx512f for Avx512Vbmi2VlToken {}
+impl HasAvx512f for X64V4Token {}
+
+// HasAvx512vl: AVX-512VL tokens
+impl HasAvx512vl for Avx512fVlToken {}
+impl HasAvx512vl for Avx512bwVlToken {}
+impl HasAvx512vl for Avx512Vbmi2VlToken {}
+impl HasAvx512vl for X64V4Token {}
+
+// HasAvx512bw: AVX-512BW and above
+impl HasAvx512bw for Avx512bwToken {}
+impl HasAvx512bw for Avx512bwVlToken {}
+impl HasAvx512bw for Avx512Vbmi2Token {}
+impl HasAvx512bw for Avx512Vbmi2VlToken {}
+impl HasAvx512bw for X64V4Token {}
+
+// HasAvx512vbmi2: AVX-512VBMI2 tokens
+impl HasAvx512vbmi2 for Avx512Vbmi2Token {}
+impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
 
 // ============================================================================
 // SIMD Operation Trait Implementations (simd_ops module)

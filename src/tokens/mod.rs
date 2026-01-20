@@ -114,6 +114,74 @@ pub trait HasFma: SimdToken {}
 pub trait HasScalableVectors: SimdToken {}
 
 // ============================================================================
+// x86 Feature Marker Traits
+// ============================================================================
+//
+// These form a hierarchy matching the x86 feature dependencies.
+// Use these as bounds on generic functions to accept any token that
+// implies a specific feature.
+
+/// Marker trait for tokens that provide SSE.
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasSse: SimdToken {}
+
+/// Marker trait for tokens that provide SSE2.
+///
+/// SSE2 is baseline on x86_64.
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasSse2: HasSse {}
+
+/// Marker trait for tokens that provide SSE4.1.
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasSse41: HasSse2 {}
+
+/// Marker trait for tokens that provide SSE4.2.
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasSse42: HasSse41 {}
+
+/// Marker trait for tokens that provide AVX.
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasAvx: HasSse42 {}
+
+/// Marker trait for tokens that provide AVX2.
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasAvx2: HasAvx {}
+
+/// Marker trait for tokens that provide AVX-512F (Foundation).
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasAvx512f: HasAvx2 {}
+
+/// Marker trait for tokens that provide AVX-512VL (Vector Length extensions).
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasAvx512vl: HasAvx512f {}
+
+/// Marker trait for tokens that provide AVX-512BW (Byte/Word).
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasAvx512bw: HasAvx512f {}
+
+/// Marker trait for tokens that provide AVX-512VBMI2.
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub trait HasAvx512vbmi2: HasAvx512bw {}
+
+// ============================================================================
+// AArch64 Feature Marker Traits
+// ============================================================================
+
+/// Marker trait for tokens that provide NEON.
+///
+/// NEON is baseline on AArch64.
+#[cfg(target_arch = "aarch64")]
+pub trait HasNeon: SimdToken {}
+
+/// Marker trait for tokens that provide SVE.
+#[cfg(target_arch = "aarch64")]
+pub trait HasSve: HasNeon {}
+
+/// Marker trait for tokens that provide SVE2.
+#[cfg(target_arch = "aarch64")]
+pub trait HasSve2: HasSve {}
+
+// ============================================================================
 // Operation Trait Modules
 // ============================================================================
 

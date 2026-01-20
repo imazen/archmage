@@ -26,23 +26,32 @@ enum Arch {
     Aarch64,
 }
 
-/// Mapping from target_feature strings to archmage token types
+/// Mapping from target_feature strings to archmage trait bounds
+/// Returns (trait_name, features_string)
+///
+/// Note: We avoid redundant bounds by using trait hierarchy knowledge.
+/// - HasAvx512vl: HasAvx512f - so HasAvx512vl implies HasAvx512f
+/// - HasAvx512bw: HasAvx512f - sibling of HasAvx512vl, need both
+/// - HasAvx512vbmi2: HasAvx512bw - need to add HasAvx512vl separately
 fn feature_to_token(features: &str, arch: Arch) -> Option<(&'static str, &'static str)> {
     match arch {
         Arch::X86 => match features {
-            "sse" => Some(("SseToken", "sse")),
-            "sse2" => Some(("Sse2Token", "sse2")),
-            "avx" => Some(("AvxToken", "avx")),
-            "avx512f" => Some(("Avx512fToken", "avx512f")),
-            "avx512f,avx512vl" => Some(("Avx512fVlToken", "avx512f,avx512vl")),
-            "avx512bw" => Some(("Avx512bwToken", "avx512bw")),
-            "avx512bw,avx512vl" => Some(("Avx512bwVlToken", "avx512bw,avx512vl")),
-            "avx512vbmi2" => Some(("Avx512Vbmi2Token", "avx512vbmi2")),
-            "avx512vbmi2,avx512vl" => Some(("Avx512Vbmi2VlToken", "avx512vbmi2,avx512vl")),
+            "sse" => Some(("HasSse", "sse")),
+            "sse2" => Some(("HasSse2", "sse2")),
+            "avx" => Some(("HasAvx", "avx")),
+            "avx512f" => Some(("HasAvx512f", "avx512f")),
+            // HasAvx512vl: HasAvx512f, so just HasAvx512vl is sufficient
+            "avx512f,avx512vl" => Some(("HasAvx512vl", "avx512f,avx512vl")),
+            "avx512bw" => Some(("HasAvx512bw", "avx512bw")),
+            // HasAvx512bw and HasAvx512vl are siblings (both extend HasAvx512f)
+            "avx512bw,avx512vl" => Some(("HasAvx512bw + HasAvx512vl", "avx512bw,avx512vl")),
+            "avx512vbmi2" => Some(("HasAvx512vbmi2", "avx512vbmi2")),
+            // HasAvx512vbmi2: HasAvx512bw, but doesn't imply VL
+            "avx512vbmi2,avx512vl" => Some(("HasAvx512vbmi2 + HasAvx512vl", "avx512vbmi2,avx512vl")),
             _ => None,
         },
         Arch::Aarch64 => match features {
-            "neon" => Some(("NeonToken", "neon")),
+            "neon" => Some(("HasNeon", "neon")),
             _ => None,
         },
     }
@@ -503,8 +512,8 @@ fn generate_wrapper_string(
         write!(out, "<{}>", generic_params.join(", ")).unwrap();
     }
 
-    // Parameters (add token as first param)
-    let params: Vec<String> = std::iter::once(format!("_token: {}", token_name))
+    // Parameters (add token as first param with impl Trait bound)
+    let params: Vec<String> = std::iter::once(format!("_token: impl {}", token_name))
         .chain(
             func.inputs
                 .iter()
@@ -630,6 +639,10 @@ fn generate_module(
     // Architecture-specific imports
     match arch {
         Arch::X86 => {
+            // Extract trait names from the token_name (e.g., "HasAvx512f + HasAvx512vl" -> ["HasAvx512f", "HasAvx512vl"])
+            let traits: Vec<&str> = token_name.split(" + ").map(|s| s.trim()).collect();
+            let trait_imports = traits.join(", ");
+
             writeln!(
                 out,
                 r#"
@@ -653,8 +666,8 @@ use safe_unaligned_simd::x86_64::{{
     Is128CellUnaligned, Is256CellUnaligned,
 }};
 
-use crate::tokens::x86::{};"#,
-                token_name
+use crate::tokens::{{{}}};"#,
+                trait_imports
             )
             .unwrap();
         }
@@ -663,7 +676,7 @@ use crate::tokens::x86::{};"#,
                 out,
                 r#"
 use core::arch::aarch64::*;
-use crate::tokens::arm::{};"#,
+use crate::tokens::{};"#,
                 token_name
             )
             .unwrap();

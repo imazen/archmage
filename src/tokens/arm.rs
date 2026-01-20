@@ -237,6 +237,7 @@ impl Sve2Token {
 // ============================================================================
 
 use super::{Has128BitSimd, HasFma, HasScalableVectors};
+use super::{HasNeon, HasSve, HasSve2};
 
 // NEON provides 128-bit SIMD and FMA
 impl Has128BitSimd for NeonToken {}
@@ -258,6 +259,24 @@ impl HasScalableVectors for SveToken {}
 impl Has128BitSimd for Sve2Token {}
 impl HasFma for Sve2Token {}
 impl HasScalableVectors for Sve2Token {}
+
+// ============================================================================
+// AArch64 Feature Marker Trait Implementations
+// ============================================================================
+
+// HasNeon: All aarch64 tokens have NEON
+impl HasNeon for NeonToken {}
+impl HasNeon for ArmCryptoToken {}
+impl HasNeon for ArmCrypto3Token {}
+impl HasNeon for SveToken {}
+impl HasNeon for Sve2Token {}
+
+// HasSve: SVE and above
+impl HasSve for SveToken {}
+impl HasSve for Sve2Token {}
+
+// HasSve2: SVE2 only
+impl HasSve2 for Sve2Token {}
 
 // ============================================================================
 // Tests

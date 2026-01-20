@@ -174,7 +174,7 @@ mod tests {
     fn test_hsum() {
         if let Some(token) = Avx2Token::try_new() {
             let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-            let v = _mm256_loadu_ps(token.avx(), &data);
+            let v = _mm256_loadu_ps(token, &data);
             let sum = hsum_f32x8(token, v);
             assert!((sum - 36.0).abs() < 0.001);
         }
@@ -184,7 +184,7 @@ mod tests {
     fn test_hmax() {
         if let Some(token) = Avx2Token::try_new() {
             let data = [1.0f32, 8.0, 3.0, 4.0, 5.0, 2.0, 7.0, 6.0];
-            let v = _mm256_loadu_ps(token.avx(), &data);
+            let v = _mm256_loadu_ps(token, &data);
             let max = hmax_f32x8(token, v);
             assert!((max - 8.0).abs() < 0.001);
         }
@@ -194,7 +194,7 @@ mod tests {
     fn test_hmin() {
         if let Some(token) = Avx2Token::try_new() {
             let data = [3.0f32, 8.0, 1.0, 4.0, 5.0, 2.0, 7.0, 6.0];
-            let v = _mm256_loadu_ps(token.avx(), &data);
+            let v = _mm256_loadu_ps(token, &data);
             let min = hmin_f32x8(token, v);
             assert!((min - 1.0).abs() < 0.001);
         }
