@@ -654,7 +654,9 @@ impl Sse42Token {
 // Capability Marker Trait Implementations
 // ============================================================================
 
-use super::{DotProduct, Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma, HorizontalOps, Transpose8x8};
+use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
+use super::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
+use super::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 
 // 128-bit SIMD: SSE2, SSE4.1, SSE4.2
 impl Has128BitSimd for Sse2Token {}
@@ -690,15 +692,17 @@ impl HasFma for X64V3Token {}
 impl HasFma for X64V4Token {}
 
 // ============================================================================
-// Operation Trait Implementations
+// SIMD Operation Trait Implementations (simd_ops module)
 // ============================================================================
 
 // Transpose8x8 for Avx2Token
 impl Transpose8x8 for Avx2Token {
+    #[inline(always)]
     fn transpose_8x8(&self, block: &mut [f32; 64]) {
         crate::composite::transpose::transpose_8x8(*self, block)
     }
 
+    #[inline(always)]
     fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
         crate::composite::transpose::transpose_8x8_copy(*self, input, output)
     }
@@ -706,10 +710,12 @@ impl Transpose8x8 for Avx2Token {
 
 // Transpose8x8 for Avx2FmaToken (delegates to Avx2)
 impl Transpose8x8 for Avx2FmaToken {
+    #[inline(always)]
     fn transpose_8x8(&self, block: &mut [f32; 64]) {
         self.avx2().transpose_8x8(block)
     }
 
+    #[inline(always)]
     fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
         self.avx2().transpose_8x8_copy(input, output)
     }
@@ -717,10 +723,12 @@ impl Transpose8x8 for Avx2FmaToken {
 
 // Transpose8x8 for X64V3Token (delegates to Avx2)
 impl Transpose8x8 for X64V3Token {
+    #[inline(always)]
     fn transpose_8x8(&self, block: &mut [f32; 64]) {
         self.avx2().transpose_8x8(block)
     }
 
+    #[inline(always)]
     fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
         self.avx2().transpose_8x8_copy(input, output)
     }
@@ -728,10 +736,12 @@ impl Transpose8x8 for X64V3Token {
 
 // Transpose8x8 for X64V4Token (delegates to Avx2 for now, could use AVX-512)
 impl Transpose8x8 for X64V4Token {
+    #[inline(always)]
     fn transpose_8x8(&self, block: &mut [f32; 64]) {
         self.avx2().transpose_8x8(block)
     }
 
+    #[inline(always)]
     fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
         self.avx2().transpose_8x8_copy(input, output)
     }
@@ -739,6 +749,7 @@ impl Transpose8x8 for X64V4Token {
 
 // DotProduct for Avx2FmaToken (uses FMA)
 impl DotProduct for Avx2FmaToken {
+    #[inline(always)]
     fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
         crate::composite::dot_product::dot_product_f32(*self, a, b)
     }
@@ -746,6 +757,7 @@ impl DotProduct for Avx2FmaToken {
 
 // DotProduct for X64V3Token (has FMA)
 impl DotProduct for X64V3Token {
+    #[inline(always)]
     fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
         crate::composite::dot_product::dot_product_f32(self.avx2_fma(), a, b)
     }
@@ -753,6 +765,7 @@ impl DotProduct for X64V3Token {
 
 // DotProduct for X64V4Token (has FMA)
 impl DotProduct for X64V4Token {
+    #[inline(always)]
     fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
         crate::composite::dot_product::dot_product_f32(self.avx2_fma(), a, b)
     }
@@ -760,6 +773,7 @@ impl DotProduct for X64V4Token {
 
 // DotProduct for Avx2Token (no FMA, uses multiply+add)
 impl DotProduct for Avx2Token {
+    #[inline(always)]
     fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
         crate::composite::dot_product::dot_product_f32_no_fma(*self, a, b)
     }
@@ -767,14 +781,17 @@ impl DotProduct for Avx2Token {
 
 // HorizontalOps for Avx2Token
 impl HorizontalOps for Avx2Token {
+    #[inline(always)]
     fn sum_f32(&self, data: &[f32]) -> f32 {
         crate::composite::horizontal::sum_f32_slice(*self, data)
     }
 
+    #[inline(always)]
     fn max_f32(&self, data: &[f32]) -> f32 {
         crate::composite::horizontal::max_f32_slice(*self, data)
     }
 
+    #[inline(always)]
     fn min_f32(&self, data: &[f32]) -> f32 {
         crate::composite::horizontal::min_f32_slice(*self, data)
     }
@@ -782,14 +799,17 @@ impl HorizontalOps for Avx2Token {
 
 // HorizontalOps for Avx2FmaToken (delegates to Avx2)
 impl HorizontalOps for Avx2FmaToken {
+    #[inline(always)]
     fn sum_f32(&self, data: &[f32]) -> f32 {
         self.avx2().sum_f32(data)
     }
 
+    #[inline(always)]
     fn max_f32(&self, data: &[f32]) -> f32 {
         self.avx2().max_f32(data)
     }
 
+    #[inline(always)]
     fn min_f32(&self, data: &[f32]) -> f32 {
         self.avx2().min_f32(data)
     }
@@ -797,14 +817,17 @@ impl HorizontalOps for Avx2FmaToken {
 
 // HorizontalOps for X64V3Token (delegates to Avx2)
 impl HorizontalOps for X64V3Token {
+    #[inline(always)]
     fn sum_f32(&self, data: &[f32]) -> f32 {
         self.avx2().sum_f32(data)
     }
 
+    #[inline(always)]
     fn max_f32(&self, data: &[f32]) -> f32 {
         self.avx2().max_f32(data)
     }
 
+    #[inline(always)]
     fn min_f32(&self, data: &[f32]) -> f32 {
         self.avx2().min_f32(data)
     }
@@ -812,18 +835,250 @@ impl HorizontalOps for X64V3Token {
 
 // HorizontalOps for X64V4Token (delegates to Avx2 for now)
 impl HorizontalOps for X64V4Token {
+    #[inline(always)]
     fn sum_f32(&self, data: &[f32]) -> f32 {
         self.avx2().sum_f32(data)
     }
 
+    #[inline(always)]
     fn max_f32(&self, data: &[f32]) -> f32 {
         self.avx2().max_f32(data)
     }
 
+    #[inline(always)]
     fn min_f32(&self, data: &[f32]) -> f32 {
         self.avx2().min_f32(data)
     }
 }
+
+// ============================================================================
+// Scalar Fallback Trait Implementations (scalar_ops module)
+// ============================================================================
+// SIMD tokens override with optimized code, others use default scalar methods.
+
+// Tokens WITHOUT 256-bit SIMD use scalar defaults
+impl Transpose8x8OrScalar for Sse2Token {}
+impl Transpose8x8OrScalar for Sse41Token {}
+impl Transpose8x8OrScalar for Sse42Token {}
+impl Transpose8x8OrScalar for X64V2Token {}
+impl DotProductOrScalar for Sse2Token {}
+impl DotProductOrScalar for Sse41Token {}
+impl DotProductOrScalar for Sse42Token {}
+impl DotProductOrScalar for X64V2Token {}
+impl HorizontalOpsOrScalar for Sse2Token {}
+impl HorizontalOpsOrScalar for Sse41Token {}
+impl HorizontalOpsOrScalar for Sse42Token {}
+impl HorizontalOpsOrScalar for X64V2Token {}
+
+// Tokens WITH 256-bit SIMD override with optimized code
+impl Transpose8x8OrScalar for Avx2Token {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.transpose_8x8_copy(input, output)
+    }
+}
+
+impl Transpose8x8OrScalar for Avx2FmaToken {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.transpose_8x8_copy(input, output)
+    }
+}
+
+impl Transpose8x8OrScalar for X64V3Token {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.transpose_8x8_copy(input, output)
+    }
+}
+
+impl Transpose8x8OrScalar for X64V4Token {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.transpose_8x8_copy(input, output)
+    }
+}
+
+impl DotProductOrScalar for Avx2Token {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.dot_product_f32(a, b)
+    }
+}
+
+impl DotProductOrScalar for Avx2FmaToken {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.dot_product_f32(a, b)
+    }
+}
+
+impl DotProductOrScalar for X64V3Token {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.dot_product_f32(a, b)
+    }
+}
+
+impl DotProductOrScalar for X64V4Token {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.dot_product_f32(a, b)
+    }
+}
+
+impl HorizontalOpsOrScalar for Avx2Token {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.min_f32(data)
+    }
+}
+
+impl HorizontalOpsOrScalar for Avx2FmaToken {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.min_f32(data)
+    }
+}
+
+impl HorizontalOpsOrScalar for X64V3Token {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.min_f32(data)
+    }
+}
+
+impl HorizontalOpsOrScalar for X64V4Token {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.min_f32(data)
+    }
+}
+
+// AVX-512 tokens
+impl Transpose8x8OrScalar for Avx512fToken {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.avx2().transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx2().transpose_8x8_copy(input, output)
+    }
+}
+
+impl Transpose8x8OrScalar for Avx512bwToken {
+    #[inline(always)]
+    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
+        self.avx512f().avx2().transpose_8x8(block)
+    }
+    #[inline(always)]
+    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx512f().avx2().transpose_8x8_copy(input, output)
+    }
+}
+
+impl DotProductOrScalar for Avx512fToken {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.avx2_fma().dot_product_f32(a, b)
+    }
+}
+
+impl DotProductOrScalar for Avx512bwToken {
+    #[inline(always)]
+    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
+        self.avx512f().avx2_fma().dot_product_f32(a, b)
+    }
+}
+
+impl HorizontalOpsOrScalar for Avx512fToken {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx2().sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx2().max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx2().min_f32(data)
+    }
+}
+
+impl HorizontalOpsOrScalar for Avx512bwToken {
+    #[inline(always)]
+    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512f().avx2().sum_f32(data)
+    }
+    #[inline(always)]
+    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512f().avx2().max_f32(data)
+    }
+    #[inline(always)]
+    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
+        self.avx512f().avx2().min_f32(data)
+    }
+}
+
+// FMA token (no 256-bit guarantee, use scalar)
+impl Transpose8x8OrScalar for FmaToken {}
+impl DotProductOrScalar for FmaToken {}
+impl HorizontalOpsOrScalar for FmaToken {}
+
+// AVX token (has 256-bit float but not integer ops needed for full transpose)
+impl Transpose8x8OrScalar for AvxToken {}
+impl DotProductOrScalar for AvxToken {}
+impl HorizontalOpsOrScalar for AvxToken {}
 
 // ============================================================================
 // Assembly verification helpers

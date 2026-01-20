@@ -108,48 +108,18 @@ pub trait HasFma: SimdToken {}
 pub trait HasScalableVectors: SimdToken {}
 
 // ============================================================================
-// Operation Traits - Generic interface with specialized implementations
+// Operation Trait Modules
 // ============================================================================
-//
-// These traits provide a generic interface that can be used with any token,
-// while each token provides its own optimized implementation using the
-// appropriate architecture-specific intrinsics.
 
-/// 8x8 matrix transpose operation.
+/// SIMD-optimized operation traits (require specific token implementations).
 ///
-/// This is critical for DCT transforms in image/video codecs.
-pub trait Transpose8x8: SimdToken {
-    /// Transpose an 8x8 f32 matrix in-place.
-    fn transpose_8x8(&self, block: &mut [f32; 64]);
+/// Use these when you need guaranteed SIMD performance.
+/// Tokens must explicitly implement these traits.
+pub mod simd_ops;
 
-    /// Transpose an 8x8 f32 matrix from input to output.
-    fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]);
-}
-
-/// Dot product operations.
-pub trait DotProduct: SimdToken {
-    /// Compute dot product of two f32 slices.
-    fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32;
-
-    /// Compute squared L2 norm (sum of squares).
-    fn norm_squared_f32(&self, a: &[f32]) -> f32 {
-        self.dot_product_f32(a, a)
-    }
-
-    /// Compute L2 norm.
-    fn norm_f32(&self, a: &[f32]) -> f32 {
-        self.norm_squared_f32(a).sqrt()
-    }
-}
-
-/// Horizontal reduction operations on vectors.
-pub trait HorizontalOps: SimdToken {
-    /// Sum all elements of an f32 slice.
-    fn sum_f32(&self, data: &[f32]) -> f32;
-
-    /// Find maximum element in an f32 slice.
-    fn max_f32(&self, data: &[f32]) -> f32;
-
-    /// Find minimum element in an f32 slice.
-    fn min_f32(&self, data: &[f32]) -> f32;
-}
+/// Operation traits with scalar fallbacks.
+///
+/// Use these when you want operations to work with any token,
+/// falling back to scalar code when SIMD isn't available.
+/// The `_or_scalar` suffix on methods indicates potential fallback.
+pub mod scalar_ops;
