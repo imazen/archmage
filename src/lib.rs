@@ -84,8 +84,40 @@ pub mod integrate;
 #[cfg_attr(docsrs, doc(cfg(feature = "composite")))]
 pub mod composite;
 
-// Re-export main types at crate root
-pub use tokens::*;
+// Safe unaligned memory operations (requires "safe-simd" feature)
+// Wraps safe_unaligned_simd with token-based safety
+#[cfg(feature = "safe-simd")]
+#[cfg_attr(docsrs, doc(cfg(feature = "safe-simd")))]
+pub mod mem;
+
+// ============================================================================
+// Re-exports at crate root for convenience
+// ============================================================================
+
+// Core trait
+pub use tokens::SimdToken;
+
+// Composite token trait
+pub use tokens::CompositeToken;
+
+// Capability marker traits
+pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma, HasScalableVectors};
+
+// x86 tokens (when on x86)
+#[cfg(target_arch = "x86_64")]
+pub use tokens::x86::{
+    Avx2FmaToken, Avx2Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken, Avx512bwToken, Avx512bwVlToken,
+    Avx512fToken, Avx512fVlToken, AvxToken, FmaToken, Sse2Token, Sse41Token, Sse42Token, SseToken,
+    X64V2Token, X64V3Token, X64V4Token,
+};
+
+// aarch64 tokens (when on ARM)
+#[cfg(target_arch = "aarch64")]
+pub use tokens::arm::{NeonToken, Sve2Token, SveToken};
+
+// wasm tokens (when on WASM)
+#[cfg(target_arch = "wasm32")]
+pub use tokens::wasm::Simd128Token;
 
 // Re-export safe load/store operations (requires "ops" feature)
 #[cfg(all(target_arch = "x86_64", feature = "ops"))]

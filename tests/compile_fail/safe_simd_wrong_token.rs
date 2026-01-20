@@ -8,6 +8,6 @@ fn main() {
     if let Some(sse2) = Sse2Token::try_new() {
         let data = [1.0f32; 8];
         // _mm256_loadu_ps requires AvxToken, not Sse2Token
-        let _ = archmage::generated::avx::_mm256_loadu_ps(sse2, &data);
+        let _ = archmage::mem::avx::_mm256_loadu_ps(sse2, &data);
     }
 }
