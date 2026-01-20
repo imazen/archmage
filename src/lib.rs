@@ -46,7 +46,7 @@
 //! - `ops`: Safe load/store operations
 //! - `composite`: Higher-level operations (transpose, dot product, etc.) - implies `ops`
 //! - `wide`: Integration with the `wide` crate
-//! - `safe-simd`: Integration with `safe_unaligned_simd` for additional safe load/store
+//! - `safe_unaligned_simd`: Integration with `safe_unaligned_simd` crate for additional safe load/store
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -76,7 +76,7 @@ pub mod tokens;
 pub mod ops;
 
 // Integration layers
-#[cfg(any(feature = "wide", feature = "safe-simd"))]
+#[cfg(any(feature = "wide", feature = "safe_unaligned_simd"))]
 pub mod integrate;
 
 // Composite operations (requires "composite" feature, implies "ops")
@@ -84,10 +84,10 @@ pub mod integrate;
 #[cfg_attr(docsrs, doc(cfg(feature = "composite")))]
 pub mod composite;
 
-// Safe unaligned memory operations (requires "safe-simd" feature)
+// Safe unaligned memory operations (requires "safe_unaligned_simd" feature)
 // Wraps safe_unaligned_simd with token-based safety
-#[cfg(feature = "safe-simd")]
-#[cfg_attr(docsrs, doc(cfg(feature = "safe-simd")))]
+#[cfg(feature = "safe_unaligned_simd")]
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_unaligned_simd")))]
 pub mod mem;
 
 // ============================================================================

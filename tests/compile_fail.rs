@@ -22,7 +22,7 @@ fn ui_tests() {
 }
 
 #[test]
-#[cfg(feature = "safe-simd")]
+#[cfg(feature = "safe_unaligned_simd")]
 fn safe_simd_type_safety() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/compile_fail/safe_simd_wrong_token.rs");

@@ -8,7 +8,7 @@ use core::arch::x86_64::*;
 #[cfg(target_arch = "x86_64")]
 use crate::tokens::x86::*;
 
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 use safe_unaligned_simd::x86_64 as safe_simd;
 
 // ============================================================================
@@ -21,7 +21,7 @@ use safe_unaligned_simd::x86_64 as safe_simd;
 /// - Token proves AVX2 is available
 /// - Reference proves memory is valid
 /// - No raw pointers
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_load_f32x8(_token: Avx2Token, data: &[f32; 8]) -> __m256 {
     // SAFETY: token proves AVX is available
@@ -33,7 +33,7 @@ pub fn safe_load_f32x8(_token: Avx2Token, data: &[f32; 8]) -> __m256 {
 /// # Safety note
 /// The unsafe block is required because safe_simd functions have `#[target_feature]`.
 /// The token proves the feature is available at runtime.
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_store_f32x8(_token: Avx2Token, data: &mut [f32; 8], v: __m256) {
     // SAFETY: token proves AVX2 is available
@@ -41,7 +41,7 @@ pub fn safe_store_f32x8(_token: Avx2Token, data: &mut [f32; 8], v: __m256) {
 }
 
 /// Safe unaligned load of 4 f64s
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_load_f64x4(_token: Avx2Token, data: &[f64; 4]) -> __m256d {
     // SAFETY: token proves AVX is available
@@ -49,7 +49,7 @@ pub fn safe_load_f64x4(_token: Avx2Token, data: &[f64; 4]) -> __m256d {
 }
 
 /// Safe unaligned store of 4 f64s
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_store_f64x4(_token: Avx2Token, data: &mut [f64; 4], v: __m256d) {
     // SAFETY: token proves AVX is available
@@ -57,7 +57,7 @@ pub fn safe_store_f64x4(_token: Avx2Token, data: &mut [f64; 4], v: __m256d) {
 }
 
 /// Safe unaligned load of 8 i32s
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_load_i32x8(_token: Avx2Token, data: &[i32; 8]) -> __m256i {
     // SAFETY: token proves AVX2 is available
@@ -65,7 +65,7 @@ pub fn safe_load_i32x8(_token: Avx2Token, data: &[i32; 8]) -> __m256i {
 }
 
 /// Safe unaligned store of 8 i32s
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_store_i32x8(_token: Avx2Token, data: &mut [i32; 8], v: __m256i) {
     // SAFETY: token proves AVX2 is available
@@ -75,7 +75,7 @@ pub fn safe_store_i32x8(_token: Avx2Token, data: &mut [i32; 8], v: __m256i) {
 // SSE variants (128-bit)
 
 /// Safe unaligned load of 4 f32s (SSE)
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_load_f32x4(_token: Sse2Token, data: &[f32; 4]) -> __m128 {
     // SAFETY: token proves SSE is available (baseline on x86_64)
@@ -83,7 +83,7 @@ pub fn safe_load_f32x4(_token: Sse2Token, data: &[f32; 4]) -> __m128 {
 }
 
 /// Safe unaligned store of 4 f32s (SSE)
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_store_f32x4(_token: Sse2Token, data: &mut [f32; 4], v: __m128) {
     // SAFETY: token proves SSE is available (baseline on x86_64)
@@ -91,7 +91,7 @@ pub fn safe_store_f32x4(_token: Sse2Token, data: &mut [f32; 4], v: __m128) {
 }
 
 /// Safe unaligned load of 2 f64s (SSE2)
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_load_f64x2(_token: Sse2Token, data: &[f64; 2]) -> __m128d {
     // SAFETY: token proves SSE2 is available (baseline on x86_64)
@@ -99,7 +99,7 @@ pub fn safe_load_f64x2(_token: Sse2Token, data: &[f64; 2]) -> __m128d {
 }
 
 /// Safe unaligned store of 2 f64s (SSE2)
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_store_f64x2(_token: Sse2Token, data: &mut [f64; 2], v: __m128d) {
     // SAFETY: token proves SSE2 is available (baseline on x86_64)
@@ -107,7 +107,7 @@ pub fn safe_store_f64x2(_token: Sse2Token, data: &mut [f64; 2], v: __m128d) {
 }
 
 /// Safe unaligned load of 4 i32s (SSE2)
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_load_i32x4(_token: Sse2Token, data: &[i32; 4]) -> __m128i {
     // SAFETY: token proves SSE2 is available (baseline on x86_64)
@@ -115,7 +115,7 @@ pub fn safe_load_i32x4(_token: Sse2Token, data: &[i32; 4]) -> __m128i {
 }
 
 /// Safe unaligned store of 4 i32s (SSE2)
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 #[inline(always)]
 pub fn safe_store_i32x4(_token: Sse2Token, data: &mut [i32; 4], v: __m128i) {
     // SAFETY: token proves SSE2 is available (baseline on x86_64)
@@ -126,7 +126,7 @@ pub fn safe_store_i32x4(_token: Sse2Token, data: &mut [i32; 4], v: __m128i) {
 // Tests
 // ============================================================================
 
-#[cfg(all(test, feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(test, feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 mod tests {
     use super::*;
     use crate::tokens::SimdToken;

@@ -68,19 +68,32 @@ The macro expands to an inner `#[target_feature]` function, making intrinsics sa
 The token IS passed through to the inner function, so you can call other token-taking functions:
 
 ```rust
+use archmage::mem::avx::_mm256_loadu_ps;
+
 #[simd_fn]
 fn outer(token: Avx2Token, data: &mut [f32; 64]) {
     // Can call other token-taking functions
     transpose_8x8(token, data);
-    let v = load_f32x8(token, (&data[0..8]).try_into().unwrap());
+    let v = _mm256_loadu_ps(token.avx(), (&data[0..8]).try_into().unwrap());
 }
 ```
 
 ### 3. Safe Load/Store
 
-Reference-based memory operations (in `ops::x86`):
+Reference-based memory operations via `mem` module (requires `safe_unaligned_simd` feature):
 
 ```rust
+use archmage::mem::avx::{_mm256_loadu_ps, _mm256_storeu_ps};
+
+let v = _mm256_loadu_ps(token.avx(), &data);   // Safe! Uses reference
+_mm256_storeu_ps(token.avx(), &mut out, v);    // Safe! Uses reference
+```
+
+Or via `ops` module (no external deps, requires `ops` feature):
+
+```rust
+use archmage::ops::x86::{load_f32x8, store_f32x8};
+
 let v = load_f32x8(token, &data);   // Safe! Uses reference
 store_f32x8(token, &mut out, v);    // Safe! Uses reference
 ```
@@ -132,7 +145,7 @@ xtask/
 └── src/main.rs         # Generator for safe_unaligned_simd wrappers
 ```
 
-## Generated Wrappers (safe-simd feature)
+## Generated Wrappers (safe_unaligned_simd feature)
 
 The `src/generated/` directory contains **auto-generated** token-gated wrappers for all
 `safe_unaligned_simd` functions. These wrappers make the functions truly safe by requiring
@@ -163,7 +176,7 @@ The generator in `xtask/src/main.rs`:
 - `FmaToken` (independent)
 - `Avx2FmaToken` (combined)
 
-**AVX-512 Tokens (for safe-simd feature):**
+**AVX-512 Tokens (for safe_unaligned_simd feature):**
 - `Avx512fToken` - AVX-512 Foundation (512-bit only)
 - `Avx512fVlToken` - AVX-512F + VL (128/256/512-bit operations)
 - `Avx512bwToken` - AVX-512 Byte/Word

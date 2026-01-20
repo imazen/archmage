@@ -6,7 +6,7 @@
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
 
-use crate::ops::x86::{load_f32x8, store_f32x8};
+use crate::mem::avx::{_mm256_loadu_ps, _mm256_storeu_ps};
 use crate::simd_fn;
 use crate::tokens::x86::Avx2Token;
 
@@ -31,15 +31,16 @@ use crate::tokens::x86::Avx2Token;
 #[simd_fn]
 #[inline]
 pub fn transpose_8x8(token: Avx2Token, block: &mut [f32; 64]) {
+    let avx = token.avx();
     // Load 8 rows
-    let mut r0 = load_f32x8(token, block[0..8].try_into().unwrap());
-    let mut r1 = load_f32x8(token, block[8..16].try_into().unwrap());
-    let mut r2 = load_f32x8(token, block[16..24].try_into().unwrap());
-    let mut r3 = load_f32x8(token, block[24..32].try_into().unwrap());
-    let mut r4 = load_f32x8(token, block[32..40].try_into().unwrap());
-    let mut r5 = load_f32x8(token, block[40..48].try_into().unwrap());
-    let mut r6 = load_f32x8(token, block[48..56].try_into().unwrap());
-    let mut r7 = load_f32x8(token, block[56..64].try_into().unwrap());
+    let mut r0 = _mm256_loadu_ps(avx, block[0..8].try_into().unwrap());
+    let mut r1 = _mm256_loadu_ps(avx, block[8..16].try_into().unwrap());
+    let mut r2 = _mm256_loadu_ps(avx, block[16..24].try_into().unwrap());
+    let mut r3 = _mm256_loadu_ps(avx, block[24..32].try_into().unwrap());
+    let mut r4 = _mm256_loadu_ps(avx, block[32..40].try_into().unwrap());
+    let mut r5 = _mm256_loadu_ps(avx, block[40..48].try_into().unwrap());
+    let mut r6 = _mm256_loadu_ps(avx, block[48..56].try_into().unwrap());
+    let mut r7 = _mm256_loadu_ps(avx, block[56..64].try_into().unwrap());
 
     // Stage 1: Interleave pairs within 128-bit lanes
     let t0 = _mm256_unpacklo_ps(r0, r1);
@@ -72,14 +73,14 @@ pub fn transpose_8x8(token: Avx2Token, block: &mut [f32; 64]) {
     let c7 = _mm256_permute2f128_ps::<0x31>(r3, r7);
 
     // Store transposed rows
-    store_f32x8(token, (&mut block[0..8]).try_into().unwrap(), c0);
-    store_f32x8(token, (&mut block[8..16]).try_into().unwrap(), c1);
-    store_f32x8(token, (&mut block[16..24]).try_into().unwrap(), c2);
-    store_f32x8(token, (&mut block[24..32]).try_into().unwrap(), c3);
-    store_f32x8(token, (&mut block[32..40]).try_into().unwrap(), c4);
-    store_f32x8(token, (&mut block[40..48]).try_into().unwrap(), c5);
-    store_f32x8(token, (&mut block[48..56]).try_into().unwrap(), c6);
-    store_f32x8(token, (&mut block[56..64]).try_into().unwrap(), c7);
+    _mm256_storeu_ps(avx, (&mut block[0..8]).try_into().unwrap(), c0);
+    _mm256_storeu_ps(avx, (&mut block[8..16]).try_into().unwrap(), c1);
+    _mm256_storeu_ps(avx, (&mut block[16..24]).try_into().unwrap(), c2);
+    _mm256_storeu_ps(avx, (&mut block[24..32]).try_into().unwrap(), c3);
+    _mm256_storeu_ps(avx, (&mut block[32..40]).try_into().unwrap(), c4);
+    _mm256_storeu_ps(avx, (&mut block[40..48]).try_into().unwrap(), c5);
+    _mm256_storeu_ps(avx, (&mut block[48..56]).try_into().unwrap(), c6);
+    _mm256_storeu_ps(avx, (&mut block[56..64]).try_into().unwrap(), c7);
 }
 
 /// Transpose an 8x8 f32 matrix from input to output using AVX2.
@@ -88,15 +89,16 @@ pub fn transpose_8x8(token: Avx2Token, block: &mut [f32; 64]) {
 #[simd_fn]
 #[inline]
 pub fn transpose_8x8_copy(token: Avx2Token, input: &[f32; 64], output: &mut [f32; 64]) {
+    let avx = token.avx();
     // Load 8 rows from input
-    let mut r0 = load_f32x8(token, input[0..8].try_into().unwrap());
-    let mut r1 = load_f32x8(token, input[8..16].try_into().unwrap());
-    let mut r2 = load_f32x8(token, input[16..24].try_into().unwrap());
-    let mut r3 = load_f32x8(token, input[24..32].try_into().unwrap());
-    let mut r4 = load_f32x8(token, input[32..40].try_into().unwrap());
-    let mut r5 = load_f32x8(token, input[40..48].try_into().unwrap());
-    let mut r6 = load_f32x8(token, input[48..56].try_into().unwrap());
-    let mut r7 = load_f32x8(token, input[56..64].try_into().unwrap());
+    let mut r0 = _mm256_loadu_ps(avx, input[0..8].try_into().unwrap());
+    let mut r1 = _mm256_loadu_ps(avx, input[8..16].try_into().unwrap());
+    let mut r2 = _mm256_loadu_ps(avx, input[16..24].try_into().unwrap());
+    let mut r3 = _mm256_loadu_ps(avx, input[24..32].try_into().unwrap());
+    let mut r4 = _mm256_loadu_ps(avx, input[32..40].try_into().unwrap());
+    let mut r5 = _mm256_loadu_ps(avx, input[40..48].try_into().unwrap());
+    let mut r6 = _mm256_loadu_ps(avx, input[48..56].try_into().unwrap());
+    let mut r7 = _mm256_loadu_ps(avx, input[56..64].try_into().unwrap());
 
     // Stage 1
     let t0 = _mm256_unpacklo_ps(r0, r1);
@@ -129,14 +131,14 @@ pub fn transpose_8x8_copy(token: Avx2Token, input: &[f32; 64], output: &mut [f32
     let c7 = _mm256_permute2f128_ps::<0x31>(r3, r7);
 
     // Store to output
-    store_f32x8(token, (&mut output[0..8]).try_into().unwrap(), c0);
-    store_f32x8(token, (&mut output[8..16]).try_into().unwrap(), c1);
-    store_f32x8(token, (&mut output[16..24]).try_into().unwrap(), c2);
-    store_f32x8(token, (&mut output[24..32]).try_into().unwrap(), c3);
-    store_f32x8(token, (&mut output[32..40]).try_into().unwrap(), c4);
-    store_f32x8(token, (&mut output[40..48]).try_into().unwrap(), c5);
-    store_f32x8(token, (&mut output[48..56]).try_into().unwrap(), c6);
-    store_f32x8(token, (&mut output[56..64]).try_into().unwrap(), c7);
+    _mm256_storeu_ps(avx, (&mut output[0..8]).try_into().unwrap(), c0);
+    _mm256_storeu_ps(avx, (&mut output[8..16]).try_into().unwrap(), c1);
+    _mm256_storeu_ps(avx, (&mut output[16..24]).try_into().unwrap(), c2);
+    _mm256_storeu_ps(avx, (&mut output[24..32]).try_into().unwrap(), c3);
+    _mm256_storeu_ps(avx, (&mut output[32..40]).try_into().unwrap(), c4);
+    _mm256_storeu_ps(avx, (&mut output[40..48]).try_into().unwrap(), c5);
+    _mm256_storeu_ps(avx, (&mut output[48..56]).try_into().unwrap(), c6);
+    _mm256_storeu_ps(avx, (&mut output[56..64]).try_into().unwrap(), c7);
 }
 
 #[cfg(test)]
