@@ -65,7 +65,16 @@ fn kernel(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
 
 The macro expands to an inner `#[target_feature]` function, making intrinsics safe.
 
-**Important limitation**: The token is NOT passed to the inner function. This means you cannot call other token-taking functions from inside `#[simd_fn]`. Use raw intrinsics directly.
+The token IS passed through to the inner function, so you can call other token-taking functions:
+
+```rust
+#[simd_fn]
+fn outer(token: Avx2Token, data: &mut [f32; 64]) {
+    // Can call other token-taking functions
+    transpose_8x8(token, data);
+    let v = load_f32x8(token, (&data[0..8]).try_into().unwrap());
+}
+```
 
 ### 3. Safe Load/Store
 
@@ -139,10 +148,10 @@ Rust 1.85+ made them safe inside `#[target_feature]`. Wrapping them adds no safe
 
 The outer function takes the token (proving features are available), then calls an inner `#[target_feature]` function. This makes the call to the inner function safe because we've proven the features exist.
 
-The token is NOT passed to the inner function because:
-1. The inner function already has `#[target_feature]` - it doesn't need runtime proof
-2. Passing it would complicate the macro and add parameter overhead
-3. Inside `#[simd_fn]`, you should use raw intrinsics directly
+The token IS passed through to the inner function, enabling composability:
+- You can call other token-taking functions from inside `#[simd_fn]`
+- The safe load/store functions require the token
+- Composite operations can call other composites
 
 ### Why Reference-Based Load/Store?
 
@@ -152,12 +161,30 @@ Memory operations are still unsafe with raw pointers. By using `&[f32; 8]` inste
 - Token proves feature availability
 - Zero overhead - compiles to same assembly
 
+## Capability Marker Traits
+
+The following marker traits enable generic code to constrain which tokens are accepted:
+
+- `Has128BitSimd` - SSE2, NEON, WASM SIMD128
+- `Has256BitSimd` - AVX, AVX2, X64V3 (implies Has128BitSimd)
+- `Has512BitSimd` - AVX-512, X64V4 (implies Has256BitSimd)
+- `HasFma` - FMA, AVX2+FMA, X64V3, X64V4, NEON
+- `HasScalableVectors` - SVE, SVE2
+
+These don't provide operations directly - use raw intrinsics via `#[simd_fn]`.
+
+Example:
+```rust
+fn requires_fma<T: HasFma>(token: T) { ... }
+fn requires_256<T: Has256BitSimd>(token: T) { ... }
+```
+
 ## Future Work
 
-- [ ] Make `#[simd_fn]` optionally pass token through for composability
-- [ ] Generic `SimdArch` trait for architecture-independent composites
+- [x] Make `#[simd_fn]` pass token through for composability
+- [x] Capability marker traits for generic bounds
 - [ ] NEON/SVE composite operations for aarch64
-- [ ] DCT, color conversion, and other JPEG primitives
+- [ ] DCT, color conversion, and other JPEG primitives (see halide-kernels)
 
 ## License
 
