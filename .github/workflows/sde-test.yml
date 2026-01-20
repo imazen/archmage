@@ -1,0 +1,84 @@
+name: Intel SDE CPU Emulation Tests
+
+on:
+  # Run weekly on Sunday at midnight
+  schedule:
+    - cron: '0 0 * * 0'
+  # Allow manual triggers
+  workflow_dispatch:
+  # Run on PRs that modify token or detection code
+  pull_request:
+    paths:
+      - 'src/tokens/**'
+      - 'src/detect.rs'
+      - 'src/generated/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  sde-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cpu:
+          - { name: "Pentium 4 (SSE2)", flag: "-p4" }
+          - { name: "Nehalem (SSE4.2)", flag: "-nhm" }
+          - { name: "Haswell (AVX2+FMA)", flag: "-hsw" }
+          - { name: "Skylake-X (AVX-512)", flag: "-skx" }
+          - { name: "Ice Lake (AVX-512 VBMI2)", flag: "-icl" }
+
+    name: Test on ${{ matrix.cpu.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Download Intel SDE
+        run: |
+          wget -q https://downloadmirror.intel.com/831748/sde-external-9.44.0-2024-08-22-lin.tar.xz
+          tar -xf sde-external-9.44.0-2024-08-22-lin.tar.xz
+          echo "$PWD/sde-external-9.44.0-2024-08-22-lin" >> $GITHUB_PATH
+
+      - name: Build tests
+        run: cargo test --all-features --no-run
+
+      - name: Run tests under SDE (${{ matrix.cpu.name }})
+        run: |
+          # Find the test binary
+          TEST_BIN=$(find target/debug/deps -name 'archmage-*' -type f -executable | head -1)
+          echo "Running: sde64 ${{ matrix.cpu.flag }} -- $TEST_BIN"
+          sde64 ${{ matrix.cpu.flag }} -- $TEST_BIN
+
+      - name: Run integration tests under SDE
+        run: |
+          for test in target/debug/deps/*-*; do
+            if [ -x "$test" ] && [ -f "$test" ]; then
+              echo "Running: $test"
+              sde64 ${{ matrix.cpu.flag }} -- "$test" || true
+            fi
+          done
+
+  miri:
+    runs-on: ubuntu-latest
+    name: Miri (undefined behavior detection)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust nightly + Miri
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+
+      - name: Setup Miri
+        run: cargo miri setup
+
+      - name: Run Miri tests
+        run: cargo miri test --test miri_safe --all-features

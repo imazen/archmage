@@ -1,0 +1,13 @@
+//! Test that using the wrong token type fails to compile.
+
+use archmage::SimdToken;
+use archmage::tokens::x86::{Sse2Token, Avx2Token};
+
+fn requires_avx2(_token: Avx2Token) {}
+
+fn main() {
+    // This should fail: SSE2 token cannot be used where AVX2 is required
+    if let Some(sse2) = Sse2Token::try_new() {
+        requires_avx2(sse2);
+    }
+}

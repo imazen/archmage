@@ -13,4 +13,14 @@ fn ui_tests() {
     t.compile_fail("tests/ui/unsafe_store_requires_unsafe.rs");
     t.compile_fail("tests/ui/unsafe_gather_requires_unsafe.rs");
     t.compile_fail("tests/ui/unsafe_maskload_requires_unsafe.rs");
+
+    // Token type safety tests
+    t.compile_fail("tests/compile_fail/wrong_token.rs");
+}
+
+#[test]
+#[cfg(feature = "safe-simd")]
+fn safe_simd_type_safety() {
+    let t = trybuild::TestCases::new();
+    t.compile_fail("tests/compile_fail/safe_simd_wrong_token.rs");
 }

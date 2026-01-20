@@ -851,6 +851,7 @@ impl Sse42Token {
 // ============================================================================
 
 use super::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
+#[cfg(feature = "composite")]
 use super::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 
@@ -910,10 +911,16 @@ impl HasFma for Avx512Vbmi2VlToken {}
 
 // ============================================================================
 // SIMD Operation Trait Implementations (simd_ops module)
+// These require the "composite" feature since they delegate to composite ops.
 // ============================================================================
 
-// Transpose8x8 for Avx2Token
-impl Transpose8x8 for Avx2Token {
+#[cfg(feature = "composite")]
+mod simd_ops_impls {
+    use super::*;
+    use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
+
+    // Transpose8x8 for Avx2Token
+    impl Transpose8x8 for Avx2Token {
     #[inline(always)]
     fn transpose_8x8(&self, block: &mut [f32; 64]) {
         crate::composite::transpose::transpose_8x8(*self, block)
@@ -1068,6 +1075,8 @@ impl HorizontalOps for X64V4Token {
     }
 }
 
+} // mod simd_ops_impls
+
 // ============================================================================
 // Scalar Fallback Trait Implementations (scalar_ops module)
 // ============================================================================
@@ -1090,15 +1099,53 @@ impl HorizontalOpsOrScalar for Sse41Token {}
 impl HorizontalOpsOrScalar for Sse42Token {}
 impl HorizontalOpsOrScalar for X64V2Token {}
 
-// Tokens WITH 256-bit SIMD override with optimized code
+// Tokens WITH 256-bit SIMD: use scalar defaults when composite is disabled
+#[cfg(not(feature = "composite"))]
+mod scalar_fallbacks_no_composite {
+    use super::*;
+    // When composite feature is disabled, all tokens use scalar defaults
+    impl Transpose8x8OrScalar for Avx2Token {}
+    impl Transpose8x8OrScalar for Avx2FmaToken {}
+    impl Transpose8x8OrScalar for X64V3Token {}
+    impl Transpose8x8OrScalar for X64V4Token {}
+    impl Transpose8x8OrScalar for Avx512fToken {}
+    impl Transpose8x8OrScalar for Avx512bwToken {}
+    impl Transpose8x8OrScalar for Avx512fVlToken {}
+    impl Transpose8x8OrScalar for Avx512bwVlToken {}
+    impl Transpose8x8OrScalar for Avx512Vbmi2Token {}
+    impl Transpose8x8OrScalar for Avx512Vbmi2VlToken {}
+    impl DotProductOrScalar for Avx2Token {}
+    impl DotProductOrScalar for Avx2FmaToken {}
+    impl DotProductOrScalar for X64V3Token {}
+    impl DotProductOrScalar for X64V4Token {}
+    impl DotProductOrScalar for Avx512fToken {}
+    impl DotProductOrScalar for Avx512bwToken {}
+    impl DotProductOrScalar for Avx512fVlToken {}
+    impl DotProductOrScalar for Avx512bwVlToken {}
+    impl DotProductOrScalar for Avx512Vbmi2Token {}
+    impl DotProductOrScalar for Avx512Vbmi2VlToken {}
+    impl HorizontalOpsOrScalar for Avx2Token {}
+    impl HorizontalOpsOrScalar for Avx2FmaToken {}
+    impl HorizontalOpsOrScalar for X64V3Token {}
+    impl HorizontalOpsOrScalar for X64V4Token {}
+    impl HorizontalOpsOrScalar for Avx512fToken {}
+    impl HorizontalOpsOrScalar for Avx512bwToken {}
+    impl HorizontalOpsOrScalar for Avx512fVlToken {}
+    impl HorizontalOpsOrScalar for Avx512bwVlToken {}
+    impl HorizontalOpsOrScalar for Avx512Vbmi2Token {}
+    impl HorizontalOpsOrScalar for Avx512Vbmi2VlToken {}
+}
+
+// Tokens WITH 256-bit SIMD override with optimized code (when composite feature enabled)
+#[cfg(feature = "composite")]
 impl Transpose8x8OrScalar for Avx2Token {
     #[inline(always)]
     fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        self.transpose_8x8(block)
+        crate::tokens::simd_ops::Transpose8x8::transpose_8x8(self, block)
     }
     #[inline(always)]
     fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.transpose_8x8_copy(input, output)
+        crate::tokens::simd_ops::Transpose8x8::transpose_8x8_copy(self, input, output)
     }
 }
 
