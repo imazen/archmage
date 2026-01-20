@@ -297,7 +297,7 @@ macro_rules! aarch64_load_store {{
         )*
     }};
 
-    (@ load $trait_bound:path, $feature:literal, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
+    (@ load $trait_bound:path, $feature:tt, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
         $(#[$meta])*
         #[inline(always)]
         pub fn $intrinsic(_token: impl $trait_bound, from: &$realty) -> $ret {{
@@ -310,7 +310,7 @@ macro_rules! aarch64_load_store {{
         }}
     }};
 
-    (@ store $trait_bound:path, $feature:literal, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
+    (@ store $trait_bound:path, $feature:tt, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
         $(#[$meta])*
         #[inline(always)]
         pub fn $intrinsic(_token: impl $trait_bound, into: &mut $realty, val: $ret) {{
