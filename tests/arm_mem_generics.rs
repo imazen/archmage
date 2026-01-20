@@ -8,9 +8,9 @@
 #![cfg(target_arch = "aarch64")]
 #![cfg(feature = "safe_unaligned_simd")]
 
-use archmage::mem::neon;
-use archmage::tokens::{HasNeon, NeonToken, SimdToken, SveToken, Sve2Token};
 use archmage::Arm64;
+use archmage::mem::neon;
+use archmage::tokens::{HasNeon, NeonToken, SimdToken, Sve2Token, SveToken};
 
 // ============================================================================
 // Test that NeonToken works with mem::neon
@@ -167,7 +167,9 @@ fn test_various_types_u8() {
 #[test]
 fn test_various_types_i8() {
     if let Some(token) = NeonToken::try_new() {
-        let data: [i8; 16] = [1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16];
+        let data: [i8; 16] = [
+            1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16,
+        ];
         let v = neon::vld1q_s8(token, &data);
         let mut out: [i8; 16] = [0; 16];
         neon::vst1q_s8(token, &mut out, v);
@@ -237,7 +239,12 @@ fn test_multi_register_x3() {
 #[test]
 fn test_multi_register_x4() {
     if let Some(token) = NeonToken::try_new() {
-        let data: [[u32; 4]; 4] = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]];
+        let data: [[u32; 4]; 4] = [
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+            [9, 10, 11, 12],
+            [13, 14, 15, 16],
+        ];
         let v = neon::vld1q_u32_x4(token, &data);
         let mut out: [[u32; 4]; 4] = [[0; 4]; 4];
         neon::vst1q_u32_x4(token, &mut out, v);

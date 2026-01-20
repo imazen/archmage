@@ -4,7 +4,7 @@ warning: unused import: `AvxToken`
 4 | use archmage::tokens::x86::{Sse2Token, AvxToken};
   |                                        ^^^^^^^^
   |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+  = note: `#[warn(unused_imports)]` on by default
 
 error[E0277]: the trait bound `Sse2Token: HasAvx` is not satisfied
   --> tests/compile_fail/safe_simd_wrong_token.rs:11:53
