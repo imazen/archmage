@@ -445,6 +445,24 @@ mod neon_tests {
 }
 
 // ============================================================================
+// NOTE ON NEON AND TARGET_FEATURE
+// ============================================================================
+//
+// Even though NEON is baseline/always available on aarch64, Rust's NEON
+// intrinsics are marked with `#[target_feature(enable = "neon")]`. This is
+// a Rust language design choice - any function with `#[target_feature]`
+// requires either:
+//   1. An unsafe block to call it, OR
+//   2. The caller to also have `#[target_feature(enable = "neon")]`
+//
+// This is why safe_unaligned_simd's NEON functions require `unsafe` to call,
+// and why our wrappers need `unsafe { ... }` even though NEON is guaranteed.
+//
+// The value-based intrinsics ARE safe INSIDE a #[target_feature] function
+// (no unsafe block needed for arithmetic, shuffles, etc. - only for pointer
+// operations like vld1/vst1). This is what the tests above verify.
+
+// ============================================================================
 // UNSAFE NEON INTRINSICS (documented for reference)
 // ============================================================================
 //
