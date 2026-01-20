@@ -34,6 +34,35 @@
 //! }
 //! ```
 //!
+//! # Creating Mutable Array References from Slices
+//!
+//! **Beware of accidentally creating mutable references to temporary arrays.**
+//!
+//! Rust will implicitly clone an array from a slice and return a mutable reference
+//! to that clone if not wrapped properly in parentheses.
+//!
+//! ```rust,ignore
+//! // ✅ Correct: mutable reference into original slice
+//! let out: &mut [f32; 8] = (&mut chunk[..8]).try_into().unwrap();
+//!
+//! // ✅ Also correct: explicit turbofish
+//! let out = TryInto::<&mut [f32; 8]>::try_into(&mut chunk[..8]).unwrap();
+//!
+//! // ❌ WRONG: creates a COPY, modifications won't reflect back!
+//! let out: &mut [f32; 8] = &mut chunk[..8].try_into().unwrap();
+//! ```
+//!
+//! The incorrect version clones the data into a temporary array and returns a
+//! mutable reference to the copy. Any modifications will be lost.
+//!
+//! **Future improvement:** Once [`as_mut_array`](https://doc.rust-lang.org/std/primitive.slice.html#method.as_mut_array)
+//! stabilizes (currently unstable as of rustc 1.91), prefer using that to sidestep this footgun entirely:
+//!
+//! ```rust,ignore
+//! // 🔮 Future: clean and safe (requires #![feature(slice_as_array)])
+//! let out: &mut [f32; 8] = chunk[..8].as_mut_array().unwrap();
+//! ```
+//!
 //! # Feature Sets
 //!
 //! Operations are organized by the CPU features they require:
