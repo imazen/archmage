@@ -5,7 +5,7 @@
 #[cfg(target_arch = "x86_64")]
 use crate::tokens::x86::*;
 
-#[cfg(feature = "wide")]
+#[cfg(all(feature = "wide", target_arch = "x86_64"))]
 use wide::f32x8;
 
 // ============================================================================

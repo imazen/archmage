@@ -84,21 +84,22 @@
 //!
 //! ## AArch64 / NEON Support
 //!
-//! AArch64 wrappers are not yet generated. Since NEON is baseline on AArch64 (always
-//! available), you can use `safe_unaligned_simd::aarch64::*` functions directly inside
-//! a `#[simd_fn]` function with a `NeonToken`:
+//! AArch64 NEON wrappers are available via [`neon`]:
+//!
+//! - [`neon`] - NEON load/store (160 functions)
 //!
 //! ```rust,ignore
-//! use archmage::{NeonToken, SimdToken, simd_fn};
+//! use archmage::{NeonToken, SimdToken};
+//! use archmage::mem::neon;
 //!
-//! #[simd_fn]
-//! fn process(token: NeonToken, data: &[f32; 4]) -> float32x4_t {
-//!     safe_unaligned_simd::aarch64::vld1q_f32(data)
+//! fn process(data: &mut [f32; 4]) {
+//!     if let Some(token) = NeonToken::try_new() {
+//!         let v = neon::vld1q_f32(token, data);
+//!         // ... process v ...
+//!         neon::vst1q_f32(token, data, v);
+//!     }
 //! }
 //! ```
-//!
-//! The generator cannot parse the macro-based aarch64 functions in `safe_unaligned_simd`.
-//! Token-gated wrappers may be added manually in the future if needed.
 
 // Re-export auto-generated wrappers
 #[path = "generated/mod.rs"]
@@ -106,3 +107,6 @@ mod generated;
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub use generated::x86::*;
+
+#[cfg(target_arch = "aarch64")]
+pub use generated::aarch64::*;

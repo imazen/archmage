@@ -247,10 +247,8 @@ Each token provides its own optimized implementation - the compiler selects the 
 
 - [x] Make `#[simd_fn]` pass token through for composability
 - [x] Capability marker traits for generic bounds
+- [x] aarch64 `mem` wrappers via macro-based generation (160 NEON functions)
 - [ ] NEON/SVE composite operations for aarch64
-- [ ] aarch64 `mem` wrappers (safe_unaligned_simd uses macros, can't parse with syn)
-  - Workaround: use `#[simd_fn]` with NeonToken and call `safe_unaligned_simd::aarch64::*` directly
-  - Alternative: manually create wrappers for common NEON load/store functions
 - [ ] DCT, color conversion, and other JPEG primitives (see halide-kernels)
 
 ## License
