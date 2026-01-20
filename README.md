@@ -119,6 +119,31 @@ if let Some(token) = Avx2FmaToken::try_new() {
 }
 ```
 
+### 4. Generic API with Operation Traits
+
+Write generic code that works with any implementing token:
+
+```rust
+use archmage::{Transpose8x8, DotProduct, HorizontalOps};
+
+fn process<T: Transpose8x8 + DotProduct + HorizontalOps>(
+    token: T,
+    block: &mut [f32; 64],
+    data: &[f32],
+) {
+    token.transpose_8x8(block);                // Specialized per token
+    let dot = token.dot_product_f32(data, data);
+    let sum = token.sum_f32(data);
+}
+
+// Works with Avx2Token, X64V3Token, etc.
+if let Some(token) = X64V3Token::try_new() {
+    process(token, &mut block, &data);
+}
+```
+
+The compiler selects the optimized implementation for each token at compile time.
+
 ## When to Use archmage
 
 archmage is for when you need **specific instructions** that neither `wide` nor LLVM autovectorization will produce:

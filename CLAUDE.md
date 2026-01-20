@@ -171,13 +171,34 @@ The following marker traits enable generic code to constrain which tokens are ac
 - `HasFma` - FMA, AVX2+FMA, X64V3, X64V4, NEON
 - `HasScalableVectors` - SVE, SVE2
 
-These don't provide operations directly - use raw intrinsics via `#[simd_fn]`.
-
 Example:
 ```rust
 fn requires_fma<T: HasFma>(token: T) { ... }
 fn requires_256<T: Has256BitSimd>(token: T) { ... }
 ```
+
+## Operation Traits (Generic API)
+
+Operation traits provide a generic interface with specialized implementations per token:
+
+- `Transpose8x8` - 8x8 matrix transpose (critical for DCT)
+- `DotProduct` - dot product, norm_squared, norm
+- `HorizontalOps` - sum, max, min reductions
+
+Usage:
+```rust
+fn process<T: Transpose8x8 + DotProduct>(token: T, block: &mut [f32; 64], data: &[f32]) {
+    token.transpose_8x8(block);        // Uses optimized impl for T
+    let dot = token.dot_product_f32(data, data);
+}
+
+// Works with any implementing token
+if let Some(token) = X64V3Token::try_new() {
+    process(token, &mut block, &data);
+}
+```
+
+Each token provides its own optimized implementation - the compiler selects the right one at compile time.
 
 ## Future Work
 
