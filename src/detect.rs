@@ -391,6 +391,109 @@ macro_rules! __impl_runtime_only_check {
 }
 
 // ============================================================================
+// AArch64 Feature Detection
+// ============================================================================
+
+/// Checks if an AArch64 CPU feature is available, with compile-time optimization.
+///
+/// Unlike `is_aarch64_feature_detected!` from std, this macro first checks
+/// `cfg!(target_feature)` at compile time. If the feature is compile-time
+/// known (e.g., compiled with `-C target-feature=+sve` or `-C target-cpu=...`),
+/// no runtime check is performed.
+///
+/// # Example
+///
+/// ```ignore
+/// use archmage::is_aarch64_feature_available;
+///
+/// if is_aarch64_feature_available!("sve") {
+///     println!("SVE is available");
+/// }
+/// ```
+///
+/// # Supported Features
+///
+/// - `"neon"` - NEON (always available on AArch64)
+/// - `"sve"` - Scalable Vector Extension
+/// - `"sve2"` - SVE2
+#[macro_export]
+macro_rules! is_aarch64_feature_available {
+    ("neon") => {{
+        // NEON is always available on AArch64
+        #[cfg(target_arch = "aarch64")]
+        {
+            true
+        }
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            false
+        }
+    }};
+    ("sve") => {{
+        $crate::__impl_aarch64_feature_check!("sve")
+    }};
+    ("sve2") => {{
+        $crate::__impl_aarch64_feature_check!("sve2")
+    }};
+    // Fallback for other features - runtime only
+    ($feature:tt) => {{
+        $crate::__impl_aarch64_runtime_only_check!($feature)
+    }};
+}
+
+/// Implementation macro for AArch64 feature check with compile-time optimization.
+/// Not intended for direct use.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_aarch64_feature_check {
+    ("sve") => {{
+        #[cfg(target_feature = "sve")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sve"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("sve")
+        }
+    }};
+    ("sve2") => {{
+        #[cfg(target_feature = "sve2")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sve2"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("sve2")
+        }
+    }};
+}
+
+/// Runtime-only AArch64 feature check. Used when compile-time detection not possible.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_aarch64_runtime_only_check {
+    ($feature:tt) => {{
+        #[cfg(target_arch = "aarch64")]
+        {
+            #[cfg(feature = "std")]
+            {
+                std::arch::is_aarch64_feature_detected!($feature)
+            }
+            #[cfg(not(feature = "std"))]
+            {
+                // In no_std, we can't do runtime detection without std
+                // Fall back to compile-time only
+                false
+            }
+        }
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            false
+        }
+    }};
+}
+
+// ============================================================================
 // Assembly verification helpers
 // ============================================================================
 
@@ -416,6 +519,22 @@ pub fn check_fma_available() -> bool {
 #[inline(never)]
 pub fn check_avx512f_available() -> bool {
     is_x86_feature_available!("avx512f")
+}
+
+/// Helper function for verifying assembly output on AArch64.
+/// When compiled with +sve, this should contain no runtime detection.
+#[cfg(target_arch = "aarch64")]
+#[inline(never)]
+pub fn check_sve_available() -> bool {
+    is_aarch64_feature_available!("sve")
+}
+
+/// Helper function for verifying assembly output on AArch64.
+/// When compiled with +sve2, this should contain no runtime detection.
+#[cfg(target_arch = "aarch64")]
+#[inline(never)]
+pub fn check_sve2_available() -> bool {
+    is_aarch64_feature_available!("sve2")
 }
 
 // ============================================================================
@@ -489,5 +608,42 @@ mod tests {
     fn test_compile_time_sse2() {
         let has_sse2 = is_x86_feature_available!("sse2");
         assert!(has_sse2);
+    }
+
+    // ========================================================================
+    // AArch64 Tests
+    // ========================================================================
+
+    /// Test that the aarch64 macro compiles for all supported features
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_aarch64_features_compile() {
+        let _ = is_aarch64_feature_available!("neon");
+        let _ = is_aarch64_feature_available!("sve");
+        let _ = is_aarch64_feature_available!("sve2");
+    }
+
+    /// Test that NEON is always available on aarch64
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_neon_always_available() {
+        let has_neon = is_aarch64_feature_available!("neon");
+        assert!(has_neon);
+    }
+
+    /// Test consistency with std's is_aarch64_feature_detected
+    #[test]
+    #[cfg(all(target_arch = "aarch64", feature = "std"))]
+    fn test_aarch64_matches_std_detection() {
+        use std::arch::is_aarch64_feature_detected;
+
+        assert_eq!(
+            is_aarch64_feature_available!("sve"),
+            is_aarch64_feature_detected!("sve")
+        );
+        assert_eq!(
+            is_aarch64_feature_available!("sve2"),
+            is_aarch64_feature_detected!("sve2")
+        );
     }
 }

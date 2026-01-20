@@ -2,8 +2,12 @@
 //!
 //! Provides tokens for NEON, SVE, and SVE2.
 //!
-//! Token construction uses runtime feature detection via `std::arch::is_aarch64_feature_detected!`
-//! combined with compile-time checks. On AArch64, NEON is always available (baseline).
+//! Token construction uses [`is_aarch64_feature_available!`] which combines
+//! compile-time and runtime detection. When compiled with a target feature
+//! enabled (e.g., in a `#[multiversed]` function), the runtime check is
+//! completely eliminated.
+//!
+//! On AArch64, NEON is always available (baseline).
 
 use super::SimdToken;
 
@@ -36,7 +40,7 @@ impl SimdToken for NeonToken {
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -54,25 +58,17 @@ pub struct SveToken {
 impl SimdToken for SveToken {
     const NAME: &'static str = "SVE";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(all(target_arch = "aarch64", feature = "std"))]
-        {
-            if std::arch::is_aarch64_feature_detected!("sve") {
-                return Some(unsafe { Self::new_unchecked() });
-            }
+        if crate::is_aarch64_feature_available!("sve") {
+            Some(unsafe { Self::forge_token_dangerously() })
+        } else {
+            None
         }
-        #[cfg(all(target_arch = "aarch64", target_feature = "sve"))]
-        {
-            // Compile-time guarantee
-            return Some(unsafe { Self::new_unchecked() });
-        }
-        #[allow(unreachable_code)]
-        None
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -81,7 +77,7 @@ impl SveToken {
     /// Get a NEON token (SVE implies NEON)
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
-        unsafe { NeonToken::new_unchecked() }
+        unsafe { NeonToken::forge_token_dangerously() }
     }
 }
 
@@ -98,25 +94,17 @@ pub struct Sve2Token {
 impl SimdToken for Sve2Token {
     const NAME: &'static str = "SVE2";
 
-    #[inline]
+    #[inline(always)]
     fn try_new() -> Option<Self> {
-        #[cfg(all(target_arch = "aarch64", feature = "std"))]
-        {
-            if std::arch::is_aarch64_feature_detected!("sve2") {
-                return Some(unsafe { Self::new_unchecked() });
-            }
+        if crate::is_aarch64_feature_available!("sve2") {
+            Some(unsafe { Self::forge_token_dangerously() })
+        } else {
+            None
         }
-        #[cfg(all(target_arch = "aarch64", target_feature = "sve2"))]
-        {
-            // Compile-time guarantee
-            return Some(unsafe { Self::new_unchecked() });
-        }
-        #[allow(unreachable_code)]
-        None
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -125,13 +113,13 @@ impl Sve2Token {
     /// Get an SVE token (SVE2 implies SVE)
     #[inline(always)]
     pub fn sve(self) -> SveToken {
-        unsafe { SveToken::new_unchecked() }
+        unsafe { SveToken::forge_token_dangerously() }
     }
 
     /// Get a NEON token (SVE2 implies NEON)
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
-        unsafe { NeonToken::new_unchecked() }
+        unsafe { NeonToken::forge_token_dangerously() }
     }
 }
 

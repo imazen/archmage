@@ -64,7 +64,7 @@ extern crate alloc;
 pub use archmage_macros::{arcane, simd_fn};
 
 // Optimized feature detection
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+#[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 pub mod detect;
 
 // Core token types and traits
@@ -140,7 +140,7 @@ pub use ops::x86::{
 /// functions because:
 /// 1. The `#[multiversed]` macro generates multiple function versions
 /// 2. The AVX2 version only executes on CPUs with AVX2 support
-/// 3. Therefore, `Avx2Token::new_unchecked()` is valid in that context
+/// 3. Therefore, `Avx2Token::forge_token_dangerously()` is valid in that context
 ///
 /// # Example
 ///
@@ -160,14 +160,14 @@ macro_rules! avx2_token {
         // SAFETY: This macro should only be used inside #[multiversed] functions
         // where the AVX2 version is being compiled with AVX2 enabled.
         // The multiversed macro guarantees the feature is available.
-        unsafe { $crate::tokens::x86::Avx2Token::new_unchecked() }
+        unsafe { $crate::tokens::x86::Avx2Token::forge_token_dangerously() }
     }};
 }
 
 /// Create an FMA token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! fma_token {
-    () => {{ unsafe { $crate::tokens::x86::FmaToken::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::FmaToken::forge_token_dangerously() } }};
 }
 
 /// Create a combined AVX2+FMA token inside a `#[multiversed]` function.
@@ -175,31 +175,31 @@ macro_rules! fma_token {
 /// This is the most common token for floating-point SIMD work.
 #[macro_export]
 macro_rules! avx2_fma_token {
-    () => {{ unsafe { $crate::tokens::x86::Avx2FmaToken::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::Avx2FmaToken::forge_token_dangerously() } }};
 }
 
 /// Create an SSE2 token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! sse2_token {
-    () => {{ unsafe { $crate::tokens::x86::Sse2Token::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::Sse2Token::forge_token_dangerously() } }};
 }
 
 /// Create an SSE4.1 token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! sse41_token {
-    () => {{ unsafe { $crate::tokens::x86::Sse41Token::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::Sse41Token::forge_token_dangerously() } }};
 }
 
 /// Create an AVX token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! avx_token {
-    () => {{ unsafe { $crate::tokens::x86::AvxToken::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::AvxToken::forge_token_dangerously() } }};
 }
 
 /// Create an SSE4.2 token inside a `#[multiversed]` function.
 #[macro_export]
 macro_rules! sse42_token {
-    () => {{ unsafe { $crate::tokens::x86::Sse42Token::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::Sse42Token::forge_token_dangerously() } }};
 }
 
 /// Create an x86-64-v2 profile token inside a `#[multiversed]` function.
@@ -207,7 +207,7 @@ macro_rules! sse42_token {
 /// v2 implies: SSE4.2 + POPCNT (Nehalem 2008+, Bulldozer 2011+).
 #[macro_export]
 macro_rules! x64v2_token {
-    () => {{ unsafe { $crate::tokens::x86::X64V2Token::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::X64V2Token::forge_token_dangerously() } }};
 }
 
 /// Create an x86-64-v3 profile token inside a `#[multiversed]` function.
@@ -216,7 +216,7 @@ macro_rules! x64v2_token {
 /// This is the most common target for high-performance SIMD code.
 #[macro_export]
 macro_rules! x64v3_token {
-    () => {{ unsafe { $crate::tokens::x86::X64V3Token::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::X64V3Token::forge_token_dangerously() } }};
 }
 
 /// Create an x86-64-v4 profile token inside a `#[multiversed]` function.
@@ -224,7 +224,7 @@ macro_rules! x64v3_token {
 /// v4 implies: v3 + AVX-512 (F/BW/CD/DQ/VL) (Xeon 2017+, Zen 4 2022+).
 #[macro_export]
 macro_rules! x64v4_token {
-    () => {{ unsafe { $crate::tokens::x86::X64V4Token::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::x86::X64V4Token::forge_token_dangerously() } }};
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -233,7 +233,7 @@ macro_rules! x64v4_token {
 /// NEON is the baseline SIMD for AArch64 - always available on 64-bit ARM.
 #[macro_export]
 macro_rules! neon_token {
-    () => {{ unsafe { $crate::tokens::arm::NeonToken::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::arm::NeonToken::forge_token_dangerously() } }};
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -243,7 +243,7 @@ macro_rules! neon_token {
 /// Fujitsu A64FX, and ARMv8.2+ cores with SVE support.
 #[macro_export]
 macro_rules! sve_token {
-    () => {{ unsafe { $crate::tokens::arm::SveToken::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::arm::SveToken::forge_token_dangerously() } }};
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -252,5 +252,5 @@ macro_rules! sve_token {
 /// SVE2 is available on ARMv9 cores (Cortex-X2/A710+, Graviton 4, etc.).
 #[macro_export]
 macro_rules! sve2_token {
-    () => {{ unsafe { $crate::tokens::arm::Sve2Token::new_unchecked() } }};
+    () => {{ unsafe { $crate::tokens::arm::Sve2Token::forge_token_dangerously() } }};
 }

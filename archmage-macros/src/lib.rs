@@ -12,18 +12,11 @@ use syn::{
 };
 
 /// Arguments to the `#[arcane]` macro.
+#[derive(Default)]
 struct ArcaneArgs {
     /// Use `#[inline(always)]` instead of `#[inline]` for the inner function.
     /// Requires nightly Rust with `#![feature(target_feature_inline_always)]`.
     inline_always: bool,
-}
-
-impl Default for ArcaneArgs {
-    fn default() -> Self {
-        Self {
-            inline_always: false,
-        }
-    }
 }
 
 impl Parse for ArcaneArgs {
@@ -192,7 +185,7 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 
             // SAFETY: The token parameter proves the required CPU features are available.
             // Tokens can only be constructed when features are verified (via try_new()
-            // runtime check or new_unchecked() in a context where features are guaranteed).
+            // runtime check or forge_token_dangerously() in a context where features are guaranteed).
             unsafe { #inner_fn_name(#(#inner_args),*) }
         }
     };

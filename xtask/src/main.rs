@@ -20,6 +20,7 @@ const SAFE_SIMD_VERSION: &str = "0.2.3";
 
 /// Architecture for code generation
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // Aarch64 reserved for future SVE support
 enum Arch {
     X86,
     Aarch64,
@@ -187,6 +188,185 @@ fn parse_file_functions(path: &Path) -> Result<Vec<ParsedFunction>> {
         .collect();
 
     Ok(functions)
+}
+
+/// Generate aarch64 neon.rs by extracting macro invocations from safe_unaligned_simd
+/// and replacing the macro name.
+///
+/// This is much simpler than parsing - we just:
+/// 1. Extract all `vld_n_replicate_k! { ... }` blocks
+/// 2. Replace `vld_n_replicate_k!` with `neon_load_store!`
+/// 3. Prepend our header with the macro definition
+fn generate_aarch64_neon_rs(safe_simd_path: &Path) -> Result<String> {
+    let aarch64_path = safe_simd_path.join("src/aarch64.rs");
+    let content = fs::read_to_string(&aarch64_path)
+        .with_context(|| format!("Failed to read {}", aarch64_path.display()))?;
+
+    // Extract all vld_n_replicate_k! { ... } blocks
+    let mut macro_blocks = Vec::new();
+    let mut depth = 0;
+    let mut current_block = String::new();
+    let mut in_block = false;
+
+    for line in content.lines() {
+        if line.trim().starts_with("vld_n_replicate_k!") && line.contains('{') {
+            in_block = true;
+            depth = 1;
+            current_block = line.to_string() + "\n";
+            continue;
+        }
+
+        if in_block {
+            current_block.push_str(line);
+            current_block.push('\n');
+
+            for ch in line.chars() {
+                match ch {
+                    '{' => depth += 1,
+                    '}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            macro_blocks.push(current_block.clone());
+                            current_block.clear();
+                            in_block = false;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    // Count functions for the header
+    let fn_count = macro_blocks
+        .iter()
+        .map(|b| b.matches("fn ").count())
+        .sum::<usize>();
+
+    // Build the output file
+    let mut output = String::new();
+
+    // Header
+    output.push_str(&format!(
+        r#"//! Token-gated wrappers for `#[target_feature(enable = "neon")]` functions.
+//!
+//! This module contains {} NEON load/store functions that are safe to call when you have a [`NeonToken`].
+//!
+//! **Auto-generated** from safe_unaligned_simd v{} - do not edit manually.
+//! Run `cargo xtask generate` to regenerate.
+
+#![allow(unused_imports)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_safety_doc)]
+
+use core::arch::aarch64::*;
+use crate::tokens::arm::NeonToken;
+
+// Token-aware macro that generates wrappers calling safe_unaligned_simd::aarch64::*
+// This has the same invocation syntax as safe_unaligned_simd's vld_n_replicate_k!
+macro_rules! neon_load_store {{
+    (
+        unsafe: $kind:ident;
+        size: $size:ident;
+
+        $(
+            $(#[$meta:meta])* fn $intrinsic:ident(_: &[$base_ty:ty; $n:literal][..$len:literal] as $realty:ty) -> $ret:ty;
+        )*
+    ) => {{
+        $(
+            neon_load_store!(
+                @ $kind $(#[$meta])* $intrinsic [$realty] [$ret]
+            );
+        )*
+    }};
+
+    // Load wrapper
+    (@ load $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
+        $(#[$meta])*
+        #[inline(always)]
+        pub fn $intrinsic(_token: NeonToken, from: &$realty) -> $ret {{
+            #[inline]
+            #[target_feature(enable = "neon")]
+            unsafe fn inner(from: &$realty) -> $ret {{
+                safe_unaligned_simd::aarch64::$intrinsic(from)
+            }}
+            // SAFETY: Token proves the target features are available
+            unsafe {{ inner(from) }}
+        }}
+    }};
+
+    // Store wrapper
+    (@ store $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
+        $(#[$meta])*
+        #[inline(always)]
+        pub fn $intrinsic(_token: NeonToken, into: &mut $realty, val: $ret) {{
+            #[inline]
+            #[target_feature(enable = "neon")]
+            unsafe fn inner(into: &mut $realty, val: $ret) {{
+                safe_unaligned_simd::aarch64::$intrinsic(into, val)
+            }}
+            // SAFETY: Token proves the target features are available
+            unsafe {{ inner(into, val) }}
+        }}
+    }};
+}}
+
+// ============================================================================
+// Auto-extracted macro invocations from safe_unaligned_simd
+// ============================================================================
+
+"#,
+        fn_count, SAFE_SIMD_VERSION
+    ));
+
+    // Add the macro blocks with renamed macro
+    for block in macro_blocks {
+        let renamed = block.replace("vld_n_replicate_k!", "neon_load_store!");
+        output.push_str(&renamed);
+        output.push('\n');
+    }
+
+    Ok(output)
+}
+
+/// Count functions in aarch64 macro blocks (for reporting)
+fn count_aarch64_functions(safe_simd_path: &Path) -> Result<usize> {
+    let aarch64_path = safe_simd_path.join("src/aarch64.rs");
+    let content = fs::read_to_string(&aarch64_path)?;
+
+    // Count "fn " occurrences in vld_n_replicate_k! blocks
+    let mut count = 0;
+    let mut in_block = false;
+    let mut depth = 0;
+
+    for line in content.lines() {
+        if line.trim().starts_with("vld_n_replicate_k!") && line.contains('{') {
+            in_block = true;
+            depth = 1;
+            continue;
+        }
+
+        if in_block {
+            count += line.matches("fn ").count();
+
+            for ch in line.chars() {
+                match ch {
+                    '{' => depth += 1,
+                    '}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            in_block = false;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    Ok(count)
 }
 
 /// Find safe_unaligned_simd in cargo cache
@@ -461,7 +641,7 @@ use crate::tokens::arm::{};"#,
 }
 
 /// Generate the mod.rs that ties everything together
-fn generate_mod_rs(modules: &[(&str, &str, usize)]) -> String {
+fn generate_mod_rs(x86_modules: &[(&str, &str, usize)], aarch64_modules: &[(&str, &str, usize)]) -> String {
     let mut code = String::from(
         r#"//! Token-gated wrappers for safe_unaligned_simd.
 //!
@@ -471,22 +651,35 @@ fn generate_mod_rs(modules: &[(&str, &str, usize)]) -> String {
 //!
 //! **Auto-generated** - do not edit manually. See `xtask/src/main.rs`.
 //!
-//! ## Feature Coverage
+//! ## x86/x86_64 Feature Coverage
 //!
 "#,
     );
 
-    for (module, features, count) in modules {
+    for (module, features, count) in x86_modules {
         code.push_str(&format!(
-            "//! - [`{}`]: {} functions (`{}`)\n",
+            "//! - [`x86::{}`]: {} functions (`{}`)\n",
+            module, count, features
+        ));
+    }
+
+    code.push_str("//!\n//! ## AArch64 Feature Coverage\n//!\n");
+
+    for (module, features, count) in aarch64_modules {
+        code.push_str(&format!(
+            "//! - [`aarch64::{}`]: {} functions (`{}`)\n",
             module, count, features
         ));
     }
 
     code.push_str(
         r#"
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+// Note: safe_unaligned_simd only provides x86_64 module, not x86 (i686)
+#[cfg(target_arch = "x86_64")]
 pub mod x86;
+
+#[cfg(target_arch = "aarch64")]
+pub mod aarch64;
 "#,
     );
 
@@ -497,6 +690,23 @@ pub mod x86;
 fn generate_x86_mod_rs(modules: &[(&str, &str, usize)]) -> String {
     let mut code = String::from(
         r#"//! x86/x86_64 token-gated wrappers.
+//!
+//! **Auto-generated** - do not edit manually.
+
+"#,
+    );
+
+    for (module, _features, _count) in modules {
+        code.push_str(&format!("pub mod {};\n", module));
+    }
+
+    code
+}
+
+/// Generate aarch64/mod.rs
+fn generate_aarch64_mod_rs(modules: &[(&str, &str, usize)]) -> String {
+    let mut code = String::from(
+        r#"//! AArch64 token-gated wrappers.
 //!
 //! **Auto-generated** - do not edit manually.
 
@@ -607,8 +817,33 @@ fn generate_wrappers() -> Result<()> {
     let x86_mod = generate_x86_mod_rs(&modules_info);
     fs::write(out_dir.join("mod.rs"), &x86_mod)?;
 
+    // ========================================================================
+    // Generate aarch64 wrappers using simple macro search/replace
+    // ========================================================================
+    println!("\n=== Generating aarch64 wrappers ===");
+
+    let aarch64_out_dir = PathBuf::from("src/generated/aarch64");
+    fs::create_dir_all(&aarch64_out_dir)?;
+
+    // Generate neon.rs by extracting macro invocations and replacing the macro name
+    println!("Generating neon.rs via macro extraction...");
+    let neon_code = generate_aarch64_neon_rs(&safe_simd_path)?;
+    let neon_path = aarch64_out_dir.join("neon.rs");
+    fs::write(&neon_path, &neon_code)?;
+    println!("  Wrote {} ({} bytes)", neon_path.display(), neon_code.len());
+
+    // Count functions for reporting
+    let neon_fn_count = count_aarch64_functions(&safe_simd_path)?;
+    let aarch64_modules_info: Vec<(&str, &str, usize)> = vec![("neon", "neon", neon_fn_count)];
+
+    // Generate aarch64/mod.rs
+    let aarch64_mod = generate_aarch64_mod_rs(&aarch64_modules_info);
+    fs::write(aarch64_out_dir.join("mod.rs"), &aarch64_mod)?;
+
+    // ========================================================================
     // Generate top-level mod.rs
-    let top_mod = generate_mod_rs(&modules_info);
+    // ========================================================================
+    let top_mod = generate_mod_rs(&modules_info, &aarch64_modules_info);
     fs::write("src/generated/mod.rs", &top_mod)?;
 
     // Write version file for tracking
@@ -617,12 +852,21 @@ fn generate_wrappers() -> Result<()> {
         format!("safe_unaligned_simd = \"{}\"\n", SAFE_SIMD_VERSION),
     )?;
 
+    let total_x86 = modules_info.iter().map(|(_, _, c)| c).sum::<usize>();
+    let total_aarch64 = aarch64_modules_info.iter().map(|(_, _, c)| c).sum::<usize>();
+
     println!("\nGeneration complete!");
     println!(
-        "Generated {} modules with {} total functions",
+        "Generated x86: {} modules with {} functions",
         modules_info.len(),
-        modules_info.iter().map(|(_, _, c)| c).sum::<usize>()
+        total_x86
     );
+    println!(
+        "Generated aarch64: {} modules with {} functions",
+        aarch64_modules_info.len(),
+        total_aarch64
+    );
+    println!("Total: {} functions", total_x86 + total_aarch64);
 
     Ok(())
 }

@@ -112,16 +112,18 @@ src/
 ├── generated/          # AUTO-GENERATED - token-gated safe_unaligned_simd wrappers
 │   ├── mod.rs
 │   ├── VERSION         # Tracks source version
-│   └── x86/
-│       ├── sse.rs      # SSE functions (6)
-│       ├── sse2.rs     # SSE2 functions (20)
-│       ├── avx.rs      # AVX functions (17)
-│       ├── avx512f.rs  # AVX-512F functions (49)
-│       ├── avx512f_vl.rs   # AVX-512F+VL functions (86)
-│       ├── avx512bw.rs     # AVX-512BW functions (13)
-│       ├── avx512bw_vl.rs  # AVX-512BW+VL functions (26)
-│       ├── avx512vbmi2.rs  # AVX-512VBMI2 functions (6)
-│       └── avx512vbmi2_vl.rs # AVX-512VBMI2+VL functions (12)
+│   ├── x86/            # x86_64 wrappers (235 functions)
+│   │   ├── sse.rs      # SSE functions (6)
+│   │   ├── sse2.rs     # SSE2 functions (20)
+│   │   ├── avx.rs      # AVX functions (17)
+│   │   ├── avx512f.rs  # AVX-512F functions (49)
+│   │   ├── avx512f_vl.rs   # AVX-512F+VL functions (86)
+│   │   ├── avx512bw.rs     # AVX-512BW functions (13)
+│   │   ├── avx512bw_vl.rs  # AVX-512BW+VL functions (26)
+│   │   ├── avx512vbmi2.rs  # AVX-512VBMI2 functions (6)
+│   │   └── avx512vbmi2_vl.rs # AVX-512VBMI2+VL functions (12)
+│   └── aarch64/        # AArch64 wrappers (240 functions)
+│       └── neon.rs     # NEON load/store functions
 ├── composite/
 │   ├── transpose.rs    # 8x8 transpose
 │   ├── dot_product.rs  # Dot product with FMA
@@ -145,9 +147,10 @@ cargo run -p xtask -- generate
 
 The generator in `xtask/src/main.rs`:
 1. Parses safe_unaligned_simd source from cargo cache
-2. Extracts function signatures and `#[target_feature]` attributes
-3. Generates wrapper functions that take a token + call the original
-4. Groups by feature set (sse, sse2, avx, avx512f, etc.)
+2. For x86: extracts function signatures and `#[target_feature]` attributes
+3. For aarch64: parses macro invocations that define NEON load/store functions
+4. Generates wrapper functions that take a token + call the original
+5. Groups by feature set (sse, sse2, avx, avx512f, neon, etc.)
 
 ## Token Hierarchy
 
@@ -247,7 +250,8 @@ Each token provides its own optimized implementation - the compiler selects the 
 
 - [x] Make `#[simd_fn]` pass token through for composability
 - [x] Capability marker traits for generic bounds
-- [x] aarch64 `mem` wrappers via macro-based generation (160 NEON functions)
+- [x] aarch64 `mem` wrappers via xtask generation (240 NEON functions)
+- [x] `is_aarch64_feature_available!` macro for compile-time elision
 - [ ] NEON/SVE composite operations for aarch64
 - [ ] DCT, color conversion, and other JPEG primitives (see halide-kernels)
 

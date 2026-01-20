@@ -32,7 +32,7 @@ impl SimdToken for Sse2Token {
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -55,14 +55,14 @@ impl SimdToken for Sse41Token {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         if crate::is_x86_feature_available!("sse4.1") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -72,7 +72,7 @@ impl Sse41Token {
     #[inline(always)]
     pub fn sse2(self) -> Sse2Token {
         // SAFETY: SSE4.1 implies SSE2
-        unsafe { Sse2Token::new_unchecked() }
+        unsafe { Sse2Token::forge_token_dangerously() }
     }
 }
 
@@ -94,14 +94,14 @@ impl SimdToken for AvxToken {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         if crate::is_x86_feature_available!("avx") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -110,13 +110,13 @@ impl AvxToken {
     /// Get an SSE4.1 token (AVX implies SSE4.1)
     #[inline(always)]
     pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::new_unchecked() }
+        unsafe { Sse41Token::forge_token_dangerously() }
     }
 
     /// Get an SSE2 token (AVX implies SSE2)
     #[inline(always)]
     pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::new_unchecked() }
+        unsafe { Sse2Token::forge_token_dangerously() }
     }
 }
 
@@ -139,14 +139,14 @@ impl SimdToken for Avx2Token {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         if crate::is_x86_feature_available!("avx2") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -155,19 +155,19 @@ impl Avx2Token {
     /// Get an AVX token (AVX2 implies AVX)
     #[inline(always)]
     pub fn avx(self) -> AvxToken {
-        unsafe { AvxToken::new_unchecked() }
+        unsafe { AvxToken::forge_token_dangerously() }
     }
 
     /// Get an SSE4.1 token (AVX2 implies SSE4.1)
     #[inline(always)]
     pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::new_unchecked() }
+        unsafe { Sse41Token::forge_token_dangerously() }
     }
 
     /// Get an SSE2 token (AVX2 implies SSE2)
     #[inline(always)]
     pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::new_unchecked() }
+        unsafe { Sse2Token::forge_token_dangerously() }
     }
 }
 
@@ -190,14 +190,14 @@ impl SimdToken for FmaToken {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         if crate::is_x86_feature_available!("fma") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -223,17 +223,17 @@ impl SimdToken for Avx2FmaToken {
     fn try_new() -> Option<Self> {
         // Both checks use compile-time optimization when features are known
         if crate::is_x86_feature_available!("avx2") && crate::is_x86_feature_available!("fma") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self {
-            avx2: unsafe { Avx2Token::new_unchecked() },
-            fma: unsafe { FmaToken::new_unchecked() },
+            avx2: unsafe { Avx2Token::forge_token_dangerously() },
+            fma: unsafe { FmaToken::forge_token_dangerously() },
         }
     }
 }
@@ -297,14 +297,14 @@ impl SimdToken for Avx512fToken {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         if crate::is_x86_feature_available!("avx512f") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -313,19 +313,19 @@ impl Avx512fToken {
     /// Get an AVX2 token (AVX-512F implies AVX2)
     #[inline(always)]
     pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::new_unchecked() }
+        unsafe { Avx2Token::forge_token_dangerously() }
     }
 
     /// Get an FMA token (AVX-512F implies FMA)
     #[inline(always)]
     pub fn fma(self) -> FmaToken {
-        unsafe { FmaToken::new_unchecked() }
+        unsafe { FmaToken::forge_token_dangerously() }
     }
 
     /// Get a combined AVX2+FMA token
     #[inline(always)]
     pub fn avx2_fma(self) -> Avx2FmaToken {
-        unsafe { Avx2FmaToken::new_unchecked() }
+        unsafe { Avx2FmaToken::forge_token_dangerously() }
     }
 }
 
@@ -341,14 +341,14 @@ impl SimdToken for Avx512bwToken {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         if crate::is_x86_feature_available!("avx512bw") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -357,7 +357,7 @@ impl Avx512bwToken {
     /// Get an AVX-512F token (AVX-512BW implies AVX-512F)
     #[inline(always)]
     pub fn avx512f(self) -> Avx512fToken {
-        unsafe { Avx512fToken::new_unchecked() }
+        unsafe { Avx512fToken::forge_token_dangerously() }
     }
 }
 
@@ -384,7 +384,7 @@ impl SimdToken for SseToken {
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -411,14 +411,14 @@ impl SimdToken for Avx512fVlToken {
         if crate::is_x86_feature_available!("avx512f")
             && crate::is_x86_feature_available!("avx512vl")
         {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -427,13 +427,13 @@ impl Avx512fVlToken {
     /// Get an AVX-512F token
     #[inline(always)]
     pub fn avx512f(self) -> Avx512fToken {
-        unsafe { Avx512fToken::new_unchecked() }
+        unsafe { Avx512fToken::forge_token_dangerously() }
     }
 
     /// Get an AVX2 token
     #[inline(always)]
     pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::new_unchecked() }
+        unsafe { Avx2Token::forge_token_dangerously() }
     }
 }
 
@@ -454,14 +454,14 @@ impl SimdToken for Avx512bwVlToken {
         if crate::is_x86_feature_available!("avx512bw")
             && crate::is_x86_feature_available!("avx512vl")
         {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -470,13 +470,13 @@ impl Avx512bwVlToken {
     /// Get an AVX-512BW token
     #[inline(always)]
     pub fn avx512bw(self) -> Avx512bwToken {
-        unsafe { Avx512bwToken::new_unchecked() }
+        unsafe { Avx512bwToken::forge_token_dangerously() }
     }
 
     /// Get an AVX-512F+VL token
     #[inline(always)]
     pub fn avx512f_vl(self) -> Avx512fVlToken {
-        unsafe { Avx512fVlToken::new_unchecked() }
+        unsafe { Avx512fVlToken::forge_token_dangerously() }
     }
 }
 
@@ -496,14 +496,14 @@ impl SimdToken for Avx512Vbmi2Token {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         if crate::is_x86_feature_available!("avx512vbmi2") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -512,7 +512,7 @@ impl Avx512Vbmi2Token {
     /// Get an AVX-512BW token (VBMI2 implies BW)
     #[inline(always)]
     pub fn avx512bw(self) -> Avx512bwToken {
-        unsafe { Avx512bwToken::new_unchecked() }
+        unsafe { Avx512bwToken::forge_token_dangerously() }
     }
 }
 
@@ -532,14 +532,14 @@ impl SimdToken for Avx512Vbmi2VlToken {
         if crate::is_x86_feature_available!("avx512vbmi2")
             && crate::is_x86_feature_available!("avx512vl")
         {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -548,13 +548,13 @@ impl Avx512Vbmi2VlToken {
     /// Get an AVX-512 VBMI2 token
     #[inline(always)]
     pub fn avx512vbmi2(self) -> Avx512Vbmi2Token {
-        unsafe { Avx512Vbmi2Token::new_unchecked() }
+        unsafe { Avx512Vbmi2Token::forge_token_dangerously() }
     }
 
     /// Get an AVX-512BW+VL token
     #[inline(always)]
     pub fn avx512bw_vl(self) -> Avx512bwVlToken {
-        unsafe { Avx512bwVlToken::new_unchecked() }
+        unsafe { Avx512bwVlToken::forge_token_dangerously() }
     }
 }
 
@@ -589,14 +589,14 @@ impl SimdToken for X64V2Token {
         // v2 requires SSE4.2 and POPCNT (SSE4.2 implies earlier SSE versions)
         if crate::is_x86_feature_available!("sse4.2") && crate::is_x86_feature_available!("popcnt")
         {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -605,19 +605,19 @@ impl X64V2Token {
     /// Get an SSE4.2 token
     #[inline(always)]
     pub fn sse42(self) -> Sse42Token {
-        unsafe { Sse42Token::new_unchecked() }
+        unsafe { Sse42Token::forge_token_dangerously() }
     }
 
     /// Get an SSE4.1 token
     #[inline(always)]
     pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::new_unchecked() }
+        unsafe { Sse41Token::forge_token_dangerously() }
     }
 
     /// Get an SSE2 token
     #[inline(always)]
     pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::new_unchecked() }
+        unsafe { Sse2Token::forge_token_dangerously() }
     }
 }
 
@@ -642,14 +642,14 @@ impl SimdToken for X64V3Token {
             && crate::is_x86_feature_available!("fma")
             && crate::is_x86_feature_available!("bmi2")
         {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -658,49 +658,49 @@ impl X64V3Token {
     /// Get a v2 token (v3 implies v2)
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::forge_token_dangerously() }
     }
 
     /// Get an AVX2+FMA combined token
     #[inline(always)]
     pub fn avx2_fma(self) -> Avx2FmaToken {
-        unsafe { Avx2FmaToken::new_unchecked() }
+        unsafe { Avx2FmaToken::forge_token_dangerously() }
     }
 
     /// Get an AVX2 token
     #[inline(always)]
     pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::new_unchecked() }
+        unsafe { Avx2Token::forge_token_dangerously() }
     }
 
     /// Get an FMA token
     #[inline(always)]
     pub fn fma(self) -> FmaToken {
-        unsafe { FmaToken::new_unchecked() }
+        unsafe { FmaToken::forge_token_dangerously() }
     }
 
     /// Get an AVX token
     #[inline(always)]
     pub fn avx(self) -> AvxToken {
-        unsafe { AvxToken::new_unchecked() }
+        unsafe { AvxToken::forge_token_dangerously() }
     }
 
     /// Get an SSE4.2 token
     #[inline(always)]
     pub fn sse42(self) -> Sse42Token {
-        unsafe { Sse42Token::new_unchecked() }
+        unsafe { Sse42Token::forge_token_dangerously() }
     }
 
     /// Get an SSE4.1 token
     #[inline(always)]
     pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::new_unchecked() }
+        unsafe { Sse41Token::forge_token_dangerously() }
     }
 
     /// Get an SSE2 token
     #[inline(always)]
     pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::new_unchecked() }
+        unsafe { Sse2Token::forge_token_dangerously() }
     }
 }
 
@@ -728,14 +728,14 @@ impl SimdToken for X64V4Token {
             && crate::is_x86_feature_available!("avx512dq")
             && crate::is_x86_feature_available!("avx512vl")
         {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -744,61 +744,61 @@ impl X64V4Token {
     /// Get a v3 token (v4 implies v3)
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
-        unsafe { X64V3Token::new_unchecked() }
+        unsafe { X64V3Token::forge_token_dangerously() }
     }
 
     /// Get a v2 token (v4 implies v2)
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::forge_token_dangerously() }
     }
 
     /// Get an AVX-512F token
     #[inline(always)]
     pub fn avx512f(self) -> Avx512fToken {
-        unsafe { Avx512fToken::new_unchecked() }
+        unsafe { Avx512fToken::forge_token_dangerously() }
     }
 
     /// Get an AVX-512BW token
     #[inline(always)]
     pub fn avx512bw(self) -> Avx512bwToken {
-        unsafe { Avx512bwToken::new_unchecked() }
+        unsafe { Avx512bwToken::forge_token_dangerously() }
     }
 
     /// Get an AVX2+FMA combined token
     #[inline(always)]
     pub fn avx2_fma(self) -> Avx2FmaToken {
-        unsafe { Avx2FmaToken::new_unchecked() }
+        unsafe { Avx2FmaToken::forge_token_dangerously() }
     }
 
     /// Get an AVX2 token
     #[inline(always)]
     pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::new_unchecked() }
+        unsafe { Avx2Token::forge_token_dangerously() }
     }
 
     /// Get an FMA token
     #[inline(always)]
     pub fn fma(self) -> FmaToken {
-        unsafe { FmaToken::new_unchecked() }
+        unsafe { FmaToken::forge_token_dangerously() }
     }
 
     /// Get an AVX token
     #[inline(always)]
     pub fn avx(self) -> AvxToken {
-        unsafe { AvxToken::new_unchecked() }
+        unsafe { AvxToken::forge_token_dangerously() }
     }
 
     /// Get an SSE4.1 token
     #[inline(always)]
     pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::new_unchecked() }
+        unsafe { Sse41Token::forge_token_dangerously() }
     }
 
     /// Get an SSE2 token
     #[inline(always)]
     pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::new_unchecked() }
+        unsafe { Sse2Token::forge_token_dangerously() }
     }
 }
 
@@ -820,14 +820,14 @@ impl SimdToken for Sse42Token {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         if crate::is_x86_feature_available!("sse4.2") {
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
         }
     }
 
     #[inline(always)]
-    unsafe fn new_unchecked() -> Self {
+    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -836,13 +836,13 @@ impl Sse42Token {
     /// Get an SSE4.1 token (SSE4.2 implies SSE4.1)
     #[inline(always)]
     pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::new_unchecked() }
+        unsafe { Sse41Token::forge_token_dangerously() }
     }
 
     /// Get an SSE2 token (SSE4.2 implies SSE2)
     #[inline(always)]
     pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::new_unchecked() }
+        unsafe { Sse2Token::forge_token_dangerously() }
     }
 }
 

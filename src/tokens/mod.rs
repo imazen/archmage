@@ -1,7 +1,7 @@
 //! SIMD capability tokens
 //!
 //! Tokens are zero-sized proof types that demonstrate a CPU feature is available.
-//! They can only be constructed via unsafe `new_unchecked()` or fallible `try_new()`.
+//! They can only be constructed via unsafe `forge_token_dangerously()` or fallible `try_new()`.
 
 #[cfg(target_arch = "x86_64")]
 pub mod x86;
@@ -29,7 +29,7 @@ pub use wasm::*;
 ///
 /// # Safety
 ///
-/// Implementors must ensure that `new_unchecked()` is only called when
+/// Implementors must ensure that `forge_token_dangerously()` is only called when
 /// the corresponding CPU feature is actually available.
 pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// Human-readable name for diagnostics and error messages.
@@ -59,7 +59,13 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// - Compile-time guarantee (`#[target_feature]` attribute)
     /// - Target CPU specification (`-C target-cpu=native` or similar)
     /// - Being inside a multiversioned function variant
-    unsafe fn new_unchecked() -> Self;
+    ///
+    /// # Why "forge_token_dangerously"?
+    ///
+    /// The name is intentionally scary to discourage casual use. Forging a token
+    /// for a feature that isn't actually available leads to undefined behavior
+    /// (illegal instructions, crashes, or silent data corruption).
+    unsafe fn forge_token_dangerously() -> Self;
 }
 
 /// Trait for tokens that can be decomposed into sub-tokens.
