@@ -432,3 +432,165 @@ neon_load_store! {
     /// Store four arrays of 2 `f64` value from four 16-byte registers.
     fn vst1q_f64_x4(_: &[f64; 2][..4] as [[f64; 2]; 4]) -> float64x2x4_t;
 }
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::SimdToken;
+
+    // Test macro for load intrinsics - adapted from safe_unaligned_simd
+    // Safety: `base` must be a Pod (integer) type and `ty` must be a SIMD vector type
+    macro_rules! test_vld1_from_slice {
+        ($(#[$attr:meta])* fn $testname:ident, $intrinsic:ident, $base:ty, $ty:ty $(, $with:expr)?) => {
+            #[test]
+            $(#[$attr])*
+            fn $testname() {
+                fn assert_eq_vec<const N: usize>(v: $ty, val: [$base; N]) {
+                    assert!(core::mem::size_of::<$ty>() == core::mem::size_of::<[$base; N]>());
+                    // Safety: transmuting a SIMD vector to its array representation which are Pod.
+                    let v = unsafe { core::mem::transmute_copy::<$ty, [$base; N]>(&v) };
+                    assert_eq!(v, val);
+                }
+
+                let token = NeonToken::try_new().expect("NEON should be available on aarch64");
+                let source: [_; core::mem::size_of::<$ty>() / core::mem::size_of::<$base>()] =
+                    core::array::from_fn(|i| i as $base);
+                let argument = source;
+                $( // optionally we need to change the type from a flat array.
+                    let argument = $with(argument);
+                )?
+                let result: $ty = super::$intrinsic(token, &argument);
+                assert_eq_vec(result, source);
+            }
+        };
+    }
+
+    // Test macro for store intrinsics - adapted from safe_unaligned_simd
+    // Safety: `base` must be a Pod (integer) type and `ty` must be a SIMD vector type
+    macro_rules! test_vst1_from_slice {
+        ($(#[$attr:meta])* fn $testname:ident, $intrinsic:ident, $base:ty, $ty:ty $(, $with:expr)?) => {
+            #[test]
+            $(#[$attr])*
+            fn $testname() {
+                fn generate<const N: usize>(val: &[$base; N]) -> $ty {
+                    assert!(core::mem::size_of::<$ty>() == core::mem::size_of::<[$base; N]>());
+                    // Safety: transmuting array representation to a SIMD vector, both are Pod.
+                    unsafe { core::mem::transmute_copy::<[$base; N], $ty>(val) }
+                }
+
+                fn result_init<T>() -> T {
+                    // Safety: only called on arrays out of `Pod` types.
+                    unsafe { core::mem::zeroed() }
+                }
+
+                // Help the type unification between source and result.
+                fn assert_eq_arr<T: PartialEq + core::fmt::Debug, const N: usize>(a: &[T; N], b: &[T; N]) {
+                    assert_eq!(a, b);
+                }
+
+                let token = NeonToken::try_new().expect("NEON should be available on aarch64");
+                let ground_truth: [_; core::mem::size_of::<$ty>() / core::mem::size_of::<$base>()] =
+                    core::array::from_fn(|i| i as $base);
+                let argument = generate(&ground_truth);
+
+                let mut result = result_init();
+                super::$intrinsic(token, &mut result, argument);
+
+                $( // optionally we need to change the type from a flat array.
+                    let result = $with(result);
+                )?
+
+                assert_eq_arr(&result, &ground_truth);
+            }
+        };
+    }
+
+    // Helper for chunked arrays
+    fn as_chunks<T: Copy, const L: usize, const N: usize, const M: usize>(
+        v: [T; N],
+    ) -> [[T; M]; L] {
+        assert_eq!(L * M, N);
+        let mut result = [[v[0]; M]; L];
+        for i in 0..L {
+            for j in 0..M {
+                result[i][j] = v[i * M + j];
+            }
+        }
+        result
+    }
+
+    fn flatten<T: Copy, const L: usize, const N: usize, const M: usize>(v: [[T; M]; L]) -> [T; N] {
+        assert_eq!(L * M, N);
+        let mut result = [v[0][0]; N];
+        for i in 0..L {
+            for j in 0..M {
+                result[i * M + j] = v[i][j];
+            }
+        }
+        result
+    }
+
+    // 8-byte load tests
+    test_vld1_from_slice!(fn test_vld1_u8, vld1_u8, u8, uint8x8_t);
+    test_vld1_from_slice!(fn test_vld1_s8, vld1_s8, i8, int8x8_t);
+    test_vld1_from_slice!(fn test_vld1_u16, vld1_u16, u16, uint16x4_t);
+    test_vld1_from_slice!(fn test_vld1_s16, vld1_s16, i16, int16x4_t);
+    test_vld1_from_slice!(fn test_vld1_u32, vld1_u32, u32, uint32x2_t);
+    test_vld1_from_slice!(fn test_vld1_s32, vld1_s32, i32, int32x2_t);
+    test_vld1_from_slice!(fn test_vld1_f32, vld1_f32, f32, float32x2_t);
+    test_vld1_from_slice!(fn test_vld1_u64, vld1_u64, u64, uint64x1_t, |[val]: [_; 1]| val);
+    test_vld1_from_slice!(fn test_vld1_s64, vld1_s64, i64, int64x1_t, |[val]: [_; 1]| val);
+    test_vld1_from_slice!(fn test_vld1_f64, vld1_f64, f64, float64x1_t, |[val]: [_; 1]| val);
+
+    // 16-byte load tests
+    test_vld1_from_slice!(fn test_vld1q_u8, vld1q_u8, u8, uint8x16_t);
+    test_vld1_from_slice!(fn test_vld1q_s8, vld1q_s8, i8, int8x16_t);
+    test_vld1_from_slice!(fn test_vld1q_u16, vld1q_u16, u16, uint16x8_t);
+    test_vld1_from_slice!(fn test_vld1q_s16, vld1q_s16, i16, int16x8_t);
+    test_vld1_from_slice!(fn test_vld1q_u32, vld1q_u32, u32, uint32x4_t);
+    test_vld1_from_slice!(fn test_vld1q_s32, vld1q_s32, i32, int32x4_t);
+    test_vld1_from_slice!(fn test_vld1q_f32, vld1q_f32, f32, float32x4_t);
+    test_vld1_from_slice!(fn test_vld1q_u64, vld1q_u64, u64, uint64x2_t);
+    test_vld1_from_slice!(fn test_vld1q_s64, vld1q_s64, i64, int64x2_t);
+    test_vld1_from_slice!(fn test_vld1q_f64, vld1q_f64, f64, float64x2_t);
+
+    // Multi-register load tests (x2)
+    test_vld1_from_slice!(fn test_vld1_u8_x2, vld1_u8_x2, u8, uint8x8x2_t, as_chunks::<_, 2, 16, 8>);
+    test_vld1_from_slice!(fn test_vld1_s8_x2, vld1_s8_x2, i8, int8x8x2_t, as_chunks::<_, 2, 16, 8>);
+    test_vld1_from_slice!(fn test_vld1q_u8_x2, vld1q_u8_x2, u8, uint8x16x2_t, as_chunks::<_, 2, 32, 16>);
+    test_vld1_from_slice!(fn test_vld1q_f32_x2, vld1q_f32_x2, f32, float32x4x2_t, as_chunks::<_, 2, 8, 4>);
+
+    // 8-byte store tests
+    test_vst1_from_slice!(fn test_vst1_u8, vst1_u8, u8, uint8x8_t);
+    test_vst1_from_slice!(fn test_vst1_s8, vst1_s8, i8, int8x8_t);
+    test_vst1_from_slice!(fn test_vst1_u16, vst1_u16, u16, uint16x4_t);
+    test_vst1_from_slice!(fn test_vst1_s16, vst1_s16, i16, int16x4_t);
+    test_vst1_from_slice!(fn test_vst1_u32, vst1_u32, u32, uint32x2_t);
+    test_vst1_from_slice!(fn test_vst1_s32, vst1_s32, i32, int32x2_t);
+    test_vst1_from_slice!(fn test_vst1_f32, vst1_f32, f32, float32x2_t);
+    test_vst1_from_slice!(fn test_vst1_u64, vst1_u64, u64, uint64x1_t, |val| [val]);
+    test_vst1_from_slice!(fn test_vst1_s64, vst1_s64, i64, int64x1_t, |val| [val]);
+    test_vst1_from_slice!(fn test_vst1_f64, vst1_f64, f64, float64x1_t, |val| [val]);
+
+    // 16-byte store tests
+    test_vst1_from_slice!(fn test_vst1q_u8, vst1q_u8, u8, uint8x16_t);
+    test_vst1_from_slice!(fn test_vst1q_s8, vst1q_s8, i8, int8x16_t);
+    test_vst1_from_slice!(fn test_vst1q_u16, vst1q_u16, u16, uint16x8_t);
+    test_vst1_from_slice!(fn test_vst1q_s16, vst1q_s16, i16, int16x8_t);
+    test_vst1_from_slice!(fn test_vst1q_u32, vst1q_u32, u32, uint32x4_t);
+    test_vst1_from_slice!(fn test_vst1q_s32, vst1q_s32, i32, int32x4_t);
+    test_vst1_from_slice!(fn test_vst1q_f32, vst1q_f32, f32, float32x4_t);
+    test_vst1_from_slice!(fn test_vst1q_u64, vst1q_u64, u64, uint64x2_t);
+    test_vst1_from_slice!(fn test_vst1q_s64, vst1q_s64, i64, int64x2_t);
+    test_vst1_from_slice!(fn test_vst1q_f64, vst1q_f64, f64, float64x2_t);
+
+    // Multi-register store tests (x2)
+    test_vst1_from_slice!(fn test_vst1_u8_x2, vst1_u8_x2, u8, uint8x8x2_t, flatten::<_, 2, 16, 8>);
+    test_vst1_from_slice!(fn test_vst1_s8_x2, vst1_s8_x2, i8, int8x8x2_t, flatten::<_, 2, 16, 8>);
+    test_vst1_from_slice!(fn test_vst1q_u8_x2, vst1q_u8_x2, u8, uint8x16x2_t, flatten::<_, 2, 32, 16>);
+    test_vst1_from_slice!(fn test_vst1q_f32_x2, vst1q_f32_x2, f32, float32x4x2_t, flatten::<_, 2, 8, 4>);
+}
