@@ -281,11 +281,13 @@ use crate::tokens::HasNeon;
 // Macro for aarch64 SIMD functions - requires #[target_feature] wrapper for safety.
 // Even NEON requires this because aarch64 targets without NEON exist (e.g., softfloat).
 // Uses `impl $trait_bound` for generic token acceptance.
+// Separate arms for load/store to avoid macro metavariable forwarding issues.
 macro_rules! aarch64_load_store {{
+    // Load functions
     (
         token: $trait_bound:path;
         feature: $feature:literal;
-        unsafe: $kind:ident;
+        unsafe: load;
         size: $size:ident;
 
         $(
@@ -293,34 +295,42 @@ macro_rules! aarch64_load_store {{
         )*
     ) => {{
         $(
-            aarch64_load_store!(@ $kind $trait_bound $feature $(#[$meta])* $intrinsic [$realty] [$ret]);
+            $(#[$meta])*
+            #[inline(always)]
+            pub fn $intrinsic(_token: impl $trait_bound, from: &$realty) -> $ret {{
+                #[inline]
+                #[target_feature(enable = $feature)]
+                unsafe fn inner(from: &$realty) -> $ret {{
+                    safe_unaligned_simd::aarch64::$intrinsic(from)
+                }}
+                unsafe {{ inner(from) }}
+            }}
         )*
     }};
 
-    (@ load $trait_bound:path, $feature:tt, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
-        $(#[$meta])*
-        #[inline(always)]
-        pub fn $intrinsic(_token: impl $trait_bound, from: &$realty) -> $ret {{
-            #[inline]
-            #[target_feature(enable = $feature)]
-            unsafe fn inner(from: &$realty) -> $ret {{
-                safe_unaligned_simd::aarch64::$intrinsic(from)
-            }}
-            unsafe {{ inner(from) }}
-        }}
-    }};
+    // Store functions
+    (
+        token: $trait_bound:path;
+        feature: $feature:literal;
+        unsafe: store;
+        size: $size:ident;
 
-    (@ store $trait_bound:path, $feature:tt, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
-        $(#[$meta])*
-        #[inline(always)]
-        pub fn $intrinsic(_token: impl $trait_bound, into: &mut $realty, val: $ret) {{
-            #[inline]
-            #[target_feature(enable = $feature)]
-            unsafe fn inner(into: &mut $realty, val: $ret) {{
-                safe_unaligned_simd::aarch64::$intrinsic(into, val)
+        $(
+            $(#[$meta:meta])* fn $intrinsic:ident(_: &[$base_ty:ty; $n:literal][..$len:literal] as $realty:ty) -> $ret:ty;
+        )*
+    ) => {{
+        $(
+            $(#[$meta])*
+            #[inline(always)]
+            pub fn $intrinsic(_token: impl $trait_bound, into: &mut $realty, val: $ret) {{
+                #[inline]
+                #[target_feature(enable = $feature)]
+                unsafe fn inner(into: &mut $realty, val: $ret) {{
+                    safe_unaligned_simd::aarch64::$intrinsic(into, val)
+                }}
+                unsafe {{ inner(into, val) }}
             }}
-            unsafe {{ inner(into, val) }}
-        }}
+        )*
     }};
 }}
 
