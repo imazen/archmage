@@ -14,7 +14,7 @@ keywords = ["simd", "avx", "neon", "performance", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
-default = ["std", "macros"]
+default = ["std", "macros", "safe_unaligned_simd"]
 std = []
 macros = ["dep:archmage-macros"]
 # Safe load/store wrappers (stable)

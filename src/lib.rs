@@ -10,7 +10,7 @@
 //!
 //! ```rust,ignore
 //! use archmage::{Desktop64, HasAvx2, SimdToken, arcane};
-//! use archmage::mem::avx;  // Safe load/store (requires safe_unaligned_simd feature)
+//! use archmage::mem::avx;  // Safe load/store (enabled by default)
 //! use std::arch::x86_64::*;
 //!
 //! #[arcane]
@@ -52,7 +52,7 @@
 //!
 //! - `std` (default): Enable std library support
 //! - `macros` (default): Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`)
-//! - `safe_unaligned_simd`: Safe load/store via references (exposed as `mem` module)
+//! - `safe_unaligned_simd` (default): Safe load/store via references (exposed as `mem` module)
 //! - `__composite`: Higher-level ops (transpose, dot product) - unstable API
 //! - `__wide`: Integration with the `wide` crate - unstable API
 

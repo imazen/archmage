@@ -14,7 +14,7 @@
 
 ```rust
 use archmage::{Desktop64, HasAvx2, SimdToken, arcane};
-use archmage::mem::avx;  // requires safe_unaligned_simd feature
+use archmage::mem::avx;  // safe load/store (enabled by default)
 use std::arch::x86_64::*;
 
 #[arcane]
@@ -225,7 +225,7 @@ archmage = "0.1"
 |---------|-------------|
 | `std` (default) | Enable std library support |
 | `macros` (default) | Enable `#[arcane]` macro (alias: `#[simd_fn]`) |
-| `safe_unaligned_simd` | Safe load/store via references (exposed as `mem` module) |
+| `safe_unaligned_simd` (default) | Safe load/store via references (exposed as `mem` module) |
 
 **Unstable features** (API may change):
 
