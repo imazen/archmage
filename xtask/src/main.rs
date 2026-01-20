@@ -265,8 +265,12 @@ fn generate_aarch64_neon_rs(safe_simd_path: &Path) -> Result<String> {
 #![allow(clippy::missing_safety_doc)]
 
 use core::arch::aarch64::*;
-// NEON is baseline on aarch64 - these are just thin wrappers.
-// Generic token param accepts any aarch64 token (all imply NEON).
+use crate::tokens::arm::NeonToken;
+
+// Macro for NEON functions - NEON is baseline on aarch64, so no inner function needed.
+// The unsafe block is required because safe_unaligned_simd functions are marked with
+// #[target_feature], but the operations themselves are safe (they use references).
+// Token exists for API consistency with x86.
 macro_rules! neon_load_store {{
     (
         unsafe: $kind:ident;
@@ -284,7 +288,9 @@ macro_rules! neon_load_store {{
     (@ load $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
         $(#[$meta])*
         #[inline(always)]
-        pub fn $intrinsic<T>(_: T, from: &$realty) -> $ret {{
+        pub fn $intrinsic(_token: NeonToken, from: &$realty) -> $ret {{
+            // SAFETY: NEON is always available on aarch64. The function is safe
+            // (uses references), the unsafe is only due to #[target_feature] annotation.
             unsafe {{ safe_unaligned_simd::aarch64::$intrinsic(from) }}
         }}
     }};
@@ -292,7 +298,9 @@ macro_rules! neon_load_store {{
     (@ store $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
         $(#[$meta])*
         #[inline(always)]
-        pub fn $intrinsic<T>(_: T, into: &mut $realty, val: $ret) {{
+        pub fn $intrinsic(_token: NeonToken, into: &mut $realty, val: $ret) {{
+            // SAFETY: NEON is always available on aarch64. The function is safe
+            // (uses references), the unsafe is only due to #[target_feature] annotation.
             unsafe {{ safe_unaligned_simd::aarch64::$intrinsic(into, val) }}
         }}
     }};
