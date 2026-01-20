@@ -199,4 +199,3 @@ pub trait HasSve: HasNeon {}
 /// Marker trait for tokens that provide SVE2.
 #[cfg(target_arch = "aarch64")]
 pub trait HasSve2: HasSve {}
-

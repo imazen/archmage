@@ -108,7 +108,10 @@ pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma, HasScalabl
 
 // x86 feature marker traits (for generic bounds)
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-pub use tokens::{HasSse, HasSse2, HasSse41, HasSse42, HasAvx, HasAvx2, HasAvx512f, HasAvx512vl, HasAvx512bw, HasAvx512vbmi2};
+pub use tokens::{
+    HasAvx, HasAvx2, HasAvx512bw, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse, HasSse2,
+    HasSse41, HasSse42,
+};
 
 // aarch64 feature marker traits
 #[cfg(target_arch = "aarch64")]
@@ -118,19 +121,33 @@ pub use tokens::{HasNeon, HasSve, HasSve2};
 #[cfg(target_arch = "x86_64")]
 pub use tokens::x86::{
     // Feature tokens
-    Avx2FmaToken, Avx2Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken, Avx512bwToken, Avx512bwVlToken,
-    Avx512fToken, Avx512fVlToken, AvxToken, FmaToken, Sse2Token, Sse41Token, Sse42Token, SseToken,
-    // Profile tokens (raw names)
-    X64V2Token, X64V3Token, X64V4Token,
+    Avx2FmaToken,
+    Avx2Token,
+    Avx512Vbmi2Token,
+    Avx512Vbmi2VlToken,
+    Avx512bwToken,
+    Avx512bwVlToken,
+    Avx512fToken,
+    Avx512fVlToken,
+    AvxToken,
     // Friendly aliases (recommended)
-    Desktop64, Server64,
+    Desktop64,
+    FmaToken,
+    Server64,
+    Sse2Token,
+    Sse41Token,
+    Sse42Token,
+    SseToken,
+    // Profile tokens (raw names)
+    X64V2Token,
+    X64V3Token,
+    X64V4Token,
 };
 
 // aarch64 tokens (when on ARM)
 #[cfg(target_arch = "aarch64")]
-pub use tokens::arm::{NeonToken, Sve2Token, SveToken, Arm64};
+pub use tokens::arm::{Arm64, NeonToken, Sve2Token, SveToken};
 
 // wasm tokens (when on WASM)
 #[cfg(target_arch = "wasm32")]
 pub use tokens::wasm::Simd128Token;
-

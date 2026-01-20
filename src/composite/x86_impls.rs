@@ -3,9 +3,9 @@
 //! This module provides implementations of `simd_ops` and `scalar_ops` traits
 //! for x86 SIMD tokens.
 
-use crate::tokens::x86::*;
-use super::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 use super::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
+use super::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
+use crate::tokens::x86::*;
 
 // ============================================================================
 // SIMD Operation Trait Implementations (simd_ops)

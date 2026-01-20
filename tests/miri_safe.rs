@@ -6,8 +6,8 @@
 // Only run these tests on x86_64 where the tokens are available
 #![cfg(target_arch = "x86_64")]
 
-use archmage::tokens::x86::*;
 use archmage::SimdToken;
+use archmage::tokens::x86::*;
 
 /// Verify all tokens are zero-sized types.
 #[test]

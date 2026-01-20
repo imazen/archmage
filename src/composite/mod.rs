@@ -3,8 +3,8 @@
 //! Higher-level operations built from primitives, all token-gated.
 
 // Operation traits
-pub mod simd_ops;
 pub mod scalar_ops;
+pub mod simd_ops;
 
 // Implementations (x86_64 only for now)
 #[cfg(target_arch = "x86_64")]
@@ -21,8 +21,8 @@ pub mod horizontal;
 mod x86_impls;
 
 // Re-export traits
-pub use simd_ops::*;
 pub use scalar_ops::*;
+pub use simd_ops::*;
 
 // Re-export implementations
 #[cfg(target_arch = "x86_64")]

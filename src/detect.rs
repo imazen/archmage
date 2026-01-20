@@ -429,30 +429,18 @@ macro_rules! is_aarch64_feature_available {
             false
         }
     }};
-    ("sve") => {{
-        $crate::__impl_aarch64_feature_check!("sve")
-    }};
-    ("sve2") => {{
-        $crate::__impl_aarch64_feature_check!("sve2")
-    }};
+    ("sve") => {{ $crate::__impl_aarch64_feature_check!("sve") }};
+    ("sve2") => {{ $crate::__impl_aarch64_feature_check!("sve2") }};
     // Crypto features (stable intrinsics)
-    ("aes") => {{
-        $crate::__impl_aarch64_feature_check!("aes")
-    }};
-    ("sha2") => {{
-        $crate::__impl_aarch64_feature_check!("sha2")
-    }};
-    ("sha3") => {{
-        $crate::__impl_aarch64_feature_check!("sha3")
-    }};
+    ("aes") => {{ $crate::__impl_aarch64_feature_check!("aes") }};
+    ("sha2") => {{ $crate::__impl_aarch64_feature_check!("sha2") }};
+    ("sha3") => {{ $crate::__impl_aarch64_feature_check!("sha3") }};
     ("crc") => {{
         // Note: std uses "crc" but target_feature uses "crc"
         $crate::__impl_aarch64_feature_check!("crc")
     }};
     // Fallback for other features - runtime only
-    ($feature:tt) => {{
-        $crate::__impl_aarch64_runtime_only_check!($feature)
-    }};
+    ($feature:tt) => {{ $crate::__impl_aarch64_runtime_only_check!($feature) }};
 }
 
 /// Implementation macro for AArch64 feature check with compile-time optimization.

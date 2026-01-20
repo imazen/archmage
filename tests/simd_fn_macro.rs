@@ -4,7 +4,10 @@
 
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
-    use archmage::{Avx2FmaToken, Avx2Token, HasAvx, HasAvx2, HasFma, SimdToken, X64V3Token, Desktop64, Server64, simd_fn};
+    use archmage::{
+        Avx2FmaToken, Avx2Token, Desktop64, HasAvx, HasAvx2, HasFma, Server64, SimdToken,
+        X64V3Token, simd_fn,
+    };
     use std::arch::x86_64::*;
 
     /// Basic test: simd_fn with Avx2Token
@@ -218,7 +221,12 @@ mod x86_tests {
 
     /// Test with multiple trait bounds using impl Trait
     #[simd_fn]
-    fn impl_trait_multi_bounds(token: impl HasAvx2 + HasFma, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    fn impl_trait_multi_bounds(
+        token: impl HasAvx2 + HasFma,
+        a: &[f32; 8],
+        b: &[f32; 8],
+        c: &[f32; 8],
+    ) -> [f32; 8] {
         let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
         let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
         let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
@@ -244,7 +252,12 @@ mod x86_tests {
 
     /// Test with multiple trait bounds using generic type parameter
     #[simd_fn]
-    fn generic_multi_bounds<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    fn generic_multi_bounds<T: HasAvx2 + HasFma>(
+        token: T,
+        a: &[f32; 8],
+        b: &[f32; 8],
+        c: &[f32; 8],
+    ) -> [f32; 8] {
         let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
         let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
         let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };

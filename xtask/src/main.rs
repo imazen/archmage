@@ -47,7 +47,9 @@ fn feature_to_token(features: &str, arch: Arch) -> Option<(&'static str, &'stati
             "avx512bw,avx512vl" => Some(("HasAvx512bw + HasAvx512vl", "avx512bw,avx512vl")),
             "avx512vbmi2" => Some(("HasAvx512vbmi2", "avx512vbmi2")),
             // HasAvx512vbmi2: HasAvx512bw, but doesn't imply VL
-            "avx512vbmi2,avx512vl" => Some(("HasAvx512vbmi2 + HasAvx512vl", "avx512vbmi2,avx512vl")),
+            "avx512vbmi2,avx512vl" => {
+                Some(("HasAvx512vbmi2 + HasAvx512vl", "avx512vbmi2,avx512vl"))
+            }
             _ => None,
         },
         Arch::Aarch64 => match features {
@@ -533,7 +535,12 @@ fn generate_wrapper_string(
         Arch::X86 => "x86_64",
         Arch::Aarch64 => "aarch64",
     };
-    write!(out, "        safe_unaligned_simd::{}::{}", simd_module, func.name).unwrap();
+    write!(
+        out,
+        "        safe_unaligned_simd::{}::{}",
+        simd_module, func.name
+    )
+    .unwrap();
 
     // Turbofish for type params
     let type_params: Vec<String> = func
@@ -661,7 +668,10 @@ use crate::tokens::{};"#,
 }
 
 /// Generate the mod.rs that ties everything together
-fn generate_mod_rs(x86_modules: &[(&str, &str, usize)], aarch64_modules: &[(&str, &str, usize)]) -> String {
+fn generate_mod_rs(
+    x86_modules: &[(&str, &str, usize)],
+    aarch64_modules: &[(&str, &str, usize)],
+) -> String {
     let mut code = String::from(
         r#"//! Token-gated wrappers for safe_unaligned_simd.
 //!
@@ -850,7 +860,11 @@ fn generate_wrappers() -> Result<()> {
     let neon_code = generate_aarch64_neon_rs(&safe_simd_path)?;
     let neon_path = aarch64_out_dir.join("neon.rs");
     fs::write(&neon_path, &neon_code)?;
-    println!("  Wrote {} ({} bytes)", neon_path.display(), neon_code.len());
+    println!(
+        "  Wrote {} ({} bytes)",
+        neon_path.display(),
+        neon_code.len()
+    );
 
     // Count functions for reporting
     let neon_fn_count = count_aarch64_functions(&safe_simd_path)?;
@@ -873,7 +887,10 @@ fn generate_wrappers() -> Result<()> {
     )?;
 
     let total_x86 = modules_info.iter().map(|(_, _, c)| c).sum::<usize>();
-    let total_aarch64 = aarch64_modules_info.iter().map(|(_, _, c)| c).sum::<usize>();
+    let total_aarch64 = aarch64_modules_info
+        .iter()
+        .map(|(_, _, c)| c)
+        .sum::<usize>();
 
     println!("\nGeneration complete!");
     println!(

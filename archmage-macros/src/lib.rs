@@ -61,7 +61,9 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
         // x86_64 profile tokens
         "X64V2Token" => Some(&["sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" => Some(&["avx2", "fma", "bmi1", "bmi2"]),
-        "X64V4Token" | "Server64" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]),
+        "X64V4Token" | "Server64" => {
+            Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"])
+        }
 
         // ARM tokens
         "NeonToken" | "Arm64" => Some(&["neon"]),
@@ -121,20 +123,16 @@ fn extract_token_type_info(ty: &Type) -> Option<TokenTypeInfo> {
     match ty {
         Type::Path(type_path) => {
             // Get the last segment of the path (e.g., "Avx2Token" from "archmage::Avx2Token")
-            type_path
-                .path
-                .segments
-                .last()
-                .map(|seg| {
-                    let name = seg.ident.to_string();
-                    // Check if it's a known concrete token type
-                    if token_to_features(&name).is_some() {
-                        TokenTypeInfo::Concrete(name)
-                    } else {
-                        // Might be a generic type parameter like `T`
-                        TokenTypeInfo::Generic(name)
-                    }
-                })
+            type_path.path.segments.last().map(|seg| {
+                let name = seg.ident.to_string();
+                // Check if it's a known concrete token type
+                if token_to_features(&name).is_some() {
+                    TokenTypeInfo::Concrete(name)
+                } else {
+                    // Might be a generic type parameter like `T`
+                    TokenTypeInfo::Generic(name)
+                }
+            })
         }
         Type::Reference(type_ref) => {
             // Handle &Token or &mut Token

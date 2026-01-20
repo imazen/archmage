@@ -7,14 +7,13 @@
 
 // Guard against rare aarch64 targets without NEON (e.g., aarch64-unknown-none-softfloat)
 #![cfg(target_feature = "neon")]
-
 #![allow(unused_imports)]
 #![allow(unused_macros)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
 
-use core::arch::aarch64::*;
 use crate::tokens::HasNeon;
+use core::arch::aarch64::*;
 
 // Macro for aarch64 SIMD functions - requires #[target_feature] wrapper for safety.
 // Even NEON requires this because aarch64 targets without NEON exist (e.g., softfloat).
@@ -627,4 +626,3 @@ aarch64_load_store! {
     /// Load an array of four `f64` elements and replicate to lanes of four registers.
     fn vld4q_dup_f64(_: &[f64; 4][..1] as [f64; 4]) -> float64x2x4_t;
 }
-
