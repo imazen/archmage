@@ -257,14 +257,17 @@ fn generate_aarch64_neon_rs(safe_simd_path: &Path) -> Result<String> {
 //! Run `cargo xtask generate` to regenerate.
 
 #![allow(unused_imports)]
+#![allow(unused_macros)] // aarch64_load_store reserved for future SVE/SVE2
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
 
 use core::arch::aarch64::*;
 use crate::tokens::arm::NeonToken;
 
-// Token-aware macro that generates wrappers calling safe_unaligned_simd::aarch64::*
-// This has the same invocation syntax as safe_unaligned_simd's vld_n_replicate_k!
+// Macro for NEON functions - NEON is baseline on aarch64, so no inner function needed.
+// The unsafe block is required because safe_unaligned_simd functions are marked with
+// #[target_feature], but the operations themselves are safe (they use references).
+// Token exists for API consistency with x86.
 macro_rules! neon_load_store {{
     (
         unsafe: $kind:ident;
@@ -275,38 +278,71 @@ macro_rules! neon_load_store {{
         )*
     ) => {{
         $(
-            neon_load_store!(
-                @ $kind $(#[$meta])* $intrinsic [$realty] [$ret]
-            );
+            neon_load_store!(@ $kind $(#[$meta])* $intrinsic [$realty] [$ret]);
         )*
     }};
 
-    // Load wrapper
     (@ load $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
         $(#[$meta])*
         #[inline(always)]
         pub fn $intrinsic(_token: NeonToken, from: &$realty) -> $ret {{
-            #[inline]
-            #[target_feature(enable = "neon")]
-            unsafe fn inner(from: &$realty) -> $ret {{
-                safe_unaligned_simd::aarch64::$intrinsic(from)
-            }}
-            // SAFETY: Token proves the target features are available
-            unsafe {{ inner(from) }}
+            // SAFETY: NEON is always available on aarch64. The function is safe
+            // (uses references), the unsafe is only due to #[target_feature] annotation.
+            unsafe {{ safe_unaligned_simd::aarch64::$intrinsic(from) }}
         }}
     }};
 
-    // Store wrapper
     (@ store $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
         $(#[$meta])*
         #[inline(always)]
         pub fn $intrinsic(_token: NeonToken, into: &mut $realty, val: $ret) {{
+            // SAFETY: NEON is always available on aarch64. The function is safe
+            // (uses references), the unsafe is only due to #[target_feature] annotation.
+            unsafe {{ safe_unaligned_simd::aarch64::$intrinsic(into, val) }}
+        }}
+    }};
+}}
+
+// Macro for non-baseline features (SVE, SVE2) - requires #[target_feature] wrapper.
+// Use this for any aarch64 feature that needs runtime detection.
+macro_rules! aarch64_load_store {{
+    (
+        token: $token:ty;
+        feature: $feature:literal;
+        unsafe: $kind:ident;
+        size: $size:ident;
+
+        $(
+            $(#[$meta:meta])* fn $intrinsic:ident(_: &[$base_ty:ty; $n:literal][..$len:literal] as $realty:ty) -> $ret:ty;
+        )*
+    ) => {{
+        $(
+            aarch64_load_store!(@ $kind $token $feature $(#[$meta])* $intrinsic [$realty] [$ret]);
+        )*
+    }};
+
+    (@ load $token:ty, $feature:literal, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
+        $(#[$meta])*
+        #[inline(always)]
+        pub fn $intrinsic(_token: $token, from: &$realty) -> $ret {{
             #[inline]
-            #[target_feature(enable = "neon")]
+            #[target_feature(enable = $feature)]
+            unsafe fn inner(from: &$realty) -> $ret {{
+                safe_unaligned_simd::aarch64::$intrinsic(from)
+            }}
+            unsafe {{ inner(from) }}
+        }}
+    }};
+
+    (@ store $token:ty, $feature:literal, $(#[$meta:meta])* $intrinsic:ident [$realty:ty] [$ret:ty]) => {{
+        $(#[$meta])*
+        #[inline(always)]
+        pub fn $intrinsic(_token: $token, into: &mut $realty, val: $ret) {{
+            #[inline]
+            #[target_feature(enable = $feature)]
             unsafe fn inner(into: &mut $realty, val: $ret) {{
                 safe_unaligned_simd::aarch64::$intrinsic(into, val)
             }}
-            // SAFETY: Token proves the target features are available
             unsafe {{ inner(into, val) }}
         }}
     }};
