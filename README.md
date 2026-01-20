@@ -7,21 +7,22 @@
 ## Quick Start
 
 ```rust
-use archmage::{X64V3Token, SimdToken, arcane};
+use archmage::{X64V3Token, HasAvx2, SimdToken, arcane};
+use archmage::mem::avx;  // Safe load/store (requires safe_unaligned_simd feature)
 use std::arch::x86_64::*;
 
 #[arcane]
-fn multiply_add(token: impl archmage::HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // Safe memory operations via archmage::mem (with safe_unaligned_simd feature)
-    let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
-    let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
+fn multiply_add(token: impl HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    // Safe memory operations - references, not raw pointers!
+    let va = avx::_mm256_loadu_ps(token, a);
+    let vb = avx::_mm256_loadu_ps(token, b);
 
     // Value-based intrinsics are SAFE inside #[arcane]!
     let result = _mm256_add_ps(va, vb);
     let result = _mm256_mul_ps(result, result);
 
     let mut out = [0.0f32; 8];
-    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+    avx::_mm256_storeu_ps(token, &mut out, result);
     out
 }
 
