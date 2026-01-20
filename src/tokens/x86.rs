@@ -651,6 +651,45 @@ impl Sse42Token {
 }
 
 // ============================================================================
+// Capability Marker Trait Implementations
+// ============================================================================
+
+use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
+
+// 128-bit SIMD: SSE2, SSE4.1, SSE4.2
+impl Has128BitSimd for Sse2Token {}
+impl Has128BitSimd for Sse41Token {}
+impl Has128BitSimd for Sse42Token {}
+impl Has128BitSimd for X64V2Token {}
+
+// 256-bit SIMD: AVX, AVX2, AVX2+FMA, profile tokens
+impl Has128BitSimd for AvxToken {}
+impl Has256BitSimd for AvxToken {}
+impl Has128BitSimd for Avx2Token {}
+impl Has256BitSimd for Avx2Token {}
+impl Has128BitSimd for Avx2FmaToken {}
+impl Has256BitSimd for Avx2FmaToken {}
+impl Has128BitSimd for X64V3Token {}
+impl Has256BitSimd for X64V3Token {}
+
+// 512-bit SIMD: AVX-512 tokens, v4 profile
+impl Has128BitSimd for Avx512fToken {}
+impl Has256BitSimd for Avx512fToken {}
+impl Has512BitSimd for Avx512fToken {}
+impl Has128BitSimd for Avx512bwToken {}
+impl Has256BitSimd for Avx512bwToken {}
+impl Has512BitSimd for Avx512bwToken {}
+impl Has128BitSimd for X64V4Token {}
+impl Has256BitSimd for X64V4Token {}
+impl Has512BitSimd for X64V4Token {}
+
+// FMA support
+impl HasFma for FmaToken {}
+impl HasFma for Avx2FmaToken {}
+impl HasFma for X64V3Token {}
+impl HasFma for X64V4Token {}
+
+// ============================================================================
 // Assembly verification helpers
 // ============================================================================
 

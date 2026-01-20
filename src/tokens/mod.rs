@@ -73,3 +73,36 @@ pub trait CompositeToken: SimdToken {
     /// Decompose into component tokens
     fn components(&self) -> Self::Components;
 }
+
+// ============================================================================
+// Capability Marker Traits
+// ============================================================================
+//
+// These traits indicate what capabilities a token provides, enabling generic
+// code to constrain which tokens are accepted. They don't provide operations
+// directly - use raw intrinsics via `#[simd_fn]` for that.
+
+/// Marker trait for tokens that provide 128-bit SIMD.
+///
+/// Implemented by: `Sse2Token`, `NeonToken`, `Simd128Token`
+pub trait Has128BitSimd: SimdToken {}
+
+/// Marker trait for tokens that provide 256-bit SIMD.
+///
+/// Implemented by: `Avx2Token`, `X64V3Token`, etc.
+pub trait Has256BitSimd: Has128BitSimd {}
+
+/// Marker trait for tokens that provide 512-bit SIMD.
+///
+/// Implemented by: `Avx512fToken`, `X64V4Token`
+pub trait Has512BitSimd: Has256BitSimd {}
+
+/// Marker trait for tokens that provide FMA (fused multiply-add).
+///
+/// Implemented by: `FmaToken`, `Avx2FmaToken`, `X64V3Token`, `NeonToken`
+pub trait HasFma: SimdToken {}
+
+/// Marker trait for tokens that provide scalable vectors (variable width).
+///
+/// Implemented by: `SveToken`, `Sve2Token`
+pub trait HasScalableVectors: SimdToken {}

@@ -124,6 +124,26 @@ impl Sve2Token {
 }
 
 // ============================================================================
+// Capability Marker Trait Implementations
+// ============================================================================
+
+use super::{Has128BitSimd, HasFma, HasScalableVectors};
+
+// NEON provides 128-bit SIMD and FMA
+impl Has128BitSimd for NeonToken {}
+impl HasFma for NeonToken {} // NEON has fused multiply-add instructions
+
+// SVE provides scalable vectors and inherits NEON capabilities
+impl Has128BitSimd for SveToken {}
+impl HasFma for SveToken {}
+impl HasScalableVectors for SveToken {}
+
+// SVE2 extends SVE
+impl Has128BitSimd for Sve2Token {}
+impl HasFma for Sve2Token {}
+impl HasScalableVectors for Sve2Token {}
+
+// ============================================================================
 // Tests
 // ============================================================================
 

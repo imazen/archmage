@@ -29,6 +29,15 @@ impl SimdToken for Simd128Token {
     }
 }
 
+// ============================================================================
+// Capability Marker Trait Implementations
+// ============================================================================
+
+use super::Has128BitSimd;
+
+// WASM SIMD128 provides 128-bit SIMD
+impl Has128BitSimd for Simd128Token {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
