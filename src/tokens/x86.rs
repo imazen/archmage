@@ -654,7 +654,7 @@ impl Sse42Token {
 // Capability Marker Trait Implementations
 // ============================================================================
 
-use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
+use super::{DotProduct, Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma, HorizontalOps, Transpose8x8};
 
 // 128-bit SIMD: SSE2, SSE4.1, SSE4.2
 impl Has128BitSimd for Sse2Token {}
@@ -688,6 +688,142 @@ impl HasFma for FmaToken {}
 impl HasFma for Avx2FmaToken {}
 impl HasFma for X64V3Token {}
 impl HasFma for X64V4Token {}
+
+// ============================================================================
+// Operation Trait Implementations
+// ============================================================================
+
+// Transpose8x8 for Avx2Token
+impl Transpose8x8 for Avx2Token {
+    fn transpose_8x8(&self, block: &mut [f32; 64]) {
+        crate::composite::transpose::transpose_8x8(*self, block)
+    }
+
+    fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        crate::composite::transpose::transpose_8x8_copy(*self, input, output)
+    }
+}
+
+// Transpose8x8 for Avx2FmaToken (delegates to Avx2)
+impl Transpose8x8 for Avx2FmaToken {
+    fn transpose_8x8(&self, block: &mut [f32; 64]) {
+        self.avx2().transpose_8x8(block)
+    }
+
+    fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx2().transpose_8x8_copy(input, output)
+    }
+}
+
+// Transpose8x8 for X64V3Token (delegates to Avx2)
+impl Transpose8x8 for X64V3Token {
+    fn transpose_8x8(&self, block: &mut [f32; 64]) {
+        self.avx2().transpose_8x8(block)
+    }
+
+    fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx2().transpose_8x8_copy(input, output)
+    }
+}
+
+// Transpose8x8 for X64V4Token (delegates to Avx2 for now, could use AVX-512)
+impl Transpose8x8 for X64V4Token {
+    fn transpose_8x8(&self, block: &mut [f32; 64]) {
+        self.avx2().transpose_8x8(block)
+    }
+
+    fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
+        self.avx2().transpose_8x8_copy(input, output)
+    }
+}
+
+// DotProduct for Avx2FmaToken (uses FMA)
+impl DotProduct for Avx2FmaToken {
+    fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
+        crate::composite::dot_product::dot_product_f32(*self, a, b)
+    }
+}
+
+// DotProduct for X64V3Token (has FMA)
+impl DotProduct for X64V3Token {
+    fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
+        crate::composite::dot_product::dot_product_f32(self.avx2_fma(), a, b)
+    }
+}
+
+// DotProduct for X64V4Token (has FMA)
+impl DotProduct for X64V4Token {
+    fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
+        crate::composite::dot_product::dot_product_f32(self.avx2_fma(), a, b)
+    }
+}
+
+// DotProduct for Avx2Token (no FMA, uses multiply+add)
+impl DotProduct for Avx2Token {
+    fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
+        crate::composite::dot_product::dot_product_f32_no_fma(*self, a, b)
+    }
+}
+
+// HorizontalOps for Avx2Token
+impl HorizontalOps for Avx2Token {
+    fn sum_f32(&self, data: &[f32]) -> f32 {
+        crate::composite::horizontal::sum_f32_slice(*self, data)
+    }
+
+    fn max_f32(&self, data: &[f32]) -> f32 {
+        crate::composite::horizontal::max_f32_slice(*self, data)
+    }
+
+    fn min_f32(&self, data: &[f32]) -> f32 {
+        crate::composite::horizontal::min_f32_slice(*self, data)
+    }
+}
+
+// HorizontalOps for Avx2FmaToken (delegates to Avx2)
+impl HorizontalOps for Avx2FmaToken {
+    fn sum_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().sum_f32(data)
+    }
+
+    fn max_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().max_f32(data)
+    }
+
+    fn min_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().min_f32(data)
+    }
+}
+
+// HorizontalOps for X64V3Token (delegates to Avx2)
+impl HorizontalOps for X64V3Token {
+    fn sum_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().sum_f32(data)
+    }
+
+    fn max_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().max_f32(data)
+    }
+
+    fn min_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().min_f32(data)
+    }
+}
+
+// HorizontalOps for X64V4Token (delegates to Avx2 for now)
+impl HorizontalOps for X64V4Token {
+    fn sum_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().sum_f32(data)
+    }
+
+    fn max_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().max_f32(data)
+    }
+
+    fn min_f32(&self, data: &[f32]) -> f32 {
+        self.avx2().min_f32(data)
+    }
+}
 
 // ============================================================================
 // Assembly verification helpers
@@ -846,5 +982,106 @@ mod tests {
         assert_eq!(X64V3Token::NAME, "x86-64-v3");
         assert_eq!(X64V4Token::NAME, "x86-64-v4");
         assert_eq!(Sse42Token::NAME, "SSE4.2");
+    }
+
+    // ========================================================================
+    // Operation Trait Tests
+    // ========================================================================
+
+    #[test]
+    fn test_transpose_trait() {
+        if let Some(token) = Avx2Token::try_new() {
+            let original: [f32; 64] = core::array::from_fn(|i| i as f32);
+            let mut block = original;
+
+            // Use trait method
+            token.transpose_8x8(&mut block);
+
+            // Verify transpose
+            for row in 0..8 {
+                for col in 0..8 {
+                    assert_eq!(original[row * 8 + col], block[col * 8 + row]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_transpose_trait_via_profile() {
+        if let Some(token) = X64V3Token::try_new() {
+            let original: [f32; 64] = core::array::from_fn(|i| i as f32);
+            let mut block = original;
+
+            // Use trait method via profile token
+            token.transpose_8x8(&mut block);
+
+            for row in 0..8 {
+                for col in 0..8 {
+                    assert_eq!(original[row * 8 + col], block[col * 8 + row]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_dot_product_trait() {
+        if let Some(token) = Avx2FmaToken::try_new() {
+            let a: Vec<f32> = (0..64).map(|i| i as f32).collect();
+            let b: Vec<f32> = vec![1.0; 64];
+
+            // Use trait method
+            let result = token.dot_product_f32(&a, &b);
+            let expected: f32 = (0..64).map(|i| i as f32).sum();
+
+            assert!((result - expected).abs() < 0.001);
+        }
+    }
+
+    #[test]
+    fn test_horizontal_ops_trait() {
+        if let Some(token) = Avx2Token::try_new() {
+            let data: Vec<f32> = (1..=100).map(|i| i as f32).collect();
+
+            // Use trait methods
+            let sum = token.sum_f32(&data);
+            let max = token.max_f32(&data);
+            let min = token.min_f32(&data);
+
+            assert!((sum - 5050.0).abs() < 0.001);
+            assert!((max - 100.0).abs() < 0.001);
+            assert!((min - 1.0).abs() < 0.001);
+        }
+    }
+
+    #[test]
+    fn test_generic_trait_bounds() {
+        // This tests that we can write generic code over tokens
+        fn process_transpose<T: Transpose8x8>(token: T) {
+            let mut block: [f32; 64] = core::array::from_fn(|i| i as f32);
+            token.transpose_8x8(&mut block);
+        }
+
+        fn process_dot<T: DotProduct>(token: T, a: &[f32], b: &[f32]) -> f32 {
+            token.dot_product_f32(a, b)
+        }
+
+        fn process_horizontal<T: HorizontalOps>(token: T, data: &[f32]) -> f32 {
+            token.sum_f32(data)
+        }
+
+        // These compile, proving the traits work
+        if let Some(token) = Avx2Token::try_new() {
+            process_transpose(token);
+            let data = vec![1.0f32; 16];
+            let _sum = process_horizontal(token, &data);
+            let _dot = process_dot(token, &data, &data);
+        }
+
+        if let Some(token) = X64V3Token::try_new() {
+            process_transpose(token);
+            let data = vec![1.0f32; 16];
+            let _sum = process_horizontal(token, &data);
+            let _dot = process_dot(token, &data, &data);
+        }
     }
 }
