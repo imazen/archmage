@@ -75,9 +75,6 @@ Zero-sized proof types that verify CPU features at runtime:
 if let Some(token) = Avx2Token::try_new() {
     // AVX2 guaranteed available
 }
-
-// Inside multiversioned code
-let token = avx2_token!();  // Safe in multiversion context
 ```
 
 **Feature Tokens:**
