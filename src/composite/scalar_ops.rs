@@ -8,7 +8,7 @@
 //!
 //! For guaranteed SIMD performance, see [`super::simd_ops`].
 
-use super::SimdToken;
+use crate::tokens::SimdToken;
 
 /// 8x8 matrix transpose with scalar fallback.
 ///

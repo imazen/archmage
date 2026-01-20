@@ -6,7 +6,7 @@
 //! For operations that work with any token (with scalar fallback),
 //! see [`super::scalar_ops`].
 
-use super::SimdToken;
+use crate::tokens::SimdToken;
 
 /// 8x8 matrix transpose operation (SIMD-optimized).
 ///

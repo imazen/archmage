@@ -850,7 +850,7 @@ impl Sse42Token {
 // Capability Marker Trait Implementations
 // ============================================================================
 
-use super::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
+use crate::composite::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 use super::{HasSse, HasSse2, HasSse41, HasSse42, HasAvx, HasAvx2, HasAvx512f, HasAvx512vl, HasAvx512bw, HasAvx512vbmi2};
 
@@ -1043,7 +1043,7 @@ impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
 #[cfg(feature = "__composite")]
 mod simd_ops_impls {
     use super::*;
-    use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
+    use crate::composite::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 
     // Transpose8x8 for Avx2Token
     impl Transpose8x8 for Avx2Token {
@@ -1276,7 +1276,7 @@ impl HorizontalOpsOrScalar for AvxToken {}
 #[cfg(feature = "__composite")]
 mod simd_or_scalar_impls {
     use super::*;
-    use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
+    use crate::composite::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 
     impl Transpose8x8OrScalar for Avx2Token {
         #[inline(always)]
@@ -1780,7 +1780,7 @@ mod tests {
     #[cfg(feature = "__composite")]
     mod simd_ops_tests {
         use super::*;
-        use crate::tokens::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
+        use crate::composite::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
 
         #[test]
         fn test_transpose_trait() {

@@ -181,19 +181,3 @@ pub trait HasSve: HasNeon {}
 #[cfg(target_arch = "aarch64")]
 pub trait HasSve2: HasSve {}
 
-// ============================================================================
-// Operation Trait Modules
-// ============================================================================
-
-/// SIMD-optimized operation traits (require specific token implementations).
-///
-/// Use these when you need guaranteed SIMD performance.
-/// Tokens must explicitly implement these traits.
-pub mod simd_ops;
-
-/// Operation traits with scalar fallbacks.
-///
-/// Use these when you want operations to work with any token,
-/// falling back to scalar code when SIMD isn't available.
-/// The `_or_scalar` suffix on methods indicates potential fallback.
-pub mod scalar_ops;
