@@ -6,8 +6,50 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
-    parse_macro_input, parse_quote, Attribute, FnArg, Ident, ItemFn, PatType, Signature, Type,
+    parse::{Parse, ParseStream},
+    parse_macro_input, parse_quote, Attribute, FnArg, Ident, ItemFn, PatType, Signature, Token,
+    Type,
 };
+
+/// Arguments to the `#[arcane]` macro.
+struct ArcaneArgs {
+    /// Use `#[inline(always)]` instead of `#[inline]` for the inner function.
+    /// Requires nightly Rust with `#![feature(target_feature_inline_always)]`.
+    inline_always: bool,
+}
+
+impl Default for ArcaneArgs {
+    fn default() -> Self {
+        Self {
+            inline_always: false,
+        }
+    }
+}
+
+impl Parse for ArcaneArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut args = ArcaneArgs::default();
+
+        while !input.is_empty() {
+            let ident: Ident = input.parse()?;
+            match ident.to_string().as_str() {
+                "inline_always" => args.inline_always = true,
+                other => {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        format!("unknown arcane argument: `{}`", other),
+                    ))
+                }
+            }
+            // Consume optional comma
+            if input.peek(Token![,]) {
+                let _: Token![,] = input.parse()?;
+            }
+        }
+
+        Ok(args)
+    }
+}
 
 /// Maps a token type name to its required target features.
 fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
@@ -77,7 +119,7 @@ fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
 }
 
 /// Shared implementation for arcane/simd_fn macros.
-fn arcane_impl(input_fn: ItemFn, macro_name: &str) -> TokenStream {
+fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStream {
     // Find the token parameter and its features
     let (_token_ident, features) = match find_token_param(&input_fn.sig) {
         Some(result) => result,
@@ -130,14 +172,21 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str) -> TokenStream {
 
     let inner_fn_name = format_ident!("__simd_inner_{}", fn_name);
 
+    // Choose inline attribute based on args
+    // Note: #[inline(always)] + #[target_feature] requires nightly with
+    // #![feature(target_feature_inline_always)]
+    let inline_attr: Attribute = if args.inline_always {
+        parse_quote!(#[inline(always)])
+    } else {
+        parse_quote!(#[inline])
+    };
+
     // Generate the expanded function
-    // Note: #[inline(always)] cannot be combined with #[target_feature] on stable Rust.
-    // We use #[inline] instead, which still allows the compiler to inline when beneficial.
     let expanded = quote! {
         #(#attrs)*
         #vis #sig {
             #(#target_feature_attrs)*
-            #[inline]
+            #inline_attr
             unsafe fn #inner_fn_name #generics (#(#inner_params),*) #output #where_clause
             #body
 
@@ -214,17 +263,37 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str) -> TokenStream {
 /// - **x86_64 profiles**: `X64V2Token`, `X64V3Token`, `X64V4Token`
 /// - **ARM**: `NeonToken`, `SveToken`, `Sve2Token`
 /// - **WASM**: `Simd128Token`
+///
+/// # Options
+///
+/// ## `inline_always`
+///
+/// Use `#[inline(always)]` instead of `#[inline]` for the inner function.
+/// This can improve performance by ensuring aggressive inlining, but requires
+/// nightly Rust with `#![feature(target_feature_inline_always)]` enabled in
+/// the crate using the macro.
+///
+/// ```ignore
+/// #![feature(target_feature_inline_always)]
+///
+/// #[arcane(inline_always)]
+/// fn fast_kernel(token: Avx2Token, data: &mut [f32]) {
+///     // Inner function will use #[inline(always)]
+/// }
+/// ```
 #[proc_macro_attribute]
-pub fn arcane(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as ArcaneArgs);
     let input_fn = parse_macro_input!(item as ItemFn);
-    arcane_impl(input_fn, "arcane")
+    arcane_impl(input_fn, "arcane", args)
 }
 
 /// Alias for [`arcane`] - mark a function as an arcane SIMD function.
 ///
 /// See [`arcane`] for full documentation.
 #[proc_macro_attribute]
-pub fn simd_fn(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as ArcaneArgs);
     let input_fn = parse_macro_input!(item as ItemFn);
-    arcane_impl(input_fn, "simd_fn")
+    arcane_impl(input_fn, "simd_fn", args)
 }

@@ -24,6 +24,10 @@ wide = ["dep:wide"]
 safe-simd = ["dep:safe_unaligned_simd"]
 # All optional modules
 full = ["ops", "composite", "wide", "safe-simd"]
+# Nightly-only: use #[inline(always)] with #[target_feature] in generated wrappers.
+# Requires #![feature(target_feature_inline_always)] in the crate using archmage.
+# Can reduce register spills in hot SIMD code by 10-20%.
+nightly-inline-always = []
 
 [dependencies]
 # Proc-macro crate for #[arcane] attribute

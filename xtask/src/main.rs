@@ -303,7 +303,10 @@ fn generate_wrapper_string(
     writeln!(out, " {{").unwrap();
 
     // Inner function with target_feature
-    // Note: #[inline(always)] cannot be used with #[target_feature] since Rust 1.85
+    // Note: #[inline(always)] cannot be used with #[target_feature] on stable Rust.
+    // Users who need guaranteed inlining should use #[arcane(inline_always)] with
+    // nightly Rust and #![feature(target_feature_inline_always)] instead of these
+    // pre-generated wrappers.
     write!(
         out,
         "    #[inline]\n    #[target_feature(enable = \"{}\")]\n    unsafe fn inner",
