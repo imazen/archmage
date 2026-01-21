@@ -255,7 +255,7 @@ For portable SIMD without manual intrinsics, use the `wide` crate instead.
 
 ```toml
 [dependencies]
-archmage = "0.1"
+archmage = "0.2"
 ```
 
 | Feature | Description |
@@ -263,6 +263,8 @@ archmage = "0.1"
 | `std` (default) | Enable std library support |
 | `macros` (default) | Enable `#[arcane]` macro (alias: `#[simd_fn]`) |
 | `safe_unaligned_simd` (default) | Safe load/store via references (exposed as `mem` module) |
+| `avx512` | AVX-512 token support (`Avx512Token`, `X64V4Token`, etc.) |
+
 **Unstable features** (API may change):
 
 | Feature | Description |
@@ -288,6 +290,23 @@ if let Some(token) = Desktop64::summon() {
 }
 ```
 
+## Avoid `unsafe` - Use `archmage::mem`
+
+**Never use `unsafe` for memory operations.** The `archmage::mem` module provides safe equivalents for all load/store intrinsics:
+
+```rust
+// ❌ WRONG - defeats the purpose of archmage
+let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+unsafe { _mm256_storeu_ps(out.as_mut_ptr(), v) };
+
+// ✅ CORRECT - fully safe with archmage::mem
+use archmage::mem::avx;
+let v = avx::_mm256_loadu_ps(token, data);
+avx::_mm256_storeu_ps(token, &mut out, v);
+```
+
+The whole point of archmage is to make SIMD safe. If you're writing `unsafe`, you're not getting the benefit.
+
 ## Methods with Self Receivers
 
 Methods with `self`, `&self`, `&mut self` receivers are supported via the `_self = Type` argument.
@@ -295,6 +314,7 @@ Use `_self` in the function body instead of `self`:
 
 ```rust
 use archmage::{HasAvx2, arcane};
+use archmage::mem::avx;
 
 trait SimdOps {
     fn double(&self, token: impl HasAvx2) -> Self;
@@ -303,21 +323,21 @@ trait SimdOps {
 
 impl SimdOps for [f32; 8] {
     #[arcane(_self = [f32; 8])]
-    fn double(&self, _token: impl HasAvx2) -> Self {
+    fn double(&self, token: impl HasAvx2) -> Self {
         // Use _self instead of self in the body
-        let v = unsafe { _mm256_loadu_ps(_self.as_ptr()) };
+        let v = avx::_mm256_loadu_ps(token, _self);
         let doubled = _mm256_add_ps(v, v);
         let mut out = [0.0f32; 8];
-        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+        avx::_mm256_storeu_ps(token, &mut out, doubled);
         out
     }
 
     #[arcane(_self = [f32; 8])]
-    fn scale(&mut self, _token: impl HasAvx2, factor: f32) {
-        let v = unsafe { _mm256_loadu_ps(_self.as_ptr()) };
+    fn scale(&mut self, token: impl HasAvx2, factor: f32) {
+        let v = avx::_mm256_loadu_ps(token, _self);
         let scale = _mm256_set1_ps(factor);
         let scaled = _mm256_mul_ps(v, scale);
-        unsafe { _mm256_storeu_ps(_self.as_mut_ptr(), scaled) };
+        avx::_mm256_storeu_ps(token, _self, scaled);
     }
 }
 ```
