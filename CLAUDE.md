@@ -113,12 +113,12 @@ Use these intuitive names instead of memorizing microarchitecture levels:
 | Alias | Target | What it means |
 |-------|--------|---------------|
 | `Desktop64` | x86_64 desktops | AVX2 + FMA (Haswell 2013+, Zen 1+) |
-| `Server64` | x86_64 servers | + AVX-512 (Xeon 2017+, Zen 4+) |
+| `Avx512Token` | x86_64 servers | + AVX-512 (Xeon 2017+, Zen 4+) |
 | `Arm64` | AArch64 | NEON (all 64-bit ARM) |
 
 **Why these names?**
 - `Desktop64` - Universal on modern desktops. Intel removed AVX-512 from consumer chips (12th-14th gen), so this is the safe choice.
-- `Server64` - AVX-512 is reliable on Xeon servers, Intel HEDT, and AMD Zen 4+.
+- `Avx512Token` - AVX-512 is reliable on Xeon servers, Intel HEDT, and AMD Zen 4+. (`X64V4Token` is an alias)
 - `Arm64` - NEON is baseline on all AArch64, always available.
 
 ```rust
@@ -164,9 +164,9 @@ xtask/
 
 ## Token Hierarchy
 
-**Recommended (friendly aliases):**
+**Recommended:**
 - `Desktop64` = `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here for x86**
-- `Server64` = `X64V4Token` = `Avx512Token` - + AVX-512 F+BW+CD+DQ+VL (Xeon 2017+, Zen 4+)
+- `Avx512Token` = `X64V4Token` - + AVX-512 F+BW+CD+DQ+VL (Xeon 2017+, Zen 4+)
 - `Arm64` - NEON baseline **← Start here for ARM**
 
 **x86 Feature Tokens:**
@@ -188,8 +188,8 @@ fn requires_v3<T: HasX64V3>(token: T) { ... }
 ```
 
 **Width traits:** `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
-**x86 Feature traits:** `HasSse42`, `HasAvx`, `HasAvx2`, `HasAvx2Fma`, `HasX64V3`, `HasAvx512`, `HasModernAvx512`
-**Alias traits:** `HasDesktop64` = `HasX64V3`, `HasServer64` = `HasAvx512` (all equivalent)
+**x86 Feature traits:** `HasSse42`, `HasAvx`, `HasAvx2`, `HasAvx2Fma`, `HasX64V3`, `HasAvx512`, `HasX64V4`, `HasModernAvx512`
+**Alias traits:** `HasDesktop64` = `HasX64V3`
 **ARM traits:** `HasNeon`, `HasArmAes`, `HasArmSha3`, `HasArmFp16`, `HasArm64`
 
 ## Safe Memory Operations

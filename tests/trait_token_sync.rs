@@ -15,7 +15,7 @@ use archmage::tokens::x86::*;
 use archmage::SimdToken;
 use archmage::{
     Has128BitSimd, Has256BitSimd, Has512BitSimd, HasAvx, HasAvx2, HasAvx2Fma, HasAvx512,
-    HasDesktop64, HasModernAvx512, HasServer64, HasSse42, HasX64V3,
+    HasDesktop64, HasModernAvx512, HasSse42, HasX64V3, HasX64V4,
 };
 
 // =============================================================================
@@ -44,7 +44,7 @@ fn verify_has_desktop64(_token: impl HasDesktop64) {}
 fn verify_has_avx512(_token: impl HasAvx512) {}
 
 #[arcane]
-fn verify_has_server64(_token: impl HasServer64) {}
+fn verify_has_x64v4(_token: impl HasX64V4) {}
 
 #[arcane]
 fn verify_has_modern_avx512(_token: impl HasModernAvx512) {}
@@ -95,9 +95,6 @@ fn verify_avx512_fp16_token(_token: Avx512Fp16Token) {}
 
 #[arcane]
 fn verify_desktop64_alias(_token: Desktop64) {}
-
-#[arcane]
-fn verify_server64_alias(_token: Server64) {}
 
 // =============================================================================
 // Runtime test to ensure this file actually gets compiled
@@ -158,8 +155,7 @@ fn can_call_verified_functions() {
 
     if let Some(token) = X64V4Token::try_new() {
         verify_x64v4_token(token);
-        verify_server64_alias(token);
-        verify_has_server64(token);
+        verify_has_x64v4(token);
     }
 
     if let Some(token) = Avx512ModernToken::try_new() {

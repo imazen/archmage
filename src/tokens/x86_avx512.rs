@@ -1,7 +1,8 @@
 //! AVX-512 capability tokens for x86/x86_64.
 //!
 //! This module provides:
-//! - `Avx512Token` / `X64V4Token` - AVX-512 F+CD+VL+DQ+BW (x86-64-v4 level)
+//! - `Avx512Token` - AVX-512 F+CD+VL+DQ+BW (x86-64-v4 level)
+//! - `X64V4Token` - Type alias for `Avx512Token`
 //! - `Avx512ModernToken` - Full modern AVX-512 (Ice Lake / Zen 4)
 //! - `Avx512Fp16Token` - AVX-512 FP16 (Sapphire Rapids+)
 
@@ -25,7 +26,7 @@ pub struct Avx512Token {
 }
 
 impl SimdToken for Avx512Token {
-    const NAME: &'static str = "AVX-512";
+    const NAME: &'static str = "x86-64-v4";
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
@@ -87,94 +88,8 @@ impl Avx512Token {
     }
 }
 
-// ============================================================================
-// x86-64-v4 Token (alias for Avx512Token)
-// ============================================================================
-
-/// Proof that x86-64-v4 features are available.
-///
-/// x86-64-v4 = v3 + AVX-512F + AVX-512CD + AVX-512VL + AVX-512DQ + AVX-512BW.
-/// This is the Xeon Skylake-SP (2017) / Zen 4 (2022) baseline.
-///
-/// This is functionally equivalent to [`Avx512Token`].
-#[derive(Clone, Copy, Debug)]
-pub struct X64V4Token {
-    _private: (),
-}
-
-impl SimdToken for X64V4Token {
-    const NAME: &'static str = "x86-64-v4";
-
-    #[inline(always)]
-    fn try_new() -> Option<Self> {
-        // Same checks as Avx512Token
-        if crate::is_x86_feature_available!("avx512f")
-            && crate::is_x86_feature_available!("avx512cd")
-            && crate::is_x86_feature_available!("avx512vl")
-            && crate::is_x86_feature_available!("avx512dq")
-            && crate::is_x86_feature_available!("avx512bw")
-            && crate::is_x86_feature_available!("fma")
-            && crate::is_x86_feature_available!("avx2")
-            && crate::is_x86_feature_available!("bmi2")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("popcnt")
-        {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl X64V4Token {
-    /// Get a v3 token (v4 implies v3)
-    #[inline(always)]
-    pub fn v3(self) -> X64V3Token {
-        unsafe { X64V3Token::forge_token_dangerously() }
-    }
-
-    /// Get an Avx512Token (equivalent)
-    #[inline(always)]
-    pub fn avx512(self) -> Avx512Token {
-        unsafe { Avx512Token::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2+FMA token
-    #[inline(always)]
-    pub fn avx2_fma(self) -> Avx2FmaToken {
-        unsafe { Avx2FmaToken::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2 token
-    #[inline(always)]
-    pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::forge_token_dangerously() }
-    }
-
-    /// Get an AVX token
-    #[inline(always)]
-    pub fn avx(self) -> AvxToken {
-        unsafe { AvxToken::forge_token_dangerously() }
-    }
-
-    /// Get an SSE4.2 token
-    #[inline(always)]
-    pub fn sse42(self) -> Sse42Token {
-        unsafe { Sse42Token::forge_token_dangerously() }
-    }
-}
-
-/// Server/workstation baseline with AVX-512 (x86-64-v4).
-///
-/// This is an alias for [`X64V4Token`], covering Xeon servers (Skylake-SP 2017+),
-/// Intel HEDT workstations, and AMD Zen 4+ CPUs.
-pub type Server64 = X64V4Token;
+/// Alias for [`Avx512Token`] using the x86-64-v4 microarchitecture level name.
+pub type X64V4Token = Avx512Token;
 
 // ============================================================================
 // AVX-512 Modern Token (Ice Lake / Zen 4)
@@ -344,6 +259,5 @@ impl Avx512Fp16Token {
 use super::sealed::Sealed;
 
 impl Sealed for Avx512Token {}
-impl Sealed for X64V4Token {}
 impl Sealed for Avx512ModernToken {}
 impl Sealed for Avx512Fp16Token {}

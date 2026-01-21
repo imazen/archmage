@@ -261,9 +261,6 @@ pub trait HasAvx512: HasX64V3 {}
 /// Alias for [`HasAvx512`] - the x86-64-v4 profile.
 pub trait HasX64V4: HasAvx512 {}
 
-/// Alias for [`HasAvx512`] - the server/workstation baseline.
-pub trait HasServer64: HasAvx512 {}
-
 /// Marker trait for tokens that provide modern AVX-512 features (Ice Lake / Zen 4).
 ///
 /// Includes all of [`HasAvx512`] plus:

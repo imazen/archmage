@@ -85,11 +85,9 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
         "Avx512ModernToken" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl", "avx512vbmi2", "avx512vnni"]),
         "Avx512Fp16Token" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl", "avx512fp16"]),
 
-        // x86_64 profile tokens
+        // x86_64 profile tokens (X64V4Token is alias for Avx512Token)
         "X64V3Token" | "Desktop64" => Some(&["avx2", "fma", "bmi1", "bmi2"]),
-        "X64V4Token" | "Server64" => {
-            Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"])
-        }
+        "X64V4Token" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]),
 
         // ARM tokens
         "NeonToken" | "Arm64" => Some(&["neon"]),
@@ -114,7 +112,7 @@ fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {
         "HasAvx2" => Some(&["avx2"]),
         "HasAvx2Fma" => Some(&["avx2", "fma"]),
         "HasX64V3" | "HasDesktop64" => Some(&["avx2", "fma", "bmi2"]),
-        "HasAvx512" | "HasX64V4" | "HasServer64" => Some(&["avx512f", "avx512cd", "avx512vl", "avx512dq", "avx512bw"]),
+        "HasAvx512" | "HasX64V4" => Some(&["avx512f", "avx512cd", "avx512vl", "avx512dq", "avx512bw"]),
         "HasModernAvx512" => Some(&["avx512f", "avx512cd", "avx512vl", "avx512dq", "avx512bw", "avx512vbmi2", "avx512vnni"]),
 
         // Width marker traits
@@ -590,14 +588,14 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// - **x86_64**: `Sse42Token`, `AvxToken`, `Avx2Token`, `Avx2FmaToken`,
 ///   `Avx512Token`, `Avx512ModernToken`, `Avx512Fp16Token`
-/// - **x86_64 profiles**: `X64V3Token` (Desktop64), `X64V4Token` (Server64)
+/// - **x86_64 profiles**: `X64V3Token` (Desktop64), `X64V4Token` (= Avx512Token)
 /// - **ARM**: `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonFp16Token`
 /// - **WASM**: `Simd128Token`
 ///
 /// # Supported Trait Bounds
 ///
 /// - **x86_64**: `HasSse42`, `HasAvx`, `HasAvx2`, `HasAvx2Fma`,
-///   `HasX64V3`, `HasDesktop64`, `HasAvx512`, `HasX64V4`, `HasServer64`, `HasModernAvx512`
+///   `HasX64V3`, `HasDesktop64`, `HasAvx512`, `HasX64V4`, `HasModernAvx512`
 /// - **ARM**: `HasNeon`, `HasArm64`, `HasArmAes`, `HasArmSha3`, `HasArmFp16`
 /// - **Generic**: `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
 ///

@@ -7,8 +7,8 @@ use super::sealed::Sealed;
 use super::SimdToken;
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 use super::{
-    HasAvx, HasAvx2, HasAvx2Fma, HasAvx512, HasDesktop64, HasModernAvx512, HasServer64, HasSse42,
-    HasX64V3, HasX64V4,
+    HasAvx, HasAvx2, HasAvx2Fma, HasAvx512, HasDesktop64, HasModernAvx512, HasSse42, HasX64V3,
+    HasX64V4,
 };
 
 macro_rules! define_x86_stub {
@@ -41,15 +41,14 @@ define_x86_stub!(AvxToken, "AVX");
 define_x86_stub!(Avx2Token, "AVX2");
 define_x86_stub!(Avx2FmaToken, "AVX2+FMA");
 define_x86_stub!(X64V3Token, "x86-64-v3");
-define_x86_stub!(Avx512Token, "AVX-512");
-define_x86_stub!(X64V4Token, "x86-64-v4");
+define_x86_stub!(Avx512Token, "x86-64-v4");
 define_x86_stub!(Avx512ModernToken, "AVX-512Modern");
 define_x86_stub!(Avx512Fp16Token, "AVX-512FP16");
 
 /// Alias for x86-64-v3 (AVX2 + FMA) - stub on non-x86 architectures.
 pub type Desktop64 = X64V3Token;
-/// Alias for x86-64-v4 (AVX-512) - stub on non-x86 architectures.
-pub type Server64 = X64V4Token;
+/// Alias for Avx512Token using the x86-64-v4 microarchitecture level name.
+pub type X64V4Token = Avx512Token;
 
 // ============================================================================
 // Marker Trait Implementations
@@ -62,7 +61,6 @@ impl HasSse42 for Avx2Token {}
 impl HasSse42 for Avx2FmaToken {}
 impl HasSse42 for X64V3Token {}
 impl HasSse42 for Avx512Token {}
-impl HasSse42 for X64V4Token {}
 impl HasSse42 for Avx512ModernToken {}
 impl HasSse42 for Avx512Fp16Token {}
 
@@ -72,7 +70,6 @@ impl HasAvx for Avx2Token {}
 impl HasAvx for Avx2FmaToken {}
 impl HasAvx for X64V3Token {}
 impl HasAvx for Avx512Token {}
-impl HasAvx for X64V4Token {}
 impl HasAvx for Avx512ModernToken {}
 impl HasAvx for Avx512Fp16Token {}
 
@@ -81,7 +78,6 @@ impl HasAvx2 for Avx2Token {}
 impl HasAvx2 for Avx2FmaToken {}
 impl HasAvx2 for X64V3Token {}
 impl HasAvx2 for Avx512Token {}
-impl HasAvx2 for X64V4Token {}
 impl HasAvx2 for Avx512ModernToken {}
 impl HasAvx2 for Avx512Fp16Token {}
 
@@ -89,41 +85,30 @@ impl HasAvx2 for Avx512Fp16Token {}
 impl HasAvx2Fma for Avx2FmaToken {}
 impl HasAvx2Fma for X64V3Token {}
 impl HasAvx2Fma for Avx512Token {}
-impl HasAvx2Fma for X64V4Token {}
 impl HasAvx2Fma for Avx512ModernToken {}
 impl HasAvx2Fma for Avx512Fp16Token {}
 
 // HasX64V3: v3 level and above
 impl HasX64V3 for X64V3Token {}
 impl HasX64V3 for Avx512Token {}
-impl HasX64V3 for X64V4Token {}
 impl HasX64V3 for Avx512ModernToken {}
 impl HasX64V3 for Avx512Fp16Token {}
 
 // HasDesktop64: alias for HasX64V3
 impl HasDesktop64 for X64V3Token {}
 impl HasDesktop64 for Avx512Token {}
-impl HasDesktop64 for X64V4Token {}
 impl HasDesktop64 for Avx512ModernToken {}
 impl HasDesktop64 for Avx512Fp16Token {}
 
 // HasAvx512: AVX-512 F+CD+VL+DQ+BW
 impl HasAvx512 for Avx512Token {}
-impl HasAvx512 for X64V4Token {}
 impl HasAvx512 for Avx512ModernToken {}
 impl HasAvx512 for Avx512Fp16Token {}
 
 // HasX64V4: alias for HasAvx512
 impl HasX64V4 for Avx512Token {}
-impl HasX64V4 for X64V4Token {}
 impl HasX64V4 for Avx512ModernToken {}
 impl HasX64V4 for Avx512Fp16Token {}
-
-// HasServer64: alias for HasAvx512
-impl HasServer64 for Avx512Token {}
-impl HasServer64 for X64V4Token {}
-impl HasServer64 for Avx512ModernToken {}
-impl HasServer64 for Avx512Fp16Token {}
 
 // HasModernAvx512: modern AVX-512
 impl HasModernAvx512 for Avx512ModernToken {}
@@ -149,9 +134,6 @@ impl Has256BitSimd for X64V3Token {}
 impl Has128BitSimd for Avx512Token {}
 impl Has256BitSimd for Avx512Token {}
 impl Has512BitSimd for Avx512Token {}
-impl Has128BitSimd for X64V4Token {}
-impl Has256BitSimd for X64V4Token {}
-impl Has512BitSimd for X64V4Token {}
 impl Has128BitSimd for Avx512ModernToken {}
 impl Has256BitSimd for Avx512ModernToken {}
 impl Has512BitSimd for Avx512ModernToken {}
@@ -169,6 +151,5 @@ impl Sealed for Avx2Token {}
 impl Sealed for Avx2FmaToken {}
 impl Sealed for X64V3Token {}
 impl Sealed for Avx512Token {}
-impl Sealed for X64V4Token {}
 impl Sealed for Avx512ModernToken {}
 impl Sealed for Avx512Fp16Token {}

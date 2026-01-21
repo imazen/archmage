@@ -50,20 +50,8 @@ impl Transpose8x8 for X64V3Token {
     }
 }
 
-// Transpose8x8 for X64V4Token (delegates to Avx2 for now, could use AVX-512)
-impl Transpose8x8 for X64V4Token {
-    #[inline(always)]
-    fn transpose_8x8(&self, block: &mut [f32; 64]) {
-        self.avx2().transpose_8x8(block)
-    }
-
-    #[inline(always)]
-    fn transpose_8x8_copy(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        self.avx2().transpose_8x8_copy(input, output)
-    }
-}
-
 // Transpose8x8 for Avx512Token (delegates to Avx2)
+// Note: X64V4Token is a type alias for Avx512Token
 impl Transpose8x8 for Avx512Token {
     #[inline(always)]
     fn transpose_8x8(&self, block: &mut [f32; 64]) {
@@ -118,15 +106,8 @@ impl DotProduct for X64V3Token {
     }
 }
 
-// DotProduct for X64V4Token (has FMA)
-impl DotProduct for X64V4Token {
-    #[inline(always)]
-    fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
-        super::dot_product::dot_product_f32(self.avx2_fma(), a, b)
-    }
-}
-
 // DotProduct for Avx512Token (has FMA)
+// Note: X64V4Token is a type alias for Avx512Token
 impl DotProduct for Avx512Token {
     #[inline(always)]
     fn dot_product_f32(&self, a: &[f32], b: &[f32]) -> f32 {
@@ -212,25 +193,8 @@ impl HorizontalOps for X64V3Token {
     }
 }
 
-// HorizontalOps for X64V4Token (delegates to Avx2 for now)
-impl HorizontalOps for X64V4Token {
-    #[inline(always)]
-    fn sum_f32(&self, data: &[f32]) -> f32 {
-        self.avx2().sum_f32(data)
-    }
-
-    #[inline(always)]
-    fn max_f32(&self, data: &[f32]) -> f32 {
-        self.avx2().max_f32(data)
-    }
-
-    #[inline(always)]
-    fn min_f32(&self, data: &[f32]) -> f32 {
-        self.avx2().min_f32(data)
-    }
-}
-
 // HorizontalOps for Avx512Token (delegates to Avx2 for now)
+// Note: X64V4Token is a type alias for Avx512Token
 impl HorizontalOps for Avx512Token {
     #[inline(always)]
     fn sum_f32(&self, data: &[f32]) -> f32 {
@@ -334,16 +298,7 @@ impl Transpose8x8OrScalar for X64V3Token {
     }
 }
 
-impl Transpose8x8OrScalar for X64V4Token {
-    #[inline(always)]
-    fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
-        Transpose8x8::transpose_8x8(self, block)
-    }
-    #[inline(always)]
-    fn transpose_8x8_copy_or_scalar(&self, input: &[f32; 64], output: &mut [f32; 64]) {
-        Transpose8x8::transpose_8x8_copy(self, input, output)
-    }
-}
+// Note: X64V4Token is a type alias for Avx512Token, so no separate impl needed
 
 impl DotProductOrScalar for Avx2Token {
     #[inline(always)]
@@ -366,12 +321,7 @@ impl DotProductOrScalar for X64V3Token {
     }
 }
 
-impl DotProductOrScalar for X64V4Token {
-    #[inline(always)]
-    fn dot_product_f32_or_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        DotProduct::dot_product_f32(self, a, b)
-    }
-}
+// Note: X64V4Token is a type alias for Avx512Token, so no separate impl needed
 
 impl HorizontalOpsOrScalar for Avx2Token {
     #[inline(always)]
@@ -418,22 +368,8 @@ impl HorizontalOpsOrScalar for X64V3Token {
     }
 }
 
-impl HorizontalOpsOrScalar for X64V4Token {
-    #[inline(always)]
-    fn sum_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        HorizontalOps::sum_f32(self, data)
-    }
-    #[inline(always)]
-    fn max_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        HorizontalOps::max_f32(self, data)
-    }
-    #[inline(always)]
-    fn min_f32_or_scalar(&self, data: &[f32]) -> f32 {
-        HorizontalOps::min_f32(self, data)
-    }
-}
-
 // AVX-512 tokens (delegate to AVX2 implementation)
+// Note: X64V4Token is a type alias for Avx512Token
 impl Transpose8x8OrScalar for Avx512Token {
     #[inline(always)]
     fn transpose_8x8_or_scalar(&self, block: &mut [f32; 64]) {
