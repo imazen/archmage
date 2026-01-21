@@ -2,7 +2,7 @@
 //!
 //! Provides tokens for NEON, SVE, SVE2, and crypto extensions.
 //!
-//! Token construction uses [`is_aarch64_feature_available!`] which combines
+//! Token construction uses [`crate::is_crate::is_aarch64_feature_available!`] which combines
 //! compile-time and runtime detection. When compiled with a target feature
 //! enabled (e.g., in a `#[multiversed]` function), the runtime check is
 //! completely eliminated.

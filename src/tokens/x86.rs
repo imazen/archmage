@@ -9,6 +9,7 @@
 
 use super::{CompositeToken, SimdToken};
 
+
 // ============================================================================
 // SSE2 Token (baseline for x86_64)
 // ============================================================================
@@ -1124,6 +1125,7 @@ pub fn verify_avx2_fma_try_new() -> Option<Avx2FmaToken> {
 // ============================================================================
 
 #[cfg(test)]
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 mod tests {
     use super::*;
 

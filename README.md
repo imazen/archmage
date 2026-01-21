@@ -178,9 +178,35 @@ The trait hierarchy means broader tokens satisfy narrower bounds:
 | `SveToken` | SVE | Graviton 3, A64FX |
 | `Sve2Token` | SVE2 | ARMv9: Graviton 4, Cortex-X2+ |
 
-## Safe Memory Operations
+## Cross-Architecture Tokens
 
-With the `safe_unaligned_simd` feature, load/store uses references instead of raw pointers:
+All token types are available on all architectures. This makes cross-platform code easier to write without `#[cfg]` guards everywhere:
+
+```rust
+use archmage::{Desktop64, NeonToken, SimdToken};
+
+// This compiles on ARM, x86, WASM - no #[cfg] needed!
+fn process_data(data: &mut [f32]) {
+    if let Some(token) = Desktop64::summon() {
+        // AVX2 path (only succeeds on x86 with AVX2)
+        process_x86(token, data);
+    } else if let Some(token) = NeonToken::summon() {
+        // NEON path (only succeeds on AArch64)
+        process_arm(token, data);
+    } else {
+        // Scalar fallback
+        process_scalar(data);
+    }
+}
+```
+
+- `summon()` returns `None` on unsupported architectures
+- Rust's type system ensures intrinsic methods don't exist on the wrong arch
+- You get compile errors if you try to use x86 intrinsics in ARM code
+
+## Safe Memory Operations (`mem` module)
+
+The `mem` module (enabled by default) provides safe load/store using references instead of raw pointers:
 
 ```rust
 use archmage::{Desktop64, SimdToken};
@@ -195,7 +221,18 @@ if let Some(token) = Desktop64::summon() {
 }
 ```
 
-The `mem` module wrappers accept `impl HasAvx`, `impl HasSse2`, etc., so any compatible token works.
+**Available submodules:**
+
+| Module | Functions | Token Required |
+|--------|-----------|----------------|
+| `mem::sse` | `_mm_loadu_ps`, `_mm_storeu_ps`, etc. | `impl HasSse` |
+| `mem::sse2` | `_mm_loadu_pd`, `_mm_loadu_si128`, etc. | `impl HasSse2` |
+| `mem::avx` | `_mm256_loadu_ps`, `_mm256_storeu_ps`, etc. | `impl HasAvx` |
+| `mem::avx2` | `_mm256_loadu_si256`, etc. | `impl HasAvx2` |
+| `mem::avx512f` | `_mm512_loadu_ps`, etc. | `impl HasAvx512f` |
+| `mem::neon` | `vld1q_f32`, `vst1q_f32`, etc. | `impl HasNeon` |
+
+The wrappers accept any compatible token (e.g., `Desktop64` works with `mem::avx` because it implements `HasAvx`).
 
 ## When to Use archmage
 

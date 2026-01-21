@@ -2,25 +2,45 @@
 //!
 //! Tokens are zero-sized proof types that demonstrate a CPU feature is available.
 //! They can only be constructed via unsafe `forge_token_dangerously()` or fallible `try_new()`.
+//!
+//! ## Cross-Architecture Availability
+//!
+//! All token types are available on all architectures for easier cross-platform code.
+//! However, `summon()` / `try_new()` will return `None` on unsupported architectures.
+//! Rust's type system ensures intrinsic methods don't exist on the wrong arch,
+//! so you get compile errors if you try to use them incorrectly.
 
-#[cfg(target_arch = "x86_64")]
+// Platform-specific implementations
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub mod x86;
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+pub use x86::*;
 
 #[cfg(target_arch = "aarch64")]
 pub mod arm;
-
-#[cfg(target_arch = "wasm32")]
-pub mod wasm;
-
-// Re-export platform-specific tokens
-#[cfg(target_arch = "x86_64")]
-pub use x86::*;
-
 #[cfg(target_arch = "aarch64")]
 pub use arm::*;
 
 #[cfg(target_arch = "wasm32")]
+pub mod wasm;
+#[cfg(target_arch = "wasm32")]
 pub use wasm::*;
+
+// Cross-platform stubs - define types that return None on wrong arch
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+pub mod x86_stubs;
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+pub use x86_stubs::*;
+
+#[cfg(not(target_arch = "aarch64"))]
+pub mod arm_stubs;
+#[cfg(not(target_arch = "aarch64"))]
+pub use arm_stubs::*;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod wasm_stubs;
+#[cfg(not(target_arch = "wasm32"))]
+pub use wasm_stubs::*;
 
 /// Marker trait for SIMD capability tokens.
 ///
@@ -139,63 +159,54 @@ pub trait HasScalableVectors: SimdToken {}
 // These form a hierarchy matching the x86 feature dependencies.
 // Use these as bounds on generic functions to accept any token that
 // implies a specific feature.
+//
+// Available on all architectures for cross-platform code.
 
 /// Marker trait for tokens that provide SSE.
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasSse: SimdToken {}
 
 /// Marker trait for tokens that provide SSE2.
 ///
 /// SSE2 is baseline on x86_64.
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasSse2: HasSse {}
 
 /// Marker trait for tokens that provide SSE4.1.
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasSse41: HasSse2 {}
 
 /// Marker trait for tokens that provide SSE4.2.
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasSse42: HasSse41 {}
 
 /// Marker trait for tokens that provide AVX.
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasAvx: HasSse42 {}
 
 /// Marker trait for tokens that provide AVX2.
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasAvx2: HasAvx {}
 
 /// Marker trait for tokens that provide AVX-512F (Foundation).
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasAvx512f: HasAvx2 {}
 
 /// Marker trait for tokens that provide AVX-512VL (Vector Length extensions).
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasAvx512vl: HasAvx512f {}
 
 /// Marker trait for tokens that provide AVX-512BW (Byte/Word).
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasAvx512bw: HasAvx512f {}
 
 /// Marker trait for tokens that provide AVX-512VBMI2.
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub trait HasAvx512vbmi2: HasAvx512bw {}
 
 // ============================================================================
 // AArch64 Feature Marker Traits
 // ============================================================================
+//
+// Available on all architectures for cross-platform code.
 
 /// Marker trait for tokens that provide NEON.
 ///
 /// NEON is baseline on AArch64.
-#[cfg(target_arch = "aarch64")]
 pub trait HasNeon: SimdToken {}
 
 /// Marker trait for tokens that provide SVE.
-#[cfg(target_arch = "aarch64")]
 pub trait HasSve: HasNeon {}
 
 /// Marker trait for tokens that provide SVE2.
-#[cfg(target_arch = "aarch64")]
 pub trait HasSve2: HasSve {}
