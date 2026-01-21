@@ -3,7 +3,7 @@ members = [".", "archmage-macros", "xtask"]
 
 [package]
 name = "archmage"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -19,8 +19,6 @@ std = []
 macros = ["dep:archmage-macros"]
 # Safe load/store wrappers (stable)
 safe_unaligned_simd = ["dep:safe_unaligned_simd"]
-# Force all tokens to return None - useful for testing scalar fallbacks
-disable-archmage = []
 
 # Unstable features (API may change, prefixed with __)
 # Experimental newtype wrappers (broken Shl/Shr, needs const generics)

@@ -10,13 +10,12 @@
 //! Rust's type system ensures intrinsic methods don't exist on the wrong arch,
 //! so you get compile errors if you try to use them incorrectly.
 //!
-//! ## Disabling SIMD (`disable-archmage` feature)
+//! ## Disabling SIMD (`ARCHMAGE_DISABLE` environment variable)
 //!
-//! Enable the `disable-archmage` feature to force all `summon()` calls to return `None`:
+//! Set the `ARCHMAGE_DISABLE` environment variable to force all `summon()` calls to return `None`:
 //!
-//! ```toml
-//! [dependencies]
-//! archmage = { version = "0.1", features = ["disable-archmage"] }
+//! ```bash
+//! ARCHMAGE_DISABLE=1 cargo test
 //! ```
 //!
 //! This is useful for:
@@ -25,7 +24,7 @@
 //! - Debugging issues that might be SIMD-related
 //!
 //! Note: `try_new()` is unaffected and still performs actual detection. Use `summon()`
-//! for code that should respect the disable flag.
+//! for code that should respect the disable flag. Requires the `std` feature (enabled by default).
 
 // Platform-specific implementations
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
@@ -92,10 +91,11 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// This is a thematic alias for [`try_new()`](Self::try_new). Summoning may fail
     /// if the required power (CPU features) is not available.
     ///
-    /// # Feature: `disable-archmage`
+    /// # Environment Variable: `ARCHMAGE_DISABLE`
     ///
-    /// When the `disable-archmage` feature is enabled, this always returns `None`.
-    /// Useful for testing scalar fallback paths or benchmarking without SIMD.
+    /// When the `ARCHMAGE_DISABLE` environment variable is set (to any value),
+    /// this always returns `None`. Useful for testing scalar fallback paths.
+    /// Requires the `std` feature (enabled by default).
     ///
     /// # Example
     ///
@@ -108,14 +108,11 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// ```
     #[inline(always)]
     fn summon() -> Option<Self> {
-        #[cfg(feature = "disable-archmage")]
-        {
-            None
+        #[cfg(feature = "std")]
+        if std::env::var_os("ARCHMAGE_DISABLE").is_some() {
+            return None;
         }
-        #[cfg(not(feature = "disable-archmage"))]
-        {
-            Self::try_new()
-        }
+        Self::try_new()
     }
 
     /// Create a token without runtime checks.

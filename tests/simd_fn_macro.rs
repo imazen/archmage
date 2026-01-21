@@ -375,9 +375,7 @@ mod x86_tests {
     // =====================================================================
 
     /// Test that summon() works as an alias for try_new()
-    /// (Skipped when disable-archmage feature is enabled since summon() returns None)
     #[test]
-    #[cfg(not(feature = "disable-archmage"))]
     fn test_summon_alias() {
         // summon() should behave identically to try_new()
         let via_try_new = Desktop64::try_new();

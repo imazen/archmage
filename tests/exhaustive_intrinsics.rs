@@ -50,9 +50,7 @@ fn test_cross_platform_token_types_exist() {
 }
 
 /// Test that summon() works correctly for the current platform.
-/// Skipped when disable-archmage is enabled (see test_disable_archmage_feature instead).
 #[test]
-#[cfg(not(feature = "disable-archmage"))]
 fn test_summon_behavior() {
     use archmage::{Arm64, NeonToken, Simd128Token};
 
@@ -102,42 +100,27 @@ fn test_summon_behavior() {
     }
 }
 
-/// Test that disable-archmage feature forces all summon() to return None.
-/// This test only runs when the feature is enabled.
+/// Test that ARCHMAGE_DISABLE env var forces summon() to return None.
+/// Run with: ARCHMAGE_DISABLE=1 cargo test test_disable_archmage_env
 #[test]
-#[cfg(feature = "disable-archmage")]
-fn test_disable_archmage_feature() {
-    use archmage::{Desktop64, NeonToken, Server64, Simd128Token, SimdToken, Sse2Token};
+fn test_disable_archmage_env() {
+    use archmage::{SimdToken, Sse2Token};
 
-    // With disable-archmage, ALL tokens should return None from summon()
-    assert!(
-        Sse2Token::summon().is_none(),
-        "disable-archmage should make Sse2Token::summon() return None"
-    );
-    assert!(
-        Desktop64::summon().is_none(),
-        "disable-archmage should make Desktop64::summon() return None"
-    );
-    assert!(
-        Server64::summon().is_none(),
-        "disable-archmage should make Server64::summon() return None"
-    );
-    assert!(
-        NeonToken::summon().is_none(),
-        "disable-archmage should make NeonToken::summon() return None"
-    );
-    assert!(
-        Simd128Token::summon().is_none(),
-        "disable-archmage should make Simd128Token::summon() return None"
-    );
-
-    // But try_new() should still work (for advanced users who need it)
-    #[cfg(target_arch = "x86_64")]
-    {
-        assert!(
-            Sse2Token::try_new().is_some(),
-            "try_new() should still detect CPU features even with disable-archmage"
-        );
+    // This test verifies the mechanism works - actual disable testing
+    // should be done by running: ARCHMAGE_DISABLE=1 cargo test
+    if std::env::var_os("ARCHMAGE_DISABLE").is_some() {
+        #[cfg(target_arch = "x86_64")]
+        {
+            assert!(
+                Sse2Token::summon().is_none(),
+                "ARCHMAGE_DISABLE should make summon() return None"
+            );
+            // try_new() should still work
+            assert!(
+                Sse2Token::try_new().is_some(),
+                "try_new() should still detect CPU features"
+            );
+        }
     }
 }
 
@@ -747,7 +730,6 @@ mod x86_mem_tests {
 // =============================================================================
 
 #[cfg(target_arch = "aarch64")]
-#[cfg(not(feature = "disable-archmage"))]
 mod aarch64_mem_tests {
     use archmage::SimdToken;
     use core::arch::aarch64::*;

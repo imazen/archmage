@@ -263,8 +263,6 @@ archmage = "0.1"
 | `std` (default) | Enable std library support |
 | `macros` (default) | Enable `#[arcane]` macro (alias: `#[simd_fn]`) |
 | `safe_unaligned_simd` (default) | Safe load/store via references (exposed as `mem` module) |
-| `disable-archmage` | Force all `summon()` calls to return `None` (for testing fallbacks) |
-
 **Unstable features** (API may change):
 
 | Feature | Description |
@@ -274,19 +272,19 @@ archmage = "0.1"
 
 ### Testing Scalar Fallbacks
 
-Enable `disable-archmage` to force scalar code paths:
+Set the `ARCHMAGE_DISABLE` environment variable to force scalar code paths:
 
-```toml
-[dev-dependencies]
-archmage = { version = "0.1", features = ["disable-archmage"] }
+```bash
+ARCHMAGE_DISABLE=1 cargo test
+ARCHMAGE_DISABLE=1 cargo run --release
 ```
 
 ```rust
-// With disable-archmage, this always takes the fallback path
+// With ARCHMAGE_DISABLE set, this always takes the fallback path
 if let Some(token) = Desktop64::summon() {
     simd_path(token, &mut data);
 } else {
-    scalar_fallback(&mut data);  // Always runs with disable-archmage
+    scalar_fallback(&mut data);  // Always runs with ARCHMAGE_DISABLE
 }
 ```
 
