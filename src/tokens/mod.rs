@@ -88,6 +88,14 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// ```
     fn try_new() -> Option<Self>;
 
+    /// Attempt to create a token with runtime feature detection.
+    ///
+    /// This is an alias for [`try_new()`](Self::try_new).
+    #[inline(always)]
+    fn attempt() -> Option<Self> {
+        Self::try_new()
+    }
+
     /// Summon a token if the CPU supports this feature.
     ///
     /// This is a thematic alias for [`try_new()`](Self::try_new). Summoning may fail
