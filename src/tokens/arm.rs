@@ -236,23 +236,15 @@ pub type Arm64 = NeonFp16Token;
 // Capability Marker Trait Implementations
 // ============================================================================
 
-use super::{Has128BitSimd, HasFma};
+use super::Has128BitSimd;
 use super::{HasArm64, HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 
-// NEON provides 128-bit SIMD and FMA
+// NEON provides 128-bit SIMD
+// Note: HasFma is x86-specific (requires HasAvx2). ARM has FMA via NEON intrinsics.
 impl Has128BitSimd for NeonToken {}
-impl HasFma for NeonToken {} // NEON has fused multiply-add instructions
-
-// Crypto tokens inherit NEON capabilities
 impl Has128BitSimd for NeonAesToken {}
-impl HasFma for NeonAesToken {}
-
 impl Has128BitSimd for NeonSha3Token {}
-impl HasFma for NeonSha3Token {}
-
-// FP16 token inherits NEON capabilities
 impl Has128BitSimd for NeonFp16Token {}
-impl HasFma for NeonFp16Token {}
 
 // ============================================================================
 // AArch64 Feature Marker Trait Implementations

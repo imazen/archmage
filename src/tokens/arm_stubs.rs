@@ -5,7 +5,7 @@
 
 use super::sealed::Sealed;
 use super::SimdToken;
-use super::{Has128BitSimd, HasFma};
+use super::Has128BitSimd;
 use super::{HasArm64, HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 
 macro_rules! define_arm_stub {
@@ -44,17 +44,11 @@ define_arm_stub!(NeonFp16Token, "NEON+FP16");
 pub type Arm64 = NeonFp16Token;
 
 // Implement marker traits for stubs
+// Note: HasFma is x86-specific (requires HasAvx2). ARM has FMA via NEON intrinsics.
 impl Has128BitSimd for NeonToken {}
-impl HasFma for NeonToken {}
-
 impl Has128BitSimd for NeonAesToken {}
-impl HasFma for NeonAesToken {}
-
 impl Has128BitSimd for NeonSha3Token {}
-impl HasFma for NeonSha3Token {}
-
 impl Has128BitSimd for NeonFp16Token {}
-impl HasFma for NeonFp16Token {}
 
 impl HasNeon for NeonToken {}
 impl HasNeon for NeonAesToken {}

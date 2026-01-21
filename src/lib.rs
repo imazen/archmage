@@ -109,13 +109,14 @@ pub use tokens::SimdToken;
 pub use tokens::CompositeToken;
 
 // Capability marker traits
-pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
+pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 
 // x86 feature marker traits (available on all architectures for cross-platform code)
-// Note: SSE4.2 is the baseline - HasSse, HasSse2, HasSse41 have been removed
+// x86 feature marker traits
+// Hierarchy: SSE4.2 → AVX → AVX2 → FMA → X64V3 → AVX-512 → ModernAVX-512
 pub use tokens::{
-    HasAvx, HasAvx2, HasAvx512bw, HasAvx512cd, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl,
-    HasSse42,
+    HasAvx, HasAvx2, HasAvx512, HasDesktop64, HasFma, HasModernAvx512, HasServer64, HasSse42,
+    HasX64V3, HasX64V4,
 };
 
 // aarch64 feature marker traits (available on all architectures)
@@ -125,31 +126,23 @@ pub use tokens::{HasArm64, HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 pub use tokens::{
     // ARM tokens
     Arm64,
-    // x86 tokens
-    Avx2FmaToken,
-    Avx2Token,
-    Avx512Fp16Token,
-    Avx512ModernToken,
-    Avx512Vbmi2Token,
-    Avx512Vbmi2VlToken,
-    Avx512bwToken,
-    Avx512bwVlToken,
-    Avx512fToken,
-    Avx512fVlToken,
-    AvxToken,
-    Desktop64,
-    FmaToken,
     NeonAesToken,
     NeonFp16Token,
     NeonSha3Token,
     NeonToken,
+    // x86 tokens (SSE4.2 is the baseline)
+    Avx2FmaToken,
+    Avx2Token,
+    Avx512Fp16Token,
+    Avx512ModernToken,
+    Avx512Token,
+    AvxToken,
+    Desktop64,
     Server64,
-    // WASM tokens
-    Simd128Token,
-    // SSE4.2 is the baseline (SSE, SSE2, SSE4.1 tokens removed)
     Sse42Token,
-    X64V2Token,
     X64V3Token,
     X64V4Token,
+    // WASM tokens
+    Simd128Token,
 };
 

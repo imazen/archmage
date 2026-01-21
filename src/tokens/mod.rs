@@ -198,23 +198,11 @@ pub trait Has256BitSimd: Has128BitSimd {}
 /// This trait is sealed and cannot be implemented outside this crate.
 pub trait Has512BitSimd: Has256BitSimd {}
 
-/// Marker trait for tokens that provide FMA (fused multiply-add).
-///
-/// Implemented by: `FmaToken`, `Avx2FmaToken`, `X64V3Token`, `NeonToken`
-///
-/// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasFma: SimdToken + sealed::Sealed {}
-
 // ============================================================================
 // x86 Feature Marker Traits (Sealed)
 // ============================================================================
 //
-// These form a hierarchy matching the x86 feature dependencies.
-// Use these as bounds on generic functions to accept any token that
-// implies a specific feature.
-//
-// Available on all architectures for cross-platform code.
-// All traits are sealed - cannot be implemented outside this crate.
+// Hierarchy: SSE4.2 → AVX → AVX2 → FMA → X64V3 → AVX-512 → ModernAVX-512
 //
 // NOTE: SSE4.2 is the baseline. HasSse, HasSse2, HasSse41 have been removed.
 // All x86 tokens assume at least SSE4.2 is available.
@@ -239,41 +227,53 @@ pub trait HasAvx: HasSse42 {}
 /// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx2: HasAvx {}
 
-/// Marker trait for tokens that provide AVX-512F (Foundation).
+/// Marker trait for tokens that provide FMA (fused multiply-add).
+///
+/// FMA requires AVX2 in this library's model (all practical FMA CPUs have AVX2).
+///
+/// Implemented by: `Avx2FmaToken`, `X64V3Token`, `Avx512Token`, `Avx512ModernToken`
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasAvx512f: HasAvx2 {}
+pub trait HasFma: HasAvx2 {}
 
-/// Marker trait for tokens that provide AVX-512VL (Vector Length extensions).
+/// Marker trait for tokens that provide x86-64-v3 level features.
+///
+/// x86-64-v3 = AVX2 + FMA + BMI1 + BMI2 + F16C + LZCNT + MOVBE
+/// This is the recommended baseline for modern desktop code (Haswell 2013+, Zen 1+).
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasAvx512vl: HasAvx512f {}
+pub trait HasX64V3: HasFma {}
 
-/// Marker trait for tokens that provide AVX-512BW (Byte/Word).
-///
-/// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasAvx512bw: HasAvx512f {}
+/// Alias for [`HasX64V3`] - the recommended desktop baseline.
+pub trait HasDesktop64: HasX64V3 {}
 
-/// Marker trait for tokens that provide AVX-512CD (Conflict Detection).
+/// Marker trait for tokens that provide AVX-512 (F + CD + VL + DQ + BW).
 ///
-/// AVX-512CD provides conflict detection for scatter operations.
-/// Present on all practical AVX-512 CPUs (Skylake-X 2017+, Zen 4+).
+/// This is the complete x86-64-v4 AVX-512 feature set, available on:
+/// - Intel Skylake-X (2017+), Ice Lake, Sapphire Rapids
+/// - AMD Zen 4+ (2022+)
+///
+/// Note: Intel 12th-14th gen consumer CPUs do NOT have AVX-512.
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasAvx512cd: HasAvx512f {}
+pub trait HasAvx512: HasX64V3 {}
 
-/// Marker trait for tokens that provide AVX-512DQ (Doubleword/Quadword).
-///
-/// AVX-512DQ provides float bitwise ops (`_mm512_or_ps`, etc.) and conversions.
-/// Present on all practical AVX-512 CPUs (Skylake-X 2017+, Zen 4+).
-///
-/// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasAvx512dq: HasAvx512f {}
+/// Alias for [`HasAvx512`] - the x86-64-v4 profile.
+pub trait HasX64V4: HasAvx512 {}
 
-/// Marker trait for tokens that provide AVX-512VBMI2.
+/// Alias for [`HasAvx512`] - the server/workstation baseline.
+pub trait HasServer64: HasAvx512 {}
+
+/// Marker trait for tokens that provide modern AVX-512 features (Ice Lake / Zen 4).
+///
+/// Includes all of [`HasAvx512`] plus:
+/// VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI, BF16, VPCLMULQDQ, GFNI, VAES
+///
+/// Available on Intel Ice Lake (2019+), Sapphire Rapids, AMD Zen 4+.
+/// NOT available on Skylake-X.
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasAvx512vbmi2: HasAvx512bw {}
+pub trait HasModernAvx512: HasAvx512 {}
 
 // ============================================================================
 // AArch64 Feature Marker Traits (Sealed)

@@ -14,9 +14,7 @@ use archmage::tokens::x86::*;
 fn tokens_are_zst() {
     assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
     assert_eq!(core::mem::size_of::<Avx2Token>(), 0);
-    assert_eq!(core::mem::size_of::<FmaToken>(), 0);
     assert_eq!(core::mem::size_of::<Avx2FmaToken>(), 0);
-    assert_eq!(core::mem::size_of::<X64V2Token>(), 0);
     assert_eq!(core::mem::size_of::<X64V3Token>(), 0);
     assert_eq!(core::mem::size_of::<X64V4Token>(), 0);
 }
@@ -27,9 +25,7 @@ fn tokens_are_copy() {
     fn assert_copy<T: Copy>() {}
     assert_copy::<Sse42Token>();
     assert_copy::<Avx2Token>();
-    assert_copy::<FmaToken>();
     assert_copy::<Avx2FmaToken>();
-    assert_copy::<X64V2Token>();
     assert_copy::<X64V3Token>();
     assert_copy::<X64V4Token>();
 }
@@ -49,9 +45,7 @@ fn sse42_minimum_supported() {
 fn token_names() {
     assert_eq!(Sse42Token::NAME, "SSE4.2");
     assert_eq!(Avx2Token::NAME, "AVX2");
-    assert_eq!(FmaToken::NAME, "FMA");
     assert_eq!(Avx2FmaToken::NAME, "AVX2+FMA");
-    assert_eq!(X64V2Token::NAME, "x86-64-v2");
     assert_eq!(X64V3Token::NAME, "x86-64-v3");
     assert_eq!(X64V4Token::NAME, "x86-64-v4");
 }
@@ -72,10 +66,8 @@ fn token_hierarchy_avx2_implies_sse42() {
 fn token_hierarchy_avx2fma() {
     if let Some(token) = Avx2FmaToken::try_new() {
         let _avx2: Avx2Token = token.avx2();
-        let _fma: FmaToken = token.fma();
         let _avx: AvxToken = token.avx();
-        let _sse41: Sse42Token = token.sse42();
-        let _sse2: Sse42Token = token.sse42();
+        let _sse42: Sse42Token = token.sse42();
     }
 }
 
@@ -84,8 +76,9 @@ fn token_hierarchy_avx2fma() {
 fn token_hierarchy_x64v3() {
     if let Some(token) = X64V3Token::try_new() {
         let _avx2: Avx2Token = token.avx2();
-        let _fma: FmaToken = token.fma();
         let _avx2_fma: Avx2FmaToken = token.avx2_fma();
+        let _avx: AvxToken = token.avx();
+        let _sse42: Sse42Token = token.sse42();
     }
 }
 

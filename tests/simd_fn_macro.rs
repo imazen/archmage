@@ -219,10 +219,10 @@ mod x86_tests {
         }
     }
 
-    /// Test with multiple trait bounds using impl Trait
+    /// Test with FMA trait bound using impl Trait (HasFma implies HasAvx2)
     #[simd_fn]
     fn impl_trait_multi_bounds(
-        token: impl HasAvx2 + HasFma,
+        token: impl HasFma,
         a: &[f32; 8],
         b: &[f32; 8],
         c: &[f32; 8],
@@ -250,9 +250,9 @@ mod x86_tests {
         }
     }
 
-    /// Test with multiple trait bounds using generic type parameter
+    /// Test with FMA trait bound using generic type parameter (HasFma implies HasAvx2)
     #[simd_fn]
-    fn generic_multi_bounds<T: HasAvx2 + HasFma>(
+    fn generic_multi_bounds<T: HasFma>(
         token: T,
         a: &[f32; 8],
         b: &[f32; 8],

@@ -18,13 +18,10 @@
 //! All tokens explicitly check ALL features they claim to provide. This ensures
 //! soundness - a token's trait implementations exactly match its runtime checks.
 
-use super::{CompositeToken, SimdToken};
+use super::SimdToken;
 
 // Re-export AVX-512 tokens from the dedicated module
-pub use super::x86_avx512::{
-    Avx512Fp16Token, Avx512ModernToken, Avx512Vbmi2Token, Avx512Vbmi2VlToken, Avx512bwToken,
-    Avx512bwVlToken, Avx512fToken, Avx512fVlToken, Server64, X64V4Token,
-};
+pub use super::x86_avx512::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};
 
 // ============================================================================
 // SSE4.2 Token (baseline for archmage)
@@ -149,67 +146,18 @@ impl Avx2Token {
 }
 
 // ============================================================================
-// FMA Token
+// AVX2 + FMA Token
 // ============================================================================
 
-/// Proof that FMA (Fused Multiply-Add) is available.
+/// Proof that AVX2 + FMA are available.
 ///
-/// FMA is independent of AVX2 in the feature hierarchy but almost always
-/// available together on modern CPUs. Use `Avx2FmaToken` for the common case.
-#[derive(Clone, Copy, Debug)]
-pub struct FmaToken {
-    _private: (),
-}
-
-impl SimdToken for FmaToken {
-    const NAME: &'static str = "FMA";
-
-    #[inline(always)]
-    fn try_new() -> Option<Self> {
-        // Explicit cumulative check: FMA + AVX + SSE4.2
-        // (FMA requires AVX, which requires SSE4.2)
-        if crate::is_x86_feature_available!("fma")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("sse4.2")
-        {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl FmaToken {
-    /// Get an AVX token (FMA implies AVX)
-    #[inline(always)]
-    pub fn avx(self) -> AvxToken {
-        unsafe { AvxToken::forge_token_dangerously() }
-    }
-
-    /// Get an SSE4.2 token (FMA implies SSE4.2)
-    #[inline(always)]
-    pub fn sse42(self) -> Sse42Token {
-        unsafe { Sse42Token::forge_token_dangerously() }
-    }
-}
-
-// ============================================================================
-// Combined AVX2 + FMA Token
-// ============================================================================
-
-/// Combined proof that both AVX2 and FMA are available.
+/// This is the standard token for floating-point SIMD work.
+/// All CPUs with AVX2 also have FMA (Haswell 2013+, Zen 1+).
 ///
-/// This is the most common token for floating-point SIMD work.
-/// Almost all CPUs with AVX2 also have FMA (Haswell and later).
+/// In archmage's model, FMA requires AVX2 - use this token for FMA operations.
 #[derive(Clone, Copy, Debug)]
 pub struct Avx2FmaToken {
-    avx2: Avx2Token,
-    fma: FmaToken,
+    _private: (),
 }
 
 impl SimdToken for Avx2FmaToken {
@@ -231,91 +179,23 @@ impl SimdToken for Avx2FmaToken {
 
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
-        Self {
-            avx2: unsafe { Avx2Token::forge_token_dangerously() },
-            fma: unsafe { FmaToken::forge_token_dangerously() },
-        }
-    }
-}
-
-impl CompositeToken for Avx2FmaToken {
-    type Components = (Avx2Token, FmaToken);
-
-    #[inline(always)]
-    fn components(&self) -> Self::Components {
-        (self.avx2, self.fma)
-    }
-}
-
-impl Avx2FmaToken {
-    /// Get the AVX2 component token
-    #[inline(always)]
-    pub fn avx2(&self) -> Avx2Token {
-        self.avx2
-    }
-
-    /// Get the FMA component token
-    #[inline(always)]
-    pub fn fma(&self) -> FmaToken {
-        self.fma
-    }
-
-    /// Get an AVX token
-    #[inline(always)]
-    pub fn avx(&self) -> AvxToken {
-        self.avx2.avx()
-    }
-
-    /// Get an SSE4.2 token
-    #[inline(always)]
-    pub fn sse42(&self) -> Sse42Token {
-        self.avx2.sse42()
-    }
-}
-
-// ============================================================================
-// x86-64 Microarchitecture Level Tokens (Profiles)
-// ============================================================================
-//
-// These match the x86-64 psABI microarchitecture levels used by multiversed:
-// https://gitlab.com/x86-psABIs/x86-64-ABI
-//
-// | Level | Key Features                           | Hardware              |
-// |-------|----------------------------------------|-----------------------|
-// | v2    | SSE4.2, POPCNT                         | Nehalem 2008+         |
-// | v3    | + AVX, AVX2, FMA, BMI1, BMI2           | Haswell 2013+, Zen 1+ |
-// | v4    | + AVX-512F/BW/CD/DQ/VL                 | Xeon 2017+, Zen 4+    |
-
-/// Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).
-///
-/// x86-64-v2 is the Nehalem (2008) / Bulldozer (2011) baseline.
-#[derive(Clone, Copy, Debug)]
-pub struct X64V2Token {
-    _private: (),
-}
-
-impl SimdToken for X64V2Token {
-    const NAME: &'static str = "x86-64-v2";
-
-    #[inline(always)]
-    fn try_new() -> Option<Self> {
-        // Explicit cumulative check: SSE4.2 + POPCNT
-        if crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("popcnt")
-        {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
 
-impl X64V2Token {
+impl Avx2FmaToken {
+    /// Get an AVX2 token
+    #[inline(always)]
+    pub fn avx2(self) -> Avx2Token {
+        unsafe { Avx2Token::forge_token_dangerously() }
+    }
+
+    /// Get an AVX token
+    #[inline(always)]
+    pub fn avx(self) -> AvxToken {
+        unsafe { AvxToken::forge_token_dangerously() }
+    }
+
     /// Get an SSE4.2 token
     #[inline(always)]
     pub fn sse42(self) -> Sse42Token {
@@ -323,12 +203,26 @@ impl X64V2Token {
     }
 }
 
+// ============================================================================
+// x86-64 Microarchitecture Level Tokens (Profiles)
+// ============================================================================
+//
+// These match the x86-64 psABI microarchitecture levels:
+// https://gitlab.com/x86-psABIs/x86-64-ABI
+//
+// | Level | Key Features                           | Hardware              |
+// |-------|----------------------------------------|-----------------------|
+// | v3    | AVX2, FMA, BMI1, BMI2, F16C, LZCNT     | Haswell 2013+, Zen 1+ |
+// | v4    | + AVX-512F/BW/CD/DQ/VL                 | Xeon 2017+, Zen 4+    |
+//
+// Note: v2 (SSE4.2 + POPCNT) is below our baseline and not provided as a token.
+
 /// Proof that AVX2 + FMA + BMI1/2 are available (x86-64-v3 level).
 ///
-/// x86-64-v3 implies all of v2 plus: AVX, AVX2, FMA, BMI1, BMI2, F16C, LZCNT, MOVBE.
+/// x86-64-v3 = AVX2 + FMA + BMI1 + BMI2 + F16C + LZCNT + MOVBE + POPCNT + SSE4.2
 /// This is the Haswell (2013) / Zen 1 (2017) baseline.
 ///
-/// This is the most commonly targeted level for high-performance SIMD code.
+/// This is the recommended baseline for modern desktop SIMD code.
 #[derive(Clone, Copy, Debug)]
 pub struct X64V3Token {
     _private: (),
@@ -360,13 +254,7 @@ impl SimdToken for X64V3Token {
 }
 
 impl X64V3Token {
-    /// Get a v2 token (v3 implies v2)
-    #[inline(always)]
-    pub fn v2(self) -> X64V2Token {
-        unsafe { X64V2Token::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2+FMA combined token
+    /// Get an AVX2+FMA token
     #[inline(always)]
     pub fn avx2_fma(self) -> Avx2FmaToken {
         unsafe { Avx2FmaToken::forge_token_dangerously() }
@@ -376,12 +264,6 @@ impl X64V3Token {
     #[inline(always)]
     pub fn avx2(self) -> Avx2Token {
         unsafe { Avx2Token::forge_token_dangerously() }
-    }
-
-    /// Get an FMA token
-    #[inline(always)]
-    pub fn fma(self) -> FmaToken {
-        unsafe { FmaToken::forge_token_dangerously() }
     }
 
     /// Get an AVX token
@@ -402,171 +284,124 @@ impl X64V3Token {
 // ============================================================================
 
 use super::sealed::Sealed;
-use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
+use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 use super::{
-    HasAvx, HasAvx2, HasAvx512bw, HasAvx512cd, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl,
-    HasSse42,
+    HasAvx, HasAvx2, HasAvx512, HasDesktop64, HasFma, HasModernAvx512, HasServer64, HasSse42,
+    HasX64V3, HasX64V4,
 };
 
 // Sealed trait implementations (required for marker traits)
 impl Sealed for Sse42Token {}
 impl Sealed for AvxToken {}
 impl Sealed for Avx2Token {}
-impl Sealed for FmaToken {}
 impl Sealed for Avx2FmaToken {}
-impl Sealed for X64V2Token {}
 impl Sealed for X64V3Token {}
 // AVX-512 tokens are sealed in x86_avx512.rs
 
-// HasSse42: All tokens (SSE4.2 is baseline)
+// HasSse42: All x86 tokens (SSE4.2 is baseline)
 impl HasSse42 for Sse42Token {}
 impl HasSse42 for AvxToken {}
 impl HasSse42 for Avx2Token {}
-impl HasSse42 for FmaToken {}
 impl HasSse42 for Avx2FmaToken {}
-impl HasSse42 for X64V2Token {}
 impl HasSse42 for X64V3Token {}
-impl HasSse42 for Avx512fToken {}
-impl HasSse42 for Avx512fVlToken {}
-impl HasSse42 for Avx512bwToken {}
-impl HasSse42 for Avx512bwVlToken {}
-impl HasSse42 for Avx512Vbmi2Token {}
-impl HasSse42 for Avx512Vbmi2VlToken {}
+impl HasSse42 for Avx512Token {}
 impl HasSse42 for X64V4Token {}
-// Avx512ModernToken HasSse42 impl is in x86_avx512.rs with its definition
+impl HasSse42 for Avx512ModernToken {}
 impl HasSse42 for Avx512Fp16Token {}
-
-// 128-bit SIMD: SSE4.2+
-impl Has128BitSimd for Sse42Token {}
-impl Has128BitSimd for X64V2Token {}
-
-// 256-bit SIMD: AVX, AVX2, AVX2+FMA, profile tokens
-impl Has128BitSimd for AvxToken {}
-impl Has256BitSimd for AvxToken {}
-impl Has128BitSimd for Avx2Token {}
-impl Has256BitSimd for Avx2Token {}
-impl Has128BitSimd for FmaToken {}
-impl Has256BitSimd for FmaToken {}
-impl Has128BitSimd for Avx2FmaToken {}
-impl Has256BitSimd for Avx2FmaToken {}
-impl Has128BitSimd for X64V3Token {}
-impl Has256BitSimd for X64V3Token {}
-
-// 512-bit SIMD: AVX-512 tokens, v4 profile
-impl Has128BitSimd for Avx512fToken {}
-impl Has256BitSimd for Avx512fToken {}
-impl Has512BitSimd for Avx512fToken {}
-impl Has128BitSimd for Avx512bwToken {}
-impl Has256BitSimd for Avx512bwToken {}
-impl Has512BitSimd for Avx512bwToken {}
-impl Has128BitSimd for X64V4Token {}
-impl Has256BitSimd for X64V4Token {}
-impl Has512BitSimd for X64V4Token {}
-
-// AVX-512 + VL tokens (have all three widths)
-impl Has128BitSimd for Avx512fVlToken {}
-impl Has256BitSimd for Avx512fVlToken {}
-impl Has512BitSimd for Avx512fVlToken {}
-impl Has128BitSimd for Avx512bwVlToken {}
-impl Has256BitSimd for Avx512bwVlToken {}
-impl Has512BitSimd for Avx512bwVlToken {}
-impl Has128BitSimd for Avx512Vbmi2Token {}
-impl Has256BitSimd for Avx512Vbmi2Token {}
-impl Has512BitSimd for Avx512Vbmi2Token {}
-impl Has128BitSimd for Avx512Vbmi2VlToken {}
-impl Has256BitSimd for Avx512Vbmi2VlToken {}
-impl Has512BitSimd for Avx512Vbmi2VlToken {}
-// Avx512ModernToken trait impls are in x86_avx512.rs with its definition
-impl Has128BitSimd for Avx512Fp16Token {}
-impl Has256BitSimd for Avx512Fp16Token {}
-impl Has512BitSimd for Avx512Fp16Token {}
-
-// FMA support
-impl HasFma for FmaToken {}
-impl HasFma for Avx2FmaToken {}
-impl HasFma for X64V3Token {}
-impl HasFma for X64V4Token {}
-impl HasFma for Avx512fToken {}
-impl HasFma for Avx512fVlToken {}
-impl HasFma for Avx512bwToken {}
-impl HasFma for Avx512bwVlToken {}
-impl HasFma for Avx512Vbmi2Token {}
-impl HasFma for Avx512Vbmi2VlToken {}
-impl HasFma for Avx512Fp16Token {}
-
-// ============================================================================
-// x86 Feature Marker Trait Implementations
-// ============================================================================
-//
-// These allow any token that implies a feature to be used where that feature
-// is required. E.g., Avx2Token implements HasAvx, so it can be passed to
-// functions that accept `impl HasAvx`.
 
 // HasAvx: AVX and above
 impl HasAvx for AvxToken {}
 impl HasAvx for Avx2Token {}
-impl HasAvx for FmaToken {}
 impl HasAvx for Avx2FmaToken {}
-impl HasAvx for Avx512fToken {}
-impl HasAvx for Avx512fVlToken {}
-impl HasAvx for Avx512bwToken {}
-impl HasAvx for Avx512bwVlToken {}
-impl HasAvx for Avx512Vbmi2Token {}
-impl HasAvx for Avx512Vbmi2VlToken {}
 impl HasAvx for X64V3Token {}
+impl HasAvx for Avx512Token {}
 impl HasAvx for X64V4Token {}
+impl HasAvx for Avx512ModernToken {}
 impl HasAvx for Avx512Fp16Token {}
 
 // HasAvx2: AVX2 and above
 impl HasAvx2 for Avx2Token {}
 impl HasAvx2 for Avx2FmaToken {}
-impl HasAvx2 for Avx512fToken {}
-impl HasAvx2 for Avx512fVlToken {}
-impl HasAvx2 for Avx512bwToken {}
-impl HasAvx2 for Avx512bwVlToken {}
-impl HasAvx2 for Avx512Vbmi2Token {}
-impl HasAvx2 for Avx512Vbmi2VlToken {}
 impl HasAvx2 for X64V3Token {}
+impl HasAvx2 for Avx512Token {}
 impl HasAvx2 for X64V4Token {}
+impl HasAvx2 for Avx512ModernToken {}
 impl HasAvx2 for Avx512Fp16Token {}
 
-// HasAvx512f: AVX-512F and above
-impl HasAvx512f for Avx512fToken {}
-impl HasAvx512f for Avx512fVlToken {}
-impl HasAvx512f for Avx512bwToken {}
-impl HasAvx512f for Avx512bwVlToken {}
-impl HasAvx512f for Avx512Vbmi2Token {}
-impl HasAvx512f for Avx512Vbmi2VlToken {}
-impl HasAvx512f for X64V4Token {}
-impl HasAvx512f for Avx512Fp16Token {}
+// HasFma: FMA and above (requires AVX2 in our model)
+impl HasFma for Avx2FmaToken {}
+impl HasFma for X64V3Token {}
+impl HasFma for Avx512Token {}
+impl HasFma for X64V4Token {}
+impl HasFma for Avx512ModernToken {}
+impl HasFma for Avx512Fp16Token {}
 
-// HasAvx512vl: AVX-512VL tokens
-impl HasAvx512vl for Avx512fVlToken {}
-impl HasAvx512vl for Avx512bwVlToken {}
-impl HasAvx512vl for Avx512Vbmi2VlToken {}
-impl HasAvx512vl for X64V4Token {}
-impl HasAvx512vl for Avx512Fp16Token {}
+// HasX64V3: x86-64-v3 level (AVX2 + FMA + BMI2)
+impl HasX64V3 for X64V3Token {}
+impl HasX64V3 for Avx512Token {}
+impl HasX64V3 for X64V4Token {}
+impl HasX64V3 for Avx512ModernToken {}
+impl HasX64V3 for Avx512Fp16Token {}
 
-// HasAvx512bw: AVX-512BW and above
-impl HasAvx512bw for Avx512bwToken {}
-impl HasAvx512bw for Avx512bwVlToken {}
-impl HasAvx512bw for Avx512Vbmi2Token {}
-impl HasAvx512bw for Avx512Vbmi2VlToken {}
-impl HasAvx512bw for X64V4Token {}
-impl HasAvx512bw for Avx512Fp16Token {}
+// HasDesktop64: alias for HasX64V3
+impl HasDesktop64 for X64V3Token {}
+impl HasDesktop64 for Avx512Token {}
+impl HasDesktop64 for X64V4Token {}
+impl HasDesktop64 for Avx512ModernToken {}
+impl HasDesktop64 for Avx512Fp16Token {}
 
-// HasAvx512cd: AVX-512CD (part of x86-64-v4)
-impl HasAvx512cd for X64V4Token {}
-impl HasAvx512cd for Avx512Fp16Token {}
+// HasAvx512: AVX-512 F+CD+VL+DQ+BW (x86-64-v4 level)
+impl HasAvx512 for Avx512Token {}
+impl HasAvx512 for X64V4Token {}
+impl HasAvx512 for Avx512ModernToken {}
+impl HasAvx512 for Avx512Fp16Token {}
 
-// HasAvx512dq: AVX-512DQ (part of x86-64-v4)
-impl HasAvx512dq for X64V4Token {}
-impl HasAvx512dq for Avx512Fp16Token {}
+// HasX64V4: alias for HasAvx512
+impl HasX64V4 for Avx512Token {}
+impl HasX64V4 for X64V4Token {}
+impl HasX64V4 for Avx512ModernToken {}
+impl HasX64V4 for Avx512Fp16Token {}
 
-// HasAvx512vbmi2: AVX-512VBMI2 tokens
-impl HasAvx512vbmi2 for Avx512Vbmi2Token {}
-impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
-impl HasAvx512vbmi2 for Avx512Fp16Token {}
+// HasServer64: alias for HasAvx512
+impl HasServer64 for Avx512Token {}
+impl HasServer64 for X64V4Token {}
+impl HasServer64 for Avx512ModernToken {}
+impl HasServer64 for Avx512Fp16Token {}
+
+// HasModernAvx512: modern AVX-512 (Ice Lake / Zen 4)
+impl HasModernAvx512 for Avx512ModernToken {}
+// Note: Avx512Fp16Token does NOT impl HasModernAvx512 (FP16 is separate from modern features)
+
+// ============================================================================
+// Width Marker Trait Implementations
+// ============================================================================
+
+// 128-bit SIMD: SSE4.2+
+impl Has128BitSimd for Sse42Token {}
+
+// 256-bit SIMD: AVX+
+impl Has128BitSimd for AvxToken {}
+impl Has256BitSimd for AvxToken {}
+impl Has128BitSimd for Avx2Token {}
+impl Has256BitSimd for Avx2Token {}
+impl Has128BitSimd for Avx2FmaToken {}
+impl Has256BitSimd for Avx2FmaToken {}
+impl Has128BitSimd for X64V3Token {}
+impl Has256BitSimd for X64V3Token {}
+
+// 512-bit SIMD: AVX-512+
+impl Has128BitSimd for Avx512Token {}
+impl Has256BitSimd for Avx512Token {}
+impl Has512BitSimd for Avx512Token {}
+impl Has128BitSimd for X64V4Token {}
+impl Has256BitSimd for X64V4Token {}
+impl Has512BitSimd for X64V4Token {}
+impl Has128BitSimd for Avx512ModernToken {}
+impl Has256BitSimd for Avx512ModernToken {}
+impl Has512BitSimd for Avx512ModernToken {}
+impl Has128BitSimd for Avx512Fp16Token {}
+impl Has256BitSimd for Avx512Fp16Token {}
+impl Has512BitSimd for Avx512Fp16Token {}
 
 // ============================================================================
 // Friendly Aliases
@@ -641,8 +476,6 @@ mod tests {
         // Tokens should be zero-sized
         assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
         assert_eq!(core::mem::size_of::<Avx2Token>(), 0);
-        assert_eq!(core::mem::size_of::<FmaToken>(), 0);
-        // Combined token is also ZST (contains two ZSTs)
         assert_eq!(core::mem::size_of::<Avx2FmaToken>(), 0);
     }
 
@@ -651,7 +484,6 @@ mod tests {
         fn assert_copy<T: Copy>() {}
         assert_copy::<Sse42Token>();
         assert_copy::<Avx2Token>();
-        assert_copy::<FmaToken>();
         assert_copy::<Avx2FmaToken>();
     }
 
@@ -659,13 +491,11 @@ mod tests {
     fn test_runtime_detection() {
         // These may or may not be available depending on CPU
         let _avx2 = Avx2Token::try_new();
-        let _fma = FmaToken::try_new();
         let _avx2_fma = Avx2FmaToken::try_new();
 
         // If AVX2+FMA available, test component access
         if let Some(token) = Avx2FmaToken::try_new() {
             let _avx2 = token.avx2();
-            let _fma = token.fma();
             let _avx = token.avx();
             let _sse42 = token.sse42();
         }
@@ -683,28 +513,17 @@ mod tests {
     #[test]
     fn test_profile_tokens_zst() {
         // Profile tokens should also be zero-sized
-        assert_eq!(core::mem::size_of::<X64V2Token>(), 0);
         assert_eq!(core::mem::size_of::<X64V3Token>(), 0);
         assert_eq!(core::mem::size_of::<X64V4Token>(), 0);
-        assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
-    }
-
-    #[test]
-    fn test_v2_token_extraction() {
-        if let Some(v2) = X64V2Token::try_new() {
-            // v2 can extract SSE4.2
-            let _sse42 = v2.sse42();
-        }
+        assert_eq!(core::mem::size_of::<Avx512Token>(), 0);
     }
 
     #[test]
     fn test_v3_token_extraction() {
         if let Some(v3) = X64V3Token::try_new() {
-            // v3 can extract v2, AVX2+FMA, AVX2, FMA, AVX, SSE4.2
-            let _v2 = v3.v2();
+            // v3 can extract AVX2+FMA, AVX2, AVX, SSE4.2
             let _avx2_fma = v3.avx2_fma();
             let _avx2 = v3.avx2();
-            let _fma = v3.fma();
             let _avx = v3.avx();
             let _sse42 = v3.sse42();
         }
@@ -713,14 +532,10 @@ mod tests {
     #[test]
     fn test_v4_token_extraction() {
         if let Some(v4) = X64V4Token::try_new() {
-            // v4 can extract v3, v2, AVX-512 variants, AVX2+FMA, etc.
+            // v4 can extract v3, AVX2+FMA, etc.
             let _v3 = v4.v3();
-            let _v2 = v4.v2();
-            let _avx512f = v4.avx512f();
-            let _avx512bw = v4.avx512bw();
             let _avx2_fma = v4.avx2_fma();
             let _avx2 = v4.avx2();
-            let _fma = v4.fma();
             let _avx = v4.avx();
             let _sse42 = v4.sse42();
         }
@@ -728,30 +543,17 @@ mod tests {
 
     #[test]
     fn test_profile_hierarchy_consistency() {
-        // If v3 is available, v2 should also be available
-        if X64V3Token::try_new().is_some() {
-            assert!(
-                X64V2Token::try_new().is_some(),
-                "v3 implies v2 should be available"
-            );
-        }
-
-        // If v4 is available, both v3 and v2 should be available
+        // If v4 is available, v3 should also be available
         if X64V4Token::try_new().is_some() {
             assert!(
                 X64V3Token::try_new().is_some(),
                 "v4 implies v3 should be available"
-            );
-            assert!(
-                X64V2Token::try_new().is_some(),
-                "v4 implies v2 should be available"
             );
         }
     }
 
     #[test]
     fn test_profile_token_names() {
-        assert_eq!(X64V2Token::NAME, "x86-64-v2");
         assert_eq!(X64V3Token::NAME, "x86-64-v3");
         assert_eq!(X64V4Token::NAME, "x86-64-v4");
         assert_eq!(Sse42Token::NAME, "SSE4.2");

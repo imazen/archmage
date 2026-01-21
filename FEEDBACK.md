@@ -10,4 +10,26 @@
 - Want HasAvx512 and HasModernAvx512 traits
 - Want profile traits: HasX64V3/HasDesktop64, HasX64V4/HasServer64, HasArm64
 - Keep Avx2FmaToken instead of FmaToken for clarity
-- **AVX-512 details were lost - need user to re-provide**
+
+### AVX-512 Feature Sets
+
+**Avx512Token (= HasAvx512 = x86-64-v4 level):**
+- F (Foundation)
+- CD (Conflict Detection)
+- VL (Vector Length)
+- DQ (Doubleword/Quadword)
+- BW (Byte/Word)
+(Plus implied: FMA, AVX2, AVX, SSE4.2)
+
+**Avx512ModernToken (= HasModernAvx512):**
+All of Avx512Token plus:
+- VPOPCNTDQ
+- IFMA
+- VBMI
+- VBMI2
+- BITALG
+- VNNI
+- BF16
+- VPCLMULQDQ
+- GFNI
+- VAES

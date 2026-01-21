@@ -11,11 +11,10 @@ error[E0277]: the trait bound `Sse42Token: HasAvx` is not satisfied
              Avx2Token
              Avx512Fp16Token
              Avx512ModernToken
-             Avx512Vbmi2Token
-             Avx512Vbmi2VlToken
-             Avx512bwToken
-             Avx512bwVlToken
-           and $N others
+             Avx512Token
+             AvxToken
+             X64V3Token
+             X64V4Token
 note: required by a bound in `archmage::mem::avx::_mm256_loadu_ps`
   --> src/generated/x86/avx.rs
    |

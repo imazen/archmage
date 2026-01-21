@@ -27,14 +27,14 @@ use safe_unaligned_simd::x86_64::{
     Is256CellUnaligned, Is512BitsUnaligned,
 };
 
-use crate::tokens::{HasAvx512vbmi2, HasAvx512vl};
+use crate::tokens::HasModernAvx512;
 
 /// Load contiguous active 16-bit integers from unaligned memory at mem_addr (those with their respective bit set in mask k), and store the results in dst using writemask k (elements are copied from src when the corresponding mask bit is not set).
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_mask_expandloadu_epi16)
 #[inline(always)]
 pub fn _mm_mask_expandloadu_epi16<T: Is128BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     src: __m128i,
     k: __mmask8,
     mem_addr: &T,
@@ -53,7 +53,7 @@ pub fn _mm_mask_expandloadu_epi16<T: Is128BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_maskz_expandloadu_epi16)
 #[inline(always)]
 pub fn _mm_maskz_expandloadu_epi16<T: Is128BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     k: __mmask8,
     mem_addr: &T,
 ) -> __m128i {
@@ -71,7 +71,7 @@ pub fn _mm_maskz_expandloadu_epi16<T: Is128BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_mask_expandloadu_epi16)
 #[inline(always)]
 pub fn _mm256_mask_expandloadu_epi16<T: Is256BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     src: __m256i,
     k: __mmask16,
     mem_addr: &T,
@@ -90,7 +90,7 @@ pub fn _mm256_mask_expandloadu_epi16<T: Is256BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_maskz_expandloadu_epi16)
 #[inline(always)]
 pub fn _mm256_maskz_expandloadu_epi16<T: Is256BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     k: __mmask16,
     mem_addr: &T,
 ) -> __m256i {
@@ -108,7 +108,7 @@ pub fn _mm256_maskz_expandloadu_epi16<T: Is256BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_mask_expandloadu_epi8)
 #[inline(always)]
 pub fn _mm_mask_expandloadu_epi8<T: Is128BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     src: __m128i,
     k: __mmask16,
     mem_addr: &T,
@@ -127,7 +127,7 @@ pub fn _mm_mask_expandloadu_epi8<T: Is128BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_maskz_expandloadu_epi8)
 #[inline(always)]
 pub fn _mm_maskz_expandloadu_epi8<T: Is128BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     k: __mmask16,
     mem_addr: &T,
 ) -> __m128i {
@@ -145,7 +145,7 @@ pub fn _mm_maskz_expandloadu_epi8<T: Is128BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_mask_expandloadu_epi8)
 #[inline(always)]
 pub fn _mm256_mask_expandloadu_epi8<T: Is256BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     src: __m256i,
     k: __mmask32,
     mem_addr: &T,
@@ -164,7 +164,7 @@ pub fn _mm256_mask_expandloadu_epi8<T: Is256BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_maskz_expandloadu_epi8)
 #[inline(always)]
 pub fn _mm256_maskz_expandloadu_epi8<T: Is256BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     k: __mmask32,
     mem_addr: &T,
 ) -> __m256i {
@@ -182,7 +182,7 @@ pub fn _mm256_maskz_expandloadu_epi8<T: Is256BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_mask_compressstoreu_epi16)
 #[inline(always)]
 pub fn _mm_mask_compressstoreu_epi16<T: Is128BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     base_addr: &mut T,
     k: __mmask8,
     a: __m128i,
@@ -201,7 +201,7 @@ pub fn _mm_mask_compressstoreu_epi16<T: Is128BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_mask_compressstoreu_epi16)
 #[inline(always)]
 pub fn _mm256_mask_compressstoreu_epi16<T: Is256BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     base_addr: &mut T,
     k: __mmask16,
     a: __m256i,
@@ -220,7 +220,7 @@ pub fn _mm256_mask_compressstoreu_epi16<T: Is256BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_mask_compressstoreu_epi8)
 #[inline(always)]
 pub fn _mm_mask_compressstoreu_epi8<T: Is128BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     base_addr: &mut T,
     k: __mmask16,
     a: __m128i,
@@ -239,7 +239,7 @@ pub fn _mm_mask_compressstoreu_epi8<T: Is128BitsUnaligned>(
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_mask_compressstoreu_epi8)
 #[inline(always)]
 pub fn _mm256_mask_compressstoreu_epi8<T: Is256BitsUnaligned>(
-    _token: impl HasAvx512vbmi2 + HasAvx512vl,
+    _token: impl HasModernAvx512,
     base_addr: &mut T,
     k: __mmask32,
     a: __m256i,

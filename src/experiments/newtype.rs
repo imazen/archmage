@@ -3300,25 +3300,25 @@ impl f32x16 {
 
     /// Get token-gated constants. Usage: `f32x16::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasAvx512dq) -> F32x16Consts {
+    pub fn consts(_: impl crate::HasAvx512) -> F32x16Consts {
         F32x16Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx512dq, data: &[f32; 16]) -> Self {
+    pub fn load(_: impl crate::HasAvx512, data: &[f32; 16]) -> Self {
         Self(unsafe { _mm512_loadu_ps(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn load_slice(_: impl crate::HasAvx512dq, data: &[f32]) -> Self {
+    pub fn load_slice(_: impl crate::HasAvx512, data: &[f32]) -> Self {
         assert!(data.len() >= 16);
         Self(unsafe { _mm512_loadu_ps(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx512dq, v: f32) -> Self {
+    pub fn splat(_: impl crate::HasAvx512, v: f32) -> Self {
         Self(unsafe { _mm512_set1_ps(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx512dq) -> Self {
+    pub fn zero(_: impl crate::HasAvx512) -> Self {
         Self(unsafe { _mm512_setzero_ps() })
     }
 
@@ -3706,20 +3706,20 @@ impl i32x16 {
 
     /// Get token-gated constants. Usage: `i32x16::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasAvx512dq) -> I32x16Consts {
+    pub fn consts(_: impl crate::HasAvx512) -> I32x16Consts {
         I32x16Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx512dq, data: &[i32; 16]) -> Self {
+    pub fn load(_: impl crate::HasAvx512, data: &[i32; 16]) -> Self {
         Self(unsafe { _mm512_loadu_si512(data.as_ptr() as *const __m512i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx512dq, v: i32) -> Self {
+    pub fn splat(_: impl crate::HasAvx512, v: i32) -> Self {
         Self(unsafe { _mm512_set1_epi32(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx512dq) -> Self {
+    pub fn zero(_: impl crate::HasAvx512) -> Self {
         Self(unsafe { _mm512_setzero_si512() })
     }
 
