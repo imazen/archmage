@@ -165,19 +165,14 @@ xtask/
 ## Token Hierarchy
 
 **Recommended (friendly aliases):**
-- `Desktop64` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here for x86**
-- `Server64` - + AVX-512 (Xeon 2017+, Zen 4+)
+- `Desktop64` = `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here for x86**
+- `Server64` = `X64V4Token` = `Avx512Token` - + AVX-512 F+BW+CD+DQ+VL (Xeon 2017+, Zen 4+)
 - `Arm64` - NEON baseline **← Start here for ARM**
-
-**x86 Profile Tokens (same as aliases):**
-- `X64V3Token` = `Desktop64`
-- `X64V4Token` = `Server64`
 
 **x86 Feature Tokens:**
 - `Sse42Token` (baseline) → `AvxToken` → `Avx2Token` → `Avx2FmaToken`
-- `Avx512Token` (consolidated: F+BW+CD+DQ+VL)
-- `Avx512ModernToken` (+VBMI2+VNNI)
-- `Avx512Fp16Token` (+FP16)
+- `Avx512ModernToken` - Avx512 + VBMI2+VNNI+BF16 etc (Ice Lake/Zen 4)
+- `Avx512Fp16Token` - Avx512 + FP16 (Sapphire Rapids+)
 
 **ARM:**
 - `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonFp16Token` = `Arm64`
@@ -194,7 +189,7 @@ fn requires_v3<T: HasX64V3>(token: T) { ... }
 
 **Width traits:** `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
 **x86 Feature traits:** `HasSse42`, `HasAvx`, `HasAvx2`, `HasAvx2Fma`, `HasX64V3`, `HasAvx512`, `HasModernAvx512`
-**Alias traits:** `HasDesktop64` (= HasX64V3), `HasServer64` (= HasAvx512)
+**Alias traits:** `HasDesktop64` = `HasX64V3`, `HasServer64` = `HasAvx512` (all equivalent)
 **ARM traits:** `HasNeon`, `HasArmAes`, `HasArmSha3`, `HasArmFp16`, `HasArm64`
 
 ## Safe Memory Operations
