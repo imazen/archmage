@@ -119,7 +119,7 @@ pub use tokens::{
 };
 
 // aarch64 feature marker traits (available on all architectures)
-pub use tokens::{HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
+pub use tokens::{HasArm64, HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 
 // All tokens available on all architectures (summon() returns None on wrong arch)
 pub use tokens::{
@@ -153,6 +153,3 @@ pub use tokens::{
     X64V4Token,
 };
 
-// Backward compatibility aliases (deprecated)
-#[allow(deprecated)]
-pub use tokens::{ArmCrypto3Token, ArmCryptoToken};

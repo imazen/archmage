@@ -13,8 +13,10 @@
 //!
 //! - `NeonToken` - baseline, always available
 //! - `NeonAesToken` - aes + sha2 + crc (most ARMv8 CPUs)
-//! - `NeonSha3Token` - + sha3 (ARMv8.4+, implies NeonAesToken)
+//! - `NeonSha3Token` - sha3 (ARMv8.4+, orthogonal to AES)
 //! - `NeonFp16Token` - fp16 half-precision (Apple M1+, Graviton 2+)
+//!
+//! Note: AES and SHA3 are orthogonal features - having one does not imply the other.
 
 use super::SimdToken;
 
@@ -98,23 +100,21 @@ impl NeonAesToken {
     }
 }
 
-/// Backward compatibility alias for [`NeonAesToken`].
-#[deprecated(since = "0.2.0", note = "Use NeonAesToken instead")]
-pub type ArmCryptoToken = NeonAesToken;
 
 // ============================================================================
-// NEON SHA3 Token (aes + sha2 + sha3 + crc)
+// NEON SHA3 Token
 // ============================================================================
 
-/// Proof that ARMv8.4 crypto extensions are available (AES, SHA2, SHA3, CRC32).
+/// Proof that ARM SHA3 extensions are available.
 ///
-/// This covers the extended crypto on ARMv8.4+ CPUs:
+/// SHA3 provides hardware-accelerated SHA3 hashing on ARMv8.2+ CPUs:
 /// - Neoverse N2/V1/V2 (Graviton 2/3/4)
 /// - Apple M1/M2/M3
 /// - Snapdragon 8 Gen 1+
 /// - Cortex-A710/A715/X2/X3
 ///
-/// Note: Some older ARMv8.0-8.2 cores (Cortex-A53/A55, Graviton 1) do NOT have SHA3.
+/// Note: SHA3 is orthogonal to AES - having one does not imply the other.
+/// Use `NeonAesToken` separately if you need AES.
 #[derive(Clone, Copy, Debug)]
 pub struct NeonSha3Token {
     _private: (),
@@ -125,12 +125,7 @@ impl SimdToken for NeonSha3Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // All four features must be available
-        if crate::is_aarch64_feature_available!("aes")
-            && crate::is_aarch64_feature_available!("sha2")
-            && crate::is_aarch64_feature_available!("sha3")
-            && crate::is_aarch64_feature_available!("crc")
-        {
+        if crate::is_aarch64_feature_available!("sha3") {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -144,22 +139,12 @@ impl SimdToken for NeonSha3Token {
 }
 
 impl NeonSha3Token {
-    /// Get a NeonAesToken (SHA3 implies base AES crypto)
-    #[inline(always)]
-    pub fn aes(self) -> NeonAesToken {
-        unsafe { NeonAesToken::forge_token_dangerously() }
-    }
-
-    /// Get a NEON token (crypto implies NEON)
+    /// Get a NEON token (SHA3 implies NEON)
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
     }
 }
-
-/// Backward compatibility alias for [`NeonSha3Token`].
-#[deprecated(since = "0.2.0", note = "Use NeonSha3Token instead")]
-pub type ArmCrypto3Token = NeonSha3Token;
 
 // ============================================================================
 // NEON FP16 Token
@@ -252,7 +237,7 @@ pub type Arm64 = NeonFp16Token;
 // ============================================================================
 
 use super::{Has128BitSimd, HasFma};
-use super::{HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
+use super::{HasArm64, HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 
 // NEON provides 128-bit SIMD and FMA
 impl Has128BitSimd for NeonToken {}
@@ -279,15 +264,17 @@ impl HasNeon for NeonAesToken {}
 impl HasNeon for NeonSha3Token {}
 impl HasNeon for NeonFp16Token {}
 
-// HasArmAes: Crypto tokens
+// HasArmAes: AES token only
 impl HasArmAes for NeonAesToken {}
-impl HasArmAes for NeonSha3Token {}
 
-// HasArmSha3: SHA3 token only
+// HasArmSha3: SHA3 token only (orthogonal to AES)
 impl HasArmSha3 for NeonSha3Token {}
 
 // HasArmFp16: FP16 token
 impl HasArmFp16 for NeonFp16Token {}
+
+// HasArm64: FP16 token (the Arm64 baseline)
+impl HasArm64 for NeonFp16Token {}
 
 // ============================================================================
 // Tests
@@ -332,9 +319,8 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn test_token_hierarchy() {
-        // If SHA3 is available, base AES crypto must also be available
+        // SHA3 and AES are orthogonal - SHA3 does NOT imply AES
         if NeonSha3Token::try_new().is_some() {
-            assert!(NeonAesToken::try_new().is_some(), "SHA3 implies AES crypto");
             assert!(NeonToken::try_new().is_some(), "SHA3 implies NEON");
         }
 
@@ -353,7 +339,6 @@ mod tests {
     #[cfg(target_arch = "aarch64")]
     fn test_sha3_token_extraction() {
         if let Some(sha3) = NeonSha3Token::try_new() {
-            let _aes = sha3.aes();
             let _neon = sha3.neon();
         }
     }

@@ -6,7 +6,7 @@
 use super::sealed::Sealed;
 use super::SimdToken;
 use super::{Has128BitSimd, HasFma};
-use super::{HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
+use super::{HasArm64, HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 
 macro_rules! define_arm_stub {
     ($name:ident, $display:literal) => {
@@ -40,14 +40,6 @@ define_arm_stub!(NeonAesToken, "NEON+AES");
 define_arm_stub!(NeonSha3Token, "NEON+SHA3");
 define_arm_stub!(NeonFp16Token, "NEON+FP16");
 
-/// Backward compatibility alias for [`NeonAesToken`].
-#[deprecated(since = "0.2.0", note = "Use NeonAesToken instead")]
-pub type ArmCryptoToken = NeonAesToken;
-
-/// Backward compatibility alias for [`NeonSha3Token`].
-#[deprecated(since = "0.2.0", note = "Use NeonSha3Token instead")]
-pub type ArmCrypto3Token = NeonSha3Token;
-
 /// The recommended starting point for AArch64 - stub on non-ARM architectures.
 pub type Arm64 = NeonFp16Token;
 
@@ -70,8 +62,9 @@ impl HasNeon for NeonSha3Token {}
 impl HasNeon for NeonFp16Token {}
 
 impl HasArmAes for NeonAesToken {}
-impl HasArmAes for NeonSha3Token {}
 
 impl HasArmSha3 for NeonSha3Token {}
 
 impl HasArmFp16 for NeonFp16Token {}
+
+impl HasArm64 for NeonFp16Token {}

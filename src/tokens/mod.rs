@@ -299,9 +299,17 @@ pub trait HasArmAes: HasNeon {}
 /// Marker trait for tokens that provide ARM SHA3 crypto extensions.
 ///
 /// SHA3 - available on ARMv8.4+ CPUs (Cortex-A76+, Graviton 2+, Apple Silicon).
+/// Note: SHA3 is orthogonal to AES - having one does not imply the other.
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasArmSha3: HasArmAes {}
+pub trait HasArmSha3: HasNeon {}
+
+/// Marker trait for tokens that provide the Arm64 baseline (NEON + FP16).
+///
+/// This is the recommended minimum for modern AArch64 code (Apple M1+, Graviton 2+).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
+pub trait HasArm64: HasNeon + HasArmFp16 {}
 
 /// Marker trait for tokens that provide ARM FP16 (half-precision floating point).
 ///
