@@ -6,10 +6,32 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
+    fold::Fold,
     parse::{Parse, ParseStream},
     parse_macro_input, parse_quote, Attribute, FnArg, GenericParam, Ident, ItemFn, PatType,
-    Signature, Token, Type, TypeParamBound,
+    ReturnType, Signature, Token, Type, TypeParamBound,
 };
+
+/// A Fold implementation that replaces `Self` with a concrete type.
+struct ReplaceSelf<'a> {
+    replacement: &'a Type,
+}
+
+impl Fold for ReplaceSelf<'_> {
+    fn fold_type(&mut self, ty: Type) -> Type {
+        match ty {
+            Type::Path(ref type_path) if type_path.qself.is_none() => {
+                // Check if it's just `Self`
+                if type_path.path.is_ident("Self") {
+                    return self.replacement.clone();
+                }
+                // Otherwise continue folding
+                syn::fold::fold_type(self, ty)
+            }
+            _ => syn::fold::fold_type(self, ty),
+        }
+    }
+}
 
 /// Arguments to the `#[arcane]` macro.
 #[derive(Default)]
@@ -17,6 +39,9 @@ struct ArcaneArgs {
     /// Use `#[inline(always)]` instead of `#[inline]` for the inner function.
     /// Requires nightly Rust with `#![feature(target_feature_inline_always)]`.
     inline_always: bool,
+    /// The concrete type to use for `self` receiver.
+    /// When specified, `self`/`&self`/`&mut self` is transformed to `_self: Type`/`&Type`/`&mut Type`.
+    self_type: Option<Type>,
 }
 
 impl Parse for ArcaneArgs {
@@ -27,6 +52,10 @@ impl Parse for ArcaneArgs {
             let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
                 "inline_always" => args.inline_always = true,
+                "_self" => {
+                    let _: Token![=] = input.parse()?;
+                    args.self_type = Some(input.parse()?);
+                }
                 other => {
                     return Err(syn::Error::new(
                         ident.span(),
@@ -266,8 +295,39 @@ fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
     None
 }
 
+/// Represents the kind of self receiver and the transformed parameter.
+enum SelfReceiver {
+    /// `self` (by value/move)
+    Owned,
+    /// `&self` (shared reference)
+    Ref,
+    /// `&mut self` (mutable reference)
+    RefMut,
+}
+
 /// Shared implementation for arcane/simd_fn macros.
 fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStream {
+    // Check for self receiver
+    let has_self_receiver = input_fn
+        .sig
+        .inputs
+        .first()
+        .map(|arg| matches!(arg, FnArg::Receiver(_)))
+        .unwrap_or(false);
+
+    // If there's a self receiver, we need _self = Type
+    if has_self_receiver && args.self_type.is_none() {
+        let msg = format!(
+            "{} with self receiver requires `_self = Type` argument.\n\
+             Example: #[{}(_self = MyType)]\n\
+             Use `_self` (not `self`) in the function body to refer to self.",
+            macro_name, macro_name
+        );
+        return syn::Error::new_spanned(&input_fn.sig, msg)
+            .to_compile_error()
+            .into();
+    }
+
     // Find the token parameter and its features
     let (_token_ident, features) = match find_token_param(&input_fn.sig) {
         Some(result) => result,
@@ -277,8 +337,8 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
                  - Concrete: `token: Avx2Token`\n\
                  - impl Trait: `token: impl HasAvx2`\n\
                  - Generic: `fn foo<T: HasAvx2>(token: T, ...)`\n\
-                 Note: self receivers (&self, &mut self) are not yet supported.",
-                macro_name
+                 - With self: `#[{}(_self = Type)] fn method(&self, token: impl HasAvx2, ...)`",
+                macro_name, macro_name
             );
             return syn::Error::new_spanned(&input_fn.sig, msg)
                 .to_compile_error()
@@ -303,11 +363,39 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
     let body = &input_fn.block;
     let attrs = &input_fn.attrs;
 
-    // Build inner function parameters (ALL parameters including token)
-    let inner_params: Vec<_> = inputs.iter().cloned().collect();
+    // Determine self receiver type if present
+    let self_receiver_kind: Option<SelfReceiver> = inputs.first().and_then(|arg| match arg {
+        FnArg::Receiver(receiver) => {
+            if receiver.reference.is_none() {
+                Some(SelfReceiver::Owned)
+            } else if receiver.mutability.is_some() {
+                Some(SelfReceiver::RefMut)
+            } else {
+                Some(SelfReceiver::Ref)
+            }
+        }
+        _ => None,
+    });
 
-    // Build inner function call arguments (ALL arguments including token)
-    let inner_args: Vec<_> = inputs
+    // Build inner function parameters, transforming self if needed
+    let inner_params: Vec<proc_macro2::TokenStream> = inputs
+        .iter()
+        .map(|arg| match arg {
+            FnArg::Receiver(_) => {
+                // Transform self receiver to _self parameter
+                let self_ty = args.self_type.as_ref().unwrap();
+                match self_receiver_kind.as_ref().unwrap() {
+                    SelfReceiver::Owned => quote!(_self: #self_ty),
+                    SelfReceiver::Ref => quote!(_self: &#self_ty),
+                    SelfReceiver::RefMut => quote!(_self: &mut #self_ty),
+                }
+            }
+            FnArg::Typed(pat_type) => quote!(#pat_type),
+        })
+        .collect();
+
+    // Build inner function call arguments
+    let inner_args: Vec<proc_macro2::TokenStream> = inputs
         .iter()
         .filter_map(|arg| match arg {
             FnArg::Typed(pat_type) => {
@@ -318,7 +406,7 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
                     None
                 }
             }
-            FnArg::Receiver(_) => Some(quote!(self)),
+            FnArg::Receiver(_) => Some(quote!(self)), // Pass self to inner as _self
         })
         .collect();
 
@@ -333,14 +421,25 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
         parse_quote!(#[inline])
     };
 
+    // Transform output and body to replace Self with concrete type if needed
+    let (inner_output, inner_body): (ReturnType, syn::Block) =
+        if let Some(ref self_ty) = args.self_type {
+            let mut replacer = ReplaceSelf { replacement: self_ty };
+            let transformed_output = replacer.fold_return_type(output.clone());
+            let transformed_body = replacer.fold_block((**body).clone());
+            (transformed_output, transformed_body)
+        } else {
+            (output.clone(), (**body).clone())
+        };
+
     // Generate the expanded function
     let expanded = quote! {
         #(#attrs)*
         #vis #sig {
             #(#target_feature_attrs)*
             #inline_attr
-            unsafe fn #inner_fn_name #generics (#(#inner_params),*) #output #where_clause
-            #body
+            unsafe fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
+            #inner_body
 
             // SAFETY: The token parameter proves the required CPU features are available.
             // Tokens can only be constructed when features are verified (via try_new()
@@ -402,36 +501,48 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// }
 /// ```
 ///
-/// ## Methods with Self Receivers (NOT YET SUPPORTED)
+/// ## Methods with Self Receivers
 ///
-/// Methods with `self`, `&self`, `&mut self` receivers are **not currently supported**.
-///
-/// **Why:** The macro works by creating an inner function with `#[target_feature]`.
-/// Rust's inner functions cannot have `self` parameters—`self` only works in
-/// associated functions. Supporting this would require rewriting the function body
-/// to replace `self` with a regular parameter, which adds significant complexity.
-///
-/// **Workaround:** Use a free function with the token as an explicit parameter:
+/// Methods with `self`, `&self`, `&mut self` receivers are supported via the
+/// `_self = Type` argument. Use `_self` in the function body instead of `self`:
 ///
 /// ```ignore
-/// impl MyProcessor {
-///     fn process(&mut self, data: &[f32; 8]) -> [f32; 8] {
-///         // Delegate to a free function
-///         process_impl(self.token, data)
-///     }
+/// use archmage::{HasAvx2, arcane};
+/// use wide::f32x8;
+///
+/// trait Avx2Ops {
+///     fn double(&self, token: impl HasAvx2) -> Self;
+///     fn square(self, token: impl HasAvx2) -> Self;
+///     fn scale(&mut self, token: impl HasAvx2, factor: f32);
 /// }
 ///
-/// #[arcane]
-/// fn process_impl(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
-///     // SIMD intrinsics safe here
+/// impl Avx2Ops for f32x8 {
+///     #[arcane(_self = f32x8)]
+///     fn double(&self, _token: impl HasAvx2) -> Self {
+///         // Use _self instead of self in the body
+///         *_self + *_self
+///     }
+///
+///     #[arcane(_self = f32x8)]
+///     fn square(self, _token: impl HasAvx2) -> Self {
+///         _self * _self
+///     }
+///
+///     #[arcane(_self = f32x8)]
+///     fn scale(&mut self, _token: impl HasAvx2, factor: f32) {
+///         *_self = *_self * f32x8::splat(factor);
+///     }
 /// }
 /// ```
 ///
-/// **Future work:** Supporting `self` receivers would require:
-/// 1. Adding a type parameter `__Self` to the inner function
-/// 2. Converting the receiver to a regular parameter (`&self` → `__self: &__Self`)
-/// 3. Walking the AST to replace all `self` with `__self` and `Self` with `__Self`
-/// 4. Copying where clauses with the type substitution
+/// **Why `_self`?** The macro generates an inner function where `self` becomes
+/// a regular parameter named `_self`. Using `_self` in your code reminds you
+/// that you're not using the normal `self` keyword.
+///
+/// **All receiver types are supported:**
+/// - `self` (by value/move) → `_self: Type`
+/// - `&self` (shared reference) → `_self: &Type`
+/// - `&mut self` (mutable reference) → `_self: &mut Type`
 ///
 /// # Multiple Trait Bounds
 ///

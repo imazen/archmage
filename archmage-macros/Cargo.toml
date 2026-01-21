@@ -12,6 +12,6 @@ categories = ["development-tools::procedural-macro-helpers"]
 proc-macro = true
 
 [dependencies]
-syn = { version = "2.0", features = ["full", "parsing", "printing"] }
+syn = { version = "2.0", features = ["full", "parsing", "printing", "fold"] }
 quote = "1.0"
 proc-macro2 = "1.0"

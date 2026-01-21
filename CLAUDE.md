@@ -196,19 +196,29 @@ if let Some(token) = Desktop64::summon() {
 }
 ```
 
-## Limitations
+## Methods with Self Receivers
 
-**Self receivers not supported:**
+Use `_self = Type` to enable self receivers. Use `_self` in the body instead of `self`:
 
 ```rust
-// Won't work - inner functions can't have self
-#[arcane]
-fn process(&self, token: impl HasAvx2) { ... }
+trait SimdOps {
+    fn double(&self, token: impl HasAvx2) -> Self;
+}
 
-// Workaround: use free function
-#[arcane]
-fn process_impl(state: &MyState, token: impl HasAvx2) { ... }
+impl SimdOps for [f32; 8] {
+    #[arcane(_self = [f32; 8])]
+    fn double(&self, _token: impl HasAvx2) -> Self {
+        // Use _self instead of self
+        let v = unsafe { _mm256_loadu_ps(_self.as_ptr()) };
+        let doubled = _mm256_add_ps(v, v);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+        out
+    }
+}
 ```
+
+**All receiver types supported:** `self`, `&self`, `&mut self`
 
 ## Generated Wrappers
 

@@ -392,4 +392,86 @@ mod x86_tests {
             assert_eq!(output, expected);
         }
     }
+
+    // =========================================================================
+    // Tests for _self = Type support (trait methods with self receivers)
+    // =========================================================================
+
+    use archmage::arcane;
+
+    /// A simple wrapper type for testing self receiver support
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    struct SimdVec8([f32; 8]);
+
+    impl SimdVec8 {
+        fn new(data: [f32; 8]) -> Self {
+            Self(data)
+        }
+
+        fn as_array(&self) -> &[f32; 8] {
+            &self.0
+        }
+    }
+
+    /// Trait with all three self receiver types
+    trait SimdOps {
+        fn double(&self, token: impl HasAvx2) -> Self;
+        fn square(self, token: impl HasAvx2) -> Self;
+        fn scale(&mut self, token: impl HasAvx2, factor: f32);
+    }
+
+    impl SimdOps for SimdVec8 {
+        #[arcane(_self = SimdVec8)]
+        fn double(&self, _token: impl HasAvx2) -> Self {
+            let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
+            let doubled = _mm256_add_ps(v, v);
+            let mut out = [0.0f32; 8];
+            unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+            SimdVec8(out)
+        }
+
+        #[arcane(_self = SimdVec8)]
+        fn square(self, _token: impl HasAvx2) -> Self {
+            let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
+            let squared = _mm256_mul_ps(v, v);
+            let mut out = [0.0f32; 8];
+            unsafe { _mm256_storeu_ps(out.as_mut_ptr(), squared) };
+            SimdVec8(out)
+        }
+
+        #[arcane(_self = SimdVec8)]
+        fn scale(&mut self, _token: impl HasAvx2, factor: f32) {
+            let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
+            let scale = _mm256_set1_ps(factor);
+            let scaled = _mm256_mul_ps(v, scale);
+            unsafe { _mm256_storeu_ps(_self.0.as_mut_ptr(), scaled) };
+        }
+    }
+
+    #[test]
+    fn test_self_receiver_ref() {
+        if let Some(token) = Desktop64::summon() {
+            let v = SimdVec8::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+            let result = v.double(token);
+            assert_eq!(result.as_array(), &[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
+
+    #[test]
+    fn test_self_receiver_owned() {
+        if let Some(token) = Desktop64::summon() {
+            let v = SimdVec8::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+            let result = v.square(token);
+            assert_eq!(result.as_array(), &[1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0]);
+        }
+    }
+
+    #[test]
+    fn test_self_receiver_mut_ref() {
+        if let Some(token) = Desktop64::summon() {
+            let mut v = SimdVec8::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+            v.scale(token, 2.0);
+            assert_eq!(v.as_array(), &[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+        }
+    }
 }

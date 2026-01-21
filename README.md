@@ -290,19 +290,45 @@ if let Some(token) = Desktop64::summon() {
 }
 ```
 
-## Limitations
+## Methods with Self Receivers
 
-**Self receivers not supported in `#[arcane]`:**
+Methods with `self`, `&self`, `&mut self` receivers are supported via the `_self = Type` argument.
+Use `_self` in the function body instead of `self`:
 
 ```rust
-// This won't work - inner functions can't have `self`
-#[arcane]
-fn process(&self, token: impl HasAvx2) { ... }
+use archmage::{HasAvx2, arcane};
 
-// Instead, take self as a regular parameter or use free functions
-#[arcane]
-fn process(state: &MyStruct, token: impl HasAvx2) { ... }
+trait SimdOps {
+    fn double(&self, token: impl HasAvx2) -> Self;
+    fn scale(&mut self, token: impl HasAvx2, factor: f32);
+}
+
+impl SimdOps for [f32; 8] {
+    #[arcane(_self = [f32; 8])]
+    fn double(&self, _token: impl HasAvx2) -> Self {
+        // Use _self instead of self in the body
+        let v = unsafe { _mm256_loadu_ps(_self.as_ptr()) };
+        let doubled = _mm256_add_ps(v, v);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+        out
+    }
+
+    #[arcane(_self = [f32; 8])]
+    fn scale(&mut self, _token: impl HasAvx2, factor: f32) {
+        let v = unsafe { _mm256_loadu_ps(_self.as_ptr()) };
+        let scale = _mm256_set1_ps(factor);
+        let scaled = _mm256_mul_ps(v, scale);
+        unsafe { _mm256_storeu_ps(_self.as_mut_ptr(), scaled) };
+    }
+}
 ```
+
+**Why `_self`?** The macro generates an inner function where `self` becomes a regular
+parameter named `_self`. Using `_self` in your code reminds you that you're not using
+the normal `self` keyword.
+
+All receiver types are supported: `self` (move), `&self` (ref), `&mut self` (mut ref)
 
 ## License
 
