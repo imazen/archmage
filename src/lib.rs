@@ -113,8 +113,8 @@ pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma, HasScalabl
 
 // x86 feature marker traits (available on all architectures for cross-platform code)
 pub use tokens::{
-    HasAvx, HasAvx2, HasAvx512bw, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse, HasSse2,
-    HasSse41, HasSse42,
+    HasAvx, HasAvx2, HasAvx512bw, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse,
+    HasSse2, HasSse41, HasSse42,
 };
 
 // aarch64 feature marker traits (available on all architectures)

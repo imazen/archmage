@@ -853,8 +853,8 @@ impl Sse42Token {
 
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 use super::{
-    HasAvx, HasAvx2, HasAvx512bw, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse, HasSse2,
-    HasSse41, HasSse42,
+    HasAvx, HasAvx2, HasAvx512bw, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse,
+    HasSse2, HasSse41, HasSse42,
 };
 
 // 128-bit SIMD: SSE, SSE2, SSE4.1, SSE4.2
@@ -1033,6 +1033,9 @@ impl HasAvx512bw for Avx512bwVlToken {}
 impl HasAvx512bw for Avx512Vbmi2Token {}
 impl HasAvx512bw for Avx512Vbmi2VlToken {}
 impl HasAvx512bw for X64V4Token {}
+
+// HasAvx512dq: AVX-512DQ (part of x86-64-v4)
+impl HasAvx512dq for X64V4Token {}
 
 // HasAvx512vbmi2: AVX-512VBMI2 tokens
 impl HasAvx512vbmi2 for Avx512Vbmi2Token {}

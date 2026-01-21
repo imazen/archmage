@@ -220,6 +220,12 @@ pub trait HasAvx512vl: HasAvx512f {}
 /// Marker trait for tokens that provide AVX-512BW (Byte/Word).
 pub trait HasAvx512bw: HasAvx512f {}
 
+/// Marker trait for tokens that provide AVX-512DQ (Doubleword/Quadword).
+///
+/// AVX-512DQ provides float bitwise ops (`_mm512_or_ps`, etc.) and conversions.
+/// Present on all practical AVX-512 CPUs (Skylake-X 2017+, Zen 4+).
+pub trait HasAvx512dq: HasAvx512f {}
+
 /// Marker trait for tokens that provide AVX-512VBMI2.
 pub trait HasAvx512vbmi2: HasAvx512bw {}
 

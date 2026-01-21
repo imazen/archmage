@@ -2193,6 +2193,503 @@ impl PartialEq for u16x8 {
 }
 
 // ============================================================================
+// f32x16 (AVX-512DQ)
+// ============================================================================
+
+#[cfg(target_arch = "x86_64")]
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct f32x16(__m512);
+
+/// Token-gated constants for f32x16. Cannot be constructed directly.
+#[cfg(target_arch = "x86_64")]
+#[derive(Clone, Copy)]
+pub struct F32x16Consts(());
+
+#[cfg(target_arch = "x86_64")]
+impl F32x16Consts {
+    #[inline(always)] pub fn one(self) -> f32x16 { f32x16(unsafe { _mm512_set1_ps(1.0) }) }
+    #[inline(always)] pub fn zero(self) -> f32x16 { f32x16(unsafe { _mm512_setzero_ps() }) }
+    #[inline(always)] pub fn half(self) -> f32x16 { f32x16(unsafe { _mm512_set1_ps(0.5) }) }
+    #[inline(always)] pub fn neg_one(self) -> f32x16 { f32x16(unsafe { _mm512_set1_ps(-1.0) }) }
+    #[inline(always)] pub fn pi(self) -> f32x16 { f32x16(unsafe { _mm512_set1_ps(core::f32::consts::PI) }) }
+    #[inline(always)] pub fn tau(self) -> f32x16 { f32x16(unsafe { _mm512_set1_ps(core::f32::consts::TAU) }) }
+    #[inline(always)] pub fn e(self) -> f32x16 { f32x16(unsafe { _mm512_set1_ps(core::f32::consts::E) }) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl f32x16 {
+    pub const LANES: usize = 16;
+
+    /// Get token-gated constants. Usage: `f32x16::consts(token).one()`
+    #[inline(always)]
+    pub fn consts(_: impl crate::HasAvx512dq) -> F32x16Consts { F32x16Consts(()) }
+
+    #[inline(always)]
+    pub fn load(_: impl crate::HasAvx512dq, data: &[f32; 16]) -> Self {
+        Self(unsafe { _mm512_loadu_ps(data.as_ptr()) })
+    }
+    #[inline(always)]
+    pub fn load_slice(_: impl crate::HasAvx512dq, data: &[f32]) -> Self {
+        assert!(data.len() >= 16);
+        Self(unsafe { _mm512_loadu_ps(data.as_ptr()) })
+    }
+    #[inline(always)]
+    pub fn splat(_: impl crate::HasAvx512dq, v: f32) -> Self { Self(unsafe { _mm512_set1_ps(v) }) }
+    #[inline(always)]
+    pub fn zero(_: impl crate::HasAvx512dq) -> Self { Self(unsafe { _mm512_setzero_ps() }) }
+
+    #[inline(always)]
+    pub fn to_array(self) -> [f32; 16] {
+        let mut out = [0.0f32; 16];
+        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), self.0) };
+        out
+    }
+    #[inline(always)]
+    pub fn store(self, out: &mut [f32; 16]) { unsafe { _mm512_storeu_ps(out.as_mut_ptr(), self.0) }; }
+    #[inline(always)]
+    pub fn store_slice(self, out: &mut [f32]) {
+        assert!(out.len() >= 16);
+        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), self.0) };
+    }
+    #[inline(always)]
+    pub fn as_array(&self) -> &[f32; 16] { unsafe { &*(self as *const Self as *const [f32; 16]) } }
+    #[inline(always)]
+    pub fn as_mut_array(&mut self) -> &mut [f32; 16] { unsafe { &mut *(self as *mut Self as *mut [f32; 16]) } }
+    #[inline(always)]
+    pub fn raw(self) -> __m512 { self.0 }
+    #[inline(always)]
+    fn from_raw(v: __m512) -> Self { Self(v) }
+
+    // Math
+    #[inline(always)] pub fn min(self, o: Self) -> Self { Self(unsafe { _mm512_min_ps(self.0, o.0) }) }
+    #[inline(always)] pub fn max(self, o: Self) -> Self { Self(unsafe { _mm512_max_ps(self.0, o.0) }) }
+    #[inline(always)] pub fn clamp(self, lo: Self, hi: Self) -> Self { self.max(lo).min(hi) }
+    #[inline(always)]
+    pub fn abs(self) -> Self {
+        Self(unsafe { _mm512_abs_ps(self.0) })
+    }
+    #[inline(always)] pub fn sqrt(self) -> Self { Self(unsafe { _mm512_sqrt_ps(self.0) }) }
+    #[inline(always)] pub fn recip(self) -> Self { Self(unsafe { _mm512_rcp14_ps(self.0) }) }
+    #[inline(always)] pub fn recip_sqrt(self) -> Self { Self(unsafe { _mm512_rsqrt14_ps(self.0) }) }
+
+    // FMA
+    #[inline(always)] pub fn mul_add(self, b: Self, c: Self) -> Self { Self(unsafe { _mm512_fmadd_ps(self.0, b.0, c.0) }) }
+    #[inline(always)] pub fn mul_sub(self, b: Self, c: Self) -> Self { Self(unsafe { _mm512_fmsub_ps(self.0, b.0, c.0) }) }
+    #[inline(always)] pub fn neg_mul_add(self, b: Self, c: Self) -> Self { Self(unsafe { _mm512_fnmadd_ps(self.0, b.0, c.0) }) }
+    #[inline(always)] pub fn neg_mul_sub(self, b: Self, c: Self) -> Self { Self(unsafe { _mm512_fnmsub_ps(self.0, b.0, c.0) }) }
+
+    // Rounding
+    #[inline(always)] pub fn round(self) -> Self { Self(unsafe { _mm512_roundscale_ps(self.0, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC) }) }
+    #[inline(always)] pub fn floor(self) -> Self { Self(unsafe { _mm512_roundscale_ps(self.0, _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC) }) }
+    #[inline(always)] pub fn ceil(self) -> Self { Self(unsafe { _mm512_roundscale_ps(self.0, _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC) }) }
+    #[inline(always)] pub fn trunc(self) -> Self { Self(unsafe { _mm512_roundscale_ps(self.0, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC) }) }
+
+    // Horizontal
+    #[inline(always)]
+    pub fn reduce_add(self) -> f32 { unsafe { _mm512_reduce_add_ps(self.0) } }
+
+    // Mask operations - AVX-512 uses k-masks
+    #[inline(always)] pub fn to_bitmask(self) -> u16 {
+        // Extract sign bits (avx512dq)
+        unsafe { _mm512_movepi32_mask(_mm512_castps_si512(self.0)) }
+    }
+    #[inline(always)] pub fn any(self) -> bool { self.to_bitmask() != 0 }
+    #[inline(always)] pub fn all(self) -> bool { self.to_bitmask() == 0xFFFF }
+    #[inline(always)] pub fn none(self) -> bool { self.to_bitmask() == 0 }
+
+    // Int conversion
+    #[inline(always)]
+    pub fn round_int(self) -> i32x16 { i32x16(unsafe { _mm512_cvtps_epi32(self.0) }) }
+    #[inline(always)]
+    pub fn trunc_int(self) -> i32x16 { i32x16(unsafe { _mm512_cvttps_epi32(self.0) }) }
+    #[inline(always)]
+    pub fn from_i32x16(v: i32x16) -> Self { Self(unsafe { _mm512_cvtepi32_ps(v.0) }) }
+
+    // Degrees
+    #[inline(always)] pub fn to_degrees(self) -> Self { self * (180.0 / core::f32::consts::PI) }
+    #[inline(always)] pub fn to_radians(self) -> Self { self * (core::f32::consts::PI / 180.0) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Neg for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self {
+        Self(unsafe { _mm512_xor_ps(self.0, _mm512_set1_ps(-0.0)) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Add for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self { Self(unsafe { _mm512_add_ps(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl Sub for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Self) -> Self { Self(unsafe { _mm512_sub_ps(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl Mul for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn mul(self, rhs: Self) -> Self { Self(unsafe { _mm512_mul_ps(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl Div for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn div(self, rhs: Self) -> Self { Self(unsafe { _mm512_div_ps(self.0, rhs.0) }) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl BitAnd for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self { Self(unsafe { _mm512_and_ps(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl BitOr for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self { Self(unsafe { _mm512_or_ps(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl BitXor for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitxor(self, rhs: Self) -> Self { Self(unsafe { _mm512_xor_ps(self.0, rhs.0) }) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl_bitwise_assign_ops!(f32x16);
+#[cfg(target_arch = "x86_64")]
+impl_assign_ops!(f32x16);
+
+// Scalar ops
+#[cfg(target_arch = "x86_64")]
+impl Add<f32> for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: f32) -> Self { self + Self(unsafe { _mm512_set1_ps(rhs) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl Sub<f32> for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: f32) -> Self { self - Self(unsafe { _mm512_set1_ps(rhs) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl Mul<f32> for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn mul(self, rhs: f32) -> Self { self * Self(unsafe { _mm512_set1_ps(rhs) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl Div<f32> for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn div(self, rhs: f32) -> Self { self / Self(unsafe { _mm512_set1_ps(rhs) }) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl SimdEq for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_eq(self, rhs: Self) -> Self {
+        let mask = unsafe { _mm512_cmp_ps_mask(self.0, rhs.0, _CMP_EQ_OQ) };
+        Self(unsafe { _mm512_maskz_mov_ps(mask, _mm512_set1_ps(f32::from_bits(u32::MAX))) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl SimdNe for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_ne(self, rhs: Self) -> Self {
+        let mask = unsafe { _mm512_cmp_ps_mask(self.0, rhs.0, _CMP_NEQ_OQ) };
+        Self(unsafe { _mm512_maskz_mov_ps(mask, _mm512_set1_ps(f32::from_bits(u32::MAX))) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl SimdLt for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_lt(self, rhs: Self) -> Self {
+        let mask = unsafe { _mm512_cmp_ps_mask(self.0, rhs.0, _CMP_LT_OQ) };
+        Self(unsafe { _mm512_maskz_mov_ps(mask, _mm512_set1_ps(f32::from_bits(u32::MAX))) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl SimdLe for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_le(self, rhs: Self) -> Self {
+        let mask = unsafe { _mm512_cmp_ps_mask(self.0, rhs.0, _CMP_LE_OQ) };
+        Self(unsafe { _mm512_maskz_mov_ps(mask, _mm512_set1_ps(f32::from_bits(u32::MAX))) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl SimdGt for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_gt(self, rhs: Self) -> Self {
+        let mask = unsafe { _mm512_cmp_ps_mask(self.0, rhs.0, _CMP_GT_OQ) };
+        Self(unsafe { _mm512_maskz_mov_ps(mask, _mm512_set1_ps(f32::from_bits(u32::MAX))) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl SimdGe for f32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_ge(self, rhs: Self) -> Self {
+        let mask = unsafe { _mm512_cmp_ps_mask(self.0, rhs.0, _CMP_GE_OQ) };
+        Self(unsafe { _mm512_maskz_mov_ps(mask, _mm512_set1_ps(f32::from_bits(u32::MAX))) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl core::fmt::Debug for f32x16 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("f32x16").field(&self.to_array()).finish()
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl PartialEq for f32x16 {
+    fn eq(&self, other: &Self) -> bool { self.to_array() == other.to_array() }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Index<usize> for f32x16 {
+    type Output = f32;
+    #[inline(always)]
+    fn index(&self, index: usize) -> &Self::Output { &self.as_array()[index] }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl IndexMut<usize> for f32x16 {
+    #[inline(always)]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output { &mut self.as_mut_array()[index] }
+}
+
+// ============================================================================
+// i32x16 (AVX-512DQ)
+// ============================================================================
+
+#[cfg(target_arch = "x86_64")]
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct i32x16(pub(crate) __m512i);
+
+/// Token-gated constants for i32x16. Cannot be constructed directly.
+#[cfg(target_arch = "x86_64")]
+#[derive(Clone, Copy)]
+pub struct I32x16Consts(());
+
+#[cfg(target_arch = "x86_64")]
+impl I32x16Consts {
+    #[inline(always)] pub fn zero(self) -> i32x16 { i32x16(unsafe { _mm512_setzero_si512() }) }
+    #[inline(always)] pub fn one(self) -> i32x16 { i32x16(unsafe { _mm512_set1_epi32(1) }) }
+    #[inline(always)] pub fn neg_one(self) -> i32x16 { i32x16(unsafe { _mm512_set1_epi32(-1) }) }
+    #[inline(always)] pub fn min_value(self) -> i32x16 { i32x16(unsafe { _mm512_set1_epi32(i32::MIN) }) }
+    #[inline(always)] pub fn max_value(self) -> i32x16 { i32x16(unsafe { _mm512_set1_epi32(i32::MAX) }) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl i32x16 {
+    pub const LANES: usize = 16;
+
+    /// Get token-gated constants. Usage: `i32x16::consts(token).one()`
+    #[inline(always)]
+    pub fn consts(_: impl crate::HasAvx512dq) -> I32x16Consts { I32x16Consts(()) }
+
+    #[inline(always)]
+    pub fn load(_: impl crate::HasAvx512dq, data: &[i32; 16]) -> Self {
+        Self(unsafe { _mm512_loadu_si512(data.as_ptr() as *const __m512i) })
+    }
+    #[inline(always)]
+    pub fn splat(_: impl crate::HasAvx512dq, v: i32) -> Self { Self(unsafe { _mm512_set1_epi32(v) }) }
+    #[inline(always)]
+    pub fn zero(_: impl crate::HasAvx512dq) -> Self { Self(unsafe { _mm512_setzero_si512() }) }
+
+    #[inline(always)]
+    pub fn to_array(self) -> [i32; 16] {
+        let mut out = [0i32; 16];
+        unsafe { _mm512_storeu_si512(out.as_mut_ptr() as *mut __m512i, self.0) };
+        out
+    }
+    #[inline(always)]
+    pub fn as_array(&self) -> &[i32; 16] { unsafe { &*(self as *const Self as *const [i32; 16]) } }
+    #[inline(always)]
+    pub fn as_mut_array(&mut self) -> &mut [i32; 16] { unsafe { &mut *(self as *mut Self as *mut [i32; 16]) } }
+    #[inline(always)]
+    pub fn raw(self) -> __m512i { self.0 }
+    #[inline(always)]
+    fn from_raw(v: __m512i) -> Self { Self(v) }
+
+    #[inline(always)] pub fn min(self, o: Self) -> Self { Self(unsafe { _mm512_min_epi32(self.0, o.0) }) }
+    #[inline(always)] pub fn max(self, o: Self) -> Self { Self(unsafe { _mm512_max_epi32(self.0, o.0) }) }
+    #[inline(always)] pub fn abs(self) -> Self { Self(unsafe { _mm512_abs_epi32(self.0) }) }
+
+    #[inline(always)] pub fn to_f32x16(self) -> f32x16 { f32x16::from_i32x16(self) }
+
+    #[inline(always)] pub fn to_bitmask(self) -> u16 {
+        // Extract sign bits (avx512dq)
+        unsafe { _mm512_movepi32_mask(self.0) }
+    }
+    #[inline(always)] pub fn any(self) -> bool { self.to_bitmask() != 0 }
+    #[inline(always)] pub fn all(self) -> bool { self.to_bitmask() == 0xFFFF }
+    #[inline(always)] pub fn none(self) -> bool { self.to_bitmask() == 0 }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Neg for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self { Self(unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), self.0) }) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Not for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn not(self) -> Self { Self(unsafe { _mm512_xor_si512(self.0, _mm512_set1_epi32(-1)) }) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Add for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self { Self(unsafe { _mm512_add_epi32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl Sub for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Self) -> Self { Self(unsafe { _mm512_sub_epi32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl Mul for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn mul(self, rhs: Self) -> Self { Self(unsafe { _mm512_mullo_epi32(self.0, rhs.0) }) }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl BitAnd for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self { Self(unsafe { _mm512_and_si512(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl BitOr for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self { Self(unsafe { _mm512_or_si512(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl BitXor for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitxor(self, rhs: Self) -> Self { Self(unsafe { _mm512_xor_si512(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "x86_64")]
+impl_bitwise_assign_ops!(i32x16);
+
+// Shifts - AVX-512 has variable shifts
+#[cfg(target_arch = "x86_64")]
+impl Shl<i32> for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn shl(self, rhs: i32) -> Self {
+        Self(unsafe { _mm512_sllv_epi32(self.0, _mm512_set1_epi32(rhs)) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl Shr<i32> for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn shr(self, rhs: i32) -> Self {
+        Self(unsafe { _mm512_srav_epi32(self.0, _mm512_set1_epi32(rhs)) })
+    }
+}
+
+// Per-lane shifts
+#[cfg(target_arch = "x86_64")]
+impl Shl<i32x16> for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn shl(self, rhs: i32x16) -> Self {
+        let shift = unsafe { _mm512_and_si512(rhs.0, _mm512_set1_epi32(31)) };
+        Self(unsafe { _mm512_sllv_epi32(self.0, shift) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl Shr<i32x16> for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn shr(self, rhs: i32x16) -> Self {
+        let shift = unsafe { _mm512_and_si512(rhs.0, _mm512_set1_epi32(31)) };
+        Self(unsafe { _mm512_srav_epi32(self.0, shift) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl SimdEq for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_eq(self, rhs: Self) -> Self {
+        let mask = unsafe { _mm512_cmpeq_epi32_mask(self.0, rhs.0) };
+        Self(unsafe { _mm512_maskz_mov_epi32(mask, _mm512_set1_epi32(-1)) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl SimdGt for i32x16 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_gt(self, rhs: Self) -> Self {
+        let mask = unsafe { _mm512_cmpgt_epi32_mask(self.0, rhs.0) };
+        Self(unsafe { _mm512_maskz_mov_epi32(mask, _mm512_set1_epi32(-1)) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl SimdLt for i32x16 { type Output = Self; #[inline(always)] fn simd_lt(self, rhs: Self) -> Self { rhs.simd_gt(self) } }
+#[cfg(target_arch = "x86_64")]
+impl SimdGe for i32x16 { type Output = Self; #[inline(always)] fn simd_ge(self, rhs: Self) -> Self { !rhs.simd_gt(self) } }
+#[cfg(target_arch = "x86_64")]
+impl SimdLe for i32x16 { type Output = Self; #[inline(always)] fn simd_le(self, rhs: Self) -> Self { !self.simd_gt(rhs) } }
+#[cfg(target_arch = "x86_64")]
+impl SimdNe for i32x16 { type Output = Self; #[inline(always)] fn simd_ne(self, rhs: Self) -> Self { !self.simd_eq(rhs) } }
+
+#[cfg(target_arch = "x86_64")]
+impl core::fmt::Debug for i32x16 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("i32x16").field(&self.to_array()).finish()
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl PartialEq for i32x16 {
+    fn eq(&self, other: &Self) -> bool { self.to_array() == other.to_array() }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Index<usize> for i32x16 {
+    type Output = i32;
+    #[inline(always)]
+    fn index(&self, index: usize) -> &Self::Output { &self.as_array()[index] }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl IndexMut<usize> for i32x16 {
+    #[inline(always)]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output { &mut self.as_mut_array()[index] }
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -2962,6 +3459,192 @@ mod tests {
         if Sse2Token::summon().is_some() {
             let result = unsafe { i32x4_intrinsics_are_safe() };
             let _ = result.to_array();
+        }
+    }
+
+    // ========================================================================
+    // AVX-512 safety verification tests
+    // ========================================================================
+
+    /// Verify all f32x16 AVX-512 intrinsics are safe inside #[target_feature(enable = "avx512f,avx512dq")]
+    #[target_feature(enable = "avx512f,avx512dq")]
+    unsafe fn f32x16_intrinsics_are_safe() -> f32x16 {
+        use core::arch::x86_64::*;
+
+        // Construction
+        let zero = _mm512_setzero_ps();
+        let one = _mm512_set1_ps(1.0);
+        let neg_zero = _mm512_set1_ps(-0.0);
+
+        // Arithmetic
+        let sum = _mm512_add_ps(zero, one);
+        let diff = _mm512_sub_ps(sum, zero);
+        let prod = _mm512_mul_ps(diff, one);
+        let quot = _mm512_div_ps(prod, one);
+
+        // FMA
+        let fma = _mm512_fmadd_ps(quot, one, zero);
+        let fms = _mm512_fmsub_ps(fma, one, zero);
+        let fnma = _mm512_fnmadd_ps(fms, one, zero);
+        let fnms = _mm512_fnmsub_ps(fnma, one, zero);
+
+        // Math
+        let min = _mm512_min_ps(fnms, one);
+        let max = _mm512_max_ps(min, zero);
+        let abs = _mm512_abs_ps(max);
+        let sqrt = _mm512_sqrt_ps(abs);
+        let rcp = _mm512_rcp14_ps(sqrt);
+        let rsqrt = _mm512_rsqrt14_ps(rcp);
+
+        // Rounding
+        let round = _mm512_roundscale_ps(rsqrt, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+        let floor = _mm512_roundscale_ps(round, _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC);
+        let ceil = _mm512_roundscale_ps(floor, _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC);
+        let trunc = _mm512_roundscale_ps(ceil, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
+
+        // Bitwise (avx512dq)
+        let and = _mm512_and_ps(trunc, one);
+        let or = _mm512_or_ps(and, zero);
+        let xor = _mm512_xor_ps(or, neg_zero);
+
+        // Comparisons (return k-mask)
+        let cmp_eq_mask = _mm512_cmp_ps_mask(xor, one, _CMP_EQ_OQ);
+        let cmp_lt_mask = _mm512_cmp_ps_mask(xor, one, _CMP_LT_OQ);
+        let cmp_gt_mask = _mm512_cmp_ps_mask(xor, one, _CMP_GT_OQ);
+
+        // Masked move
+        let masked = _mm512_maskz_mov_ps(cmp_eq_mask, one);
+        let _ = cmp_lt_mask;
+        let _ = cmp_gt_mask;
+
+        // Horizontal
+        let _reduce = _mm512_reduce_add_ps(masked);
+
+        // Mask extraction (avx512dq)
+        let as_si = _mm512_castps_si512(masked);
+        let _bitmask = _mm512_movepi32_mask(as_si);
+
+        // Int conversion
+        let as_int = _mm512_cvtps_epi32(masked);
+        let back = _mm512_cvtepi32_ps(as_int);
+        let trunc_int = _mm512_cvttps_epi32(back);
+        let _back2 = _mm512_cvtepi32_ps(trunc_int);
+
+        f32x16(masked)
+    }
+
+    /// Verify all i32x16 AVX-512 intrinsics are safe inside #[target_feature(enable = "avx512f,avx512dq")]
+    #[target_feature(enable = "avx512f,avx512dq")]
+    unsafe fn i32x16_intrinsics_are_safe() -> i32x16 {
+        use core::arch::x86_64::*;
+
+        // Construction
+        let zero = _mm512_setzero_si512();
+        let one = _mm512_set1_epi32(1);
+        let neg_one = _mm512_set1_epi32(-1);
+
+        // Arithmetic
+        let sum = _mm512_add_epi32(zero, one);
+        let diff = _mm512_sub_epi32(sum, zero);
+        let prod = _mm512_mullo_epi32(diff, one);
+
+        // Min/max/abs
+        let min = _mm512_min_epi32(prod, one);
+        let max = _mm512_max_epi32(min, zero);
+        let abs = _mm512_abs_epi32(max);
+
+        // Bitwise
+        let and = _mm512_and_si512(abs, neg_one);
+        let or = _mm512_or_si512(and, zero);
+        let xor = _mm512_xor_si512(or, zero);
+
+        // Shifts (variable)
+        let shift_amt = _mm512_set1_epi32(2);
+        let shl = _mm512_sllv_epi32(xor, shift_amt);
+        let shr = _mm512_srav_epi32(shl, shift_amt);
+
+        // Comparisons (return k-mask)
+        let cmp_eq_mask = _mm512_cmpeq_epi32_mask(shr, one);
+        let cmp_gt_mask = _mm512_cmpgt_epi32_mask(shr, zero);
+
+        // Masked move
+        let masked = _mm512_maskz_mov_epi32(cmp_eq_mask, neg_one);
+        let _ = cmp_gt_mask;
+
+        // Mask extraction (avx512dq)
+        let _bitmask = _mm512_movepi32_mask(masked);
+
+        i32x16(masked)
+    }
+
+    #[test]
+    fn test_f32x16_intrinsics_safe_in_target_feature() {
+        // X64V4Token includes avx512dq (avx512f-only token doesn't have DQ)
+        if crate::X64V4Token::summon().is_some() {
+            let result = unsafe { f32x16_intrinsics_are_safe() };
+            let _ = result.to_array();
+        }
+    }
+
+    #[test]
+    fn test_i32x16_intrinsics_safe_in_target_feature() {
+        // X64V4Token includes avx512dq (avx512f-only token doesn't have DQ)
+        if crate::X64V4Token::summon().is_some() {
+            let result = unsafe { i32x16_intrinsics_are_safe() };
+            let _ = result.to_array();
+        }
+    }
+
+    // Basic functional tests for AVX-512DQ types
+    #[test]
+    fn test_f32x16_basic() {
+        if let Some(t) = crate::X64V4Token::summon() {
+            let a = f32x16::splat(t, 2.0);
+            let b = f32x16::splat(t, 3.0);
+            assert_eq!((a + b).to_array(), [5.0f32; 16]);
+            assert_eq!((a * b).to_array(), [6.0f32; 16]);
+            assert_eq!((-a).to_array(), [-2.0f32; 16]);
+        }
+    }
+
+    #[test]
+    fn test_f32x16_fma() {
+        if let Some(t) = crate::X64V4Token::summon() {
+            let a = f32x16::splat(t, 2.0);
+            let b = f32x16::splat(t, 3.0);
+            let c = f32x16::splat(t, 1.0);
+            assert_eq!(a.mul_add(b, c).to_array(), [7.0f32; 16]);
+        }
+    }
+
+    #[test]
+    fn test_i32x16_basic() {
+        if let Some(t) = crate::X64V4Token::summon() {
+            let a = i32x16::splat(t, 10);
+            let b = i32x16::splat(t, 3);
+            assert_eq!((a + b).to_array(), [13i32; 16]);
+            assert_eq!((a - b).to_array(), [7i32; 16]);
+            assert_eq!((a * b).to_array(), [30i32; 16]);
+            assert_eq!((-a).to_array(), [-10i32; 16]);
+        }
+    }
+
+    #[test]
+    fn test_i32x16_shifts() {
+        if let Some(t) = crate::X64V4Token::summon() {
+            let a = i32x16::splat(t, 16);
+            assert_eq!((a << 2i32).to_array(), [64i32; 16]);
+            assert_eq!((a >> 2i32).to_array(), [4i32; 16]);
+        }
+    }
+
+    #[test]
+    fn test_f32x16_constants() {
+        if let Some(t) = crate::X64V4Token::summon() {
+            let c = f32x16::consts(t);
+            assert_eq!(c.one().to_array(), [1.0f32; 16]);
+            assert_eq!(c.zero().to_array(), [0.0f32; 16]);
+            assert_eq!(c.half().to_array(), [0.5f32; 16]);
         }
     }
 }
