@@ -16,15 +16,13 @@ use archmage::SimdToken;
 #[test]
 fn test_cross_platform_token_types_exist() {
     // x86 tokens - should compile on ARM/WASM, summon returns None there
+    // SSE4.2 is the baseline for archmage - no SSE/SSE2/SSE4.1 tokens
     use archmage::{
-        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Server64, Sse2Token, Sse41Token,
-        Sse42Token, SseToken, X64V2Token, X64V3Token, X64V4Token,
+        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Server64, Sse42Token,
+        X64V2Token, X64V3Token, X64V4Token,
     };
 
     // Verify tokens are zero-sized
-    assert_eq!(core::mem::size_of::<SseToken>(), 0);
-    assert_eq!(core::mem::size_of::<Sse2Token>(), 0);
-    assert_eq!(core::mem::size_of::<Sse41Token>(), 0);
     assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
     assert_eq!(core::mem::size_of::<AvxToken>(), 0);
     assert_eq!(core::mem::size_of::<Avx2Token>(), 0);
@@ -60,9 +58,9 @@ fn test_summon_behavior() {
     // On x86_64, Desktop64/Server64 may succeed
     #[cfg(target_arch = "x86_64")]
     {
-        // SSE2 is baseline on x86_64, so Sse2Token should always succeed
-        use archmage::Sse2Token;
-        assert!(Sse2Token::summon().is_some(), "SSE2 is baseline on x86_64");
+        // SSE2 is baseline on x86_64, so Sse42Token should always succeed
+        use archmage::Sse42Token;
+        assert!(Sse42Token::summon().is_some(), "SSE2 is baseline on x86_64");
 
         // ARM and WASM tokens should return None on x86
         assert!(NeonToken::summon().is_none(), "NEON unavailable on x86");
@@ -108,12 +106,12 @@ fn test_summon_behavior() {
 #[test]
 #[cfg(feature = "disable-archmage")]
 fn test_disable_archmage_feature() {
-    use archmage::{Desktop64, NeonToken, Server64, Simd128Token, SimdToken, Sse2Token};
+    use archmage::{Desktop64, NeonToken, Server64, Simd128Token, SimdToken, Sse42Token};
 
     // With disable-archmage, ALL tokens should return None from summon()
     assert!(
-        Sse2Token::summon().is_none(),
-        "disable-archmage should make Sse2Token::summon() return None"
+        Sse42Token::summon().is_none(),
+        "disable-archmage should make Sse42Token::summon() return None"
     );
     assert!(
         Desktop64::summon().is_none(),
@@ -136,7 +134,7 @@ fn test_disable_archmage_feature() {
     #[cfg(target_arch = "x86_64")]
     {
         assert!(
-            Sse2Token::try_new().is_some(),
+            Sse42Token::try_new().is_some(),
             "try_new() should still detect CPU features even with disable-archmage"
         );
     }
@@ -176,13 +174,10 @@ fn test_token_names() {
     use archmage::{
         Arm64, Avx2FmaToken, Avx2Token, Avx512Fp16Token, Avx512ModernToken, AvxToken, Desktop64,
         FmaToken, NeonAesToken, NeonFp16Token, NeonSha3Token, NeonToken, Server64, Simd128Token,
-        Sse2Token, Sse41Token, Sse42Token, SseToken, X64V2Token, X64V3Token, X64V4Token,
+        Sse42Token, X64V2Token, X64V3Token, X64V4Token,
     };
 
-    // x86 tokens
-    assert_eq!(SseToken::NAME, "SSE");
-    assert_eq!(Sse2Token::NAME, "SSE2");
-    assert_eq!(Sse41Token::NAME, "SSE4.1");
+    // x86 tokens (SSE4.2 is the baseline - no SSE/SSE2/SSE4.1 tokens)
     assert_eq!(Sse42Token::NAME, "SSE4.2");
     assert_eq!(AvxToken::NAME, "AVX");
     assert_eq!(Avx2Token::NAME, "AVX2");
@@ -224,10 +219,10 @@ mod x86_mem_tests {
     /// Exhaustive test of all SSE mem functions.
     #[test]
     fn test_sse_mem_exhaustive() {
-        use archmage::SseToken;
+        use archmage::Sse42Token;
         use archmage::mem::sse;
 
-        let Some(token) = SseToken::summon() else {
+        let Some(token) = Sse42Token::summon() else {
             eprintln!("SSE not available, skipping test");
             return;
         };
@@ -273,10 +268,10 @@ mod x86_mem_tests {
     /// Exhaustive test of all SSE2 mem functions.
     #[test]
     fn test_sse2_mem_exhaustive() {
-        use archmage::Sse2Token;
+        use archmage::Sse42Token;
         use archmage::mem::sse2;
 
-        let Some(token) = Sse2Token::summon() else {
+        let Some(token) = Sse42Token::summon() else {
             eprintln!("SSE2 not available, skipping test");
             return;
         };

@@ -13,7 +13,7 @@ use archmage::tokens::x86::*;
 /// If SSE2 token is available, SSE2 instructions must work.
 #[test]
 fn sse2_instructions_work_when_token_available() {
-    if let Some(_token) = Sse2Token::try_new() {
+    if let Some(_token) = Sse42Token::try_new() {
         // This will SIGILL if SSE2 isn't actually available
         unsafe {
             use core::arch::x86_64::*;
@@ -90,8 +90,8 @@ fn token_hierarchy_is_correct() {
     if Avx2Token::try_new().is_some() {
         assert!(AvxToken::try_new().is_some(), "AVX2 implies AVX");
         assert!(Sse42Token::try_new().is_some(), "AVX2 implies SSE4.2");
-        assert!(Sse41Token::try_new().is_some(), "AVX2 implies SSE4.1");
-        assert!(Sse2Token::try_new().is_some(), "AVX2 implies SSE2");
+        assert!(Sse42Token::try_new().is_some(), "AVX2 implies SSE4.1");
+        assert!(Sse42Token::try_new().is_some(), "AVX2 implies SSE2");
     }
 
     // If AVX-512F is available, AVX2 and predecessors must be available
@@ -132,8 +132,8 @@ fn combined_tokens_match_components() {
 #[test]
 fn print_detected_features() {
     println!("Feature detection results:");
-    println!("  SSE2:      {}", Sse2Token::try_new().is_some());
-    println!("  SSE4.1:    {}", Sse41Token::try_new().is_some());
+    println!("  SSE2:      {}", Sse42Token::try_new().is_some());
+    println!("  SSE4.1:    {}", Sse42Token::try_new().is_some());
     println!("  SSE4.2:    {}", Sse42Token::try_new().is_some());
     println!("  AVX:       {}", AvxToken::try_new().is_some());
     println!("  AVX2:      {}", Avx2Token::try_new().is_some());

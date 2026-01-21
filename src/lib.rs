@@ -112,9 +112,10 @@ pub use tokens::CompositeToken;
 pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 
 // x86 feature marker traits (available on all architectures for cross-platform code)
+// Note: SSE4.2 is the baseline - HasSse, HasSse2, HasSse41 have been removed
 pub use tokens::{
     HasAvx, HasAvx2, HasAvx512bw, HasAvx512cd, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl,
-    HasSse, HasSse2, HasSse41, HasSse42,
+    HasSse42,
 };
 
 // aarch64 feature marker traits (available on all architectures)
@@ -145,10 +146,8 @@ pub use tokens::{
     Server64,
     // WASM tokens
     Simd128Token,
-    Sse2Token,
-    Sse41Token,
+    // SSE4.2 is the baseline (SSE, SSE2, SSE4.1 tokens removed)
     Sse42Token,
-    SseToken,
     X64V2Token,
     X64V3Token,
     X64V4Token,

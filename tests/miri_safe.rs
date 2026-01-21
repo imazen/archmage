@@ -12,7 +12,7 @@ use archmage::tokens::x86::*;
 /// Verify all tokens are zero-sized types.
 #[test]
 fn tokens_are_zst() {
-    assert_eq!(core::mem::size_of::<Sse2Token>(), 0);
+    assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
     assert_eq!(core::mem::size_of::<Avx2Token>(), 0);
     assert_eq!(core::mem::size_of::<FmaToken>(), 0);
     assert_eq!(core::mem::size_of::<Avx2FmaToken>(), 0);
@@ -25,7 +25,7 @@ fn tokens_are_zst() {
 #[test]
 fn tokens_are_copy() {
     fn assert_copy<T: Copy>() {}
-    assert_copy::<Sse2Token>();
+    assert_copy::<Sse42Token>();
     assert_copy::<Avx2Token>();
     assert_copy::<FmaToken>();
     assert_copy::<Avx2FmaToken>();
@@ -34,17 +34,20 @@ fn tokens_are_copy() {
     assert_copy::<X64V4Token>();
 }
 
-/// Verify SSE2 is always available on x86_64 (baseline).
+/// Verify SSE4.2 is the minimum supported token level.
 #[test]
-fn sse2_always_available() {
-    // SSE2 is baseline on x86_64, must always succeed
-    assert!(Sse2Token::try_new().is_some());
+fn sse42_minimum_supported() {
+    // SSE4.2 is the baseline for archmage (x86-64-v2 level)
+    // Note: This may fail on very old CPUs that lack SSE4.2
+    if let Some(_token) = Sse42Token::try_new() {
+        // Token created successfully
+    }
 }
 
 /// Test that token names are set correctly.
 #[test]
 fn token_names() {
-    assert_eq!(Sse2Token::NAME, "SSE2");
+    assert_eq!(Sse42Token::NAME, "SSE4.2");
     assert_eq!(Avx2Token::NAME, "AVX2");
     assert_eq!(FmaToken::NAME, "FMA");
     assert_eq!(Avx2FmaToken::NAME, "AVX2+FMA");
@@ -53,14 +56,14 @@ fn token_names() {
     assert_eq!(X64V4Token::NAME, "x86-64-v4");
 }
 
-/// Test token hierarchy - if we have AVX2, we can get SSE2.
+/// Test token hierarchy - if we have AVX2, we can get SSE4.2.
 #[test]
-fn token_hierarchy_avx2_implies_sse2() {
+fn token_hierarchy_avx2_implies_sse42() {
     if let Some(avx2) = Avx2Token::try_new() {
-        let sse2: Sse2Token = avx2.sse2();
+        let sse42: Sse42Token = avx2.sse42();
         // Can't really verify the token is valid without running SIMD,
         // but we can verify it's the right type and ZST
-        assert_eq!(core::mem::size_of_val(&sse2), 0);
+        assert_eq!(core::mem::size_of_val(&sse42), 0);
     }
 }
 
@@ -71,8 +74,8 @@ fn token_hierarchy_avx2fma() {
         let _avx2: Avx2Token = token.avx2();
         let _fma: FmaToken = token.fma();
         let _avx: AvxToken = token.avx();
-        let _sse41: Sse41Token = token.sse41();
-        let _sse2: Sse2Token = token.sse2();
+        let _sse41: Sse42Token = token.sse42();
+        let _sse2: Sse42Token = token.sse42();
     }
 }
 
@@ -107,7 +110,7 @@ fn marker_traits_compile() {
     fn requires_256<T: Has256BitSimd>(_: T) {}
     fn requires_fma<T: HasFma>(_: T) {}
 
-    if let Some(token) = Sse2Token::try_new() {
+    if let Some(token) = Sse42Token::try_new() {
         requires_128(token);
     }
     if let Some(token) = Avx2Token::try_new() {

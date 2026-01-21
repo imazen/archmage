@@ -1,11 +1,22 @@
 //! x86_64 SIMD capability tokens
 //!
-//! Provides tokens for SSE2, SSE4.1, AVX, AVX2, AVX-512, and FMA.
+//! Provides tokens for SSE4.2, AVX, AVX2, AVX-512, and FMA.
 //!
 //! Token construction uses [`crate::is_x86_feature_available!`] which combines
 //! compile-time and runtime detection. When compiled with a target feature
 //! enabled (e.g., in a `#[multiversed]` function), the runtime check is
 //! completely eliminated.
+//!
+//! ## Baseline: SSE4.2
+//!
+//! All tokens in archmage assume SSE4.2 as the baseline. Tokens below SSE4.2
+//! (SSE, SSE2, SSE3, SSSE3, SSE4.1) are not provided - this simplifies the
+//! hierarchy and matches practical modern CPU availability (Nehalem 2008+).
+//!
+//! ## Explicit Feature Verification
+//!
+//! All tokens explicitly check ALL features they claim to provide. This ensures
+//! soundness - a token's trait implementations exactly match its runtime checks.
 
 use super::{CompositeToken, SimdToken};
 
@@ -16,51 +27,25 @@ pub use super::x86_avx512::{
 };
 
 // ============================================================================
-// SSE2 Token (baseline for x86_64)
+// SSE4.2 Token (baseline for archmage)
 // ============================================================================
 
-/// Proof that SSE2 is available.
+/// Proof that SSE4.2 is available.
 ///
-/// SSE2 is the baseline for x86_64 - it's always available on 64-bit x86.
-/// This token exists for completeness and generic code.
+/// SSE4.2 is the practical baseline for archmage. It's available on all x86_64
+/// CPUs from 2008+ (Nehalem, Bulldozer, and later).
 #[derive(Clone, Copy, Debug)]
-pub struct Sse2Token {
+pub struct Sse42Token {
     _private: (),
 }
 
-impl SimdToken for Sse2Token {
-    const NAME: &'static str = "SSE2";
-
-    #[inline]
-    fn try_new() -> Option<Self> {
-        // SSE2 is always available on x86_64
-        Some(Self { _private: () })
-    }
-
-    #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
-        Self { _private: () }
-    }
-}
-
-// ============================================================================
-// SSE4.1 Token
-// ============================================================================
-
-/// Proof that SSE4.1 is available.
-///
-/// SSE4.1 adds blend, round, and other useful instructions.
-#[derive(Clone, Copy, Debug)]
-pub struct Sse41Token {
-    _private: (),
-}
-
-impl SimdToken for Sse41Token {
-    const NAME: &'static str = "SSE4.1";
+impl SimdToken for Sse42Token {
+    const NAME: &'static str = "SSE4.2";
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        if crate::is_x86_feature_available!("sse4.1") {
+        // Explicit check - SSE4.2 is our baseline
+        if crate::is_x86_feature_available!("sse4.2") {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -70,15 +55,6 @@ impl SimdToken for Sse41Token {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
-    }
-}
-
-impl Sse41Token {
-    /// Get an SSE2 token (SSE4.1 implies SSE2)
-    #[inline(always)]
-    pub fn sse2(self) -> Sse2Token {
-        // SAFETY: SSE4.1 implies SSE2
-        unsafe { Sse2Token::forge_token_dangerously() }
     }
 }
 
@@ -99,7 +75,10 @@ impl SimdToken for AvxToken {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        if crate::is_x86_feature_available!("avx") {
+        // Explicit cumulative check: AVX + SSE4.2
+        if crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.2")
+        {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -113,16 +92,10 @@ impl SimdToken for AvxToken {
 }
 
 impl AvxToken {
-    /// Get an SSE4.1 token (AVX implies SSE4.1)
+    /// Get an SSE4.2 token (AVX implies SSE4.2)
     #[inline(always)]
-    pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::forge_token_dangerously() }
-    }
-
-    /// Get an SSE2 token (AVX implies SSE2)
-    #[inline(always)]
-    pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::forge_token_dangerously() }
+    pub fn sse42(self) -> Sse42Token {
+        unsafe { Sse42Token::forge_token_dangerously() }
     }
 }
 
@@ -144,7 +117,11 @@ impl SimdToken for Avx2Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        if crate::is_x86_feature_available!("avx2") {
+        // Explicit cumulative check: AVX2 + AVX + SSE4.2
+        if crate::is_x86_feature_available!("avx2")
+            && crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.2")
+        {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -164,16 +141,10 @@ impl Avx2Token {
         unsafe { AvxToken::forge_token_dangerously() }
     }
 
-    /// Get an SSE4.1 token (AVX2 implies SSE4.1)
+    /// Get an SSE4.2 token (AVX2 implies SSE4.2)
     #[inline(always)]
-    pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::forge_token_dangerously() }
-    }
-
-    /// Get an SSE2 token (AVX2 implies SSE2)
-    #[inline(always)]
-    pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::forge_token_dangerously() }
+    pub fn sse42(self) -> Sse42Token {
+        unsafe { Sse42Token::forge_token_dangerously() }
     }
 }
 
@@ -195,7 +166,12 @@ impl SimdToken for FmaToken {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        if crate::is_x86_feature_available!("fma") {
+        // Explicit cumulative check: FMA + AVX + SSE4.2
+        // (FMA requires AVX, which requires SSE4.2)
+        if crate::is_x86_feature_available!("fma")
+            && crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.2")
+        {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -205,6 +181,20 @@ impl SimdToken for FmaToken {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl FmaToken {
+    /// Get an AVX token (FMA implies AVX)
+    #[inline(always)]
+    pub fn avx(self) -> AvxToken {
+        unsafe { AvxToken::forge_token_dangerously() }
+    }
+
+    /// Get an SSE4.2 token (FMA implies SSE4.2)
+    #[inline(always)]
+    pub fn sse42(self) -> Sse42Token {
+        unsafe { Sse42Token::forge_token_dangerously() }
     }
 }
 
@@ -227,8 +217,12 @@ impl SimdToken for Avx2FmaToken {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // Both checks use compile-time optimization when features are known
-        if crate::is_x86_feature_available!("avx2") && crate::is_x86_feature_available!("fma") {
+        // Explicit cumulative check: AVX2 + FMA + AVX + SSE4.2
+        if crate::is_x86_feature_available!("avx2")
+            && crate::is_x86_feature_available!("fma")
+            && crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.2")
+        {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -272,48 +266,12 @@ impl Avx2FmaToken {
         self.avx2.avx()
     }
 
-    /// Get an SSE4.1 token
+    /// Get an SSE4.2 token
     #[inline(always)]
-    pub fn sse41(&self) -> Sse41Token {
-        self.avx2.sse41()
-    }
-
-    /// Get an SSE2 token
-    #[inline(always)]
-    pub fn sse2(&self) -> Sse2Token {
-        self.avx2.sse2()
+    pub fn sse42(&self) -> Sse42Token {
+        self.avx2.sse42()
     }
 }
-
-
-// ============================================================================
-// SSE Token (for functions that only need SSE, not SSE2)
-// ============================================================================
-
-/// Proof that SSE is available.
-///
-/// SSE is implied by SSE2, which is baseline on x86_64. This token exists
-/// for completeness when wrapping functions that only require SSE.
-#[derive(Clone, Copy, Debug)]
-pub struct SseToken {
-    _private: (),
-}
-
-impl SimdToken for SseToken {
-    const NAME: &'static str = "SSE";
-
-    #[inline(always)]
-    fn try_new() -> Option<Self> {
-        // SSE is always available on x86_64 (implied by SSE2)
-        Some(Self { _private: () })
-    }
-
-    #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
-        Self { _private: () }
-    }
-}
-
 
 // ============================================================================
 // x86-64 Microarchitecture Level Tokens (Profiles)
@@ -324,15 +282,13 @@ impl SimdToken for SseToken {
 //
 // | Level | Key Features                           | Hardware              |
 // |-------|----------------------------------------|-----------------------|
-// | v1    | SSE, SSE2 (baseline x86_64)            | All x86_64            |
-// | v2    | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT  | Nehalem 2008+         |
+// | v2    | SSE4.2, POPCNT                         | Nehalem 2008+         |
 // | v3    | + AVX, AVX2, FMA, BMI1, BMI2           | Haswell 2013+, Zen 1+ |
 // | v4    | + AVX-512F/BW/CD/DQ/VL                 | Xeon 2017+, Zen 4+    |
 
 /// Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).
 ///
-/// x86-64-v2 implies: SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CX16, SAHF.
-/// This is the Nehalem (2008) / Bulldozer (2011) baseline.
+/// x86-64-v2 is the Nehalem (2008) / Bulldozer (2011) baseline.
 #[derive(Clone, Copy, Debug)]
 pub struct X64V2Token {
     _private: (),
@@ -343,8 +299,9 @@ impl SimdToken for X64V2Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // v2 requires SSE4.2 and POPCNT (SSE4.2 implies earlier SSE versions)
-        if crate::is_x86_feature_available!("sse4.2") && crate::is_x86_feature_available!("popcnt")
+        // Explicit cumulative check: SSE4.2 + POPCNT
+        if crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -364,18 +321,6 @@ impl X64V2Token {
     pub fn sse42(self) -> Sse42Token {
         unsafe { Sse42Token::forge_token_dangerously() }
     }
-
-    /// Get an SSE4.1 token
-    #[inline(always)]
-    pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::forge_token_dangerously() }
-    }
-
-    /// Get an SSE2 token
-    #[inline(always)]
-    pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::forge_token_dangerously() }
-    }
 }
 
 /// Proof that AVX2 + FMA + BMI1/2 are available (x86-64-v3 level).
@@ -394,10 +339,13 @@ impl SimdToken for X64V3Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // v3 requires AVX2, FMA, and BMI2 (these imply most other v3 features)
+        // Explicit cumulative check: all v3 features
         if crate::is_x86_feature_available!("avx2")
             && crate::is_x86_feature_available!("fma")
             && crate::is_x86_feature_available!("bmi2")
+            && crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -447,63 +395,6 @@ impl X64V3Token {
     pub fn sse42(self) -> Sse42Token {
         unsafe { Sse42Token::forge_token_dangerously() }
     }
-
-    /// Get an SSE4.1 token
-    #[inline(always)]
-    pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::forge_token_dangerously() }
-    }
-
-    /// Get an SSE2 token
-    #[inline(always)]
-    pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::forge_token_dangerously() }
-    }
-}
-
-
-// ============================================================================
-// SSE4.2 Token (needed for v2)
-// ============================================================================
-
-/// Proof that SSE4.2 is available.
-///
-/// SSE4.2 adds string/text processing and CRC32 instructions.
-#[derive(Clone, Copy, Debug)]
-pub struct Sse42Token {
-    _private: (),
-}
-
-impl SimdToken for Sse42Token {
-    const NAME: &'static str = "SSE4.2";
-
-    #[inline(always)]
-    fn try_new() -> Option<Self> {
-        if crate::is_x86_feature_available!("sse4.2") {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl Sse42Token {
-    /// Get an SSE4.1 token (SSE4.2 implies SSE4.1)
-    #[inline(always)]
-    pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::forge_token_dangerously() }
-    }
-
-    /// Get an SSE2 token (SSE4.2 implies SSE2)
-    #[inline(always)]
-    pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::forge_token_dangerously() }
-    }
 }
 
 // ============================================================================
@@ -514,13 +405,10 @@ use super::sealed::Sealed;
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 use super::{
     HasAvx, HasAvx2, HasAvx512bw, HasAvx512cd, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl,
-    HasSse, HasSse2, HasSse41, HasSse42,
+    HasSse42,
 };
 
 // Sealed trait implementations (required for marker traits)
-impl Sealed for SseToken {}
-impl Sealed for Sse2Token {}
-impl Sealed for Sse41Token {}
 impl Sealed for Sse42Token {}
 impl Sealed for AvxToken {}
 impl Sealed for Avx2Token {}
@@ -530,10 +418,25 @@ impl Sealed for X64V2Token {}
 impl Sealed for X64V3Token {}
 // AVX-512 tokens are sealed in x86_avx512.rs
 
-// 128-bit SIMD: SSE, SSE2, SSE4.1, SSE4.2
-impl Has128BitSimd for SseToken {}
-impl Has128BitSimd for Sse2Token {}
-impl Has128BitSimd for Sse41Token {}
+// HasSse42: All tokens (SSE4.2 is baseline)
+impl HasSse42 for Sse42Token {}
+impl HasSse42 for AvxToken {}
+impl HasSse42 for Avx2Token {}
+impl HasSse42 for FmaToken {}
+impl HasSse42 for Avx2FmaToken {}
+impl HasSse42 for X64V2Token {}
+impl HasSse42 for X64V3Token {}
+impl HasSse42 for Avx512fToken {}
+impl HasSse42 for Avx512fVlToken {}
+impl HasSse42 for Avx512bwToken {}
+impl HasSse42 for Avx512bwVlToken {}
+impl HasSse42 for Avx512Vbmi2Token {}
+impl HasSse42 for Avx512Vbmi2VlToken {}
+impl HasSse42 for X64V4Token {}
+// Avx512ModernToken HasSse42 impl is in x86_avx512.rs with its definition
+impl HasSse42 for Avx512Fp16Token {}
+
+// 128-bit SIMD: SSE4.2+
 impl Has128BitSimd for Sse42Token {}
 impl Has128BitSimd for X64V2Token {}
 
@@ -542,6 +445,8 @@ impl Has128BitSimd for AvxToken {}
 impl Has256BitSimd for AvxToken {}
 impl Has128BitSimd for Avx2Token {}
 impl Has256BitSimd for Avx2Token {}
+impl Has128BitSimd for FmaToken {}
+impl Has256BitSimd for FmaToken {}
 impl Has128BitSimd for Avx2FmaToken {}
 impl Has256BitSimd for Avx2FmaToken {}
 impl Has128BitSimd for X64V3Token {}
@@ -597,81 +502,10 @@ impl HasFma for Avx512Fp16Token {}
 // is required. E.g., Avx2Token implements HasAvx, so it can be passed to
 // functions that accept `impl HasAvx`.
 
-// HasSse: All x86 tokens have SSE
-impl HasSse for SseToken {}
-impl HasSse for Sse2Token {}
-impl HasSse for Sse41Token {}
-impl HasSse for Sse42Token {}
-impl HasSse for AvxToken {}
-impl HasSse for Avx2Token {}
-impl HasSse for Avx2FmaToken {}
-impl HasSse for FmaToken {}
-impl HasSse for Avx512fToken {}
-impl HasSse for Avx512fVlToken {}
-impl HasSse for Avx512bwToken {}
-impl HasSse for Avx512bwVlToken {}
-impl HasSse for Avx512Vbmi2Token {}
-impl HasSse for Avx512Vbmi2VlToken {}
-impl HasSse for X64V2Token {}
-impl HasSse for X64V3Token {}
-impl HasSse for X64V4Token {}
-impl HasSse for Avx512Fp16Token {}
-
-// HasSse2: All tokens except SseToken (SSE2 is baseline on x86_64)
-impl HasSse2 for Sse2Token {}
-impl HasSse2 for Sse41Token {}
-impl HasSse2 for Sse42Token {}
-impl HasSse2 for AvxToken {}
-impl HasSse2 for Avx2Token {}
-impl HasSse2 for Avx2FmaToken {}
-impl HasSse2 for FmaToken {}
-impl HasSse2 for Avx512fToken {}
-impl HasSse2 for Avx512fVlToken {}
-impl HasSse2 for Avx512bwToken {}
-impl HasSse2 for Avx512bwVlToken {}
-impl HasSse2 for Avx512Vbmi2Token {}
-impl HasSse2 for Avx512Vbmi2VlToken {}
-impl HasSse2 for X64V2Token {}
-impl HasSse2 for X64V3Token {}
-impl HasSse2 for X64V4Token {}
-impl HasSse2 for Avx512Fp16Token {}
-
-// HasSse41: SSE4.1 and above
-impl HasSse41 for Sse41Token {}
-impl HasSse41 for Sse42Token {}
-impl HasSse41 for AvxToken {}
-impl HasSse41 for Avx2Token {}
-impl HasSse41 for Avx2FmaToken {}
-impl HasSse41 for Avx512fToken {}
-impl HasSse41 for Avx512fVlToken {}
-impl HasSse41 for Avx512bwToken {}
-impl HasSse41 for Avx512bwVlToken {}
-impl HasSse41 for Avx512Vbmi2Token {}
-impl HasSse41 for Avx512Vbmi2VlToken {}
-impl HasSse41 for X64V2Token {}
-impl HasSse41 for X64V3Token {}
-impl HasSse41 for X64V4Token {}
-impl HasSse41 for Avx512Fp16Token {}
-
-// HasSse42: SSE4.2 and above
-impl HasSse42 for Sse42Token {}
-impl HasSse42 for AvxToken {}
-impl HasSse42 for Avx2Token {}
-impl HasSse42 for Avx2FmaToken {}
-impl HasSse42 for Avx512fToken {}
-impl HasSse42 for Avx512fVlToken {}
-impl HasSse42 for Avx512bwToken {}
-impl HasSse42 for Avx512bwVlToken {}
-impl HasSse42 for Avx512Vbmi2Token {}
-impl HasSse42 for Avx512Vbmi2VlToken {}
-impl HasSse42 for X64V2Token {}
-impl HasSse42 for X64V3Token {}
-impl HasSse42 for X64V4Token {}
-impl HasSse42 for Avx512Fp16Token {}
-
 // HasAvx: AVX and above
 impl HasAvx for AvxToken {}
 impl HasAvx for Avx2Token {}
+impl HasAvx for FmaToken {}
 impl HasAvx for Avx2FmaToken {}
 impl HasAvx for Avx512fToken {}
 impl HasAvx for Avx512fVlToken {}
@@ -796,15 +630,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sse2_always_available() {
-        // SSE2 is baseline for x86_64
-        assert!(Sse2Token::try_new().is_some());
+    fn test_sse42_baseline() {
+        // SSE4.2 is the baseline for archmage
+        // Most modern x86_64 CPUs have SSE4.2 (Nehalem 2008+)
+        let _sse42 = Sse42Token::try_new();
     }
 
     #[test]
     fn test_token_is_zst() {
         // Tokens should be zero-sized
-        assert_eq!(core::mem::size_of::<Sse2Token>(), 0);
+        assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
         assert_eq!(core::mem::size_of::<Avx2Token>(), 0);
         assert_eq!(core::mem::size_of::<FmaToken>(), 0);
         // Combined token is also ZST (contains two ZSTs)
@@ -814,7 +649,7 @@ mod tests {
     #[test]
     fn test_token_is_copy() {
         fn assert_copy<T: Copy>() {}
-        assert_copy::<Sse2Token>();
+        assert_copy::<Sse42Token>();
         assert_copy::<Avx2Token>();
         assert_copy::<FmaToken>();
         assert_copy::<Avx2FmaToken>();
@@ -832,18 +667,16 @@ mod tests {
             let _avx2 = token.avx2();
             let _fma = token.fma();
             let _avx = token.avx();
-            let _sse41 = token.sse41();
-            let _sse2 = token.sse2();
+            let _sse42 = token.sse42();
         }
     }
 
     #[test]
     fn test_token_hierarchy() {
         if let Some(avx2) = Avx2Token::try_new() {
-            // AVX2 implies AVX, SSE4.1, SSE2
+            // AVX2 implies AVX, SSE4.2
             let _avx = avx2.avx();
-            let _sse41 = avx2.sse41();
-            let _sse2 = avx2.sse2();
+            let _sse42 = avx2.sse42();
         }
     }
 
@@ -859,25 +692,21 @@ mod tests {
     #[test]
     fn test_v2_token_extraction() {
         if let Some(v2) = X64V2Token::try_new() {
-            // v2 can extract SSE4.2, SSE4.1, SSE2
+            // v2 can extract SSE4.2
             let _sse42 = v2.sse42();
-            let _sse41 = v2.sse41();
-            let _sse2 = v2.sse2();
         }
     }
 
     #[test]
     fn test_v3_token_extraction() {
         if let Some(v3) = X64V3Token::try_new() {
-            // v3 can extract v2, AVX2+FMA, AVX2, FMA, AVX, SSE4.2, SSE4.1, SSE2
+            // v3 can extract v2, AVX2+FMA, AVX2, FMA, AVX, SSE4.2
             let _v2 = v3.v2();
             let _avx2_fma = v3.avx2_fma();
             let _avx2 = v3.avx2();
             let _fma = v3.fma();
             let _avx = v3.avx();
             let _sse42 = v3.sse42();
-            let _sse41 = v3.sse41();
-            let _sse2 = v3.sse2();
         }
     }
 
@@ -893,8 +722,7 @@ mod tests {
             let _avx2 = v4.avx2();
             let _fma = v4.fma();
             let _avx = v4.avx();
-            let _sse41 = v4.sse41();
-            let _sse2 = v4.sse2();
+            let _sse42 = v4.sse42();
         }
     }
 

@@ -173,20 +173,11 @@ impl HorizontalOps for X64V4Token {
 // Tokens without optimized SIMD implementations use default scalar methods.
 // Tokens with SIMD override to use the optimized implementations.
 
-// Tokens WITHOUT 256-bit SIMD use scalar defaults
-impl Transpose8x8OrScalar for SseToken {}
-impl Transpose8x8OrScalar for Sse2Token {}
-impl Transpose8x8OrScalar for Sse41Token {}
+// Tokens WITHOUT 256-bit SIMD use scalar defaults (SSE4.2 is baseline)
 impl Transpose8x8OrScalar for Sse42Token {}
 impl Transpose8x8OrScalar for X64V2Token {}
-impl DotProductOrScalar for SseToken {}
-impl DotProductOrScalar for Sse2Token {}
-impl DotProductOrScalar for Sse41Token {}
 impl DotProductOrScalar for Sse42Token {}
 impl DotProductOrScalar for X64V2Token {}
-impl HorizontalOpsOrScalar for SseToken {}
-impl HorizontalOpsOrScalar for Sse2Token {}
-impl HorizontalOpsOrScalar for Sse41Token {}
 impl HorizontalOpsOrScalar for Sse42Token {}
 impl HorizontalOpsOrScalar for X64V2Token {}
 

@@ -1,6 +1,7 @@
 //! Token-gated wrappers for `#[target_feature(enable = "sse")]` functions.
 //!
-//! This module contains 6 functions that are safe to call when you have a [`HasSse`].
+//! This module contains 6 functions that are safe to call when you have a [`HasSse42`].
+//! Note: SSE4.2 is the baseline for archmage, so HasSse42 is used instead of HasSse.
 //!
 //! **Auto-generated** from safe_unaligned_simd v0.2.3 - do not edit manually.
 //! See `xtask/src/main.rs` for the generator.
@@ -27,7 +28,7 @@ use safe_unaligned_simd::x86_64::{
     Is256CellUnaligned, Is512BitsUnaligned,
 };
 
-use crate::tokens::HasSse;
+use crate::tokens::HasSse42;
 
 /// Construct a [`__m128`] by duplicating the value read from `mem_addr` into
 /// all elements.
@@ -37,7 +38,7 @@ use crate::tokens::HasSse;
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load1_ps)
 #[inline(always)]
-pub fn _mm_load1_ps(_token: impl HasSse, mem_addr: &f32) -> __m128 {
+pub fn _mm_load1_ps(_token: impl HasSse42, mem_addr: &f32) -> __m128 {
     #[inline]
     #[target_feature(enable = "sse")]
     unsafe fn inner(mem_addr: &f32) -> __m128 {
@@ -51,7 +52,7 @@ pub fn _mm_load1_ps(_token: impl HasSse, mem_addr: &f32) -> __m128 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load_ps1)
 #[inline(always)]
-pub fn _mm_load_ps1(_token: impl HasSse, mem_addr: &f32) -> __m128 {
+pub fn _mm_load_ps1(_token: impl HasSse42, mem_addr: &f32) -> __m128 {
     #[inline]
     #[target_feature(enable = "sse")]
     unsafe fn inner(mem_addr: &f32) -> __m128 {
@@ -68,7 +69,7 @@ pub fn _mm_load_ps1(_token: impl HasSse, mem_addr: &f32) -> __m128 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_load_ss)
 #[inline(always)]
-pub fn _mm_load_ss(_token: impl HasSse, mem_addr: &f32) -> __m128 {
+pub fn _mm_load_ss(_token: impl HasSse42, mem_addr: &f32) -> __m128 {
     #[inline]
     #[target_feature(enable = "sse")]
     unsafe fn inner(mem_addr: &f32) -> __m128 {
@@ -85,7 +86,7 @@ pub fn _mm_load_ss(_token: impl HasSse, mem_addr: &f32) -> __m128 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_loadu_ps)
 #[inline(always)]
-pub fn _mm_loadu_ps(_token: impl HasSse, mem_addr: &[f32; 4]) -> __m128 {
+pub fn _mm_loadu_ps(_token: impl HasSse42, mem_addr: &[f32; 4]) -> __m128 {
     #[inline]
     #[target_feature(enable = "sse")]
     unsafe fn inner(mem_addr: &[f32; 4]) -> __m128 {
@@ -101,7 +102,7 @@ pub fn _mm_loadu_ps(_token: impl HasSse, mem_addr: &[f32; 4]) -> __m128 {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_store_ss)
 #[inline(always)]
-pub fn _mm_store_ss(_token: impl HasSse, mem_addr: &mut f32, a: __m128) {
+pub fn _mm_store_ss(_token: impl HasSse42, mem_addr: &mut f32, a: __m128) {
     #[inline]
     #[target_feature(enable = "sse")]
     unsafe fn inner(mem_addr: &mut f32, a: __m128) {
@@ -118,7 +119,7 @@ pub fn _mm_store_ss(_token: impl HasSse, mem_addr: &mut f32, a: __m128) {
 ///
 /// [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_storeu_ps)
 #[inline(always)]
-pub fn _mm_storeu_ps(_token: impl HasSse, mem_addr: &mut [f32; 4], a: __m128) {
+pub fn _mm_storeu_ps(_token: impl HasSse42, mem_addr: &mut [f32; 4], a: __m128) {
     #[inline]
     #[target_feature(enable = "sse")]
     unsafe fn inner(mem_addr: &mut [f32; 4], a: __m128) {

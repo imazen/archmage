@@ -1,8 +1,8 @@
-error[E0277]: the trait bound `Sse2Token: HasAvx` is not satisfied
+error[E0277]: the trait bound `Sse42Token: HasAvx` is not satisfied
   --> tests/compile_fail/safe_simd_wrong_token.rs:11:53
    |
-11 |         let _ = archmage::mem::avx::_mm256_loadu_ps(sse2, &data);
-   |                 ----------------------------------- ^^^^ the trait `HasAvx` is not implemented for `Sse2Token`
+11 |         let _ = archmage::mem::avx::_mm256_loadu_ps(sse42, &data);
+   |                 ----------------------------------- ^^^^^ the trait `HasAvx` is not implemented for `Sse42Token`
    |                 |
    |                 required by a bound introduced by this call
    |

@@ -1544,20 +1544,20 @@ impl f32x4 {
 
     /// Get token-gated constants. Usage: `f32x4::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasSse2) -> F32x4Consts {
+    pub fn consts(_: impl crate::HasSse42) -> F32x4Consts {
         F32x4Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[f32; 4]) -> Self {
+    pub fn load(_: impl crate::HasSse42, data: &[f32; 4]) -> Self {
         Self(unsafe { _mm_loadu_ps(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: f32) -> Self {
+    pub fn splat(_: impl crate::HasSse42, v: f32) -> Self {
         Self(unsafe { _mm_set1_ps(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::HasSse42) -> Self {
         Self(unsafe { _mm_setzero_ps() })
     }
 
@@ -1824,20 +1824,20 @@ impl i32x4 {
 
     /// Get token-gated constants. Usage: `i32x4::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasSse2) -> I32x4Consts {
+    pub fn consts(_: impl crate::HasSse42) -> I32x4Consts {
         I32x4Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[i32; 4]) -> Self {
+    pub fn load(_: impl crate::HasSse42, data: &[i32; 4]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: i32) -> Self {
+    pub fn splat(_: impl crate::HasSse42, v: i32) -> Self {
         Self(unsafe { _mm_set1_epi32(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::HasSse42) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -2769,15 +2769,15 @@ impl f64x2 {
     pub const LANES: usize = 2;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[f64; 2]) -> Self {
+    pub fn load(_: impl crate::HasSse42, data: &[f64; 2]) -> Self {
         Self(unsafe { _mm_loadu_pd(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: f64) -> Self {
+    pub fn splat(_: impl crate::HasSse42, v: f64) -> Self {
         Self(unsafe { _mm_set1_pd(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::HasSse42) -> Self {
         Self(unsafe { _mm_setzero_pd() })
     }
 
@@ -3082,15 +3082,15 @@ impl i16x8 {
     pub const LANES: usize = 8;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[i16; 8]) -> Self {
+    pub fn load(_: impl crate::HasSse42, data: &[i16; 8]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: i16) -> Self {
+    pub fn splat(_: impl crate::HasSse42, v: i16) -> Self {
         Self(unsafe { _mm_set1_epi16(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::HasSse42) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -3172,15 +3172,15 @@ impl u16x8 {
     pub const LANES: usize = 8;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[u16; 8]) -> Self {
+    pub fn load(_: impl crate::HasSse42, data: &[u16; 8]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: u16) -> Self {
+    pub fn splat(_: impl crate::HasSse42, v: u16) -> Self {
         Self(unsafe { _mm_set1_epi16(v as i16) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::HasSse42) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -3981,7 +3981,7 @@ impl IndexMut<usize> for i32x16 {
 mod tests {
     use super::*;
     use crate::tokens::SimdToken;
-    use crate::{Avx2Token, Sse2Token};
+    use crate::{Avx2Token, Sse42Token};
 
     #[test]
     fn test_f32x8_basic() {
@@ -4088,7 +4088,7 @@ mod tests {
 
     #[test]
     fn test_f32x4_basic() {
-        if let Some(t) = Sse2Token::summon() {
+        if let Some(t) = Sse42Token::summon() {
             let a = f32x4::splat(t, 2.0);
             let b = f32x4::splat(t, 3.0);
             assert_eq!((a + b).to_array(), [5.0f32; 4]);
@@ -4768,7 +4768,7 @@ mod tests {
 
     #[test]
     fn test_f32x4_intrinsics_safe_in_target_feature() {
-        if Sse2Token::summon().is_some() {
+        if Sse42Token::summon().is_some() {
             let result = unsafe { f32x4_intrinsics_are_safe() };
             let _ = result.to_array();
         }
@@ -4776,7 +4776,7 @@ mod tests {
 
     #[test]
     fn test_i32x4_intrinsics_safe_in_target_feature() {
-        if Sse2Token::summon().is_some() {
+        if Sse42Token::summon().is_some() {
             let result = unsafe { i32x4_intrinsics_are_safe() };
             let _ = result.to_array();
         }

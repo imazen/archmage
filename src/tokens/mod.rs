@@ -215,30 +215,21 @@ pub trait HasFma: SimdToken + sealed::Sealed {}
 //
 // Available on all architectures for cross-platform code.
 // All traits are sealed - cannot be implemented outside this crate.
-
-/// Marker trait for tokens that provide SSE.
-///
-/// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasSse: SimdToken + sealed::Sealed {}
-
-/// Marker trait for tokens that provide SSE2.
-///
-/// SSE2 is baseline on x86_64.
-///
-/// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasSse2: HasSse {}
-
-/// Marker trait for tokens that provide SSE4.1.
-///
-/// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasSse41: HasSse2 {}
+//
+// NOTE: SSE4.2 is the baseline. HasSse, HasSse2, HasSse41 have been removed.
+// All x86 tokens assume at least SSE4.2 is available.
 
 /// Marker trait for tokens that provide SSE4.2.
 ///
+/// SSE4.2 is the practical baseline for archmage. All tokens that provide
+/// any x86 SIMD capability also provide SSE4.2.
+///
 /// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasSse42: HasSse41 {}
+pub trait HasSse42: SimdToken + sealed::Sealed {}
 
 /// Marker trait for tokens that provide AVX.
+///
+/// AVX implies SSE4.2.
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx: HasSse42 {}
