@@ -93,6 +93,11 @@ pub mod composite;
 #[cfg_attr(docsrs, doc(cfg(feature = "safe_unaligned_simd")))]
 pub mod mem;
 
+// Experimental features (unstable API, broken Shl/Shr needs const generics)
+#[cfg(all(target_arch = "x86_64", feature = "__experiments"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "__experiments")))]
+pub mod experiments;
+
 // ============================================================================
 // Re-exports at crate root for convenience
 // ============================================================================

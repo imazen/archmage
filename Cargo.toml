@@ -23,6 +23,8 @@ safe_unaligned_simd = ["dep:safe_unaligned_simd"]
 disable-archmage = []
 
 # Unstable features (API may change, prefixed with __)
+# Experimental newtype wrappers (broken Shl/Shr, needs const generics)
+__experiments = []
 # Transpose, dot product, horizontal ops - implies safe_unaligned_simd
 __composite = ["safe_unaligned_simd"]
 # Integration with wide crate
