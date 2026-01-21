@@ -4,8 +4,8 @@
 //! `summon()` always returns `None` on non-ARM.
 
 use super::SimdToken;
-use super::{Has128BitSimd, HasFma, HasScalableVectors};
-use super::{HasNeon, HasSve, HasSve2};
+use super::{Has128BitSimd, HasFma};
+use super::{HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 
 macro_rules! define_arm_stub {
     ($name:ident, $display:literal) => {
@@ -33,39 +33,42 @@ macro_rules! define_arm_stub {
 
 // Define all ARM token stubs
 define_arm_stub!(NeonToken, "NEON");
-define_arm_stub!(ArmCryptoToken, "ARM Crypto");
-define_arm_stub!(ArmCrypto3Token, "ARM Crypto3");
-define_arm_stub!(SveToken, "SVE");
-define_arm_stub!(Sve2Token, "SVE2");
+define_arm_stub!(NeonAesToken, "NEON+AES");
+define_arm_stub!(NeonSha3Token, "NEON+SHA3");
+define_arm_stub!(NeonFp16Token, "NEON+FP16");
 
-/// The baseline for AArch64 (NEON) - stub on non-ARM architectures.
-pub type Arm64 = NeonToken;
+/// Backward compatibility alias for [`NeonAesToken`].
+#[deprecated(since = "0.2.0", note = "Use NeonAesToken instead")]
+pub type ArmCryptoToken = NeonAesToken;
+
+/// Backward compatibility alias for [`NeonSha3Token`].
+#[deprecated(since = "0.2.0", note = "Use NeonSha3Token instead")]
+pub type ArmCrypto3Token = NeonSha3Token;
+
+/// The recommended starting point for AArch64 - stub on non-ARM architectures.
+pub type Arm64 = NeonFp16Token;
 
 // Implement marker traits for stubs
 impl Has128BitSimd for NeonToken {}
 impl HasFma for NeonToken {}
 
-impl Has128BitSimd for ArmCryptoToken {}
-impl HasFma for ArmCryptoToken {}
+impl Has128BitSimd for NeonAesToken {}
+impl HasFma for NeonAesToken {}
 
-impl Has128BitSimd for ArmCrypto3Token {}
-impl HasFma for ArmCrypto3Token {}
+impl Has128BitSimd for NeonSha3Token {}
+impl HasFma for NeonSha3Token {}
 
-impl Has128BitSimd for SveToken {}
-impl HasFma for SveToken {}
-impl HasScalableVectors for SveToken {}
-
-impl Has128BitSimd for Sve2Token {}
-impl HasFma for Sve2Token {}
-impl HasScalableVectors for Sve2Token {}
+impl Has128BitSimd for NeonFp16Token {}
+impl HasFma for NeonFp16Token {}
 
 impl HasNeon for NeonToken {}
-impl HasNeon for ArmCryptoToken {}
-impl HasNeon for ArmCrypto3Token {}
-impl HasNeon for SveToken {}
-impl HasNeon for Sve2Token {}
+impl HasNeon for NeonAesToken {}
+impl HasNeon for NeonSha3Token {}
+impl HasNeon for NeonFp16Token {}
 
-impl HasSve for SveToken {}
-impl HasSve for Sve2Token {}
+impl HasArmAes for NeonAesToken {}
+impl HasArmAes for NeonSha3Token {}
 
-impl HasSve2 for Sve2Token {}
+impl HasArmSha3 for NeonSha3Token {}
+
+impl HasArmFp16 for NeonFp16Token {}

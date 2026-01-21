@@ -109,25 +109,51 @@ pub use tokens::SimdToken;
 pub use tokens::CompositeToken;
 
 // Capability marker traits
-pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma, HasScalableVectors};
+pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 
 // x86 feature marker traits (available on all architectures for cross-platform code)
 pub use tokens::{
-    HasAvx, HasAvx2, HasAvx512bw, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse,
-    HasSse2, HasSse41, HasSse42,
+    HasAvx, HasAvx2, HasAvx512bw, HasAvx512cd, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl,
+    HasSse, HasSse2, HasSse41, HasSse42,
 };
 
 // aarch64 feature marker traits (available on all architectures)
-pub use tokens::{HasNeon, HasSve, HasSve2};
+pub use tokens::{HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 
 // All tokens available on all architectures (summon() returns None on wrong arch)
 pub use tokens::{
-    // x86 tokens
-    Avx2FmaToken, Avx2Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken, Avx512bwToken, Avx512bwVlToken,
-    Avx512fToken, Avx512fVlToken, AvxToken, Desktop64, FmaToken, Server64, Sse2Token, Sse41Token,
-    Sse42Token, SseToken, X64V2Token, X64V3Token, X64V4Token,
     // ARM tokens
-    Arm64, NeonToken, Sve2Token, SveToken,
+    Arm64,
+    // x86 tokens
+    Avx2FmaToken,
+    Avx2Token,
+    Avx512Fp16Token,
+    Avx512ModernToken,
+    Avx512Vbmi2Token,
+    Avx512Vbmi2VlToken,
+    Avx512bwToken,
+    Avx512bwVlToken,
+    Avx512fToken,
+    Avx512fVlToken,
+    AvxToken,
+    Desktop64,
+    FmaToken,
+    NeonAesToken,
+    NeonFp16Token,
+    NeonSha3Token,
+    NeonToken,
+    Server64,
     // WASM tokens
     Simd128Token,
+    Sse2Token,
+    Sse41Token,
+    Sse42Token,
+    SseToken,
+    X64V2Token,
+    X64V3Token,
+    X64V4Token,
 };
+
+// Backward compatibility aliases (deprecated)
+#[allow(deprecated)]
+pub use tokens::{ArmCrypto3Token, ArmCryptoToken};

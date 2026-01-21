@@ -6,8 +6,8 @@
 use super::{CompositeToken, SimdToken};
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 use super::{
-    HasAvx, HasAvx2, HasAvx512bw, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse,
-    HasSse2, HasSse41, HasSse42,
+    HasAvx, HasAvx2, HasAvx512bw, HasAvx512cd, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl,
+    HasSse, HasSse2, HasSse41, HasSse42,
 };
 
 macro_rules! define_x86_stub {
@@ -51,6 +51,8 @@ define_x86_stub!(Avx512Vbmi2VlToken, "AVX-512VBMI2+VL");
 define_x86_stub!(X64V2Token, "x86-64-v2");
 define_x86_stub!(X64V3Token, "x86-64-v3");
 define_x86_stub!(X64V4Token, "x86-64-v4");
+define_x86_stub!(Avx512ModernToken, "AVX-512Modern");
+define_x86_stub!(Avx512Fp16Token, "AVX-512FP16");
 
 /// Stub for AVX2+FMA combined token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
@@ -76,10 +78,9 @@ impl CompositeToken for Avx2FmaToken {
     type Components = (Avx2Token, FmaToken);
 
     fn components(&self) -> Self::Components {
-        (
-            unsafe { Avx2Token::forge_token_dangerously() },
-            unsafe { FmaToken::forge_token_dangerously() },
-        )
+        (unsafe { Avx2Token::forge_token_dangerously() }, unsafe {
+            FmaToken::forge_token_dangerously()
+        })
     }
 }
 
@@ -123,6 +124,12 @@ impl Has512BitSimd for Avx512Vbmi2Token {}
 impl Has128BitSimd for Avx512Vbmi2VlToken {}
 impl Has256BitSimd for Avx512Vbmi2VlToken {}
 impl Has512BitSimd for Avx512Vbmi2VlToken {}
+impl Has128BitSimd for Avx512ModernToken {}
+impl Has256BitSimd for Avx512ModernToken {}
+impl Has512BitSimd for Avx512ModernToken {}
+impl Has128BitSimd for Avx512Fp16Token {}
+impl Has256BitSimd for Avx512Fp16Token {}
+impl Has512BitSimd for Avx512Fp16Token {}
 
 impl HasFma for FmaToken {}
 impl HasFma for Avx2FmaToken {}
@@ -134,6 +141,8 @@ impl HasFma for Avx512bwToken {}
 impl HasFma for Avx512bwVlToken {}
 impl HasFma for Avx512Vbmi2Token {}
 impl HasFma for Avx512Vbmi2VlToken {}
+impl HasFma for Avx512ModernToken {}
+impl HasFma for Avx512Fp16Token {}
 
 impl HasSse for SseToken {}
 impl HasSse for Sse2Token {}
@@ -152,6 +161,8 @@ impl HasSse for Avx512Vbmi2VlToken {}
 impl HasSse for X64V2Token {}
 impl HasSse for X64V3Token {}
 impl HasSse for X64V4Token {}
+impl HasSse for Avx512ModernToken {}
+impl HasSse for Avx512Fp16Token {}
 
 impl HasSse2 for Sse2Token {}
 impl HasSse2 for Sse41Token {}
@@ -169,6 +180,8 @@ impl HasSse2 for Avx512Vbmi2VlToken {}
 impl HasSse2 for X64V2Token {}
 impl HasSse2 for X64V3Token {}
 impl HasSse2 for X64V4Token {}
+impl HasSse2 for Avx512ModernToken {}
+impl HasSse2 for Avx512Fp16Token {}
 
 impl HasSse41 for Sse41Token {}
 impl HasSse41 for Sse42Token {}
@@ -184,6 +197,8 @@ impl HasSse41 for Avx512Vbmi2VlToken {}
 impl HasSse41 for X64V2Token {}
 impl HasSse41 for X64V3Token {}
 impl HasSse41 for X64V4Token {}
+impl HasSse41 for Avx512ModernToken {}
+impl HasSse41 for Avx512Fp16Token {}
 
 impl HasSse42 for Sse42Token {}
 impl HasSse42 for AvxToken {}
@@ -198,6 +213,8 @@ impl HasSse42 for Avx512Vbmi2VlToken {}
 impl HasSse42 for X64V2Token {}
 impl HasSse42 for X64V3Token {}
 impl HasSse42 for X64V4Token {}
+impl HasSse42 for Avx512ModernToken {}
+impl HasSse42 for Avx512Fp16Token {}
 
 impl HasAvx for AvxToken {}
 impl HasAvx for Avx2Token {}
@@ -210,6 +227,8 @@ impl HasAvx for Avx512Vbmi2Token {}
 impl HasAvx for Avx512Vbmi2VlToken {}
 impl HasAvx for X64V3Token {}
 impl HasAvx for X64V4Token {}
+impl HasAvx for Avx512ModernToken {}
+impl HasAvx for Avx512Fp16Token {}
 
 impl HasAvx2 for Avx2Token {}
 impl HasAvx2 for Avx2FmaToken {}
@@ -221,6 +240,8 @@ impl HasAvx2 for Avx512Vbmi2Token {}
 impl HasAvx2 for Avx512Vbmi2VlToken {}
 impl HasAvx2 for X64V3Token {}
 impl HasAvx2 for X64V4Token {}
+impl HasAvx2 for Avx512ModernToken {}
+impl HasAvx2 for Avx512Fp16Token {}
 
 impl HasAvx512f for Avx512fToken {}
 impl HasAvx512f for Avx512fVlToken {}
@@ -229,19 +250,33 @@ impl HasAvx512f for Avx512bwVlToken {}
 impl HasAvx512f for Avx512Vbmi2Token {}
 impl HasAvx512f for Avx512Vbmi2VlToken {}
 impl HasAvx512f for X64V4Token {}
+impl HasAvx512f for Avx512ModernToken {}
+impl HasAvx512f for Avx512Fp16Token {}
 
 impl HasAvx512vl for Avx512fVlToken {}
 impl HasAvx512vl for Avx512bwVlToken {}
 impl HasAvx512vl for Avx512Vbmi2VlToken {}
 impl HasAvx512vl for X64V4Token {}
+impl HasAvx512vl for Avx512ModernToken {}
+impl HasAvx512vl for Avx512Fp16Token {}
 
 impl HasAvx512bw for Avx512bwToken {}
 impl HasAvx512bw for Avx512bwVlToken {}
 impl HasAvx512bw for Avx512Vbmi2Token {}
 impl HasAvx512bw for Avx512Vbmi2VlToken {}
 impl HasAvx512bw for X64V4Token {}
+impl HasAvx512bw for Avx512ModernToken {}
+impl HasAvx512bw for Avx512Fp16Token {}
+
+impl HasAvx512cd for X64V4Token {}
+impl HasAvx512cd for Avx512ModernToken {}
+impl HasAvx512cd for Avx512Fp16Token {}
 
 impl HasAvx512dq for X64V4Token {}
+impl HasAvx512dq for Avx512ModernToken {}
+impl HasAvx512dq for Avx512Fp16Token {}
 
 impl HasAvx512vbmi2 for Avx512Vbmi2Token {}
 impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
+impl HasAvx512vbmi2 for Avx512ModernToken {}
+impl HasAvx512vbmi2 for Avx512Fp16Token {}

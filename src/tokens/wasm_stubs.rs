@@ -3,8 +3,8 @@
 //! These types exist so cross-platform code can reference them without cfg guards.
 //! `summon()` always returns `None` on non-WASM.
 
-use super::SimdToken;
 use super::Has128BitSimd;
+use super::SimdToken;
 
 /// Stub for SIMD128 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]

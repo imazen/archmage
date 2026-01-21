@@ -176,11 +176,6 @@ pub trait Has512BitSimd: Has256BitSimd {}
 /// Implemented by: `FmaToken`, `Avx2FmaToken`, `X64V3Token`, `NeonToken`
 pub trait HasFma: SimdToken {}
 
-/// Marker trait for tokens that provide scalable vectors (variable width).
-///
-/// Implemented by: `SveToken`, `Sve2Token`
-pub trait HasScalableVectors: SimdToken {}
-
 // ============================================================================
 // x86 Feature Marker Traits
 // ============================================================================
@@ -220,6 +215,12 @@ pub trait HasAvx512vl: HasAvx512f {}
 /// Marker trait for tokens that provide AVX-512BW (Byte/Word).
 pub trait HasAvx512bw: HasAvx512f {}
 
+/// Marker trait for tokens that provide AVX-512CD (Conflict Detection).
+///
+/// AVX-512CD provides conflict detection for scatter operations.
+/// Present on all practical AVX-512 CPUs (Skylake-X 2017+, Zen 4+).
+pub trait HasAvx512cd: HasAvx512f {}
+
 /// Marker trait for tokens that provide AVX-512DQ (Doubleword/Quadword).
 ///
 /// AVX-512DQ provides float bitwise ops (`_mm512_or_ps`, etc.) and conversions.
@@ -240,8 +241,17 @@ pub trait HasAvx512vbmi2: HasAvx512bw {}
 /// NEON is baseline on AArch64.
 pub trait HasNeon: SimdToken {}
 
-/// Marker trait for tokens that provide SVE.
-pub trait HasSve: HasNeon {}
+/// Marker trait for tokens that provide ARM AES crypto extensions.
+///
+/// AES + SHA2 + CRC - available on most ARMv8 CPUs (Cortex-A53+, Graviton, Apple Silicon).
+pub trait HasArmAes: HasNeon {}
 
-/// Marker trait for tokens that provide SVE2.
-pub trait HasSve2: HasSve {}
+/// Marker trait for tokens that provide ARM SHA3 crypto extensions.
+///
+/// SHA3 - available on ARMv8.4+ CPUs (Cortex-A76+, Graviton 2+, Apple Silicon).
+pub trait HasArmSha3: HasArmAes {}
+
+/// Marker trait for tokens that provide ARM FP16 (half-precision floating point).
+///
+/// FP16 - available on modern ARM (Apple M1+, Graviton 2+, Cortex-A76+).
+pub trait HasArmFp16: HasNeon {}
