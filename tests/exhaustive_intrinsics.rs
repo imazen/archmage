@@ -558,6 +558,7 @@ mod x86_mem_tests {
         let mask: u16 = 0b1010101010101010;
         let v = avx512f::_mm512_maskz_loadu_ps(token, mask, &data_f32);
         avx512f::_mm512_storeu_ps(token, &mut out_f32, v);
+        #[allow(clippy::needless_range_loop)] // i used for both indexing and mask shifting
         for i in 0..16 {
             if (mask >> i) & 1 == 1 {
                 assert_eq!(out_f32[i], 1.0);
