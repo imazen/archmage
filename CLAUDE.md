@@ -23,6 +23,19 @@ cargo clippy --all-features   # Lint
 cargo run -p xtask -- generate # Regenerate safe_unaligned_simd wrappers
 ```
 
+## CRITICAL: Adding New Traits or Tokens
+
+The `#[arcane]` macro in `archmage-macros` has hardcoded mappings from traits/tokens to CPU features. **These must stay in sync.**
+
+When adding a new trait or token:
+1. Add the trait/token to `src/tokens/`
+2. **Update `archmage-macros/src/lib.rs`:**
+   - `trait_to_features()` - for new marker traits
+   - `token_to_features()` - for new token types
+3. **Add a test to `tests/trait_token_sync.rs`** - compile-time verification
+
+If `tests/trait_token_sync.rs` fails to compile, the macro mappings are out of sync. The compiler error tells you exactly which trait/token is unrecognized.
+
 ## Core Insight: Rust 1.85+ Changed Everything
 
 As of Rust 1.85, **value-based intrinsics are safe inside `#[target_feature]` functions**:
@@ -86,8 +99,8 @@ fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
 }
 
 #[arcane]
-fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // Requires both AVX2 and FMA
+fn fma_kernel<T: HasAvx2Fma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    // Requires AVX2 + FMA (use HasAvx2Fma, not separate traits)
 }
 ```
 
@@ -159,15 +172,15 @@ xtask/
 **x86 Profile Tokens (same as aliases):**
 - `X64V3Token` = `Desktop64`
 - `X64V4Token` = `Server64`
-- `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
 
 **x86 Feature Tokens:**
-- `Sse2Token` → `Sse41Token` → `Sse42Token` → `AvxToken` → `Avx2Token`
-- `FmaToken` (independent), `Avx2FmaToken` (combined)
-- `Avx512fToken`, `Avx512bwToken`, `Avx512Vbmi2Token` + VL variants
+- `Sse42Token` (baseline) → `AvxToken` → `Avx2Token` → `Avx2FmaToken`
+- `Avx512Token` (consolidated: F+BW+CD+DQ+VL)
+- `Avx512ModernToken` (+VBMI2+VNNI)
+- `Avx512Fp16Token` (+FP16)
 
 **ARM:**
-- `NeonToken` = `Arm64` (baseline), `SveToken`, `Sve2Token`
+- `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonFp16Token` = `Arm64`
 
 ## Marker Traits
 
@@ -175,13 +188,14 @@ Enable generic bounds:
 
 ```rust
 fn requires_avx2(token: impl HasAvx2) { ... }
-fn requires_fma(token: impl HasFma) { ... }
-fn requires_both<T: HasAvx2 + HasFma>(token: T) { ... }
+fn requires_fma(token: impl HasAvx2Fma) { ... }  // AVX2+FMA combined
+fn requires_v3<T: HasX64V3>(token: T) { ... }
 ```
 
 **Width traits:** `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
-**Feature traits:** `HasSse`, `HasSse2`, `HasAvx`, `HasAvx2`, `HasFma`, `HasAvx512f`, etc.
-**ARM traits:** `HasNeon`, `HasSve`, `HasSve2`
+**x86 Feature traits:** `HasSse42`, `HasAvx`, `HasAvx2`, `HasAvx2Fma`, `HasX64V3`, `HasAvx512`, `HasModernAvx512`
+**Alias traits:** `HasDesktop64` (= HasX64V3), `HasServer64` (= HasAvx512)
+**ARM traits:** `HasNeon`, `HasArmAes`, `HasArmSha3`, `HasArmFp16`, `HasArm64`
 
 ## Safe Memory Operations
 
