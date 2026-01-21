@@ -5,7 +5,7 @@
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
     use archmage::{
-        Avx2FmaToken, Avx2Token, Desktop64, HasAvx, HasAvx2, HasFma, Avx512Token, SimdToken,
+        Avx2FmaToken, Avx2Token, Avx512Token, Desktop64, HasAvx, HasAvx2, HasFma, SimdToken,
         X64V3Token, simd_fn,
     };
     use std::arch::x86_64::*;

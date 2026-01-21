@@ -17,7 +17,7 @@ use archmage::SimdToken;
 fn test_cross_platform_token_types_exist() {
     // x86 tokens - should compile on ARM/WASM, summon returns None there
     use archmage::{
-        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Avx512Token, Sse2Token, Sse41Token,
+        Avx2FmaToken, Avx2Token, Avx512Token, AvxToken, Desktop64, FmaToken, Sse2Token, Sse41Token,
         Sse42Token, SseToken, X64V2Token, X64V3Token, X64V4Token,
     };
 
@@ -79,7 +79,10 @@ fn test_summon_behavior() {
             Desktop64::summon().is_none(),
             "Desktop64 unavailable on ARM"
         );
-        assert!(Avx512Token::summon().is_none(), "Avx512Token unavailable on ARM");
+        assert!(
+            Avx512Token::summon().is_none(),
+            "Avx512Token unavailable on ARM"
+        );
         assert!(
             Simd128Token::summon().is_none(),
             "WASM SIMD unavailable on ARM"
@@ -125,7 +128,7 @@ fn test_disable_archmage_env() {
 /// Test that cross-platform dispatch code compiles and runs.
 #[test]
 fn test_cross_platform_dispatch_pattern() {
-    use archmage::{Arm64, Desktop64, NeonToken, Avx512Token};
+    use archmage::{Arm64, Avx512Token, Desktop64, NeonToken};
 
     let mut data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 

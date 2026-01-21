@@ -253,4 +253,3 @@ impl Avx512Fp16Token {
         unsafe { Avx2Token::forge_token_dangerously() }
     }
 }
-

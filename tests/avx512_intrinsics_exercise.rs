@@ -11,10 +11,10 @@
 #![allow(clippy::needless_return, clippy::identity_op, clippy::unnecessary_cast)]
 #![allow(clippy::eq_op)]
 
-use archmage::{arcane, SimdToken};
-use archmage::tokens::x86::Avx512ModernToken;
 #[cfg(feature = "safe_unaligned_simd")]
-use archmage::mem::{avx512f, avx512f_vl, avx512bw, avx512bw_vl, avx512vbmi2, avx512vbmi2_vl};
+use archmage::mem::{avx512bw, avx512bw_vl, avx512f, avx512f_vl, avx512vbmi2, avx512vbmi2_vl};
+use archmage::tokens::x86::Avx512ModernToken;
+use archmage::{SimdToken, arcane};
 use core::arch::x86_64::*;
 use core::hint::black_box;
 
@@ -245,14 +245,22 @@ fn exercise_avx512f(token: Avx512ModernToken) {
     black_box(_mm512_maskz_mov_epi32(mask16, ones_i32));
 
     // === Ternary Logic ===
-    black_box(_mm512_ternarylogic_epi32::<0xF0>(ones_i32, ones_i32, ones_i32));
-    black_box(_mm512_ternarylogic_epi64::<0xF0>(ones_i64, ones_i64, ones_i64));
+    black_box(_mm512_ternarylogic_epi32::<0xF0>(
+        ones_i32, ones_i32, ones_i32,
+    ));
+    black_box(_mm512_ternarylogic_epi64::<0xF0>(
+        ones_i64, ones_i64, ones_i64,
+    ));
 
     // === Getexp/Getmant ===
     black_box(_mm512_getexp_ps(ones_ps));
     black_box(_mm512_getexp_pd(ones_pd));
-    black_box(_mm512_getmant_ps::<_MM_MANT_NORM_1_2, _MM_MANT_SIGN_SRC>(ones_ps));
-    black_box(_mm512_getmant_pd::<_MM_MANT_NORM_1_2, _MM_MANT_SIGN_SRC>(ones_pd));
+    black_box(_mm512_getmant_ps::<_MM_MANT_NORM_1_2, _MM_MANT_SIGN_SRC>(
+        ones_ps,
+    ));
+    black_box(_mm512_getmant_pd::<_MM_MANT_NORM_1_2, _MM_MANT_SIGN_SRC>(
+        ones_pd,
+    ));
 
     // === Scale ===
     black_box(_mm512_scalef_ps(ones_ps, ones_ps));
@@ -305,8 +313,12 @@ fn exercise_avx512f_vl(token: Avx512ModernToken) {
     black_box(_mm256_permutexvar_ps(v256_i32, v256_ps));
 
     // 256-bit ternary logic
-    black_box(_mm256_ternarylogic_epi32::<0xF0>(v256_i32, v256_i32, v256_i32));
-    black_box(_mm256_ternarylogic_epi64::<0xF0>(v256_i64, v256_i64, v256_i64));
+    black_box(_mm256_ternarylogic_epi32::<0xF0>(
+        v256_i32, v256_i32, v256_i32,
+    ));
+    black_box(_mm256_ternarylogic_epi64::<0xF0>(
+        v256_i64, v256_i64, v256_i64,
+    ));
 
     // 128-bit masked operations
     black_box(_mm_mask_add_ps(v128_ps, mask4, v128_ps, v128_ps));
@@ -379,8 +391,14 @@ fn exercise_avx512bw(token: Avx512ModernToken) {
     // Pack
     black_box(_mm512_packs_epi16(ones_i16, ones_i16));
     black_box(_mm512_packus_epi16(ones_i16, ones_i16));
-    black_box(_mm512_packs_epi32(_mm512_set1_epi32(1), _mm512_set1_epi32(1)));
-    black_box(_mm512_packus_epi32(_mm512_set1_epi32(1), _mm512_set1_epi32(1)));
+    black_box(_mm512_packs_epi32(
+        _mm512_set1_epi32(1),
+        _mm512_set1_epi32(1),
+    ));
+    black_box(_mm512_packus_epi32(
+        _mm512_set1_epi32(1),
+        _mm512_set1_epi32(1),
+    ));
 
     // Unpack
     black_box(_mm512_unpackhi_epi8(ones_i8, ones_i8));
@@ -495,7 +513,10 @@ fn exercise_avx512dq(token: Avx512ModernToken) {
     // Insert/extract
     black_box(_mm512_insertf32x8::<0>(ones_ps, _mm256_set1_ps(1.0)));
     black_box(_mm512_insertf64x2::<0>(ones_pd, _mm_set1_pd(1.0)));
-    black_box(_mm512_inserti32x8::<0>(_mm512_set1_epi32(1), _mm256_set1_epi32(1)));
+    black_box(_mm512_inserti32x8::<0>(
+        _mm512_set1_epi32(1),
+        _mm256_set1_epi32(1),
+    ));
     black_box(_mm512_inserti64x2::<0>(ones_i64, _mm_set1_epi64x(1)));
     black_box(_mm512_extractf32x8_ps::<0>(ones_ps));
     black_box(_mm512_extractf64x2_pd::<0>(ones_pd));
@@ -643,14 +664,22 @@ fn exercise_avx512vbmi(token: Avx512ModernToken) {
     black_box(_mm512_permutex2var_epi8(ones_i8, zero_i, ones_i8));
 
     // Masked permute
-    black_box(_mm512_mask_permutexvar_epi8(ones_i8, mask64, zero_i, ones_i8));
+    black_box(_mm512_mask_permutexvar_epi8(
+        ones_i8, mask64, zero_i, ones_i8,
+    ));
     black_box(_mm512_maskz_permutexvar_epi8(mask64, zero_i, ones_i8));
-    black_box(_mm512_mask_permutex2var_epi8(ones_i8, mask64, zero_i, ones_i8));
-    black_box(_mm512_maskz_permutex2var_epi8(mask64, ones_i8, zero_i, ones_i8));
+    black_box(_mm512_mask_permutex2var_epi8(
+        ones_i8, mask64, zero_i, ones_i8,
+    ));
+    black_box(_mm512_maskz_permutex2var_epi8(
+        mask64, ones_i8, zero_i, ones_i8,
+    ));
 
     // Multishift
     black_box(_mm512_multishift_epi64_epi8(ones_i8, ones_i8));
-    black_box(_mm512_mask_multishift_epi64_epi8(ones_i8, mask64, ones_i8, ones_i8));
+    black_box(_mm512_mask_multishift_epi64_epi8(
+        ones_i8, mask64, ones_i8, ones_i8,
+    ));
     black_box(_mm512_maskz_multishift_epi64_epi8(mask64, ones_i8, ones_i8));
 }
 
@@ -693,7 +722,9 @@ fn exercise_avx512vbmi2(token: Avx512ModernToken) {
     black_box(_mm512_shrdv_epi64(ones_i64, ones_i64, ones_i64));
 
     // Masked concatenate shift
-    black_box(_mm512_mask_shldi_epi16::<1>(ones_i16, mask32, ones_i16, ones_i16));
+    black_box(_mm512_mask_shldi_epi16::<1>(
+        ones_i16, mask32, ones_i16, ones_i16,
+    ));
     black_box(_mm512_maskz_shldi_epi16::<1>(mask32, ones_i16, ones_i16));
 }
 
@@ -708,23 +739,79 @@ fn exercise_avx512vnni(token: Avx512ModernToken) {
     let mask16: __mmask16 = 0xFFFF;
 
     // Dot product unsigned/signed byte to int32
-    black_box(_mm512_dpbusd_epi32(ones_i32, ones_i8_as_i32, ones_i8_as_i32));
-    black_box(_mm512_dpbusds_epi32(ones_i32, ones_i8_as_i32, ones_i8_as_i32));
+    black_box(_mm512_dpbusd_epi32(
+        ones_i32,
+        ones_i8_as_i32,
+        ones_i8_as_i32,
+    ));
+    black_box(_mm512_dpbusds_epi32(
+        ones_i32,
+        ones_i8_as_i32,
+        ones_i8_as_i32,
+    ));
 
     // Dot product signed word to int32
     let ones_i16_as_i32 = _mm512_set1_epi16(1);
-    black_box(_mm512_dpwssd_epi32(ones_i32, ones_i16_as_i32, ones_i16_as_i32));
-    black_box(_mm512_dpwssds_epi32(ones_i32, ones_i16_as_i32, ones_i16_as_i32));
+    black_box(_mm512_dpwssd_epi32(
+        ones_i32,
+        ones_i16_as_i32,
+        ones_i16_as_i32,
+    ));
+    black_box(_mm512_dpwssds_epi32(
+        ones_i32,
+        ones_i16_as_i32,
+        ones_i16_as_i32,
+    ));
 
     // Masked versions
-    black_box(_mm512_mask_dpbusd_epi32(ones_i32, mask16, ones_i8_as_i32, ones_i8_as_i32));
-    black_box(_mm512_maskz_dpbusd_epi32(mask16, ones_i32, ones_i8_as_i32, ones_i8_as_i32));
-    black_box(_mm512_mask_dpbusds_epi32(ones_i32, mask16, ones_i8_as_i32, ones_i8_as_i32));
-    black_box(_mm512_maskz_dpbusds_epi32(mask16, ones_i32, ones_i8_as_i32, ones_i8_as_i32));
-    black_box(_mm512_mask_dpwssd_epi32(ones_i32, mask16, ones_i16_as_i32, ones_i16_as_i32));
-    black_box(_mm512_maskz_dpwssd_epi32(mask16, ones_i32, ones_i16_as_i32, ones_i16_as_i32));
-    black_box(_mm512_mask_dpwssds_epi32(ones_i32, mask16, ones_i16_as_i32, ones_i16_as_i32));
-    black_box(_mm512_maskz_dpwssds_epi32(mask16, ones_i32, ones_i16_as_i32, ones_i16_as_i32));
+    black_box(_mm512_mask_dpbusd_epi32(
+        ones_i32,
+        mask16,
+        ones_i8_as_i32,
+        ones_i8_as_i32,
+    ));
+    black_box(_mm512_maskz_dpbusd_epi32(
+        mask16,
+        ones_i32,
+        ones_i8_as_i32,
+        ones_i8_as_i32,
+    ));
+    black_box(_mm512_mask_dpbusds_epi32(
+        ones_i32,
+        mask16,
+        ones_i8_as_i32,
+        ones_i8_as_i32,
+    ));
+    black_box(_mm512_maskz_dpbusds_epi32(
+        mask16,
+        ones_i32,
+        ones_i8_as_i32,
+        ones_i8_as_i32,
+    ));
+    black_box(_mm512_mask_dpwssd_epi32(
+        ones_i32,
+        mask16,
+        ones_i16_as_i32,
+        ones_i16_as_i32,
+    ));
+    black_box(_mm512_maskz_dpwssd_epi32(
+        mask16,
+        ones_i32,
+        ones_i16_as_i32,
+        ones_i16_as_i32,
+    ));
+    black_box(_mm512_mask_dpwssds_epi32(
+        ones_i32,
+        mask16,
+        ones_i16_as_i32,
+        ones_i16_as_i32,
+    ));
+    black_box(_mm512_maskz_dpwssds_epi32(
+        mask16,
+        ones_i32,
+        ones_i16_as_i32,
+        ones_i16_as_i32,
+    ));
 }
 
 // =============================================================================
@@ -780,8 +867,18 @@ fn exercise_avx512bf16(token: Avx512ModernToken) {
     // Masked operations
     black_box(_mm512_mask_cvtneps_pbh(bf16_256, mask16, ones_ps));
     black_box(_mm512_maskz_cvtneps_pbh(mask16, ones_ps));
-    black_box(_mm512_mask_dpbf16_ps(ones_ps, mask16, zero_bf16_512, zero_bf16_512));
-    black_box(_mm512_maskz_dpbf16_ps(mask16, ones_ps, zero_bf16_512, zero_bf16_512));
+    black_box(_mm512_mask_dpbf16_ps(
+        ones_ps,
+        mask16,
+        zero_bf16_512,
+        zero_bf16_512,
+    ));
+    black_box(_mm512_maskz_dpbf16_ps(
+        mask16,
+        ones_ps,
+        zero_bf16_512,
+        zero_bf16_512,
+    ));
 }
 
 // =============================================================================
@@ -798,10 +895,18 @@ fn exercise_avx512ifma(token: Avx512ModernToken) {
     black_box(_mm512_madd52hi_epu64(ones_i64, ones_i64, ones_i64));
 
     // Masked versions
-    black_box(_mm512_mask_madd52lo_epu64(ones_i64, mask8, ones_i64, ones_i64));
-    black_box(_mm512_maskz_madd52lo_epu64(mask8, ones_i64, ones_i64, ones_i64));
-    black_box(_mm512_mask_madd52hi_epu64(ones_i64, mask8, ones_i64, ones_i64));
-    black_box(_mm512_maskz_madd52hi_epu64(mask8, ones_i64, ones_i64, ones_i64));
+    black_box(_mm512_mask_madd52lo_epu64(
+        ones_i64, mask8, ones_i64, ones_i64,
+    ));
+    black_box(_mm512_maskz_madd52lo_epu64(
+        mask8, ones_i64, ones_i64, ones_i64,
+    ));
+    black_box(_mm512_mask_madd52hi_epu64(
+        ones_i64, mask8, ones_i64, ones_i64,
+    ));
+    black_box(_mm512_maskz_madd52hi_epu64(
+        mask8, ones_i64, ones_i64, ones_i64,
+    ));
 
     // VL variants
     let v256_i64 = _mm256_set1_epi64x(1);
@@ -811,13 +916,19 @@ fn exercise_avx512ifma(token: Avx512ModernToken) {
 
     black_box(_mm256_madd52lo_epu64(v256_i64, v256_i64, v256_i64));
     black_box(_mm256_madd52hi_epu64(v256_i64, v256_i64, v256_i64));
-    black_box(_mm256_mask_madd52lo_epu64(v256_i64, mask4, v256_i64, v256_i64));
-    black_box(_mm256_maskz_madd52lo_epu64(mask4, v256_i64, v256_i64, v256_i64));
+    black_box(_mm256_mask_madd52lo_epu64(
+        v256_i64, mask4, v256_i64, v256_i64,
+    ));
+    black_box(_mm256_maskz_madd52lo_epu64(
+        mask4, v256_i64, v256_i64, v256_i64,
+    ));
 
     black_box(_mm_madd52lo_epu64(v128_i64, v128_i64, v128_i64));
     black_box(_mm_madd52hi_epu64(v128_i64, v128_i64, v128_i64));
     black_box(_mm_mask_madd52lo_epu64(v128_i64, mask2, v128_i64, v128_i64));
-    black_box(_mm_maskz_madd52lo_epu64(mask2, v128_i64, v128_i64, v128_i64));
+    black_box(_mm_maskz_madd52lo_epu64(
+        mask2, v128_i64, v128_i64, v128_i64,
+    ));
 }
 
 // =============================================================================
@@ -839,8 +950,12 @@ fn exercise_gfni(token: Avx512ModernToken) {
     black_box(_mm512_gf2p8mul_epi8(ones_i8, ones_i8));
 
     // 512-bit masked
-    black_box(_mm512_mask_gf2p8affine_epi64_epi8::<0>(ones_i8, mask64, ones_i8, ones_i8));
-    black_box(_mm512_maskz_gf2p8affine_epi64_epi8::<0>(mask64, ones_i8, ones_i8));
+    black_box(_mm512_mask_gf2p8affine_epi64_epi8::<0>(
+        ones_i8, mask64, ones_i8, ones_i8,
+    ));
+    black_box(_mm512_maskz_gf2p8affine_epi64_epi8::<0>(
+        mask64, ones_i8, ones_i8,
+    ));
     black_box(_mm512_mask_gf2p8mul_epi8(ones_i8, mask64, ones_i8, ones_i8));
     black_box(_mm512_maskz_gf2p8mul_epi8(mask64, ones_i8, ones_i8));
 
@@ -850,8 +965,12 @@ fn exercise_gfni(token: Avx512ModernToken) {
     black_box(_mm256_gf2p8mul_epi8(v256_i8, v256_i8));
 
     // 256-bit masked
-    black_box(_mm256_mask_gf2p8affine_epi64_epi8::<0>(v256_i8, mask32, v256_i8, v256_i8));
-    black_box(_mm256_maskz_gf2p8affine_epi64_epi8::<0>(mask32, v256_i8, v256_i8));
+    black_box(_mm256_mask_gf2p8affine_epi64_epi8::<0>(
+        v256_i8, mask32, v256_i8, v256_i8,
+    ));
+    black_box(_mm256_maskz_gf2p8affine_epi64_epi8::<0>(
+        mask32, v256_i8, v256_i8,
+    ));
 
     // 128-bit GFNI
     black_box(_mm_gf2p8affine_epi64_epi8::<0>(v128_i8, v128_i8));
@@ -859,8 +978,12 @@ fn exercise_gfni(token: Avx512ModernToken) {
     black_box(_mm_gf2p8mul_epi8(v128_i8, v128_i8));
 
     // 128-bit masked
-    black_box(_mm_mask_gf2p8affine_epi64_epi8::<0>(v128_i8, mask16, v128_i8, v128_i8));
-    black_box(_mm_maskz_gf2p8affine_epi64_epi8::<0>(mask16, v128_i8, v128_i8));
+    black_box(_mm_mask_gf2p8affine_epi64_epi8::<0>(
+        v128_i8, mask16, v128_i8, v128_i8,
+    ));
+    black_box(_mm_maskz_gf2p8affine_epi64_epi8::<0>(
+        mask16, v128_i8, v128_i8,
+    ));
 }
 
 // =============================================================================
@@ -970,20 +1093,41 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
 
     // Float loads
     black_box(avx512f::_mm512_loadu_ps(token, &arr_f32_16));
-    black_box(avx512f::_mm512_mask_loadu_ps(token, vec_512_ps, mask16, &arr_f32_16));
+    black_box(avx512f::_mm512_mask_loadu_ps(
+        token,
+        vec_512_ps,
+        mask16,
+        &arr_f32_16,
+    ));
     black_box(avx512f::_mm512_maskz_loadu_ps(token, mask16, &arr_f32_16));
 
     // Double loads
     black_box(avx512f::_mm512_loadu_pd(token, &arr_f64_8));
-    black_box(avx512f::_mm512_mask_loadu_pd(token, vec_512_pd, mask8, &arr_f64_8));
+    black_box(avx512f::_mm512_mask_loadu_pd(
+        token, vec_512_pd, mask8, &arr_f64_8,
+    ));
     black_box(avx512f::_mm512_maskz_loadu_pd(token, mask8, &arr_f64_8));
 
     // Integer loads (epi32/epi64)
     black_box(avx512f::_mm512_loadu_epi32(token, &arr_i32_16));
-    black_box(avx512f::_mm512_mask_loadu_epi32(token, vec_512_i32, mask16, &arr_i32_16));
-    black_box(avx512f::_mm512_maskz_loadu_epi32(token, mask16, &arr_i32_16));
+    black_box(avx512f::_mm512_mask_loadu_epi32(
+        token,
+        vec_512_i32,
+        mask16,
+        &arr_i32_16,
+    ));
+    black_box(avx512f::_mm512_maskz_loadu_epi32(
+        token,
+        mask16,
+        &arr_i32_16,
+    ));
     black_box(avx512f::_mm512_loadu_epi64(token, &arr_i64_8));
-    black_box(avx512f::_mm512_mask_loadu_epi64(token, vec_512_i64, mask8, &arr_i64_8));
+    black_box(avx512f::_mm512_mask_loadu_epi64(
+        token,
+        vec_512_i64,
+        mask8,
+        &arr_i64_8,
+    ));
     black_box(avx512f::_mm512_maskz_loadu_epi64(token, mask8, &arr_i64_8));
     black_box(avx512f::_mm512_loadu_si512(token, &arr_i32_16));
 
@@ -1003,14 +1147,43 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     avx512f::_mm512_storeu_si512(token, &mut arr_i32_16, vec_512_i32);
 
     // Expand loads (masked load with expansion)
-    black_box(avx512f::_mm512_mask_expandloadu_ps(token, vec_512_ps, mask16, &arr_f32_16));
-    black_box(avx512f::_mm512_maskz_expandloadu_ps(token, mask16, &arr_f32_16));
-    black_box(avx512f::_mm512_mask_expandloadu_pd(token, vec_512_pd, mask8, &arr_f64_8));
-    black_box(avx512f::_mm512_maskz_expandloadu_pd(token, mask8, &arr_f64_8));
-    black_box(avx512f::_mm512_mask_expandloadu_epi32(token, vec_512_i32, mask16, &arr_i32_16));
-    black_box(avx512f::_mm512_maskz_expandloadu_epi32(token, mask16, &arr_i32_16));
-    black_box(avx512f::_mm512_mask_expandloadu_epi64(token, vec_512_i64, mask8, &arr_i64_8));
-    black_box(avx512f::_mm512_maskz_expandloadu_epi64(token, mask8, &arr_i64_8));
+    black_box(avx512f::_mm512_mask_expandloadu_ps(
+        token,
+        vec_512_ps,
+        mask16,
+        &arr_f32_16,
+    ));
+    black_box(avx512f::_mm512_maskz_expandloadu_ps(
+        token,
+        mask16,
+        &arr_f32_16,
+    ));
+    black_box(avx512f::_mm512_mask_expandloadu_pd(
+        token, vec_512_pd, mask8, &arr_f64_8,
+    ));
+    black_box(avx512f::_mm512_maskz_expandloadu_pd(
+        token, mask8, &arr_f64_8,
+    ));
+    black_box(avx512f::_mm512_mask_expandloadu_epi32(
+        token,
+        vec_512_i32,
+        mask16,
+        &arr_i32_16,
+    ));
+    black_box(avx512f::_mm512_maskz_expandloadu_epi32(
+        token,
+        mask16,
+        &arr_i32_16,
+    ));
+    black_box(avx512f::_mm512_mask_expandloadu_epi64(
+        token,
+        vec_512_i64,
+        mask8,
+        &arr_i64_8,
+    ));
+    black_box(avx512f::_mm512_maskz_expandloadu_epi64(
+        token, mask8, &arr_i64_8,
+    ));
 
     // Compress stores (masked store with compression)
     avx512f::_mm512_mask_compressstoreu_ps(token, &mut arr_f32_16, mask16, vec_512_ps);
@@ -1045,14 +1218,32 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     // =========================================================================
 
     black_box(avx512f_vl::_mm256_loadu_epi32(token, &arr_i32_8));
-    black_box(avx512f_vl::_mm256_mask_loadu_epi32(token, vec_256_i32, mask8, &arr_i32_8));
-    black_box(avx512f_vl::_mm256_maskz_loadu_epi32(token, mask8, &arr_i32_8));
+    black_box(avx512f_vl::_mm256_mask_loadu_epi32(
+        token,
+        vec_256_i32,
+        mask8,
+        &arr_i32_8,
+    ));
+    black_box(avx512f_vl::_mm256_maskz_loadu_epi32(
+        token, mask8, &arr_i32_8,
+    ));
     black_box(avx512f_vl::_mm256_loadu_epi64(token, &arr_i64_4));
-    black_box(avx512f_vl::_mm256_mask_loadu_epi64(token, vec_256_i64, mask4, &arr_i64_4));
-    black_box(avx512f_vl::_mm256_maskz_loadu_epi64(token, mask4, &arr_i64_4));
-    black_box(avx512f_vl::_mm256_mask_loadu_ps(token, vec_256_ps, mask8, &arr_f32_8));
+    black_box(avx512f_vl::_mm256_mask_loadu_epi64(
+        token,
+        vec_256_i64,
+        mask4,
+        &arr_i64_4,
+    ));
+    black_box(avx512f_vl::_mm256_maskz_loadu_epi64(
+        token, mask4, &arr_i64_4,
+    ));
+    black_box(avx512f_vl::_mm256_mask_loadu_ps(
+        token, vec_256_ps, mask8, &arr_f32_8,
+    ));
     black_box(avx512f_vl::_mm256_maskz_loadu_ps(token, mask8, &arr_f32_8));
-    black_box(avx512f_vl::_mm256_mask_loadu_pd(token, vec_256_pd, mask4, &arr_f64_4));
+    black_box(avx512f_vl::_mm256_mask_loadu_pd(
+        token, vec_256_pd, mask4, &arr_f64_4,
+    ));
     black_box(avx512f_vl::_mm256_maskz_loadu_pd(token, mask4, &arr_f64_4));
 
     avx512f_vl::_mm256_storeu_epi32(token, &mut arr_i32_8, vec_256_i32);
@@ -1063,14 +1254,36 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     avx512f_vl::_mm256_mask_storeu_pd(token, &mut arr_f64_4, mask4, vec_256_pd);
 
     // 256-bit expand loads
-    black_box(avx512f_vl::_mm256_mask_expandloadu_ps(token, vec_256_ps, mask8, &arr_f32_8));
-    black_box(avx512f_vl::_mm256_maskz_expandloadu_ps(token, mask8, &arr_f32_8));
-    black_box(avx512f_vl::_mm256_mask_expandloadu_pd(token, vec_256_pd, mask4, &arr_f64_4));
-    black_box(avx512f_vl::_mm256_maskz_expandloadu_pd(token, mask4, &arr_f64_4));
-    black_box(avx512f_vl::_mm256_mask_expandloadu_epi32(token, vec_256_i32, mask8, &arr_i32_8));
-    black_box(avx512f_vl::_mm256_maskz_expandloadu_epi32(token, mask8, &arr_i32_8));
-    black_box(avx512f_vl::_mm256_mask_expandloadu_epi64(token, vec_256_i64, mask4, &arr_i64_4));
-    black_box(avx512f_vl::_mm256_maskz_expandloadu_epi64(token, mask4, &arr_i64_4));
+    black_box(avx512f_vl::_mm256_mask_expandloadu_ps(
+        token, vec_256_ps, mask8, &arr_f32_8,
+    ));
+    black_box(avx512f_vl::_mm256_maskz_expandloadu_ps(
+        token, mask8, &arr_f32_8,
+    ));
+    black_box(avx512f_vl::_mm256_mask_expandloadu_pd(
+        token, vec_256_pd, mask4, &arr_f64_4,
+    ));
+    black_box(avx512f_vl::_mm256_maskz_expandloadu_pd(
+        token, mask4, &arr_f64_4,
+    ));
+    black_box(avx512f_vl::_mm256_mask_expandloadu_epi32(
+        token,
+        vec_256_i32,
+        mask8,
+        &arr_i32_8,
+    ));
+    black_box(avx512f_vl::_mm256_maskz_expandloadu_epi32(
+        token, mask8, &arr_i32_8,
+    ));
+    black_box(avx512f_vl::_mm256_mask_expandloadu_epi64(
+        token,
+        vec_256_i64,
+        mask4,
+        &arr_i64_4,
+    ));
+    black_box(avx512f_vl::_mm256_maskz_expandloadu_epi64(
+        token, mask4, &arr_i64_4,
+    ));
 
     // 256-bit compress stores
     avx512f_vl::_mm256_mask_compressstoreu_ps(token, &mut arr_f32_8, mask8, vec_256_ps);
@@ -1083,14 +1296,28 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     // =========================================================================
 
     black_box(avx512f_vl::_mm_loadu_epi32(token, &arr_i32_4));
-    black_box(avx512f_vl::_mm_mask_loadu_epi32(token, vec_128_i32, mask4, &arr_i32_4));
+    black_box(avx512f_vl::_mm_mask_loadu_epi32(
+        token,
+        vec_128_i32,
+        mask4,
+        &arr_i32_4,
+    ));
     black_box(avx512f_vl::_mm_maskz_loadu_epi32(token, mask4, &arr_i32_4));
     black_box(avx512f_vl::_mm_loadu_epi64(token, &arr_i64_2));
-    black_box(avx512f_vl::_mm_mask_loadu_epi64(token, vec_128_i64, mask2, &arr_i64_2));
+    black_box(avx512f_vl::_mm_mask_loadu_epi64(
+        token,
+        vec_128_i64,
+        mask2,
+        &arr_i64_2,
+    ));
     black_box(avx512f_vl::_mm_maskz_loadu_epi64(token, mask2, &arr_i64_2));
-    black_box(avx512f_vl::_mm_mask_loadu_ps(token, vec_128_ps, mask4, &arr_f32_4));
+    black_box(avx512f_vl::_mm_mask_loadu_ps(
+        token, vec_128_ps, mask4, &arr_f32_4,
+    ));
     black_box(avx512f_vl::_mm_maskz_loadu_ps(token, mask4, &arr_f32_4));
-    black_box(avx512f_vl::_mm_mask_loadu_pd(token, vec_128_pd, mask2, &arr_f64_2));
+    black_box(avx512f_vl::_mm_mask_loadu_pd(
+        token, vec_128_pd, mask2, &arr_f64_2,
+    ));
     black_box(avx512f_vl::_mm_maskz_loadu_pd(token, mask2, &arr_f64_2));
 
     avx512f_vl::_mm_storeu_epi32(token, &mut arr_i32_4, vec_128_i32);
@@ -1101,14 +1328,36 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     avx512f_vl::_mm_mask_storeu_pd(token, &mut arr_f64_2, mask2, vec_128_pd);
 
     // 128-bit expand loads
-    black_box(avx512f_vl::_mm_mask_expandloadu_ps(token, vec_128_ps, mask4, &arr_f32_4));
-    black_box(avx512f_vl::_mm_maskz_expandloadu_ps(token, mask4, &arr_f32_4));
-    black_box(avx512f_vl::_mm_mask_expandloadu_pd(token, vec_128_pd, mask2, &arr_f64_2));
-    black_box(avx512f_vl::_mm_maskz_expandloadu_pd(token, mask2, &arr_f64_2));
-    black_box(avx512f_vl::_mm_mask_expandloadu_epi32(token, vec_128_i32, mask4, &arr_i32_4));
-    black_box(avx512f_vl::_mm_maskz_expandloadu_epi32(token, mask4, &arr_i32_4));
-    black_box(avx512f_vl::_mm_mask_expandloadu_epi64(token, vec_128_i64, mask2, &arr_i64_2));
-    black_box(avx512f_vl::_mm_maskz_expandloadu_epi64(token, mask2, &arr_i64_2));
+    black_box(avx512f_vl::_mm_mask_expandloadu_ps(
+        token, vec_128_ps, mask4, &arr_f32_4,
+    ));
+    black_box(avx512f_vl::_mm_maskz_expandloadu_ps(
+        token, mask4, &arr_f32_4,
+    ));
+    black_box(avx512f_vl::_mm_mask_expandloadu_pd(
+        token, vec_128_pd, mask2, &arr_f64_2,
+    ));
+    black_box(avx512f_vl::_mm_maskz_expandloadu_pd(
+        token, mask2, &arr_f64_2,
+    ));
+    black_box(avx512f_vl::_mm_mask_expandloadu_epi32(
+        token,
+        vec_128_i32,
+        mask4,
+        &arr_i32_4,
+    ));
+    black_box(avx512f_vl::_mm_maskz_expandloadu_epi32(
+        token, mask4, &arr_i32_4,
+    ));
+    black_box(avx512f_vl::_mm_mask_expandloadu_epi64(
+        token,
+        vec_128_i64,
+        mask2,
+        &arr_i64_2,
+    ));
+    black_box(avx512f_vl::_mm_maskz_expandloadu_epi64(
+        token, mask2, &arr_i64_2,
+    ));
 
     // 128-bit compress stores
     avx512f_vl::_mm_mask_compressstoreu_ps(token, &mut arr_f32_4, mask4, vec_128_ps);
@@ -1121,10 +1370,21 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     // =========================================================================
 
     black_box(avx512bw::_mm512_loadu_epi16(token, &arr_i16_32));
-    black_box(avx512bw::_mm512_mask_loadu_epi16(token, vec_512_i16, mask32, &arr_i16_32));
-    black_box(avx512bw::_mm512_maskz_loadu_epi16(token, mask32, &arr_i16_32));
+    black_box(avx512bw::_mm512_mask_loadu_epi16(
+        token,
+        vec_512_i16,
+        mask32,
+        &arr_i16_32,
+    ));
+    black_box(avx512bw::_mm512_maskz_loadu_epi16(
+        token,
+        mask32,
+        &arr_i16_32,
+    ));
     black_box(avx512bw::_mm512_loadu_epi8(token, &arr_i8_64));
-    black_box(avx512bw::_mm512_mask_loadu_epi8(token, vec_512_i8, mask64, &arr_i8_64));
+    black_box(avx512bw::_mm512_mask_loadu_epi8(
+        token, vec_512_i8, mask64, &arr_i8_64,
+    ));
     black_box(avx512bw::_mm512_maskz_loadu_epi8(token, mask64, &arr_i8_64));
 
     avx512bw::_mm512_storeu_epi16(token, &mut arr_i16_32, vec_512_i16);
@@ -1142,11 +1402,24 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     // =========================================================================
 
     black_box(avx512bw_vl::_mm256_loadu_epi16(token, &arr_i16_16));
-    black_box(avx512bw_vl::_mm256_mask_loadu_epi16(token, vec_256_i16, mask16, &arr_i16_16));
-    black_box(avx512bw_vl::_mm256_maskz_loadu_epi16(token, mask16, &arr_i16_16));
+    black_box(avx512bw_vl::_mm256_mask_loadu_epi16(
+        token,
+        vec_256_i16,
+        mask16,
+        &arr_i16_16,
+    ));
+    black_box(avx512bw_vl::_mm256_maskz_loadu_epi16(
+        token,
+        mask16,
+        &arr_i16_16,
+    ));
     black_box(avx512bw_vl::_mm256_loadu_epi8(token, &arr_i8_32));
-    black_box(avx512bw_vl::_mm256_mask_loadu_epi8(token, vec_256_i8, mask32, &arr_i8_32));
-    black_box(avx512bw_vl::_mm256_maskz_loadu_epi8(token, mask32, &arr_i8_32));
+    black_box(avx512bw_vl::_mm256_mask_loadu_epi8(
+        token, vec_256_i8, mask32, &arr_i8_32,
+    ));
+    black_box(avx512bw_vl::_mm256_maskz_loadu_epi8(
+        token, mask32, &arr_i8_32,
+    ));
 
     avx512bw_vl::_mm256_storeu_epi16(token, &mut arr_i16_16, vec_256_i16);
     avx512bw_vl::_mm256_mask_storeu_epi16(token, &mut arr_i16_16, mask16, vec_256_i16);
@@ -1162,10 +1435,17 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     // =========================================================================
 
     black_box(avx512bw_vl::_mm_loadu_epi16(token, &arr_i16_8));
-    black_box(avx512bw_vl::_mm_mask_loadu_epi16(token, vec_128_i16, mask8, &arr_i16_8));
+    black_box(avx512bw_vl::_mm_mask_loadu_epi16(
+        token,
+        vec_128_i16,
+        mask8,
+        &arr_i16_8,
+    ));
     black_box(avx512bw_vl::_mm_maskz_loadu_epi16(token, mask8, &arr_i16_8));
     black_box(avx512bw_vl::_mm_loadu_epi8(token, &arr_i8_16));
-    black_box(avx512bw_vl::_mm_mask_loadu_epi8(token, vec_128_i8, mask16, &arr_i8_16));
+    black_box(avx512bw_vl::_mm_mask_loadu_epi8(
+        token, vec_128_i8, mask16, &arr_i8_16,
+    ));
     black_box(avx512bw_vl::_mm_maskz_loadu_epi8(token, mask16, &arr_i8_16));
 
     avx512bw_vl::_mm_storeu_epi16(token, &mut arr_i16_8, vec_128_i16);
@@ -1181,10 +1461,23 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     // AVX-512VBMI2 512-bit Byte/Word Expand/Compress
     // =========================================================================
 
-    black_box(avx512vbmi2::_mm512_mask_expandloadu_epi16(token, vec_512_i16, mask32, &arr_i16_32));
-    black_box(avx512vbmi2::_mm512_maskz_expandloadu_epi16(token, mask32, &arr_i16_32));
-    black_box(avx512vbmi2::_mm512_mask_expandloadu_epi8(token, vec_512_i8, mask64, &arr_i8_64));
-    black_box(avx512vbmi2::_mm512_maskz_expandloadu_epi8(token, mask64, &arr_i8_64));
+    black_box(avx512vbmi2::_mm512_mask_expandloadu_epi16(
+        token,
+        vec_512_i16,
+        mask32,
+        &arr_i16_32,
+    ));
+    black_box(avx512vbmi2::_mm512_maskz_expandloadu_epi16(
+        token,
+        mask32,
+        &arr_i16_32,
+    ));
+    black_box(avx512vbmi2::_mm512_mask_expandloadu_epi8(
+        token, vec_512_i8, mask64, &arr_i8_64,
+    ));
+    black_box(avx512vbmi2::_mm512_maskz_expandloadu_epi8(
+        token, mask64, &arr_i8_64,
+    ));
 
     avx512vbmi2::_mm512_mask_compressstoreu_epi16(token, &mut arr_i16_32, mask32, vec_512_i16);
     avx512vbmi2::_mm512_mask_compressstoreu_epi8(token, &mut arr_i8_64, mask64, vec_512_i8);
@@ -1193,10 +1486,23 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     // AVX-512VBMI2+VL 256-bit Byte/Word Expand/Compress
     // =========================================================================
 
-    black_box(avx512vbmi2_vl::_mm256_mask_expandloadu_epi16(token, vec_256_i16, mask16, &arr_i16_16));
-    black_box(avx512vbmi2_vl::_mm256_maskz_expandloadu_epi16(token, mask16, &arr_i16_16));
-    black_box(avx512vbmi2_vl::_mm256_mask_expandloadu_epi8(token, vec_256_i8, mask32, &arr_i8_32));
-    black_box(avx512vbmi2_vl::_mm256_maskz_expandloadu_epi8(token, mask32, &arr_i8_32));
+    black_box(avx512vbmi2_vl::_mm256_mask_expandloadu_epi16(
+        token,
+        vec_256_i16,
+        mask16,
+        &arr_i16_16,
+    ));
+    black_box(avx512vbmi2_vl::_mm256_maskz_expandloadu_epi16(
+        token,
+        mask16,
+        &arr_i16_16,
+    ));
+    black_box(avx512vbmi2_vl::_mm256_mask_expandloadu_epi8(
+        token, vec_256_i8, mask32, &arr_i8_32,
+    ));
+    black_box(avx512vbmi2_vl::_mm256_maskz_expandloadu_epi8(
+        token, mask32, &arr_i8_32,
+    ));
 
     avx512vbmi2_vl::_mm256_mask_compressstoreu_epi16(token, &mut arr_i16_16, mask16, vec_256_i16);
     avx512vbmi2_vl::_mm256_mask_compressstoreu_epi8(token, &mut arr_i8_32, mask32, vec_256_i8);
@@ -1205,10 +1511,21 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     // AVX-512VBMI2+VL 128-bit Byte/Word Expand/Compress
     // =========================================================================
 
-    black_box(avx512vbmi2_vl::_mm_mask_expandloadu_epi16(token, vec_128_i16, mask8, &arr_i16_8));
-    black_box(avx512vbmi2_vl::_mm_maskz_expandloadu_epi16(token, mask8, &arr_i16_8));
-    black_box(avx512vbmi2_vl::_mm_mask_expandloadu_epi8(token, vec_128_i8, mask16, &arr_i8_16));
-    black_box(avx512vbmi2_vl::_mm_maskz_expandloadu_epi8(token, mask16, &arr_i8_16));
+    black_box(avx512vbmi2_vl::_mm_mask_expandloadu_epi16(
+        token,
+        vec_128_i16,
+        mask8,
+        &arr_i16_8,
+    ));
+    black_box(avx512vbmi2_vl::_mm_maskz_expandloadu_epi16(
+        token, mask8, &arr_i16_8,
+    ));
+    black_box(avx512vbmi2_vl::_mm_mask_expandloadu_epi8(
+        token, vec_128_i8, mask16, &arr_i8_16,
+    ));
+    black_box(avx512vbmi2_vl::_mm_maskz_expandloadu_epi8(
+        token, mask16, &arr_i8_16,
+    ));
 
     avx512vbmi2_vl::_mm_mask_compressstoreu_epi16(token, &mut arr_i16_8, mask8, vec_128_i16);
     avx512vbmi2_vl::_mm_mask_compressstoreu_epi8(token, &mut arr_i8_16, mask16, vec_128_i8);

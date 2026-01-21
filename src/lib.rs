@@ -124,7 +124,6 @@ pub use tokens::{HasNeon, HasSve, HasSve2};
 pub use tokens::{
     // ARM tokens
     Arm64,
-    NeonToken,
     // x86 tokens
     Avx2FmaToken,
     Avx2Token,
@@ -140,6 +139,9 @@ pub use tokens::{
     AvxToken,
     Desktop64,
     FmaToken,
+    NeonToken,
+    // WASM tokens
+    Simd128Token,
     Sse2Token,
     Sse41Token,
     Sse42Token,
@@ -147,6 +149,4 @@ pub use tokens::{
     X64V2Token,
     X64V3Token,
     X64V4Token,
-    // WASM tokens
-    Simd128Token,
 };
