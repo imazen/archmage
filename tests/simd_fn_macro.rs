@@ -5,7 +5,7 @@
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
     use archmage::{
-        Avx2FmaToken, Avx2Token, Desktop64, HasAvx, HasAvx2, HasFma, Server64, SimdToken,
+        Avx2FmaToken, Avx2Token, Desktop64, HasAvx, HasAvx2, HasFma, Avx512Token, SimdToken,
         X64V3Token, simd_fn,
     };
     use std::arch::x86_64::*;
@@ -300,7 +300,7 @@ mod x86_tests {
     }
 
     // =====================================================================
-    // Tests for friendly aliases (Desktop64, Server64)
+    // Tests for friendly aliases (Desktop64, Avx512Token)
     // =====================================================================
 
     /// Test Desktop64 alias with simd_fn macro
@@ -349,10 +349,10 @@ mod x86_tests {
         }
     }
 
-    /// Test Server64 alias (only runs on machines with AVX-512)
+    /// Test Avx512Token alias (only runs on machines with AVX-512)
     #[simd_fn]
-    fn server64_test(token: Server64, data: &[f32; 8]) -> [f32; 8] {
-        // Server64 = X64V4Token = AVX-512, but we'll just use AVX2 ops for simplicity
+    fn server64_test(token: Avx512Token, data: &[f32; 8]) -> [f32; 8] {
+        // Avx512Token = X64V4Token = AVX-512, but we'll just use AVX2 ops for simplicity
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
         let mut out = [0.0f32; 8];
@@ -363,7 +363,7 @@ mod x86_tests {
     #[test]
     fn test_simd_fn_server64_alias() {
         // This test only runs on machines with AVX-512
-        if let Some(token) = Server64::try_new() {
+        if let Some(token) = Avx512Token::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = server64_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);

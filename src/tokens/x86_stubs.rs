@@ -51,6 +51,9 @@ define_x86_stub!(Avx512Vbmi2VlToken, "AVX-512VBMI2+VL");
 define_x86_stub!(X64V2Token, "x86-64-v2");
 define_x86_stub!(X64V3Token, "x86-64-v3");
 define_x86_stub!(X64V4Token, "x86-64-v4");
+define_x86_stub!(Avx512Token, "AVX-512");
+define_x86_stub!(Avx512ModernToken, "AVX-512Modern");
+define_x86_stub!(Avx512Fp16Token, "AVX-512FP16");
 
 /// Stub for AVX2+FMA combined token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
@@ -84,8 +87,6 @@ impl CompositeToken for Avx2FmaToken {
 
 /// Alias for x86-64-v3 (AVX2 + FMA) - stub on non-x86 architectures.
 pub type Desktop64 = X64V3Token;
-/// Alias for x86-64-v4 (AVX-512) - stub on non-x86 architectures.
-pub type Server64 = X64V4Token;
 
 // Implement marker traits for stubs
 impl Has128BitSimd for SseToken {}
@@ -244,3 +245,52 @@ impl HasAvx512dq for X64V4Token {}
 
 impl HasAvx512vbmi2 for Avx512Vbmi2Token {}
 impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
+impl HasAvx512vbmi2 for Avx512ModernToken {}
+
+// Avx512Token (alias for X64V4Token functionally, but separate struct for stubs)
+impl Has128BitSimd for Avx512Token {}
+impl Has256BitSimd for Avx512Token {}
+impl Has512BitSimd for Avx512Token {}
+impl HasFma for Avx512Token {}
+impl HasSse for Avx512Token {}
+impl HasSse2 for Avx512Token {}
+impl HasSse41 for Avx512Token {}
+impl HasSse42 for Avx512Token {}
+impl HasAvx for Avx512Token {}
+impl HasAvx2 for Avx512Token {}
+impl HasAvx512f for Avx512Token {}
+impl HasAvx512vl for Avx512Token {}
+impl HasAvx512bw for Avx512Token {}
+impl HasAvx512dq for Avx512Token {}
+
+// Avx512ModernToken (Ice Lake / Zen 4)
+impl Has128BitSimd for Avx512ModernToken {}
+impl Has256BitSimd for Avx512ModernToken {}
+impl Has512BitSimd for Avx512ModernToken {}
+impl HasFma for Avx512ModernToken {}
+impl HasSse for Avx512ModernToken {}
+impl HasSse2 for Avx512ModernToken {}
+impl HasSse41 for Avx512ModernToken {}
+impl HasSse42 for Avx512ModernToken {}
+impl HasAvx for Avx512ModernToken {}
+impl HasAvx2 for Avx512ModernToken {}
+impl HasAvx512f for Avx512ModernToken {}
+impl HasAvx512vl for Avx512ModernToken {}
+impl HasAvx512bw for Avx512ModernToken {}
+impl HasAvx512dq for Avx512ModernToken {}
+
+// Avx512Fp16Token (Sapphire Rapids+)
+impl Has128BitSimd for Avx512Fp16Token {}
+impl Has256BitSimd for Avx512Fp16Token {}
+impl Has512BitSimd for Avx512Fp16Token {}
+impl HasFma for Avx512Fp16Token {}
+impl HasSse for Avx512Fp16Token {}
+impl HasSse2 for Avx512Fp16Token {}
+impl HasSse41 for Avx512Fp16Token {}
+impl HasSse42 for Avx512Fp16Token {}
+impl HasAvx for Avx512Fp16Token {}
+impl HasAvx2 for Avx512Fp16Token {}
+impl HasAvx512f for Avx512Fp16Token {}
+impl HasAvx512vl for Avx512Fp16Token {}
+impl HasAvx512bw for Avx512Fp16Token {}
+impl HasAvx512dq for Avx512Fp16Token {}

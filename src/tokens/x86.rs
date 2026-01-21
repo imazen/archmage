@@ -9,6 +9,9 @@
 
 use super::{CompositeToken, SimdToken};
 
+// Re-export AVX-512 tokens from the dedicated module
+pub use super::x86_avx512::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, X64V4Token};
+
 // ============================================================================
 // SSE2 Token (baseline for x86_64)
 // ============================================================================
@@ -704,104 +707,6 @@ impl X64V3Token {
     }
 }
 
-/// Proof that AVX-512 (F/BW/CD/DQ/VL) is available (x86-64-v4 level).
-///
-/// x86-64-v4 implies all of v3 plus: AVX-512F, AVX-512BW, AVX-512CD, AVX-512DQ, AVX-512VL.
-/// This is the Xeon Skylake-SP (2017) / Zen 4 (2022) baseline.
-///
-/// Note: Intel consumer CPUs (12th-14th gen) do NOT have AVX-512 due to E-core limitations.
-/// Only Xeon server, i9-X workstation, and AMD Zen 4+ have AVX-512.
-#[derive(Clone, Copy, Debug)]
-pub struct X64V4Token {
-    _private: (),
-}
-
-impl SimdToken for X64V4Token {
-    const NAME: &'static str = "x86-64-v4";
-
-    #[inline(always)]
-    fn try_new() -> Option<Self> {
-        // v4 requires all AVX-512 subsets used in the psABI level
-        if crate::is_x86_feature_available!("avx512f")
-            && crate::is_x86_feature_available!("avx512bw")
-            && crate::is_x86_feature_available!("avx512cd")
-            && crate::is_x86_feature_available!("avx512dq")
-            && crate::is_x86_feature_available!("avx512vl")
-        {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl X64V4Token {
-    /// Get a v3 token (v4 implies v3)
-    #[inline(always)]
-    pub fn v3(self) -> X64V3Token {
-        unsafe { X64V3Token::forge_token_dangerously() }
-    }
-
-    /// Get a v2 token (v4 implies v2)
-    #[inline(always)]
-    pub fn v2(self) -> X64V2Token {
-        unsafe { X64V2Token::forge_token_dangerously() }
-    }
-
-    /// Get an AVX-512F token
-    #[inline(always)]
-    pub fn avx512f(self) -> Avx512fToken {
-        unsafe { Avx512fToken::forge_token_dangerously() }
-    }
-
-    /// Get an AVX-512BW token
-    #[inline(always)]
-    pub fn avx512bw(self) -> Avx512bwToken {
-        unsafe { Avx512bwToken::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2+FMA combined token
-    #[inline(always)]
-    pub fn avx2_fma(self) -> Avx2FmaToken {
-        unsafe { Avx2FmaToken::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2 token
-    #[inline(always)]
-    pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::forge_token_dangerously() }
-    }
-
-    /// Get an FMA token
-    #[inline(always)]
-    pub fn fma(self) -> FmaToken {
-        unsafe { FmaToken::forge_token_dangerously() }
-    }
-
-    /// Get an AVX token
-    #[inline(always)]
-    pub fn avx(self) -> AvxToken {
-        unsafe { AvxToken::forge_token_dangerously() }
-    }
-
-    /// Get an SSE4.1 token
-    #[inline(always)]
-    pub fn sse41(self) -> Sse41Token {
-        unsafe { Sse41Token::forge_token_dangerously() }
-    }
-
-    /// Get an SSE2 token
-    #[inline(always)]
-    pub fn sse2(self) -> Sse2Token {
-        unsafe { Sse2Token::forge_token_dangerously() }
-    }
-}
-
 // ============================================================================
 // SSE4.2 Token (needed for v2)
 // ============================================================================
@@ -1039,6 +944,40 @@ impl HasAvx512dq for X64V4Token {}
 // HasAvx512vbmi2: AVX-512VBMI2 tokens
 impl HasAvx512vbmi2 for Avx512Vbmi2Token {}
 impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
+impl HasAvx512vbmi2 for Avx512ModernToken {}
+
+// Avx512ModernToken: Full modern AVX-512 (Ice Lake / Zen 4)
+// Implements all AVX-512 traits since it's a superset
+impl Has128BitSimd for Avx512ModernToken {}
+impl Has256BitSimd for Avx512ModernToken {}
+impl Has512BitSimd for Avx512ModernToken {}
+impl HasFma for Avx512ModernToken {}
+impl HasSse for Avx512ModernToken {}
+impl HasSse2 for Avx512ModernToken {}
+impl HasSse41 for Avx512ModernToken {}
+impl HasSse42 for Avx512ModernToken {}
+impl HasAvx for Avx512ModernToken {}
+impl HasAvx2 for Avx512ModernToken {}
+impl HasAvx512f for Avx512ModernToken {}
+impl HasAvx512vl for Avx512ModernToken {}
+impl HasAvx512bw for Avx512ModernToken {}
+impl HasAvx512dq for Avx512ModernToken {}
+
+// Avx512Fp16Token: AVX-512 with FP16 (Sapphire Rapids+)
+impl Has128BitSimd for Avx512Fp16Token {}
+impl Has256BitSimd for Avx512Fp16Token {}
+impl Has512BitSimd for Avx512Fp16Token {}
+impl HasFma for Avx512Fp16Token {}
+impl HasSse for Avx512Fp16Token {}
+impl HasSse2 for Avx512Fp16Token {}
+impl HasSse41 for Avx512Fp16Token {}
+impl HasSse42 for Avx512Fp16Token {}
+impl HasAvx for Avx512Fp16Token {}
+impl HasAvx2 for Avx512Fp16Token {}
+impl HasAvx512f for Avx512Fp16Token {}
+impl HasAvx512vl for Avx512Fp16Token {}
+impl HasAvx512bw for Avx512Fp16Token {}
+impl HasAvx512dq for Avx512Fp16Token {}
 
 // ============================================================================
 // Friendly Aliases
@@ -1073,37 +1012,6 @@ impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
 /// }
 /// ```
 pub type Desktop64 = X64V3Token;
-
-/// Server/workstation baseline with AVX-512 (x86-64-v4).
-///
-/// This is an alias for [`X64V4Token`], covering Xeon servers (Skylake-SP 2017+),
-/// Intel HEDT workstations, and AMD Zen 4+ CPUs. Use this for server workloads
-/// or when you know AVX-512 is available.
-///
-/// # When to use Server64
-///
-/// - **Cloud servers**: AWS (Xeon, Graviton doesn't apply here), GCP, Azure Xeon instances
-/// - **Workstations**: Intel i9-X series, AMD Threadripper Zen 4+
-/// - **AMD Zen 4+**: Ryzen 7000+ series desktop CPUs do have AVX-512
-///
-/// # When NOT to use Server64
-///
-/// - **Intel consumer laptops/desktops**: 12th-14th gen Core chips lack AVX-512
-/// - **Unknown hardware**: Fall back to [`Desktop64`] for broader compatibility
-///
-/// # Example
-///
-/// ```rust,ignore
-/// use archmage::{Server64, Desktop64, SimdToken, arcane};
-///
-/// // Try server features first, fall back to desktop
-/// if let Some(token) = Server64::try_new() {
-///     process_avx512(token, &mut data);
-/// } else if let Some(token) = Desktop64::try_new() {
-///     process_avx2(token, &mut data);
-/// }
-/// ```
-pub type Server64 = X64V4Token;
 
 // ============================================================================
 // Assembly verification helpers
@@ -1220,17 +1128,12 @@ mod tests {
     #[test]
     fn test_v4_token_extraction() {
         if let Some(v4) = X64V4Token::try_new() {
-            // v4 can extract v3, v2, AVX-512 variants, AVX2+FMA, etc.
+            // v4 (alias for Avx512Token) can extract v3, AVX2+FMA, etc.
             let _v3 = v4.v3();
-            let _v2 = v4.v2();
-            let _avx512f = v4.avx512f();
-            let _avx512bw = v4.avx512bw();
             let _avx2_fma = v4.avx2_fma();
             let _avx2 = v4.avx2();
-            let _fma = v4.fma();
             let _avx = v4.avx();
-            let _sse41 = v4.sse41();
-            let _sse2 = v4.sse2();
+            let _sse42 = v4.sse42();
         }
     }
 
@@ -1261,7 +1164,9 @@ mod tests {
     fn test_profile_token_names() {
         assert_eq!(X64V2Token::NAME, "x86-64-v2");
         assert_eq!(X64V3Token::NAME, "x86-64-v3");
-        assert_eq!(X64V4Token::NAME, "x86-64-v4");
+        // X64V4Token is an alias for Avx512Token
+        assert_eq!(X64V4Token::NAME, "AVX-512");
+        assert_eq!(Avx512Token::NAME, "AVX-512");
         assert_eq!(Sse42Token::NAME, "SSE4.2");
     }
 

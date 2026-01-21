@@ -90,14 +90,37 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
         // x86_64 profile tokens
         "X64V2Token" => Some(&["sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" => Some(&["avx2", "fma", "bmi1", "bmi2"]),
-        "X64V4Token" | "Server64" => {
+        "X64V4Token" | "Avx512Token" => {
             Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"])
         }
+        "Avx512ModernToken" => Some(&[
+            "avx512f",
+            "avx512bw",
+            "avx512cd",
+            "avx512dq",
+            "avx512vl",
+            "avx512vpopcntdq",
+            "avx512ifma",
+            "avx512vbmi",
+            "avx512vbmi2",
+            "avx512bitalg",
+            "avx512vnni",
+            "avx512bf16",
+            "vpclmulqdq",
+            "gfni",
+            "vaes",
+        ]),
+        "Avx512Fp16Token" => Some(&[
+            "avx512f",
+            "avx512bw",
+            "avx512cd",
+            "avx512dq",
+            "avx512vl",
+            "avx512fp16",
+        ]),
 
         // ARM tokens
         "NeonToken" | "Arm64" => Some(&["neon"]),
-        "SveToken" => Some(&["sve"]),
-        "Sve2Token" => Some(&["sve2"]),
 
         // WASM tokens
         "Simd128Token" => Some(&["simd128"]),
@@ -130,8 +153,6 @@ fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {
 
         // ARM feature marker traits
         "HasNeon" => Some(&["neon"]),
-        "HasSve" => Some(&["sve"]),
-        "HasSve2" => Some(&["sve2"]),
 
         _ => None,
     }

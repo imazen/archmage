@@ -50,7 +50,7 @@ fn token_names() {
     assert_eq!(Avx2FmaToken::NAME, "AVX2+FMA");
     assert_eq!(X64V2Token::NAME, "x86-64-v2");
     assert_eq!(X64V3Token::NAME, "x86-64-v3");
-    assert_eq!(X64V4Token::NAME, "x86-64-v4");
+    assert_eq!(X64V4Token::NAME, "AVX-512"); // X64V4Token is alias for Avx512Token
 }
 
 /// Test token hierarchy - if we have AVX2, we can get SSE2.

@@ -17,7 +17,7 @@ use archmage::SimdToken;
 fn test_cross_platform_token_types_exist() {
     // x86 tokens - should compile on ARM/WASM, summon returns None there
     use archmage::{
-        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Server64, Sse2Token, Sse41Token,
+        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Avx512Token, Sse2Token, Sse41Token,
         Sse42Token, SseToken, X64V2Token, X64V3Token, X64V4Token,
     };
 
@@ -34,14 +34,12 @@ fn test_cross_platform_token_types_exist() {
     assert_eq!(core::mem::size_of::<X64V3Token>(), 0);
     assert_eq!(core::mem::size_of::<X64V4Token>(), 0);
     assert_eq!(core::mem::size_of::<Desktop64>(), 0);
-    assert_eq!(core::mem::size_of::<Server64>(), 0);
+    assert_eq!(core::mem::size_of::<Avx512Token>(), 0);
 
     // ARM tokens - should compile on x86/WASM, summon returns None there
-    use archmage::{Arm64, NeonToken, Sve2Token, SveToken};
+    use archmage::{Arm64, NeonToken};
 
     assert_eq!(core::mem::size_of::<NeonToken>(), 0);
-    assert_eq!(core::mem::size_of::<SveToken>(), 0);
-    assert_eq!(core::mem::size_of::<Sve2Token>(), 0);
     assert_eq!(core::mem::size_of::<Arm64>(), 0);
 
     // WASM token - should compile everywhere
@@ -54,7 +52,7 @@ fn test_cross_platform_token_types_exist() {
 fn test_summon_behavior() {
     use archmage::{Arm64, NeonToken, Simd128Token};
 
-    // On x86_64, Desktop64/Server64 may succeed
+    // On x86_64, Desktop64/Avx512Token may succeed
     #[cfg(target_arch = "x86_64")]
     {
         // SSE2 is baseline on x86_64, so Sse2Token should always succeed
@@ -81,7 +79,7 @@ fn test_summon_behavior() {
             Desktop64::summon().is_none(),
             "Desktop64 unavailable on ARM"
         );
-        assert!(Server64::summon().is_none(), "Server64 unavailable on ARM");
+        assert!(Avx512Token::summon().is_none(), "Avx512Token unavailable on ARM");
         assert!(
             Simd128Token::summon().is_none(),
             "WASM SIMD unavailable on ARM"
@@ -127,12 +125,12 @@ fn test_disable_archmage_env() {
 /// Test that cross-platform dispatch code compiles and runs.
 #[test]
 fn test_cross_platform_dispatch_pattern() {
-    use archmage::{Arm64, Desktop64, NeonToken, Server64};
+    use archmage::{Arm64, Desktop64, NeonToken, Avx512Token};
 
     let mut data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
     // This pattern should compile on any architecture
-    let processed = if let Some(_token) = Server64::summon() {
+    let processed = if let Some(_token) = Avx512Token::summon() {
         "avx512"
     } else if let Some(_token) = Desktop64::summon() {
         "avx2"
@@ -156,9 +154,9 @@ fn test_cross_platform_dispatch_pattern() {
 #[test]
 fn test_token_names() {
     use archmage::{
-        Arm64, Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, NeonToken, Server64,
-        Simd128Token, Sse2Token, Sse41Token, Sse42Token, SseToken, Sve2Token, SveToken, X64V2Token,
-        X64V3Token, X64V4Token,
+        Arm64, Avx2FmaToken, Avx2Token, Avx512Token, AvxToken, Desktop64, FmaToken, NeonToken,
+        Simd128Token, Sse2Token, Sse41Token, Sse42Token, SseToken, X64V2Token, X64V3Token,
+        X64V4Token,
     };
 
     // x86 tokens
@@ -172,16 +170,15 @@ fn test_token_names() {
     assert_eq!(Avx2FmaToken::NAME, "AVX2+FMA");
     assert_eq!(X64V2Token::NAME, "x86-64-v2");
     assert_eq!(X64V3Token::NAME, "x86-64-v3");
-    assert_eq!(X64V4Token::NAME, "x86-64-v4");
+    // X64V4Token is an alias for Avx512Token
+    assert_eq!(X64V4Token::NAME, "AVX-512");
+    assert_eq!(Avx512Token::NAME, "AVX-512");
 
     // Verify aliases
     assert_eq!(Desktop64::NAME, X64V3Token::NAME);
-    assert_eq!(Server64::NAME, X64V4Token::NAME);
 
     // ARM tokens
     assert_eq!(NeonToken::NAME, "NEON");
-    assert_eq!(SveToken::NAME, "SVE");
-    assert_eq!(Sve2Token::NAME, "SVE2");
     assert_eq!(Arm64::NAME, NeonToken::NAME);
 
     // WASM tokens
