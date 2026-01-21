@@ -17,9 +17,11 @@ use archmage::SimdToken;
 fn test_cross_platform_token_types_exist() {
     // x86 tokens - should compile on ARM/WASM, summon returns None there
     use archmage::{
-        Avx2FmaToken, Avx2Token, Avx512Token, AvxToken, Desktop64, FmaToken, Sse2Token, Sse41Token,
-        Sse42Token, SseToken, X64V2Token, X64V3Token, X64V4Token,
+        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Sse2Token, Sse41Token, Sse42Token,
+        SseToken, X64V2Token, X64V3Token,
     };
+    #[cfg(feature = "avx512")]
+    use archmage::{Avx512Token, X64V4Token};
 
     // Verify tokens are zero-sized
     assert_eq!(core::mem::size_of::<SseToken>(), 0);
@@ -32,8 +34,10 @@ fn test_cross_platform_token_types_exist() {
     assert_eq!(core::mem::size_of::<Avx2FmaToken>(), 0);
     assert_eq!(core::mem::size_of::<X64V2Token>(), 0);
     assert_eq!(core::mem::size_of::<X64V3Token>(), 0);
+    #[cfg(feature = "avx512")]
     assert_eq!(core::mem::size_of::<X64V4Token>(), 0);
     assert_eq!(core::mem::size_of::<Desktop64>(), 0);
+    #[cfg(feature = "avx512")]
     assert_eq!(core::mem::size_of::<Avx512Token>(), 0);
 
     // ARM tokens - should compile on x86/WASM, summon returns None there
@@ -79,8 +83,9 @@ fn test_summon_behavior() {
             Desktop64::summon().is_none(),
             "Desktop64 unavailable on ARM"
         );
+        #[cfg(feature = "avx512")]
         assert!(
-            Avx512Token::summon().is_none(),
+            archmage::Avx512Token::summon().is_none(),
             "Avx512Token unavailable on ARM"
         );
         assert!(
@@ -128,14 +133,30 @@ fn test_disable_archmage_env() {
 /// Test that cross-platform dispatch code compiles and runs.
 #[test]
 fn test_cross_platform_dispatch_pattern() {
-    use archmage::{Arm64, Avx512Token, Desktop64, NeonToken};
+    use archmage::{Arm64, Desktop64, NeonToken};
 
     let mut data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
     // This pattern should compile on any architecture
-    let processed = if let Some(_token) = Avx512Token::summon() {
+    #[cfg(feature = "avx512")]
+    let processed = if let Some(_token) = archmage::Avx512Token::summon() {
         "avx512"
     } else if let Some(_token) = Desktop64::summon() {
+        "avx2"
+    } else if let Some(_token) = NeonToken::summon() {
+        "neon"
+    } else if let Some(_token) = Arm64::summon() {
+        "arm64"
+    } else {
+        // Scalar fallback
+        for x in &mut data {
+            *x *= 2.0;
+        }
+        "scalar"
+    };
+
+    #[cfg(not(feature = "avx512"))]
+    let processed = if let Some(_token) = Desktop64::summon() {
         "avx2"
     } else if let Some(_token) = NeonToken::summon() {
         "neon"
@@ -157,9 +178,8 @@ fn test_cross_platform_dispatch_pattern() {
 #[test]
 fn test_token_names() {
     use archmage::{
-        Arm64, Avx2FmaToken, Avx2Token, Avx512Token, AvxToken, Desktop64, FmaToken, NeonToken,
-        Simd128Token, Sse2Token, Sse41Token, Sse42Token, SseToken, X64V2Token, X64V3Token,
-        X64V4Token,
+        Arm64, Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, NeonToken, Simd128Token,
+        Sse2Token, Sse41Token, Sse42Token, SseToken, X64V2Token, X64V3Token,
     };
 
     // x86 tokens
@@ -173,9 +193,15 @@ fn test_token_names() {
     assert_eq!(Avx2FmaToken::NAME, "AVX2+FMA");
     assert_eq!(X64V2Token::NAME, "x86-64-v2");
     assert_eq!(X64V3Token::NAME, "x86-64-v3");
-    // X64V4Token is an alias for Avx512Token
-    assert_eq!(X64V4Token::NAME, "AVX-512");
-    assert_eq!(Avx512Token::NAME, "AVX-512");
+
+    // AVX-512 tokens (requires avx512 feature)
+    #[cfg(feature = "avx512")]
+    {
+        use archmage::{Avx512Token, X64V4Token};
+        // X64V4Token is an alias for Avx512Token
+        assert_eq!(X64V4Token::NAME, "AVX-512");
+        assert_eq!(Avx512Token::NAME, "AVX-512");
+    }
 
     // Verify aliases
     assert_eq!(Desktop64::NAME, X64V3Token::NAME);
@@ -192,7 +218,7 @@ fn test_token_names() {
 // x86_64 mem Module Exhaustive Tests
 // =============================================================================
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", feature = "safe_unaligned_simd"))]
 mod x86_mem_tests {
     use archmage::SimdToken;
     use core::arch::x86_64::*;
@@ -493,6 +519,7 @@ mod x86_mem_tests {
     }
 
     /// Test AVX-512F mem functions (if available).
+    #[cfg(feature = "avx512")]
     #[test]
     fn test_avx512f_mem_sampling() {
         use archmage::Avx512fToken;

@@ -70,6 +70,7 @@ fn fma_instructions_work_when_token_available() {
 }
 
 /// If AVX-512F token is available, AVX-512 instructions must work.
+#[cfg(feature = "avx512")]
 #[test]
 fn avx512f_instructions_work_when_token_available() {
     if let Some(_token) = Avx512fToken::try_new() {
@@ -95,12 +96,14 @@ fn token_hierarchy_is_correct() {
     }
 
     // If AVX-512F is available, AVX2 and predecessors must be available
+    #[cfg(feature = "avx512")]
     if Avx512fToken::try_new().is_some() {
         assert!(Avx2Token::try_new().is_some(), "AVX-512F implies AVX2");
         assert!(FmaToken::try_new().is_some(), "AVX-512F implies FMA");
     }
 
     // Profile token hierarchy
+    #[cfg(feature = "avx512")]
     if X64V4Token::try_new().is_some() {
         assert!(X64V3Token::try_new().is_some(), "v4 implies v3");
         assert!(X64V2Token::try_new().is_some(), "v4 implies v2");
@@ -139,8 +142,10 @@ fn print_detected_features() {
     println!("  AVX2:      {}", Avx2Token::try_new().is_some());
     println!("  FMA:       {}", FmaToken::try_new().is_some());
     println!("  AVX2+FMA:  {}", Avx2FmaToken::try_new().is_some());
+    #[cfg(feature = "avx512")]
     println!("  AVX-512F:  {}", Avx512fToken::try_new().is_some());
     println!("  x86-64-v2: {}", X64V2Token::try_new().is_some());
     println!("  x86-64-v3: {}", X64V3Token::try_new().is_some());
+    #[cfg(feature = "avx512")]
     println!("  x86-64-v4: {}", X64V4Token::try_new().is_some());
 }

@@ -10,6 +10,7 @@
 use super::{CompositeToken, SimdToken};
 
 // Re-export AVX-512 tokens from the dedicated module
+#[cfg(feature = "avx512")]
 pub use super::x86_avx512::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, X64V4Token};
 
 // ============================================================================
@@ -289,11 +290,13 @@ impl Avx2FmaToken {
 /// Proof that AVX-512F (Foundation) is available.
 ///
 /// AVX-512F is the base AVX-512 feature set with 512-bit vectors.
+#[cfg(feature = "avx512")]
 #[derive(Clone, Copy, Debug)]
 pub struct Avx512fToken {
     _private: (),
 }
 
+#[cfg(feature = "avx512")]
 impl SimdToken for Avx512fToken {
     const NAME: &'static str = "AVX-512F";
 
@@ -312,6 +315,7 @@ impl SimdToken for Avx512fToken {
     }
 }
 
+#[cfg(feature = "avx512")]
 impl Avx512fToken {
     /// Get an AVX2 token (AVX-512F implies AVX2)
     #[inline(always)]
@@ -333,11 +337,13 @@ impl Avx512fToken {
 }
 
 /// Proof that AVX-512BW (Byte and Word) is available.
+#[cfg(feature = "avx512")]
 #[derive(Clone, Copy, Debug)]
 pub struct Avx512bwToken {
     _private: (),
 }
 
+#[cfg(feature = "avx512")]
 impl SimdToken for Avx512bwToken {
     const NAME: &'static str = "AVX-512BW";
 
@@ -356,6 +362,7 @@ impl SimdToken for Avx512bwToken {
     }
 }
 
+#[cfg(feature = "avx512")]
 impl Avx512bwToken {
     /// Get an AVX-512F token (AVX-512BW implies AVX-512F)
     #[inline(always)]
@@ -401,11 +408,13 @@ impl SimdToken for SseToken {
 /// AVX-512VL (Vector Length) extensions allow AVX-512 instructions to operate
 /// on 128-bit and 256-bit vectors, not just 512-bit. This is required for
 /// functions like `_mm_loadu_epi32` and `_mm256_loadu_epi32`.
+#[cfg(feature = "avx512")]
 #[derive(Clone, Copy, Debug)]
 pub struct Avx512fVlToken {
     _private: (),
 }
 
+#[cfg(feature = "avx512")]
 impl SimdToken for Avx512fVlToken {
     const NAME: &'static str = "AVX-512F+VL";
 
@@ -426,6 +435,7 @@ impl SimdToken for Avx512fVlToken {
     }
 }
 
+#[cfg(feature = "avx512")]
 impl Avx512fVlToken {
     /// Get an AVX-512F token
     #[inline(always)]
@@ -444,11 +454,13 @@ impl Avx512fVlToken {
 ///
 /// Required for byte/word operations on 128-bit and 256-bit vectors,
 /// such as `_mm_loadu_epi8`, `_mm256_loadu_epi16`, etc.
+#[cfg(feature = "avx512")]
 #[derive(Clone, Copy, Debug)]
 pub struct Avx512bwVlToken {
     _private: (),
 }
 
+#[cfg(feature = "avx512")]
 impl SimdToken for Avx512bwVlToken {
     const NAME: &'static str = "AVX-512BW+VL";
 
@@ -469,6 +481,7 @@ impl SimdToken for Avx512bwVlToken {
     }
 }
 
+#[cfg(feature = "avx512")]
 impl Avx512bwVlToken {
     /// Get an AVX-512BW token
     #[inline(always)]
@@ -488,11 +501,13 @@ impl Avx512bwVlToken {
 /// AVX-512 VBMI2 (Vector Byte Manipulation Instructions 2) provides
 /// compress/expand operations for byte and word elements.
 /// Available on Ice Lake+, Zen 4+.
+#[cfg(feature = "avx512")]
 #[derive(Clone, Copy, Debug)]
 pub struct Avx512Vbmi2Token {
     _private: (),
 }
 
+#[cfg(feature = "avx512")]
 impl SimdToken for Avx512Vbmi2Token {
     const NAME: &'static str = "AVX-512VBMI2";
 
@@ -511,6 +526,7 @@ impl SimdToken for Avx512Vbmi2Token {
     }
 }
 
+#[cfg(feature = "avx512")]
 impl Avx512Vbmi2Token {
     /// Get an AVX-512BW token (VBMI2 implies BW)
     #[inline(always)]
@@ -522,11 +538,13 @@ impl Avx512Vbmi2Token {
 /// Proof that AVX-512 VBMI2 + VL are available.
 ///
 /// Required for compress/expand operations on 128-bit and 256-bit vectors.
+#[cfg(feature = "avx512")]
 #[derive(Clone, Copy, Debug)]
 pub struct Avx512Vbmi2VlToken {
     _private: (),
 }
 
+#[cfg(feature = "avx512")]
 impl SimdToken for Avx512Vbmi2VlToken {
     const NAME: &'static str = "AVX-512VBMI2+VL";
 
@@ -547,6 +565,7 @@ impl SimdToken for Avx512Vbmi2VlToken {
     }
 }
 
+#[cfg(feature = "avx512")]
 impl Avx512Vbmi2VlToken {
     /// Get an AVX-512 VBMI2 token
     #[inline(always)]
@@ -755,11 +774,10 @@ impl Sse42Token {
 // Capability Marker Trait Implementations
 // ============================================================================
 
-use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
-use super::{
-    HasAvx, HasAvx2, HasAvx512bw, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse,
-    HasSse2, HasSse41, HasSse42,
-};
+use super::{Has128BitSimd, Has256BitSimd, HasFma};
+#[cfg(feature = "avx512")]
+use super::{Has512BitSimd, HasAvx512bw, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl};
+use super::{HasAvx, HasAvx2, HasSse, HasSse2, HasSse41, HasSse42};
 
 // 128-bit SIMD: SSE, SSE2, SSE4.1, SSE4.2
 impl Has128BitSimd for SseToken {}
@@ -778,42 +796,10 @@ impl Has256BitSimd for Avx2FmaToken {}
 impl Has128BitSimd for X64V3Token {}
 impl Has256BitSimd for X64V3Token {}
 
-// 512-bit SIMD: AVX-512 tokens, v4 profile
-impl Has128BitSimd for Avx512fToken {}
-impl Has256BitSimd for Avx512fToken {}
-impl Has512BitSimd for Avx512fToken {}
-impl Has128BitSimd for Avx512bwToken {}
-impl Has256BitSimd for Avx512bwToken {}
-impl Has512BitSimd for Avx512bwToken {}
-impl Has128BitSimd for X64V4Token {}
-impl Has256BitSimd for X64V4Token {}
-impl Has512BitSimd for X64V4Token {}
-
-// AVX-512 + VL tokens (have all three widths)
-impl Has128BitSimd for Avx512fVlToken {}
-impl Has256BitSimd for Avx512fVlToken {}
-impl Has512BitSimd for Avx512fVlToken {}
-impl Has128BitSimd for Avx512bwVlToken {}
-impl Has256BitSimd for Avx512bwVlToken {}
-impl Has512BitSimd for Avx512bwVlToken {}
-impl Has128BitSimd for Avx512Vbmi2Token {}
-impl Has256BitSimd for Avx512Vbmi2Token {}
-impl Has512BitSimd for Avx512Vbmi2Token {}
-impl Has128BitSimd for Avx512Vbmi2VlToken {}
-impl Has256BitSimd for Avx512Vbmi2VlToken {}
-impl Has512BitSimd for Avx512Vbmi2VlToken {}
-
-// FMA support
+// FMA support (non-AVX-512)
 impl HasFma for FmaToken {}
 impl HasFma for Avx2FmaToken {}
 impl HasFma for X64V3Token {}
-impl HasFma for X64V4Token {}
-impl HasFma for Avx512fToken {}
-impl HasFma for Avx512fVlToken {}
-impl HasFma for Avx512bwToken {}
-impl HasFma for Avx512bwVlToken {}
-impl HasFma for Avx512Vbmi2Token {}
-impl HasFma for Avx512Vbmi2VlToken {}
 
 // ============================================================================
 // x86 Feature Marker Trait Implementations
@@ -832,15 +818,8 @@ impl HasSse for AvxToken {}
 impl HasSse for Avx2Token {}
 impl HasSse for Avx2FmaToken {}
 impl HasSse for FmaToken {}
-impl HasSse for Avx512fToken {}
-impl HasSse for Avx512fVlToken {}
-impl HasSse for Avx512bwToken {}
-impl HasSse for Avx512bwVlToken {}
-impl HasSse for Avx512Vbmi2Token {}
-impl HasSse for Avx512Vbmi2VlToken {}
 impl HasSse for X64V2Token {}
 impl HasSse for X64V3Token {}
-impl HasSse for X64V4Token {}
 
 // HasSse2: All tokens except SseToken (SSE2 is baseline on x86_64)
 impl HasSse2 for Sse2Token {}
@@ -850,15 +829,8 @@ impl HasSse2 for AvxToken {}
 impl HasSse2 for Avx2Token {}
 impl HasSse2 for Avx2FmaToken {}
 impl HasSse2 for FmaToken {}
-impl HasSse2 for Avx512fToken {}
-impl HasSse2 for Avx512fVlToken {}
-impl HasSse2 for Avx512bwToken {}
-impl HasSse2 for Avx512bwVlToken {}
-impl HasSse2 for Avx512Vbmi2Token {}
-impl HasSse2 for Avx512Vbmi2VlToken {}
 impl HasSse2 for X64V2Token {}
 impl HasSse2 for X64V3Token {}
-impl HasSse2 for X64V4Token {}
 
 // HasSse41: SSE4.1 and above
 impl HasSse41 for Sse41Token {}
@@ -866,118 +838,183 @@ impl HasSse41 for Sse42Token {}
 impl HasSse41 for AvxToken {}
 impl HasSse41 for Avx2Token {}
 impl HasSse41 for Avx2FmaToken {}
-impl HasSse41 for Avx512fToken {}
-impl HasSse41 for Avx512fVlToken {}
-impl HasSse41 for Avx512bwToken {}
-impl HasSse41 for Avx512bwVlToken {}
-impl HasSse41 for Avx512Vbmi2Token {}
-impl HasSse41 for Avx512Vbmi2VlToken {}
 impl HasSse41 for X64V2Token {}
 impl HasSse41 for X64V3Token {}
-impl HasSse41 for X64V4Token {}
 
 // HasSse42: SSE4.2 and above
 impl HasSse42 for Sse42Token {}
 impl HasSse42 for AvxToken {}
 impl HasSse42 for Avx2Token {}
 impl HasSse42 for Avx2FmaToken {}
-impl HasSse42 for Avx512fToken {}
-impl HasSse42 for Avx512fVlToken {}
-impl HasSse42 for Avx512bwToken {}
-impl HasSse42 for Avx512bwVlToken {}
-impl HasSse42 for Avx512Vbmi2Token {}
-impl HasSse42 for Avx512Vbmi2VlToken {}
 impl HasSse42 for X64V2Token {}
 impl HasSse42 for X64V3Token {}
-impl HasSse42 for X64V4Token {}
 
 // HasAvx: AVX and above
 impl HasAvx for AvxToken {}
 impl HasAvx for Avx2Token {}
 impl HasAvx for Avx2FmaToken {}
-impl HasAvx for Avx512fToken {}
-impl HasAvx for Avx512fVlToken {}
-impl HasAvx for Avx512bwToken {}
-impl HasAvx for Avx512bwVlToken {}
-impl HasAvx for Avx512Vbmi2Token {}
-impl HasAvx for Avx512Vbmi2VlToken {}
 impl HasAvx for X64V3Token {}
-impl HasAvx for X64V4Token {}
 
 // HasAvx2: AVX2 and above
 impl HasAvx2 for Avx2Token {}
 impl HasAvx2 for Avx2FmaToken {}
-impl HasAvx2 for Avx512fToken {}
-impl HasAvx2 for Avx512fVlToken {}
-impl HasAvx2 for Avx512bwToken {}
-impl HasAvx2 for Avx512bwVlToken {}
-impl HasAvx2 for Avx512Vbmi2Token {}
-impl HasAvx2 for Avx512Vbmi2VlToken {}
 impl HasAvx2 for X64V3Token {}
-impl HasAvx2 for X64V4Token {}
 
-// HasAvx512f: AVX-512F and above
-impl HasAvx512f for Avx512fToken {}
-impl HasAvx512f for Avx512fVlToken {}
-impl HasAvx512f for Avx512bwToken {}
-impl HasAvx512f for Avx512bwVlToken {}
-impl HasAvx512f for Avx512Vbmi2Token {}
-impl HasAvx512f for Avx512Vbmi2VlToken {}
-impl HasAvx512f for X64V4Token {}
+// ============================================================================
+// AVX-512 marker trait implementations (requires "avx512" feature)
+// ============================================================================
+#[cfg(feature = "avx512")]
+mod avx512_marker_impls {
+    use super::*;
 
-// HasAvx512vl: AVX-512VL tokens
-impl HasAvx512vl for Avx512fVlToken {}
-impl HasAvx512vl for Avx512bwVlToken {}
-impl HasAvx512vl for Avx512Vbmi2VlToken {}
-impl HasAvx512vl for X64V4Token {}
+    // 512-bit SIMD for AVX-512 tokens
+    impl Has128BitSimd for Avx512fToken {}
+    impl Has256BitSimd for Avx512fToken {}
+    impl Has512BitSimd for Avx512fToken {}
+    impl Has128BitSimd for Avx512bwToken {}
+    impl Has256BitSimd for Avx512bwToken {}
+    impl Has512BitSimd for Avx512bwToken {}
+    impl Has128BitSimd for X64V4Token {}
+    impl Has256BitSimd for X64V4Token {}
+    impl Has512BitSimd for X64V4Token {}
+    impl Has128BitSimd for Avx512fVlToken {}
+    impl Has256BitSimd for Avx512fVlToken {}
+    impl Has512BitSimd for Avx512fVlToken {}
+    impl Has128BitSimd for Avx512bwVlToken {}
+    impl Has256BitSimd for Avx512bwVlToken {}
+    impl Has512BitSimd for Avx512bwVlToken {}
+    impl Has128BitSimd for Avx512Vbmi2Token {}
+    impl Has256BitSimd for Avx512Vbmi2Token {}
+    impl Has512BitSimd for Avx512Vbmi2Token {}
+    impl Has128BitSimd for Avx512Vbmi2VlToken {}
+    impl Has256BitSimd for Avx512Vbmi2VlToken {}
+    impl Has512BitSimd for Avx512Vbmi2VlToken {}
 
-// HasAvx512bw: AVX-512BW and above
-impl HasAvx512bw for Avx512bwToken {}
-impl HasAvx512bw for Avx512bwVlToken {}
-impl HasAvx512bw for Avx512Vbmi2Token {}
-impl HasAvx512bw for Avx512Vbmi2VlToken {}
-impl HasAvx512bw for X64V4Token {}
+    // FMA for AVX-512 tokens
+    impl HasFma for X64V4Token {}
+    impl HasFma for Avx512fToken {}
+    impl HasFma for Avx512fVlToken {}
+    impl HasFma for Avx512bwToken {}
+    impl HasFma for Avx512bwVlToken {}
+    impl HasFma for Avx512Vbmi2Token {}
+    impl HasFma for Avx512Vbmi2VlToken {}
 
-// HasAvx512dq: AVX-512DQ (part of x86-64-v4)
-impl HasAvx512dq for X64V4Token {}
+    // HasSse for AVX-512 tokens
+    impl HasSse for Avx512fToken {}
+    impl HasSse for Avx512fVlToken {}
+    impl HasSse for Avx512bwToken {}
+    impl HasSse for Avx512bwVlToken {}
+    impl HasSse for Avx512Vbmi2Token {}
+    impl HasSse for Avx512Vbmi2VlToken {}
+    impl HasSse for X64V4Token {}
 
-// HasAvx512vbmi2: AVX-512VBMI2 tokens
-impl HasAvx512vbmi2 for Avx512Vbmi2Token {}
-impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
-impl HasAvx512vbmi2 for Avx512ModernToken {}
+    // HasSse2 for AVX-512 tokens
+    impl HasSse2 for Avx512fToken {}
+    impl HasSse2 for Avx512fVlToken {}
+    impl HasSse2 for Avx512bwToken {}
+    impl HasSse2 for Avx512bwVlToken {}
+    impl HasSse2 for Avx512Vbmi2Token {}
+    impl HasSse2 for Avx512Vbmi2VlToken {}
+    impl HasSse2 for X64V4Token {}
 
-// Avx512ModernToken: Full modern AVX-512 (Ice Lake / Zen 4)
-// Implements all AVX-512 traits since it's a superset
-impl Has128BitSimd for Avx512ModernToken {}
-impl Has256BitSimd for Avx512ModernToken {}
-impl Has512BitSimd for Avx512ModernToken {}
-impl HasFma for Avx512ModernToken {}
-impl HasSse for Avx512ModernToken {}
-impl HasSse2 for Avx512ModernToken {}
-impl HasSse41 for Avx512ModernToken {}
-impl HasSse42 for Avx512ModernToken {}
-impl HasAvx for Avx512ModernToken {}
-impl HasAvx2 for Avx512ModernToken {}
-impl HasAvx512f for Avx512ModernToken {}
-impl HasAvx512vl for Avx512ModernToken {}
-impl HasAvx512bw for Avx512ModernToken {}
-impl HasAvx512dq for Avx512ModernToken {}
+    // HasSse41 for AVX-512 tokens
+    impl HasSse41 for Avx512fToken {}
+    impl HasSse41 for Avx512fVlToken {}
+    impl HasSse41 for Avx512bwToken {}
+    impl HasSse41 for Avx512bwVlToken {}
+    impl HasSse41 for Avx512Vbmi2Token {}
+    impl HasSse41 for Avx512Vbmi2VlToken {}
+    impl HasSse41 for X64V4Token {}
 
-// Avx512Fp16Token: AVX-512 with FP16 (Sapphire Rapids+)
-impl Has128BitSimd for Avx512Fp16Token {}
-impl Has256BitSimd for Avx512Fp16Token {}
-impl Has512BitSimd for Avx512Fp16Token {}
-impl HasFma for Avx512Fp16Token {}
-impl HasSse for Avx512Fp16Token {}
-impl HasSse2 for Avx512Fp16Token {}
-impl HasSse41 for Avx512Fp16Token {}
-impl HasSse42 for Avx512Fp16Token {}
-impl HasAvx for Avx512Fp16Token {}
-impl HasAvx2 for Avx512Fp16Token {}
-impl HasAvx512f for Avx512Fp16Token {}
-impl HasAvx512vl for Avx512Fp16Token {}
-impl HasAvx512bw for Avx512Fp16Token {}
-impl HasAvx512dq for Avx512Fp16Token {}
+    // HasSse42 for AVX-512 tokens
+    impl HasSse42 for Avx512fToken {}
+    impl HasSse42 for Avx512fVlToken {}
+    impl HasSse42 for Avx512bwToken {}
+    impl HasSse42 for Avx512bwVlToken {}
+    impl HasSse42 for Avx512Vbmi2Token {}
+    impl HasSse42 for Avx512Vbmi2VlToken {}
+    impl HasSse42 for X64V4Token {}
+
+    // HasAvx for AVX-512 tokens
+    impl HasAvx for Avx512fToken {}
+    impl HasAvx for Avx512fVlToken {}
+    impl HasAvx for Avx512bwToken {}
+    impl HasAvx for Avx512bwVlToken {}
+    impl HasAvx for Avx512Vbmi2Token {}
+    impl HasAvx for Avx512Vbmi2VlToken {}
+    impl HasAvx for X64V4Token {}
+
+    // HasAvx2 for AVX-512 tokens
+    impl HasAvx2 for Avx512fToken {}
+    impl HasAvx2 for Avx512fVlToken {}
+    impl HasAvx2 for Avx512bwToken {}
+    impl HasAvx2 for Avx512bwVlToken {}
+    impl HasAvx2 for Avx512Vbmi2Token {}
+    impl HasAvx2 for Avx512Vbmi2VlToken {}
+    impl HasAvx2 for X64V4Token {}
+
+    // HasAvx512f: AVX-512F and above
+    impl HasAvx512f for Avx512fToken {}
+    impl HasAvx512f for Avx512fVlToken {}
+    impl HasAvx512f for Avx512bwToken {}
+    impl HasAvx512f for Avx512bwVlToken {}
+    impl HasAvx512f for Avx512Vbmi2Token {}
+    impl HasAvx512f for Avx512Vbmi2VlToken {}
+    impl HasAvx512f for X64V4Token {}
+
+    // HasAvx512vl: AVX-512VL tokens
+    impl HasAvx512vl for Avx512fVlToken {}
+    impl HasAvx512vl for Avx512bwVlToken {}
+    impl HasAvx512vl for Avx512Vbmi2VlToken {}
+    impl HasAvx512vl for X64V4Token {}
+
+    // HasAvx512bw: AVX-512BW and above
+    impl HasAvx512bw for Avx512bwToken {}
+    impl HasAvx512bw for Avx512bwVlToken {}
+    impl HasAvx512bw for Avx512Vbmi2Token {}
+    impl HasAvx512bw for Avx512Vbmi2VlToken {}
+    impl HasAvx512bw for X64V4Token {}
+
+    // HasAvx512dq: AVX-512DQ (part of x86-64-v4)
+    impl HasAvx512dq for X64V4Token {}
+
+    // HasAvx512vbmi2: AVX-512VBMI2 tokens
+    impl HasAvx512vbmi2 for Avx512Vbmi2Token {}
+    impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
+    impl HasAvx512vbmi2 for Avx512ModernToken {}
+
+    // Avx512ModernToken: Full modern AVX-512 (Ice Lake / Zen 4)
+    impl Has128BitSimd for Avx512ModernToken {}
+    impl Has256BitSimd for Avx512ModernToken {}
+    impl Has512BitSimd for Avx512ModernToken {}
+    impl HasFma for Avx512ModernToken {}
+    impl HasSse for Avx512ModernToken {}
+    impl HasSse2 for Avx512ModernToken {}
+    impl HasSse41 for Avx512ModernToken {}
+    impl HasSse42 for Avx512ModernToken {}
+    impl HasAvx for Avx512ModernToken {}
+    impl HasAvx2 for Avx512ModernToken {}
+    impl HasAvx512f for Avx512ModernToken {}
+    impl HasAvx512vl for Avx512ModernToken {}
+    impl HasAvx512bw for Avx512ModernToken {}
+    impl HasAvx512dq for Avx512ModernToken {}
+
+    // Avx512Fp16Token: AVX-512 with FP16 (Sapphire Rapids+)
+    impl Has128BitSimd for Avx512Fp16Token {}
+    impl Has256BitSimd for Avx512Fp16Token {}
+    impl Has512BitSimd for Avx512Fp16Token {}
+    impl HasFma for Avx512Fp16Token {}
+    impl HasSse for Avx512Fp16Token {}
+    impl HasSse2 for Avx512Fp16Token {}
+    impl HasSse41 for Avx512Fp16Token {}
+    impl HasSse42 for Avx512Fp16Token {}
+    impl HasAvx for Avx512Fp16Token {}
+    impl HasAvx2 for Avx512Fp16Token {}
+    impl HasAvx512f for Avx512Fp16Token {}
+    impl HasAvx512vl for Avx512Fp16Token {}
+    impl HasAvx512bw for Avx512Fp16Token {}
+    impl HasAvx512dq for Avx512Fp16Token {}
+}
 
 // ============================================================================
 // Friendly Aliases
@@ -1096,6 +1133,7 @@ mod tests {
         // Profile tokens should also be zero-sized
         assert_eq!(core::mem::size_of::<X64V2Token>(), 0);
         assert_eq!(core::mem::size_of::<X64V3Token>(), 0);
+        #[cfg(feature = "avx512")]
         assert_eq!(core::mem::size_of::<X64V4Token>(), 0);
         assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
     }
@@ -1125,6 +1163,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "avx512")]
     #[test]
     fn test_v4_token_extraction() {
         if let Some(v4) = X64V4Token::try_new() {
@@ -1148,6 +1187,7 @@ mod tests {
         }
 
         // If v4 is available, both v3 and v2 should be available
+        #[cfg(feature = "avx512")]
         if X64V4Token::try_new().is_some() {
             assert!(
                 X64V3Token::try_new().is_some(),
@@ -1164,9 +1204,12 @@ mod tests {
     fn test_profile_token_names() {
         assert_eq!(X64V2Token::NAME, "x86-64-v2");
         assert_eq!(X64V3Token::NAME, "x86-64-v3");
-        // X64V4Token is an alias for Avx512Token
-        assert_eq!(X64V4Token::NAME, "AVX-512");
-        assert_eq!(Avx512Token::NAME, "AVX-512");
+        #[cfg(feature = "avx512")]
+        {
+            // X64V4Token is an alias for Avx512Token, so they have the same NAME
+            assert_eq!(X64V4Token::NAME, "AVX-512");
+            assert_eq!(Avx512Token::NAME, "AVX-512");
+        }
         assert_eq!(Sse42Token::NAME, "SSE4.2");
     }
 

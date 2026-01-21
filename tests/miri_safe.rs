@@ -18,6 +18,7 @@ fn tokens_are_zst() {
     assert_eq!(core::mem::size_of::<Avx2FmaToken>(), 0);
     assert_eq!(core::mem::size_of::<X64V2Token>(), 0);
     assert_eq!(core::mem::size_of::<X64V3Token>(), 0);
+    #[cfg(feature = "avx512")]
     assert_eq!(core::mem::size_of::<X64V4Token>(), 0);
 }
 
@@ -31,6 +32,7 @@ fn tokens_are_copy() {
     assert_copy::<Avx2FmaToken>();
     assert_copy::<X64V2Token>();
     assert_copy::<X64V3Token>();
+    #[cfg(feature = "avx512")]
     assert_copy::<X64V4Token>();
 }
 
@@ -50,6 +52,7 @@ fn token_names() {
     assert_eq!(Avx2FmaToken::NAME, "AVX2+FMA");
     assert_eq!(X64V2Token::NAME, "x86-64-v2");
     assert_eq!(X64V3Token::NAME, "x86-64-v3");
+    #[cfg(feature = "avx512")]
     assert_eq!(X64V4Token::NAME, "AVX-512"); // X64V4Token is alias for Avx512Token
 }
 

@@ -127,15 +127,6 @@ pub use tokens::{
     // x86 tokens
     Avx2FmaToken,
     Avx2Token,
-    Avx512Fp16Token,
-    Avx512ModernToken,
-    Avx512Token,
-    Avx512Vbmi2Token,
-    Avx512Vbmi2VlToken,
-    Avx512bwToken,
-    Avx512bwVlToken,
-    Avx512fToken,
-    Avx512fVlToken,
     AvxToken,
     Desktop64,
     FmaToken,
@@ -148,5 +139,11 @@ pub use tokens::{
     SseToken,
     X64V2Token,
     X64V3Token,
-    X64V4Token,
+};
+
+// AVX-512 tokens (requires "avx512" feature)
+#[cfg(feature = "avx512")]
+pub use tokens::{
+    Avx512Fp16Token, Avx512ModernToken, Avx512Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken,
+    Avx512bwToken, Avx512bwVlToken, Avx512fToken, Avx512fVlToken, X64V4Token,
 };

@@ -4,9 +4,10 @@
 
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
+    #[cfg(feature = "avx512")]
+    use archmage::Avx512Token;
     use archmage::{
-        Avx2FmaToken, Avx2Token, Avx512Token, Desktop64, HasAvx, HasAvx2, HasFma, SimdToken,
-        X64V3Token, simd_fn,
+        Avx2FmaToken, Avx2Token, Desktop64, HasAvx, HasAvx2, HasFma, SimdToken, X64V3Token, simd_fn,
     };
     use std::arch::x86_64::*;
 
@@ -350,6 +351,7 @@ mod x86_tests {
     }
 
     /// Test Avx512Token alias (only runs on machines with AVX-512)
+    #[cfg(feature = "avx512")]
     #[simd_fn]
     fn server64_test(token: Avx512Token, data: &[f32; 8]) -> [f32; 8] {
         // Avx512Token = X64V4Token = AVX-512, but we'll just use AVX2 ops for simplicity
@@ -360,6 +362,7 @@ mod x86_tests {
         out
     }
 
+    #[cfg(feature = "avx512")]
     #[test]
     fn test_simd_fn_server64_alias() {
         // This test only runs on machines with AVX-512

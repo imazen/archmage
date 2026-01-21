@@ -6,7 +6,7 @@
 //! Avx512ModernToken requires: AVX-512F, CD, VL, DQ, BW, VPOPCNTDQ, IFMA, VBMI,
 //! VBMI2, BITALG, VNNI, BF16, VPCLMULQDQ, GFNI, VAES + x86-64-v3 baseline
 
-#![cfg(target_arch = "x86_64")]
+#![cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #![allow(unused_imports, unused_variables, dead_code, unused_mut)]
 #![allow(clippy::needless_return, clippy::identity_op, clippy::unnecessary_cast)]
 #![allow(clippy::eq_op)]
