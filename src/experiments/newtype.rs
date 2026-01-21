@@ -2667,4 +2667,449 @@ mod tests {
             assert_eq!(result.to_array(), [0, 0, 0, 0, 100, 100, 100, 100]);
         }
     }
+
+    // ========================================================================
+    // Safety verification tests: ensure all intrinsics are safe inside
+    // #[target_feature] functions (Rust 1.85+ behavior)
+    // ========================================================================
+
+    /// Verify all f32x8 intrinsics are safe inside #[target_feature(enable = "avx2,fma")]
+    #[target_feature(enable = "avx2,fma")]
+    unsafe fn f32x8_intrinsics_are_safe() -> f32x8 {
+        use core::arch::x86_64::*;
+
+        // Construction intrinsics
+        let zero = _mm256_setzero_ps();
+        let one = _mm256_set1_ps(1.0);
+        let neg_zero = _mm256_set1_ps(-0.0);
+
+        // Arithmetic (all safe inside target_feature)
+        let sum = _mm256_add_ps(zero, one);
+        let diff = _mm256_sub_ps(sum, zero);
+        let prod = _mm256_mul_ps(diff, one);
+        let quot = _mm256_div_ps(prod, one);
+
+        // FMA operations
+        let fma = _mm256_fmadd_ps(quot, one, zero);
+        let fms = _mm256_fmsub_ps(fma, one, zero);
+        let fnma = _mm256_fnmadd_ps(fms, one, zero);
+        let fnms = _mm256_fnmsub_ps(fnma, one, zero);
+
+        // Math operations
+        let min = _mm256_min_ps(fnms, one);
+        let max = _mm256_max_ps(min, zero);
+        let sqrt = _mm256_sqrt_ps(max);
+        let rcp = _mm256_rcp_ps(sqrt);
+        let rsqrt = _mm256_rsqrt_ps(rcp);
+
+        // Rounding
+        let round = _mm256_round_ps(rsqrt, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+        let floor = _mm256_floor_ps(round);
+        let ceil = _mm256_ceil_ps(floor);
+        let trunc = _mm256_round_ps(ceil, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
+
+        // Bitwise
+        let mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFF_FFFF));
+        let and = _mm256_and_ps(trunc, mask);
+        let or = _mm256_or_ps(and, zero);
+        let xor = _mm256_xor_ps(or, neg_zero);
+
+        // Comparisons
+        let cmp_eq = _mm256_cmp_ps(xor, one, _CMP_EQ_OQ);
+        let cmp_lt = _mm256_cmp_ps(cmp_eq, one, _CMP_LT_OQ);
+        let cmp_le = _mm256_cmp_ps(cmp_lt, one, _CMP_LE_OQ);
+        let cmp_gt = _mm256_cmp_ps(cmp_le, one, _CMP_GT_OQ);
+        let cmp_ge = _mm256_cmp_ps(cmp_gt, one, _CMP_GE_OQ);
+        let cmp_neq = _mm256_cmp_ps(cmp_ge, one, _CMP_NEQ_OQ);
+        let cmp_unord = _mm256_cmp_ps(cmp_neq, cmp_neq, _CMP_UNORD_Q);
+
+        // Blend
+        let blend = _mm256_blendv_ps(cmp_unord, one, zero);
+
+        // Horizontal reduction helpers
+        let hi = _mm256_extractf128_ps(blend, 1);
+        let lo = _mm256_castps256_ps128(blend);
+        let sum128 = _mm_add_ps(lo, hi);
+        let shuf1 = _mm_movehdup_ps(sum128);
+        let sum2 = _mm_add_ps(sum128, shuf1);
+        let shuf2 = _mm_movehl_ps(sum2, sum2);
+        let final_sum = _mm_add_ss(sum2, shuf2);
+        let _scalar = _mm_cvtss_f32(final_sum);
+
+        // Mask extraction
+        let _bitmask = _mm256_movemask_ps(blend);
+
+        // Int conversion
+        let as_int = _mm256_cvtps_epi32(blend);
+        let back = _mm256_cvtepi32_ps(as_int);
+        let trunc_int = _mm256_cvttps_epi32(back);
+        let _back2 = _mm256_cvtepi32_ps(trunc_int);
+
+        // Cast operations
+        let as_si = _mm256_castps_si256(blend);
+        let _back_ps = _mm256_castsi256_ps(as_si);
+
+        f32x8(blend)
+    }
+
+    /// Verify all i32x8 intrinsics are safe inside #[target_feature(enable = "avx2")]
+    #[target_feature(enable = "avx2")]
+    unsafe fn i32x8_intrinsics_are_safe() -> i32x8 {
+        use core::arch::x86_64::*;
+
+        // Construction
+        let zero = _mm256_setzero_si256();
+        let one = _mm256_set1_epi32(1);
+        let neg_one = _mm256_set1_epi32(-1);
+
+        // Arithmetic
+        let sum = _mm256_add_epi32(zero, one);
+        let diff = _mm256_sub_epi32(sum, zero);
+        let prod = _mm256_mullo_epi32(diff, one);
+
+        // Min/max/abs
+        let min = _mm256_min_epi32(prod, one);
+        let max = _mm256_max_epi32(min, zero);
+        let abs = _mm256_abs_epi32(max);
+
+        // Bitwise
+        let and = _mm256_and_si256(abs, neg_one);
+        let or = _mm256_or_si256(and, zero);
+        let xor = _mm256_xor_si256(or, zero);
+
+        // Shifts (variable - AVX2)
+        let shift_amt = _mm256_set1_epi32(2);
+        let shl = _mm256_sllv_epi32(xor, shift_amt);
+        let shr_arith = _mm256_srav_epi32(shl, shift_amt);
+        let shr_logic = _mm256_srlv_epi32(shr_arith, shift_amt);
+
+        // Comparisons
+        let cmp_eq = _mm256_cmpeq_epi32(shr_logic, one);
+        let cmp_gt = _mm256_cmpgt_epi32(cmp_eq, zero);
+
+        // Blend
+        let blend = _mm256_blendv_epi8(cmp_gt, one, zero);
+
+        // Mask (via float cast)
+        let as_ps = _mm256_castsi256_ps(blend);
+        let _bitmask = _mm256_movemask_ps(as_ps);
+
+        i32x8(blend)
+    }
+
+    /// Verify all u32x8 intrinsics are safe inside #[target_feature(enable = "avx2")]
+    #[target_feature(enable = "avx2")]
+    unsafe fn u32x8_intrinsics_are_safe() -> u32x8 {
+        use core::arch::x86_64::*;
+
+        // Construction (same as i32x8, just interpreted as unsigned)
+        let zero = _mm256_setzero_si256();
+        let one = _mm256_set1_epi32(1);
+
+        // Arithmetic (same intrinsics as signed)
+        let sum = _mm256_add_epi32(zero, one);
+        let diff = _mm256_sub_epi32(sum, zero);
+
+        // Unsigned min/max
+        let min = _mm256_min_epu32(diff, one);
+        let max = _mm256_max_epu32(min, zero);
+
+        // Shifts (logical for unsigned)
+        let shift_amt = _mm256_set1_epi32(2);
+        let shl = _mm256_sllv_epi32(max, shift_amt);
+        let shr = _mm256_srlv_epi32(shl, shift_amt);
+
+        // Unsigned comparison via sign-flip trick
+        let flip = _mm256_set1_epi32(i32::MIN);
+        let a_flipped = _mm256_xor_si256(shr, flip);
+        let b_flipped = _mm256_xor_si256(one, flip);
+        let _cmp_gt = _mm256_cmpgt_epi32(a_flipped, b_flipped);
+
+        u32x8(shr)
+    }
+
+    /// Verify all f32x4 intrinsics are safe inside #[target_feature(enable = "sse4.1")]
+    #[target_feature(enable = "sse4.1")]
+    unsafe fn f32x4_intrinsics_are_safe() -> f32x4 {
+        use core::arch::x86_64::*;
+
+        // Construction
+        let zero = _mm_setzero_ps();
+        let one = _mm_set1_ps(1.0);
+        let neg_zero = _mm_set1_ps(-0.0);
+
+        // Arithmetic
+        let sum = _mm_add_ps(zero, one);
+        let diff = _mm_sub_ps(sum, zero);
+        let prod = _mm_mul_ps(diff, one);
+        let quot = _mm_div_ps(prod, one);
+
+        // Math
+        let min = _mm_min_ps(quot, one);
+        let max = _mm_max_ps(min, zero);
+        let sqrt = _mm_sqrt_ps(max);
+        let rcp = _mm_rcp_ps(sqrt);
+        let rsqrt = _mm_rsqrt_ps(rcp);
+
+        // Rounding (SSE4.1)
+        let round = _mm_round_ps(rsqrt, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+        let floor = _mm_floor_ps(round);
+        let ceil = _mm_ceil_ps(floor);
+        let trunc = _mm_round_ps(ceil, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
+
+        // Bitwise
+        let mask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFF_FFFF));
+        let and = _mm_and_ps(trunc, mask);
+        let or = _mm_or_ps(and, zero);
+        let xor = _mm_xor_ps(or, neg_zero);
+
+        // Comparisons
+        let cmp_eq = _mm_cmpeq_ps(xor, one);
+        let cmp_lt = _mm_cmplt_ps(cmp_eq, one);
+        let cmp_le = _mm_cmple_ps(cmp_lt, one);
+        let cmp_gt = _mm_cmpgt_ps(cmp_le, one);
+        let cmp_ge = _mm_cmpge_ps(cmp_gt, one);
+        let cmp_neq = _mm_cmpneq_ps(cmp_ge, one);
+
+        // Blend (SSE4.1)
+        let blend = _mm_blendv_ps(cmp_neq, one, zero);
+
+        // Horizontal
+        let shuf1 = _mm_movehdup_ps(blend);
+        let sum1 = _mm_add_ps(blend, shuf1);
+        let shuf2 = _mm_movehl_ps(sum1, sum1);
+        let _final = _mm_add_ss(sum1, shuf2);
+
+        // Mask
+        let _bitmask = _mm_movemask_ps(blend);
+
+        // Int conversion
+        let as_int = _mm_cvtps_epi32(blend);
+        let back = _mm_cvtepi32_ps(as_int);
+        let trunc_int = _mm_cvttps_epi32(back);
+        let _back2 = _mm_cvtepi32_ps(trunc_int);
+
+        f32x4(blend)
+    }
+
+    /// Verify all i32x4 intrinsics are safe inside #[target_feature(enable = "sse4.1")]
+    #[target_feature(enable = "sse4.1")]
+    unsafe fn i32x4_intrinsics_are_safe() -> i32x4 {
+        use core::arch::x86_64::*;
+
+        // Construction
+        let zero = _mm_setzero_si128();
+        let one = _mm_set1_epi32(1);
+        let neg_one = _mm_set1_epi32(-1);
+
+        // Arithmetic
+        let sum = _mm_add_epi32(zero, one);
+        let diff = _mm_sub_epi32(sum, zero);
+        let prod = _mm_mullo_epi32(diff, one); // SSE4.1
+
+        // Min/max/abs (SSE4.1)
+        let min = _mm_min_epi32(prod, one);
+        let max = _mm_max_epi32(min, zero);
+        let abs = _mm_abs_epi32(max);
+
+        // Bitwise
+        let and = _mm_and_si128(abs, neg_one);
+        let or = _mm_or_si128(and, zero);
+        let xor = _mm_xor_si128(or, zero);
+
+        // Comparisons
+        let cmp_eq = _mm_cmpeq_epi32(xor, one);
+        let cmp_gt = _mm_cmpgt_epi32(cmp_eq, zero);
+
+        i32x4(cmp_gt)
+    }
+
+    #[test]
+    fn test_f32x8_intrinsics_safe_in_target_feature() {
+        if Avx2Token::summon().is_some() {
+            let result = unsafe { f32x8_intrinsics_are_safe() };
+            // Just verify it compiles and runs - exact value doesn't matter
+            let _ = result.to_array();
+        }
+    }
+
+    #[test]
+    fn test_i32x8_intrinsics_safe_in_target_feature() {
+        if Avx2Token::summon().is_some() {
+            let result = unsafe { i32x8_intrinsics_are_safe() };
+            let _ = result.to_array();
+        }
+    }
+
+    #[test]
+    fn test_u32x8_intrinsics_safe_in_target_feature() {
+        if Avx2Token::summon().is_some() {
+            let result = unsafe { u32x8_intrinsics_are_safe() };
+            let _ = result.to_array();
+        }
+    }
+
+    #[test]
+    fn test_f32x4_intrinsics_safe_in_target_feature() {
+        if Sse2Token::summon().is_some() {
+            let result = unsafe { f32x4_intrinsics_are_safe() };
+            let _ = result.to_array();
+        }
+    }
+
+    #[test]
+    fn test_i32x4_intrinsics_safe_in_target_feature() {
+        if Sse2Token::summon().is_some() {
+            let result = unsafe { i32x4_intrinsics_are_safe() };
+            let _ = result.to_array();
+        }
+    }
+}
+
+// ============================================================================
+// NEON safety verification tests (aarch64)
+// ============================================================================
+
+#[cfg(all(test, target_arch = "aarch64"))]
+mod neon_tests {
+    use super::*;
+    use crate::tokens::SimdToken;
+    use crate::NeonToken;
+
+    /// Verify all f32x4 NEON intrinsics are safe inside #[target_feature(enable = "neon")]
+    #[target_feature(enable = "neon")]
+    unsafe fn f32x4_neon_intrinsics_are_safe() -> f32x4 {
+        use core::arch::aarch64::*;
+
+        // Construction
+        let zero = vdupq_n_f32(0.0);
+        let one = vdupq_n_f32(1.0);
+
+        // Arithmetic
+        let sum = vaddq_f32(zero, one);
+        let diff = vsubq_f32(sum, zero);
+        let prod = vmulq_f32(diff, one);
+        let quot = vdivq_f32(prod, one);
+
+        // Math
+        let min = vminq_f32(quot, one);
+        let max = vmaxq_f32(min, zero);
+        let abs = vabsq_f32(max);
+        let sqrt = vsqrtq_f32(abs);
+        let rcp = vrecpeq_f32(sqrt);
+        let rsqrt = vrsqrteq_f32(rcp);
+
+        // Rounding
+        let round = vrndnq_f32(rsqrt);
+        let floor = vrndmq_f32(round);
+        let ceil = vrndpq_f32(floor);
+        let trunc = vrndq_f32(ceil);
+
+        // Negation
+        let neg = vnegq_f32(trunc);
+
+        // Bitwise (via reinterpret)
+        let as_u32 = vreinterpretq_u32_f32(neg);
+        let and = vandq_u32(as_u32, as_u32);
+        let or = vorrq_u32(and, and);
+        let xor = veorq_u32(or, or);
+        let not = vmvnq_u32(xor);
+        let back = vreinterpretq_f32_u32(not);
+
+        // Comparisons
+        let cmp_eq = vceqq_f32(back, one);
+        let cmp_lt = vcltq_f32(vreinterpretq_f32_u32(cmp_eq), one);
+        let cmp_le = vcleq_f32(vreinterpretq_f32_u32(cmp_lt), one);
+        let cmp_gt = vcgtq_f32(vreinterpretq_f32_u32(cmp_le), one);
+        let cmp_ge = vcgeq_f32(vreinterpretq_f32_u32(cmp_gt), one);
+
+        // Blend
+        let blend = vbslq_f32(cmp_ge, one, zero);
+
+        // Horizontal reduction
+        let _sum = vaddvq_f32(blend);
+
+        // Mask helpers
+        let mask_u32 = vreinterpretq_u32_f32(blend);
+        let _max_lane = vmaxvq_u32(mask_u32);
+        let _min_lane = vminvq_u32(mask_u32);
+        let _shifted = vshrq_n_u32(mask_u32, 31);
+
+        // Int conversion
+        let as_int = vcvtnq_s32_f32(blend);
+        let back_f = vcvtq_f32_s32(as_int);
+        let trunc_int = vcvtq_s32_f32(back_f);
+        let _back2 = vcvtq_f32_s32(trunc_int);
+
+        f32x4(blend)
+    }
+
+    /// Verify all i32x4 NEON intrinsics are safe inside #[target_feature(enable = "neon")]
+    #[target_feature(enable = "neon")]
+    unsafe fn i32x4_neon_intrinsics_are_safe() -> i32x4 {
+        use core::arch::aarch64::*;
+
+        // Construction
+        let zero = vdupq_n_s32(0);
+        let one = vdupq_n_s32(1);
+
+        // Arithmetic
+        let sum = vaddq_s32(zero, one);
+        let diff = vsubq_s32(sum, zero);
+        let prod = vmulq_s32(diff, one);
+
+        // Min/max/abs
+        let min = vminq_s32(prod, one);
+        let max = vmaxq_s32(min, zero);
+        let abs = vabsq_s32(max);
+
+        // Negation
+        let neg = vnegq_s32(abs);
+
+        // Bitwise
+        let and = vandq_s32(neg, one);
+        let or = vorrq_s32(and, zero);
+        let xor = veorq_s32(or, zero);
+
+        // Bitwise NOT via u32
+        let as_u32 = vreinterpretq_u32_s32(xor);
+        let not = vmvnq_u32(as_u32);
+        let back = vreinterpretq_s32_u32(not);
+
+        // Shifts
+        let shift_amt = vdupq_n_s32(2);
+        let shl = vshlq_s32(back, shift_amt);
+        let neg_shift = vdupq_n_s32(-2);
+        let shr = vshlq_s32(shl, neg_shift);
+
+        // Comparisons
+        let cmp_eq = vceqq_s32(shr, one);
+        let cmp_gt = vcgtq_s32(vreinterpretq_s32_u32(cmp_eq), zero);
+
+        // Blend
+        let mask = vreinterpretq_u32_s32(vreinterpretq_s32_u32(cmp_gt));
+        let blend = vbslq_u32(mask, vreinterpretq_u32_s32(one), vreinterpretq_u32_s32(zero));
+
+        // Mask helpers
+        let _max_lane = vmaxvq_u32(blend);
+        let _min_lane = vminvq_u32(blend);
+
+        i32x4(vreinterpretq_s32_u32(blend))
+    }
+
+    #[test]
+    fn test_f32x4_neon_intrinsics_safe_in_target_feature() {
+        if NeonToken::summon().is_some() {
+            let result = unsafe { f32x4_neon_intrinsics_are_safe() };
+            let _ = result.to_array();
+        }
+    }
+
+    #[test]
+    fn test_i32x4_neon_intrinsics_safe_in_target_feature() {
+        if NeonToken::summon().is_some() {
+            let result = unsafe { i32x4_neon_intrinsics_are_safe() };
+            let _ = result.to_array();
+        }
+    }
 }
