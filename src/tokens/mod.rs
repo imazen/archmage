@@ -9,6 +9,23 @@
 //! However, `summon()` / `try_new()` will return `None` on unsupported architectures.
 //! Rust's type system ensures intrinsic methods don't exist on the wrong arch,
 //! so you get compile errors if you try to use them incorrectly.
+//!
+//! ## Disabling SIMD (`disable-archmage` feature)
+//!
+//! Enable the `disable-archmage` feature to force all `summon()` calls to return `None`:
+//!
+//! ```toml
+//! [dependencies]
+//! archmage = { version = "0.1", features = ["disable-archmage"] }
+//! ```
+//!
+//! This is useful for:
+//! - Testing scalar fallback code paths
+//! - Benchmarking SIMD vs scalar performance
+//! - Debugging issues that might be SIMD-related
+//!
+//! Note: `try_new()` is unaffected and still performs actual detection. Use `summon()`
+//! for code that should respect the disable flag.
 
 // Platform-specific implementations
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
@@ -75,6 +92,11 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// This is a thematic alias for [`try_new()`](Self::try_new). Summoning may fail
     /// if the required power (CPU features) is not available.
     ///
+    /// # Feature: `disable-archmage`
+    ///
+    /// When the `disable-archmage` feature is enabled, this always returns `None`.
+    /// Useful for testing scalar fallback paths or benchmarking without SIMD.
+    ///
     /// # Example
     ///
     /// ```rust,ignore
@@ -86,7 +108,14 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// ```
     #[inline(always)]
     fn summon() -> Option<Self> {
-        Self::try_new()
+        #[cfg(feature = "disable-archmage")]
+        {
+            None
+        }
+        #[cfg(not(feature = "disable-archmage"))]
+        {
+            Self::try_new()
+        }
     }
 
     /// Create a token without runtime checks.

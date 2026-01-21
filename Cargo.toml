@@ -19,6 +19,8 @@ std = []
 macros = ["dep:archmage-macros"]
 # Safe load/store wrappers (stable)
 safe_unaligned_simd = ["dep:safe_unaligned_simd"]
+# Force all tokens to return None - useful for testing scalar fallbacks
+disable-archmage = []
 
 # Unstable features (API may change, prefixed with __)
 # Transpose, dot product, horizontal ops - implies safe_unaligned_simd

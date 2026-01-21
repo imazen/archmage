@@ -50,7 +50,9 @@ fn test_cross_platform_token_types_exist() {
 }
 
 /// Test that summon() works correctly for the current platform.
+/// Skipped when disable-archmage is enabled (see test_disable_archmage_feature instead).
 #[test]
+#[cfg(not(feature = "disable-archmage"))]
 fn test_summon_behavior() {
     use archmage::{Arm64, NeonToken, Simd128Token};
 
@@ -103,6 +105,45 @@ fn test_summon_behavior() {
             "Desktop64 unavailable on WASM"
         );
         assert!(NeonToken::summon().is_none(), "NEON unavailable on WASM");
+    }
+}
+
+/// Test that disable-archmage feature forces all summon() to return None.
+/// This test only runs when the feature is enabled.
+#[test]
+#[cfg(feature = "disable-archmage")]
+fn test_disable_archmage_feature() {
+    use archmage::{Desktop64, NeonToken, Server64, Simd128Token, Sse2Token, SimdToken};
+
+    // With disable-archmage, ALL tokens should return None from summon()
+    assert!(
+        Sse2Token::summon().is_none(),
+        "disable-archmage should make Sse2Token::summon() return None"
+    );
+    assert!(
+        Desktop64::summon().is_none(),
+        "disable-archmage should make Desktop64::summon() return None"
+    );
+    assert!(
+        Server64::summon().is_none(),
+        "disable-archmage should make Server64::summon() return None"
+    );
+    assert!(
+        NeonToken::summon().is_none(),
+        "disable-archmage should make NeonToken::summon() return None"
+    );
+    assert!(
+        Simd128Token::summon().is_none(),
+        "disable-archmage should make Simd128Token::summon() return None"
+    );
+
+    // But try_new() should still work (for advanced users who need it)
+    #[cfg(target_arch = "x86_64")]
+    {
+        assert!(
+            Sse2Token::try_new().is_some(),
+            "try_new() should still detect CPU features even with disable-archmage"
+        );
     }
 }
 
