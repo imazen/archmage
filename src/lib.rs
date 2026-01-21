@@ -115,7 +115,7 @@ pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 // x86 feature marker traits
 // Hierarchy: SSE4.2 → AVX → AVX2 → FMA → X64V3 → AVX-512 → ModernAVX-512
 pub use tokens::{
-    HasAvx, HasAvx2, HasAvx512, HasDesktop64, HasFma, HasModernAvx512, HasServer64, HasSse42,
+    HasAvx, HasAvx2, HasAvx2Fma, HasAvx512, HasDesktop64, HasModernAvx512, HasServer64, HasSse42,
     HasX64V3, HasX64V4,
 };
 

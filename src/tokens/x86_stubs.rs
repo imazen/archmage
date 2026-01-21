@@ -7,7 +7,7 @@ use super::sealed::Sealed;
 use super::SimdToken;
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 use super::{
-    HasAvx, HasAvx2, HasAvx512, HasDesktop64, HasFma, HasModernAvx512, HasServer64, HasSse42,
+    HasAvx, HasAvx2, HasAvx2Fma, HasAvx512, HasDesktop64, HasModernAvx512, HasServer64, HasSse42,
     HasX64V3, HasX64V4,
 };
 
@@ -85,13 +85,13 @@ impl HasAvx2 for X64V4Token {}
 impl HasAvx2 for Avx512ModernToken {}
 impl HasAvx2 for Avx512Fp16Token {}
 
-// HasFma: FMA and above
-impl HasFma for Avx2FmaToken {}
-impl HasFma for X64V3Token {}
-impl HasFma for Avx512Token {}
-impl HasFma for X64V4Token {}
-impl HasFma for Avx512ModernToken {}
-impl HasFma for Avx512Fp16Token {}
+// HasAvx2Fma: AVX2 + FMA
+impl HasAvx2Fma for Avx2FmaToken {}
+impl HasAvx2Fma for X64V3Token {}
+impl HasAvx2Fma for Avx512Token {}
+impl HasAvx2Fma for X64V4Token {}
+impl HasAvx2Fma for Avx512ModernToken {}
+impl HasAvx2Fma for Avx512Fp16Token {}
 
 // HasX64V3: v3 level and above
 impl HasX64V3 for X64V3Token {}

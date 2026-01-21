@@ -234,7 +234,7 @@ pub trait HasAvx2: HasAvx {}
 /// Implemented by: `Avx2FmaToken`, `X64V3Token`, `Avx512Token`, `Avx512ModernToken`
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasFma: HasAvx2 {}
+pub trait HasAvx2Fma: HasAvx2 {}
 
 /// Marker trait for tokens that provide x86-64-v3 level features.
 ///
@@ -242,7 +242,7 @@ pub trait HasFma: HasAvx2 {}
 /// This is the recommended baseline for modern desktop code (Haswell 2013+, Zen 1+).
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
-pub trait HasX64V3: HasFma {}
+pub trait HasX64V3: HasAvx2Fma {}
 
 /// Alias for [`HasX64V3`] - the recommended desktop baseline.
 pub trait HasDesktop64: HasX64V3 {}

@@ -44,7 +44,7 @@ define_arm_stub!(NeonFp16Token, "NEON+FP16");
 pub type Arm64 = NeonFp16Token;
 
 // Implement marker traits for stubs
-// Note: HasFma is x86-specific (requires HasAvx2). ARM has FMA via NEON intrinsics.
+// Note: HasAvx2Fma is x86-specific (requires HasAvx2). ARM has FMA via NEON intrinsics.
 impl Has128BitSimd for NeonToken {}
 impl Has128BitSimd for NeonAesToken {}
 impl Has128BitSimd for NeonSha3Token {}

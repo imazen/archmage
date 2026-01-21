@@ -240,7 +240,7 @@ use super::Has128BitSimd;
 use super::{HasArm64, HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
 
 // NEON provides 128-bit SIMD
-// Note: HasFma is x86-specific (requires HasAvx2). ARM has FMA via NEON intrinsics.
+// Note: HasAvx2Fma is x86-specific (requires HasAvx2). ARM has FMA via NEON intrinsics.
 impl Has128BitSimd for NeonToken {}
 impl Has128BitSimd for NeonAesToken {}
 impl Has128BitSimd for NeonSha3Token {}

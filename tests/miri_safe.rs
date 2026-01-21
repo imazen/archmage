@@ -97,11 +97,11 @@ fn try_new_is_consistent() {
 /// Test marker trait bounds compile correctly.
 #[test]
 fn marker_traits_compile() {
-    use archmage::{Has128BitSimd, Has256BitSimd, HasFma};
+    use archmage::{Has128BitSimd, Has256BitSimd, HasAvx2Fma};
 
     fn requires_128<T: Has128BitSimd>(_: T) {}
     fn requires_256<T: Has256BitSimd>(_: T) {}
-    fn requires_fma<T: HasFma>(_: T) {}
+    fn requires_fma<T: HasAvx2Fma>(_: T) {}
 
     if let Some(token) = Sse42Token::try_new() {
         requires_128(token);

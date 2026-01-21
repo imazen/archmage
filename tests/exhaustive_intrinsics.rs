@@ -569,7 +569,7 @@ mod x86_mem_tests {
     /// Exhaustive test of core::arch intrinsics via #[arcane].
     #[test]
     fn test_arcane_core_arch_intrinsics() {
-        use archmage::{Desktop64, HasAvx2, HasFma, SimdToken, arcane};
+        use archmage::{Desktop64, HasAvx2, HasAvx2Fma, SimdToken, arcane};
 
         // Skip if Desktop64 not available
         let Some(token) = Desktop64::summon() else {
@@ -600,9 +600,9 @@ mod x86_mem_tests {
         let result = test_avx2_arithmetic(token);
         assert!(result.iter().all(|&x| (x - 3.0).abs() < 0.0001));
 
-        // Test FMA intrinsics (HasFma implies HasAvx2)
+        // Test FMA intrinsics (HasAvx2Fma implies HasAvx2)
         #[arcane]
-        fn test_fma_intrinsics<T: HasFma>(_token: T) -> [f32; 8] {
+        fn test_fma_intrinsics<T: HasAvx2Fma>(_token: T) -> [f32; 8] {
             let a = _mm256_set1_ps(2.0);
             let b = _mm256_set1_ps(3.0);
             let c = _mm256_set1_ps(1.0);

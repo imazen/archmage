@@ -5,7 +5,7 @@
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
     use archmage::{
-        Avx2FmaToken, Avx2Token, Desktop64, HasAvx, HasAvx2, HasFma, Server64, SimdToken,
+        Avx2FmaToken, Avx2Token, Desktop64, HasAvx, HasAvx2, HasAvx2Fma, Server64, SimdToken,
         X64V3Token, simd_fn,
     };
     use std::arch::x86_64::*;
@@ -219,10 +219,10 @@ mod x86_tests {
         }
     }
 
-    /// Test with FMA trait bound using impl Trait (HasFma implies HasAvx2)
+    /// Test with FMA trait bound using impl Trait (HasAvx2Fma implies HasAvx2)
     #[simd_fn]
     fn impl_trait_multi_bounds(
-        token: impl HasFma,
+        token: impl HasAvx2Fma,
         a: &[f32; 8],
         b: &[f32; 8],
         c: &[f32; 8],
@@ -239,7 +239,7 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_impl_trait_multi_bounds() {
-        // X64V3Token provides both HasAvx2 and HasFma
+        // X64V3Token provides HasAvx2Fma (which implies HasAvx2)
         if let Some(token) = X64V3Token::try_new() {
             let a = [2.0f32; 8];
             let b = [3.0f32; 8];
@@ -250,9 +250,9 @@ mod x86_tests {
         }
     }
 
-    /// Test with FMA trait bound using generic type parameter (HasFma implies HasAvx2)
+    /// Test with FMA trait bound using generic type parameter (HasAvx2Fma implies HasAvx2)
     #[simd_fn]
-    fn generic_multi_bounds<T: HasFma>(
+    fn generic_multi_bounds<T: HasAvx2Fma>(
         token: T,
         a: &[f32; 8],
         b: &[f32; 8],
