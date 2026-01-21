@@ -10,6 +10,9 @@
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
 
+#[cfg(target_arch = "aarch64")]
+use core::arch::aarch64::*;
+
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
     Index, IndexMut, Mul, MulAssign, Neg, Not, Shl, Shr, Sub, SubAssign,
@@ -194,6 +197,48 @@ macro_rules! impl_int_scalar_ops {
             #[inline(always)]
             fn mul(self, rhs: $t) -> $t { <$t>::from_raw(unsafe { $set1(self) }) * rhs }
         }
+    };
+}
+
+// ============================================================================
+// Multi-arch dispatch macro (similar to wide's pick!)
+// ============================================================================
+
+/// Compile-time architecture dispatch macro.
+/// Usage:
+/// ```ignore
+/// pick! {
+///     if #[cfg(target_arch = "x86_64")] { /* x86 code */ }
+///     else if #[cfg(target_arch = "aarch64")] { /* arm code */ }
+///     else { /* fallback */ }
+/// }
+/// ```
+#[allow(unused_macros)]
+macro_rules! pick {
+    // x86_64 only
+    (if #[cfg(target_arch = "x86_64")] { $($x86:tt)* } else { $($fallback:tt)* }) => {
+        #[cfg(target_arch = "x86_64")]
+        { $($x86)* }
+        #[cfg(not(target_arch = "x86_64"))]
+        { $($fallback)* }
+    };
+    // x86_64 then aarch64
+    (if #[cfg(target_arch = "x86_64")] { $($x86:tt)* }
+     else if #[cfg(target_arch = "aarch64")] { $($arm:tt)* }
+     else { $($fallback:tt)* }) => {
+        #[cfg(target_arch = "x86_64")]
+        { $($x86)* }
+        #[cfg(target_arch = "aarch64")]
+        { $($arm)* }
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        { $($fallback)* }
+    };
+    // aarch64 only
+    (if #[cfg(target_arch = "aarch64")] { $($arm:tt)* } else { $($fallback:tt)* }) => {
+        #[cfg(target_arch = "aarch64")]
+        { $($arm)* }
+        #[cfg(not(target_arch = "aarch64"))]
+        { $($fallback)* }
     };
 }
 
@@ -1263,6 +1308,447 @@ impl core::fmt::Debug for i32x4 {
 impl PartialEq for i32x4 {
     fn eq(&self, other: &Self) -> bool { self.to_array() == other.to_array() }
 }
+
+// ============================================================================
+// f32x4 - NEON (aarch64)
+// ============================================================================
+
+#[cfg(target_arch = "aarch64")]
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct f32x4(float32x4_t);
+
+/// Token-gated constants for f32x4. Cannot be constructed directly.
+#[cfg(target_arch = "aarch64")]
+#[derive(Clone, Copy)]
+pub struct F32x4Consts(());
+
+#[cfg(target_arch = "aarch64")]
+impl F32x4Consts {
+    #[inline(always)] pub fn one(self) -> f32x4 { f32x4(unsafe { vdupq_n_f32(1.0) }) }
+    #[inline(always)] pub fn zero(self) -> f32x4 { f32x4(unsafe { vdupq_n_f32(0.0) }) }
+    #[inline(always)] pub fn half(self) -> f32x4 { f32x4(unsafe { vdupq_n_f32(0.5) }) }
+    #[inline(always)] pub fn neg_one(self) -> f32x4 { f32x4(unsafe { vdupq_n_f32(-1.0) }) }
+    #[inline(always)] pub fn pi(self) -> f32x4 { f32x4(unsafe { vdupq_n_f32(core::f32::consts::PI) }) }
+    #[inline(always)] pub fn tau(self) -> f32x4 { f32x4(unsafe { vdupq_n_f32(core::f32::consts::TAU) }) }
+    #[inline(always)] pub fn e(self) -> f32x4 { f32x4(unsafe { vdupq_n_f32(core::f32::consts::E) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl f32x4 {
+    pub const LANES: usize = 4;
+
+    /// Get token-gated constants. Usage: `f32x4::consts(token).one()`
+    #[inline(always)]
+    pub fn consts(_: impl crate::HasNeon) -> F32x4Consts { F32x4Consts(()) }
+
+    #[inline(always)]
+    pub fn load(_: impl crate::HasNeon, data: &[f32; 4]) -> Self {
+        Self(unsafe { vld1q_f32(data.as_ptr()) })
+    }
+    #[inline(always)]
+    pub fn splat(_: impl crate::HasNeon, v: f32) -> Self { Self(unsafe { vdupq_n_f32(v) }) }
+    #[inline(always)]
+    pub fn zero(_: impl crate::HasNeon) -> Self { Self(unsafe { vdupq_n_f32(0.0) }) }
+
+    #[inline(always)]
+    pub fn to_array(self) -> [f32; 4] {
+        let mut out = [0.0f32; 4];
+        unsafe { vst1q_f32(out.as_mut_ptr(), self.0) };
+        out
+    }
+    #[inline(always)]
+    pub fn as_array(&self) -> &[f32; 4] { unsafe { &*(self as *const Self as *const [f32; 4]) } }
+    #[inline(always)]
+    pub fn as_mut_array(&mut self) -> &mut [f32; 4] { unsafe { &mut *(self as *mut Self as *mut [f32; 4]) } }
+    #[inline(always)]
+    fn from_raw(v: float32x4_t) -> Self { Self(v) }
+
+    #[inline(always)] pub fn min(self, o: Self) -> Self { Self(unsafe { vminq_f32(self.0, o.0) }) }
+    #[inline(always)] pub fn max(self, o: Self) -> Self { Self(unsafe { vmaxq_f32(self.0, o.0) }) }
+    #[inline(always)] pub fn clamp(self, lo: Self, hi: Self) -> Self { self.max(lo).min(hi) }
+    #[inline(always)] pub fn abs(self) -> Self { Self(unsafe { vabsq_f32(self.0) }) }
+    #[inline(always)] pub fn sqrt(self) -> Self { Self(unsafe { vsqrtq_f32(self.0) }) }
+    #[inline(always)] pub fn recip(self) -> Self { Self(unsafe { vrecpeq_f32(self.0) }) }
+    #[inline(always)] pub fn recip_sqrt(self) -> Self { Self(unsafe { vrsqrteq_f32(self.0) }) }
+
+    #[inline(always)] pub fn round(self) -> Self { Self(unsafe { vrndnq_f32(self.0) }) }
+    #[inline(always)] pub fn floor(self) -> Self { Self(unsafe { vrndmq_f32(self.0) }) }
+    #[inline(always)] pub fn ceil(self) -> Self { Self(unsafe { vrndpq_f32(self.0) }) }
+    #[inline(always)] pub fn trunc(self) -> Self { Self(unsafe { vrndq_f32(self.0) }) }
+
+    #[inline(always)]
+    pub fn reduce_add(self) -> f32 { unsafe { vaddvq_f32(self.0) } }
+
+    #[inline(always)]
+    pub fn blend(self, if_true: Self, if_false: Self) -> Self {
+        // NEON: use vbslq with the mask reinterpreted as u32x4
+        let mask = unsafe { vreinterpretq_u32_f32(self.0) };
+        Self(unsafe { vbslq_f32(mask, if_true.0, if_false.0) })
+    }
+
+    /// Convert mask to bitmask (NEON doesn't have movemask, emulate)
+    #[inline(always)]
+    pub fn to_bitmask(self) -> u32 {
+        unsafe {
+            let mask = vreinterpretq_u32_f32(self.0);
+            let shifted = vshrq_n_u32(mask, 31);
+            let arr: [u32; 4] = core::mem::transmute(shifted);
+            arr[0] | (arr[1] << 1) | (arr[2] << 2) | (arr[3] << 3)
+        }
+    }
+    #[inline(always)] pub fn any(self) -> bool { unsafe { vmaxvq_u32(vreinterpretq_u32_f32(self.0)) != 0 } }
+    #[inline(always)] pub fn all(self) -> bool { unsafe { vminvq_u32(vreinterpretq_u32_f32(self.0)) == u32::MAX } }
+    #[inline(always)] pub fn none(self) -> bool { unsafe { vmaxvq_u32(vreinterpretq_u32_f32(self.0)) == 0 } }
+
+    #[inline(always)] pub fn round_int(self) -> i32x4 { i32x4(unsafe { vcvtnq_s32_f32(self.0) }) }
+    #[inline(always)] pub fn trunc_int(self) -> i32x4 { i32x4(unsafe { vcvtq_s32_f32(self.0) }) }
+    #[inline(always)] pub fn from_i32x4(v: i32x4) -> Self { Self(unsafe { vcvtq_f32_s32(v.0) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Neg for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self { Self(unsafe { vnegq_f32(self.0) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Not for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn not(self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(self.0))) })
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Add for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self { Self(unsafe { vaddq_f32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl Sub for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Self) -> Self { Self(unsafe { vsubq_f32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl Mul for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn mul(self, rhs: Self) -> Self { Self(unsafe { vmulq_f32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl Div for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn div(self, rhs: Self) -> Self { Self(unsafe { vdivq_f32(self.0, rhs.0) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl BitAnd for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(self.0), vreinterpretq_u32_f32(rhs.0))) })
+    }
+}
+#[cfg(target_arch = "aarch64")]
+impl BitOr for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vorrq_u32(vreinterpretq_u32_f32(self.0), vreinterpretq_u32_f32(rhs.0))) })
+    }
+}
+#[cfg(target_arch = "aarch64")]
+impl BitXor for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(veorq_u32(vreinterpretq_u32_f32(self.0), vreinterpretq_u32_f32(rhs.0))) })
+    }
+}
+#[cfg(target_arch = "aarch64")]
+impl_bitwise_assign_ops!(f32x4);
+#[cfg(target_arch = "aarch64")]
+impl_assign_ops!(f32x4);
+
+// Scalar ops for NEON f32x4
+#[cfg(target_arch = "aarch64")]
+impl Add<f32> for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: f32) -> Self { self + Self(unsafe { vdupq_n_f32(rhs) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl Sub<f32> for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: f32) -> Self { self - Self(unsafe { vdupq_n_f32(rhs) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl Mul<f32> for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn mul(self, rhs: f32) -> Self { self * Self(unsafe { vdupq_n_f32(rhs) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl Div<f32> for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn div(self, rhs: f32) -> Self { self / Self(unsafe { vdupq_n_f32(rhs) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl core::fmt::Debug for f32x4 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("f32x4").field(&self.to_array()).finish()
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl PartialEq for f32x4 {
+    fn eq(&self, other: &Self) -> bool { self.to_array() == other.to_array() }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Index<usize> for f32x4 {
+    type Output = f32;
+    #[inline(always)]
+    fn index(&self, index: usize) -> &Self::Output { &self.as_array()[index] }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl IndexMut<usize> for f32x4 {
+    #[inline(always)]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output { &mut self.as_mut_array()[index] }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl SimdEq for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_eq(self, rhs: Self) -> Self { Self(unsafe { vreinterpretq_f32_u32(vceqq_f32(self.0, rhs.0)) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl SimdNe for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_ne(self, rhs: Self) -> Self { !self.simd_eq(rhs) }
+}
+#[cfg(target_arch = "aarch64")]
+impl SimdLt for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_lt(self, rhs: Self) -> Self { Self(unsafe { vreinterpretq_f32_u32(vcltq_f32(self.0, rhs.0)) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl SimdLe for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_le(self, rhs: Self) -> Self { Self(unsafe { vreinterpretq_f32_u32(vcleq_f32(self.0, rhs.0)) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl SimdGt for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_gt(self, rhs: Self) -> Self { Self(unsafe { vreinterpretq_f32_u32(vcgtq_f32(self.0, rhs.0)) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl SimdGe for f32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_ge(self, rhs: Self) -> Self { Self(unsafe { vreinterpretq_f32_u32(vcgeq_f32(self.0, rhs.0)) }) }
+}
+
+// ============================================================================
+// i32x4 - NEON (aarch64)
+// ============================================================================
+
+#[cfg(target_arch = "aarch64")]
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct i32x4(pub(crate) int32x4_t);
+
+/// Token-gated constants for i32x4. Cannot be constructed directly.
+#[cfg(target_arch = "aarch64")]
+#[derive(Clone, Copy)]
+pub struct I32x4Consts(());
+
+#[cfg(target_arch = "aarch64")]
+impl I32x4Consts {
+    #[inline(always)] pub fn zero(self) -> i32x4 { i32x4(unsafe { vdupq_n_s32(0) }) }
+    #[inline(always)] pub fn one(self) -> i32x4 { i32x4(unsafe { vdupq_n_s32(1) }) }
+    #[inline(always)] pub fn neg_one(self) -> i32x4 { i32x4(unsafe { vdupq_n_s32(-1) }) }
+    #[inline(always)] pub fn min_value(self) -> i32x4 { i32x4(unsafe { vdupq_n_s32(i32::MIN) }) }
+    #[inline(always)] pub fn max_value(self) -> i32x4 { i32x4(unsafe { vdupq_n_s32(i32::MAX) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl i32x4 {
+    pub const LANES: usize = 4;
+
+    /// Get token-gated constants. Usage: `i32x4::consts(token).one()`
+    #[inline(always)]
+    pub fn consts(_: impl crate::HasNeon) -> I32x4Consts { I32x4Consts(()) }
+
+    #[inline(always)]
+    pub fn load(_: impl crate::HasNeon, data: &[i32; 4]) -> Self {
+        Self(unsafe { vld1q_s32(data.as_ptr()) })
+    }
+    #[inline(always)]
+    pub fn splat(_: impl crate::HasNeon, v: i32) -> Self { Self(unsafe { vdupq_n_s32(v) }) }
+    #[inline(always)]
+    pub fn zero(_: impl crate::HasNeon) -> Self { Self(unsafe { vdupq_n_s32(0) }) }
+
+    #[inline(always)]
+    pub fn to_array(self) -> [i32; 4] {
+        let mut out = [0i32; 4];
+        unsafe { vst1q_s32(out.as_mut_ptr(), self.0) };
+        out
+    }
+    #[inline(always)]
+    pub fn as_array(&self) -> &[i32; 4] { unsafe { &*(self as *const Self as *const [i32; 4]) } }
+    #[inline(always)]
+    pub fn as_mut_array(&mut self) -> &mut [i32; 4] { unsafe { &mut *(self as *mut Self as *mut [i32; 4]) } }
+    #[inline(always)]
+    fn from_raw(v: int32x4_t) -> Self { Self(v) }
+
+    #[inline(always)] pub fn min(self, o: Self) -> Self { Self(unsafe { vminq_s32(self.0, o.0) }) }
+    #[inline(always)] pub fn max(self, o: Self) -> Self { Self(unsafe { vmaxq_s32(self.0, o.0) }) }
+    #[inline(always)] pub fn abs(self) -> Self { Self(unsafe { vabsq_s32(self.0) }) }
+
+    #[inline(always)] pub fn to_f32x4(self) -> f32x4 { f32x4::from_i32x4(self) }
+
+    /// Convert mask to bitmask
+    #[inline(always)]
+    pub fn to_bitmask(self) -> u32 {
+        unsafe {
+            let mask = vreinterpretq_u32_s32(self.0);
+            let shifted = vshrq_n_u32(mask, 31);
+            let arr: [u32; 4] = core::mem::transmute(shifted);
+            arr[0] | (arr[1] << 1) | (arr[2] << 2) | (arr[3] << 3)
+        }
+    }
+    #[inline(always)] pub fn any(self) -> bool { unsafe { vmaxvq_u32(vreinterpretq_u32_s32(self.0)) != 0 } }
+    #[inline(always)] pub fn all(self) -> bool { unsafe { vminvq_u32(vreinterpretq_u32_s32(self.0)) == u32::MAX } }
+    #[inline(always)] pub fn none(self) -> bool { unsafe { vmaxvq_u32(vreinterpretq_u32_s32(self.0)) == 0 } }
+
+    #[inline(always)]
+    pub fn blend(self, if_true: Self, if_false: Self) -> Self {
+        let mask = unsafe { vreinterpretq_u32_s32(self.0) };
+        Self(unsafe { vreinterpretq_s32_u32(vbslq_u32(mask, vreinterpretq_u32_s32(if_true.0), vreinterpretq_u32_s32(if_false.0))) })
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Neg for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self { Self(unsafe { vnegq_s32(self.0) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Not for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn not(self) -> Self { Self(unsafe { vreinterpretq_s32_u32(vmvnq_u32(vreinterpretq_u32_s32(self.0))) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Add for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self { Self(unsafe { vaddq_s32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl Sub for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Self) -> Self { Self(unsafe { vsubq_s32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl Mul for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn mul(self, rhs: Self) -> Self { Self(unsafe { vmulq_s32(self.0, rhs.0) }) }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl BitAnd for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self { Self(unsafe { vandq_s32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl BitOr for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self { Self(unsafe { vorrq_s32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl BitXor for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn bitxor(self, rhs: Self) -> Self { Self(unsafe { veorq_s32(self.0, rhs.0) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl_bitwise_assign_ops!(i32x4);
+
+// Shifts for NEON i32x4
+#[cfg(target_arch = "aarch64")]
+impl Shl<i32> for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn shl(self, rhs: i32) -> Self {
+        Self(unsafe { vshlq_s32(self.0, vdupq_n_s32(rhs)) })
+    }
+}
+#[cfg(target_arch = "aarch64")]
+impl Shr<i32> for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn shr(self, rhs: i32) -> Self {
+        // NEON vshlq_s32 with negative shift = right shift
+        Self(unsafe { vshlq_s32(self.0, vdupq_n_s32(-rhs)) })
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl core::fmt::Debug for i32x4 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("i32x4").field(&self.to_array()).finish()
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl PartialEq for i32x4 {
+    fn eq(&self, other: &Self) -> bool { self.to_array() == other.to_array() }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl SimdEq for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_eq(self, rhs: Self) -> Self { Self(unsafe { vreinterpretq_s32_u32(vceqq_s32(self.0, rhs.0)) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl SimdGt for i32x4 {
+    type Output = Self;
+    #[inline(always)]
+    fn simd_gt(self, rhs: Self) -> Self { Self(unsafe { vreinterpretq_s32_u32(vcgtq_s32(self.0, rhs.0)) }) }
+}
+#[cfg(target_arch = "aarch64")]
+impl SimdLt for i32x4 { type Output = Self; #[inline(always)] fn simd_lt(self, rhs: Self) -> Self { rhs.simd_gt(self) } }
+#[cfg(target_arch = "aarch64")]
+impl SimdGe for i32x4 { type Output = Self; #[inline(always)] fn simd_ge(self, rhs: Self) -> Self { !rhs.simd_gt(self) } }
+#[cfg(target_arch = "aarch64")]
+impl SimdLe for i32x4 { type Output = Self; #[inline(always)] fn simd_le(self, rhs: Self) -> Self { !self.simd_gt(rhs) } }
+#[cfg(target_arch = "aarch64")]
+impl SimdNe for i32x4 { type Output = Self; #[inline(always)] fn simd_ne(self, rhs: Self) -> Self { !self.simd_eq(rhs) } }
 
 // ============================================================================
 // f64x4
