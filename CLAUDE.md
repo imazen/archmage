@@ -23,19 +23,6 @@ cargo clippy --all-features   # Lint
 cargo run -p xtask -- generate # Regenerate safe_unaligned_simd wrappers
 ```
 
-## CRITICAL: Adding New Traits or Tokens
-
-The `#[arcane]` macro in `archmage-macros` has hardcoded mappings from traits/tokens to CPU features. **These must stay in sync.**
-
-When adding a new trait or token:
-1. Add the trait/token to `src/tokens/`
-2. **Update `archmage-macros/src/lib.rs`:**
-   - `trait_to_features()` - for new marker traits
-   - `token_to_features()` - for new token types
-3. **Add a test to `tests/trait_token_sync.rs`** - compile-time verification
-
-If `tests/trait_token_sync.rs` fails to compile, the macro mappings are out of sync. The compiler error tells you exactly which trait/token is unrecognized.
-
 ## Core Insight: Rust 1.85+ Changed Everything
 
 As of Rust 1.85, **value-based intrinsics are safe inside `#[target_feature]` functions**:
@@ -99,8 +86,8 @@ fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
 }
 
 #[arcane]
-fn fma_kernel<T: HasAvx2Fma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // Requires AVX2 + FMA (use HasAvx2Fma, not separate traits)
+fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    // Requires both AVX2 and FMA
 }
 ```
 
@@ -113,12 +100,12 @@ Use these intuitive names instead of memorizing microarchitecture levels:
 | Alias | Target | What it means |
 |-------|--------|---------------|
 | `Desktop64` | x86_64 desktops | AVX2 + FMA (Haswell 2013+, Zen 1+) |
-| `Avx512Token` | x86_64 servers | + AVX-512 (Xeon 2017+, Zen 4+) |
+| `Server64` | x86_64 servers | + AVX-512 (Xeon 2017+, Zen 4+) |
 | `Arm64` | AArch64 | NEON (all 64-bit ARM) |
 
 **Why these names?**
 - `Desktop64` - Universal on modern desktops. Intel removed AVX-512 from consumer chips (12th-14th gen), so this is the safe choice.
-- `Avx512Token` - AVX-512 is reliable on Xeon servers, Intel HEDT, and AMD Zen 4+. (`X64V4Token` is an alias)
+- `Server64` - AVX-512 is reliable on Xeon servers, Intel HEDT, and AMD Zen 4+.
 - `Arm64` - NEON is baseline on all AArch64, always available.
 
 ```rust
@@ -164,18 +151,23 @@ xtask/
 
 ## Token Hierarchy
 
-**Recommended:**
-- `Desktop64` = `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here for x86**
-- `Avx512Token` = `X64V4Token` - + AVX-512 F+BW+CD+DQ+VL (Xeon 2017+, Zen 4+)
+**Recommended (friendly aliases):**
+- `Desktop64` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here for x86**
+- `Server64` - + AVX-512 (Xeon 2017+, Zen 4+)
 - `Arm64` - NEON baseline **← Start here for ARM**
 
+**x86 Profile Tokens (same as aliases):**
+- `X64V3Token` = `Desktop64`
+- `X64V4Token` = `Server64`
+- `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
+
 **x86 Feature Tokens:**
-- `Sse42Token` (baseline) → `AvxToken` → `Avx2Token` → `Avx2FmaToken`
-- `Avx512ModernToken` - Avx512 + VBMI2+VNNI+BF16 etc (Ice Lake/Zen 4)
-- `Avx512Fp16Token` - Avx512 + FP16 (Sapphire Rapids+)
+- `Sse2Token` → `Sse41Token` → `Sse42Token` → `AvxToken` → `Avx2Token`
+- `FmaToken` (independent), `Avx2FmaToken` (combined)
+- `Avx512fToken`, `Avx512bwToken`, `Avx512Vbmi2Token` + VL variants
 
 **ARM:**
-- `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonFp16Token` = `Arm64`
+- `NeonToken` = `Arm64` (baseline), `SveToken`, `Sve2Token`
 
 ## Marker Traits
 
@@ -183,14 +175,13 @@ Enable generic bounds:
 
 ```rust
 fn requires_avx2(token: impl HasAvx2) { ... }
-fn requires_fma(token: impl HasAvx2Fma) { ... }  // AVX2+FMA combined
-fn requires_v3<T: HasX64V3>(token: T) { ... }
+fn requires_fma(token: impl HasFma) { ... }
+fn requires_both<T: HasAvx2 + HasFma>(token: T) { ... }
 ```
 
 **Width traits:** `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
-**x86 Feature traits:** `HasSse42`, `HasAvx`, `HasAvx2`, `HasAvx2Fma`, `HasX64V3`, `HasAvx512`, `HasX64V4`, `HasModernAvx512`
-**Alias traits:** `HasDesktop64` = `HasX64V3`
-**ARM traits:** `HasNeon`, `HasArmAes`, `HasArmSha3`, `HasArmFp16`, `HasArm64`
+**Feature traits:** `HasSse`, `HasSse2`, `HasAvx`, `HasAvx2`, `HasFma`, `HasAvx512f`, etc.
+**ARM traits:** `HasNeon`, `HasSve`, `HasSve2`
 
 ## Safe Memory Operations
 

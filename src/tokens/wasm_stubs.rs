@@ -3,9 +3,8 @@
 //! These types exist so cross-platform code can reference them without cfg guards.
 //! `summon()` always returns `None` on non-WASM.
 
-use super::sealed::Sealed;
-use super::Has128BitSimd;
 use super::SimdToken;
+use super::Has128BitSimd;
 
 /// Stub for SIMD128 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
@@ -27,5 +26,4 @@ impl SimdToken for Simd128Token {
     }
 }
 
-impl Sealed for Simd128Token {}
 impl Has128BitSimd for Simd128Token {}

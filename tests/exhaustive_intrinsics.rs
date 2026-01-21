@@ -16,29 +16,32 @@ use archmage::SimdToken;
 #[test]
 fn test_cross_platform_token_types_exist() {
     // x86 tokens - should compile on ARM/WASM, summon returns None there
-    // SSE4.2 is the baseline for archmage
     use archmage::{
-        Avx2FmaToken, Avx2Token, Avx512Token, AvxToken, Desktop64, Sse42Token, X64V3Token,
-        X64V4Token,
+        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Server64, Sse2Token, Sse41Token,
+        Sse42Token, SseToken, X64V2Token, X64V3Token, X64V4Token,
     };
 
     // Verify tokens are zero-sized
+    assert_eq!(core::mem::size_of::<SseToken>(), 0);
+    assert_eq!(core::mem::size_of::<Sse2Token>(), 0);
+    assert_eq!(core::mem::size_of::<Sse41Token>(), 0);
     assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
     assert_eq!(core::mem::size_of::<AvxToken>(), 0);
     assert_eq!(core::mem::size_of::<Avx2Token>(), 0);
+    assert_eq!(core::mem::size_of::<FmaToken>(), 0);
     assert_eq!(core::mem::size_of::<Avx2FmaToken>(), 0);
+    assert_eq!(core::mem::size_of::<X64V2Token>(), 0);
     assert_eq!(core::mem::size_of::<X64V3Token>(), 0);
     assert_eq!(core::mem::size_of::<X64V4Token>(), 0);
     assert_eq!(core::mem::size_of::<Desktop64>(), 0);
-    assert_eq!(core::mem::size_of::<Avx512Token>(), 0);
+    assert_eq!(core::mem::size_of::<Server64>(), 0);
 
     // ARM tokens - should compile on x86/WASM, summon returns None there
-    use archmage::{Arm64, NeonAesToken, NeonFp16Token, NeonSha3Token, NeonToken};
+    use archmage::{Arm64, NeonToken, Sve2Token, SveToken};
 
     assert_eq!(core::mem::size_of::<NeonToken>(), 0);
-    assert_eq!(core::mem::size_of::<NeonAesToken>(), 0);
-    assert_eq!(core::mem::size_of::<NeonSha3Token>(), 0);
-    assert_eq!(core::mem::size_of::<NeonFp16Token>(), 0);
+    assert_eq!(core::mem::size_of::<SveToken>(), 0);
+    assert_eq!(core::mem::size_of::<Sve2Token>(), 0);
     assert_eq!(core::mem::size_of::<Arm64>(), 0);
 
     // WASM token - should compile everywhere
@@ -53,12 +56,15 @@ fn test_cross_platform_token_types_exist() {
 fn test_summon_behavior() {
     use archmage::{Arm64, NeonToken, Simd128Token};
 
-    // On x86_64, Desktop64/Avx512Token may succeed
+    // On x86_64, Desktop64/Server64 may succeed
     #[cfg(target_arch = "x86_64")]
     {
-        // SSE2 is baseline on x86_64, so Sse42Token should always succeed
-        use archmage::Sse42Token;
-        assert!(Sse42Token::summon().is_some(), "SSE2 is baseline on x86_64");
+        // SSE2 is baseline on x86_64, so Sse2Token should always succeed
+        use archmage::Sse2Token;
+        assert!(
+            Sse2Token::summon().is_some(),
+            "SSE2 is baseline on x86_64"
+        );
 
         // ARM and WASM tokens should return None on x86
         assert!(NeonToken::summon().is_none(), "NEON unavailable on x86");
@@ -72,7 +78,10 @@ fn test_summon_behavior() {
     // On aarch64, NEON is always available
     #[cfg(target_arch = "aarch64")]
     {
-        assert!(NeonToken::summon().is_some(), "NEON is baseline on AArch64");
+        assert!(
+            NeonToken::summon().is_some(),
+            "NEON is baseline on AArch64"
+        );
         assert!(Arm64::summon().is_some(), "Arm64 is baseline on AArch64");
 
         // x86 and WASM tokens should return None on ARM
@@ -80,10 +89,7 @@ fn test_summon_behavior() {
             Desktop64::summon().is_none(),
             "Desktop64 unavailable on ARM"
         );
-        assert!(
-            Avx512Token::summon().is_none(),
-            "Avx512Token unavailable on ARM"
-        );
+        assert!(Server64::summon().is_none(), "Server64 unavailable on ARM");
         assert!(
             Simd128Token::summon().is_none(),
             "WASM SIMD unavailable on ARM"
@@ -107,20 +113,20 @@ fn test_summon_behavior() {
 #[test]
 #[cfg(feature = "disable-archmage")]
 fn test_disable_archmage_feature() {
-    use archmage::{Avx512Token, Desktop64, NeonToken, Simd128Token, SimdToken, Sse42Token};
+    use archmage::{Desktop64, NeonToken, Server64, Simd128Token, Sse2Token, SimdToken};
 
     // With disable-archmage, ALL tokens should return None from summon()
     assert!(
-        Sse42Token::summon().is_none(),
-        "disable-archmage should make Sse42Token::summon() return None"
+        Sse2Token::summon().is_none(),
+        "disable-archmage should make Sse2Token::summon() return None"
     );
     assert!(
         Desktop64::summon().is_none(),
         "disable-archmage should make Desktop64::summon() return None"
     );
     assert!(
-        Avx512Token::summon().is_none(),
-        "disable-archmage should make Avx512Token::summon() return None"
+        Server64::summon().is_none(),
+        "disable-archmage should make Server64::summon() return None"
     );
     assert!(
         NeonToken::summon().is_none(),
@@ -135,7 +141,7 @@ fn test_disable_archmage_feature() {
     #[cfg(target_arch = "x86_64")]
     {
         assert!(
-            Sse42Token::try_new().is_some(),
+            Sse2Token::try_new().is_some(),
             "try_new() should still detect CPU features even with disable-archmage"
         );
     }
@@ -144,12 +150,12 @@ fn test_disable_archmage_feature() {
 /// Test that cross-platform dispatch code compiles and runs.
 #[test]
 fn test_cross_platform_dispatch_pattern() {
-    use archmage::{Arm64, Avx512Token, Desktop64, NeonToken};
+    use archmage::{Arm64, Desktop64, NeonToken, Server64};
 
     let mut data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
     // This pattern should compile on any architecture
-    let processed = if let Some(_token) = Avx512Token::summon() {
+    let processed = if let Some(_token) = Server64::summon() {
         "avx512"
     } else if let Some(_token) = Desktop64::summon() {
         "avx2"
@@ -173,34 +179,33 @@ fn test_cross_platform_dispatch_pattern() {
 #[test]
 fn test_token_names() {
     use archmage::{
-        Arm64, Avx2FmaToken, Avx2Token, Avx512Fp16Token, Avx512ModernToken, Avx512Token, AvxToken,
-        Desktop64, NeonAesToken, NeonFp16Token, NeonSha3Token, NeonToken, Simd128Token, Sse42Token,
+        Arm64, Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, NeonToken, Server64,
+        Simd128Token, Sse2Token, Sse41Token, Sse42Token, SseToken, Sve2Token, SveToken, X64V2Token,
         X64V3Token, X64V4Token,
     };
 
-    // x86 tokens (SSE4.2 is the baseline - no SSE/SSE2/SSE4.1 tokens)
+    // x86 tokens
+    assert_eq!(SseToken::NAME, "SSE");
+    assert_eq!(Sse2Token::NAME, "SSE2");
+    assert_eq!(Sse41Token::NAME, "SSE4.1");
     assert_eq!(Sse42Token::NAME, "SSE4.2");
     assert_eq!(AvxToken::NAME, "AVX");
     assert_eq!(Avx2Token::NAME, "AVX2");
+    assert_eq!(FmaToken::NAME, "FMA");
     assert_eq!(Avx2FmaToken::NAME, "AVX2+FMA");
-    assert_eq!(Avx512Token::NAME, "x86-64-v4");
+    assert_eq!(X64V2Token::NAME, "x86-64-v2");
     assert_eq!(X64V3Token::NAME, "x86-64-v3");
-    assert_eq!(X64V4Token::NAME, "x86-64-v4"); // X64V4Token is alias for Avx512Token
+    assert_eq!(X64V4Token::NAME, "x86-64-v4");
 
     // Verify aliases
     assert_eq!(Desktop64::NAME, X64V3Token::NAME);
-    assert_eq!(X64V4Token::NAME, Avx512Token::NAME);
+    assert_eq!(Server64::NAME, X64V4Token::NAME);
 
     // ARM tokens
     assert_eq!(NeonToken::NAME, "NEON");
-    assert_eq!(NeonAesToken::NAME, "NEON+AES");
-    assert_eq!(NeonSha3Token::NAME, "NEON+SHA3");
-    assert_eq!(NeonFp16Token::NAME, "NEON+FP16");
-    assert_eq!(Arm64::NAME, NeonFp16Token::NAME);
-
-    // Additional x86 tokens
-    assert_eq!(Avx512ModernToken::NAME, "AVX-512Modern");
-    assert_eq!(Avx512Fp16Token::NAME, "AVX-512FP16");
+    assert_eq!(SveToken::NAME, "SVE");
+    assert_eq!(Sve2Token::NAME, "SVE2");
+    assert_eq!(Arm64::NAME, NeonToken::NAME);
 
     // WASM tokens
     assert_eq!(Simd128Token::NAME, "SIMD128");
@@ -219,10 +224,10 @@ mod x86_mem_tests {
     /// Exhaustive test of all SSE mem functions.
     #[test]
     fn test_sse_mem_exhaustive() {
-        use archmage::Sse42Token;
         use archmage::mem::sse;
+        use archmage::SseToken;
 
-        let Some(token) = Sse42Token::summon() else {
+        let Some(token) = SseToken::summon() else {
             eprintln!("SSE not available, skipping test");
             return;
         };
@@ -268,10 +273,10 @@ mod x86_mem_tests {
     /// Exhaustive test of all SSE2 mem functions.
     #[test]
     fn test_sse2_mem_exhaustive() {
-        use archmage::Sse42Token;
         use archmage::mem::sse2;
+        use archmage::Sse2Token;
 
-        let Some(token) = Sse42Token::summon() else {
+        let Some(token) = Sse2Token::summon() else {
             eprintln!("SSE2 not available, skipping test");
             return;
         };
@@ -381,8 +386,8 @@ mod x86_mem_tests {
     /// Exhaustive test of all AVX mem functions.
     #[test]
     fn test_avx_mem_exhaustive() {
-        use archmage::AvxToken;
         use archmage::mem::avx;
+        use archmage::AvxToken;
 
         let Some(token) = AvxToken::summon() else {
             eprintln!("AVX not available, skipping test");
@@ -513,11 +518,11 @@ mod x86_mem_tests {
     /// Test AVX-512F mem functions (if available).
     #[test]
     fn test_avx512f_mem_sampling() {
-        use archmage::Avx512Token;
         use archmage::mem::avx512f;
+        use archmage::Avx512fToken;
 
-        let Some(token) = Avx512Token::summon() else {
-            eprintln!("AVX-512 not available, skipping test");
+        let Some(token) = Avx512fToken::summon() else {
+            eprintln!("AVX-512F not available, skipping test");
             return;
         };
 
@@ -571,7 +576,7 @@ mod x86_mem_tests {
     /// Exhaustive test of core::arch intrinsics via #[arcane].
     #[test]
     fn test_arcane_core_arch_intrinsics() {
-        use archmage::{Desktop64, HasAvx2, HasAvx2Fma, SimdToken, arcane};
+        use archmage::{arcane, Desktop64, HasAvx2, HasFma, SimdToken};
 
         // Skip if Desktop64 not available
         let Some(token) = Desktop64::summon() else {
@@ -602,9 +607,9 @@ mod x86_mem_tests {
         let result = test_avx2_arithmetic(token);
         assert!(result.iter().all(|&x| (x - 3.0).abs() < 0.0001));
 
-        // Test FMA intrinsics (HasAvx2Fma implies HasAvx2)
+        // Test FMA intrinsics
         #[arcane]
-        fn test_fma_intrinsics<T: HasAvx2Fma>(_token: T) -> [f32; 8] {
+        fn test_fma_intrinsics<T: HasAvx2 + HasFma>(_token: T) -> [f32; 8] {
             let a = _mm256_set1_ps(2.0);
             let b = _mm256_set1_ps(3.0);
             let c = _mm256_set1_ps(1.0);
@@ -756,8 +761,8 @@ mod aarch64_mem_tests {
     /// Exhaustive test of NEON load functions.
     #[test]
     fn test_neon_load_exhaustive() {
-        use archmage::NeonToken;
         use archmage::mem::neon;
+        use archmage::NeonToken;
 
         let token = NeonToken::summon().expect("NEON should be available on AArch64");
 
@@ -975,7 +980,7 @@ mod aarch64_mem_tests {
     /// Test NEON intrinsics via #[arcane].
     #[test]
     fn test_arcane_neon_intrinsics() {
-        use archmage::{HasNeon, NeonToken, SimdToken, arcane};
+        use archmage::{arcane, HasNeon, NeonToken, SimdToken};
 
         let token = NeonToken::summon().expect("NEON should be available");
 

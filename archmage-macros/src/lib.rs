@@ -76,24 +76,28 @@ impl Parse for ArcaneArgs {
 /// Maps a token type name to its required target features.
 fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
     match token_name {
-        // x86_64 feature tokens (SSE4.2 is baseline)
+        // x86_64 granular tokens
+        "Sse2Token" => Some(&["sse2"]),
+        "Sse41Token" => Some(&["sse4.1"]),
         "Sse42Token" => Some(&["sse4.2"]),
         "AvxToken" => Some(&["avx"]),
         "Avx2Token" => Some(&["avx2"]),
+        "FmaToken" => Some(&["fma"]),
         "Avx2FmaToken" => Some(&["avx2", "fma"]),
-        "Avx512Token" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]),
-        "Avx512ModernToken" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl", "avx512vbmi2", "avx512vnni"]),
-        "Avx512Fp16Token" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl", "avx512fp16"]),
+        "Avx512fToken" => Some(&["avx512f"]),
+        "Avx512bwToken" => Some(&["avx512bw"]),
 
-        // x86_64 profile tokens (X64V4Token is alias for Avx512Token)
+        // x86_64 profile tokens
+        "X64V2Token" => Some(&["sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" => Some(&["avx2", "fma", "bmi1", "bmi2"]),
-        "X64V4Token" => Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]),
+        "X64V4Token" | "Server64" => {
+            Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"])
+        }
 
         // ARM tokens
         "NeonToken" | "Arm64" => Some(&["neon"]),
-        "NeonAesToken" => Some(&["neon", "aes"]),
-        "NeonSha3Token" => Some(&["neon", "sha3"]),
-        "NeonFp16Token" => Some(&["neon", "fp16"]),
+        "SveToken" => Some(&["sve"]),
+        "Sve2Token" => Some(&["sve2"]),
 
         // WASM tokens
         "Simd128Token" => Some(&["simd128"]),
@@ -107,15 +111,19 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
 fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {
     match trait_name {
         // x86 feature marker traits
+        "HasSse" => Some(&["sse"]),
+        "HasSse2" => Some(&["sse2"]),
+        "HasSse41" => Some(&["sse4.1"]),
         "HasSse42" => Some(&["sse4.2"]),
         "HasAvx" => Some(&["avx"]),
         "HasAvx2" => Some(&["avx2"]),
-        "HasAvx2Fma" => Some(&["avx2", "fma"]),
-        "HasX64V3" | "HasDesktop64" => Some(&["avx2", "fma", "bmi2"]),
-        "HasAvx512" | "HasX64V4" => Some(&["avx512f", "avx512cd", "avx512vl", "avx512dq", "avx512bw"]),
-        "HasModernAvx512" => Some(&["avx512f", "avx512cd", "avx512vl", "avx512dq", "avx512bw", "avx512vbmi2", "avx512vnni"]),
+        "HasAvx512f" => Some(&["avx512f"]),
+        "HasAvx512vl" => Some(&["avx512f", "avx512vl"]),
+        "HasAvx512bw" => Some(&["avx512bw"]),
+        "HasAvx512vbmi2" => Some(&["avx512vbmi2"]),
 
-        // Width marker traits
+        // Capability marker traits - use most specific features that satisfy them
+        "HasFma" => Some(&["fma"]),
         "Has128BitSimd" => Some(&["sse2"]),
         "Has256BitSimd" => Some(&["avx"]),
         "Has512BitSimd" => Some(&["avx512f"]),
@@ -124,10 +132,6 @@ fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {
         "HasNeon" => Some(&["neon"]),
         "HasSve" => Some(&["sve"]),
         "HasSve2" => Some(&["sve2"]),
-        "HasArm64" => Some(&["neon"]),
-        "HasArmAes" => Some(&["neon", "aes"]),
-        "HasArmSha3" => Some(&["neon", "sha3"]),
-        "HasArmFp16" => Some(&["neon", "fp16"]),
 
         _ => None,
     }
@@ -164,7 +168,7 @@ fn extract_token_type_info(ty: &Type) -> Option<TokenTypeInfo> {
             extract_token_type_info(&type_ref.elem)
         }
         Type::ImplTrait(impl_trait) => {
-            // Handle `impl HasAvx2` or `impl HasAvx2Fma`
+            // Handle `impl HasAvx2` or `impl HasAvx2 + HasFma`
             let traits: Vec<String> = extract_trait_names_from_bounds(&impl_trait.bounds);
             if traits.is_empty() {
                 None
@@ -420,9 +424,7 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
     // Transform output and body to replace Self with concrete type if needed
     let (inner_output, inner_body): (ReturnType, syn::Block) =
         if let Some(ref self_ty) = args.self_type {
-            let mut replacer = ReplaceSelf {
-                replacement: self_ty,
-            };
+            let mut replacer = ReplaceSelf { replacement: self_ty };
             let transformed_output = replacer.fold_return_type(output.clone());
             let transformed_body = replacer.fold_block((**body).clone());
             (transformed_output, transformed_body)
@@ -542,13 +544,14 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// - `&self` (shared reference) → `_self: &Type`
 /// - `&mut self` (mutable reference) → `_self: &mut Type`
 ///
-/// # FMA Trait
+/// # Multiple Trait Bounds
 ///
-/// `HasAvx2Fma` implies `HasAvx2`, so you only need to specify one:
+/// When using `impl Trait` or generic bounds with multiple traits,
+/// all required features are enabled:
 ///
 /// ```ignore
 /// #[arcane]
-/// fn fma_kernel(token: impl HasAvx2Fma, data: &[f32; 8]) -> [f32; 8] {
+/// fn fma_kernel(token: impl HasAvx2 + HasFma, data: &[f32; 8]) -> [f32; 8] {
 ///     // Both AVX2 and FMA intrinsics are safe here
 /// }
 /// ```
@@ -586,17 +589,17 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// # Supported Tokens
 ///
-/// - **x86_64**: `Sse42Token`, `AvxToken`, `Avx2Token`, `Avx2FmaToken`,
-///   `Avx512Token`, `Avx512ModernToken`, `Avx512Fp16Token`
-/// - **x86_64 profiles**: `X64V3Token` (Desktop64), `X64V4Token` (= Avx512Token)
-/// - **ARM**: `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonFp16Token`
+/// - **x86_64**: `Sse2Token`, `Sse41Token`, `Sse42Token`, `AvxToken`, `Avx2Token`,
+///   `FmaToken`, `Avx2FmaToken`, `Avx512fToken`, `Avx512bwToken`
+/// - **x86_64 profiles**: `X64V2Token`, `X64V3Token`, `X64V4Token`
+/// - **ARM**: `NeonToken`, `SveToken`, `Sve2Token`
 /// - **WASM**: `Simd128Token`
 ///
 /// # Supported Trait Bounds
 ///
-/// - **x86_64**: `HasSse42`, `HasAvx`, `HasAvx2`, `HasAvx2Fma`,
-///   `HasX64V3`, `HasDesktop64`, `HasAvx512`, `HasX64V4`, `HasModernAvx512`
-/// - **ARM**: `HasNeon`, `HasArm64`, `HasArmAes`, `HasArmSha3`, `HasArmFp16`
+/// - **x86_64**: `HasSse`, `HasSse2`, `HasSse41`, `HasSse42`, `HasAvx`, `HasAvx2`,
+///   `HasAvx512f`, `HasAvx512vl`, `HasAvx512bw`, `HasAvx512vbmi2`, `HasFma`
+/// - **ARM**: `HasNeon`, `HasSve`, `HasSve2`
 /// - **Generic**: `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
 ///
 /// # Options

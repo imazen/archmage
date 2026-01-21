@@ -5,7 +5,7 @@
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
     use archmage::{
-        Avx2FmaToken, Avx2Token, Avx512Token, Desktop64, HasAvx, HasAvx2, HasAvx2Fma, SimdToken,
+        Avx2FmaToken, Avx2Token, Desktop64, HasAvx, HasAvx2, HasFma, Server64, SimdToken,
         X64V3Token, simd_fn,
     };
     use std::arch::x86_64::*;
@@ -219,10 +219,10 @@ mod x86_tests {
         }
     }
 
-    /// Test with FMA trait bound using impl Trait (HasAvx2Fma implies HasAvx2)
+    /// Test with multiple trait bounds using impl Trait
     #[simd_fn]
     fn impl_trait_multi_bounds(
-        token: impl HasAvx2Fma,
+        token: impl HasAvx2 + HasFma,
         a: &[f32; 8],
         b: &[f32; 8],
         c: &[f32; 8],
@@ -239,7 +239,7 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_impl_trait_multi_bounds() {
-        // X64V3Token provides HasAvx2Fma (which implies HasAvx2)
+        // X64V3Token provides both HasAvx2 and HasFma
         if let Some(token) = X64V3Token::try_new() {
             let a = [2.0f32; 8];
             let b = [3.0f32; 8];
@@ -250,9 +250,9 @@ mod x86_tests {
         }
     }
 
-    /// Test with FMA trait bound using generic type parameter (HasAvx2Fma implies HasAvx2)
+    /// Test with multiple trait bounds using generic type parameter
     #[simd_fn]
-    fn generic_multi_bounds<T: HasAvx2Fma>(
+    fn generic_multi_bounds<T: HasAvx2 + HasFma>(
         token: T,
         a: &[f32; 8],
         b: &[f32; 8],
@@ -300,7 +300,7 @@ mod x86_tests {
     }
 
     // =====================================================================
-    // Tests for friendly aliases (Desktop64)
+    // Tests for friendly aliases (Desktop64, Server64)
     // =====================================================================
 
     /// Test Desktop64 alias with simd_fn macro
@@ -349,10 +349,10 @@ mod x86_tests {
         }
     }
 
-    /// Test Avx512Token (only runs on machines with AVX-512)
+    /// Test Server64 alias (only runs on machines with AVX-512)
     #[simd_fn]
-    fn avx512_test(token: Avx512Token, data: &[f32; 8]) -> [f32; 8] {
-        // Avx512Token = x86-64-v4, but we'll just use AVX2 ops for simplicity
+    fn server64_test(token: Server64, data: &[f32; 8]) -> [f32; 8] {
+        // Server64 = X64V4Token = AVX-512, but we'll just use AVX2 ops for simplicity
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
         let mut out = [0.0f32; 8];
@@ -361,11 +361,11 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_avx512_token() {
+    fn test_simd_fn_server64_alias() {
         // This test only runs on machines with AVX-512
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Server64::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-            let output = avx512_test(token, &input);
+            let output = server64_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
         }
     }
@@ -453,10 +453,7 @@ mod x86_tests {
         if let Some(token) = Desktop64::summon() {
             let v = SimdVec8::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             let result = v.double(token);
-            assert_eq!(
-                result.as_array(),
-                &[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]
-            );
+            assert_eq!(result.as_array(), &[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
         }
     }
 
@@ -465,10 +462,7 @@ mod x86_tests {
         if let Some(token) = Desktop64::summon() {
             let v = SimdVec8::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             let result = v.square(token);
-            assert_eq!(
-                result.as_array(),
-                &[1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0]
-            );
+            assert_eq!(result.as_array(), &[1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0]);
         }
     }
 

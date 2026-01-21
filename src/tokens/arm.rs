@@ -1,8 +1,8 @@
 //! ARM SIMD capability tokens
 //!
-//! Provides tokens for NEON and crypto extensions.
+//! Provides tokens for NEON, SVE, SVE2, and crypto extensions.
 //!
-//! Token construction uses [`crate::is_aarch64_feature_available!`] which combines
+//! Token construction uses [`crate::is_crate::is_aarch64_feature_available!`] which combines
 //! compile-time and runtime detection. When compiled with a target feature
 //! enabled (e.g., in a `#[multiversed]` function), the runtime check is
 //! completely eliminated.
@@ -12,11 +12,10 @@
 //! ## Token Hierarchy
 //!
 //! - `NeonToken` - baseline, always available
-//! - `NeonAesToken` - aes + sha2 + crc (most ARMv8 CPUs)
-//! - `NeonSha3Token` - sha3 (ARMv8.4+, orthogonal to AES)
-//! - `NeonFp16Token` - fp16 half-precision (Apple M1+, Graviton 2+)
-//!
-//! Note: AES and SHA3 are orthogonal features - having one does not imply the other.
+//! - `ArmCryptoToken` - aes + sha2 + crc (most ARMv8 CPUs)
+//! - `ArmCrypto3Token` - + sha3 (ARMv8.4+, implies ArmCryptoToken)
+//! - `SveToken` - SVE (Graviton 3, A64FX)
+//! - `Sve2Token` - SVE2 (Graviton 4+, implies SveToken)
 
 use super::SimdToken;
 
@@ -55,7 +54,7 @@ impl SimdToken for NeonToken {
 }
 
 // ============================================================================
-// NEON AES Token (aes + sha2 + crc)
+// ARM Crypto Token (aes + sha2 + crc)
 // ============================================================================
 
 /// Proof that ARM crypto extensions are available (AES, SHA2, CRC32).
@@ -66,12 +65,12 @@ impl SimdToken for NeonToken {
 /// - Apple M1/M2/M3
 /// - Snapdragon 8xx series
 #[derive(Clone, Copy, Debug)]
-pub struct NeonAesToken {
+pub struct ArmCryptoToken {
     _private: (),
 }
 
-impl SimdToken for NeonAesToken {
-    const NAME: &'static str = "NEON+AES";
+impl SimdToken for ArmCryptoToken {
+    const NAME: &'static str = "ARM Crypto";
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
@@ -92,7 +91,7 @@ impl SimdToken for NeonAesToken {
     }
 }
 
-impl NeonAesToken {
+impl ArmCryptoToken {
     /// Get a NEON token (crypto implies NEON)
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
@@ -100,32 +99,35 @@ impl NeonAesToken {
     }
 }
 
-
 // ============================================================================
-// NEON SHA3 Token
+// ARM Crypto3 Token (aes + sha2 + sha3 + crc)
 // ============================================================================
 
-/// Proof that ARM SHA3 extensions are available.
+/// Proof that ARMv8.4 crypto extensions are available (AES, SHA2, SHA3, CRC32).
 ///
-/// SHA3 provides hardware-accelerated SHA3 hashing on ARMv8.2+ CPUs:
+/// This covers the extended crypto on ARMv8.4+ CPUs:
 /// - Neoverse N2/V1/V2 (Graviton 2/3/4)
 /// - Apple M1/M2/M3
 /// - Snapdragon 8 Gen 1+
 /// - Cortex-A710/A715/X2/X3
 ///
-/// Note: SHA3 is orthogonal to AES - having one does not imply the other.
-/// Use `NeonAesToken` separately if you need AES.
+/// Note: Some older ARMv8.0-8.2 cores (Cortex-A53/A55, Graviton 1) do NOT have SHA3.
 #[derive(Clone, Copy, Debug)]
-pub struct NeonSha3Token {
+pub struct ArmCrypto3Token {
     _private: (),
 }
 
-impl SimdToken for NeonSha3Token {
-    const NAME: &'static str = "NEON+SHA3";
+impl SimdToken for ArmCrypto3Token {
+    const NAME: &'static str = "ARM Crypto3";
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        if crate::is_aarch64_feature_available!("sha3") {
+        // All four features must be available
+        if crate::is_aarch64_feature_available!("aes")
+            && crate::is_aarch64_feature_available!("sha2")
+            && crate::is_aarch64_feature_available!("sha3")
+            && crate::is_aarch64_feature_available!("crc")
+        {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -138,8 +140,14 @@ impl SimdToken for NeonSha3Token {
     }
 }
 
-impl NeonSha3Token {
-    /// Get a NEON token (SHA3 implies NEON)
+impl ArmCrypto3Token {
+    /// Get an ArmCryptoToken (Crypto3 implies base Crypto)
+    #[inline(always)]
+    pub fn crypto(self) -> ArmCryptoToken {
+        unsafe { ArmCryptoToken::forge_token_dangerously() }
+    }
+
+    /// Get a NEON token (crypto implies NEON)
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
@@ -147,32 +155,21 @@ impl NeonSha3Token {
 }
 
 // ============================================================================
-// NEON FP16 Token
+// SVE Token
 // ============================================================================
 
-/// Proof that ARM FP16 (half-precision floating point) is available.
-///
-/// FP16 provides native half-precision (16-bit) floating point operations,
-/// useful for ML inference and graphics workloads.
-///
-/// Available on modern ARM CPUs:
-/// - Apple M1/M2/M3/M4
-/// - AWS Graviton 2/3/4
-/// - Cortex-A76/A77/A78/X1 and newer
-/// - Snapdragon 8xx series (855+)
-///
-/// Note: Not available on older ARMv8.0-8.1 cores (Cortex-A53/A55/A72, Graviton 1).
+/// Proof that SVE (Scalable Vector Extension) is available.
 #[derive(Clone, Copy, Debug)]
-pub struct NeonFp16Token {
+pub struct SveToken {
     _private: (),
 }
 
-impl SimdToken for NeonFp16Token {
-    const NAME: &'static str = "NEON+FP16";
+impl SimdToken for SveToken {
+    const NAME: &'static str = "SVE";
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        if crate::is_aarch64_feature_available!("fp16") {
+        if crate::is_aarch64_feature_available!("sve") {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -185,8 +182,50 @@ impl SimdToken for NeonFp16Token {
     }
 }
 
-impl NeonFp16Token {
-    /// Get a NEON token (FP16 implies NEON)
+impl SveToken {
+    /// Get a NEON token (SVE implies NEON)
+    #[inline(always)]
+    pub fn neon(self) -> NeonToken {
+        unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+// ============================================================================
+// SVE2 Token
+// ============================================================================
+
+/// Proof that SVE2 is available.
+#[derive(Clone, Copy, Debug)]
+pub struct Sve2Token {
+    _private: (),
+}
+
+impl SimdToken for Sve2Token {
+    const NAME: &'static str = "SVE2";
+
+    #[inline(always)]
+    fn try_new() -> Option<Self> {
+        if crate::is_aarch64_feature_available!("sve2") {
+            Some(unsafe { Self::forge_token_dangerously() })
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Sve2Token {
+    /// Get an SVE token (SVE2 implies SVE)
+    #[inline(always)]
+    pub fn sve(self) -> SveToken {
+        unsafe { SveToken::forge_token_dangerously() }
+    }
+
+    /// Get a NEON token (SVE2 implies NEON)
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
@@ -197,22 +236,17 @@ impl NeonFp16Token {
 // Friendly Aliases
 // ============================================================================
 
-/// The recommended starting point for AArch64 (NEON + FP16).
+/// The baseline for AArch64 (NEON).
 ///
-/// This is an alias for [`NeonFp16Token`], targeting modern ARM CPUs with
-/// half-precision floating point support. This covers:
-/// - Apple M1/M2/M3/M4
-/// - AWS Graviton 2/3/4
-/// - Cortex-A76+ (most phones from 2019+)
+/// This is an alias for [`NeonToken`], covering all 64-bit ARM CPUs. NEON is
+/// always available on AArch64, making this the universal starting point for
+/// ARM code.
 ///
-/// For maximum compatibility on older ARM (Graviton 1, Cortex-A53/A55),
-/// use [`NeonToken`] directly instead.
+/// # Why Arm64?
 ///
-/// # Why Arm64 = FP16?
-///
-/// - **Modern baseline**: FP16 is present on virtually all ARM CPUs from 2019+
-/// - **ML acceleration**: Half-precision is essential for efficient inference
-/// - **Good coverage**: Apple Silicon, Graviton 2+, and recent Cortex-A all have it
+/// - **Universal**: Every AArch64 CPU has NEON - it's the baseline
+/// - **128-bit vectors**: Like SSE2 on x86_64, NEON provides 128-bit SIMD
+/// - **FMA included**: ARM NEON includes fused multiply-add instructions
 ///
 /// # Example
 ///
@@ -221,30 +255,43 @@ impl NeonFp16Token {
 ///
 /// #[arcane]
 /// fn process(token: Arm64, data: &mut [f32; 4]) {
-///     // NEON + FP16 intrinsics safe here
+///     // NEON intrinsics safe here
 /// }
 ///
-/// if let Some(token) = Arm64::summon() {
+/// // Always succeeds on AArch64
+/// if let Some(token) = Arm64::try_new() {
 ///     process(token, &mut data);
-/// } else {
-///     // Fallback for older ARM (Graviton 1, Cortex-A53)
 /// }
 /// ```
-pub type Arm64 = NeonFp16Token;
+pub type Arm64 = NeonToken;
 
 // ============================================================================
 // Capability Marker Trait Implementations
 // ============================================================================
 
-use super::Has128BitSimd;
-use super::{HasArm64, HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
+use super::{Has128BitSimd, HasFma, HasScalableVectors};
+use super::{HasNeon, HasSve, HasSve2};
 
-// NEON provides 128-bit SIMD
-// Note: HasAvx2Fma is x86-specific (requires HasAvx2). ARM has FMA via NEON intrinsics.
+// NEON provides 128-bit SIMD and FMA
 impl Has128BitSimd for NeonToken {}
-impl Has128BitSimd for NeonAesToken {}
-impl Has128BitSimd for NeonSha3Token {}
-impl Has128BitSimd for NeonFp16Token {}
+impl HasFma for NeonToken {} // NEON has fused multiply-add instructions
+
+// Crypto tokens inherit NEON capabilities
+impl Has128BitSimd for ArmCryptoToken {}
+impl HasFma for ArmCryptoToken {}
+
+impl Has128BitSimd for ArmCrypto3Token {}
+impl HasFma for ArmCrypto3Token {}
+
+// SVE provides scalable vectors and inherits NEON capabilities
+impl Has128BitSimd for SveToken {}
+impl HasFma for SveToken {}
+impl HasScalableVectors for SveToken {}
+
+// SVE2 extends SVE
+impl Has128BitSimd for Sve2Token {}
+impl HasFma for Sve2Token {}
+impl HasScalableVectors for Sve2Token {}
 
 // ============================================================================
 // AArch64 Feature Marker Trait Implementations
@@ -252,21 +299,17 @@ impl Has128BitSimd for NeonFp16Token {}
 
 // HasNeon: All aarch64 tokens have NEON
 impl HasNeon for NeonToken {}
-impl HasNeon for NeonAesToken {}
-impl HasNeon for NeonSha3Token {}
-impl HasNeon for NeonFp16Token {}
+impl HasNeon for ArmCryptoToken {}
+impl HasNeon for ArmCrypto3Token {}
+impl HasNeon for SveToken {}
+impl HasNeon for Sve2Token {}
 
-// HasArmAes: AES token only
-impl HasArmAes for NeonAesToken {}
+// HasSve: SVE and above
+impl HasSve for SveToken {}
+impl HasSve for Sve2Token {}
 
-// HasArmSha3: SHA3 token only (orthogonal to AES)
-impl HasArmSha3 for NeonSha3Token {}
-
-// HasArmFp16: FP16 token
-impl HasArmFp16 for NeonFp16Token {}
-
-// HasArm64: FP16 token (the Arm64 baseline)
-impl HasArm64 for NeonFp16Token {}
+// HasSve2: SVE2 only
+impl HasSve2 for Sve2Token {}
 
 // ============================================================================
 // Tests
@@ -279,26 +322,29 @@ mod tests {
     #[test]
     fn test_token_is_zst() {
         assert_eq!(core::mem::size_of::<NeonToken>(), 0);
-        assert_eq!(core::mem::size_of::<NeonAesToken>(), 0);
-        assert_eq!(core::mem::size_of::<NeonSha3Token>(), 0);
-        assert_eq!(core::mem::size_of::<NeonFp16Token>(), 0);
+        assert_eq!(core::mem::size_of::<ArmCryptoToken>(), 0);
+        assert_eq!(core::mem::size_of::<ArmCrypto3Token>(), 0);
+        assert_eq!(core::mem::size_of::<SveToken>(), 0);
+        assert_eq!(core::mem::size_of::<Sve2Token>(), 0);
     }
 
     #[test]
     fn test_token_is_copy() {
         fn assert_copy<T: Copy>() {}
         assert_copy::<NeonToken>();
-        assert_copy::<NeonAesToken>();
-        assert_copy::<NeonSha3Token>();
-        assert_copy::<NeonFp16Token>();
+        assert_copy::<ArmCryptoToken>();
+        assert_copy::<ArmCrypto3Token>();
+        assert_copy::<SveToken>();
+        assert_copy::<Sve2Token>();
     }
 
     #[test]
     fn test_token_names() {
         assert_eq!(NeonToken::NAME, "NEON");
-        assert_eq!(NeonAesToken::NAME, "NEON+AES");
-        assert_eq!(NeonSha3Token::NAME, "NEON+SHA3");
-        assert_eq!(NeonFp16Token::NAME, "NEON+FP16");
+        assert_eq!(ArmCryptoToken::NAME, "ARM Crypto");
+        assert_eq!(ArmCrypto3Token::NAME, "ARM Crypto3");
+        assert_eq!(SveToken::NAME, "SVE");
+        assert_eq!(Sve2Token::NAME, "SVE2");
     }
 
     #[test]
@@ -311,43 +357,63 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn test_token_hierarchy() {
-        // SHA3 and AES are orthogonal - SHA3 does NOT imply AES
-        if NeonSha3Token::try_new().is_some() {
-            assert!(NeonToken::try_new().is_some(), "SHA3 implies NEON");
+        // If SVE2 is available, SVE and NEON must also be available
+        if Sve2Token::try_new().is_some() {
+            assert!(SveToken::try_new().is_some(), "SVE2 implies SVE");
+            assert!(NeonToken::try_new().is_some(), "SVE2 implies NEON");
         }
 
-        // If AES crypto is available, NEON must also be available
-        if NeonAesToken::try_new().is_some() {
-            assert!(NeonToken::try_new().is_some(), "AES crypto implies NEON");
+        // If SVE is available, NEON must also be available
+        if SveToken::try_new().is_some() {
+            assert!(NeonToken::try_new().is_some(), "SVE implies NEON");
         }
 
-        // If FP16 is available, NEON must also be available
-        if NeonFp16Token::try_new().is_some() {
-            assert!(NeonToken::try_new().is_some(), "FP16 implies NEON");
+        // If Crypto3 is available, base Crypto must also be available
+        if ArmCrypto3Token::try_new().is_some() {
+            assert!(
+                ArmCryptoToken::try_new().is_some(),
+                "Crypto3 implies Crypto"
+            );
+            assert!(NeonToken::try_new().is_some(), "Crypto3 implies NEON");
         }
-    }
 
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_sha3_token_extraction() {
-        if let Some(sha3) = NeonSha3Token::try_new() {
-            let _neon = sha3.neon();
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_aes_token_extraction() {
-        if let Some(aes) = NeonAesToken::try_new() {
-            let _neon = aes.neon();
+        // If Crypto is available, NEON must also be available
+        if ArmCryptoToken::try_new().is_some() {
+            assert!(NeonToken::try_new().is_some(), "Crypto implies NEON");
         }
     }
 
     #[test]
     #[cfg(target_arch = "aarch64")]
-    fn test_fp16_token_extraction() {
-        if let Some(fp16) = NeonFp16Token::try_new() {
-            let _neon = fp16.neon();
+    fn test_sve2_token_extraction() {
+        if let Some(sve2) = Sve2Token::try_new() {
+            let _sve = sve2.sve();
+            let _neon = sve2.neon();
+        }
+    }
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_sve_token_extraction() {
+        if let Some(sve) = SveToken::try_new() {
+            let _neon = sve.neon();
+        }
+    }
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_crypto3_token_extraction() {
+        if let Some(crypto3) = ArmCrypto3Token::try_new() {
+            let _crypto = crypto3.crypto();
+            let _neon = crypto3.neon();
+        }
+    }
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_crypto_token_extraction() {
+        if let Some(crypto) = ArmCryptoToken::try_new() {
+            let _neon = crypto.neon();
         }
     }
 }
