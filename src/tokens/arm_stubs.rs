@@ -3,6 +3,7 @@
 //! These types exist so cross-platform code can reference them without cfg guards.
 //! `summon()` always returns `None` on non-ARM.
 
+use super::sealed::Sealed;
 use super::SimdToken;
 use super::{Has128BitSimd, HasFma};
 use super::{HasArmAes, HasArmFp16, HasArmSha3, HasNeon};
@@ -28,6 +29,8 @@ macro_rules! define_arm_stub {
                 Self { _private: () }
             }
         }
+
+        impl Sealed for $name {}
     };
 }
 

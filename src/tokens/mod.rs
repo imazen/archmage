@@ -27,6 +27,20 @@
 //! Note: `try_new()` is unaffected and still performs actual detection. Use `summon()`
 //! for code that should respect the disable flag.
 
+/// Private module for sealing marker traits.
+///
+/// Marker traits like `HasAvx2` are sealed to prevent external implementations.
+/// Only token types defined in this crate can implement them.
+pub(crate) mod sealed {
+    /// Sealed trait - cannot be implemented outside this crate.
+    pub trait Sealed {}
+}
+
+// Token definition macros (must be before platform modules that use them)
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+#[macro_use]
+mod macros;
+
 // Platform-specific implementations
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub mod x86;
@@ -153,35 +167,46 @@ pub trait CompositeToken: SimdToken {
 }
 
 // ============================================================================
-// Capability Marker Traits
+// Capability Marker Traits (Sealed)
 // ============================================================================
 //
 // These traits indicate what capabilities a token provides, enabling generic
 // code to constrain which tokens are accepted. They don't provide operations
 // directly - use raw intrinsics via `#[simd_fn]` for that.
+//
+// All marker traits are SEALED - they cannot be implemented outside this crate.
+// This ensures that only archmage-defined tokens can claim CPU feature support.
 
 /// Marker trait for tokens that provide 128-bit SIMD.
 ///
 /// Implemented by: `Sse2Token`, `NeonToken`, `Simd128Token`
-pub trait Has128BitSimd: SimdToken {}
+///
+/// This trait is sealed and cannot be implemented outside this crate.
+pub trait Has128BitSimd: SimdToken + sealed::Sealed {}
 
 /// Marker trait for tokens that provide 256-bit SIMD.
 ///
 /// Implemented by: `Avx2Token`, `X64V3Token`, etc.
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait Has256BitSimd: Has128BitSimd {}
 
 /// Marker trait for tokens that provide 512-bit SIMD.
 ///
 /// Implemented by: `Avx512fToken`, `X64V4Token`
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait Has512BitSimd: Has256BitSimd {}
 
 /// Marker trait for tokens that provide FMA (fused multiply-add).
 ///
 /// Implemented by: `FmaToken`, `Avx2FmaToken`, `X64V3Token`, `NeonToken`
-pub trait HasFma: SimdToken {}
+///
+/// This trait is sealed and cannot be implemented outside this crate.
+pub trait HasFma: SimdToken + sealed::Sealed {}
 
 // ============================================================================
-// x86 Feature Marker Traits
+// x86 Feature Marker Traits (Sealed)
 // ============================================================================
 //
 // These form a hierarchy matching the x86 feature dependencies.
@@ -189,73 +214,107 @@ pub trait HasFma: SimdToken {}
 // implies a specific feature.
 //
 // Available on all architectures for cross-platform code.
+// All traits are sealed - cannot be implemented outside this crate.
 
 /// Marker trait for tokens that provide SSE.
-pub trait HasSse: SimdToken {}
+///
+/// This trait is sealed and cannot be implemented outside this crate.
+pub trait HasSse: SimdToken + sealed::Sealed {}
 
 /// Marker trait for tokens that provide SSE2.
 ///
 /// SSE2 is baseline on x86_64.
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasSse2: HasSse {}
 
 /// Marker trait for tokens that provide SSE4.1.
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasSse41: HasSse2 {}
 
 /// Marker trait for tokens that provide SSE4.2.
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasSse42: HasSse41 {}
 
 /// Marker trait for tokens that provide AVX.
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx: HasSse42 {}
 
 /// Marker trait for tokens that provide AVX2.
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx2: HasAvx {}
 
 /// Marker trait for tokens that provide AVX-512F (Foundation).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx512f: HasAvx2 {}
 
 /// Marker trait for tokens that provide AVX-512VL (Vector Length extensions).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx512vl: HasAvx512f {}
 
 /// Marker trait for tokens that provide AVX-512BW (Byte/Word).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx512bw: HasAvx512f {}
 
 /// Marker trait for tokens that provide AVX-512CD (Conflict Detection).
 ///
 /// AVX-512CD provides conflict detection for scatter operations.
 /// Present on all practical AVX-512 CPUs (Skylake-X 2017+, Zen 4+).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx512cd: HasAvx512f {}
 
 /// Marker trait for tokens that provide AVX-512DQ (Doubleword/Quadword).
 ///
 /// AVX-512DQ provides float bitwise ops (`_mm512_or_ps`, etc.) and conversions.
 /// Present on all practical AVX-512 CPUs (Skylake-X 2017+, Zen 4+).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx512dq: HasAvx512f {}
 
 /// Marker trait for tokens that provide AVX-512VBMI2.
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasAvx512vbmi2: HasAvx512bw {}
 
 // ============================================================================
-// AArch64 Feature Marker Traits
+// AArch64 Feature Marker Traits (Sealed)
 // ============================================================================
 //
 // Available on all architectures for cross-platform code.
+// All traits are sealed - cannot be implemented outside this crate.
 
 /// Marker trait for tokens that provide NEON.
 ///
 /// NEON is baseline on AArch64.
-pub trait HasNeon: SimdToken {}
+///
+/// This trait is sealed and cannot be implemented outside this crate.
+pub trait HasNeon: SimdToken + sealed::Sealed {}
 
 /// Marker trait for tokens that provide ARM AES crypto extensions.
 ///
 /// AES + SHA2 + CRC - available on most ARMv8 CPUs (Cortex-A53+, Graviton, Apple Silicon).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasArmAes: HasNeon {}
 
 /// Marker trait for tokens that provide ARM SHA3 crypto extensions.
 ///
 /// SHA3 - available on ARMv8.4+ CPUs (Cortex-A76+, Graviton 2+, Apple Silicon).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasArmSha3: HasArmAes {}
 
 /// Marker trait for tokens that provide ARM FP16 (half-precision floating point).
 ///
 /// FP16 - available on modern ARM (Apple M1+, Graviton 2+, Cortex-A76+).
+///
+/// This trait is sealed and cannot be implemented outside this crate.
 pub trait HasArmFp16: HasNeon {}

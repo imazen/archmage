@@ -3,6 +3,7 @@
 //! These types exist so cross-platform code can reference them without cfg guards.
 //! `summon()` always returns `None` on non-x86.
 
+use super::sealed::Sealed;
 use super::{CompositeToken, SimdToken};
 use super::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma};
 use super::{
@@ -280,3 +281,24 @@ impl HasAvx512vbmi2 for Avx512Vbmi2Token {}
 impl HasAvx512vbmi2 for Avx512Vbmi2VlToken {}
 impl HasAvx512vbmi2 for Avx512ModernToken {}
 impl HasAvx512vbmi2 for Avx512Fp16Token {}
+
+// Sealed trait implementations
+impl Sealed for SseToken {}
+impl Sealed for Sse2Token {}
+impl Sealed for Sse41Token {}
+impl Sealed for Sse42Token {}
+impl Sealed for AvxToken {}
+impl Sealed for Avx2Token {}
+impl Sealed for FmaToken {}
+impl Sealed for Avx2FmaToken {}
+impl Sealed for Avx512fToken {}
+impl Sealed for Avx512bwToken {}
+impl Sealed for Avx512fVlToken {}
+impl Sealed for Avx512bwVlToken {}
+impl Sealed for Avx512Vbmi2Token {}
+impl Sealed for Avx512Vbmi2VlToken {}
+impl Sealed for Avx512ModernToken {}
+impl Sealed for Avx512Fp16Token {}
+impl Sealed for X64V2Token {}
+impl Sealed for X64V3Token {}
+impl Sealed for X64V4Token {}

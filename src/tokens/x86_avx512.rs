@@ -269,6 +269,13 @@ impl Avx512Vbmi2VlToken {
 // AVX-512 Modern Token (Ice Lake / Zen 4)
 // ============================================================================
 
+// Import traits needed for the macro
+use super::{
+    sealed::Sealed, Has128BitSimd, Has256BitSimd, Has512BitSimd, HasAvx, HasAvx2, HasAvx512bw,
+    HasAvx512cd, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasFma, HasSse, HasSse2,
+    HasSse41, HasSse42,
+};
+
 /// Proof that modern AVX-512 features are available (Ice Lake / Zen 4 level).
 ///
 /// This is the "modern" AVX-512 baseline covering Ice Lake (2019+) and Zen 4+ (2022+):
@@ -289,6 +296,18 @@ impl Avx512Vbmi2VlToken {
 /// - Intel Ice Lake (2019+), Tiger Lake, Alder Lake S (different from P/E hybrid)
 /// - Intel Sapphire Rapids (2023+), Emerald Rapids
 /// - AMD Zen 4+ (2022+)
+///
+/// # Feature-Trait Correspondence
+///
+/// The following traits are implemented because their features are checked:
+/// - `HasAvx512f` ← `"avx512f"`
+/// - `HasAvx512cd` ← `"avx512cd"`
+/// - `HasAvx512vl` ← `"avx512vl"`
+/// - `HasAvx512dq` ← `"avx512dq"`
+/// - `HasAvx512bw` ← `"avx512bw"`
+/// - `HasAvx512vbmi2` ← `"avx512vbmi2"`
+///
+/// Implied traits (from hierarchy): `HasAvx2`, `HasAvx`, `HasSse*`, `HasFma`, `Has*BitSimd`
 #[derive(Clone, Copy, Debug)]
 pub struct Avx512ModernToken {
     _private: (),
@@ -326,6 +345,25 @@ impl SimdToken for Avx512ModernToken {
         Self { _private: () }
     }
 }
+
+// Trait implementations - generated alongside token definition for consistency
+impl Sealed for Avx512ModernToken {}
+impl HasAvx512f for Avx512ModernToken {}
+impl HasAvx512cd for Avx512ModernToken {}
+impl HasAvx512vl for Avx512ModernToken {}
+impl HasAvx512dq for Avx512ModernToken {}
+impl HasAvx512bw for Avx512ModernToken {}
+impl HasAvx512vbmi2 for Avx512ModernToken {}
+impl HasFma for Avx512ModernToken {}
+impl HasAvx2 for Avx512ModernToken {}
+impl HasAvx for Avx512ModernToken {}
+impl HasSse42 for Avx512ModernToken {}
+impl HasSse41 for Avx512ModernToken {}
+impl HasSse2 for Avx512ModernToken {}
+impl HasSse for Avx512ModernToken {}
+impl Has512BitSimd for Avx512ModernToken {}
+impl Has256BitSimd for Avx512ModernToken {}
+impl Has128BitSimd for Avx512ModernToken {}
 
 impl Avx512ModernToken {
     /// Get an AVX-512F token
@@ -561,3 +599,17 @@ impl X64V4Token {
 /// }
 /// ```
 pub type Server64 = X64V4Token;
+
+// ============================================================================
+// Sealed Trait Implementations
+// ============================================================================
+
+impl Sealed for Avx512fToken {}
+impl Sealed for Avx512bwToken {}
+impl Sealed for Avx512fVlToken {}
+impl Sealed for Avx512bwVlToken {}
+impl Sealed for Avx512Vbmi2Token {}
+impl Sealed for Avx512Vbmi2VlToken {}
+// Avx512ModernToken Sealed impl is with its definition above
+impl Sealed for Avx512Fp16Token {}
+impl Sealed for X64V4Token {}
