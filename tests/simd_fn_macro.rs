@@ -453,7 +453,10 @@ mod x86_tests {
         if let Some(token) = Desktop64::summon() {
             let v = SimdVec8::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             let result = v.double(token);
-            assert_eq!(result.as_array(), &[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+            assert_eq!(
+                result.as_array(),
+                &[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]
+            );
         }
     }
 
@@ -462,7 +465,10 @@ mod x86_tests {
         if let Some(token) = Desktop64::summon() {
             let v = SimdVec8::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             let result = v.square(token);
-            assert_eq!(result.as_array(), &[1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0]);
+            assert_eq!(
+                result.as_array(),
+                &[1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0]
+            );
         }
     }
 

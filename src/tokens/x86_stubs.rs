@@ -76,10 +76,9 @@ impl CompositeToken for Avx2FmaToken {
     type Components = (Avx2Token, FmaToken);
 
     fn components(&self) -> Self::Components {
-        (
-            unsafe { Avx2Token::forge_token_dangerously() },
-            unsafe { FmaToken::forge_token_dangerously() },
-        )
+        (unsafe { Avx2Token::forge_token_dangerously() }, unsafe {
+            FmaToken::forge_token_dangerously()
+        })
     }
 }
 

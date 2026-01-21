@@ -122,12 +122,31 @@ pub use tokens::{HasNeon, HasSve, HasSve2};
 
 // All tokens available on all architectures (summon() returns None on wrong arch)
 pub use tokens::{
-    // x86 tokens
-    Avx2FmaToken, Avx2Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken, Avx512bwToken, Avx512bwVlToken,
-    Avx512fToken, Avx512fVlToken, AvxToken, Desktop64, FmaToken, Server64, Sse2Token, Sse41Token,
-    Sse42Token, SseToken, X64V2Token, X64V3Token, X64V4Token,
     // ARM tokens
-    Arm64, NeonToken, Sve2Token, SveToken,
+    Arm64,
+    // x86 tokens
+    Avx2FmaToken,
+    Avx2Token,
+    Avx512Vbmi2Token,
+    Avx512Vbmi2VlToken,
+    Avx512bwToken,
+    Avx512bwVlToken,
+    Avx512fToken,
+    Avx512fVlToken,
+    AvxToken,
+    Desktop64,
+    FmaToken,
+    NeonToken,
+    Server64,
     // WASM tokens
     Simd128Token,
+    Sse2Token,
+    Sse41Token,
+    Sse42Token,
+    SseToken,
+    Sve2Token,
+    SveToken,
+    X64V2Token,
+    X64V3Token,
+    X64V4Token,
 };

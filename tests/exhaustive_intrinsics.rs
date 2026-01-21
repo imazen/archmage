@@ -61,10 +61,7 @@ fn test_summon_behavior() {
     {
         // SSE2 is baseline on x86_64, so Sse2Token should always succeed
         use archmage::Sse2Token;
-        assert!(
-            Sse2Token::summon().is_some(),
-            "SSE2 is baseline on x86_64"
-        );
+        assert!(Sse2Token::summon().is_some(), "SSE2 is baseline on x86_64");
 
         // ARM and WASM tokens should return None on x86
         assert!(NeonToken::summon().is_none(), "NEON unavailable on x86");
@@ -78,10 +75,7 @@ fn test_summon_behavior() {
     // On aarch64, NEON is always available
     #[cfg(target_arch = "aarch64")]
     {
-        assert!(
-            NeonToken::summon().is_some(),
-            "NEON is baseline on AArch64"
-        );
+        assert!(NeonToken::summon().is_some(), "NEON is baseline on AArch64");
         assert!(Arm64::summon().is_some(), "Arm64 is baseline on AArch64");
 
         // x86 and WASM tokens should return None on ARM
@@ -113,7 +107,7 @@ fn test_summon_behavior() {
 #[test]
 #[cfg(feature = "disable-archmage")]
 fn test_disable_archmage_feature() {
-    use archmage::{Desktop64, NeonToken, Server64, Simd128Token, Sse2Token, SimdToken};
+    use archmage::{Desktop64, NeonToken, Server64, Simd128Token, SimdToken, Sse2Token};
 
     // With disable-archmage, ALL tokens should return None from summon()
     assert!(
@@ -224,8 +218,8 @@ mod x86_mem_tests {
     /// Exhaustive test of all SSE mem functions.
     #[test]
     fn test_sse_mem_exhaustive() {
-        use archmage::mem::sse;
         use archmage::SseToken;
+        use archmage::mem::sse;
 
         let Some(token) = SseToken::summon() else {
             eprintln!("SSE not available, skipping test");
@@ -273,8 +267,8 @@ mod x86_mem_tests {
     /// Exhaustive test of all SSE2 mem functions.
     #[test]
     fn test_sse2_mem_exhaustive() {
-        use archmage::mem::sse2;
         use archmage::Sse2Token;
+        use archmage::mem::sse2;
 
         let Some(token) = Sse2Token::summon() else {
             eprintln!("SSE2 not available, skipping test");
@@ -386,8 +380,8 @@ mod x86_mem_tests {
     /// Exhaustive test of all AVX mem functions.
     #[test]
     fn test_avx_mem_exhaustive() {
-        use archmage::mem::avx;
         use archmage::AvxToken;
+        use archmage::mem::avx;
 
         let Some(token) = AvxToken::summon() else {
             eprintln!("AVX not available, skipping test");
@@ -518,8 +512,8 @@ mod x86_mem_tests {
     /// Test AVX-512F mem functions (if available).
     #[test]
     fn test_avx512f_mem_sampling() {
-        use archmage::mem::avx512f;
         use archmage::Avx512fToken;
+        use archmage::mem::avx512f;
 
         let Some(token) = Avx512fToken::summon() else {
             eprintln!("AVX-512F not available, skipping test");
@@ -576,7 +570,7 @@ mod x86_mem_tests {
     /// Exhaustive test of core::arch intrinsics via #[arcane].
     #[test]
     fn test_arcane_core_arch_intrinsics() {
-        use archmage::{arcane, Desktop64, HasAvx2, HasFma, SimdToken};
+        use archmage::{Desktop64, HasAvx2, HasFma, SimdToken, arcane};
 
         // Skip if Desktop64 not available
         let Some(token) = Desktop64::summon() else {
@@ -753,6 +747,7 @@ mod x86_mem_tests {
 // =============================================================================
 
 #[cfg(target_arch = "aarch64")]
+#[cfg(not(feature = "disable-archmage"))]
 mod aarch64_mem_tests {
     use archmage::SimdToken;
     use core::arch::aarch64::*;
@@ -761,8 +756,8 @@ mod aarch64_mem_tests {
     /// Exhaustive test of NEON load functions.
     #[test]
     fn test_neon_load_exhaustive() {
-        use archmage::mem::neon;
         use archmage::NeonToken;
+        use archmage::mem::neon;
 
         let token = NeonToken::summon().expect("NEON should be available on AArch64");
 
@@ -980,7 +975,7 @@ mod aarch64_mem_tests {
     /// Test NEON intrinsics via #[arcane].
     #[test]
     fn test_arcane_neon_intrinsics() {
-        use archmage::{arcane, HasNeon, NeonToken, SimdToken};
+        use archmage::{HasNeon, NeonToken, SimdToken, arcane};
 
         let token = NeonToken::summon().expect("NEON should be available");
 

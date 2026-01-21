@@ -424,7 +424,9 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
     // Transform output and body to replace Self with concrete type if needed
     let (inner_output, inner_body): (ReturnType, syn::Block) =
         if let Some(ref self_ty) = args.self_type {
-            let mut replacer = ReplaceSelf { replacement: self_ty };
+            let mut replacer = ReplaceSelf {
+                replacement: self_ty,
+            };
             let transformed_output = replacer.fold_return_type(output.clone());
             let transformed_body = replacer.fold_block((**body).clone());
             (transformed_output, transformed_body)
