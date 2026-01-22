@@ -245,9 +245,46 @@ let result = exp2(x * LOG2_E);
 - `_mm256_set_ps` - scalar gather (manual)
 - Or `_mm256_i32gather_epi32` - hardware gather (if available)
 
+## Comparison with sleef-rs
+
+Benchmarked using `examples/sleef_comparison.rs` (requires nightly for `portable_simd`).
+
+### Performance (AVX2, 32K elements, 1000 iterations)
+
+| Function | scalar std | sleef u10 | archmage | Notes |
+|----------|------------|-----------|----------|-------|
+| exp2 | 67 µs (491 M/s) | 87 µs (377 M/s) | 261 µs (125 M/s) | archmage 3x slower than sleef |
+| log2 | 79 µs (415 M/s) | 107 µs (306 M/s) | 298 µs (110 M/s) | archmage 2.8x slower than sleef |
+| pow(x, 2.4) | 115 µs (285 M/s) | 276 µs (119 M/s) | 546 µs (60 M/s) | archmage 2x slower than sleef |
+
+### Accuracy (vs scalar std)
+
+| Function | sleef u10 max err | archmage max err | Difference |
+|----------|-------------------|------------------|------------|
+| exp2 | 1.19e-7 | 5.56e-3 | sleef ~47000x more accurate |
+| log2 | 1.14e-7 | 9.57e-4 | sleef ~8400x more accurate |
+| pow(x, 2.4) | 1.13e-7 | 5.56e-3 | sleef ~49000x more accurate |
+
+### Analysis
+
+**Current archmage implementation issues:**
+1. **Slower than scalar** - SIMD overhead not amortized; benchmark shows 2-4x slower than scalar std
+2. **Low accuracy** - Using degree-3/4 polynomials vs sleef's higher-degree approximations
+3. **No LUT optimization** - sleef uses lookup tables for better accuracy/speed tradeoff
+
+**sleef advantages:**
+- Higher-degree polynomials for accuracy
+- Optimized table-based implementations
+- Uses `portable_simd` abstraction layer
+
+**Recommendations:**
+1. For production use requiring accuracy, consider sleef-rs dependency
+2. Current archmage transcendentals suitable only for low-precision use cases (8-bit color)
+3. Future work: port sleef algorithms or add LUT-based implementations
+
 ## References
 
 - butteraugli (libjxl): fast_log2f rational polynomial
 - linear-srgb crate: LUT-based exp2 with polynomial refinement
 - wide crate: MIT-licensed polynomial implementations
-- Sleef library: high-precision vectorized math functions
+- [sleef-rs](https://github.com/burrbull/sleef-rs): high-precision vectorized math functions

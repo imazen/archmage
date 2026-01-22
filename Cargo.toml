@@ -40,6 +40,7 @@ safe_unaligned_simd = { version = "0.2.3", optional = true, features = ["avx512"
 criterion = { version = "0.5", features = ["html_reports"] }
 trybuild = "1.0"
 safe_unaligned_simd = { version = "0.2.3", features = ["avx512"] }
+sleef = "0.3"
 
 [[bench]]
 name = "tokens"
