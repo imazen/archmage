@@ -4,7 +4,7 @@
 //! across their valid input ranges, including edge cases.
 
 use archmage::simd::f32x8;
-use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::{Avx2FmaToken, SimdToken, arcane};
 
 // ============================================================================
 // Test wrappers using #[arcane]
@@ -290,9 +290,7 @@ fn test_pow_midp_brute_force() {
     // Test pow(x, 2.4) - sRGB gamma
     let mut stats = AccuracyStats::new("pow_midp(x, 2.4)");
 
-    let test_values: Vec<f32> = (1..1_000_000)
-        .map(|i| i as f32 / 1_000_000.0)
-        .collect();
+    let test_values: Vec<f32> = (1..1_000_000).map(|i| i as f32 / 1_000_000.0).collect();
 
     for chunk in test_values.chunks(8) {
         if chunk.len() < 8 {
@@ -555,9 +553,7 @@ fn test_lowp_functions_brute_force() {
 
     // pow_lowp
     let mut stats = AccuracyStats::new("pow_lowp(x, 2.4)");
-    let test_values: Vec<f32> = (1..100_000)
-        .map(|i| i as f32 / 100_000.0)
-        .collect();
+    let test_values: Vec<f32> = (1..100_000).map(|i| i as f32 / 100_000.0).collect();
 
     for chunk in test_values.chunks(8) {
         if chunk.len() < 8 {
