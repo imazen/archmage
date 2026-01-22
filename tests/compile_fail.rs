@@ -34,8 +34,10 @@ fn ui_tests() {
 }
 
 #[test]
-#[cfg(feature = "safe_unaligned_simd")]
+#[cfg(all(feature = "safe_unaligned_simd", feature = "avx512"))]
 fn safe_simd_type_safety() {
+    // Requires avx512 feature because the error message lists available tokens,
+    // which varies based on enabled features
     if is_ci() {
         return;
     }

@@ -151,6 +151,63 @@ The trait hierarchy means broader tokens satisfy narrower bounds:
 - `Desktop64` implements `HasAvx2`, `HasFma`, `HasSse42`, etc.
 - `Server64` implements everything `Desktop64` does, plus `HasAvx512f`, etc.
 
+## Zero-Overhead Inlining
+
+Everything inlines completely. No function call overhead, no abstraction cost.
+
+### Rust 1.85+ Contextual Safety
+
+Inside `#[arcane]` functions, the generated inner function has `#[target_feature]`. This enables **contextual safety** for intrinsics:
+
+```rust
+#[arcane]
+fn example(token: impl HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    // Value intrinsics are SAFE - no unsafe needed!
+    let va = _mm256_loadu_ps(a.as_ptr());  // Still needs unsafe (raw pointer)
+    let sum = _mm256_add_ps(va, va);       // SAFE! Value-based intrinsic
+    let prod = _mm256_mul_ps(sum, sum);    // SAFE!
+    let sqrt = _mm256_sqrt_ps(prod);       // SAFE!
+    // ...
+}
+```
+
+**What's safe inside `#[arcane]`:**
+- All value-based intrinsics: arithmetic, shuffles, comparisons, bitwise ops
+- Calls to `safe_unaligned_simd` functions (they have matching `#[target_feature]`)
+- Calls to `archmage::mem` functions
+
+**What still needs `unsafe`:**
+- Raw pointer loads/stores (`_mm256_loadu_ps(ptr)`) - use `archmage::mem` instead
+
+### `safe_unaligned_simd` Inlines Completely
+
+The `archmage::mem` wrappers call `safe_unaligned_simd` functions, which have their own `#[target_feature]`. When called from inside `#[arcane]`, these are **safe calls** (same target features), and the optimizer inlines everything:
+
+```rust
+#[arcane]
+pub fn process(_token: impl Has256BitSimd, data: &mut [[f32; 8]]) {
+    for chunk in data.iter_mut() {
+        let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(chunk);  // Safe call!
+        let r = _mm256_mul_ps(v, v);
+        // ...
+    }
+}
+```
+
+Compiles to (with `-C opt-level=3`):
+
+```asm
+vmovups   (%rdi), %ymm0       # load from chunk[0]
+vmulps    %ymm0, %ymm0, %ymm0 # square
+vmovups   %ymm0, (%rdi)       # store
+vmovups   32(%rdi), %ymm0     # load from chunk[1] (loop unrolled!)
+vmulps    %ymm0, %ymm0, %ymm0
+vmovups   %ymm0, 32(%rdi)
+# ... loop continues unrolled
+```
+
+**Zero function calls.** The `safe_unaligned_simd` wrapper, the `archmage::mem` wrapper, and the loop body all collapse into straight-line SIMD instructions.
+
 ## Choosing a Token
 
 **Start with `Desktop64`** - it's the sweet spot for modern x86-64:
