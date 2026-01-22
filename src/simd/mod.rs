@@ -1083,6 +1083,104 @@ pub fn interleave(self, other: Self) -> (Self, Self) {
     (self.interleave_lo(other), self.interleave_hi(other))
 }
 
+// ========== 4-Channel Interleave/Deinterleave ==========
+
+/// Deinterleave 4 RGBA pixels from AoS to SoA format.
+///
+/// Input: 4 vectors where each contains one pixel `[R, G, B, A]`.
+/// Output: 4 vectors where each contains one channel across all pixels.
+///
+/// ```text
+/// Input:  rgba[0] = [R0, G0, B0, A0]  (pixel 0)
+///         rgba[1] = [R1, G1, B1, A1]  (pixel 1)
+///         rgba[2] = [R2, G2, B2, A2]  (pixel 2)
+///         rgba[3] = [R3, G3, B3, A3]  (pixel 3)
+///
+/// Output: [0] = [R0, R1, R2, R3]  (red channel)
+///         [1] = [G0, G1, G2, G3]  (green channel)
+///         [2] = [B0, B1, B2, B3]  (blue channel)
+///         [3] = [A0, A1, A2, A3]  (alpha channel)
+/// ```
+#[inline]
+pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
+    Self::transpose_4x4_copy(rgba)
+}
+
+/// Interleave 4 channels from SoA to AoS format.
+///
+/// Input: 4 vectors where each contains one channel across pixels.
+/// Output: 4 vectors where each contains one complete RGBA pixel.
+///
+/// This is the inverse of `deinterleave_4ch`.
+#[inline]
+pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
+    Self::transpose_4x4_copy(channels)
+}
+
+/// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
+///
+/// Input: 16 bytes = 4 RGBA pixels in interleaved format.
+/// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
+#[inline]
+pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+    unsafe {
+        let v = _mm_loadu_si128(rgba.as_ptr() as *const __m128i);
+
+        // Shuffle masks to gather each channel
+        // R: bytes 0, 4, 8, 12 → positions 0, 1, 2, 3
+        let r_mask = _mm_setr_epi8(0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1);
+        // G: bytes 1, 5, 9, 13
+        let g_mask = _mm_setr_epi8(1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1);
+        // B: bytes 2, 6, 10, 14
+        let b_mask = _mm_setr_epi8(2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1);
+        // A: bytes 3, 7, 11, 15
+        let a_mask = _mm_setr_epi8(3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1);
+
+        // Shuffle and convert to f32
+        let r_i32 = _mm_shuffle_epi8(v, r_mask);
+        let g_i32 = _mm_shuffle_epi8(v, g_mask);
+        let b_i32 = _mm_shuffle_epi8(v, b_mask);
+        let a_i32 = _mm_shuffle_epi8(v, a_mask);
+
+        (
+            Self(_mm_cvtepi32_ps(r_i32)),
+            Self(_mm_cvtepi32_ps(g_i32)),
+            Self(_mm_cvtepi32_ps(b_i32)),
+            Self(_mm_cvtepi32_ps(a_i32)),
+        )
+    }
+}
+
+/// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
+///
+/// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
+/// Output: 16 bytes = 4 RGBA pixels in interleaved format.
+#[inline]
+pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
+    unsafe {
+        // Convert to i32 with rounding
+        let ri = _mm_cvtps_epi32(r.0);
+        let gi = _mm_cvtps_epi32(g.0);
+        let bi = _mm_cvtps_epi32(b.0);
+        let ai = _mm_cvtps_epi32(a.0);
+
+        // Pack i32 to i16 (saturating)
+        let rg = _mm_packs_epi32(ri, gi); // [R0,R1,R2,R3,G0,G1,G2,G3]
+        let ba = _mm_packs_epi32(bi, ai); // [B0,B1,B2,B3,A0,A1,A2,A3]
+
+        // Pack i16 to u8 (saturating)
+        let rgba_packed = _mm_packus_epi16(rg, ba); // [R0-3,G0-3,B0-3,A0-3]
+
+        // Shuffle to interleaved RGBA format
+        let shuffle = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+        let result = _mm_shuffle_epi8(rgba_packed, shuffle);
+
+        let mut out = [0u8; 16];
+        _mm_storeu_si128(out.as_mut_ptr() as *mut __m128i, result);
+        out
+    }
+}
+
 // ========== Matrix Transpose ==========
 
 /// Transpose a 4x4 matrix represented as 4 row vectors.
@@ -4607,6 +4705,188 @@ pub fn interleave_hi(self, other: Self) -> Self {
 #[inline(always)]
 pub fn interleave(self, other: Self) -> (Self, Self) {
     (self.interleave_lo(other), self.interleave_hi(other))
+}
+
+// ========== 4-Channel Interleave/Deinterleave ==========
+
+/// Deinterleave 8 RGBA pixels from AoS to SoA format.
+///
+/// Input: 4 f32x8 vectors, where pairs of adjacent elements form RGBA pixels.
+/// Each input vector contains 2 complete RGBA pixels:
+/// - `rgba[0]` = [R0, G0, B0, A0, R1, G1, B1, A1]
+/// - `rgba[1]` = [R2, G2, B2, A2, R3, G3, B3, A3]
+/// - `rgba[2]` = [R4, G4, B4, A4, R5, G5, B5, A5]
+/// - `rgba[3]` = [R6, G6, B6, A6, R7, G7, B7, A7]
+///
+/// Output: 4 f32x8 vectors, one per channel:
+/// - `[0]` = [R0, R1, R2, R3, R4, R5, R6, R7]
+/// - `[1]` = [G0, G1, G2, G3, G4, G5, G6, G7]
+/// - `[2]` = [B0, B1, B2, B3, B4, B5, B6, B7]
+/// - `[3]` = [A0, A1, A2, A3, A4, A5, A6, A7]
+#[inline]
+pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
+    unsafe {
+        // Stage 1: Unpack pairs
+        // unpacklo: [a0,b0,a1,b1, a4,b4,a5,b5]
+        // unpackhi: [a2,b2,a3,b3, a6,b6,a7,b7]
+        let rg_lo = _mm256_unpacklo_ps(rgba[0].0, rgba[1].0); // [R0,R2,G0,G2, R1,R3,G1,G3]
+        let rg_hi = _mm256_unpackhi_ps(rgba[0].0, rgba[1].0); // [B0,B2,A0,A2, B1,B3,A1,A3]
+        let rg_lo2 = _mm256_unpacklo_ps(rgba[2].0, rgba[3].0); // [R4,R6,G4,G6, R5,R7,G5,G7]
+        let rg_hi2 = _mm256_unpackhi_ps(rgba[2].0, rgba[3].0); // [B4,B6,A4,A6, B5,B7,A5,A7]
+
+        // Stage 2: Shuffle to separate R,G and B,A
+        let r_g_01 = _mm256_unpacklo_ps(rg_lo, rg_lo2);   // [R0,R4,R2,R6, R1,R5,R3,R7]
+        let r_g_23 = _mm256_unpackhi_ps(rg_lo, rg_lo2);   // [G0,G4,G2,G6, G1,G5,G3,G7]
+        let b_a_01 = _mm256_unpacklo_ps(rg_hi, rg_hi2);   // [B0,B4,B2,B6, B1,B5,B3,B7]
+        let b_a_23 = _mm256_unpackhi_ps(rg_hi, rg_hi2);   // [A0,A4,A2,A6, A1,A5,A3,A7]
+
+        // Stage 3: Final permute to get contiguous channels
+        // Need to reorder: [0,4,2,6,1,5,3,7] → [0,1,2,3,4,5,6,7]
+        let perm = _mm256_setr_epi32(0, 4, 2, 6, 1, 5, 3, 7);
+        let r = _mm256_permutevar8x32_ps(r_g_01, perm);
+        let g = _mm256_permutevar8x32_ps(r_g_23, perm);
+        let b = _mm256_permutevar8x32_ps(b_a_01, perm);
+        let a = _mm256_permutevar8x32_ps(b_a_23, perm);
+
+        [Self(r), Self(g), Self(b), Self(a)]
+    }
+}
+
+/// Interleave 4 channels from SoA to AoS format.
+///
+/// Input: 4 f32x8 vectors, one per channel (R, G, B, A).
+/// Output: 4 f32x8 vectors in interleaved AoS format.
+///
+/// This is the inverse of `deinterleave_4ch`.
+#[inline]
+pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
+    unsafe {
+        let r = channels[0].0;
+        let g = channels[1].0;
+        let b = channels[2].0;
+        let a = channels[3].0;
+
+        // Interleave R with G: [R0,G0,R1,G1, R4,G4,R5,G5]
+        let rg_lo = _mm256_unpacklo_ps(r, g);
+        // [R2,G2,R3,G3, R6,G6,R7,G7]
+        let rg_hi = _mm256_unpackhi_ps(r, g);
+
+        // Interleave B with A
+        let ba_lo = _mm256_unpacklo_ps(b, a);
+        let ba_hi = _mm256_unpackhi_ps(b, a);
+
+        // Combine RG with BA: [R0,G0,B0,A0, R4,G4,B4,A4]
+        let rgba_0 = _mm256_shuffle_ps::<0x44>(rg_lo, ba_lo);
+        let rgba_1 = _mm256_shuffle_ps::<0xEE>(rg_lo, ba_lo);
+        let rgba_2 = _mm256_shuffle_ps::<0x44>(rg_hi, ba_hi);
+        let rgba_3 = _mm256_shuffle_ps::<0xEE>(rg_hi, ba_hi);
+
+        // Permute to get final layout
+        let out0 = _mm256_permute2f128_ps::<0x20>(rgba_0, rgba_1);
+        let out1 = _mm256_permute2f128_ps::<0x20>(rgba_2, rgba_3);
+        let out2 = _mm256_permute2f128_ps::<0x31>(rgba_0, rgba_1);
+        let out3 = _mm256_permute2f128_ps::<0x31>(rgba_2, rgba_3);
+
+        [Self(out0), Self(out1), Self(out2), Self(out3)]
+    }
+}
+
+/// Load 8 RGBA u8 pixels and deinterleave to 4 f32x8 channel vectors.
+///
+/// Input: 32 bytes = 8 RGBA pixels in interleaved format.
+/// Output: (R, G, B, A) where each is f32x8 with values in [0.0, 255.0].
+#[inline]
+pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
+    unsafe {
+        // Load 32 bytes
+        let v = _mm256_loadu_si256(rgba.as_ptr() as *const __m256i);
+
+        // Use vpshufb to gather channels within each 128-bit lane
+        // Lane 0: pixels 0-3, Lane 1: pixels 4-7
+        let r_mask = _mm256_setr_epi8(
+            0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+        );
+        let g_mask = _mm256_setr_epi8(
+            1, 5, 9, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            1, 5, 9, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+        );
+        let b_mask = _mm256_setr_epi8(
+            2, 6, 10, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            2, 6, 10, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+        );
+        let a_mask = _mm256_setr_epi8(
+            3, 7, 11, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            3, 7, 11, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+        );
+
+        // Gather each channel's bytes into low 4 bytes of each lane
+        let r_bytes = _mm256_shuffle_epi8(v, r_mask);
+        let g_bytes = _mm256_shuffle_epi8(v, g_mask);
+        let b_bytes = _mm256_shuffle_epi8(v, b_mask);
+        let a_bytes = _mm256_shuffle_epi8(v, a_mask);
+
+        // Extract low 128-bit and high 128-bit lanes, combine low 4 bytes of each
+        // to get 8 consecutive bytes, then extend to f32x8
+        let r_lo = _mm256_castsi256_si128(r_bytes);
+        let r_hi = _mm256_extracti128_si256::<1>(r_bytes);
+        let r_combined = _mm_unpacklo_epi32(r_lo, r_hi); // [R0-3, R4-7, ...]
+        let r_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(r_combined));
+
+        let g_lo = _mm256_castsi256_si128(g_bytes);
+        let g_hi = _mm256_extracti128_si256::<1>(g_bytes);
+        let g_combined = _mm_unpacklo_epi32(g_lo, g_hi);
+        let g_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(g_combined));
+
+        let b_lo = _mm256_castsi256_si128(b_bytes);
+        let b_hi = _mm256_extracti128_si256::<1>(b_bytes);
+        let b_combined = _mm_unpacklo_epi32(b_lo, b_hi);
+        let b_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(b_combined));
+
+        let a_lo = _mm256_castsi256_si128(a_bytes);
+        let a_hi = _mm256_extracti128_si256::<1>(a_bytes);
+        let a_combined = _mm_unpacklo_epi32(a_lo, a_hi);
+        let a_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(a_combined));
+
+        (Self(r_f32), Self(g_f32), Self(b_f32), Self(a_f32))
+    }
+}
+
+/// Interleave 4 f32x8 channels and store as 8 RGBA u8 pixels.
+///
+/// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
+/// Output: 32 bytes = 8 RGBA pixels in interleaved format.
+#[inline]
+pub fn store_8_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {
+    unsafe {
+        // Convert f32 to i32
+        let ri = _mm256_cvtps_epi32(r.0);
+        let gi = _mm256_cvtps_epi32(g.0);
+        let bi = _mm256_cvtps_epi32(b.0);
+        let ai = _mm256_cvtps_epi32(a.0);
+
+        // Pack to i16 (need to handle AVX2's lane-wise packing)
+        // _mm256_packs_epi32 packs within lanes: [lo0-3, hi0-3] + [lo4-7, hi4-7]
+        // → [lo0-3 as i16, lo4-7 as i16, hi0-3 as i16, hi4-7 as i16]
+
+        // Pack R,G and B,A together
+        let rg = _mm256_packs_epi32(ri, gi); // [R0-3,G0-3, R4-7,G4-7] as i16
+        let ba = _mm256_packs_epi32(bi, ai); // [B0-3,A0-3, B4-7,A4-7] as i16
+
+        // Pack i16 to u8
+        let rgba = _mm256_packus_epi16(rg, ba); // [R0-3,G0-3,B0-3,A0-3, R4-7,G4-7,B4-7,A4-7]
+
+        // Shuffle within each lane to get RGBA order
+        let shuf = _mm256_setr_epi8(
+            0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
+            0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15
+        );
+        let shuffled = _mm256_shuffle_epi8(rgba, shuf);
+
+        let mut out = [0u8; 32];
+        _mm256_storeu_si256(out.as_mut_ptr() as *mut __m256i, shuffled);
+        out
+    }
 }
 
 // ========== Matrix Transpose ==========

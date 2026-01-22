@@ -179,6 +179,81 @@ fn test_f32x8_load_store_8x8() {
         assert_eq!(input, output);
     }
 }
+
+#[test]
+fn test_f32x4_4ch_interleave() {
+    if let Some(token) = archmage::Sse41Token::try_new() {
+        // Create 4 channel vectors (SoA format)
+        let r = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
+        let g = f32x4::from_array(token, [10.0, 20.0, 30.0, 40.0]);
+        let b = f32x4::from_array(token, [100.0, 200.0, 300.0, 400.0]);
+        let a = f32x4::from_array(token, [255.0, 255.0, 255.0, 255.0]);
+
+        // Interleave to AoS: each output vector is one RGBA pixel
+        let aos = f32x4::interleave_4ch([r, g, b, a]);
+        assert_eq!(aos[0].to_array(), [1.0, 10.0, 100.0, 255.0]);   // pixel 0
+        assert_eq!(aos[1].to_array(), [2.0, 20.0, 200.0, 255.0]);   // pixel 1
+        assert_eq!(aos[2].to_array(), [3.0, 30.0, 300.0, 255.0]);   // pixel 2
+        assert_eq!(aos[3].to_array(), [4.0, 40.0, 400.0, 255.0]);   // pixel 3
+
+        // Deinterleave back to SoA
+        let [r2, g2, b2, a2] = f32x4::deinterleave_4ch(aos);
+        assert_eq!(r2.to_array(), r.to_array());
+        assert_eq!(g2.to_array(), g.to_array());
+        assert_eq!(b2.to_array(), b.to_array());
+        assert_eq!(a2.to_array(), a.to_array());
+    }
+}
+
+#[test]
+fn test_f32x4_load_store_rgba_u8() {
+    if let Some(_token) = archmage::Sse41Token::try_new() {
+        // 4 RGBA pixels: red, green, blue, white
+        let rgba: [u8; 16] = [
+            255, 0, 0, 255,     // red
+            0, 255, 0, 255,     // green
+            0, 0, 255, 255,     // blue
+            255, 255, 255, 255, // white
+        ];
+
+        let (r, g, b, a) = f32x4::load_4_rgba_u8(&rgba);
+        assert_eq!(r.to_array(), [255.0, 0.0, 0.0, 255.0]);
+        assert_eq!(g.to_array(), [0.0, 255.0, 0.0, 255.0]);
+        assert_eq!(b.to_array(), [0.0, 0.0, 255.0, 255.0]);
+        assert_eq!(a.to_array(), [255.0, 255.0, 255.0, 255.0]);
+
+        // Roundtrip
+        let out = f32x4::store_4_rgba_u8(r, g, b, a);
+        assert_eq!(out, rgba);
+    }
+}
+
+#[test]
+fn test_f32x8_load_store_rgba_u8() {
+    if let Some(_token) = Avx2FmaToken::try_new() {
+        // 8 RGBA pixels
+        let rgba: [u8; 32] = [
+            255, 0, 0, 255,     // red
+            0, 255, 0, 255,     // green
+            0, 0, 255, 255,     // blue
+            255, 255, 255, 255, // white
+            128, 128, 128, 255, // gray
+            0, 0, 0, 255,       // black
+            255, 128, 0, 255,   // orange
+            128, 0, 255, 255,   // purple
+        ];
+
+        let (r, g, b, a) = f32x8::load_8_rgba_u8(&rgba);
+        assert_eq!(r.to_array(), [255.0, 0.0, 0.0, 255.0, 128.0, 0.0, 255.0, 128.0]);
+        assert_eq!(g.to_array(), [0.0, 255.0, 0.0, 255.0, 128.0, 0.0, 128.0, 0.0]);
+        assert_eq!(b.to_array(), [0.0, 0.0, 255.0, 255.0, 128.0, 0.0, 0.0, 255.0]);
+        assert_eq!(a.to_array(), [255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0]);
+
+        // Roundtrip
+        let out = f32x8::store_8_rgba_u8(r, g, b, a);
+        assert_eq!(out, rgba);
+    }
+}
 "#,
     );
 
