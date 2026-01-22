@@ -65,17 +65,20 @@
 //!
 //! # Feature Sets
 //!
-//! Operations are organized by the CPU features they require:
+//! Operations are organized by CPU feature tiers:
 //!
-//! - [`sse`] - SSE (6 functions)
-//! - [`sse2`] - SSE2 (20 functions)
-//! - [`avx`] - AVX (17 functions)
-//! - [`avx512f`] - AVX-512F (49 functions)
-//! - [`avx512f_vl`] - AVX-512F + VL for 128/256-bit ops (86 functions)
-//! - [`avx512bw`] - AVX-512BW (13 functions)
-//! - [`avx512bw_vl`] - AVX-512BW + VL (26 functions)
-//! - [`avx512vbmi2`] - AVX-512 VBMI2 (6 functions)
-//! - [`avx512vbmi2_vl`] - AVX-512 VBMI2 + VL (12 functions)
+//! ## x86_64 Modules
+//!
+//! - [`avx`] - AVX (17 functions) - accepts any token with `Has256BitSimd`
+//! - [`v4`] - x64-v4 / AVX-512F (49 functions) - requires `avx512` feature
+//! - [`v4_vl`] - AVX-512F + VL for 128/256-bit ops (86 functions) - requires `avx512` feature
+//! - [`v4_bw`] - AVX-512BW (13 functions) - requires `avx512` feature
+//! - [`v4_bw_vl`] - AVX-512BW + VL (26 functions) - requires `avx512` feature
+//! - [`modern`] - Avx512Modern / VBMI2 (6 functions) - requires `avx512` feature
+//! - [`modern_vl`] - Avx512Modern + VL (12 functions) - requires `avx512` feature
+//!
+//! Note: SSE/SSE2 wrappers are not generated because these are baseline features on x86_64
+//! that are always available. Use `core::arch` intrinsics directly for SSE/SSE2.
 //!
 //! # Implementation
 //!

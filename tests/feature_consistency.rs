@@ -10,19 +10,17 @@
 use archmage::SimdToken;
 use archmage::tokens::x86::*;
 
-/// If SSE2 token is available, SSE2 instructions must work.
+/// SSE2 is baseline on x86_64 and always works.
 #[test]
-fn sse2_instructions_work_when_token_available() {
-    if let Some(_token) = Sse2Token::try_new() {
-        // This will SIGILL if SSE2 isn't actually available
-        unsafe {
-            use core::arch::x86_64::*;
-            let a = _mm_setzero_ps();
-            let b = _mm_set1_ps(1.0);
-            let c = _mm_add_ps(a, b);
-            // Prevent optimization
-            std::hint::black_box(c);
-        }
+fn sse2_instructions_work_baseline() {
+    // SSE2 is baseline on x86_64, no token needed
+    unsafe {
+        use core::arch::x86_64::*;
+        let a = _mm_setzero_ps();
+        let b = _mm_set1_ps(1.0);
+        let c = _mm_add_ps(a, b);
+        // Prevent optimization
+        std::hint::black_box(c);
     }
 }
 
@@ -92,14 +90,14 @@ fn token_hierarchy_is_correct() {
         assert!(AvxToken::try_new().is_some(), "AVX2 implies AVX");
         assert!(Sse42Token::try_new().is_some(), "AVX2 implies SSE4.2");
         assert!(Sse41Token::try_new().is_some(), "AVX2 implies SSE4.1");
-        assert!(Sse2Token::try_new().is_some(), "AVX2 implies SSE2");
+        // Note: SSE2 is baseline on x86_64, always available
     }
 
-    // If AVX-512F is available, AVX2 and predecessors must be available
+    // If AVX-512 (x64-v4) is available, AVX2 and FMA must also be available
     #[cfg(feature = "avx512")]
-    if Avx512fToken::try_new().is_some() {
-        assert!(Avx2Token::try_new().is_some(), "AVX-512F implies AVX2");
-        assert!(FmaToken::try_new().is_some(), "AVX-512F implies FMA");
+    if X64V4Token::try_new().is_some() {
+        assert!(Avx2Token::try_new().is_some(), "x64-v4 implies AVX2");
+        assert!(Avx2FmaToken::try_new().is_some(), "x64-v4 implies AVX2+FMA");
     }
 
     // Profile token hierarchy
@@ -135,15 +133,12 @@ fn combined_tokens_match_components() {
 #[test]
 fn print_detected_features() {
     println!("Feature detection results:");
-    println!("  SSE2:      {}", Sse2Token::try_new().is_some());
+    println!("  SSE2:      always (baseline on x86_64)");
     println!("  SSE4.1:    {}", Sse41Token::try_new().is_some());
     println!("  SSE4.2:    {}", Sse42Token::try_new().is_some());
     println!("  AVX:       {}", AvxToken::try_new().is_some());
     println!("  AVX2:      {}", Avx2Token::try_new().is_some());
-    println!("  FMA:       {}", FmaToken::try_new().is_some());
     println!("  AVX2+FMA:  {}", Avx2FmaToken::try_new().is_some());
-    #[cfg(feature = "avx512")]
-    println!("  AVX-512F:  {}", Avx512fToken::try_new().is_some());
     println!("  x86-64-v2: {}", X64V2Token::try_new().is_some());
     println!("  x86-64-v3: {}", X64V3Token::try_new().is_some());
     #[cfg(feature = "avx512")]

@@ -74,10 +74,11 @@ impl Parse for ArcaneArgs {
 }
 
 /// Maps a token type name to its required target features.
+///
+/// Based on LLVM x86-64 microarchitecture levels (psABI).
 fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
     match token_name {
-        // x86_64 granular tokens
-        "Sse2Token" => Some(&["sse2"]),
+        // x86_64 feature tokens (kept for backwards compatibility)
         "Sse41Token" => Some(&["sse4.1"]),
         "Sse42Token" => Some(&["sse4.2"]),
         "AvxToken" => Some(&["avx"]),
@@ -87,10 +88,10 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
         "Avx512fToken" => Some(&["avx512f"]),
         "Avx512bwToken" => Some(&["avx512bw"]),
 
-        // x86_64 profile tokens
+        // x86_64 tier tokens
         "X64V2Token" => Some(&["sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" => Some(&["avx2", "fma", "bmi1", "bmi2"]),
-        "X64V4Token" | "Avx512Token" => {
+        "X64V4Token" | "Avx512Token" | "Server64" => {
             Some(&["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"])
         }
         "Avx512ModernToken" => Some(&[
@@ -119,8 +120,12 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
             "avx512fp16",
         ]),
 
-        // ARM tokens
+        // AArch64 tokens
         "NeonToken" | "Arm64" => Some(&["neon"]),
+        "NeonAesToken" => Some(&["neon", "aes"]),
+        "NeonSha3Token" => Some(&["neon", "sha3"]),
+        "ArmCryptoToken" => Some(&["neon", "aes", "sha2"]),
+        "ArmCrypto3Token" => Some(&["neon", "aes", "sha2", "sha3"]),
 
         // WASM tokens
         "Simd128Token" => Some(&["simd128"]),
@@ -130,29 +135,70 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
 }
 
 /// Maps a trait bound name to its required target features.
-/// Used for `impl HasAvx2` and `T: HasAvx2` style parameters.
+///
+/// IMPORTANT: Each entry must include ALL implied features, not just the defining ones.
+/// The compiler needs explicit #[target_feature] for each feature used.
+///
+/// Based on LLVM x86-64 microarchitecture levels (psABI).
 fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {
     match trait_name {
-        // x86 feature marker traits
-        "HasSse" => Some(&["sse"]),
-        "HasSse2" => Some(&["sse2"]),
-        "HasSse41" => Some(&["sse4.1"]),
-        "HasSse42" => Some(&["sse4.2"]),
-        "HasAvx" => Some(&["avx"]),
-        "HasAvx2" => Some(&["avx2"]),
-        "HasAvx512f" => Some(&["avx512f"]),
-        "HasAvx512vl" => Some(&["avx512f", "avx512vl"]),
-        "HasAvx512bw" => Some(&["avx512bw"]),
-        "HasAvx512vbmi2" => Some(&["avx512vbmi2"]),
+        // x86 tier traits - each includes all features from lower tiers
+        "HasX64V2" => Some(&[
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"
+        ]),
+        "HasX64V4" => Some(&[
+            // v2 features
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            // v3 features
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            // v4 features
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"
+        ]),
 
-        // Capability marker traits - use most specific features that satisfy them
-        "HasFma" => Some(&["fma"]),
+        // x86 token types - when used directly as bounds
+        "X64V2Token" => Some(&[
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"
+        ]),
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(&[
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt"
+        ]),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"
+        ]),
+        "Avx512ModernToken" => Some(&[
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+            "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
+            "avx512bitalg", "avx512vnni", "avx512bf16",
+            "vpclmulqdq", "gfni", "vaes"
+        ]),
+        "Avx512Fp16Token" => Some(&[
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+            "avx512fp16"
+        ]),
+
+        // Width traits - minimal features to satisfy width
         "Has128BitSimd" => Some(&["sse2"]),
         "Has256BitSimd" => Some(&["avx"]),
         "Has512BitSimd" => Some(&["avx512f"]),
 
-        // ARM feature marker traits
+        // AArch64 traits
         "HasNeon" => Some(&["neon"]),
+        "HasNeonAes" => Some(&["neon", "aes"]),
+        "HasNeonSha3" => Some(&["neon", "sha3"]),
+
+        // AArch64 token types
+        "NeonToken" | "Arm64" => Some(&["neon"]),
+        "NeonAesToken" => Some(&["neon", "aes"]),
+        "NeonSha3Token" => Some(&["neon", "sha3"]),
+        "ArmCryptoToken" => Some(&["neon", "aes", "sha2"]),
+        "ArmCrypto3Token" => Some(&["neon", "aes", "sha2", "sha3"]),
 
         _ => None,
     }

@@ -2,9 +2,44 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
+## CRITICAL: Token/Trait Design (DO NOT MODIFY)
+
+### LLVM x86-64 Microarchitecture Levels
+
+| Level | Features | Token | Trait |
+|-------|----------|-------|-------|
+| **v1** | SSE, SSE2 (baseline) | None | None (always available) |
+| **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | `X64V2Token` | `HasX64V2` |
+| **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` / `Desktop64` / `Avx2FmaToken` | Use token directly |
+| **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` / `Server64` | `HasX64V4` |
+| **Modern** | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | `Avx512ModernToken` | Use token directly |
+| **FP16** | AVX512FP16 (independent) | `Avx512Fp16Token` | Use token directly |
+
+### AArch64 Tokens
+
+| Token | Features | Trait |
+|-------|----------|-------|
+| `NeonToken` / `Arm64` | neon + fp16 (always together) | `HasNeon` (baseline) |
+| `NeonAesToken` | + aes | `HasNeonAes` |
+| `NeonSha3Token` | + sha3 | `HasNeonSha3` |
+| `ArmCryptoToken` | aes + sha2 + crc | Use token directly |
+| `ArmCrypto3Token` | + sha3 | Use token directly |
+
+**PROHIBITED:** NO SVE/SVE2 - hasn't shipped in consumer hardware.
+
+### Rules
+
+1. **NO granular x86 traits** - No `HasSse`, `HasSse2`, `HasAvx`, `HasAvx2`, `HasFma`, `HasAvx512f`, `HasAvx512bw`, etc.
+2. **Use tier tokens** - `X64V2Token`, `Avx2FmaToken`, `X64V4Token`, `Avx512ModernToken`
+3. **Single trait per tier** - `HasX64V2`, `HasX64V4` only
+4. **NEON includes fp16** - They always appear together on AArch64
+5. **NO SVE** - `SveToken`, `Sve2Token`, `HasSve`, `HasSve2` are PROHIBITED
+
+---
+
 ## CRITICAL: Documentation Examples
 
-**ALWAYS use `archmage::mem` for load/store in examples.** The entire point of this crate is to make SIMD safe. Never write examples with `unsafe { _mm256_loadu_ps(ptr) }` - that defeats the purpose.
+**ALWAYS use `archmage::mem` for load/store in examples.** Never write examples with `unsafe { _mm256_loadu_ps(ptr) }`.
 
 ```rust
 // WRONG - bypasses the safety archmage provides
@@ -51,14 +86,14 @@ The macro generates an inner function with `#[target_feature]`:
 ```rust
 // You write:
 #[arcane]
-fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+fn my_kernel(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
     let v = _mm256_setzero_ps();  // Safe!
     // ...
 }
 
 // Macro generates:
-fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
-    #[target_feature(enable = "avx2")]
+fn my_kernel(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
+    #[target_feature(enable = "avx2,fma")]
     unsafe fn inner(data: &[f32; 8]) -> [f32; 8] {
         let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
         // ...
@@ -68,45 +103,13 @@ fn my_kernel(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
-**Why is this safe?**
-1. `inner()` has `#[target_feature]`, so intrinsics are safe inside
-2. Calling `inner()` is unsafe, but valid because:
-   - The function requires a token parameter
-   - Tokens can only be created via `summon()` which checks CPUID
-   - If you have a token, the CPU supports the features
-
-## Generic Token Bounds
-
-Use trait bounds to accept any compatible token:
-
-```rust
-#[arcane]
-fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
-    // Works with Avx2Token, X64V3Token, X64V4Token, etc.
-}
-
-#[arcane]
-fn fma_kernel<T: HasAvx2 + HasFma>(token: T, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // Requires both AVX2 and FMA
-}
-```
-
-**Recommended starting point:** `Desktop64` (alias for `X64V3Token`)
-
 ## Friendly Aliases
 
-Use these intuitive names instead of memorizing microarchitecture levels:
-
-| Alias | Target | What it means |
-|-------|--------|---------------|
-| `Desktop64` | x86_64 desktops | AVX2 + FMA (Haswell 2013+, Zen 1+) |
-| `Server64` | x86_64 servers | + AVX-512 (Xeon 2017+, Zen 4+) |
-| `Arm64` | AArch64 | NEON (all 64-bit ARM) |
-
-**Why these names?**
-- `Desktop64` - Universal on modern desktops. Intel removed AVX-512 from consumer chips (12th-14th gen), so this is the safe choice.
-- `Server64` - AVX-512 is reliable on Xeon servers, Intel HEDT, and AMD Zen 4+.
-- `Arm64` - NEON is baseline on all AArch64, always available.
+| Alias | Token | What it means |
+|-------|-------|---------------|
+| `Desktop64` | `X64V3Token` | AVX2 + FMA (Haswell 2013+, Zen 1+) |
+| `Server64` | `X64V4Token` | + AVX-512 (Xeon 2017+, Zen 4+) |
+| `Arm64` | `NeonToken` | NEON + FP16 (all 64-bit ARM) |
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
@@ -127,61 +130,45 @@ if let Some(token) = Desktop64::summon() {
 src/
 ├── lib.rs              # Main exports
 ├── tokens/
-│   ├── mod.rs          # SimdToken trait, marker traits (HasAvx2, etc.)
+│   ├── mod.rs          # SimdToken trait, tier traits (HasX64V2, HasX64V4)
 │   ├── x86.rs          # x86 token types
 │   ├── arm.rs          # ARM token types
 │   └── wasm.rs         # WASM token types
 ├── composite/          # Higher-level operations (__composite feature)
-│   ├── mod.rs
-│   ├── simd_ops.rs     # SIMD operation traits
-│   ├── scalar_ops.rs   # Scalar fallback traits
-│   ├── x86_impls.rs    # Token trait implementations
-│   ├── transpose.rs    # 8x8 matrix transpose
-│   ├── dot_product.rs  # Dot product
-│   └── horizontal.rs   # Horizontal reductions
-├── integrate/
-│   └── wide_ops.rs     # wide crate integration (__wide feature)
+├── integrate/          # wide crate integration (__wide feature)
 ├── mem.rs              # Re-exports generated wrappers
 └── generated/          # AUTO-GENERATED (safe_unaligned_simd feature)
-    ├── x86/            # 235 x86_64 functions
-    └── aarch64/        # 240 NEON functions
 xtask/
 └── src/main.rs         # Wrapper generator
 ```
 
 ## Token Hierarchy
 
-**Recommended (friendly aliases):**
-- `Desktop64` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+) **← Start here for x86**
-- `Server64` - + AVX-512 (Xeon 2017+, Zen 4+)
-- `Arm64` - NEON baseline **← Start here for ARM**
-
-**x86 Profile Tokens (same as aliases):**
-- `X64V3Token` = `Desktop64`
-- `X64V4Token` = `Server64`
+**x86:**
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
-
-**x86 Feature Tokens:**
-- `Sse2Token` → `Sse41Token` → `Sse42Token` → `AvxToken` → `Avx2Token`
-- `FmaToken` (independent), `Avx2FmaToken` (combined)
-- `Avx512fToken`, `Avx512bwToken`, `Avx512Vbmi2Token` + VL variants
+- `X64V3Token` / `Desktop64` / `Avx2FmaToken` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
+- `X64V4Token` / `Avx512Token` / `Server64` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
+- `Avx512ModernToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
+- `Avx512Fp16Token` - + FP16 (Sapphire Rapids 2023+)
 
 **ARM:**
-- `NeonToken` = `Arm64` (baseline), `SveToken`, `Sve2Token`
+- `NeonToken` / `Arm64` - NEON + FP16 (baseline)
+- `NeonAesToken` - + AES
+- `NeonSha3Token` - + SHA3
+- `ArmCryptoToken` - AES + SHA2 + CRC
+- `ArmCrypto3Token` - + SHA3
 
-## Marker Traits
+## Tier Traits
 
-Enable generic bounds:
+Only two tier traits exist for generic bounds:
 
 ```rust
-fn requires_avx2(token: impl HasAvx2) { ... }
-fn requires_fma(token: impl HasFma) { ... }
-fn requires_both<T: HasAvx2 + HasFma>(token: T) { ... }
+fn requires_v2(token: impl HasX64V2) { ... }
+fn requires_v4(token: impl HasX64V4) { ... }
+fn requires_neon(token: impl HasNeon) { ... }
 ```
 
-**Width traits:** `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
-**Feature traits:** `HasSse`, `HasSse2`, `HasAvx`, `HasAvx2`, `HasFma`, `HasAvx512f`, etc.
-**ARM traits:** `HasNeon`, `HasSve`, `HasSve2`
+For v3 (AVX2+FMA), use `Avx2FmaToken` directly - it's the recommended baseline.
 
 ## Safe Memory Operations
 
@@ -196,43 +183,11 @@ if let Some(token) = Desktop64::summon() {
 }
 ```
 
-## Methods with Self Receivers
-
-Use `_self = Type` to enable self receivers. Use `_self` in the body instead of `self`:
-
-```rust
-trait SimdOps {
-    fn double(&self, token: impl HasAvx2) -> Self;
-}
-
-impl SimdOps for [f32; 8] {
-    #[arcane(_self = [f32; 8])]
-    fn double(&self, _token: impl HasAvx2) -> Self {
-        // Use _self instead of self
-        let v = unsafe { _mm256_loadu_ps(_self.as_ptr()) };
-        let doubled = _mm256_add_ps(v, v);
-        let mut out = [0.0f32; 8];
-        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
-        out
-    }
-}
-```
-
-**All receiver types supported:** `self`, `&self`, `&mut self`
-
 ## Generated Wrappers
-
-The `mem` module wraps `safe_unaligned_simd` with token requirements:
 
 ```bash
 cargo run -p xtask -- generate  # Regenerate after safe_unaligned_simd updates
 ```
-
-The generator:
-1. Parses safe_unaligned_simd source from cargo cache
-2. Extracts function signatures and `#[target_feature]` attributes
-3. Generates wrappers with `impl HasXxx` bounds
-4. Groups by feature set (sse, sse2, avx, neon, etc.)
 
 ## License
 

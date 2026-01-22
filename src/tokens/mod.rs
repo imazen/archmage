@@ -156,99 +156,61 @@ pub trait CompositeToken: SimdToken {
 }
 
 // ============================================================================
-// Capability Marker Traits
+// Width Marker Traits
 // ============================================================================
 //
-// These traits indicate what capabilities a token provides, enabling generic
-// code to constrain which tokens are accepted. They don't provide operations
-// directly - use raw intrinsics via `#[simd_fn]` for that.
+// These traits indicate what vector widths a token provides.
 
 /// Marker trait for tokens that provide 128-bit SIMD.
-///
-/// Implemented by: `Sse2Token`, `NeonToken`, `Simd128Token`
 pub trait Has128BitSimd: SimdToken {}
 
 /// Marker trait for tokens that provide 256-bit SIMD.
-///
-/// Implemented by: `Avx2Token`, `X64V3Token`, etc.
 pub trait Has256BitSimd: Has128BitSimd {}
 
 /// Marker trait for tokens that provide 512-bit SIMD.
-///
-/// Implemented by: `Avx512fToken`, `X64V4Token`
 pub trait Has512BitSimd: Has256BitSimd {}
 
-/// Marker trait for tokens that provide FMA (fused multiply-add).
-///
-/// Implemented by: `FmaToken`, `Avx2FmaToken`, `X64V3Token`, `NeonToken`
-pub trait HasFma: SimdToken {}
-
-/// Marker trait for tokens that provide scalable vectors (variable width).
-///
-/// Implemented by: `SveToken`, `Sve2Token`
-pub trait HasScalableVectors: SimdToken {}
-
 // ============================================================================
-// x86 Feature Marker Traits
+// x86 Tier Marker Traits
 // ============================================================================
 //
-// These form a hierarchy matching the x86 feature dependencies.
-// Use these as bounds on generic functions to accept any token that
-// implies a specific feature.
+// Based on LLVM x86-64 microarchitecture levels (psABI).
+// v1 (baseline): No trait needed - SSE2 always available on x86_64
+// v3: No trait - use Avx2FmaToken directly
 //
 // Available on all architectures for cross-platform code.
 
-/// Marker trait for tokens that provide SSE.
-pub trait HasSse: SimdToken {}
-
-/// Marker trait for tokens that provide SSE2.
+/// Marker trait for x86-64-v2 level (Nehalem 2008+).
 ///
-/// SSE2 is baseline on x86_64.
-pub trait HasSse2: HasSse {}
+/// v2 includes: SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B, LAHF-SAHF.
+pub trait HasX64V2: SimdToken {}
 
-/// Marker trait for tokens that provide SSE4.1.
-pub trait HasSse41: HasSse2 {}
-
-/// Marker trait for tokens that provide SSE4.2.
-pub trait HasSse42: HasSse41 {}
-
-/// Marker trait for tokens that provide AVX.
-pub trait HasAvx: HasSse42 {}
-
-/// Marker trait for tokens that provide AVX2.
-pub trait HasAvx2: HasAvx {}
-
-/// Marker trait for tokens that provide AVX-512F (Foundation).
-pub trait HasAvx512f: HasAvx2 {}
-
-/// Marker trait for tokens that provide AVX-512VL (Vector Length extensions).
-pub trait HasAvx512vl: HasAvx512f {}
-
-/// Marker trait for tokens that provide AVX-512BW (Byte/Word).
-pub trait HasAvx512bw: HasAvx512f {}
-
-/// Marker trait for tokens that provide AVX-512DQ (Doubleword/Quadword).
+/// Marker trait for x86-64-v4 level (Skylake-X 2017+, Zen 4 2022+).
 ///
-/// AVX-512DQ provides float bitwise ops (`_mm512_or_ps`, etc.) and conversions.
-/// Present on all practical AVX-512 CPUs (Skylake-X 2017+, Zen 4+).
-pub trait HasAvx512dq: HasAvx512f {}
-
-/// Marker trait for tokens that provide AVX-512VBMI2.
-pub trait HasAvx512vbmi2: HasAvx512bw {}
+/// v4 includes all of v3 plus: AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL.
+/// Implies HasX64V2.
+pub trait HasX64V4: HasX64V2 {}
 
 // ============================================================================
-// AArch64 Feature Marker Traits
+// AArch64 Tier Marker Traits
 // ============================================================================
+//
+// NEON is baseline on AArch64 - no runtime detection needed.
+// Extensions like AES and SHA3 are optional.
 //
 // Available on all architectures for cross-platform code.
 
-/// Marker trait for tokens that provide NEON.
+/// Marker trait for NEON (baseline on AArch64).
 ///
-/// NEON is baseline on AArch64.
+/// NEON is always available on AArch64.
 pub trait HasNeon: SimdToken {}
 
-/// Marker trait for tokens that provide SVE.
-pub trait HasSve: HasNeon {}
+/// Marker trait for NEON + AES.
+///
+/// AES extension is common on modern ARM64 devices (ARMv8-A with Crypto).
+pub trait HasNeonAes: HasNeon {}
 
-/// Marker trait for tokens that provide SVE2.
-pub trait HasSve2: HasSve {}
+/// Marker trait for NEON + SHA3.
+///
+/// SHA3 extension is available on ARMv8.2-A and later.
+pub trait HasNeonSha3: HasNeon {}

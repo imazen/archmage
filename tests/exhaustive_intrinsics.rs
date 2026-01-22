@@ -17,15 +17,13 @@ use archmage::SimdToken;
 fn test_cross_platform_token_types_exist() {
     // x86 tokens - should compile on ARM/WASM, summon returns None there
     use archmage::{
-        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Sse2Token, Sse41Token, Sse42Token,
-        SseToken, X64V2Token, X64V3Token,
+        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Sse41Token, Sse42Token,
+        X64V2Token, X64V3Token,
     };
     #[cfg(feature = "avx512")]
     use archmage::{Avx512Token, X64V4Token};
 
     // Verify tokens are zero-sized
-    assert_eq!(core::mem::size_of::<SseToken>(), 0);
-    assert_eq!(core::mem::size_of::<Sse2Token>(), 0);
     assert_eq!(core::mem::size_of::<Sse41Token>(), 0);
     assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
     assert_eq!(core::mem::size_of::<AvxToken>(), 0);
@@ -59,9 +57,10 @@ fn test_summon_behavior() {
     // On x86_64, Desktop64/Avx512Token may succeed
     #[cfg(target_arch = "x86_64")]
     {
-        // SSE2 is baseline on x86_64, so Sse2Token should always succeed
-        use archmage::Sse2Token;
-        assert!(Sse2Token::summon().is_some(), "SSE2 is baseline on x86_64");
+        // X64V2Token covers SSE4.2 which is baseline on modern x86_64
+        use archmage::X64V2Token;
+        // Note: X64V2Token may not be available on very old processors
+        let _ = X64V2Token::summon();
 
         // ARM and WASM tokens should return None on x86
         assert!(NeonToken::summon().is_none(), "NEON unavailable on x86");
@@ -110,7 +109,7 @@ fn test_summon_behavior() {
 /// Run with: ARCHMAGE_DISABLE=1 cargo test test_disable_archmage_env
 #[test]
 fn test_disable_archmage_env() {
-    use archmage::{SimdToken, Sse2Token};
+    use archmage::{SimdToken, Sse41Token};
 
     // This test verifies the mechanism works - actual disable testing
     // should be done by running: ARCHMAGE_DISABLE=1 cargo test
@@ -118,12 +117,12 @@ fn test_disable_archmage_env() {
         #[cfg(target_arch = "x86_64")]
         {
             assert!(
-                Sse2Token::summon().is_none(),
+                Sse41Token::summon().is_none(),
                 "ARCHMAGE_DISABLE should make summon() return None"
             );
             // try_new() should still work
             assert!(
-                Sse2Token::try_new().is_some(),
+                Sse41Token::try_new().is_some(),
                 "try_new() should still detect CPU features"
             );
         }
@@ -179,12 +178,10 @@ fn test_cross_platform_dispatch_pattern() {
 fn test_token_names() {
     use archmage::{
         Arm64, Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, NeonToken, Simd128Token,
-        Sse2Token, Sse41Token, Sse42Token, SseToken, X64V2Token, X64V3Token,
+        Sse41Token, Sse42Token, X64V2Token, X64V3Token,
     };
 
     // x86 tokens
-    assert_eq!(SseToken::NAME, "SSE");
-    assert_eq!(Sse2Token::NAME, "SSE2");
     assert_eq!(Sse41Token::NAME, "SSE4.1");
     assert_eq!(Sse42Token::NAME, "SSE4.2");
     assert_eq!(AvxToken::NAME, "AVX");
@@ -224,167 +221,9 @@ mod x86_mem_tests {
     use core::arch::x86_64::*;
     use std::hint::black_box;
 
-    /// Exhaustive test of all SSE mem functions.
-    #[test]
-    fn test_sse_mem_exhaustive() {
-        use archmage::SseToken;
-        use archmage::mem::sse;
-
-        let Some(token) = SseToken::summon() else {
-            eprintln!("SSE not available, skipping test");
-            return;
-        };
-
-        // Test data
-        let data_f32 = [1.0f32, 2.0, 3.0, 4.0];
-        let single_f32 = 42.0f32;
-
-        // _mm_load1_ps - broadcast single f32
-        let v = sse::_mm_load1_ps(token, &single_f32);
-        let mut out = [0.0f32; 4];
-        sse::_mm_storeu_ps(token, &mut out, v);
-        assert!(out.iter().all(|&x| x == 42.0));
-
-        // _mm_load_ps1 - alias for _mm_load1_ps
-        let v = sse::_mm_load_ps1(token, &single_f32);
-        sse::_mm_storeu_ps(token, &mut out, v);
-        assert!(out.iter().all(|&x| x == 42.0));
-
-        // _mm_load_ss - load single, zero upper
-        let v = sse::_mm_load_ss(token, &single_f32);
-        sse::_mm_storeu_ps(token, &mut out, v);
-        assert_eq!(out[0], 42.0);
-        assert_eq!(out[1], 0.0);
-        assert_eq!(out[2], 0.0);
-        assert_eq!(out[3], 0.0);
-
-        // _mm_loadu_ps - load 4 floats
-        let v = sse::_mm_loadu_ps(token, &data_f32);
-        sse::_mm_storeu_ps(token, &mut out, v);
-        assert_eq!(out, data_f32);
-
-        // _mm_store_ss - store single
-        let mut single_out = 0.0f32;
-        sse::_mm_store_ss(token, &mut single_out, v);
-        assert_eq!(single_out, 1.0);
-
-        // _mm_storeu_ps already tested above
-
-        black_box(&out);
-    }
-
-    /// Exhaustive test of all SSE2 mem functions.
-    #[test]
-    fn test_sse2_mem_exhaustive() {
-        use archmage::Sse2Token;
-        use archmage::mem::sse2;
-
-        let Some(token) = Sse2Token::summon() else {
-            eprintln!("SSE2 not available, skipping test");
-            return;
-        };
-
-        // Test data
-        let data_f64 = [1.0f64, 2.0];
-        let single_f64 = 42.0f64;
-        let data_i8: [i8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-        let data_i16: [i16; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
-        let data_i32: [i32; 4] = [1, 2, 3, 4];
-        let data_i64: [i64; 2] = [1, 2];
-
-        let mut out_f64 = [0.0f64; 2];
-        let mut out_i8 = [0i8; 16];
-        let mut out_i16 = [0i16; 8];
-        let mut out_i32 = [0i32; 4];
-        let mut out_i64 = [0i64; 2];
-
-        // _mm_load_pd1 - broadcast double
-        let v = sse2::_mm_load_pd1(token, &single_f64);
-        sse2::_mm_storeu_pd(token, &mut out_f64, v);
-        assert!(out_f64.iter().all(|&x| x == 42.0));
-
-        // _mm_load_sd - load single double, zero upper
-        let v = sse2::_mm_load_sd(token, &single_f64);
-        sse2::_mm_storeu_pd(token, &mut out_f64, v);
-        assert_eq!(out_f64[0], 42.0);
-        assert_eq!(out_f64[1], 0.0);
-
-        // _mm_load1_pd - broadcast double (alias)
-        let v = sse2::_mm_load1_pd(token, &single_f64);
-        sse2::_mm_storeu_pd(token, &mut out_f64, v);
-        assert!(out_f64.iter().all(|&x| x == 42.0));
-
-        // _mm_loadh_pd - load high double
-        let base = unsafe { _mm_setzero_pd() };
-        let v = sse2::_mm_loadh_pd(token, base, &single_f64);
-        sse2::_mm_storeu_pd(token, &mut out_f64, v);
-        assert_eq!(out_f64[0], 0.0);
-        assert_eq!(out_f64[1], 42.0);
-
-        // _mm_loadl_epi64 - load 64 bits to low, zero upper
-        let v = sse2::_mm_loadl_epi64(token, &data_i64);
-        sse2::_mm_storeu_si128(token, &mut out_i64, v);
-        assert_eq!(out_i64[0], data_i64[0]);
-
-        // _mm_loadl_pd - load low double
-        let base = unsafe { _mm_set_pd(99.0, 99.0) };
-        let v = sse2::_mm_loadl_pd(token, base, &single_f64);
-        sse2::_mm_storeu_pd(token, &mut out_f64, v);
-        assert_eq!(out_f64[0], 42.0);
-        assert_eq!(out_f64[1], 99.0);
-
-        // _mm_loadu_pd - load 2 doubles
-        let v = sse2::_mm_loadu_pd(token, &data_f64);
-        sse2::_mm_storeu_pd(token, &mut out_f64, v);
-        assert_eq!(out_f64, data_f64);
-
-        // _mm_loadu_si128 - load 128 bits
-        let v = sse2::_mm_loadu_si128(token, &data_i8);
-        sse2::_mm_storeu_si128(token, &mut out_i8, v);
-        assert_eq!(out_i8, data_i8);
-
-        // _mm_loadu_si16 - load 16 bits
-        let v = sse2::_mm_loadu_si16(token, &data_i16[0]);
-        sse2::_mm_storeu_si16(token, &mut out_i16[0], v);
-        assert_eq!(out_i16[0], data_i16[0]);
-
-        // _mm_loadu_si32 - load 32 bits
-        let v = sse2::_mm_loadu_si32(token, &data_i32[0]);
-        sse2::_mm_storeu_si32(token, &mut out_i32[0], v);
-        assert_eq!(out_i32[0], data_i32[0]);
-
-        // _mm_loadu_si64 - load 64 bits
-        let v = sse2::_mm_loadu_si64(token, &data_i64[0]);
-        sse2::_mm_storeu_si64(token, &mut out_i64[0], v);
-        assert_eq!(out_i64[0], data_i64[0]);
-
-        // _mm_store_sd
-        let v = sse2::_mm_loadu_pd(token, &data_f64);
-        let mut single_out = 0.0f64;
-        sse2::_mm_store_sd(token, &mut single_out, v);
-        assert_eq!(single_out, 1.0);
-
-        // _mm_storeh_pd - store high double
-        let v = unsafe { _mm_set_pd(99.0, 42.0) };
-        sse2::_mm_storeh_pd(token, &mut single_out, v);
-        assert_eq!(single_out, 99.0);
-
-        // _mm_storel_epi64 - store low 64 bits
-        let v = sse2::_mm_loadu_si128(token, &data_i64);
-        sse2::_mm_storel_epi64(token, &mut out_i64, v);
-        assert_eq!(out_i64[0], data_i64[0]);
-
-        // _mm_storel_pd - store low double
-        let v = unsafe { _mm_set_pd(99.0, 42.0) };
-        sse2::_mm_storel_pd(token, &mut single_out, v);
-        assert_eq!(single_out, 42.0);
-
-        black_box(&out_f64);
-        black_box(&out_i8);
-        black_box(&out_i16);
-        black_box(&out_i32);
-        black_box(&out_i64);
-    }
+    // Note: SSE and SSE2 mem wrappers are not generated because these are
+    // baseline features on x86_64 that are always available. No token is
+    // needed to use them safely - just use core::arch intrinsics directly.
 
     /// Exhaustive test of all AVX mem functions.
     #[test]
@@ -522,11 +361,11 @@ mod x86_mem_tests {
     #[cfg(feature = "avx512")]
     #[test]
     fn test_avx512f_mem_sampling() {
-        use archmage::Avx512fToken;
-        use archmage::mem::avx512f;
+        use archmage::X64V4Token;
+        use archmage::mem::v4;
 
-        let Some(token) = Avx512fToken::summon() else {
-            eprintln!("AVX-512F not available, skipping test");
+        let Some(token) = X64V4Token::summon() else {
+            eprintln!("AVX-512 (x64-v4) not available, skipping test");
             return;
         };
 
@@ -542,26 +381,26 @@ mod x86_mem_tests {
         let mut out_i64 = [0i64; 8];
 
         // Basic load/store
-        let v = avx512f::_mm512_loadu_ps(token, &data_f32);
-        avx512f::_mm512_storeu_ps(token, &mut out_f32, v);
+        let v = v4::_mm512_loadu_ps(token, &data_f32);
+        v4::_mm512_storeu_ps(token, &mut out_f32, v);
         assert_eq!(out_f32, data_f32);
 
-        let v = avx512f::_mm512_loadu_pd(token, &data_f64);
-        avx512f::_mm512_storeu_pd(token, &mut out_f64, v);
+        let v = v4::_mm512_loadu_pd(token, &data_f64);
+        v4::_mm512_storeu_pd(token, &mut out_f64, v);
         assert_eq!(out_f64, data_f64);
 
-        let v = avx512f::_mm512_loadu_epi32(token, &data_i32);
-        avx512f::_mm512_storeu_epi32(token, &mut out_i32, v);
+        let v = v4::_mm512_loadu_epi32(token, &data_i32);
+        v4::_mm512_storeu_epi32(token, &mut out_i32, v);
         assert_eq!(out_i32, data_i32);
 
-        let v = avx512f::_mm512_loadu_epi64(token, &data_i64);
-        avx512f::_mm512_storeu_epi64(token, &mut out_i64, v);
+        let v = v4::_mm512_loadu_epi64(token, &data_i64);
+        v4::_mm512_storeu_epi64(token, &mut out_i64, v);
         assert_eq!(out_i64, data_i64);
 
         // Masked operations
         let mask: u16 = 0b1010101010101010;
-        let v = avx512f::_mm512_maskz_loadu_ps(token, mask, &data_f32);
-        avx512f::_mm512_storeu_ps(token, &mut out_f32, v);
+        let v = v4::_mm512_maskz_loadu_ps(token, mask, &data_f32);
+        v4::_mm512_storeu_ps(token, &mut out_f32, v);
         #[allow(clippy::needless_range_loop)] // i used for both indexing and mask shifting
         for i in 0..16 {
             if (mask >> i) & 1 == 1 {
@@ -580,7 +419,7 @@ mod x86_mem_tests {
     /// Exhaustive test of core::arch intrinsics via #[arcane].
     #[test]
     fn test_arcane_core_arch_intrinsics() {
-        use archmage::{Desktop64, HasAvx2, HasFma, SimdToken, arcane};
+        use archmage::{Avx2FmaToken, Desktop64, Has256BitSimd, SimdToken, arcane};
 
         // Skip if Desktop64 not available
         let Some(token) = Desktop64::summon() else {
@@ -590,7 +429,7 @@ mod x86_mem_tests {
 
         // Test arithmetic intrinsics
         #[arcane]
-        fn test_avx2_arithmetic(_token: impl HasAvx2) -> [f32; 8] {
+        fn test_avx2_arithmetic(_token: impl Has256BitSimd) -> [f32; 8] {
             let a = _mm256_set1_ps(2.0);
             let b = _mm256_set1_ps(3.0);
 
@@ -611,9 +450,9 @@ mod x86_mem_tests {
         let result = test_avx2_arithmetic(token);
         assert!(result.iter().all(|&x| (x - 3.0).abs() < 0.0001));
 
-        // Test FMA intrinsics
+        // Test FMA intrinsics (requires Avx2FmaToken which provides AVX2+FMA)
         #[arcane]
-        fn test_fma_intrinsics<T: HasAvx2 + HasFma>(_token: T) -> [f32; 8] {
+        fn test_fma_intrinsics(_token: Avx2FmaToken) -> [f32; 8] {
             let a = _mm256_set1_ps(2.0);
             let b = _mm256_set1_ps(3.0);
             let c = _mm256_set1_ps(1.0);
@@ -633,12 +472,15 @@ mod x86_mem_tests {
             result
         }
 
-        let result = test_fma_intrinsics(token);
-        assert!(result.iter().all(|&x| (x - 7.0).abs() < 0.0001));
+        // FMA test needs Avx2FmaToken specifically
+        if let Some(fma_token) = Avx2FmaToken::try_new() {
+            let result = test_fma_intrinsics(fma_token);
+            assert!(result.iter().all(|&x| (x - 7.0).abs() < 0.0001));
+        }
 
         // Test comparison and blending
         #[arcane]
-        fn test_compare_blend(_token: impl HasAvx2) -> [f32; 8] {
+        fn test_compare_blend(_token: impl Has256BitSimd) -> [f32; 8] {
             let a = _mm256_set_ps(8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0);
             let b = _mm256_set1_ps(4.5);
 
@@ -657,9 +499,9 @@ mod x86_mem_tests {
         assert_eq!(result[0], 1.0); // 1.0 <= 4.5, keep
         assert_eq!(result[4], 4.5); // 5.0 > 4.5, replaced
 
-        // Test shuffle and permute
+        // Test shuffle and permute (AVX2 integer intrinsics require Desktop64/AVX2)
         #[arcane]
-        fn test_shuffle_permute(_token: impl HasAvx2) -> [i32; 8] {
+        fn test_shuffle_permute(_token: Desktop64) -> [i32; 8] {
             let a = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
 
             // Permute within 128-bit lanes
@@ -675,9 +517,9 @@ mod x86_mem_tests {
         assert_eq!(result[0], 3);
         assert_eq!(result[3], 0);
 
-        // Test bitwise operations
+        // Test bitwise operations (AVX2 integer intrinsics require Desktop64/AVX2)
         #[arcane]
-        fn test_bitwise(_token: impl HasAvx2) -> [i32; 8] {
+        fn test_bitwise(_token: Desktop64) -> [i32; 8] {
             let a = _mm256_set1_epi32(0b1100);
             let b = _mm256_set1_epi32(0b1010);
 
@@ -699,7 +541,7 @@ mod x86_mem_tests {
 
         // Test horizontal operations
         #[arcane]
-        fn test_horizontal(_token: impl HasAvx2) -> [f32; 8] {
+        fn test_horizontal(_token: impl Has256BitSimd) -> [f32; 8] {
             let a = _mm256_set_ps(8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0);
             let b = _mm256_set_ps(16.0, 15.0, 14.0, 13.0, 12.0, 11.0, 10.0, 9.0);
 
@@ -718,9 +560,9 @@ mod x86_mem_tests {
         assert_eq!(result[0], 3.0); // 1+2
         assert_eq!(result[1], 7.0); // 3+4
 
-        // Test conversion intrinsics
+        // Test conversion intrinsics (AVX2 for integer store)
         #[arcane]
-        fn test_conversion(_token: impl HasAvx2) -> [i32; 8] {
+        fn test_conversion(_token: Desktop64) -> [i32; 8] {
             let a = _mm256_set_ps(8.5, 7.5, 6.5, 5.5, 4.5, 3.5, 2.5, 1.5);
 
             // Convert to integers (truncate)
@@ -734,9 +576,9 @@ mod x86_mem_tests {
         let result = test_conversion(token);
         assert_eq!(result, [1, 2, 3, 4, 5, 6, 7, 8]);
 
-        // Test gather operations (AVX2)
+        // Test gather operations (AVX2 - requires Desktop64/AVX2)
         #[arcane]
-        fn test_gather(_token: impl HasAvx2) -> [f32; 8] {
+        fn test_gather(_token: Desktop64) -> [f32; 8] {
             let base = [0.0f32, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0];
             let indices = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
 

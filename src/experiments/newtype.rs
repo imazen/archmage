@@ -411,26 +411,26 @@ impl f32x8 {
 
     /// Get token-gated constants. Usage: `f32x8::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasAvx2) -> F32x8Consts {
+    pub fn consts(_: crate::Avx2FmaToken) -> F32x8Consts {
         F32x8Consts(())
     }
 
     // Construction (token-gated)
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx2, data: &[f32; 8]) -> Self {
+    pub fn load(_: crate::Avx2FmaToken, data: &[f32; 8]) -> Self {
         Self(unsafe { _mm256_loadu_ps(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn load_slice(_: impl crate::HasAvx2, data: &[f32]) -> Self {
+    pub fn load_slice(_: crate::Avx2FmaToken, data: &[f32]) -> Self {
         assert!(data.len() >= 8);
         Self(unsafe { _mm256_loadu_ps(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx2, v: f32) -> Self {
+    pub fn splat(_: crate::Avx2FmaToken, v: f32) -> Self {
         Self(unsafe { _mm256_set1_ps(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx2) -> Self {
+    pub fn zero(_: crate::Avx2FmaToken) -> Self {
         Self(unsafe { _mm256_setzero_ps() })
     }
 
@@ -866,20 +866,20 @@ impl i32x8 {
 
     /// Get token-gated constants. Usage: `i32x8::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasAvx2) -> I32x8Consts {
+    pub fn consts(_: crate::Avx2FmaToken) -> I32x8Consts {
         I32x8Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx2, data: &[i32; 8]) -> Self {
+    pub fn load(_: crate::Avx2FmaToken, data: &[i32; 8]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx2, v: i32) -> Self {
+    pub fn splat(_: crate::Avx2FmaToken, v: i32) -> Self {
         Self(unsafe { _mm256_set1_epi32(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx2) -> Self {
+    pub fn zero(_: crate::Avx2FmaToken) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -1188,20 +1188,20 @@ impl u32x8 {
 
     /// Get token-gated constants. Usage: `u32x8::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasAvx2) -> U32x8Consts {
+    pub fn consts(_: crate::Avx2FmaToken) -> U32x8Consts {
         U32x8Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx2, data: &[u32; 8]) -> Self {
+    pub fn load(_: crate::Avx2FmaToken, data: &[u32; 8]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx2, v: u32) -> Self {
+    pub fn splat(_: crate::Avx2FmaToken, v: u32) -> Self {
         Self(unsafe { _mm256_set1_epi32(v as i32) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx2) -> Self {
+    pub fn zero(_: crate::Avx2FmaToken) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -1544,20 +1544,20 @@ impl f32x4 {
 
     /// Get token-gated constants. Usage: `f32x4::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasSse2) -> F32x4Consts {
+    pub fn consts(_: impl crate::SimdToken) -> F32x4Consts {
         F32x4Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[f32; 4]) -> Self {
+    pub fn load(_: impl crate::SimdToken, data: &[f32; 4]) -> Self {
         Self(unsafe { _mm_loadu_ps(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: f32) -> Self {
+    pub fn splat(_: impl crate::SimdToken, v: f32) -> Self {
         Self(unsafe { _mm_set1_ps(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::SimdToken) -> Self {
         Self(unsafe { _mm_setzero_ps() })
     }
 
@@ -1824,20 +1824,20 @@ impl i32x4 {
 
     /// Get token-gated constants. Usage: `i32x4::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasSse2) -> I32x4Consts {
+    pub fn consts(_: impl crate::SimdToken) -> I32x4Consts {
         I32x4Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[i32; 4]) -> Self {
+    pub fn load(_: impl crate::SimdToken, data: &[i32; 4]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: i32) -> Self {
+    pub fn splat(_: impl crate::SimdToken, v: i32) -> Self {
         Self(unsafe { _mm_set1_epi32(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::SimdToken) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -2641,15 +2641,15 @@ impl f64x4 {
     pub const LANES: usize = 4;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx2, data: &[f64; 4]) -> Self {
+    pub fn load(_: crate::Avx2FmaToken, data: &[f64; 4]) -> Self {
         Self(unsafe { _mm256_loadu_pd(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx2, v: f64) -> Self {
+    pub fn splat(_: crate::Avx2FmaToken, v: f64) -> Self {
         Self(unsafe { _mm256_set1_pd(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx2) -> Self {
+    pub fn zero(_: crate::Avx2FmaToken) -> Self {
         Self(unsafe { _mm256_setzero_pd() })
     }
 
@@ -2769,15 +2769,15 @@ impl f64x2 {
     pub const LANES: usize = 2;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[f64; 2]) -> Self {
+    pub fn load(_: impl crate::SimdToken, data: &[f64; 2]) -> Self {
         Self(unsafe { _mm_loadu_pd(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: f64) -> Self {
+    pub fn splat(_: impl crate::SimdToken, v: f64) -> Self {
         Self(unsafe { _mm_set1_pd(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::SimdToken) -> Self {
         Self(unsafe { _mm_setzero_pd() })
     }
 
@@ -2856,15 +2856,15 @@ impl i64x4 {
     pub const LANES: usize = 4;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx2, data: &[i64; 4]) -> Self {
+    pub fn load(_: crate::Avx2FmaToken, data: &[i64; 4]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx2, v: i64) -> Self {
+    pub fn splat(_: crate::Avx2FmaToken, v: i64) -> Self {
         Self(unsafe { _mm256_set1_epi64x(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx2) -> Self {
+    pub fn zero(_: crate::Avx2FmaToken) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -2922,15 +2922,15 @@ impl i16x16 {
     pub const LANES: usize = 16;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx2, data: &[i16; 16]) -> Self {
+    pub fn load(_: crate::Avx2FmaToken, data: &[i16; 16]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx2, v: i16) -> Self {
+    pub fn splat(_: crate::Avx2FmaToken, v: i16) -> Self {
         Self(unsafe { _mm256_set1_epi16(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx2) -> Self {
+    pub fn zero(_: crate::Avx2FmaToken) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -3008,15 +3008,15 @@ impl u8x32 {
     pub const LANES: usize = 32;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx2, data: &[u8; 32]) -> Self {
+    pub fn load(_: crate::Avx2FmaToken, data: &[u8; 32]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx2, v: u8) -> Self {
+    pub fn splat(_: crate::Avx2FmaToken, v: u8) -> Self {
         Self(unsafe { _mm256_set1_epi8(v as i8) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx2) -> Self {
+    pub fn zero(_: crate::Avx2FmaToken) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -3082,15 +3082,15 @@ impl i16x8 {
     pub const LANES: usize = 8;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[i16; 8]) -> Self {
+    pub fn load(_: impl crate::SimdToken, data: &[i16; 8]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: i16) -> Self {
+    pub fn splat(_: impl crate::SimdToken, v: i16) -> Self {
         Self(unsafe { _mm_set1_epi16(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::SimdToken) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -3172,15 +3172,15 @@ impl u16x8 {
     pub const LANES: usize = 8;
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasSse2, data: &[u16; 8]) -> Self {
+    pub fn load(_: impl crate::SimdToken, data: &[u16; 8]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasSse2, v: u16) -> Self {
+    pub fn splat(_: impl crate::SimdToken, v: u16) -> Self {
         Self(unsafe { _mm_set1_epi16(v as i16) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasSse2) -> Self {
+    pub fn zero(_: impl crate::SimdToken) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -3300,25 +3300,25 @@ impl f32x16 {
 
     /// Get token-gated constants. Usage: `f32x16::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasAvx512dq) -> F32x16Consts {
+    pub fn consts(_: impl crate::HasX64V4) -> F32x16Consts {
         F32x16Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx512dq, data: &[f32; 16]) -> Self {
+    pub fn load(_: impl crate::HasX64V4, data: &[f32; 16]) -> Self {
         Self(unsafe { _mm512_loadu_ps(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn load_slice(_: impl crate::HasAvx512dq, data: &[f32]) -> Self {
+    pub fn load_slice(_: impl crate::HasX64V4, data: &[f32]) -> Self {
         assert!(data.len() >= 16);
         Self(unsafe { _mm512_loadu_ps(data.as_ptr()) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx512dq, v: f32) -> Self {
+    pub fn splat(_: impl crate::HasX64V4, v: f32) -> Self {
         Self(unsafe { _mm512_set1_ps(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx512dq) -> Self {
+    pub fn zero(_: impl crate::HasX64V4) -> Self {
         Self(unsafe { _mm512_setzero_ps() })
     }
 
@@ -3706,20 +3706,20 @@ impl i32x16 {
 
     /// Get token-gated constants. Usage: `i32x16::consts(token).one()`
     #[inline(always)]
-    pub fn consts(_: impl crate::HasAvx512dq) -> I32x16Consts {
+    pub fn consts(_: impl crate::HasX64V4) -> I32x16Consts {
         I32x16Consts(())
     }
 
     #[inline(always)]
-    pub fn load(_: impl crate::HasAvx512dq, data: &[i32; 16]) -> Self {
+    pub fn load(_: impl crate::HasX64V4, data: &[i32; 16]) -> Self {
         Self(unsafe { _mm512_loadu_si512(data.as_ptr() as *const __m512i) })
     }
     #[inline(always)]
-    pub fn splat(_: impl crate::HasAvx512dq, v: i32) -> Self {
+    pub fn splat(_: impl crate::HasX64V4, v: i32) -> Self {
         Self(unsafe { _mm512_set1_epi32(v) })
     }
     #[inline(always)]
-    pub fn zero(_: impl crate::HasAvx512dq) -> Self {
+    pub fn zero(_: impl crate::HasX64V4) -> Self {
         Self(unsafe { _mm512_setzero_si512() })
     }
 
@@ -3981,11 +3981,11 @@ impl IndexMut<usize> for i32x16 {
 mod tests {
     use super::*;
     use crate::tokens::SimdToken;
-    use crate::{Avx2Token, Sse2Token};
+    use crate::{Avx2FmaToken, Sse41Token};
 
     #[test]
     fn test_f32x8_basic() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::splat(t, 2.0);
             let b = f32x8::splat(t, 3.0);
             assert_eq!((a + b).to_array(), [5.0f32; 8]);
@@ -3996,7 +3996,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_fma() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::splat(t, 2.0);
             let b = f32x8::splat(t, 3.0);
             let c = f32x8::splat(t, 1.0);
@@ -4006,7 +4006,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_comparison_blend() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::load(t, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             let thresh = f32x8::splat(t, 4.5);
             let mask = a.simd_gt(thresh);
@@ -4021,7 +4021,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_mask_helpers() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::load(t, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             let mask = a.simd_gt(f32x8::splat(t, 4.0));
             assert!(mask.any());
@@ -4033,7 +4033,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_predicates() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let nan = f32x8::splat(t, f32::NAN);
             let inf = f32x8::splat(t, f32::INFINITY);
             let normal = f32x8::splat(t, 1.0);
@@ -4047,7 +4047,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_int_conversion() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let f = f32x8::load(t, &[1.4, 2.5, 3.6, 4.0, -1.4, -2.5, -3.6, -4.0]);
             let rounded = f.round_int().to_array();
             assert_eq!(rounded, [1, 2, 4, 4, -1, -2, -4, -4]); // round to nearest even
@@ -4058,7 +4058,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_basic() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = i32x8::splat(t, 10);
             let b = i32x8::splat(t, 3);
             assert_eq!((a + b).to_array(), [13i32; 8]);
@@ -4070,7 +4070,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_shifts() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = i32x8::splat(t, 16);
             assert_eq!((a << 2i32).to_array(), [64i32; 8]);
             assert_eq!((a >> 2i32).to_array(), [4i32; 8]);
@@ -4079,7 +4079,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_to_f32x8() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let i = i32x8::load(t, &[1, 2, 3, 4, 5, 6, 7, 8]);
             let f = i.to_f32x8();
             assert_eq!(f.to_array(), [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
@@ -4088,7 +4088,8 @@ mod tests {
 
     #[test]
     fn test_f32x4_basic() {
-        if let Some(t) = Sse2Token::summon() {
+        // f32x4 uses SSE/SSE2 which is baseline on x86_64
+        if let Some(t) = Sse41Token::summon() {
             let a = f32x4::splat(t, 2.0);
             let b = f32x4::splat(t, 3.0);
             assert_eq!((a + b).to_array(), [5.0f32; 4]);
@@ -4097,7 +4098,7 @@ mod tests {
 
     #[test]
     fn test_f64x4_basic() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f64x4::splat(t, 2.0);
             let b = f64x4::splat(t, 3.0);
             assert_eq!((a + b).to_array(), [5.0f64; 4]);
@@ -4107,7 +4108,7 @@ mod tests {
 
     #[test]
     fn test_i16x16_saturating() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = i16x16::splat(t, 32000);
             let b = i16x16::splat(t, 1000);
             assert_eq!(a.saturating_add(b).to_array(), [i16::MAX; 16]);
@@ -4116,7 +4117,7 @@ mod tests {
 
     #[test]
     fn test_u8x32_basic() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = u8x32::splat(t, 100);
             let b = u8x32::splat(t, 200);
             assert_eq!(a.saturating_add(b).to_array(), [255u8; 32]);
@@ -4126,7 +4127,7 @@ mod tests {
 
     #[test]
     fn test_as_array() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let mut v = f32x8::load(t, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             assert_eq!(v.as_array()[0], 1.0);
             v.as_mut_array()[0] = 100.0;
@@ -4140,7 +4141,7 @@ mod tests {
         // let _: f32x8 = Default::default();
         // let _: f32x8 = [1.0f32; 8].into();
         // let _ = f32x8::from_raw(reg);
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let _ = f32x8::zero(t); // Only way
         }
     }
@@ -4151,7 +4152,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_constants() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let c = f32x8::consts(t);
             assert_eq!(c.one().to_array(), [1.0f32; 8]);
             assert_eq!(c.zero().to_array(), [0.0f32; 8]);
@@ -4164,7 +4165,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_constants() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let c = i32x8::consts(t);
             assert_eq!(c.one().to_array(), [1i32; 8]);
             assert_eq!(c.zero().to_array(), [0i32; 8]);
@@ -4176,7 +4177,7 @@ mod tests {
 
     #[test]
     fn test_u32x8_constants() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let c = u32x8::consts(t);
             assert_eq!(c.one().to_array(), [1u32; 8]);
             assert_eq!(c.zero().to_array(), [0u32; 8]);
@@ -4186,7 +4187,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_scalar_ops() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::splat(t, 10.0);
             // f32x8 + f32
             assert_eq!((a + 5.0).to_array(), [15.0f32; 8]);
@@ -4203,7 +4204,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_scalar_ops() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = i32x8::splat(t, 10);
             // i32x8 + i32
             assert_eq!((a + 5).to_array(), [15i32; 8]);
@@ -4218,7 +4219,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_per_lane_shift() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = i32x8::load(t, &[1, 2, 4, 8, 16, 32, 64, 128]);
             let shifts = i32x8::load(t, &[0, 1, 2, 3, 0, 1, 2, 3]);
             // Per-lane left shift
@@ -4232,7 +4233,7 @@ mod tests {
 
     #[test]
     fn test_u32x8_per_lane_shift() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = u32x8::load(t, &[16, 32, 64, 128, 256, 512, 1024, 2048]);
             let shifts = u32x8::load(t, &[1, 2, 3, 4, 1, 2, 3, 4]);
             let left = a << shifts;
@@ -4247,7 +4248,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_round_float() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             // Create a mask using comparison
             let a = i32x8::load(t, &[1, -1, 1, -1, 1, -1, 1, -1]);
             let zero = i32x8::zero(t);
@@ -4262,7 +4263,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_all_comparisons() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::load(t, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             let b = f32x8::load(t, &[2.0, 2.0, 2.0, 2.0, 6.0, 6.0, 6.0, 6.0]);
 
@@ -4283,7 +4284,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_all_comparisons() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = i32x8::load(t, &[1, 2, 3, 4, 5, 6, 7, 8]);
             let b = i32x8::load(t, &[2, 2, 2, 2, 6, 6, 6, 6]);
 
@@ -4298,7 +4299,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_sign_operations() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::load(t, &[1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0]);
             let b = f32x8::load(t, &[-1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0]);
 
@@ -4324,7 +4325,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_math_ops() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::load(t, &[1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0]);
 
             // sqrt
@@ -4361,7 +4362,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_rounding() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::load(t, &[1.4, 1.5, 1.6, 2.5, -1.4, -1.5, -1.6, -2.5]);
 
             assert_eq!(
@@ -4386,7 +4387,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_horizontal() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::load(t, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
             assert_eq!(a.reduce_add(), 36.0);
         }
@@ -4394,7 +4395,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_fma_variants() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = f32x8::splat(t, 2.0);
             let b = f32x8::splat(t, 3.0);
             let c = f32x8::splat(t, 1.0);
@@ -4412,7 +4413,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_bitwise() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let c = f32x8::consts(t);
             let all_ones = !c.zero();
             assert!(all_ones.all()); // all bits set = all lanes have sign bit set
@@ -4428,7 +4429,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_bitwise() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = i32x8::splat(t, 0b1100);
             let b = i32x8::splat(t, 0b1010);
 
@@ -4441,7 +4442,7 @@ mod tests {
 
     #[test]
     fn test_assign_ops() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let c = f32x8::consts(t);
             let mut a = f32x8::splat(t, 10.0);
             a += f32x8::splat(t, 5.0);
@@ -4462,7 +4463,7 @@ mod tests {
 
     #[test]
     fn test_degrees_radians() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let deg = f32x8::splat(t, 180.0);
             let rad = deg.to_radians();
             assert!((rad.to_array()[0] - core::f32::consts::PI).abs() < 1e-6);
@@ -4475,7 +4476,7 @@ mod tests {
 
     #[test]
     fn test_blend_i32x8() {
-        if let Some(t) = Avx2Token::summon() {
+        if let Some(t) = Avx2FmaToken::summon() {
             let a = i32x8::load(t, &[1, 2, 3, 4, 5, 6, 7, 8]);
             let mask = a.simd_gt(i32x8::splat(t, 4));
             let true_val = i32x8::splat(t, 100);
@@ -4743,7 +4744,7 @@ mod tests {
 
     #[test]
     fn test_f32x8_intrinsics_safe_in_target_feature() {
-        if Avx2Token::summon().is_some() {
+        if Avx2FmaToken::summon().is_some() {
             let result = unsafe { f32x8_intrinsics_are_safe() };
             // Just verify it compiles and runs - exact value doesn't matter
             let _ = result.to_array();
@@ -4752,7 +4753,7 @@ mod tests {
 
     #[test]
     fn test_i32x8_intrinsics_safe_in_target_feature() {
-        if Avx2Token::summon().is_some() {
+        if Avx2FmaToken::summon().is_some() {
             let result = unsafe { i32x8_intrinsics_are_safe() };
             let _ = result.to_array();
         }
@@ -4760,7 +4761,7 @@ mod tests {
 
     #[test]
     fn test_u32x8_intrinsics_safe_in_target_feature() {
-        if Avx2Token::summon().is_some() {
+        if Avx2FmaToken::summon().is_some() {
             let result = unsafe { u32x8_intrinsics_are_safe() };
             let _ = result.to_array();
         }
@@ -4768,18 +4769,16 @@ mod tests {
 
     #[test]
     fn test_f32x4_intrinsics_safe_in_target_feature() {
-        if Sse2Token::summon().is_some() {
-            let result = unsafe { f32x4_intrinsics_are_safe() };
-            let _ = result.to_array();
-        }
+        // SSE2 is baseline on x86_64, always available
+        let result = unsafe { f32x4_intrinsics_are_safe() };
+        let _ = result.to_array();
     }
 
     #[test]
     fn test_i32x4_intrinsics_safe_in_target_feature() {
-        if Sse2Token::summon().is_some() {
-            let result = unsafe { i32x4_intrinsics_are_safe() };
-            let _ = result.to_array();
-        }
+        // SSE2 is baseline on x86_64, always available
+        let result = unsafe { i32x4_intrinsics_are_safe() };
+        let _ = result.to_array();
     }
 
     // ========================================================================

@@ -3,13 +3,17 @@
 //! This tool parses the safe_unaligned_simd crate source and generates
 //! wrapper modules that gate each function behind the appropriate archmage token.
 //!
-//! Usage: cargo xtask generate
+//! Usage:
+//!   cargo xtask generate   - Generate wrapper modules
+//!   cargo xtask validate   - Validate token bounds match feature requirements
+//!   cargo xtask check-version - Check for safe_unaligned_simd updates
 
 use anyhow::{Context, Result, bail};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use syn::{
     Attribute, FnArg, GenericParam, Generics, ItemFn, Meta, Pat, ReturnType, Type, parse_file,
 };
@@ -26,56 +30,213 @@ enum Arch {
     Aarch64,
 }
 
-/// Mapping from target_feature strings to archmage trait bounds
-/// Returns (trait_name, features_string)
+/// Token/trait info for wrapper generation.
+struct TokenInfo {
+    /// The token or trait name
+    name: &'static str,
+    /// The target features string
+    features: &'static str,
+    /// True if this is a trait (use `impl Trait`), false if concrete type
+    is_trait: bool,
+    /// True if this requires the avx512 feature flag
+    requires_avx512: bool,
+}
+
+// ============================================================================
+// Feature Registry - Authoritative source of what features each token provides
+// ============================================================================
+
+/// Returns the set of features that a token or trait provides.
 ///
-/// Note: We avoid redundant bounds by using trait hierarchy knowledge.
-/// - HasAvx512vl: HasAvx512f - so HasAvx512vl implies HasAvx512f
-/// - HasAvx512bw: HasAvx512f - sibling of HasAvx512vl, need both
-/// - HasAvx512vbmi2: HasAvx512bw - need to add HasAvx512vl separately
-fn feature_to_token(features: &str, arch: Arch) -> Option<(&'static str, &'static str)> {
+/// This is the authoritative mapping used for validation. When we assign a token
+/// bound to a wrapper, we must verify the token provides ALL required features.
+fn token_provides_features(token_or_trait: &str) -> Option<&'static [&'static str]> {
+    match token_or_trait {
+        // Width traits
+        "Has128BitSimd" => Some(&["sse", "sse2"]),
+        "Has256BitSimd" => Some(&["sse", "sse2", "avx"]),
+        "Has512BitSimd" => Some(&["sse", "sse2", "avx", "avx2", "avx512f"]),
+
+        // x86 tier traits
+        "HasX64V2" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
+        "HasX64V4" => Some(&[
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+        ]),
+
+        // x86 concrete tokens
+        "Sse41Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1"]),
+        "Sse42Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2"]),
+        "AvxToken" => Some(&["sse", "sse2", "avx"]),
+        "Avx2Token" => Some(&["sse", "sse2", "avx", "avx2"]),
+        "Avx2FmaToken" => Some(&["sse", "sse2", "avx", "avx2", "fma"]),
+        "X64V2Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
+        "X64V3Token" | "Desktop64" => Some(&[
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+        ]),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+        ]),
+        "Avx512ModernToken" => Some(&[
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+            "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
+            "avx512bitalg", "avx512vnni", "avx512bf16", "vpclmulqdq", "gfni", "vaes",
+        ]),
+        "Avx512Fp16Token" => Some(&[
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+            "avx512fp16",
+        ]),
+
+        // AArch64 traits
+        "HasNeon" => Some(&["neon"]),
+        "HasNeonAes" => Some(&["neon", "aes"]),
+        "HasNeonSha3" => Some(&["neon", "sha3"]),
+
+        // AArch64 concrete tokens
+        "NeonToken" | "Arm64" => Some(&["neon"]),
+        "NeonAesToken" => Some(&["neon", "aes"]),
+        "NeonSha3Token" => Some(&["neon", "sha3"]),
+
+        _ => None,
+    }
+}
+
+/// Parse a comma-separated feature string into a set of individual features.
+fn parse_features(features: &str) -> HashSet<&str> {
+    features.split(',').map(|s| s.trim()).collect()
+}
+
+/// Check if a token/trait provides all required features.
+fn token_satisfies_features(token: &str, required_features: &str) -> Result<(), Vec<String>> {
+    let provided = match token_provides_features(token) {
+        Some(f) => f.iter().copied().collect::<HashSet<_>>(),
+        None => return Err(vec![format!("Unknown token/trait: {}", token)]),
+    };
+
+    let required = parse_features(required_features);
+    let missing: Vec<_> = required
+        .iter()
+        .filter(|f| !provided.contains(*f))
+        .map(|s| s.to_string())
+        .collect();
+
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(missing)
+    }
+}
+
+/// Mapping from target_feature strings to archmage tokens/traits.
+///
+/// Uses LLVM x86-64 microarchitecture level-based tier tokens.
+fn feature_to_token(features: &str, arch: Arch) -> Option<TokenInfo> {
     match arch {
         Arch::X86 => match features {
-            "sse" => Some(("HasSse", "sse")),
-            "sse2" => Some(("HasSse2", "sse2")),
-            "avx" => Some(("HasAvx", "avx")),
-            "avx512f" => Some(("HasAvx512f", "avx512f")),
-            // HasAvx512vl: HasAvx512f, so just HasAvx512vl is sufficient
-            "avx512f,avx512vl" => Some(("HasAvx512vl", "avx512f,avx512vl")),
-            "avx512bw" => Some(("HasAvx512bw", "avx512bw")),
-            // HasAvx512bw and HasAvx512vl are siblings (both extend HasAvx512f)
-            "avx512bw,avx512vl" => Some(("HasAvx512bw + HasAvx512vl", "avx512bw,avx512vl")),
-            "avx512vbmi2" => Some(("HasAvx512vbmi2", "avx512vbmi2")),
-            // HasAvx512vbmi2: HasAvx512bw, but doesn't imply VL
-            "avx512vbmi2,avx512vl" => {
-                Some(("HasAvx512vbmi2 + HasAvx512vl", "avx512vbmi2,avx512vl"))
-            }
+            // AVX (v3 level) - use Has256BitSimd trait so any 256-bit token works
+            "avx" => Some(TokenInfo {
+                name: "Has256BitSimd",
+                features: "avx",
+                is_trait: true,
+                requires_avx512: false,
+            }),
+
+            // v4 features - use HasX64V4 trait
+            "avx512f" => Some(TokenInfo {
+                name: "HasX64V4",
+                features: "avx512f",
+                is_trait: true,
+                requires_avx512: true,
+            }),
+            "avx512f,avx512vl" => Some(TokenInfo {
+                name: "HasX64V4",
+                features: "avx512f,avx512vl",
+                is_trait: true,
+                requires_avx512: true,
+            }),
+            "avx512bw" => Some(TokenInfo {
+                name: "HasX64V4",
+                features: "avx512bw",
+                is_trait: true,
+                requires_avx512: true,
+            }),
+            "avx512bw,avx512vl" => Some(TokenInfo {
+                name: "HasX64V4",
+                features: "avx512bw,avx512vl",
+                is_trait: true,
+                requires_avx512: true,
+            }),
+
+            // Modern extensions - use concrete Avx512ModernToken
+            "avx512vbmi2" => Some(TokenInfo {
+                name: "Avx512ModernToken",
+                features: "avx512vbmi2",
+                is_trait: false,
+                requires_avx512: true,
+            }),
+            "avx512vbmi2,avx512vl" => Some(TokenInfo {
+                name: "Avx512ModernToken",
+                features: "avx512vbmi2,avx512vl",
+                is_trait: false,
+                requires_avx512: true,
+            }),
+
+            // SSE/SSE2 - skip, baseline on x86_64
+            "sse" | "sse2" => None,
+
             _ => None,
         },
         Arch::Aarch64 => match features {
-            "neon" => Some(("HasNeon", "neon")),
+            "neon" => Some(TokenInfo {
+                name: "HasNeon",
+                features: "neon",
+                is_trait: true,
+                requires_avx512: false,
+            }),
+            f if f.contains("sha3") => Some(TokenInfo {
+                name: "HasNeonSha3",
+                features: "neon",
+                is_trait: true,
+                requires_avx512: false,
+            }),
+            f if f.contains("aes") => Some(TokenInfo {
+                name: "HasNeonAes",
+                features: "neon",
+                is_trait: true,
+                requires_avx512: false,
+            }),
             _ => None,
         },
     }
 }
 
-/// Module name for a given feature set
+/// Module name for a given feature set.
+///
+/// Groups features by tier: avx (v3), v4 (standard AVX-512), modern (AVX-512 extensions).
 fn feature_to_module(features: &str, arch: Arch) -> &'static str {
     match arch {
         Arch::X86 => match features {
-            "sse" => "sse",
-            "sse2" => "sse2",
             "avx" => "avx",
-            "avx512f" => "avx512f",
-            "avx512f,avx512vl" => "avx512f_vl",
-            "avx512bw" => "avx512bw",
-            "avx512bw,avx512vl" => "avx512bw_vl",
-            "avx512vbmi2" => "avx512vbmi2",
-            "avx512vbmi2,avx512vl" => "avx512vbmi2_vl",
+            "avx512f" => "v4",
+            "avx512f,avx512vl" => "v4_vl",
+            "avx512bw" => "v4_bw",
+            "avx512bw,avx512vl" => "v4_bw_vl",
+            "avx512vbmi2" => "modern",
+            "avx512vbmi2,avx512vl" => "modern_vl",
             _ => "unknown",
         },
         Arch::Aarch64 => match features {
             "neon" => "neon",
+            f if f.contains("sha3") => "neon_sha3",
+            f if f.contains("aes") => "neon_aes",
             _ => "unknown",
         },
     }
@@ -197,6 +358,89 @@ fn parse_file_functions(path: &Path) -> Result<Vec<ParsedFunction>> {
             }
         })
         .collect();
+
+    Ok(functions)
+}
+
+/// Parse aarch64 functions using `cargo expand` to expand macros.
+///
+/// The aarch64.rs file in safe_unaligned_simd uses macros like `vld_n_replicate_k!`
+/// which don't yield parseable function items directly. We use `cargo expand` to
+/// expand the macros and then parse the resulting code.
+fn parse_aarch64_via_expand(safe_simd_path: &Path) -> Result<BTreeMap<String, String>> {
+    let mut functions: BTreeMap<String, String> = BTreeMap::new();
+
+    // Run cargo expand on safe_unaligned_simd for aarch64 target
+    let output = Command::new("cargo")
+        .arg("expand")
+        .arg("--lib")
+        .arg("--target")
+        .arg("aarch64-unknown-linux-gnu")
+        .current_dir(safe_simd_path)
+        .output()
+        .context("Failed to run cargo expand. Is cargo-expand installed? Run: cargo install cargo-expand")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Check if it's just missing target (non-fatal)
+        if stderr.contains("target may not be installed") {
+            println!("  Warning: aarch64 target not installed, skipping expand");
+            println!("  Run: rustup target add aarch64-unknown-linux-gnu");
+            return Ok(functions);
+        }
+        bail!(
+            "cargo expand failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let expanded = String::from_utf8_lossy(&output.stdout);
+
+    // Parse the expanded output to extract function signatures
+    // We look for patterns like:
+    //   #[target_feature(enable = "neon")]
+    //   pub fn vld1_u8(from: &[u8; 8]) -> uint8x8_t {
+    //
+    // or:
+    //   #[target_feature(enable = "neon,aes")]
+    //   pub fn ...
+
+    let mut current_features: Option<String> = None;
+
+    for line in expanded.lines() {
+        let trimmed = line.trim();
+
+        // Check for target_feature attribute
+        if trimmed.starts_with("#[target_feature(enable") {
+            // Extract the feature string
+            if let Some(start) = trimmed.find('"') {
+                if let Some(end) = trimmed.rfind('"') {
+                    if start < end {
+                        current_features = Some(trimmed[start + 1..end].to_string());
+                    }
+                }
+            }
+            continue;
+        }
+
+        // Check for pub fn declaration
+        if trimmed.starts_with("pub fn ") {
+            if let Some(features) = current_features.take() {
+                // Extract function name
+                let after_fn = &trimmed[7..]; // Skip "pub fn "
+                let name_end = after_fn
+                    .find(['<', '('])
+                    .unwrap_or(after_fn.len());
+                let name = after_fn[..name_end].to_string();
+
+                // Only include aarch64-specific functions (skip any generic ones)
+                // NEON functions typically start with 'v'
+                if name.starts_with('v') {
+                    functions.insert(name, features);
+                }
+            }
+        }
+    }
 
     Ok(functions)
 }
@@ -435,8 +679,7 @@ fn type_to_string(ty: &Type) -> String {
 /// Generate a single wrapper function as a formatted string
 fn generate_wrapper_string(
     func: &ParsedFunction,
-    token_name: &str,
-    features: &str,
+    token_info: &TokenInfo,
     arch: Arch,
 ) -> String {
     let mut out = String::new();
@@ -492,8 +735,13 @@ fn generate_wrapper_string(
         write!(out, "<{}>", generic_params.join(", ")).unwrap();
     }
 
-    // Parameters (add token as first param with impl Trait bound)
-    let params: Vec<String> = std::iter::once(format!("_token: impl {}", token_name))
+    // Parameters (add token as first param - use impl Trait for traits, concrete type otherwise)
+    let token_param = if token_info.is_trait {
+        format!("_token: impl {}", token_info.name)
+    } else {
+        format!("_token: {}", token_info.name)
+    };
+    let params: Vec<String> = std::iter::once(token_param)
         .chain(
             func.inputs
                 .iter()
@@ -518,7 +766,7 @@ fn generate_wrapper_string(
     write!(
         out,
         "    #[inline]\n    #[target_feature(enable = \"{}\")]\n    unsafe fn inner",
-        features
+        token_info.features
     )
     .unwrap();
 
@@ -593,8 +841,7 @@ fn generate_wrapper_string(
 
 /// Generate a module for a specific feature set
 fn generate_module(
-    token_name: &str,
-    features: &str,
+    token_info: &TokenInfo,
     functions: &[ParsedFunction],
     arch: Arch,
 ) -> String {
@@ -614,9 +861,9 @@ fn generate_module(
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::missing_safety_doc)]
 "#,
-        features,
+        token_info.features,
         functions.len(),
-        token_name,
+        token_info.name,
         SAFE_SIMD_VERSION,
     )
     .unwrap();
@@ -624,10 +871,6 @@ fn generate_module(
     // Architecture-specific imports
     match arch {
         Arch::X86 => {
-            // Extract trait names from the token_name (e.g., "HasAvx512f + HasAvx512vl" -> ["HasAvx512f", "HasAvx512vl"])
-            let traits: Vec<&str> = token_name.split(" + ").map(|s| s.trim()).collect();
-            let trait_imports = traits.join(", ");
-
             writeln!(
                 out,
                 r#"
@@ -652,7 +895,7 @@ use safe_unaligned_simd::x86_64::{{
 }};
 
 use crate::tokens::{{{}}};"#,
-                trait_imports
+                token_info.name
             )
             .unwrap();
         }
@@ -662,7 +905,7 @@ use crate::tokens::{{{}}};"#,
                 r#"
 use core::arch::aarch64::*;
 use crate::tokens::{};"#,
-                token_name
+                token_info.name
             )
             .unwrap();
         }
@@ -671,7 +914,7 @@ use crate::tokens::{};"#,
     // Generate each function
     for func in functions {
         writeln!(out).unwrap();
-        out.push_str(&generate_wrapper_string(func, token_name, features, arch));
+        out.push_str(&generate_wrapper_string(func, token_info, arch));
     }
 
     out
@@ -679,7 +922,7 @@ use crate::tokens::{};"#,
 
 /// Generate the mod.rs that ties everything together
 fn generate_mod_rs(
-    x86_modules: &[(&str, &str, usize)],
+    x86_modules: &[(&str, &str, usize, bool)],
     aarch64_modules: &[(&str, &str, usize)],
 ) -> String {
     let mut code = String::from(
@@ -696,10 +939,11 @@ fn generate_mod_rs(
 "#,
     );
 
-    for (module, features, count) in x86_modules {
+    for (module, features, count, requires_avx512) in x86_modules {
+        let avx512_note = if *requires_avx512 { " (requires `avx512` feature)" } else { "" };
         code.push_str(&format!(
-            "//! - [`x86::{}`]: {} functions (`{}`)\n",
-            module, count, features
+            "//! - [`x86::{}`]: {} functions (`{}`){}\n",
+            module, count, features, avx512_note
         ));
     }
 
@@ -726,8 +970,8 @@ pub mod aarch64;
     code
 }
 
-/// Generate x86/mod.rs
-fn generate_x86_mod_rs(modules: &[(&str, &str, usize)]) -> String {
+/// Generate x86/mod.rs with conditional compilation for AVX-512 modules
+fn generate_x86_mod_rs(modules: &[(&str, &str, usize, bool)]) -> String {
     let mut code = String::from(
         r#"//! x86/x86_64 token-gated wrappers.
 //!
@@ -736,8 +980,12 @@ fn generate_x86_mod_rs(modules: &[(&str, &str, usize)]) -> String {
 "#,
     );
 
-    for (module, _features, _count) in modules {
-        code.push_str(&format!("pub mod {};\n", module));
+    for (module, _features, _count, requires_avx512) in modules {
+        if *requires_avx512 {
+            code.push_str(&format!("#[cfg(feature = \"avx512\")]\npub mod {};\n", module));
+        } else {
+            code.push_str(&format!("pub mod {};\n", module));
+        }
     }
 
     code
@@ -765,12 +1013,14 @@ fn main() -> Result<()> {
 
     if args.len() < 2 {
         eprintln!("Usage: cargo xtask generate");
+        eprintln!("       cargo xtask validate");
         eprintln!("       cargo xtask check-version");
         std::process::exit(1);
     }
 
     match args[1].as_str() {
         "generate" => generate_wrappers()?,
+        "validate" => validate_wrappers()?,
         "check-version" => check_version()?,
         _ => {
             eprintln!("Unknown command: {}", args[1]);
@@ -831,27 +1081,28 @@ fn generate_wrappers() -> Result<()> {
     let out_dir = PathBuf::from("src/generated/x86");
     fs::create_dir_all(&out_dir)?;
 
-    let mut modules_info: Vec<(&str, &str, usize)> = Vec::new();
+    // (module_name, feature_str, count, requires_avx512)
+    let mut modules_info: Vec<(&str, &str, usize, bool)> = Vec::new();
 
     // Generate each module
     for (feature, functions) in &by_feature {
-        if let Some((token_name, features)) = feature_to_token(feature, Arch::X86) {
+        if let Some(token_info) = feature_to_token(feature, Arch::X86) {
             let module_name = feature_to_module(feature, Arch::X86);
             println!("\nGenerating {}...", module_name);
 
-            let code = generate_module(token_name, features, functions, Arch::X86);
+            let code = generate_module(&token_info, functions, Arch::X86);
             let out_path = out_dir.join(format!("{}.rs", module_name));
             fs::write(&out_path, &code)?;
             println!("  Wrote {} ({} bytes)", out_path.display(), code.len());
 
-            modules_info.push((module_name, feature, functions.len()));
+            modules_info.push((module_name, feature, functions.len(), token_info.requires_avx512));
         } else {
             println!("\nSkipping unknown feature: {}", feature);
         }
     }
 
     // Sort modules for consistent output
-    modules_info.sort_by_key(|(name, _, _)| *name);
+    modules_info.sort_by_key(|(name, _, _, _)| *name);
 
     // Generate x86/mod.rs
     let x86_mod = generate_x86_mod_rs(&modules_info);
@@ -896,7 +1147,7 @@ fn generate_wrappers() -> Result<()> {
         format!("safe_unaligned_simd = \"{}\"\n", SAFE_SIMD_VERSION),
     )?;
 
-    let total_x86 = modules_info.iter().map(|(_, _, c)| c).sum::<usize>();
+    let total_x86 = modules_info.iter().map(|(_, _, c, _)| c).sum::<usize>();
     let total_aarch64 = aarch64_modules_info
         .iter()
         .map(|(_, _, c)| c)
@@ -916,6 +1167,366 @@ fn generate_wrappers() -> Result<()> {
     println!("Total: {} functions", total_x86 + total_aarch64);
 
     Ok(())
+}
+
+// ============================================================================
+// Validation
+// ============================================================================
+
+/// Parsed wrapper function from generated code
+#[derive(Debug)]
+struct GeneratedWrapper {
+    name: String,
+    token_bound: String,
+    module: String,
+}
+
+/// Extract token bound from a function signature line
+fn extract_token_bound(line: &str) -> Option<String> {
+    // Match patterns like:
+    //   _token: impl Has256BitSimd
+    //   _token: Avx512ModernToken
+    if let Some(start) = line.find("_token:") {
+        let after_colon = &line[start + 7..];
+        let after_colon = after_colon.trim_start();
+
+        // Find the end (comma or closing paren)
+        let end = after_colon
+            .find([',', ')'])
+            .unwrap_or(after_colon.len());
+
+        let token_part = after_colon[..end].trim();
+
+        // Handle "impl Trait" syntax
+        if let Some(stripped) = token_part.strip_prefix("impl ") {
+            return Some(stripped.trim().to_string());
+        } else {
+            return Some(token_part.to_string());
+        }
+    }
+    None
+}
+
+/// Parse generated aarch64 wrappers from macro invocations.
+///
+/// The generated neon.rs uses `aarch64_load_store!` macro invocations.
+/// We parse the macro arguments to extract function names.
+fn parse_generated_aarch64_wrappers(path: &Path) -> Result<Vec<GeneratedWrapper>> {
+    let mut wrappers = Vec::new();
+
+    if !path.exists() {
+        return Ok(wrappers);
+    }
+
+    let content = fs::read_to_string(path)?;
+
+    // Look for aarch64_load_store! blocks and extract:
+    // - token: HasNeon;
+    // - fn <name>(...
+    let mut current_token: Option<String> = None;
+    let mut in_macro = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        // Start of macro block
+        if trimmed.starts_with("aarch64_load_store!") {
+            in_macro = true;
+            current_token = None;
+            continue;
+        }
+
+        if in_macro {
+            // Extract token bound
+            if trimmed.starts_with("token:") {
+                // Parse "token: HasNeon;"
+                let after_colon = trimmed[6..].trim();
+                if let Some(semicolon) = after_colon.find(';') {
+                    current_token = Some(after_colon[..semicolon].trim().to_string());
+                }
+                continue;
+            }
+
+            // Extract function names
+            if trimmed.contains("fn ") && !trimmed.starts_with("//") {
+                if let Some(fn_pos) = trimmed.find("fn ") {
+                    let after_fn = &trimmed[fn_pos + 3..];
+                    // Function name ends at '(' or '<'
+                    if let Some(name_end) = after_fn.find('(') {
+                        let name = after_fn[..name_end].trim().to_string();
+                        if let Some(ref token) = current_token {
+                            wrappers.push(GeneratedWrapper {
+                                name,
+                                token_bound: token.clone(),
+                                module: "neon".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            // End of macro block
+            if trimmed == "}" && !trimmed.contains("fn ") {
+                // Check brace depth to detect end of macro
+                // Simple heuristic: standalone "}" at trimmed start likely ends the macro
+                in_macro = false;
+            }
+        }
+    }
+
+    Ok(wrappers)
+}
+
+/// Parse generated wrapper files and extract function info
+fn parse_generated_wrappers(dir: &Path, _arch: Arch) -> Result<Vec<GeneratedWrapper>> {
+    let mut wrappers = Vec::new();
+
+    if !dir.exists() {
+        return Ok(wrappers);
+    }
+
+    for entry in WalkDir::new(dir).max_depth(1) {
+        let entry = entry?;
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let path = entry.path();
+        if path.extension().is_some_and(|e| e == "rs") {
+            let filename = path.file_name().unwrap().to_string_lossy();
+            if filename == "mod.rs" {
+                continue;
+            }
+
+            let module = filename.trim_end_matches(".rs").to_string();
+            let content = fs::read_to_string(path)?;
+
+            for line in content.lines() {
+                if line.starts_with("pub fn ") {
+                    // Extract function name
+                    let name_start = 7; // "pub fn ".len()
+                    let name_end = line[name_start..]
+                        .find(['<', '('])
+                        .map(|i| i + name_start)
+                        .unwrap_or(line.len());
+                    let name = line[name_start..name_end].to_string();
+
+                    // Extract token bound
+                    if let Some(token_bound) = extract_token_bound(line) {
+                        wrappers.push(GeneratedWrapper {
+                            name,
+                            token_bound,
+                            module: module.clone(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(wrappers)
+}
+
+/// Validate that all generated wrappers have correct token bounds
+fn validate_wrappers() -> Result<()> {
+    println!("=== Archmage Wrapper Validation ===\n");
+
+    // Find safe_unaligned_simd source
+    println!("Finding safe_unaligned_simd-{} in cargo cache...", SAFE_SIMD_VERSION);
+    let safe_simd_path = find_safe_simd_path()?;
+    println!("Found at: {}\n", safe_simd_path.display());
+
+    // Parse source functions to get ground truth
+    println!("--- Parsing Source Functions ---");
+
+    // x86 source
+    let x86_dir = safe_simd_path.join("src/x86");
+    let mut x86_source: BTreeMap<String, String> = BTreeMap::new(); // name -> features
+
+    for entry in WalkDir::new(&x86_dir).max_depth(1) {
+        let entry = entry?;
+        if entry.file_type().is_file() && entry.path().extension().is_some_and(|e| e == "rs") {
+            let path = entry.path();
+            let name = path.file_name().unwrap().to_string_lossy();
+            if name == "mod.rs" || name.contains("test") || name == "cell.rs" {
+                continue;
+            }
+
+            let functions = parse_file_functions(path)?;
+            for func in functions {
+                x86_source.insert(func.name, func.target_features);
+            }
+        }
+    }
+    println!("Parsed {} x86 source functions", x86_source.len());
+
+    // aarch64 source - use cargo expand to handle macros
+    println!("\nExpanding aarch64 macros via cargo expand...");
+    let aarch64_source = parse_aarch64_via_expand(&safe_simd_path)?;
+    if aarch64_source.is_empty() {
+        println!("  No aarch64 functions extracted (target may not be installed)");
+    } else {
+        println!("Parsed {} aarch64 source functions via macro expansion\n", aarch64_source.len());
+    }
+
+    // Parse generated wrappers
+    println!("--- Parsing Generated Wrappers ---");
+    let x86_gen_dir = PathBuf::from("src/generated/x86");
+    let x86_wrappers = parse_generated_wrappers(&x86_gen_dir, Arch::X86)?;
+    println!("Found {} x86 wrappers", x86_wrappers.len());
+
+    // Parse aarch64 wrappers from macro invocations in neon.rs
+    let aarch64_neon_path = PathBuf::from("src/generated/aarch64/neon.rs");
+    let aarch64_wrappers = parse_generated_aarch64_wrappers(&aarch64_neon_path)?;
+    println!("Found {} aarch64 wrappers (from macro parsing)\n", aarch64_wrappers.len());
+
+    // Validation results
+    let mut errors: Vec<String> = Vec::new();
+    let mut warnings: Vec<String> = Vec::new();
+    let mut validated = 0;
+
+    println!("--- Validating x86 Token Bounds ---");
+
+    // Check each x86 wrapper against source
+    for wrapper in &x86_wrappers {
+        if let Some(required_features) = x86_source.get(&wrapper.name) {
+            match token_satisfies_features(&wrapper.token_bound, required_features) {
+                Ok(()) => validated += 1,
+                Err(missing) => {
+                    errors.push(format!(
+                        "MISMATCH: x86/{}::{}\n  Token: {} does not provide: {:?}\n  Required: {}",
+                        wrapper.module, wrapper.name, wrapper.token_bound, missing, required_features
+                    ));
+                }
+            }
+        } else {
+            warnings.push(format!(
+                "NOT IN SOURCE: x86/{}::{} (wrapper exists but no source function found)",
+                wrapper.module, wrapper.name
+            ));
+        }
+    }
+
+    println!("--- Validating aarch64 Token Bounds ---");
+
+    // Check each aarch64 wrapper against source
+    for wrapper in &aarch64_wrappers {
+        if let Some(required_features) = aarch64_source.get(&wrapper.name) {
+            match token_satisfies_features(&wrapper.token_bound, required_features) {
+                Ok(()) => validated += 1,
+                Err(missing) => {
+                    errors.push(format!(
+                        "MISMATCH: aarch64/{}::{}\n  Token: {} does not provide: {:?}\n  Required: {}",
+                        wrapper.module, wrapper.name, wrapper.token_bound, missing, required_features
+                    ));
+                }
+            }
+        } else {
+            warnings.push(format!(
+                "NOT IN SOURCE: aarch64/{}::{} (wrapper exists but no source function found)",
+                wrapper.module, wrapper.name
+            ));
+        }
+    }
+
+    // Check for unhandled feature combinations in x86 source
+    println!("\n--- Checking x86 Feature Coverage ---");
+    let mut x86_feature_coverage: BTreeMap<String, usize> = BTreeMap::new();
+    let mut unhandled_x86: BTreeSet<String> = BTreeSet::new();
+
+    for features in x86_source.values() {
+        *x86_feature_coverage.entry(features.clone()).or_insert(0) += 1;
+
+        if feature_to_token(features, Arch::X86).is_none() {
+            // Skip baseline features (sse, sse2) - intentionally not wrapped
+            if features != "sse" && features != "sse2" {
+                unhandled_x86.insert(features.clone());
+            }
+        }
+    }
+
+    println!("x86 feature coverage (source → generated):");
+    for (features, count) in &x86_feature_coverage {
+        let token = feature_to_token(features, Arch::X86);
+        let status = match token {
+            Some(t) => format!("→ {} ✓", t.name),
+            None if features == "sse" || features == "sse2" => "→ (skipped, baseline)".to_string(),
+            None => "→ UNHANDLED ✗".to_string(),
+        };
+        println!("  {}: {} functions {}", features, count, status);
+    }
+
+    if !unhandled_x86.is_empty() {
+        println!("\n⚠ Unhandled x86 feature combinations (functions silently skipped):");
+        for f in &unhandled_x86 {
+            let count = x86_feature_coverage.get(f).unwrap_or(&0);
+            warnings.push(format!("UNHANDLED x86: {} ({} functions skipped)", f, count));
+            println!("  - {} ({} functions)", f, count);
+        }
+    }
+
+    // Check for unhandled feature combinations in aarch64 source
+    if !aarch64_source.is_empty() {
+        println!("\n--- Checking aarch64 Feature Coverage ---");
+        let mut aarch64_feature_coverage: BTreeMap<String, usize> = BTreeMap::new();
+        let mut unhandled_aarch64: BTreeSet<String> = BTreeSet::new();
+
+        for features in aarch64_source.values() {
+            *aarch64_feature_coverage.entry(features.clone()).or_insert(0) += 1;
+
+            if feature_to_token(features, Arch::Aarch64).is_none() {
+                unhandled_aarch64.insert(features.clone());
+            }
+        }
+
+        println!("aarch64 feature coverage (source → generated):");
+        for (features, count) in &aarch64_feature_coverage {
+            let token = feature_to_token(features, Arch::Aarch64);
+            let status = match token {
+                Some(t) => format!("→ {} ✓", t.name),
+                None => "→ UNHANDLED ✗".to_string(),
+            };
+            println!("  {}: {} functions {}", features, count, status);
+        }
+
+        if !unhandled_aarch64.is_empty() {
+            println!("\n⚠ Unhandled aarch64 feature combinations (functions silently skipped):");
+            for f in &unhandled_aarch64 {
+                let count = aarch64_feature_coverage.get(f).unwrap_or(&0);
+                warnings.push(format!("UNHANDLED aarch64: {} ({} functions skipped)", f, count));
+                println!("  - {} ({} functions)", f, count);
+            }
+        }
+    }
+
+    // Summary
+    println!("\n=== Validation Summary ===");
+    println!("  Validated: {} wrappers", validated);
+    println!("  Errors:    {} (token doesn't provide required features)", errors.len());
+    println!("  Warnings:  {} (unhandled features or orphan wrappers)", warnings.len());
+
+    if !errors.is_empty() {
+        println!("\n=== ERRORS ===");
+        for e in &errors {
+            println!("\n{}", e);
+        }
+    }
+
+    if !warnings.is_empty() {
+        println!("\n=== WARNINGS ===");
+        for w in &warnings {
+            println!("  {}", w);
+        }
+    }
+
+    if errors.is_empty() && warnings.is_empty() {
+        println!("\n✓ All validations passed!");
+        Ok(())
+    } else if errors.is_empty() {
+        println!("\n⚠ Validation passed with warnings");
+        Ok(())
+    } else {
+        bail!("Validation failed with {} errors", errors.len())
+    }
 }
 
 fn check_version() -> Result<()> {

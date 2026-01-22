@@ -9,14 +9,12 @@
 //! ## x86/x86_64 Feature Coverage
 //!
 //! - [`x86::avx`]: 17 functions (`avx`)
-//! - [`x86::avx512bw`]: 13 functions (`avx512bw`)
-//! - [`x86::avx512bw_vl`]: 26 functions (`avx512bw,avx512vl`)
-//! - [`x86::avx512f`]: 49 functions (`avx512f`)
-//! - [`x86::avx512f_vl`]: 86 functions (`avx512f,avx512vl`)
-//! - [`x86::avx512vbmi2`]: 6 functions (`avx512vbmi2`)
-//! - [`x86::avx512vbmi2_vl`]: 12 functions (`avx512vbmi2,avx512vl`)
-//! - [`x86::sse`]: 6 functions (`sse`)
-//! - [`x86::sse2`]: 20 functions (`sse2`)
+//! - [`x86::modern`]: 6 functions (`avx512vbmi2`) (requires `avx512` feature)
+//! - [`x86::modern_vl`]: 12 functions (`avx512vbmi2,avx512vl`) (requires `avx512` feature)
+//! - [`x86::v4`]: 49 functions (`avx512f`) (requires `avx512` feature)
+//! - [`x86::v4_bw`]: 13 functions (`avx512bw`) (requires `avx512` feature)
+//! - [`x86::v4_bw_vl`]: 26 functions (`avx512bw,avx512vl`) (requires `avx512` feature)
+//! - [`x86::v4_vl`]: 86 functions (`avx512f,avx512vl`) (requires `avx512` feature)
 //!
 //! ## AArch64 Feature Coverage
 //!

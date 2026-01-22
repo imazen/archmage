@@ -3,11 +3,15 @@
 //! **Auto-generated** - do not edit manually.
 
 pub mod avx;
-pub mod avx512bw;
-pub mod avx512bw_vl;
-pub mod avx512f;
-pub mod avx512f_vl;
-pub mod avx512vbmi2;
-pub mod avx512vbmi2_vl;
-pub mod sse;
-pub mod sse2;
+#[cfg(feature = "avx512")]
+pub mod modern;
+#[cfg(feature = "avx512")]
+pub mod modern_vl;
+#[cfg(feature = "avx512")]
+pub mod v4;
+#[cfg(feature = "avx512")]
+pub mod v4_bw;
+#[cfg(feature = "avx512")]
+pub mod v4_bw_vl;
+#[cfg(feature = "avx512")]
+pub mod v4_vl;

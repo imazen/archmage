@@ -108,37 +108,36 @@ pub use tokens::SimdToken;
 // Composite token trait
 pub use tokens::CompositeToken;
 
-// Capability marker traits
-pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasFma, HasScalableVectors};
+// Width marker traits
+pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 
-// x86 feature marker traits (available on all architectures for cross-platform code)
-pub use tokens::{
-    HasAvx, HasAvx2, HasAvx512bw, HasAvx512dq, HasAvx512f, HasAvx512vbmi2, HasAvx512vl, HasSse,
-    HasSse2, HasSse41, HasSse42,
-};
+// x86 tier marker traits (based on LLVM x86-64 microarchitecture levels)
+pub use tokens::HasX64V2;
+#[cfg(feature = "avx512")]
+pub use tokens::HasX64V4;
 
-// aarch64 feature marker traits (available on all architectures)
-pub use tokens::{HasNeon, HasSve, HasSve2};
+// AArch64 tier marker traits
+pub use tokens::{HasNeon, HasNeonAes, HasNeonSha3};
 
 // All tokens available on all architectures (summon() returns None on wrong arch)
 pub use tokens::{
     // ARM tokens
     Arm64,
+    NeonToken,
+    NeonAesToken,
+    NeonSha3Token,
     // x86 tokens
     Avx2FmaToken,
     Avx2Token,
     AvxToken,
     Desktop64,
     FmaToken,
-    NeonToken,
-    // WASM tokens
-    Simd128Token,
-    Sse2Token,
     Sse41Token,
     Sse42Token,
-    SseToken,
     X64V2Token,
     X64V3Token,
+    // WASM tokens
+    Simd128Token,
 };
 
 // AVX-512 tokens (requires "avx512" feature)

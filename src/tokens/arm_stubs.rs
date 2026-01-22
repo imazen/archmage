@@ -4,8 +4,8 @@
 //! `summon()` always returns `None` on non-ARM.
 
 use super::SimdToken;
-use super::{Has128BitSimd, HasFma, HasScalableVectors};
-use super::{HasNeon, HasSve, HasSve2};
+use super::Has128BitSimd;
+use super::{HasNeon, HasNeonAes, HasNeonSha3};
 
 macro_rules! define_arm_stub {
     ($name:ident, $display:literal) => {
@@ -33,39 +33,31 @@ macro_rules! define_arm_stub {
 
 // Define all ARM token stubs
 define_arm_stub!(NeonToken, "NEON");
+define_arm_stub!(NeonAesToken, "NEON+AES");
+define_arm_stub!(NeonSha3Token, "NEON+SHA3");
 define_arm_stub!(ArmCryptoToken, "ARM Crypto");
 define_arm_stub!(ArmCrypto3Token, "ARM Crypto3");
-define_arm_stub!(SveToken, "SVE");
-define_arm_stub!(Sve2Token, "SVE2");
 
 /// The baseline for AArch64 (NEON) - stub on non-ARM architectures.
 pub type Arm64 = NeonToken;
 
-// Implement marker traits for stubs
+// Width traits
 impl Has128BitSimd for NeonToken {}
-impl HasFma for NeonToken {}
-
+impl Has128BitSimd for NeonAesToken {}
+impl Has128BitSimd for NeonSha3Token {}
 impl Has128BitSimd for ArmCryptoToken {}
-impl HasFma for ArmCryptoToken {}
-
 impl Has128BitSimd for ArmCrypto3Token {}
-impl HasFma for ArmCrypto3Token {}
 
-impl Has128BitSimd for SveToken {}
-impl HasFma for SveToken {}
-impl HasScalableVectors for SveToken {}
-
-impl Has128BitSimd for Sve2Token {}
-impl HasFma for Sve2Token {}
-impl HasScalableVectors for Sve2Token {}
-
+// Tier traits
 impl HasNeon for NeonToken {}
+impl HasNeon for NeonAesToken {}
+impl HasNeon for NeonSha3Token {}
 impl HasNeon for ArmCryptoToken {}
 impl HasNeon for ArmCrypto3Token {}
-impl HasNeon for SveToken {}
-impl HasNeon for Sve2Token {}
 
-impl HasSve for SveToken {}
-impl HasSve for Sve2Token {}
+impl HasNeonAes for NeonAesToken {}
+impl HasNeonAes for ArmCryptoToken {}
+impl HasNeonAes for ArmCrypto3Token {}
 
-impl HasSve2 for Sve2Token {}
+impl HasNeonSha3 for NeonSha3Token {}
+impl HasNeonSha3 for ArmCrypto3Token {}
