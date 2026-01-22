@@ -298,30 +298,40 @@ Benchmarked using `examples/sleef_comparison.rs` (requires nightly for `portable
 - Higher accuracy (~1 ULP vs ~140 ULP for midp)
 - Required for scientific computing or highest-precision work
 
-**CRITICAL: #[target_feature] requirement**
+**CRITICAL: Use `#[arcane]` for proper inlining**
 
-archmage SIMD types **must** be used within functions annotated with `#[target_feature]` or the `#[arcane]` macro. Without this, intrinsics are called as functions instead of inlined, causing 50-100x slowdowns.
+archmage SIMD types **must** be used within functions annotated with the `#[arcane]` macro. Without this, intrinsics are called as functions instead of inlined, causing 50-100x slowdowns.
 
 ```rust
+use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::simd::f32x8;
+
 // WRONG - intrinsics won't inline
-fn slow_version(token: Avx2FmaToken, data: &[f32]) {
-    let v = f32x8::load(token, ...);  // Function call overhead!
-    v.exp2_lowp();
+fn slow_version(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
+    let v = f32x8::load(token, data);  // Function call overhead!
+    v.exp2_lowp().to_array()
 }
 
-// CORRECT - intrinsics inline properly
-#[target_feature(enable = "avx2,fma")]
-unsafe fn fast_version(token: Avx2FmaToken, data: &[f32]) {
-    let v = f32x8::load(token, ...);  // Inline SIMD instructions!
-    v.exp2_lowp();
+// CORRECT - use #[arcane] macro
+#[arcane]
+fn fast_version(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
+    let v = f32x8::load(token, data);  // Inline SIMD instructions!
+    v.exp2_lowp().to_array()
+}
+
+// Usage
+if let Some(token) = Avx2FmaToken::try_new() {
+    let result = fast_version(token, &input);
 }
 ```
+
+The `#[arcane]` macro automatically generates the correct `#[target_feature]` attributes based on the token type, keeping your code safe and fast.
 
 **Recommendations:**
 - For preview/thumbnails: use `_lowp` functions (fastest)
 - For 8-12 bit color processing: use `_midp` functions (fast + accurate)
 - For 16-bit+ or scientific: consider sleef-rs or std::f32
-- Always wrap archmage code in `#[arcane]` or `#[target_feature]` functions
+- Always wrap archmage code in `#[arcane]` functions
 
 ## References
 

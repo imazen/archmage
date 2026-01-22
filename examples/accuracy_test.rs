@@ -11,7 +11,7 @@
 //! ```
 
 use archmage::simd::f32x8;
-use archmage::SimdToken;
+use archmage::{arcane, Avx2FmaToken, SimdToken};
 
 /// Calculate ULP difference between two f32 values
 fn ulp_diff(a: f32, b: f32) -> u32 {
@@ -102,108 +102,125 @@ where
     }
 }
 
-/// Apply archmage exp2 to a slice
+// ============================================================================
+// SIMD kernel functions using #[arcane]
+// ============================================================================
+
+/// Process a single chunk of 8 floats with exp2_lowp
+#[arcane]
+fn exp2_lowp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    f32x8::load(token, input).exp2_lowp().to_array()
+}
+
+/// Process a single chunk of 8 floats with log2_lowp
+#[arcane]
+fn log2_lowp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    f32x8::load(token, input).log2_lowp().to_array()
+}
+
+/// Process a single chunk of 8 floats with pow_lowp
+#[arcane]
+fn pow_lowp_chunk(token: Avx2FmaToken, input: &[f32; 8], exp: f32) -> [f32; 8] {
+    f32x8::load(token, input).pow_lowp(exp).to_array()
+}
+
+/// Process a single chunk of 8 floats with pow_midp
+#[arcane]
+fn pow_midp_chunk(token: Avx2FmaToken, input: &[f32; 8], exp: f32) -> [f32; 8] {
+    f32x8::load(token, input).pow_midp(exp).to_array()
+}
+
+// ============================================================================
+// Slice processing wrappers
+// ============================================================================
+
+/// Apply archmage exp2_lowp to a slice
 fn archmage_exp2(input: &[f32]) -> Vec<f32> {
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return input.iter().map(|&x| x.exp2()).collect();
     };
 
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, input: &[f32]) -> Vec<f32> {
-        let mut output = vec![0.0f32; input.len()];
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = f32x8::load(token, arr);
-            let r = x.exp2_lowp();
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].exp2();
-        }
-        output
+    let mut output = vec![0.0f32; input.len()];
+    let chunks = input.len() / 8;
+
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&exp2_lowp_chunk(token, arr));
     }
 
-    unsafe { inner(token, input) }
+    // Handle remainder with scalar fallback
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].exp2();
+    }
+
+    output
 }
 
-/// Apply archmage log2 to a slice
+/// Apply archmage log2_lowp to a slice
 fn archmage_log2(input: &[f32]) -> Vec<f32> {
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return input.iter().map(|&x| x.log2()).collect();
     };
 
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, input: &[f32]) -> Vec<f32> {
-        let mut output = vec![0.0f32; input.len()];
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = f32x8::load(token, arr);
-            let r = x.log2_lowp();
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].log2();
-        }
-        output
+    let mut output = vec![0.0f32; input.len()];
+    let chunks = input.len() / 8;
+
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&log2_lowp_chunk(token, arr));
     }
 
-    unsafe { inner(token, input) }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].log2();
+    }
+
+    output
 }
 
 /// Apply archmage pow_lowp (fast, low-precision) to a slice
 fn archmage_pow_lowp(input: &[f32], exp: f32) -> Vec<f32> {
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return input.iter().map(|&x| x.powf(exp)).collect();
     };
 
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, exp: f32, input: &[f32]) -> Vec<f32> {
-        let mut output = vec![0.0f32; input.len()];
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = f32x8::load(token, arr);
-            let r = x.pow_lowp(exp);
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].powf(exp);
-        }
-        output
+    let mut output = vec![0.0f32; input.len()];
+    let chunks = input.len() / 8;
+
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&pow_lowp_chunk(token, arr, exp));
     }
 
-    unsafe { inner(token, exp, input) }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].powf(exp);
+    }
+
+    output
 }
 
 /// Apply archmage pow_midp (mid-precision) to a slice
 fn archmage_pow_midp(input: &[f32], exp: f32) -> Vec<f32> {
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return input.iter().map(|&x| x.powf(exp)).collect();
     };
 
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, exp: f32, input: &[f32]) -> Vec<f32> {
-        let mut output = vec![0.0f32; input.len()];
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = f32x8::load(token, arr);
-            let r = x.pow_midp(exp);
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].powf(exp);
-        }
-        output
+    let mut output = vec![0.0f32; input.len()];
+    let chunks = input.len() / 8;
+
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&pow_midp_chunk(token, arr, exp));
     }
 
-    unsafe { inner(token, exp, input) }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].powf(exp);
+    }
+
+    output
 }
 
 /// Test round-trip accuracy for a given pow function
@@ -253,13 +270,14 @@ where
 }
 
 /// Test round-trip accuracy: sRGB -> linear -> sRGB
+#[allow(dead_code)]
 fn test_srgb_roundtrip(bit_depth: u32) {
     let levels = 1u32 << bit_depth;
     let max_val = (levels - 1) as f32;
 
     println!("\n=== {}-bit sRGB Round-trip Test ({} levels) ===", bit_depth, levels);
 
-    let Some(_token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(_token) = Avx2FmaToken::try_new() else {
         eprintln!("AVX2+FMA not available");
         return;
     };
@@ -336,7 +354,7 @@ fn main() {
     println!("Archmage Transcendental Accuracy Analysis");
     println!("=========================================\n");
 
-    if archmage::Avx2FmaToken::try_new().is_none() {
+    if Avx2FmaToken::try_new().is_none() {
         eprintln!("AVX2+FMA not available, skipping");
         return;
     }
@@ -404,7 +422,7 @@ fn main() {
     let stats = measure_accuracy("pow_midp_0.417", &range_0_1, |x| archmage_pow_midp(x, 1.0/2.4), |x| x.powf(1.0/2.4));
     println!("  {}", stats);
 
-    // Round-trip comparison: basic vs HP vs std
+    // Round-trip comparison: lowp vs midp vs std
     println!("\n=== sRGB Round-trip Comparison ===");
     println!("(pow(x, 2.4) then pow(result, 1/2.4), checking if we get back original level)\n");
 
