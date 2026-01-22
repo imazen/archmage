@@ -14,6 +14,7 @@
 //! - `transcendental` - Transcendental functions (log, exp, pow, cbrt)
 
 mod ops;
+mod ops_comparison;
 mod structure;
 mod transcendental;
 mod types;
