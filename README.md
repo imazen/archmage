@@ -273,6 +273,88 @@ fn process(_token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
 
 Inside `#[arcane]`, these calls are **safe** because the `#[target_feature]` attributes match. Outside `#[arcane]`, you would need `unsafe` blocks.
 
+## SIMD Types
+
+archmage provides token-gated SIMD types with `wide`-like ergonomics. Construction requires a capability token, ensuring CPU support at compile time.
+
+### Available Types
+
+| Width | Float | Signed Int | Unsigned Int | Token Required |
+|-------|-------|------------|--------------|----------------|
+| **128-bit** | `f32x4`, `f64x2` | `i8x16`, `i16x8`, `i32x4`, `i64x2` | `u8x16`, `u16x8`, `u32x4`, `u64x2` | `Sse41Token` |
+| **256-bit** | `f32x8`, `f64x4` | `i8x32`, `i16x16`, `i32x8`, `i64x4` | `u8x32`, `u16x16`, `u32x8`, `u64x4` | `Avx2FmaToken` |
+| **512-bit** | `f32x16`, `f64x8` | `i8x64`, `i16x32`, `i32x16`, `i64x8` | `u8x64`, `u16x32`, `u32x16`, `u64x8` | `Avx512Token` |
+
+### Operations
+
+**Construction** (requires token):
+- `splat(token, value)` - broadcast scalar to all lanes
+- `load(token, &array)` - load from aligned array
+- `from_array(token, array)` - construct from array
+- `zero(token)` - all zeros
+
+**Conversion** (no token needed):
+- `store(&mut array)` - store to array
+- `to_array() -> [T; N]` - extract to array
+- `as_array() -> &[T; N]` - view as array reference
+- `raw() -> __m256` - extract raw intrinsic type
+
+**Arithmetic** (operators): `+`, `-`, `*`, `/`, `+=`, `-=`, `*=`, `/=`
+
+**Bitwise** (operators): `&`, `|`, `^`, `&=`, `|=`, `^=`
+
+**Math** (float types):
+- `min`, `max`, `clamp` - element-wise bounds
+- `sqrt`, `abs` - square root, absolute value
+- `floor`, `ceil`, `round` - rounding
+- `mul_add(a, b)` - fused multiply-add: `self * a + b`
+- `mul_sub(a, b)` - fused multiply-sub: `self * a - b`
+- `rcp_approx`, `recip` - reciprocal (fast/accurate)
+- `rsqrt_approx`, `rsqrt` - reciprocal sqrt (fast/accurate)
+
+**Transcendentals** (float types):
+- `log2_lowp`, `log2_midp` - base-2 logarithm
+- `exp2_lowp`, `exp2_midp` - base-2 exponential
+- `ln_lowp`, `ln_midp` - natural logarithm
+- `exp_lowp`, `exp_midp` - natural exponential
+- `pow_lowp(n)`, `pow_midp(n)` - power function
+- `cbrt_midp` - cube root
+
+**Comparison** (returns mask):
+- `simd_eq`, `simd_ne` - equality
+- `simd_lt`, `simd_le`, `simd_gt`, `simd_ge` - ordering
+
+**Blending & Reduction**:
+- `blend(mask, if_true, if_false)` - conditional select
+- `reduce_add`, `reduce_min`, `reduce_max` - horizontal ops
+
+**Integer-specific**:
+- `shl::<N>`, `shr::<N>` - shift by constant
+- `shr_arithmetic::<N>` - arithmetic right shift
+- `extend_lo_*`, `extend_hi_*` - widen to larger type
+- `pack_*` - narrow to smaller type
+
+**Block operations** (f32x4, f32x8):
+- `transpose_4x4`, `transpose_8x8` - matrix transpose
+- `interleave_4ch`, `deinterleave_4ch` - AoS ↔ SoA for RGBA
+- `load_4_rgba_u8`, `store_4_rgba_u8` - packed RGBA u8 conversion
+
+### Example
+
+```rust
+use archmage::{Avx2FmaToken, SimdToken, simd::f32x8};
+
+fn main() {
+    if let Some(token) = Avx2FmaToken::try_new() {
+        let a = f32x8::splat(token, 2.0);
+        let b = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let c = a * b + a;  // Operators work naturally
+        let result = c.sqrt().pow_midp(0.5);  // Method chaining
+        println!("{:?}", result.to_array());
+    }
+}
+```
+
 ## When to Use archmage
 
 archmage is for when you need **specific instructions** that autovectorization won't produce:
