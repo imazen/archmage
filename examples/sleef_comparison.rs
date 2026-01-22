@@ -1,6 +1,6 @@
 //! Comparison benchmark: archmage vs sleef-rs transcendentals
 //!
-//! **Requires nightly Rust** for `portable_simd` feature.
+//! **Requires nightly Rust** for `portable_simd` feature (sleef dependency).
 //!
 //! Run with:
 //! ```sh
@@ -10,7 +10,6 @@
 #![feature(portable_simd)]
 #![allow(dead_code)]
 
-use archmage::SimdToken;
 use std::simd::f32x8;
 use std::time::Instant;
 
@@ -139,144 +138,115 @@ fn sleef_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
 }
 
 // ============================================================================
-// Archmage implementations
+// Archmage implementations using #[arcane] macro
 // ============================================================================
 
-fn archmage_exp2_f32(input: &[f32], output: &mut [f32]) {
-    
-    use archmage::SimdToken;
+use archmage::simd::f32x8 as am_f32x8;
+use archmage::{arcane, Avx2FmaToken, SimdToken};
 
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+#[arcane]
+fn exp2_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    am_f32x8::load(token, input).exp2_lowp().to_array()
+}
+
+#[arcane]
+fn log2_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    am_f32x8::load(token, input).log2_lowp().to_array()
+}
+
+#[arcane]
+fn ln_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    am_f32x8::load(token, input).ln_lowp().to_array()
+}
+
+#[arcane]
+fn exp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    am_f32x8::load(token, input).exp_lowp().to_array()
+}
+
+#[arcane]
+fn pow_chunk(token: Avx2FmaToken, input: &[f32; 8], exp: f32) -> [f32; 8] {
+    am_f32x8::load(token, input).pow_lowp(exp).to_array()
+}
+
+fn archmage_exp2_f32(input: &[f32], output: &mut [f32]) {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return;
     };
 
-    // Inner function with target_feature for proper inlining
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, input: &[f32], output: &mut [f32]) {
-        use archmage::simd::f32x8 as am_f32x8;
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = am_f32x8::load(token, arr);
-            let r = x.exp2_lowp();
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].exp2();
-        }
+    let chunks = input.len() / 8;
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&exp2_chunk(token, arr));
     }
-
-    // SAFETY: Token proves AVX2+FMA are available
-    unsafe { inner(token, input, output) }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].exp2();
+    }
 }
 
 fn archmage_log2_f32(input: &[f32], output: &mut [f32]) {
-
-    use archmage::SimdToken;
-
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return;
     };
 
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, input: &[f32], output: &mut [f32]) {
-        use archmage::simd::f32x8 as am_f32x8;
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = am_f32x8::load(token, arr);
-            let r = x.log2_lowp();
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].log2();
-        }
+    let chunks = input.len() / 8;
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&log2_chunk(token, arr));
     }
-
-    unsafe { inner(token, input, output) }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].log2();
+    }
 }
 
 fn archmage_ln_f32(input: &[f32], output: &mut [f32]) {
-
-    use archmage::SimdToken;
-
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return;
     };
 
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, input: &[f32], output: &mut [f32]) {
-        use archmage::simd::f32x8 as am_f32x8;
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = am_f32x8::load(token, arr);
-            let r = x.ln_lowp();
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].ln();
-        }
+    let chunks = input.len() / 8;
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&ln_chunk(token, arr));
     }
-
-    unsafe { inner(token, input, output) }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].ln();
+    }
 }
 
 fn archmage_exp_f32(input: &[f32], output: &mut [f32]) {
-
-    use archmage::SimdToken;
-
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return;
     };
 
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, input: &[f32], output: &mut [f32]) {
-        use archmage::simd::f32x8 as am_f32x8;
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = am_f32x8::load(token, arr);
-            let r = x.exp_lowp();
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].exp();
-        }
+    let chunks = input.len() / 8;
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&exp_chunk(token, arr));
     }
-
-    unsafe { inner(token, input, output) }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].exp();
+    }
 }
 
 fn archmage_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
-
-    use archmage::SimdToken;
-
-    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+    let Some(token) = Avx2FmaToken::try_new() else {
         return;
     };
 
-    #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(token: archmage::Avx2FmaToken, exp: f32, input: &[f32], output: &mut [f32]) {
-        use archmage::simd::f32x8 as am_f32x8;
-        let chunks = input.len() / 8;
-        for i in 0..chunks {
-            let start = i * 8;
-            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
-            let x = am_f32x8::load(token, arr);
-            let r = x.pow_lowp(exp);
-            output[start..start + 8].copy_from_slice(&r.to_array());
-        }
-        for i in (chunks * 8)..input.len() {
-            output[i] = input[i].powf(exp);
-        }
+    let chunks = input.len() / 8;
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&pow_chunk(token, arr, exp));
     }
-
-    unsafe { inner(token, exp, input, output) }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].powf(exp);
+    }
 }
 
 // ============================================================================
@@ -307,7 +277,7 @@ fn main() {
     println!("N = {} elements, {} iterations\n", N, ITERATIONS);
 
     // Check if AVX2+FMA is available
-    if archmage::Avx2FmaToken::try_new().is_none() {
+    if Avx2FmaToken::try_new().is_none() {
         eprintln!("AVX2+FMA not available, skipping archmage benchmarks");
         return;
     }

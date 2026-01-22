@@ -36,6 +36,7 @@ dependencies = [
  "archmage-macros",
  "criterion",
  "safe_unaligned_simd",
+ "sleef",
  "trybuild",
  "wide",
 ]
@@ -197,6 +198,12 @@ name = "crunchy"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
+
+[[package]]
+name = "doubled"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f60f472d90e6b0aa29ba7e63aef46fa5441a4a852d36d950648b5468adfe3a3"
 
 [[package]]
 name = "either"
@@ -508,6 +515,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8bbf91e5a4d6315eee45e704372590b30e260ee83af6639d64557f51b067776"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "sleef"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fe16088049a19013d5736660a666dae8e1dbb78dd1ced530a396a7bab4ef47d"
+dependencies = [
+ "doubled",
 ]
 
 [[package]]
