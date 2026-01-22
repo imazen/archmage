@@ -384,6 +384,192 @@ impl f32x4 {
         Self(unsafe { _mm_fmsub_ps(self.0, a.0, b.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_ps(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpneq_ps(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmplt_ps(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmple_ps(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_ps(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpge_ps(self.0, other.0) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f32x4::splat(token, 1.0);
+    /// let b = f32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = f32x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_ps(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 4 lanes.
+    #[inline(always)]
+    pub fn reduce_add(self) -> f32 {
+        unsafe {
+            let h1 = _mm_hadd_ps(self.0, self.0);
+            let h2 = _mm_hadd_ps(h1, h1);
+            _mm_cvtss_f32(h2)
+        }
+    }
+
+    /// Find the minimum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_min(self) -> f32 {
+        unsafe {
+            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);
+            let m1 = _mm_min_ps(self.0, shuf);
+            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);
+            let m2 = _mm_min_ps(m1, shuf2);
+            _mm_cvtss_f32(m2)
+        }
+    }
+
+    /// Find the maximum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_max(self) -> f32 {
+        unsafe {
+            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);
+            let m1 = _mm_max_ps(self.0, shuf);
+            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);
+            let m2 = _mm_max_ps(m1, shuf2);
+            _mm_cvtss_f32(m2)
+        }
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to signed 32-bit integers, rounding toward zero (truncation).
+    ///
+    /// Values outside the representable range become `i32::MIN` (0x80000000).
+    #[inline(always)]
+    pub fn to_i32x4(self) -> i32x4 {
+        i32x4(unsafe { _mm_cvttps_epi32(self.0) })
+    }
+
+    /// Convert to signed 32-bit integers, rounding to nearest even.
+    ///
+    /// Values outside the representable range become `i32::MIN` (0x80000000).
+    #[inline(always)]
+    pub fn to_i32x4_round(self) -> i32x4 {
+        i32x4(unsafe { _mm_cvtps_epi32(self.0) })
+    }
+
+    /// Create from signed 32-bit integers.
+    #[inline(always)]
+    pub fn from_i32x4(v: i32x4) -> Self {
+        Self(unsafe { _mm_cvtepi32_ps(v.0) })
+    }
+
+    // ========== Approximation Operations ==========
+
+    /// Fast reciprocal approximation (1/x) with ~12-bit precision.
+    ///
+    /// For full precision, use `recip()` which applies Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rcp_approx(self) -> Self {
+        Self(unsafe { _mm_rcp_ps(self.0) })
+    }
+
+    /// Precise reciprocal (1/x) using Newton-Raphson refinement.
+    ///
+    /// More accurate than `rcp_approx()` but slower. For maximum speed
+    /// with acceptable precision loss, use `rcp_approx()`.
+    #[inline(always)]
+    pub fn recip(self) -> Self {
+        // Newton-Raphson: x' = x * (2 - a*x)
+        let approx = self.rcp_approx();
+        let two = Self(unsafe { _mm_set1_ps(2.0) });
+        // One iteration gives ~24-bit precision from ~12-bit
+        approx * (two - self * approx)
+    }
+
+    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~12-bit precision.
+    ///
+    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually.
+    #[inline(always)]
+    pub fn rsqrt_approx(self) -> Self {
+        Self(unsafe { _mm_rsqrt_ps(self.0) })
+    }
+
+    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rsqrt(self) -> Self {
+        // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - x * y * y)
+        let approx = self.rsqrt_approx();
+        let half = Self(unsafe { _mm_set1_ps(0.5) });
+        let three = Self(unsafe { _mm_set1_ps(3.0) });
+        half * approx * (three - self * approx * approx)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi32(-1);
+            let as_int = _mm_castps_si128(self.0);
+            _mm_castsi128_ps (_mm_xor_si128(as_int, ones))
+        })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -396,6 +582,52 @@ impl_neg!(f32x4, _mm_sub_ps, _mm_setzero_ps);
 impl_bitwise_ops!(f32x4, __m128, _mm_and_ps, _mm_or_ps, _mm_xor_ps);
 #[cfg(target_arch = "x86_64")]
 impl_index!(f32x4, f32, 4);
+
+
+// Scalar broadcast operations for f32x4
+// These allow `v + 2.0` instead of `v + f32x4::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<f32> for f32x4 {
+    type Output = Self;
+    /// Add a scalar to all lanes: `v + 2.0`
+    ///
+    /// Broadcasts the scalar to all lanes, then adds.
+    #[inline(always)]
+    fn add(self, rhs: f32) -> Self {
+        self + Self(unsafe { _mm_set1_ps(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<f32> for f32x4 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes: `v - 2.0`
+    #[inline(always)]
+    fn sub(self, rhs: f32) -> Self {
+        self - Self(unsafe { _mm_set1_ps(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Mul<f32> for f32x4 {
+    type Output = Self;
+    /// Multiply all lanes by a scalar: `v * 2.0`
+    #[inline(always)]
+    fn mul(self, rhs: f32) -> Self {
+        self * Self(unsafe { _mm_set1_ps(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Div<f32> for f32x4 {
+    type Output = Self;
+    /// Divide all lanes by a scalar: `v / 2.0`
+    #[inline(always)]
+    fn div(self, rhs: f32) -> Self {
+        self / Self(unsafe { _mm_set1_ps(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -540,6 +772,132 @@ impl f64x2 {
         Self(unsafe { _mm_fmsub_pd(self.0, a.0, b.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_pd(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpneq_pd(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmplt_pd(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmple_pd(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_pd(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpge_pd(self.0, other.0) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f64x2::splat(token, 1.0);
+    /// let b = f64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = f64x2::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_pd(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 2 lanes.
+    #[inline(always)]
+    pub fn reduce_add(self) -> f64 {
+        unsafe {
+            let h = _mm_hadd_pd(self.0, self.0);
+            _mm_cvtsd_f64(h)
+        }
+    }
+
+    /// Find the minimum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_min(self) -> f64 {
+        unsafe {
+            let shuf = _mm_shuffle_pd::<0b01>(self.0, self.0);
+            let m = _mm_min_pd(self.0, shuf);
+            _mm_cvtsd_f64(m)
+        }
+    }
+
+    /// Find the maximum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_max(self) -> f64 {
+        unsafe {
+            let shuf = _mm_shuffle_pd::<0b01>(self.0, self.0);
+            let m = _mm_max_pd(self.0, shuf);
+            _mm_cvtsd_f64(m)
+        }
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero.
+    ///
+    /// Returns an `i32x4` where only the lower 2 lanes are valid.
+    #[inline(always)]
+    pub fn to_i32x4_low(self) -> i32x4 {
+        i32x4(unsafe { _mm_cvttpd_epi32(self.0) })
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi64x(-1);
+            let as_int = _mm_castpd_si128(self.0);
+            _mm_castsi128_pd (_mm_xor_si128(as_int, ones))
+        })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -552,6 +910,52 @@ impl_neg!(f64x2, _mm_sub_pd, _mm_setzero_pd);
 impl_bitwise_ops!(f64x2, __m128d, _mm_and_pd, _mm_or_pd, _mm_xor_pd);
 #[cfg(target_arch = "x86_64")]
 impl_index!(f64x2, f64, 2);
+
+
+// Scalar broadcast operations for f64x2
+// These allow `v + 2.0` instead of `v + f64x2::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<f64> for f64x2 {
+    type Output = Self;
+    /// Add a scalar to all lanes: `v + 2.0`
+    ///
+    /// Broadcasts the scalar to all lanes, then adds.
+    #[inline(always)]
+    fn add(self, rhs: f64) -> Self {
+        self + Self(unsafe { _mm_set1_pd(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<f64> for f64x2 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes: `v - 2.0`
+    #[inline(always)]
+    fn sub(self, rhs: f64) -> Self {
+        self - Self(unsafe { _mm_set1_pd(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Mul<f64> for f64x2 {
+    type Output = Self;
+    /// Multiply all lanes by a scalar: `v * 2.0`
+    #[inline(always)]
+    fn mul(self, rhs: f64) -> Self {
+        self * Self(unsafe { _mm_set1_pd(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Div<f64> for f64x2 {
+    type Output = Self;
+    /// Divide all lanes by a scalar: `v / 2.0`
+    #[inline(always)]
+    fn div(self, rhs: f64) -> Self {
+        self / Self(unsafe { _mm_set1_pd(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -657,6 +1061,112 @@ impl i8x16 {
         Self(unsafe { _mm_abs_epi8(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_epi8(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm_cmpeq_epi8(self.0, other.0);
+            let ones = _mm_set1_epi8(-1);
+            _mm_xor_si128(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_epi8(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_epi8(other.0, self.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = _mm_cmpgt_epi8(other.0, self.0);
+            let ones = _mm_set1_epi8(-1);
+            _mm_xor_si128(lt, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = _mm_cmpgt_epi8(self.0, other.0);
+            let ones = _mm_set1_epi8(-1);
+            _mm_xor_si128(gt, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i8x16::splat(token, 1.0);
+    /// let b = i8x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i8x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 16 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i8 {
+        self.to_array().iter().copied().fold(0_i8, i8::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi8(-1);
+            _mm_xor_si128(self.0, ones)
+        })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -667,6 +1177,30 @@ impl_assign_ops!(i8x16);
 impl_bitwise_ops!(i8x16, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i8x16, i8, 16);
+
+
+// Scalar broadcast operations for i8x16
+// These allow `v + 2.0` instead of `v + i8x16::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<i8> for i8x16 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i8) -> Self {
+        self + Self(unsafe { _mm_set1_epi8(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<i8> for i8x16 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i8) -> Self {
+        self - Self(unsafe { _mm_set1_epi8(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -766,6 +1300,118 @@ impl u8x16 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_epi8(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm_cmpeq_epi8(self.0, other.0);
+            let ones = _mm_set1_epi8(-1);
+            _mm_xor_si128(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            // Flip sign bit to convert unsigned to signed comparison
+            let bias = _mm_set1_epi8(0x80u8 as i8);
+            let a = _mm_xor_si128(self.0, bias);
+            let b = _mm_xor_si128(other.0, bias);
+            _mm_cmpgt_epi8(a, b)
+        })
+    }
+
+    /// Lane-wise less-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        other.simd_gt(self)
+    }
+
+    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = other.simd_gt(self);
+            let ones = _mm_set1_epi8(-1);
+            _mm_xor_si128(lt.0, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = self.simd_gt(other);
+            let ones = _mm_set1_epi8(-1);
+            _mm_xor_si128(gt.0, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u8x16::splat(token, 1.0);
+    /// let b = u8x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u8x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 16 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u8 {
+        self.to_array().iter().copied().fold(0_u8, u8::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi8(-1);
+            _mm_xor_si128(self.0, ones)
+        })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -776,6 +1422,30 @@ impl_assign_ops!(u8x16);
 impl_bitwise_ops!(u8x16, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u8x16, u8, 16);
+
+
+// Scalar broadcast operations for u8x16
+// These allow `v + 2.0` instead of `v + u8x16::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<u8> for u8x16 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u8) -> Self {
+        self + Self(unsafe { _mm_set1_epi8(rhs as i8) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<u8> for u8x16 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u8) -> Self {
+        self - Self(unsafe { _mm_set1_epi8(rhs as i8) })
+    }
+}
 
 
 // ============================================================================
@@ -881,6 +1551,138 @@ impl i16x8 {
         Self(unsafe { _mm_abs_epi16(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_epi16(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm_cmpeq_epi16(self.0, other.0);
+            let ones = _mm_set1_epi16(-1);
+            _mm_xor_si128(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_epi16(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_epi16(other.0, self.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = _mm_cmpgt_epi16(other.0, self.0);
+            let ones = _mm_set1_epi16(-1);
+            _mm_xor_si128(lt, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = _mm_cmpgt_epi16(self.0, other.0);
+            let ones = _mm_set1_epi16(-1);
+            _mm_xor_si128(gt, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i16x8::splat(token, 1.0);
+    /// let b = i16x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i16x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 8 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i16 {
+        self.to_array().iter().copied().fold(0_i16, i16::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi16(-1);
+            _mm_xor_si128(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_slli_epi16::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_srli_epi16::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_srai_epi16::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -893,6 +1695,30 @@ impl_assign_ops!(i16x8);
 impl_bitwise_ops!(i16x8, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i16x8, i16, 8);
+
+
+// Scalar broadcast operations for i16x8
+// These allow `v + 2.0` instead of `v + i16x8::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<i16> for i16x8 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i16) -> Self {
+        self + Self(unsafe { _mm_set1_epi16(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<i16> for i16x8 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i16) -> Self {
+        self - Self(unsafe { _mm_set1_epi16(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -992,6 +1818,136 @@ impl u16x8 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_epi16(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm_cmpeq_epi16(self.0, other.0);
+            let ones = _mm_set1_epi16(-1);
+            _mm_xor_si128(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            // Flip sign bit to convert unsigned to signed comparison
+            let bias = _mm_set1_epi16(0x8000u16 as i16);
+            let a = _mm_xor_si128(self.0, bias);
+            let b = _mm_xor_si128(other.0, bias);
+            _mm_cmpgt_epi16(a, b)
+        })
+    }
+
+    /// Lane-wise less-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        other.simd_gt(self)
+    }
+
+    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = other.simd_gt(self);
+            let ones = _mm_set1_epi16(-1);
+            _mm_xor_si128(lt.0, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = self.simd_gt(other);
+            let ones = _mm_set1_epi16(-1);
+            _mm_xor_si128(gt.0, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u16x8::splat(token, 1.0);
+    /// let b = u16x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u16x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 8 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u16 {
+        self.to_array().iter().copied().fold(0_u16, u16::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi16(-1);
+            _mm_xor_si128(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_slli_epi16::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_srli_epi16::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1004,6 +1960,30 @@ impl_assign_ops!(u16x8);
 impl_bitwise_ops!(u16x8, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u16x8, u16, 8);
+
+
+// Scalar broadcast operations for u16x8
+// These allow `v + 2.0` instead of `v + u16x8::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<u16> for u16x8 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u16) -> Self {
+        self + Self(unsafe { _mm_set1_epi16(rhs as i16) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<u16> for u16x8 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u16) -> Self {
+        self - Self(unsafe { _mm_set1_epi16(rhs as i16) })
+    }
+}
 
 
 // ============================================================================
@@ -1109,6 +2089,146 @@ impl i32x4 {
         Self(unsafe { _mm_abs_epi32(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_epi32(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm_cmpeq_epi32(self.0, other.0);
+            let ones = _mm_set1_epi32(-1);
+            _mm_xor_si128(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_epi32(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_epi32(other.0, self.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = _mm_cmpgt_epi32(other.0, self.0);
+            let ones = _mm_set1_epi32(-1);
+            _mm_xor_si128(lt, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = _mm_cmpgt_epi32(self.0, other.0);
+            let ones = _mm_set1_epi32(-1);
+            _mm_xor_si128(gt, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i32x4::splat(token, 1.0);
+    /// let b = i32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i32x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 4 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i32 {
+        self.to_array().iter().copied().fold(0_i32, i32::wrapping_add)
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to single-precision floats.
+    #[inline(always)]
+    pub fn to_f32x4(self) -> f32x4 {
+        f32x4(unsafe { _mm_cvtepi32_ps(self.0) })
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi32(-1);
+            _mm_xor_si128(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_slli_epi32::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_srli_epi32::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_srai_epi32::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1121,6 +2241,30 @@ impl_assign_ops!(i32x4);
 impl_bitwise_ops!(i32x4, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i32x4, i32, 4);
+
+
+// Scalar broadcast operations for i32x4
+// These allow `v + 2.0` instead of `v + i32x4::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<i32> for i32x4 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i32) -> Self {
+        self + Self(unsafe { _mm_set1_epi32(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<i32> for i32x4 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i32) -> Self {
+        self - Self(unsafe { _mm_set1_epi32(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -1220,6 +2364,136 @@ impl u32x4 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_epi32(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm_cmpeq_epi32(self.0, other.0);
+            let ones = _mm_set1_epi32(-1);
+            _mm_xor_si128(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            // Flip sign bit to convert unsigned to signed comparison
+            let bias = _mm_set1_epi32(0x8000_0000u32 as i32);
+            let a = _mm_xor_si128(self.0, bias);
+            let b = _mm_xor_si128(other.0, bias);
+            _mm_cmpgt_epi32(a, b)
+        })
+    }
+
+    /// Lane-wise less-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        other.simd_gt(self)
+    }
+
+    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = other.simd_gt(self);
+            let ones = _mm_set1_epi32(-1);
+            _mm_xor_si128(lt.0, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = self.simd_gt(other);
+            let ones = _mm_set1_epi32(-1);
+            _mm_xor_si128(gt.0, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u32x4::splat(token, 1.0);
+    /// let b = u32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u32x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 4 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u32 {
+        self.to_array().iter().copied().fold(0_u32, u32::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi32(-1);
+            _mm_xor_si128(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_slli_epi32::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_srli_epi32::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1232,6 +2506,30 @@ impl_assign_ops!(u32x4);
 impl_bitwise_ops!(u32x4, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u32x4, u32, 4);
+
+
+// Scalar broadcast operations for u32x4
+// These allow `v + 2.0` instead of `v + u32x4::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<u32> for u32x4 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u32) -> Self {
+        self + Self(unsafe { _mm_set1_epi32(rhs as i32) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<u32> for u32x4 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u32) -> Self {
+        self - Self(unsafe { _mm_set1_epi32(rhs as i32) })
+    }
+}
 
 
 // ============================================================================
@@ -1313,6 +2611,130 @@ impl i64x2 {
         Self(v)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_epi64(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm_cmpeq_epi64(self.0, other.0);
+            let ones = _mm_set1_epi64x(-1);
+            _mm_xor_si128(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_epi64(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpgt_epi64(other.0, self.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = _mm_cmpgt_epi64(other.0, self.0);
+            let ones = _mm_set1_epi64x(-1);
+            _mm_xor_si128(lt, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = _mm_cmpgt_epi64(self.0, other.0);
+            let ones = _mm_set1_epi64x(-1);
+            _mm_xor_si128(gt, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i64x2::splat(token, 1.0);
+    /// let b = i64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i64x2::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 2 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i64 {
+        self.to_array().iter().copied().fold(0_i64, i64::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi64x(-1);
+            _mm_xor_si128(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_slli_epi64::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_srli_epi64::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1323,6 +2745,30 @@ impl_assign_ops!(i64x2);
 impl_bitwise_ops!(i64x2, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i64x2, i64, 2);
+
+
+// Scalar broadcast operations for i64x2
+// These allow `v + 2.0` instead of `v + i64x2::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<i64> for i64x2 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i64) -> Self {
+        self + Self(unsafe { _mm_set1_epi64x(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<i64> for i64x2 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i64) -> Self {
+        self - Self(unsafe { _mm_set1_epi64x(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -1404,6 +2850,136 @@ impl u64x2 {
         Self(v)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm_cmpeq_epi64(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm_cmpeq_epi64(self.0, other.0);
+            let ones = _mm_set1_epi64x(-1);
+            _mm_xor_si128(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            // Flip sign bit to convert unsigned to signed comparison
+            let bias = _mm_set1_epi64x(0x8000_0000_0000_0000u64 as i64);
+            let a = _mm_xor_si128(self.0, bias);
+            let b = _mm_xor_si128(other.0, bias);
+            _mm_cmpgt_epi64(a, b)
+        })
+    }
+
+    /// Lane-wise less-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        other.simd_gt(self)
+    }
+
+    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = other.simd_gt(self);
+            let ones = _mm_set1_epi64x(-1);
+            _mm_xor_si128(lt.0, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = self.simd_gt(other);
+            let ones = _mm_set1_epi64x(-1);
+            _mm_xor_si128(gt.0, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u64x2::splat(token, 1.0);
+    /// let b = u64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u64x2::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 2 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u64 {
+        self.to_array().iter().copied().fold(0_u64, u64::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm_set1_epi64x(-1);
+            _mm_xor_si128(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_slli_epi64::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm_srli_epi64::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1414,6 +2990,30 @@ impl_assign_ops!(u64x2);
 impl_bitwise_ops!(u64x2, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u64x2, u64, 2);
+
+
+// Scalar broadcast operations for u64x2
+// These allow `v + 2.0` instead of `v + u64x2::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<u64> for u64x2 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u64) -> Self {
+        self + Self(unsafe { _mm_set1_epi64x(rhs as i64) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<u64> for u64x2 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u64) -> Self {
+        self - Self(unsafe { _mm_set1_epi64x(rhs as i64) })
+    }
+}
 
 
 // ============================================================================
@@ -1558,6 +3158,201 @@ impl f32x8 {
         Self(unsafe { _mm256_fmsub_ps(self.0, a.0, b.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_ps::<_CMP_NEQ_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_ps::<_CMP_LT_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_ps::<_CMP_LE_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_ps::<_CMP_GT_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_ps::<_CMP_GE_OQ>(self.0, other.0) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f32x8::splat(token, 1.0);
+    /// let b = f32x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = f32x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_ps(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 8 lanes.
+    #[inline(always)]
+    pub fn reduce_add(self) -> f32 {
+        unsafe {
+            let hi = _mm256_extractf128_ps::<1>(self.0);
+            let lo = _mm256_castps256_ps128(self.0);
+            let sum = _mm_add_ps(lo, hi);
+            let h1 = _mm_hadd_ps(sum, sum);
+            let h2 = _mm_hadd_ps(h1, h1);
+            _mm_cvtss_f32(h2)
+        }
+    }
+
+    /// Find the minimum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_min(self) -> f32 {
+        unsafe {
+            let hi = _mm256_extractf128_ps::<1>(self.0);
+            let lo = _mm256_castps256_ps128(self.0);
+            let m = _mm_min_ps(lo, hi);
+            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(m, m);
+            let m1 = _mm_min_ps(m, shuf);
+            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);
+            let m2 = _mm_min_ps(m1, shuf2);
+            _mm_cvtss_f32(m2)
+        }
+    }
+
+    /// Find the maximum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_max(self) -> f32 {
+        unsafe {
+            let hi = _mm256_extractf128_ps::<1>(self.0);
+            let lo = _mm256_castps256_ps128(self.0);
+            let m = _mm_max_ps(lo, hi);
+            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(m, m);
+            let m1 = _mm_max_ps(m, shuf);
+            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);
+            let m2 = _mm_max_ps(m1, shuf2);
+            _mm_cvtss_f32(m2)
+        }
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to signed 32-bit integers, rounding toward zero (truncation).
+    ///
+    /// Values outside the representable range become `i32::MIN` (0x80000000).
+    #[inline(always)]
+    pub fn to_i32x8(self) -> i32x8 {
+        i32x8(unsafe { _mm256_cvttps_epi32(self.0) })
+    }
+
+    /// Convert to signed 32-bit integers, rounding to nearest even.
+    ///
+    /// Values outside the representable range become `i32::MIN` (0x80000000).
+    #[inline(always)]
+    pub fn to_i32x8_round(self) -> i32x8 {
+        i32x8(unsafe { _mm256_cvtps_epi32(self.0) })
+    }
+
+    /// Create from signed 32-bit integers.
+    #[inline(always)]
+    pub fn from_i32x8(v: i32x8) -> Self {
+        Self(unsafe { _mm256_cvtepi32_ps(v.0) })
+    }
+
+    // ========== Approximation Operations ==========
+
+    /// Fast reciprocal approximation (1/x) with ~12-bit precision.
+    ///
+    /// For full precision, use `recip()` which applies Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rcp_approx(self) -> Self {
+        Self(unsafe { _mm256_rcp_ps(self.0) })
+    }
+
+    /// Precise reciprocal (1/x) using Newton-Raphson refinement.
+    ///
+    /// More accurate than `rcp_approx()` but slower. For maximum speed
+    /// with acceptable precision loss, use `rcp_approx()`.
+    #[inline(always)]
+    pub fn recip(self) -> Self {
+        // Newton-Raphson: x' = x * (2 - a*x)
+        let approx = self.rcp_approx();
+        let two = Self(unsafe { _mm256_set1_ps(2.0) });
+        // One iteration gives ~24-bit precision from ~12-bit
+        approx * (two - self * approx)
+    }
+
+    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~12-bit precision.
+    ///
+    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually.
+    #[inline(always)]
+    pub fn rsqrt_approx(self) -> Self {
+        Self(unsafe { _mm256_rsqrt_ps(self.0) })
+    }
+
+    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rsqrt(self) -> Self {
+        // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - x * y * y)
+        let approx = self.rsqrt_approx();
+        let half = Self(unsafe { _mm256_set1_ps(0.5) });
+        let three = Self(unsafe { _mm256_set1_ps(3.0) });
+        half * approx * (three - self * approx * approx)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi32(-1);
+            let as_int = _mm256_castps_si256(self.0);
+            _mm256_castsi256_ps (_mm256_xor_si256(as_int, ones))
+        })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1570,6 +3365,52 @@ impl_neg!(f32x8, _mm256_sub_ps, _mm256_setzero_ps);
 impl_bitwise_ops!(f32x8, __m256, _mm256_and_ps, _mm256_or_ps, _mm256_xor_ps);
 #[cfg(target_arch = "x86_64")]
 impl_index!(f32x8, f32, 8);
+
+
+// Scalar broadcast operations for f32x8
+// These allow `v + 2.0` instead of `v + f32x8::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<f32> for f32x8 {
+    type Output = Self;
+    /// Add a scalar to all lanes: `v + 2.0`
+    ///
+    /// Broadcasts the scalar to all lanes, then adds.
+    #[inline(always)]
+    fn add(self, rhs: f32) -> Self {
+        self + Self(unsafe { _mm256_set1_ps(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<f32> for f32x8 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes: `v - 2.0`
+    #[inline(always)]
+    fn sub(self, rhs: f32) -> Self {
+        self - Self(unsafe { _mm256_set1_ps(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Mul<f32> for f32x8 {
+    type Output = Self;
+    /// Multiply all lanes by a scalar: `v * 2.0`
+    #[inline(always)]
+    fn mul(self, rhs: f32) -> Self {
+        self * Self(unsafe { _mm256_set1_ps(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Div<f32> for f32x8 {
+    type Output = Self;
+    /// Divide all lanes by a scalar: `v / 2.0`
+    #[inline(always)]
+    fn div(self, rhs: f32) -> Self {
+        self / Self(unsafe { _mm256_set1_ps(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -1714,6 +3555,131 @@ impl f64x4 {
         Self(unsafe { _mm256_fmsub_pd(self.0, a.0, b.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_pd::<_CMP_EQ_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_pd::<_CMP_NEQ_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_pd::<_CMP_LT_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_pd::<_CMP_LE_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_pd::<_CMP_GT_OQ>(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmp_pd::<_CMP_GE_OQ>(self.0, other.0) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f64x4::splat(token, 1.0);
+    /// let b = f64x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = f64x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_pd(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 4 lanes.
+    #[inline(always)]
+    pub fn reduce_add(self) -> f64 {
+        unsafe {
+            let hi = _mm256_extractf128_pd::<1>(self.0);
+            let lo = _mm256_castpd256_pd128(self.0);
+            let sum = _mm_add_pd(lo, hi);
+            let h = _mm_hadd_pd(sum, sum);
+            _mm_cvtsd_f64(h)
+        }
+    }
+
+    /// Find the minimum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_min(self) -> f64 {
+        unsafe {
+            let hi = _mm256_extractf128_pd::<1>(self.0);
+            let lo = _mm256_castpd256_pd128(self.0);
+            let m = _mm_min_pd(lo, hi);
+            let shuf = _mm_shuffle_pd::<0b01>(m, m);
+            let m2 = _mm_min_pd(m, shuf);
+            _mm_cvtsd_f64(m2)
+        }
+    }
+
+    /// Find the maximum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_max(self) -> f64 {
+        unsafe {
+            let hi = _mm256_extractf128_pd::<1>(self.0);
+            let lo = _mm256_castpd256_pd128(self.0);
+            let m = _mm_max_pd(lo, hi);
+            let shuf = _mm_shuffle_pd::<0b01>(m, m);
+            let m2 = _mm_max_pd(m, shuf);
+            _mm_cvtsd_f64(m2)
+        }
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi64x(-1);
+            let as_int = _mm256_castpd_si256(self.0);
+            _mm256_castsi256_pd (_mm256_xor_si256(as_int, ones))
+        })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1726,6 +3692,52 @@ impl_neg!(f64x4, _mm256_sub_pd, _mm256_setzero_pd);
 impl_bitwise_ops!(f64x4, __m256d, _mm256_and_pd, _mm256_or_pd, _mm256_xor_pd);
 #[cfg(target_arch = "x86_64")]
 impl_index!(f64x4, f64, 4);
+
+
+// Scalar broadcast operations for f64x4
+// These allow `v + 2.0` instead of `v + f64x4::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<f64> for f64x4 {
+    type Output = Self;
+    /// Add a scalar to all lanes: `v + 2.0`
+    ///
+    /// Broadcasts the scalar to all lanes, then adds.
+    #[inline(always)]
+    fn add(self, rhs: f64) -> Self {
+        self + Self(unsafe { _mm256_set1_pd(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<f64> for f64x4 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes: `v - 2.0`
+    #[inline(always)]
+    fn sub(self, rhs: f64) -> Self {
+        self - Self(unsafe { _mm256_set1_pd(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Mul<f64> for f64x4 {
+    type Output = Self;
+    /// Multiply all lanes by a scalar: `v * 2.0`
+    #[inline(always)]
+    fn mul(self, rhs: f64) -> Self {
+        self * Self(unsafe { _mm256_set1_pd(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Div<f64> for f64x4 {
+    type Output = Self;
+    /// Divide all lanes by a scalar: `v / 2.0`
+    #[inline(always)]
+    fn div(self, rhs: f64) -> Self {
+        self / Self(unsafe { _mm256_set1_pd(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -1831,6 +3843,112 @@ impl i8x32 {
         Self(unsafe { _mm256_abs_epi8(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpeq_epi8(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm256_cmpeq_epi8(self.0, other.0);
+            let ones = _mm256_set1_epi8(-1);
+            _mm256_xor_si256(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpgt_epi8(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpgt_epi8(other.0, self.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = _mm256_cmpgt_epi8(other.0, self.0);
+            let ones = _mm256_set1_epi8(-1);
+            _mm256_xor_si256(lt, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = _mm256_cmpgt_epi8(self.0, other.0);
+            let ones = _mm256_set1_epi8(-1);
+            _mm256_xor_si256(gt, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i8x32::splat(token, 1.0);
+    /// let b = i8x32::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i8x32::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 32 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i8 {
+        self.to_array().iter().copied().fold(0_i8, i8::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi8(-1);
+            _mm256_xor_si256(self.0, ones)
+        })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1841,6 +3959,30 @@ impl_assign_ops!(i8x32);
 impl_bitwise_ops!(i8x32, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i8x32, i8, 32);
+
+
+// Scalar broadcast operations for i8x32
+// These allow `v + 2.0` instead of `v + i8x32::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<i8> for i8x32 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i8) -> Self {
+        self + Self(unsafe { _mm256_set1_epi8(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<i8> for i8x32 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i8) -> Self {
+        self - Self(unsafe { _mm256_set1_epi8(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -1940,6 +4082,118 @@ impl u8x32 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpeq_epi8(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm256_cmpeq_epi8(self.0, other.0);
+            let ones = _mm256_set1_epi8(-1);
+            _mm256_xor_si256(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            // Flip sign bit to convert unsigned to signed comparison
+            let bias = _mm256_set1_epi8(0x80u8 as i8);
+            let a = _mm256_xor_si256(self.0, bias);
+            let b = _mm256_xor_si256(other.0, bias);
+            _mm256_cmpgt_epi8(a, b)
+        })
+    }
+
+    /// Lane-wise less-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        other.simd_gt(self)
+    }
+
+    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = other.simd_gt(self);
+            let ones = _mm256_set1_epi8(-1);
+            _mm256_xor_si256(lt.0, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = self.simd_gt(other);
+            let ones = _mm256_set1_epi8(-1);
+            _mm256_xor_si256(gt.0, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u8x32::splat(token, 1.0);
+    /// let b = u8x32::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u8x32::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 32 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u8 {
+        self.to_array().iter().copied().fold(0_u8, u8::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi8(-1);
+            _mm256_xor_si256(self.0, ones)
+        })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1950,6 +4204,30 @@ impl_assign_ops!(u8x32);
 impl_bitwise_ops!(u8x32, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u8x32, u8, 32);
+
+
+// Scalar broadcast operations for u8x32
+// These allow `v + 2.0` instead of `v + u8x32::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<u8> for u8x32 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u8) -> Self {
+        self + Self(unsafe { _mm256_set1_epi8(rhs as i8) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<u8> for u8x32 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u8) -> Self {
+        self - Self(unsafe { _mm256_set1_epi8(rhs as i8) })
+    }
+}
 
 
 // ============================================================================
@@ -2055,6 +4333,138 @@ impl i16x16 {
         Self(unsafe { _mm256_abs_epi16(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpeq_epi16(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm256_cmpeq_epi16(self.0, other.0);
+            let ones = _mm256_set1_epi16(-1);
+            _mm256_xor_si256(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpgt_epi16(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpgt_epi16(other.0, self.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = _mm256_cmpgt_epi16(other.0, self.0);
+            let ones = _mm256_set1_epi16(-1);
+            _mm256_xor_si256(lt, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = _mm256_cmpgt_epi16(self.0, other.0);
+            let ones = _mm256_set1_epi16(-1);
+            _mm256_xor_si256(gt, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i16x16::splat(token, 1.0);
+    /// let b = i16x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i16x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 16 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i16 {
+        self.to_array().iter().copied().fold(0_i16, i16::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi16(-1);
+            _mm256_xor_si256(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_slli_epi16::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srli_epi16::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srai_epi16::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2067,6 +4477,30 @@ impl_assign_ops!(i16x16);
 impl_bitwise_ops!(i16x16, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i16x16, i16, 16);
+
+
+// Scalar broadcast operations for i16x16
+// These allow `v + 2.0` instead of `v + i16x16::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<i16> for i16x16 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i16) -> Self {
+        self + Self(unsafe { _mm256_set1_epi16(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<i16> for i16x16 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i16) -> Self {
+        self - Self(unsafe { _mm256_set1_epi16(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -2166,6 +4600,136 @@ impl u16x16 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpeq_epi16(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm256_cmpeq_epi16(self.0, other.0);
+            let ones = _mm256_set1_epi16(-1);
+            _mm256_xor_si256(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            // Flip sign bit to convert unsigned to signed comparison
+            let bias = _mm256_set1_epi16(0x8000u16 as i16);
+            let a = _mm256_xor_si256(self.0, bias);
+            let b = _mm256_xor_si256(other.0, bias);
+            _mm256_cmpgt_epi16(a, b)
+        })
+    }
+
+    /// Lane-wise less-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        other.simd_gt(self)
+    }
+
+    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = other.simd_gt(self);
+            let ones = _mm256_set1_epi16(-1);
+            _mm256_xor_si256(lt.0, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = self.simd_gt(other);
+            let ones = _mm256_set1_epi16(-1);
+            _mm256_xor_si256(gt.0, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u16x16::splat(token, 1.0);
+    /// let b = u16x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u16x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 16 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u16 {
+        self.to_array().iter().copied().fold(0_u16, u16::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi16(-1);
+            _mm256_xor_si256(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_slli_epi16::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srli_epi16::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2178,6 +4742,30 @@ impl_assign_ops!(u16x16);
 impl_bitwise_ops!(u16x16, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u16x16, u16, 16);
+
+
+// Scalar broadcast operations for u16x16
+// These allow `v + 2.0` instead of `v + u16x16::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<u16> for u16x16 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u16) -> Self {
+        self + Self(unsafe { _mm256_set1_epi16(rhs as i16) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<u16> for u16x16 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u16) -> Self {
+        self - Self(unsafe { _mm256_set1_epi16(rhs as i16) })
+    }
+}
 
 
 // ============================================================================
@@ -2283,6 +4871,146 @@ impl i32x8 {
         Self(unsafe { _mm256_abs_epi32(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpeq_epi32(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm256_cmpeq_epi32(self.0, other.0);
+            let ones = _mm256_set1_epi32(-1);
+            _mm256_xor_si256(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpgt_epi32(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpgt_epi32(other.0, self.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = _mm256_cmpgt_epi32(other.0, self.0);
+            let ones = _mm256_set1_epi32(-1);
+            _mm256_xor_si256(lt, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = _mm256_cmpgt_epi32(self.0, other.0);
+            let ones = _mm256_set1_epi32(-1);
+            _mm256_xor_si256(gt, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i32x8::splat(token, 1.0);
+    /// let b = i32x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i32x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 8 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i32 {
+        self.to_array().iter().copied().fold(0_i32, i32::wrapping_add)
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to single-precision floats.
+    #[inline(always)]
+    pub fn to_f32x8(self) -> f32x8 {
+        f32x8(unsafe { _mm256_cvtepi32_ps(self.0) })
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi32(-1);
+            _mm256_xor_si256(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_slli_epi32::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srli_epi32::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srai_epi32::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2295,6 +5023,30 @@ impl_assign_ops!(i32x8);
 impl_bitwise_ops!(i32x8, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i32x8, i32, 8);
+
+
+// Scalar broadcast operations for i32x8
+// These allow `v + 2.0` instead of `v + i32x8::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<i32> for i32x8 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i32) -> Self {
+        self + Self(unsafe { _mm256_set1_epi32(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<i32> for i32x8 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i32) -> Self {
+        self - Self(unsafe { _mm256_set1_epi32(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -2394,6 +5146,136 @@ impl u32x8 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpeq_epi32(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm256_cmpeq_epi32(self.0, other.0);
+            let ones = _mm256_set1_epi32(-1);
+            _mm256_xor_si256(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            // Flip sign bit to convert unsigned to signed comparison
+            let bias = _mm256_set1_epi32(0x8000_0000u32 as i32);
+            let a = _mm256_xor_si256(self.0, bias);
+            let b = _mm256_xor_si256(other.0, bias);
+            _mm256_cmpgt_epi32(a, b)
+        })
+    }
+
+    /// Lane-wise less-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        other.simd_gt(self)
+    }
+
+    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = other.simd_gt(self);
+            let ones = _mm256_set1_epi32(-1);
+            _mm256_xor_si256(lt.0, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = self.simd_gt(other);
+            let ones = _mm256_set1_epi32(-1);
+            _mm256_xor_si256(gt.0, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u32x8::splat(token, 1.0);
+    /// let b = u32x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u32x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 8 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u32 {
+        self.to_array().iter().copied().fold(0_u32, u32::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi32(-1);
+            _mm256_xor_si256(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_slli_epi32::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srli_epi32::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2406,6 +5288,30 @@ impl_assign_ops!(u32x8);
 impl_bitwise_ops!(u32x8, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u32x8, u32, 8);
+
+
+// Scalar broadcast operations for u32x8
+// These allow `v + 2.0` instead of `v + u32x8::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<u32> for u32x8 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u32) -> Self {
+        self + Self(unsafe { _mm256_set1_epi32(rhs as i32) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<u32> for u32x8 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u32) -> Self {
+        self - Self(unsafe { _mm256_set1_epi32(rhs as i32) })
+    }
+}
 
 
 // ============================================================================
@@ -2487,6 +5393,130 @@ impl i64x4 {
         Self(v)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpeq_epi64(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm256_cmpeq_epi64(self.0, other.0);
+            let ones = _mm256_set1_epi64x(-1);
+            _mm256_xor_si256(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpgt_epi64(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpgt_epi64(other.0, self.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = _mm256_cmpgt_epi64(other.0, self.0);
+            let ones = _mm256_set1_epi64x(-1);
+            _mm256_xor_si256(lt, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = _mm256_cmpgt_epi64(self.0, other.0);
+            let ones = _mm256_set1_epi64x(-1);
+            _mm256_xor_si256(gt, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i64x4::splat(token, 1.0);
+    /// let b = i64x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i64x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 4 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i64 {
+        self.to_array().iter().copied().fold(0_i64, i64::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi64x(-1);
+            _mm256_xor_si256(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_slli_epi64::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srli_epi64::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2497,6 +5527,30 @@ impl_assign_ops!(i64x4);
 impl_bitwise_ops!(i64x4, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i64x4, i64, 4);
+
+
+// Scalar broadcast operations for i64x4
+// These allow `v + 2.0` instead of `v + i64x4::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<i64> for i64x4 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i64) -> Self {
+        self + Self(unsafe { _mm256_set1_epi64x(rhs) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<i64> for i64x4 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i64) -> Self {
+        self - Self(unsafe { _mm256_set1_epi64x(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -2578,6 +5632,136 @@ impl u64x4 {
         Self(v)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { _mm256_cmpeq_epi64(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let eq = _mm256_cmpeq_epi64(self.0, other.0);
+            let ones = _mm256_set1_epi64x(-1);
+            _mm256_xor_si256(eq, ones)
+        })
+    }
+
+    /// Lane-wise greater-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            // Flip sign bit to convert unsigned to signed comparison
+            let bias = _mm256_set1_epi64x(0x8000_0000_0000_0000u64 as i64);
+            let a = _mm256_xor_si256(self.0, bias);
+            let b = _mm256_xor_si256(other.0, bias);
+            _mm256_cmpgt_epi64(a, b)
+        })
+    }
+
+    /// Lane-wise less-than comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        other.simd_gt(self)
+    }
+
+    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let lt = other.simd_gt(self);
+            let ones = _mm256_set1_epi64x(-1);
+            _mm256_xor_si256(lt.0, ones)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison (unsigned).
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let gt = self.simd_gt(other);
+            let ones = _mm256_set1_epi64x(-1);
+            _mm256_xor_si256(gt.0, ones)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u64x4::splat(token, 1.0);
+    /// let b = u64x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u64x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 4 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u64 {
+        self.to_array().iter().copied().fold(0_u64, u64::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm256_set1_epi64x(-1);
+            _mm256_xor_si256(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_slli_epi64::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srli_epi64::<N>(self.0) })
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2588,6 +5772,30 @@ impl_assign_ops!(u64x4);
 impl_bitwise_ops!(u64x4, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u64x4, u64, 4);
+
+
+// Scalar broadcast operations for u64x4
+// These allow `v + 2.0` instead of `v + u64x4::splat(token, 2.0)`
+
+#[cfg(target_arch = "x86_64")]
+impl Add<u64> for u64x4 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u64) -> Self {
+        self + Self(unsafe { _mm256_set1_epi64x(rhs as i64) })
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Sub<u64> for u64x4 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u64) -> Self {
+        self - Self(unsafe { _mm256_set1_epi64x(rhs as i64) })
+    }
+}
 
 
 // ============================================================================
@@ -2732,6 +5940,204 @@ impl f32x16 {
         Self(unsafe { _mm512_fmsub_ps(self.0, a.0, b.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_ps_mask::<_CMP_NEQ_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_ps_mask::<_CMP_LE_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_ps_mask::<_CMP_GT_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f32x16::splat(token, 1.0);
+    /// let b = f32x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = f32x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi32_mask(_mm512_castps_si512(mask.0), _mm512_setzero_si512());
+            _mm512_mask_blend_ps(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 16 lanes.
+    #[inline(always)]
+    pub fn reduce_add(self) -> f32 {
+        unsafe { _mm512_reduce_add_ps(self.0) }
+    }
+
+    /// Find the minimum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_min(self) -> f32 {
+        unsafe { _mm512_reduce_min_ps(self.0) }
+    }
+
+    /// Find the maximum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_max(self) -> f32 {
+        unsafe { _mm512_reduce_max_ps(self.0) }
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to signed 32-bit integers, rounding toward zero (truncation).
+    ///
+    /// Values outside the representable range become `i32::MIN` (0x80000000).
+    #[inline(always)]
+    pub fn to_i32x16(self) -> i32x16 {
+        i32x16(unsafe { _mm512_cvttps_epi32(self.0) })
+    }
+
+    /// Convert to signed 32-bit integers, rounding to nearest even.
+    ///
+    /// Values outside the representable range become `i32::MIN` (0x80000000).
+    #[inline(always)]
+    pub fn to_i32x16_round(self) -> i32x16 {
+        i32x16(unsafe { _mm512_cvtps_epi32(self.0) })
+    }
+
+    /// Create from signed 32-bit integers.
+    #[inline(always)]
+    pub fn from_i32x16(v: i32x16) -> Self {
+        Self(unsafe { _mm512_cvtepi32_ps(v.0) })
+    }
+
+    // ========== Approximation Operations ==========
+
+    /// Fast reciprocal approximation (1/x) with ~14-bit precision.
+    ///
+    /// For full precision, use `recip()` which applies Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rcp_approx(self) -> Self {
+        Self(unsafe { _mm512_rcp14_ps(self.0) })
+    }
+
+    /// Precise reciprocal (1/x) using Newton-Raphson refinement.
+    ///
+    /// More accurate than `rcp_approx()` but slower. For maximum speed
+    /// with acceptable precision loss, use `rcp_approx()`.
+    #[inline(always)]
+    pub fn recip(self) -> Self {
+        // Newton-Raphson: x' = x * (2 - a*x)
+        let approx = self.rcp_approx();
+        let two = Self(unsafe { _mm512_set1_ps(2.0) });
+        // One iteration gives ~24-bit precision from ~12-bit
+        approx * (two - self * approx)
+    }
+
+    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~14-bit precision.
+    ///
+    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually.
+    #[inline(always)]
+    pub fn rsqrt_approx(self) -> Self {
+        Self(unsafe { _mm512_rsqrt14_ps(self.0) })
+    }
+
+    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rsqrt(self) -> Self {
+        // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - x * y * y)
+        let approx = self.rsqrt_approx();
+        let half = Self(unsafe { _mm512_set1_ps(0.5) });
+        let three = Self(unsafe { _mm512_set1_ps(3.0) });
+        half * approx * (three - self * approx * approx)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi32(-1);
+            let as_int = _mm512_castps_si512(self.0);
+            _mm512_castsi512_ps (_mm512_xor_si512(as_int, ones))
+        })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -2744,6 +6150,52 @@ impl_neg!(f32x16, _mm512_sub_ps, _mm512_setzero_ps);
 impl_bitwise_ops!(f32x16, __m512, _mm512_and_ps, _mm512_or_ps, _mm512_xor_ps);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(f32x16, f32, 16);
+
+
+// Scalar broadcast operations for f32x16
+// These allow `v + 2.0` instead of `v + f32x16::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<f32> for f32x16 {
+    type Output = Self;
+    /// Add a scalar to all lanes: `v + 2.0`
+    ///
+    /// Broadcasts the scalar to all lanes, then adds.
+    #[inline(always)]
+    fn add(self, rhs: f32) -> Self {
+        self + Self(unsafe { _mm512_set1_ps(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<f32> for f32x16 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes: `v - 2.0`
+    #[inline(always)]
+    fn sub(self, rhs: f32) -> Self {
+        self - Self(unsafe { _mm512_set1_ps(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Mul<f32> for f32x16 {
+    type Output = Self;
+    /// Multiply all lanes by a scalar: `v * 2.0`
+    #[inline(always)]
+    fn mul(self, rhs: f32) -> Self {
+        self * Self(unsafe { _mm512_set1_ps(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Div<f32> for f32x16 {
+    type Output = Self;
+    /// Divide all lanes by a scalar: `v / 2.0`
+    #[inline(always)]
+    fn div(self, rhs: f32) -> Self {
+        self / Self(unsafe { _mm512_set1_ps(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -2888,6 +6340,170 @@ impl f64x8 {
         Self(unsafe { _mm512_fmsub_pd(self.0, a.0, b.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_pd_mask::<_CMP_EQ_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_pd_mask::<_CMP_NEQ_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_pd_mask::<_CMP_LT_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_pd_mask::<_CMP_LE_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_pd_mask::<_CMP_GT_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_pd_mask::<_CMP_GE_OQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f64x8::splat(token, 1.0);
+    /// let b = f64x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = f64x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi64_mask(_mm512_castpd_si512(mask.0), _mm512_setzero_si512());
+            _mm512_mask_blend_pd(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 8 lanes.
+    #[inline(always)]
+    pub fn reduce_add(self) -> f64 {
+        unsafe { _mm512_reduce_add_pd(self.0) }
+    }
+
+    /// Find the minimum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_min(self) -> f64 {
+        unsafe { _mm512_reduce_min_pd(self.0) }
+    }
+
+    /// Find the maximum value across all lanes.
+    #[inline(always)]
+    pub fn reduce_max(self) -> f64 {
+        unsafe { _mm512_reduce_max_pd(self.0) }
+    }
+
+    // ========== Approximation Operations ==========
+
+    /// Fast reciprocal approximation (1/x) with ~14-bit precision.
+    #[inline(always)]
+    pub fn rcp_approx(self) -> Self {
+        Self(unsafe { _mm512_rcp14_pd(self.0) })
+    }
+
+    /// Precise reciprocal (1/x) using Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn recip(self) -> Self {
+        let approx = self.rcp_approx();
+        let two = Self(unsafe { _mm512_set1_pd(2.0) });
+        approx * (two - self * approx)
+    }
+
+    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~14-bit precision.
+    #[inline(always)]
+    pub fn rsqrt_approx(self) -> Self {
+        Self(unsafe { _mm512_rsqrt14_pd(self.0) })
+    }
+
+    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rsqrt(self) -> Self {
+        let approx = self.rsqrt_approx();
+        let half = Self(unsafe { _mm512_set1_pd(0.5) });
+        let three = Self(unsafe { _mm512_set1_pd(3.0) });
+        half * approx * (three - self * approx * approx)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi64(-1);
+            let as_int = _mm512_castpd_si512(self.0);
+            _mm512_castsi512_pd (_mm512_xor_si512(as_int, ones))
+        })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -2900,6 +6516,52 @@ impl_neg!(f64x8, _mm512_sub_pd, _mm512_setzero_pd);
 impl_bitwise_ops!(f64x8, __m512d, _mm512_and_pd, _mm512_or_pd, _mm512_xor_pd);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(f64x8, f64, 8);
+
+
+// Scalar broadcast operations for f64x8
+// These allow `v + 2.0` instead of `v + f64x8::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<f64> for f64x8 {
+    type Output = Self;
+    /// Add a scalar to all lanes: `v + 2.0`
+    ///
+    /// Broadcasts the scalar to all lanes, then adds.
+    #[inline(always)]
+    fn add(self, rhs: f64) -> Self {
+        self + Self(unsafe { _mm512_set1_pd(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<f64> for f64x8 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes: `v - 2.0`
+    #[inline(always)]
+    fn sub(self, rhs: f64) -> Self {
+        self - Self(unsafe { _mm512_set1_pd(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Mul<f64> for f64x8 {
+    type Output = Self;
+    /// Multiply all lanes by a scalar: `v * 2.0`
+    #[inline(always)]
+    fn mul(self, rhs: f64) -> Self {
+        self * Self(unsafe { _mm512_set1_pd(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Div<f64> for f64x8 {
+    type Output = Self;
+    /// Divide all lanes by a scalar: `v / 2.0`
+    #[inline(always)]
+    fn div(self, rhs: f64) -> Self {
+        self / Self(unsafe { _mm512_set1_pd(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -3005,6 +6667,128 @@ impl i8x64 {
         Self(unsafe { _mm512_abs_epi8(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi8_mask::<_MM_CMPINT_EQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi8_mask::<_MM_CMPINT_NE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi8_mask::<_MM_CMPINT_LT>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi8_mask::<_MM_CMPINT_LE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi8_mask::<_MM_CMPINT_LT>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi8_mask::<_MM_CMPINT_LE>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i8x64::splat(token, 1.0);
+    /// let b = i8x64::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i8x64::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi8_mask(mask.0, _mm512_setzero_si512());
+            _mm512_mask_blend_epi8(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 64 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i8 {
+        self.to_array().iter().copied().fold(0_i8, i8::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi8(-1);
+            _mm512_xor_si512(self.0, ones)
+        })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3015,6 +6799,30 @@ impl_assign_ops!(i8x64);
 impl_bitwise_ops!(i8x64, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(i8x64, i8, 64);
+
+
+// Scalar broadcast operations for i8x64
+// These allow `v + 2.0` instead of `v + i8x64::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<i8> for i8x64 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i8) -> Self {
+        self + Self(unsafe { _mm512_set1_epi8(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<i8> for i8x64 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i8) -> Self {
+        self - Self(unsafe { _mm512_set1_epi8(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -3114,6 +6922,128 @@ impl u8x64 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu8_mask::<_MM_CMPINT_EQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu8_mask::<_MM_CMPINT_NE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu8_mask::<_MM_CMPINT_LT>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu8_mask::<_MM_CMPINT_LE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu8_mask::<_MM_CMPINT_LT>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu8_mask::<_MM_CMPINT_LE>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi8(mask, -1)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u8x64::splat(token, 1.0);
+    /// let b = u8x64::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u8x64::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi8_mask(mask.0, _mm512_setzero_si512());
+            _mm512_mask_blend_epi8(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 64 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u8 {
+        self.to_array().iter().copied().fold(0_u8, u8::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi8(-1);
+            _mm512_xor_si512(self.0, ones)
+        })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3124,6 +7054,30 @@ impl_assign_ops!(u8x64);
 impl_bitwise_ops!(u8x64, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(u8x64, u8, 64);
+
+
+// Scalar broadcast operations for u8x64
+// These allow `v + 2.0` instead of `v + u8x64::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<u8> for u8x64 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u8) -> Self {
+        self + Self(unsafe { _mm512_set1_epi8(rhs as i8) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<u8> for u8x64 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u8) -> Self {
+        self - Self(unsafe { _mm512_set1_epi8(rhs as i8) })
+    }
+}
 
 
 // ============================================================================
@@ -3229,6 +7183,154 @@ impl i16x32 {
         Self(unsafe { _mm512_abs_epi16(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi16_mask::<_MM_CMPINT_EQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi16_mask::<_MM_CMPINT_NE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi16_mask::<_MM_CMPINT_LT>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi16_mask::<_MM_CMPINT_LE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi16_mask::<_MM_CMPINT_LT>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi16_mask::<_MM_CMPINT_LE>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i16x32::splat(token, 1.0);
+    /// let b = i16x32::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i16x32::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi16_mask(mask.0, _mm512_setzero_si512());
+            _mm512_mask_blend_epi16(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 32 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i16 {
+        self.to_array().iter().copied().fold(0_i16, i16::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi16(-1);
+            _mm512_xor_si512(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_slli_epi16::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srli_epi16::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srai_epi16::<N>(self.0) })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3241,6 +7343,30 @@ impl_assign_ops!(i16x32);
 impl_bitwise_ops!(i16x32, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(i16x32, i16, 32);
+
+
+// Scalar broadcast operations for i16x32
+// These allow `v + 2.0` instead of `v + i16x32::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<i16> for i16x32 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i16) -> Self {
+        self + Self(unsafe { _mm512_set1_epi16(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<i16> for i16x32 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i16) -> Self {
+        self - Self(unsafe { _mm512_set1_epi16(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -3340,6 +7466,146 @@ impl u16x32 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu16_mask::<_MM_CMPINT_EQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu16_mask::<_MM_CMPINT_NE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu16_mask::<_MM_CMPINT_LT>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu16_mask::<_MM_CMPINT_LE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu16_mask::<_MM_CMPINT_LT>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu16_mask::<_MM_CMPINT_LE>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi16(mask, -1)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u16x32::splat(token, 1.0);
+    /// let b = u16x32::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u16x32::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi16_mask(mask.0, _mm512_setzero_si512());
+            _mm512_mask_blend_epi16(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 32 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u16 {
+        self.to_array().iter().copied().fold(0_u16, u16::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi16(-1);
+            _mm512_xor_si512(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_slli_epi16::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srli_epi16::<N>(self.0) })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3352,6 +7618,30 @@ impl_assign_ops!(u16x32);
 impl_bitwise_ops!(u16x32, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(u16x32, u16, 32);
+
+
+// Scalar broadcast operations for u16x32
+// These allow `v + 2.0` instead of `v + u16x32::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<u16> for u16x32 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u16) -> Self {
+        self + Self(unsafe { _mm512_set1_epi16(rhs as i16) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<u16> for u16x32 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u16) -> Self {
+        self - Self(unsafe { _mm512_set1_epi16(rhs as i16) })
+    }
+}
 
 
 // ============================================================================
@@ -3457,6 +7747,162 @@ impl i32x16 {
         Self(unsafe { _mm512_abs_epi32(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi32_mask::<_MM_CMPINT_EQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi32_mask::<_MM_CMPINT_NE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi32_mask::<_MM_CMPINT_LT>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi32_mask::<_MM_CMPINT_LE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi32_mask::<_MM_CMPINT_LT>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi32_mask::<_MM_CMPINT_LE>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i32x16::splat(token, 1.0);
+    /// let b = i32x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i32x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi32_mask(mask.0, _mm512_setzero_si512());
+            _mm512_mask_blend_epi32(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 16 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i32 {
+        self.to_array().iter().copied().fold(0_i32, i32::wrapping_add)
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to single-precision floats.
+    #[inline(always)]
+    pub fn to_f32x16(self) -> f32x16 {
+        f32x16(unsafe { _mm512_cvtepi32_ps(self.0) })
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi32(-1);
+            _mm512_xor_si512(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_slli_epi32::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srli_epi32::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srai_epi32::<N>(self.0) })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3469,6 +7915,30 @@ impl_assign_ops!(i32x16);
 impl_bitwise_ops!(i32x16, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(i32x16, i32, 16);
+
+
+// Scalar broadcast operations for i32x16
+// These allow `v + 2.0` instead of `v + i32x16::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<i32> for i32x16 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i32) -> Self {
+        self + Self(unsafe { _mm512_set1_epi32(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<i32> for i32x16 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i32) -> Self {
+        self - Self(unsafe { _mm512_set1_epi32(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -3568,6 +8038,146 @@ impl u32x16 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu32_mask::<_MM_CMPINT_EQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu32_mask::<_MM_CMPINT_NE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu32_mask::<_MM_CMPINT_LT>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu32_mask::<_MM_CMPINT_LE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu32_mask::<_MM_CMPINT_LT>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu32_mask::<_MM_CMPINT_LE>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi32(mask, -1)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u32x16::splat(token, 1.0);
+    /// let b = u32x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u32x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi32_mask(mask.0, _mm512_setzero_si512());
+            _mm512_mask_blend_epi32(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 16 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u32 {
+        self.to_array().iter().copied().fold(0_u32, u32::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi32(-1);
+            _mm512_xor_si512(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_slli_epi32::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srli_epi32::<N>(self.0) })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3580,6 +8190,30 @@ impl_assign_ops!(u32x16);
 impl_bitwise_ops!(u32x16, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(u32x16, u32, 16);
+
+
+// Scalar broadcast operations for u32x16
+// These allow `v + 2.0` instead of `v + u32x16::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<u32> for u32x16 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u32) -> Self {
+        self + Self(unsafe { _mm512_set1_epi32(rhs as i32) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<u32> for u32x16 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u32) -> Self {
+        self - Self(unsafe { _mm512_set1_epi32(rhs as i32) })
+    }
+}
 
 
 // ============================================================================
@@ -3685,6 +8319,154 @@ impl i64x8 {
         Self(unsafe { _mm512_abs_epi64(self.0) })
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi64_mask::<_MM_CMPINT_EQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi64_mask::<_MM_CMPINT_NE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi64_mask::<_MM_CMPINT_LT>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi64_mask::<_MM_CMPINT_LE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi64_mask::<_MM_CMPINT_LT>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epi64_mask::<_MM_CMPINT_LE>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i64x8::splat(token, 1.0);
+    /// let b = i64x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i64x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi64_mask(mask.0, _mm512_setzero_si512());
+            _mm512_mask_blend_epi64(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 8 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> i64 {
+        self.to_array().iter().copied().fold(0_i64, i64::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi64(-1);
+            _mm512_xor_si512(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_slli_epi64::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srli_epi64::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srai_epi64::<N>(self.0) })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3695,6 +8477,30 @@ impl_assign_ops!(i64x8);
 impl_bitwise_ops!(i64x8, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(i64x8, i64, 8);
+
+
+// Scalar broadcast operations for i64x8
+// These allow `v + 2.0` instead of `v + i64x8::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<i64> for i64x8 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: i64) -> Self {
+        self + Self(unsafe { _mm512_set1_epi64(rhs) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<i64> for i64x8 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: i64) -> Self {
+        self - Self(unsafe { _mm512_set1_epi64(rhs) })
+    }
+}
 
 
 // ============================================================================
@@ -3794,6 +8600,146 @@ impl u64x8 {
         self.max(lo).min(hi)
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu64_mask::<_MM_CMPINT_EQ>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu64_mask::<_MM_CMPINT_NE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu64_mask::<_MM_CMPINT_LT>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu64_mask::<_MM_CMPINT_LE>(self.0, other.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu64_mask::<_MM_CMPINT_LT>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe {
+            let mask = _mm512_cmp_epu64_mask::<_MM_CMPINT_LE>(other.0, self.0);
+            // Expand mask to vector: -1 where true, 0 where false
+            _mm512_maskz_set1_epi64(mask, -1)
+        })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u64x8::splat(token, 1.0);
+    /// let b = u64x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u64x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe {
+            // Convert vector mask to mask register
+            let m = _mm512_cmpneq_epi64_mask(mask.0, _mm512_setzero_si512());
+            _mm512_mask_blend_epi64(m, if_false.0, if_true.0)
+        })
+    }
+
+    // ========== Horizontal Operations ==========
+
+    /// Sum all lanes horizontally.
+    ///
+    /// Returns a scalar containing the sum of all 8 lanes.
+    /// Note: This uses a scalar loop. For performance-critical code,
+    /// consider keeping values in SIMD until the final reduction.
+    #[inline(always)]
+    pub fn reduce_add(self) -> u64 {
+        self.to_array().iter().copied().fold(0_u64, u64::wrapping_add)
+    }
+
+    // ========== Bitwise Unary Operations ==========
+
+    /// Bitwise NOT (complement): flips all bits.
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe {
+            let ones = _mm512_set1_epi64(-1);
+            _mm512_xor_si512(self.0, ones)
+        })
+    }
+
+    // ========== Shift Operations ==========
+
+    /// Shift each lane left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_slli_epi64::<N>(self.0) })
+    }
+
+    /// Shift each lane right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm512_srli_epi64::<N>(self.0) })
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3804,4 +8750,28 @@ impl_assign_ops!(u64x8);
 impl_bitwise_ops!(u64x8, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(u64x8, u64, 8);
+
+
+// Scalar broadcast operations for u64x8
+// These allow `v + 2.0` instead of `v + u64x8::splat(token, 2.0)`
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Add<u64> for u64x8 {
+    type Output = Self;
+    /// Add a scalar to all lanes.
+    #[inline(always)]
+    fn add(self, rhs: u64) -> Self {
+        self + Self(unsafe { _mm512_set1_epi64(rhs as i64) })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Sub<u64> for u64x8 {
+    type Output = Self;
+    /// Subtract a scalar from all lanes.
+    #[inline(always)]
+    fn sub(self, rhs: u64) -> Self {
+        self - Self(unsafe { _mm512_set1_epi64(rhs as i64) })
+    }
+}
 

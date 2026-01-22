@@ -827,12 +827,819 @@ fn generate_type(ty: &SimdType) -> String {
     // Math operations
     code.push_str(&generate_math_ops(ty));
 
+    // Comparison operations
+    code.push_str(&generate_comparison_ops(ty));
+
+    // Blend/select operations
+    code.push_str(&generate_blend_ops(ty));
+
+    // Horizontal operations (reduce_add, reduce_min, reduce_max)
+    code.push_str(&generate_horizontal_ops(ty));
+
+    // Type conversions (f32 <-> i32, etc.)
+    code.push_str(&generate_conversion_ops(ty));
+
+    // Approximation operations (rcp, rsqrt with Newton-Raphson)
+    code.push_str(&generate_approx_ops(ty));
+
+    // Bitwise unary operations (not)
+    code.push_str(&generate_bitwise_unary_ops(ty));
+
+    // Shift operations (shl, shr, shr_arithmetic)
+    code.push_str(&generate_shift_ops(ty));
+
     writeln!(code, "}}\n").unwrap();
 
     // Operator implementations
     code.push_str(&generate_operator_impls(ty, &cfg_attr));
 
+    // Scalar broadcast operators (v + 2.0)
+    code.push_str(&generate_scalar_ops(ty, &cfg_attr));
+
     code
+}
+
+fn generate_comparison_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+    let name = ty.name();
+    let prefix = ty.width.x86_prefix();
+    let suffix = ty.elem.x86_suffix();
+    let lanes = ty.lanes();
+
+    // Section header
+    writeln!(code, "    // ========== Comparisons ==========").unwrap();
+    writeln!(code, "    // These return a mask where each lane is all-1s (true) or all-0s (false).").unwrap();
+    writeln!(code, "    // Use with `blend()` to select values based on the comparison result.\n").unwrap();
+
+    if ty.elem.is_float() {
+        // Float comparisons use _mm*_cmp_ps/pd with comparison predicate
+        // AVX-512 uses mask registers but we'll use the vector-returning variants for consistency
+        let cmp_intrinsic = format!("{}_cmp_{}", prefix, suffix);
+
+        // For SSE, comparisons are different intrinsics, not cmp with predicate
+        if ty.width == SimdWidth::W128 {
+            // SSE uses separate intrinsics
+            writeln!(code, "    /// Lane-wise equality comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.").unwrap();
+            writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_cmpeq_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise inequality comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_cmpneq_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise less-than comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_cmplt_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise less-than-or-equal comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_cmple_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise greater-than comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_cmpgt_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise greater-than-or-equal comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_cmpge_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        } else if ty.width == SimdWidth::W512 {
+            // AVX-512 uses mask-returning intrinsics, need to expand mask to vector
+            // Pattern: get mask, then use mask_blend to create all-1s where true
+            let mask_suffix = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
+            let int_suffix = if ty.elem == ElementType::F32 { "epi32" } else { "epi64" };
+            let cast_fn = if ty.elem == ElementType::F32 {
+                "_mm512_castsi512_ps"
+            } else {
+                "_mm512_castsi512_pd"
+            };
+
+            for (method, doc, cmp_const) in [
+                ("simd_eq", "equality", "_CMP_EQ_OQ"),
+                ("simd_ne", "inequality", "_CMP_NEQ_OQ"),
+                ("simd_lt", "less-than", "_CMP_LT_OQ"),
+                ("simd_le", "less-than-or-equal", "_CMP_LE_OQ"),
+                ("simd_gt", "greater-than", "_CMP_GT_OQ"),
+                ("simd_ge", "greater-than-or-equal", "_CMP_GE_OQ"),
+            ] {
+                writeln!(code, "    /// Lane-wise {} comparison.", doc).unwrap();
+                writeln!(code, "    ///").unwrap();
+                writeln!(code, "    /// Returns a mask where each lane is all-1s if {}, all-0s otherwise.", doc).unwrap();
+                if method == "simd_eq" {
+                    writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+                }
+                writeln!(code, "    #[inline(always)]").unwrap();
+                writeln!(code, "    pub fn {}(self, other: Self) -> Self {{", method).unwrap();
+                writeln!(code, "        Self(unsafe {{").unwrap();
+                writeln!(code, "            let mask = {}_cmp_{}_mask::<{}>{}(self.0, other.0);", prefix, mask_suffix, cmp_const, "").unwrap();
+                writeln!(code, "            // Expand mask to vector: -1 where true, 0 where false").unwrap();
+                writeln!(code, "            {}({}_maskz_set1_{}(mask, -1))", cast_fn, prefix, int_suffix).unwrap();
+                writeln!(code, "        }})").unwrap();
+                writeln!(code, "    }}\n").unwrap();
+            }
+        } else {
+            // AVX (256-bit) uses _cmp_ps/pd with predicate constants, returns vector directly
+            // _CMP_EQ_OQ = 0, _CMP_LT_OQ = 17, _CMP_LE_OQ = 18, _CMP_NEQ_OQ = 12, _CMP_GE_OQ = 29, _CMP_GT_OQ = 30
+            writeln!(code, "    /// Lane-wise equality comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.").unwrap();
+            writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}::<_CMP_EQ_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise inequality comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}::<_CMP_NEQ_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise less-than comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}::<_CMP_LT_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise less-than-or-equal comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}::<_CMP_LE_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise greater-than comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}::<_CMP_GT_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise greater-than-or-equal comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}::<_CMP_GE_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
+    } else if ty.width == SimdWidth::W512 {
+        // AVX-512 integer comparisons return mask registers, need to expand to vector
+        // For signed: use cmp_*_mask intrinsics with _MM_CMPINT_*
+        // For unsigned: use cmpu*_mask intrinsics
+        let set1_suffix = match ty.elem {
+            ElementType::I8 | ElementType::U8 => "epi8",
+            ElementType::I16 | ElementType::U16 => "epi16",
+            ElementType::I32 | ElementType::U32 => "epi32",
+            ElementType::I64 | ElementType::U64 => "epi64",
+            _ => unreachable!(),
+        };
+
+        // AVX-512 has direct unsigned comparison intrinsics
+        let cmp_fn = if ty.elem.is_signed() {
+            format!("{}_cmp_{}_mask", prefix, suffix)
+        } else {
+            // Unsigned uses epu* variants
+            let unsigned_suffix = match ty.elem {
+                ElementType::U8 => "epu8",
+                ElementType::U16 => "epu16",
+                ElementType::U32 => "epu32",
+                ElementType::U64 => "epu64",
+                _ => unreachable!(),
+            };
+            format!("{}_cmp_{}_mask", prefix, unsigned_suffix)
+        };
+
+        for (method, doc, cmp_const) in [
+            ("simd_eq", "equality", "_MM_CMPINT_EQ"),
+            ("simd_ne", "inequality", "_MM_CMPINT_NE"),
+            ("simd_lt", "less-than", "_MM_CMPINT_LT"),
+            ("simd_le", "less-than-or-equal", "_MM_CMPINT_LE"),
+            ("simd_gt", "greater-than", "_MM_CMPINT_NLT"), // NLT on swapped args = GT
+            ("simd_ge", "greater-than-or-equal", "_MM_CMPINT_NLE"), // NLE on swapped args = GE
+        ] {
+            writeln!(code, "    /// Lane-wise {} comparison.", doc).unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if {}, all-0s otherwise.", doc).unwrap();
+            if method == "simd_eq" {
+                writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+            }
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn {}(self, other: Self) -> Self {{", method).unwrap();
+            writeln!(code, "        Self(unsafe {{").unwrap();
+            // GT and GE need swapped arguments with NLT/NLE
+            if method == "simd_gt" || method == "simd_ge" {
+                let actual_cmp = if method == "simd_gt" { "_MM_CMPINT_LT" } else { "_MM_CMPINT_LE" };
+                writeln!(code, "            let mask = {}::<{}>(other.0, self.0);", cmp_fn, actual_cmp).unwrap();
+            } else {
+                writeln!(code, "            let mask = {}::<{}>(self.0, other.0);", cmp_fn, cmp_const).unwrap();
+            }
+            writeln!(code, "            // Expand mask to vector: -1 where true, 0 where false").unwrap();
+            writeln!(code, "            {}_maskz_set1_{}(mask, -1)", prefix, set1_suffix).unwrap();
+            writeln!(code, "        }})").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
+    } else {
+        // SSE/AVX integer comparisons return vectors directly
+        // cmpeq exists for all, cmpgt exists for signed
+        // For unsigned comparisons and lt/le/ge, we derive from cmpgt
+
+        writeln!(code, "    /// Lane-wise equality comparison.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.").unwrap();
+        writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
+        writeln!(code, "        Self(unsafe {{ {}_cmpeq_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        writeln!(code, "    /// Lane-wise inequality comparison.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
+        // ne = NOT eq, so XOR with all-1s
+        writeln!(code, "        Self(unsafe {{").unwrap();
+        writeln!(code, "            let eq = {}_cmpeq_{}(self.0, other.0);", prefix, suffix).unwrap();
+        writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, match ty.elem {
+            ElementType::I8 | ElementType::U8 => "epi8",
+            ElementType::I16 | ElementType::U16 => "epi16",
+            ElementType::I32 | ElementType::U32 => "epi32",
+            ElementType::I64 | ElementType::U64 => "epi64x",
+            _ => unreachable!(),
+        }).unwrap();
+        writeln!(code, "            {}_xor_si{}(eq, ones)", prefix, ty.width.bits()).unwrap();
+        writeln!(code, "        }})").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        if ty.elem.is_signed() {
+            // Signed integers have cmpgt directly
+            writeln!(code, "    /// Lane-wise greater-than comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_cmpgt_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise less-than comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
+            // lt(a, b) = gt(b, a)
+            writeln!(code, "        Self(unsafe {{ {}_cmpgt_{}(other.0, self.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise greater-than-or-equal comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
+            // ge(a, b) = NOT lt(a, b) = NOT gt(b, a)
+            writeln!(code, "        Self(unsafe {{").unwrap();
+            writeln!(code, "            let lt = {}_cmpgt_{}(other.0, self.0);", prefix, suffix).unwrap();
+            writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, match ty.elem {
+                ElementType::I8 => "epi8",
+                ElementType::I16 => "epi16",
+                ElementType::I32 => "epi32",
+                ElementType::I64 => "epi64x",
+                _ => unreachable!(),
+            }).unwrap();
+            writeln!(code, "            {}_xor_si{}(lt, ones)", prefix, ty.width.bits()).unwrap();
+            writeln!(code, "        }})").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise less-than-or-equal comparison.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
+            // le(a, b) = NOT gt(a, b)
+            writeln!(code, "        Self(unsafe {{").unwrap();
+            writeln!(code, "            let gt = {}_cmpgt_{}(self.0, other.0);", prefix, suffix).unwrap();
+            writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, match ty.elem {
+                ElementType::I8 => "epi8",
+                ElementType::I16 => "epi16",
+                ElementType::I32 => "epi32",
+                ElementType::I64 => "epi64x",
+                _ => unreachable!(),
+            }).unwrap();
+            writeln!(code, "            {}_xor_si{}(gt, ones)", prefix, ty.width.bits()).unwrap();
+            writeln!(code, "        }})").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        } else {
+            // Unsigned comparisons - use signed comparison with bias trick
+            // For unsigned compare: XOR with 0x80..80 to flip sign bit, then do signed compare
+            let bias_val = match ty.elem {
+                ElementType::U8 => "0x80u8 as i8",
+                ElementType::U16 => "0x8000u16 as i16",
+                ElementType::U32 => "0x8000_0000u32 as i32",
+                ElementType::U64 => "0x8000_0000_0000_0000u64 as i64",
+                _ => unreachable!(),
+            };
+            let signed_suffix = match ty.elem {
+                ElementType::U8 => "epi8",
+                ElementType::U16 => "epi16",
+                ElementType::U32 => "epi32",
+                ElementType::U64 => "epi64",
+                _ => unreachable!(),
+            };
+            let set1_suffix = match ty.elem {
+                ElementType::U64 => "epi64x",
+                _ => signed_suffix,
+            };
+
+            writeln!(code, "    /// Lane-wise greater-than comparison (unsigned).").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{").unwrap();
+            writeln!(code, "            // Flip sign bit to convert unsigned to signed comparison").unwrap();
+            writeln!(code, "            let bias = {}_set1_{}({});", prefix, set1_suffix, bias_val).unwrap();
+            writeln!(code, "            let a = {}_xor_si{}(self.0, bias);", prefix, ty.width.bits()).unwrap();
+            writeln!(code, "            let b = {}_xor_si{}(other.0, bias);", prefix, ty.width.bits()).unwrap();
+            writeln!(code, "            {}_cmpgt_{}(a, b)", prefix, signed_suffix).unwrap();
+            writeln!(code, "        }})").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise less-than comparison (unsigned).").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        other.simd_gt(self)").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise greater-than-or-equal comparison (unsigned).").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{").unwrap();
+            writeln!(code, "            let lt = other.simd_gt(self);").unwrap();
+            writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, set1_suffix).unwrap();
+            writeln!(code, "            {}_xor_si{}(lt.0, ones)", prefix, ty.width.bits()).unwrap();
+            writeln!(code, "        }})").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            writeln!(code, "    /// Lane-wise less-than-or-equal comparison (unsigned).").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{").unwrap();
+            writeln!(code, "            let gt = self.simd_gt(other);").unwrap();
+            writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, set1_suffix).unwrap();
+            writeln!(code, "            {}_xor_si{}(gt.0, ones)", prefix, ty.width.bits()).unwrap();
+            writeln!(code, "        }})").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
+    }
+
+    code
+}
+
+fn generate_blend_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+    let prefix = ty.width.x86_prefix();
+    let suffix = ty.elem.x86_suffix();
+
+    writeln!(code, "    // ========== Blending/Selection ==========\n").unwrap();
+
+    writeln!(code, "    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// The mask should come from a comparison operation like `simd_lt()`.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// # Example").unwrap();
+    writeln!(code, "    /// ```ignore").unwrap();
+    writeln!(code, "    /// let a = {}::splat(token, 1.0);", ty.name()).unwrap();
+    writeln!(code, "    /// let b = {}::splat(token, 2.0);", ty.name()).unwrap();
+    writeln!(code, "    /// let mask = a.simd_lt(b);  // all true").unwrap();
+    writeln!(code, "    /// let result = {}::blend(mask, a, b);  // selects a", ty.name()).unwrap();
+    writeln!(code, "    /// ```").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{").unwrap();
+
+    if ty.width == SimdWidth::W512 {
+        // AVX-512 uses mask registers for blend
+        // Convert vector mask to mask register by comparing against zero
+        if ty.elem.is_float() {
+            let (int_suffix, cast_fn) = if ty.elem == ElementType::F32 {
+                ("epi32", "_mm512_castps_si512")
+            } else {
+                ("epi64", "_mm512_castpd_si512")
+            };
+            writeln!(code, "        Self(unsafe {{").unwrap();
+            writeln!(code, "            // Convert vector mask to mask register").unwrap();
+            writeln!(code, "            let m = _mm512_cmpneq_{}_mask({}(mask.0), _mm512_setzero_si512());", int_suffix, cast_fn).unwrap();
+            writeln!(code, "            {}_mask_blend_{}(m, if_false.0, if_true.0)", prefix, suffix).unwrap();
+            writeln!(code, "        }})").unwrap();
+        } else {
+            // Integer types
+            writeln!(code, "        Self(unsafe {{").unwrap();
+            writeln!(code, "            // Convert vector mask to mask register").unwrap();
+            writeln!(code, "            let m = _mm512_cmpneq_{}_mask(mask.0, _mm512_setzero_si512());", suffix).unwrap();
+            writeln!(code, "            {}_mask_blend_{}(m, if_false.0, if_true.0)", prefix, suffix).unwrap();
+            writeln!(code, "        }})").unwrap();
+        }
+    } else if ty.elem.is_float() {
+        writeln!(code, "        Self(unsafe {{ {}_blendv_{}(if_false.0, if_true.0, mask.0) }})", prefix, suffix).unwrap();
+    } else {
+        // Integer blend uses blendv_epi8 which operates on bytes
+        writeln!(code, "        Self(unsafe {{ {}_blendv_epi8(if_false.0, if_true.0, mask.0) }})", prefix).unwrap();
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    code
+}
+
+fn generate_horizontal_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+    let prefix = ty.width.x86_prefix();
+    let suffix = ty.elem.x86_suffix();
+    let name = ty.name();
+    let elem = ty.elem.name();
+    let lanes = ty.lanes();
+
+    writeln!(code, "    // ========== Horizontal Operations ==========\n").unwrap();
+
+    // Horizontal sum - different strategies per width
+    if ty.elem.is_float() {
+        writeln!(code, "    /// Sum all lanes horizontally.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Returns a scalar containing the sum of all {} lanes.", lanes).unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn reduce_add(self) -> {} {{", elem).unwrap();
+
+        match (ty.elem, ty.width) {
+            (ElementType::F32, SimdWidth::W128) => {
+                // f32x4: hadd twice, extract
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let h1 = _mm_hadd_ps(self.0, self.0);").unwrap();
+                writeln!(code, "            let h2 = _mm_hadd_ps(h1, h1);").unwrap();
+                writeln!(code, "            _mm_cvtss_f32(h2)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W128) => {
+                // f64x2: hadd, extract
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let h = _mm_hadd_pd(self.0, self.0);").unwrap();
+                writeln!(code, "            _mm_cvtsd_f64(h)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F32, SimdWidth::W256) => {
+                // f32x8: extract halves, add, then 128-bit reduce
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let hi = _mm256_extractf128_ps::<1>(self.0);").unwrap();
+                writeln!(code, "            let lo = _mm256_castps256_ps128(self.0);").unwrap();
+                writeln!(code, "            let sum = _mm_add_ps(lo, hi);").unwrap();
+                writeln!(code, "            let h1 = _mm_hadd_ps(sum, sum);").unwrap();
+                writeln!(code, "            let h2 = _mm_hadd_ps(h1, h1);").unwrap();
+                writeln!(code, "            _mm_cvtss_f32(h2)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W256) => {
+                // f64x4: extract halves, add, then 128-bit reduce
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let hi = _mm256_extractf128_pd::<1>(self.0);").unwrap();
+                writeln!(code, "            let lo = _mm256_castpd256_pd128(self.0);").unwrap();
+                writeln!(code, "            let sum = _mm_add_pd(lo, hi);").unwrap();
+                writeln!(code, "            let h = _mm_hadd_pd(sum, sum);").unwrap();
+                writeln!(code, "            _mm_cvtsd_f64(h)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F32, SimdWidth::W512) => {
+                // f32x16: AVX-512 has reduce intrinsics
+                writeln!(code, "        unsafe {{ _mm512_reduce_add_ps(self.0) }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W512) => {
+                // f64x8: AVX-512 has reduce intrinsics
+                writeln!(code, "        unsafe {{ _mm512_reduce_add_pd(self.0) }}").unwrap();
+            }
+            _ => unreachable!(),
+        }
+        writeln!(code, "    }}\n").unwrap();
+
+        // Horizontal min/max for floats
+        writeln!(code, "    /// Find the minimum value across all lanes.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn reduce_min(self) -> {} {{", elem).unwrap();
+        match (ty.elem, ty.width) {
+            (ElementType::F32, SimdWidth::W128) => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);").unwrap();
+                writeln!(code, "            let m1 = _mm_min_ps(self.0, shuf);").unwrap();
+                writeln!(code, "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);").unwrap();
+                writeln!(code, "            let m2 = _mm_min_ps(m1, shuf2);").unwrap();
+                writeln!(code, "            _mm_cvtss_f32(m2)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W128) => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let shuf = _mm_shuffle_pd::<0b01>(self.0, self.0);").unwrap();
+                writeln!(code, "            let m = _mm_min_pd(self.0, shuf);").unwrap();
+                writeln!(code, "            _mm_cvtsd_f64(m)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F32, SimdWidth::W256) => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let hi = _mm256_extractf128_ps::<1>(self.0);").unwrap();
+                writeln!(code, "            let lo = _mm256_castps256_ps128(self.0);").unwrap();
+                writeln!(code, "            let m = _mm_min_ps(lo, hi);").unwrap();
+                writeln!(code, "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(m, m);").unwrap();
+                writeln!(code, "            let m1 = _mm_min_ps(m, shuf);").unwrap();
+                writeln!(code, "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);").unwrap();
+                writeln!(code, "            let m2 = _mm_min_ps(m1, shuf2);").unwrap();
+                writeln!(code, "            _mm_cvtss_f32(m2)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W256) => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let hi = _mm256_extractf128_pd::<1>(self.0);").unwrap();
+                writeln!(code, "            let lo = _mm256_castpd256_pd128(self.0);").unwrap();
+                writeln!(code, "            let m = _mm_min_pd(lo, hi);").unwrap();
+                writeln!(code, "            let shuf = _mm_shuffle_pd::<0b01>(m, m);").unwrap();
+                writeln!(code, "            let m2 = _mm_min_pd(m, shuf);").unwrap();
+                writeln!(code, "            _mm_cvtsd_f64(m2)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F32, SimdWidth::W512) => {
+                writeln!(code, "        unsafe {{ _mm512_reduce_min_ps(self.0) }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W512) => {
+                writeln!(code, "        unsafe {{ _mm512_reduce_min_pd(self.0) }}").unwrap();
+            }
+            _ => unreachable!(),
+        }
+        writeln!(code, "    }}\n").unwrap();
+
+        writeln!(code, "    /// Find the maximum value across all lanes.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn reduce_max(self) -> {} {{", elem).unwrap();
+        match (ty.elem, ty.width) {
+            (ElementType::F32, SimdWidth::W128) => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);").unwrap();
+                writeln!(code, "            let m1 = _mm_max_ps(self.0, shuf);").unwrap();
+                writeln!(code, "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);").unwrap();
+                writeln!(code, "            let m2 = _mm_max_ps(m1, shuf2);").unwrap();
+                writeln!(code, "            _mm_cvtss_f32(m2)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W128) => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let shuf = _mm_shuffle_pd::<0b01>(self.0, self.0);").unwrap();
+                writeln!(code, "            let m = _mm_max_pd(self.0, shuf);").unwrap();
+                writeln!(code, "            _mm_cvtsd_f64(m)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F32, SimdWidth::W256) => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let hi = _mm256_extractf128_ps::<1>(self.0);").unwrap();
+                writeln!(code, "            let lo = _mm256_castps256_ps128(self.0);").unwrap();
+                writeln!(code, "            let m = _mm_max_ps(lo, hi);").unwrap();
+                writeln!(code, "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(m, m);").unwrap();
+                writeln!(code, "            let m1 = _mm_max_ps(m, shuf);").unwrap();
+                writeln!(code, "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);").unwrap();
+                writeln!(code, "            let m2 = _mm_max_ps(m1, shuf2);").unwrap();
+                writeln!(code, "            _mm_cvtss_f32(m2)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W256) => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(code, "            let hi = _mm256_extractf128_pd::<1>(self.0);").unwrap();
+                writeln!(code, "            let lo = _mm256_castpd256_pd128(self.0);").unwrap();
+                writeln!(code, "            let m = _mm_max_pd(lo, hi);").unwrap();
+                writeln!(code, "            let shuf = _mm_shuffle_pd::<0b01>(m, m);").unwrap();
+                writeln!(code, "            let m2 = _mm_max_pd(m, shuf);").unwrap();
+                writeln!(code, "            _mm_cvtsd_f64(m2)").unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            (ElementType::F32, SimdWidth::W512) => {
+                writeln!(code, "        unsafe {{ _mm512_reduce_max_ps(self.0) }}").unwrap();
+            }
+            (ElementType::F64, SimdWidth::W512) => {
+                writeln!(code, "        unsafe {{ _mm512_reduce_max_pd(self.0) }}").unwrap();
+            }
+            _ => unreachable!(),
+        }
+        writeln!(code, "    }}\n").unwrap();
+    } else {
+        // Integer horizontal sum - use to_array fallback for now (complex shuffle patterns)
+        writeln!(code, "    /// Sum all lanes horizontally.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Returns a scalar containing the sum of all {} lanes.", lanes).unwrap();
+        writeln!(code, "    /// Note: This uses a scalar loop. For performance-critical code,").unwrap();
+        writeln!(code, "    /// consider keeping values in SIMD until the final reduction.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn reduce_add(self) -> {} {{", elem).unwrap();
+        writeln!(code, "        self.to_array().iter().copied().fold(0_{}, {}::wrapping_add)", elem, elem).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    code
+}
+
+fn generate_conversion_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+    let prefix = ty.width.x86_prefix();
+    let name = ty.name();
+    let lanes = ty.lanes();
+    let token = ty.token();
+
+    // Only generate conversions for matching lane counts
+    // f32 <-> i32 conversions
+    if ty.elem == ElementType::F32 {
+        let int_name = format!("i32x{}", lanes);
+        let uint_name = format!("u32x{}", lanes);
+
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        writeln!(code, "    /// Convert to signed 32-bit integers, rounding toward zero (truncation).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Values outside the representable range become `i32::MIN` (0x80000000).").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x{}(self) -> {} {{", lanes, int_name).unwrap();
+        writeln!(code, "        {}(unsafe {{ {}_cvttps_epi32(self.0) }})", int_name, prefix).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        writeln!(code, "    /// Convert to signed 32-bit integers, rounding to nearest even.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Values outside the representable range become `i32::MIN` (0x80000000).").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x{}_round(self) -> {} {{", lanes, int_name).unwrap();
+        writeln!(code, "        {}(unsafe {{ {}_cvtps_epi32(self.0) }})", int_name, prefix).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        writeln!(code, "    /// Create from signed 32-bit integers.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn from_i32x{}(v: {}) -> Self {{", lanes, int_name).unwrap();
+        writeln!(code, "        Self(unsafe {{ {}_cvtepi32_ps(v.0) }})", prefix).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    } else if ty.elem == ElementType::I32 {
+        let float_name = format!("f32x{}", lanes);
+
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        writeln!(code, "    /// Convert to single-precision floats.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_f32x{}(self) -> {} {{", lanes, float_name).unwrap();
+        writeln!(code, "        {}(unsafe {{ {}_cvtepi32_ps(self.0) }})", float_name, prefix).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    // f64 <-> i64/i32 conversions (more limited)
+    if ty.elem == ElementType::F64 && ty.width == SimdWidth::W128 {
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        writeln!(code, "    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Returns an `i32x4` where only the lower 2 lanes are valid.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x4_low(self) -> i32x4 {{").unwrap();
+        writeln!(code, "        i32x4(unsafe {{ _mm_cvttpd_epi32(self.0) }})").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    code
+}
+
+fn generate_scalar_ops(ty: &SimdType, cfg_attr: &str) -> String {
+    let mut code = String::new();
+    let name = ty.name();
+    let elem = ty.elem.name();
+    let token = ty.token();
+
+    writeln!(code, "\n// Scalar broadcast operations for {}", name).unwrap();
+    writeln!(code, "// These allow `v + 2.0` instead of `v + {}::splat(token, 2.0)`\n", name).unwrap();
+
+    if ty.elem.is_float() {
+        // Add scalar
+        writeln!(code, "{}impl Add<{}> for {} {{", cfg_attr, elem, name).unwrap();
+        writeln!(code, "    type Output = Self;").unwrap();
+        writeln!(code, "    /// Add a scalar to all lanes: `v + 2.0`").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Broadcasts the scalar to all lanes, then adds.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    fn add(self, rhs: {}) -> Self {{", elem).unwrap();
+        writeln!(code, "        self + Self(unsafe {{ {}({}) }})", scalar_splat_intrinsic(ty), "rhs").unwrap();
+        writeln!(code, "    }}").unwrap();
+        writeln!(code, "}}\n").unwrap();
+
+        // Sub scalar
+        writeln!(code, "{}impl Sub<{}> for {} {{", cfg_attr, elem, name).unwrap();
+        writeln!(code, "    type Output = Self;").unwrap();
+        writeln!(code, "    /// Subtract a scalar from all lanes: `v - 2.0`").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    fn sub(self, rhs: {}) -> Self {{", elem).unwrap();
+        writeln!(code, "        self - Self(unsafe {{ {}({}) }})", scalar_splat_intrinsic(ty), "rhs").unwrap();
+        writeln!(code, "    }}").unwrap();
+        writeln!(code, "}}\n").unwrap();
+
+        // Mul scalar
+        writeln!(code, "{}impl Mul<{}> for {} {{", cfg_attr, elem, name).unwrap();
+        writeln!(code, "    type Output = Self;").unwrap();
+        writeln!(code, "    /// Multiply all lanes by a scalar: `v * 2.0`").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    fn mul(self, rhs: {}) -> Self {{", elem).unwrap();
+        writeln!(code, "        self * Self(unsafe {{ {}({}) }})", scalar_splat_intrinsic(ty), "rhs").unwrap();
+        writeln!(code, "    }}").unwrap();
+        writeln!(code, "}}\n").unwrap();
+
+        // Div scalar
+        writeln!(code, "{}impl Div<{}> for {} {{", cfg_attr, elem, name).unwrap();
+        writeln!(code, "    type Output = Self;").unwrap();
+        writeln!(code, "    /// Divide all lanes by a scalar: `v / 2.0`").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    fn div(self, rhs: {}) -> Self {{", elem).unwrap();
+        writeln!(code, "        self / Self(unsafe {{ {}({}) }})", scalar_splat_intrinsic(ty), "rhs").unwrap();
+        writeln!(code, "    }}").unwrap();
+        writeln!(code, "}}\n").unwrap();
+    }
+
+    // Integer scalar ops - just add/sub for now
+    if !ty.elem.is_float() {
+        let splat_call = scalar_splat_intrinsic_int(ty);
+
+        writeln!(code, "{}impl Add<{}> for {} {{", cfg_attr, elem, name).unwrap();
+        writeln!(code, "    type Output = Self;").unwrap();
+        writeln!(code, "    /// Add a scalar to all lanes.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    fn add(self, rhs: {}) -> Self {{", elem).unwrap();
+        writeln!(code, "        self + Self(unsafe {{ {} }})", splat_call).unwrap();
+        writeln!(code, "    }}").unwrap();
+        writeln!(code, "}}\n").unwrap();
+
+        writeln!(code, "{}impl Sub<{}> for {} {{", cfg_attr, elem, name).unwrap();
+        writeln!(code, "    type Output = Self;").unwrap();
+        writeln!(code, "    /// Subtract a scalar from all lanes.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    fn sub(self, rhs: {}) -> Self {{", elem).unwrap();
+        writeln!(code, "        self - Self(unsafe {{ {} }})", splat_call).unwrap();
+        writeln!(code, "    }}").unwrap();
+        writeln!(code, "}}\n").unwrap();
+    }
+
+    code
+}
+
+fn scalar_splat_intrinsic(ty: &SimdType) -> String {
+    let prefix = ty.width.x86_prefix();
+    match ty.elem {
+        ElementType::F32 => format!("{}_set1_ps", prefix),
+        ElementType::F64 => format!("{}_set1_pd", prefix),
+        _ => unreachable!("scalar_splat_intrinsic only for floats"),
+    }
+}
+
+fn scalar_splat_intrinsic_int(ty: &SimdType) -> String {
+    let prefix = ty.width.x86_prefix();
+    let (suffix, cast) = match (ty.elem, ty.width) {
+        (ElementType::I8, _) => ("epi8", "rhs"),
+        (ElementType::U8, _) => ("epi8", "rhs as i8"),
+        (ElementType::I16, _) => ("epi16", "rhs"),
+        (ElementType::U16, _) => ("epi16", "rhs as i16"),
+        (ElementType::I32, _) => ("epi32", "rhs"),
+        (ElementType::U32, _) => ("epi32", "rhs as i32"),
+        (ElementType::I64, SimdWidth::W512) => ("epi64", "rhs"),
+        (ElementType::I64, _) => ("epi64x", "rhs"),
+        (ElementType::U64, SimdWidth::W512) => ("epi64", "rhs as i64"),
+        (ElementType::U64, _) => ("epi64x", "rhs as i64"),
+        _ => unreachable!(),
+    };
+    format!("{}_set1_{}({})", prefix, suffix, cast)
 }
 
 fn generate_math_ops(ty: &SimdType) -> String {
@@ -1047,6 +1854,213 @@ fn generate_math_ops(ty: &SimdType) -> String {
     code
 }
 
+fn generate_approx_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+    let prefix = ty.width.x86_prefix();
+    let suffix = ty.elem.x86_suffix();
+
+    // Only for f32 types (f64 doesn't have rcp/rsqrt in SSE/AVX, only AVX-512)
+    if ty.elem == ElementType::F32 {
+        writeln!(code, "    // ========== Approximation Operations ==========\n").unwrap();
+
+        // rcp - reciprocal approximation
+        if ty.width == SimdWidth::W512 {
+            // AVX-512 has rcp14 with ~14-bit precision
+            writeln!(code, "    /// Fast reciprocal approximation (1/x) with ~14-bit precision.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// For full precision, use `recip()` which applies Newton-Raphson refinement.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_rcp14_{}(self.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        } else {
+            // SSE/AVX have rcp with ~12-bit precision
+            writeln!(code, "    /// Fast reciprocal approximation (1/x) with ~12-bit precision.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// For full precision, use `recip()` which applies Newton-Raphson refinement.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_rcp_{}(self.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
+
+        // recip - precise reciprocal via Newton-Raphson
+        writeln!(code, "    /// Precise reciprocal (1/x) using Newton-Raphson refinement.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// More accurate than `rcp_approx()` but slower. For maximum speed").unwrap();
+        writeln!(code, "    /// with acceptable precision loss, use `rcp_approx()`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn recip(self) -> Self {{").unwrap();
+        writeln!(code, "        // Newton-Raphson: x' = x * (2 - a*x)").unwrap();
+        writeln!(code, "        let approx = self.rcp_approx();").unwrap();
+        writeln!(code, "        let two = Self(unsafe {{ {}_set1_ps(2.0) }});", prefix).unwrap();
+        writeln!(code, "        // One iteration gives ~24-bit precision from ~12-bit").unwrap();
+        writeln!(code, "        approx * (two - self * approx)").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // rsqrt - reciprocal sqrt approximation
+        if ty.width == SimdWidth::W512 {
+            writeln!(code, "    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~14-bit precision.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_rsqrt14_{}(self.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        } else {
+            writeln!(code, "    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~12-bit precision.").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_rsqrt_{}(self.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
+
+        // rsqrt with refinement
+        writeln!(code, "    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn rsqrt(self) -> Self {{").unwrap();
+        writeln!(code, "        // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - x * y * y)").unwrap();
+        writeln!(code, "        let approx = self.rsqrt_approx();").unwrap();
+        writeln!(code, "        let half = Self(unsafe {{ {}_set1_ps(0.5) }});", prefix).unwrap();
+        writeln!(code, "        let three = Self(unsafe {{ {}_set1_ps(3.0) }});", prefix).unwrap();
+        writeln!(code, "        half * approx * (three - self * approx * approx)").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    // AVX-512 also has rcp14/rsqrt14 for f64
+    if ty.elem == ElementType::F64 && ty.width == SimdWidth::W512 {
+        writeln!(code, "    // ========== Approximation Operations ==========\n").unwrap();
+
+        writeln!(code, "    /// Fast reciprocal approximation (1/x) with ~14-bit precision.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
+        writeln!(code, "        Self(unsafe {{ {}_rcp14_{}(self.0) }})", prefix, suffix).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        writeln!(code, "    /// Precise reciprocal (1/x) using Newton-Raphson refinement.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn recip(self) -> Self {{").unwrap();
+        writeln!(code, "        let approx = self.rcp_approx();").unwrap();
+        writeln!(code, "        let two = Self(unsafe {{ {}_set1_pd(2.0) }});", prefix).unwrap();
+        writeln!(code, "        approx * (two - self * approx)").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        writeln!(code, "    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~14-bit precision.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
+        writeln!(code, "        Self(unsafe {{ {}_rsqrt14_{}(self.0) }})", prefix, suffix).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        writeln!(code, "    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn rsqrt(self) -> Self {{").unwrap();
+        writeln!(code, "        let approx = self.rsqrt_approx();").unwrap();
+        writeln!(code, "        let half = Self(unsafe {{ {}_set1_pd(0.5) }});", prefix).unwrap();
+        writeln!(code, "        let three = Self(unsafe {{ {}_set1_pd(3.0) }});", prefix).unwrap();
+        writeln!(code, "        half * approx * (three - self * approx * approx)").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    code
+}
+
+fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+    let prefix = ty.width.x86_prefix();
+    let bits = ty.width.bits();
+
+    writeln!(code, "    // ========== Bitwise Unary Operations ==========\n").unwrap();
+
+    // not - bitwise complement (XOR with all 1s)
+    writeln!(code, "    /// Bitwise NOT (complement): flips all bits.").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn not(self) -> Self {{").unwrap();
+
+    if ty.elem.is_float() {
+        let suffix = ty.elem.x86_suffix();
+        let int_suffix = if ty.elem == ElementType::F32 { "epi32" } else { "epi64" };
+        let set1_suffix = match (ty.elem, ty.width) {
+            (ElementType::F32, _) => "epi32",
+            (_, SimdWidth::W512) => "epi64",
+            _ => "epi64x",
+        };
+        let cast_to = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
+        let cast_from = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
+
+        writeln!(code, "        Self(unsafe {{").unwrap();
+        writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, set1_suffix).unwrap();
+        writeln!(code, "            let as_int = {}_cast{}_si{}(self.0);", prefix, cast_from, bits).unwrap();
+        writeln!(code, "            {}_castsi{}_{} ({}_xor_si{}(as_int, ones))", prefix, bits, cast_to, prefix, bits).unwrap();
+        writeln!(code, "        }})").unwrap();
+    } else {
+        let set1_suffix = match (ty.elem, ty.width) {
+            (ElementType::I8 | ElementType::U8, _) => "epi8",
+            (ElementType::I16 | ElementType::U16, _) => "epi16",
+            (ElementType::I32 | ElementType::U32, _) => "epi32",
+            (ElementType::I64 | ElementType::U64, SimdWidth::W512) => "epi64",
+            (ElementType::I64 | ElementType::U64, _) => "epi64x",
+            _ => unreachable!(),
+        };
+        writeln!(code, "        Self(unsafe {{").unwrap();
+        writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, set1_suffix).unwrap();
+        writeln!(code, "            {}_xor_si{}(self.0, ones)", prefix, bits).unwrap();
+        writeln!(code, "        }})").unwrap();
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    code
+}
+
+fn generate_shift_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+
+    // Only for integer types, and NOT for 8-bit (no 8-bit shift intrinsics in x86 SIMD)
+    if ty.elem.is_float() || matches!(ty.elem, ElementType::I8 | ElementType::U8) {
+        return code;
+    }
+
+    let prefix = ty.width.x86_prefix();
+    let suffix = ty.elem.x86_suffix();
+
+    writeln!(code, "    // ========== Shift Operations ==========\n").unwrap();
+
+    // Shift left logical
+    writeln!(code, "    /// Shift each lane left by `N` bits.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// Bits shifted out are lost; zeros are shifted in.").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn shl<const N: i32>(self) -> Self {{").unwrap();
+    writeln!(code, "        Self(unsafe {{ {}_slli_{}::<N>(self.0) }})", prefix, suffix).unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // Shift right logical
+    writeln!(code, "    /// Shift each lane right by `N` bits (logical/unsigned shift).").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// Bits shifted out are lost; zeros are shifted in.").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn shr<const N: i32>(self) -> Self {{").unwrap();
+    writeln!(code, "        Self(unsafe {{ {}_srli_{}::<N>(self.0) }})", prefix, suffix).unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // Arithmetic shift right (signed types; 64-bit only in AVX-512)
+    if ty.elem.is_signed() {
+        let has_sra = ty.elem != ElementType::I64 || ty.width == SimdWidth::W512;
+        if has_sra {
+            writeln!(code, "    /// Arithmetic shift right by `N` bits (sign-extending).").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// The sign bit is replicated into the vacated positions.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn shr_arithmetic<const N: i32>(self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}_srai_{}::<N>(self.0) }})", prefix, suffix).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
+    }
+
+    code
+}
+
 fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
     let mut code = String::new();
     let name = ty.name();
@@ -1194,6 +2208,125 @@ fn test_f32x8_basic() {
 }
 
 #[test]
+fn test_f32x8_comparisons() {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        eprintln!("AVX2+FMA not available");
+        return;
+    };
+
+    let a = f32x8::load(token, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+    let b = f32x8::load(token, &[2.0, 2.0, 2.0, 2.0, 6.0, 6.0, 6.0, 6.0]);
+
+    // Test simd_lt: lanes where a < b should be all-1s (as f32: NaN)
+    let lt = a.simd_lt(b);
+    let lt_arr = lt.to_array();
+    assert!(lt_arr[0].is_nan()); // 1 < 2 = true (all-1s = NaN)
+    assert_eq!(lt_arr[1].to_bits(), 0); // 2 < 2 = false
+    assert_eq!(lt_arr[2].to_bits(), 0); // 3 < 2 = false
+
+    // Test simd_eq
+    let eq = a.simd_eq(b);
+    let eq_arr = eq.to_array();
+    assert_eq!(eq_arr[0].to_bits(), 0); // 1 == 2 = false
+    assert!(eq_arr[1].is_nan()); // 2 == 2 = true
+
+    // Test simd_gt
+    let gt = a.simd_gt(b);
+    let gt_arr = gt.to_array();
+    assert_eq!(gt_arr[0].to_bits(), 0); // 1 > 2 = false
+    assert_eq!(gt_arr[1].to_bits(), 0); // 2 > 2 = false
+    assert!(gt_arr[2].is_nan()); // 3 > 2 = true
+}
+
+#[test]
+fn test_f32x8_blend() {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        eprintln!("AVX2+FMA not available");
+        return;
+    };
+
+    let a = f32x8::load(token, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+    let b = f32x8::splat(token, 0.0);
+    let threshold = f32x8::splat(token, 4.5);
+
+    // Select a where a < threshold, else b
+    let mask = a.simd_lt(threshold);
+    let result = f32x8::blend(mask, a, b);
+
+    assert_eq!(result.to_array(), [1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0]);
+}
+
+#[test]
+fn test_f32x8_horizontal() {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        eprintln!("AVX2+FMA not available");
+        return;
+    };
+
+    let v = f32x8::load(token, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+
+    // Sum: 1+2+3+4+5+6+7+8 = 36
+    let sum = v.reduce_add();
+    assert!((sum - 36.0).abs() < 0.001);
+
+    // Min: 1.0
+    let min = v.reduce_min();
+    assert!((min - 1.0).abs() < 0.001);
+
+    // Max: 8.0
+    let max = v.reduce_max();
+    assert!((max - 8.0).abs() < 0.001);
+}
+
+#[test]
+fn test_f32x8_scalar_ops() {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        eprintln!("AVX2+FMA not available");
+        return;
+    };
+
+    let v = f32x8::load(token, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+
+    // Test v + scalar
+    let sum = v + 10.0;
+    assert_eq!(sum.to_array(), [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0]);
+
+    // Test v * scalar
+    let prod = v * 2.0;
+    assert_eq!(prod.to_array(), [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+
+    // Test v - scalar
+    let diff = v - 0.5;
+    assert_eq!(diff.to_array(), [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]);
+
+    // Test v / scalar
+    let quot = v / 2.0;
+    assert_eq!(quot.to_array(), [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]);
+}
+
+#[test]
+fn test_f32x8_conversions() {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        eprintln!("AVX2+FMA not available");
+        return;
+    };
+
+    // f32 -> i32 (truncate)
+    let f = f32x8::load(token, &[1.9, -2.9, 3.1, -4.1, 5.5, -6.5, 7.0, -8.0]);
+    let i = f.to_i32x8();
+    assert_eq!(i.to_array(), [1, -2, 3, -4, 5, -6, 7, -8]);
+
+    // f32 -> i32 (round)
+    let rounded = f.to_i32x8_round();
+    assert_eq!(rounded.to_array(), [2, -3, 3, -4, 6, -6, 7, -8]);
+
+    // i32 -> f32
+    let i2 = i32x8::load(token, &[1, 2, 3, 4, 5, 6, 7, 8]);
+    let f2 = f32x8::from_i32x8(i2);
+    assert_eq!(f2.to_array(), [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+}
+
+#[test]
 fn test_i32x8_basic() {
     let Some(token) = archmage::Avx2FmaToken::try_new() else {
         eprintln!("AVX2+FMA not available");
@@ -1217,6 +2350,76 @@ fn test_i32x8_basic() {
 }
 
 #[test]
+fn test_i32x8_comparisons() {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        eprintln!("AVX2+FMA not available");
+        return;
+    };
+
+    let a = i32x8::load(token, &[1, 2, 3, 4, 5, 6, 7, 8]);
+    let b = i32x8::load(token, &[2, 2, 2, 2, 6, 6, 6, 6]);
+
+    // simd_eq: compare each lane
+    let eq = a.simd_eq(b);
+    let eq_arr = eq.to_array();
+    assert_eq!(eq_arr[0], 0);  // 1 == 2 = false
+    assert_eq!(eq_arr[1], -1); // 2 == 2 = true (all-1s = -1 as i32)
+    assert_eq!(eq_arr[2], 0);  // 3 == 2 = false
+
+    // simd_gt
+    let gt = a.simd_gt(b);
+    let gt_arr = gt.to_array();
+    assert_eq!(gt_arr[0], 0);  // 1 > 2 = false
+    assert_eq!(gt_arr[1], 0);  // 2 > 2 = false
+    assert_eq!(gt_arr[2], -1); // 3 > 2 = true
+
+    // simd_lt
+    let lt = a.simd_lt(b);
+    let lt_arr = lt.to_array();
+    assert_eq!(lt_arr[0], -1); // 1 < 2 = true
+    assert_eq!(lt_arr[1], 0);  // 2 < 2 = false
+}
+
+#[test]
+fn test_i32x8_scalar_ops() {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        eprintln!("AVX2+FMA not available");
+        return;
+    };
+
+    let v = i32x8::load(token, &[1, 2, 3, 4, 5, 6, 7, 8]);
+
+    // Test v + scalar
+    let sum = v + 10;
+    assert_eq!(sum.to_array(), [11, 12, 13, 14, 15, 16, 17, 18]);
+
+    // Test v - scalar
+    let diff = v - 1;
+    assert_eq!(diff.to_array(), [0, 1, 2, 3, 4, 5, 6, 7]);
+}
+
+#[test]
+fn test_u32x8_comparisons() {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        eprintln!("AVX2+FMA not available");
+        return;
+    };
+
+    // Test unsigned comparison (important: different from signed!)
+    let a = u32x8::load(token, &[1, 2, 0xFFFF_FFFF, 4, 5, 6, 7, 8]);
+    let b = u32x8::load(token, &[2, 2, 1, 4, 4, 4, 4, 4]);
+
+    // simd_gt for unsigned: 0xFFFF_FFFF > 1 should be true
+    let gt = a.simd_gt(b);
+    let gt_arr = gt.to_array();
+    assert_eq!(gt_arr[0], 0);           // 1 > 2 = false
+    assert_eq!(gt_arr[1], 0);           // 2 > 2 = false
+    assert_eq!(gt_arr[2], 0xFFFF_FFFF); // 0xFFFF_FFFF > 1 = true (unsigned!)
+    assert_eq!(gt_arr[3], 0);           // 4 > 4 = false
+    assert_eq!(gt_arr[4], 0xFFFF_FFFF); // 5 > 4 = true
+}
+
+#[test]
 fn test_f32x4_basic() {
     let Some(token) = archmage::Sse41Token::try_new() else {
         eprintln!("SSE4.1 not available");
@@ -1226,6 +2429,28 @@ fn test_f32x4_basic() {
     let data = [1.0f32, 2.0, 3.0, 4.0];
     let v = f32x4::load(token, &data);
     assert_eq!(v.to_array(), data);
+
+    // Test horizontal sum
+    let sum = v.reduce_add();
+    assert!((sum - 10.0).abs() < 0.001);
+}
+
+#[test]
+fn test_f32x4_comparisons() {
+    let Some(token) = archmage::Sse41Token::try_new() else {
+        eprintln!("SSE4.1 not available");
+        return;
+    };
+
+    let a = f32x4::load(token, &[1.0, 2.0, 3.0, 4.0]);
+    let b = f32x4::load(token, &[2.0, 2.0, 2.0, 2.0]);
+
+    // Test simd_lt
+    let lt = a.simd_lt(b);
+    let lt_arr = lt.to_array();
+    assert!(lt_arr[0].is_nan()); // 1 < 2 = true
+    assert_eq!(lt_arr[1].to_bits(), 0); // 2 < 2 = false
+    assert_eq!(lt_arr[2].to_bits(), 0); // 3 < 2 = false
 }
 "#,
     );
