@@ -3,7 +3,7 @@ members = [".", "archmage-macros", "xtask"]
 
 [package]
 name = "archmage"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -14,35 +14,32 @@ keywords = ["simd", "avx", "neon", "performance", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
-default = ["std", "macros", "safe_unaligned_simd"]
+default = ["std", "macros"]
 std = []
 macros = ["dep:archmage-macros"]
-# Safe load/store wrappers (stable)
-safe_unaligned_simd = ["dep:safe_unaligned_simd"]
 # AVX-512 token support (Avx512Token, Avx512ModernToken, X64V4Token, etc.)
 avx512 = []
 
 # Unstable features (API may change, prefixed with __)
 # Experimental newtype wrappers (broken Shl/Shr, needs const generics)
 __experiments = []
-# Transpose, dot product, horizontal ops - implies safe_unaligned_simd
-__composite = ["safe_unaligned_simd"]
+# Transpose, dot product, horizontal ops - requires safe_unaligned_simd
+__composite = ["dep:safe_unaligned_simd"]
 # Integration with wide crate
 __wide = ["dep:wide"]
-# Nightly-only: use #[inline(always)] with #[target_feature] in generated wrappers.
-# Requires #![feature(target_feature_inline_always)] in the crate using archmage.
-__nightly-inline-always = []
 
 [dependencies]
 # Proc-macro crate for #[arcane] attribute
 archmage-macros = { version = "0.1.1", path = "archmage-macros", optional = true }
 # Optional integrations
 wide = { version = "1.1.1", optional = true }
+# Safe unaligned memory operations (optional, for __composite)
 safe_unaligned_simd = { version = "0.2.3", optional = true, features = ["avx512"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 trybuild = "1.0"
+safe_unaligned_simd = { version = "0.2.3", features = ["avx512"] }
 
 [[bench]]
 name = "tokens"

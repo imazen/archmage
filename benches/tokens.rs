@@ -4,7 +4,7 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 #[cfg(target_arch = "x86_64")]
 fn bench_token_overhead(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, Avx2Token, SimdToken, mem};
+    use archmage::{Avx2FmaToken, Avx2Token, SimdToken};
 
     let mut group = c.benchmark_group("token_overhead");
 
@@ -18,12 +18,16 @@ fn bench_token_overhead(c: &mut Criterion) {
     });
 
     // Benchmark operations with token vs raw intrinsics
-    if let Some(token) = Avx2Token::try_new() {
+    if let Some(_token) = Avx2Token::try_new() {
         let data = [1.0f32; 8];
 
-        group.bench_function("load_with_token", |b| {
+        group.bench_function("load_with_safe_unaligned_simd", |b| {
             b.iter(|| {
-                let v = mem::avx::_mm256_loadu_ps(token.avx(), black_box(&data));
+                // safe_unaligned_simd is always safe inside target_feature functions
+                // but here we're outside, so we still use unsafe
+                let v = unsafe {
+                    core::arch::x86_64::_mm256_loadu_ps(black_box(&data).as_ptr())
+                };
                 black_box(v)
             })
         });
@@ -32,7 +36,7 @@ fn bench_token_overhead(c: &mut Criterion) {
     group.finish();
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", feature = "__composite"))]
 fn bench_composite_ops(c: &mut Criterion) {
     use archmage::{Avx2FmaToken, Avx2Token, SimdToken, composite};
 
@@ -64,6 +68,11 @@ fn bench_composite_ops(c: &mut Criterion) {
     }
 
     group.finish();
+}
+
+#[cfg(all(target_arch = "x86_64", not(feature = "__composite")))]
+fn bench_composite_ops(_c: &mut Criterion) {
+    // Composite feature not enabled
 }
 
 #[cfg(target_arch = "x86_64")]

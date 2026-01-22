@@ -33,15 +33,3 @@ fn ui_tests() {
     t.compile_fail("tests/compile_fail/wrong_token.rs");
 }
 
-#[test]
-#[cfg(all(feature = "safe_unaligned_simd", feature = "avx512"))]
-fn safe_simd_type_safety() {
-    // Requires avx512 feature because the error message lists available tokens,
-    // which varies based on enabled features
-    if is_ci() {
-        return;
-    }
-
-    let t = trybuild::TestCases::new();
-    t.compile_fail("tests/compile_fail/safe_simd_wrong_token.rs");
-}

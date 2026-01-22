@@ -39,14 +39,14 @@
 
 ## CRITICAL: Documentation Examples
 
-**ALWAYS use `archmage::mem` for load/store in examples.** Never write examples with `unsafe { _mm256_loadu_ps(ptr) }`.
+**Use `safe_unaligned_simd` directly inside `#[arcane]` functions.** The calls are safe because the target features match.
 
 ```rust
-// WRONG - bypasses the safety archmage provides
+// WRONG - raw pointers need unsafe
 let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
 
-// CORRECT - use the safe mem wrappers
-let v = avx::_mm256_loadu_ps(token, data);
+// CORRECT - use safe_unaligned_simd (safe inside #[arcane])
+let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
 ```
 
 ## Quick Start
@@ -55,7 +55,6 @@ let v = avx::_mm256_loadu_ps(token, data);
 cargo test                    # Run tests
 cargo test --all-features     # Test with all integrations
 cargo clippy --all-features   # Lint
-cargo run -p xtask -- generate # Regenerate safe_unaligned_simd wrappers
 ```
 
 ## Core Insight: Rust 1.85+ Changed Everything
@@ -77,7 +76,7 @@ unsafe fn example() {
 This means we **don't need to wrap** arithmetic, shuffle, compare, bitwise, or other value-based intrinsics. Only:
 1. **Tokens** - Prove CPU features are available
 2. **`#[arcane]` macro** - Enable `#[target_feature]` via token proof
-3. **Safe load/store** - Reference-based memory operations (optional)
+3. **`safe_unaligned_simd`** - Reference-based memory operations (user adds as dependency)
 
 ## How `#[arcane]` Works
 
@@ -136,10 +135,9 @@ src/
 │   └── wasm.rs         # WASM token types
 ├── composite/          # Higher-level operations (__composite feature)
 ├── integrate/          # wide crate integration (__wide feature)
-├── mem.rs              # Re-exports generated wrappers
-└── generated/          # AUTO-GENERATED (safe_unaligned_simd feature)
+└── simd/               # Auto-generated SIMD types (wide-like ergonomics)
 xtask/
-└── src/main.rs         # Wrapper generator
+└── src/main.rs         # SIMD type generator
 ```
 
 ## Token Hierarchy
@@ -172,21 +170,20 @@ For v3 (AVX2+FMA), use `Avx2FmaToken` directly - it's the recommended baseline.
 
 ## Safe Memory Operations
 
-With `safe_unaligned_simd` feature, the `mem` module provides reference-based load/store:
+Use `safe_unaligned_simd` directly inside `#[arcane]` functions:
 
 ```rust
-use archmage::{Desktop64, SimdToken, mem::avx};
+use archmage::{Desktop64, SimdToken, arcane, HasAvx2};
 
-if let Some(token) = Desktop64::summon() {
-    let v = avx::_mm256_loadu_ps(token, &data);  // Safe! Reference, not pointer
-    avx::_mm256_storeu_ps(token, &mut out, v);
+#[arcane]
+fn process(_token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+    // safe_unaligned_simd calls are SAFE inside #[arcane]
+    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+    let squared = _mm256_mul_ps(v, v);
+    let mut out = [0.0f32; 8];
+    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, squared);
+    out
 }
-```
-
-## Generated Wrappers
-
-```bash
-cargo run -p xtask -- generate  # Regenerate after safe_unaligned_simd updates
 ```
 
 ## License

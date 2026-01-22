@@ -10,21 +10,20 @@
 //!
 //! ```rust,ignore
 //! use archmage::{Desktop64, HasAvx2, SimdToken, arcane};
-//! use archmage::mem::avx;  // Safe load/store (enabled by default)
 //! use std::arch::x86_64::*;
 //!
 //! #[arcane]
-//! fn multiply_add(token: impl HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-//!     // Safe memory operations - references, not raw pointers!
-//!     let va = avx::_mm256_loadu_ps(token, a);
-//!     let vb = avx::_mm256_loadu_ps(token, b);
+//! fn multiply_add(_token: impl HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+//!     // safe_unaligned_simd calls are SAFE inside #[arcane] - no unsafe needed!
+//!     let va = safe_unaligned_simd::x86_64::_mm256_loadu_ps(a);
+//!     let vb = safe_unaligned_simd::x86_64::_mm256_loadu_ps(b);
 //!
-//!     // Value-based intrinsics are SAFE inside #[arcane]!
+//!     // Value-based intrinsics are also SAFE inside #[arcane]!
 //!     let result = _mm256_add_ps(va, vb);
 //!     let result = _mm256_mul_ps(result, result);
 //!
 //!     let mut out = [0.0f32; 8];
-//!     avx::_mm256_storeu_ps(token, &mut out, result);
+//!     safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, result);
 //!     out
 //! }
 //!
@@ -52,7 +51,7 @@
 //!
 //! - `std` (default): Enable std library support
 //! - `macros` (default): Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`)
-//! - `safe_unaligned_simd` (default): Safe load/store via references (exposed as `mem` module)
+//! - `avx512`: AVX-512 token support
 //! - `__composite`: Higher-level ops (transpose, dot product) - unstable API
 //! - `__wide`: Integration with the `wide` crate - unstable API
 
@@ -79,19 +78,13 @@ pub mod detect;
 pub mod tokens;
 
 // Integration layers
-#[cfg(any(feature = "__wide", feature = "safe_unaligned_simd"))]
+#[cfg(feature = "__wide")]
 pub mod integrate;
 
 // Composite operations (requires "__composite" feature, unstable API)
 #[cfg(feature = "__composite")]
 #[cfg_attr(docsrs, doc(cfg(feature = "__composite")))]
 pub mod composite;
-
-// Safe unaligned memory operations (requires "safe_unaligned_simd" feature)
-// Wraps safe_unaligned_simd with token-based safety
-#[cfg(feature = "safe_unaligned_simd")]
-#[cfg_attr(docsrs, doc(cfg(feature = "safe_unaligned_simd")))]
-pub mod mem;
 
 // Experimental features (unstable API, broken Shl/Shr needs const generics)
 #[cfg(all(target_arch = "x86_64", feature = "__experiments"))]
