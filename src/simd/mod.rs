@@ -7311,7 +7311,7 @@ impl i16x32 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shl<const N: i32>(self) -> Self {
+    pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi16::<N>(self.0) })
     }
 
@@ -7319,7 +7319,7 @@ impl i16x32 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi16::<N>(self.0) })
     }
 
@@ -7327,7 +7327,7 @@ impl i16x32 {
     ///
     /// The sign bit is replicated into the vacated positions.
     #[inline(always)]
-    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+    pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi16::<N>(self.0) })
     }
 
@@ -7594,7 +7594,7 @@ impl u16x32 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shl<const N: i32>(self) -> Self {
+    pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi16::<N>(self.0) })
     }
 
@@ -7602,7 +7602,7 @@ impl u16x32 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi16::<N>(self.0) })
     }
 
@@ -7883,7 +7883,7 @@ impl i32x16 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shl<const N: i32>(self) -> Self {
+    pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi32::<N>(self.0) })
     }
 
@@ -7891,7 +7891,7 @@ impl i32x16 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi32::<N>(self.0) })
     }
 
@@ -7899,7 +7899,7 @@ impl i32x16 {
     ///
     /// The sign bit is replicated into the vacated positions.
     #[inline(always)]
-    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+    pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi32::<N>(self.0) })
     }
 
@@ -8166,7 +8166,7 @@ impl u32x16 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shl<const N: i32>(self) -> Self {
+    pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi32::<N>(self.0) })
     }
 
@@ -8174,7 +8174,7 @@ impl u32x16 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi32::<N>(self.0) })
     }
 
@@ -8447,7 +8447,7 @@ impl i64x8 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shl<const N: i32>(self) -> Self {
+    pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi64::<N>(self.0) })
     }
 
@@ -8455,7 +8455,7 @@ impl i64x8 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi64::<N>(self.0) })
     }
 
@@ -8463,7 +8463,7 @@ impl i64x8 {
     ///
     /// The sign bit is replicated into the vacated positions.
     #[inline(always)]
-    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+    pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi64::<N>(self.0) })
     }
 
@@ -8728,7 +8728,7 @@ impl u64x8 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shl<const N: i32>(self) -> Self {
+    pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi64::<N>(self.0) })
     }
 
@@ -8736,7 +8736,7 @@ impl u64x8 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi64::<N>(self.0) })
     }
 

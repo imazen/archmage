@@ -2023,6 +2023,8 @@ fn generate_shift_ops(ty: &SimdType) -> String {
 
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
+    // AVX-512 intrinsics use u32 for const generic, SSE/AVX use i32
+    let const_type = if ty.width == SimdWidth::W512 { "u32" } else { "i32" };
 
     writeln!(code, "    // ========== Shift Operations ==========\n").unwrap();
 
@@ -2031,7 +2033,7 @@ fn generate_shift_ops(ty: &SimdType) -> String {
     writeln!(code, "    ///").unwrap();
     writeln!(code, "    /// Bits shifted out are lost; zeros are shifted in.").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn shl<const N: i32>(self) -> Self {{").unwrap();
+    writeln!(code, "    pub fn shl<const N: {}>(self) -> Self {{", const_type).unwrap();
     writeln!(code, "        Self(unsafe {{ {}_slli_{}::<N>(self.0) }})", prefix, suffix).unwrap();
     writeln!(code, "    }}\n").unwrap();
 
@@ -2040,7 +2042,7 @@ fn generate_shift_ops(ty: &SimdType) -> String {
     writeln!(code, "    ///").unwrap();
     writeln!(code, "    /// Bits shifted out are lost; zeros are shifted in.").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn shr<const N: i32>(self) -> Self {{").unwrap();
+    writeln!(code, "    pub fn shr<const N: {}>(self) -> Self {{", const_type).unwrap();
     writeln!(code, "        Self(unsafe {{ {}_srli_{}::<N>(self.0) }})", prefix, suffix).unwrap();
     writeln!(code, "    }}\n").unwrap();
 
@@ -2052,7 +2054,7 @@ fn generate_shift_ops(ty: &SimdType) -> String {
             writeln!(code, "    ///").unwrap();
             writeln!(code, "    /// The sign bit is replicated into the vacated positions.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn shr_arithmetic<const N: i32>(self) -> Self {{").unwrap();
+            writeln!(code, "    pub fn shr_arithmetic<const N: {}>(self) -> Self {{", const_type).unwrap();
             writeln!(code, "        Self(unsafe {{ {}_srai_{}::<N>(self.0) }})", prefix, suffix).unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
