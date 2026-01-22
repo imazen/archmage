@@ -1033,39 +1033,73 @@ impl f32x4 {
         }
     }
 
-// ========== Block Operations ==========
+// ========== Load and Convert ==========
+
+/// Load 4 u8 values and convert to f32x4.
+///
+/// Useful for image processing: load pixel values directly to float.
+#[inline(always)]
+pub fn from_u8(bytes: &[u8; 4]) -> Self {
+    unsafe {
+        // Load 4 bytes into low part of XMM register
+        let b = _mm_cvtsi32_si128(i32::from_ne_bytes(*bytes));
+        let i32s = _mm_cvtepu8_epi32(b);
+        Self(_mm_cvtepi32_ps(i32s))
+    }
+}
+
+/// Convert to 4 u8 values with saturation.
+///
+/// Values are clamped to [0, 255] and rounded.
+#[inline(always)]
+pub fn to_u8(self) -> [u8; 4] {
+    unsafe {
+        // Convert to i32, pack to i16, pack to u8
+        let i32s = _mm_cvtps_epi32(self.0);
+        let i16s = _mm_packs_epi32(i32s, i32s);
+        let u8s = _mm_packus_epi16(i16s, i16s);
+        let val = _mm_cvtsi128_si32(u8s) as u32;
+        val.to_ne_bytes()
+    }
+}
+
+// ========== Interleave Operations ==========
+
+/// Interleave low elements: [a0,a1,a2,a3] + [b0,b1,b2,b3] → [a0,b0,a1,b1]
+#[inline(always)]
+pub fn interleave_lo(self, other: Self) -> Self {
+    Self(unsafe { _mm_unpacklo_ps(self.0, other.0) })
+}
+
+/// Interleave high elements: [a0,a1,a2,a3] + [b0,b1,b2,b3] → [a2,b2,a3,b3]
+#[inline(always)]
+pub fn interleave_hi(self, other: Self) -> Self {
+    Self(unsafe { _mm_unpackhi_ps(self.0, other.0) })
+}
+
+/// Interleave two vectors: returns (interleave_lo, interleave_hi)
+#[inline(always)]
+pub fn interleave(self, other: Self) -> (Self, Self) {
+    (self.interleave_lo(other), self.interleave_hi(other))
+}
+
+// ========== Matrix Transpose ==========
 
 /// Transpose a 4x4 matrix represented as 4 row vectors.
 ///
 /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
-///
-/// # Example
-/// ```ignore
-/// let mut rows = [
-///     f32x4::from_array(token, [0.0, 1.0, 2.0, 3.0]),
-///     f32x4::from_array(token, [4.0, 5.0, 6.0, 7.0]),
-///     f32x4::from_array(token, [8.0, 9.0, 10.0, 11.0]),
-///     f32x4::from_array(token, [12.0, 13.0, 14.0, 15.0]),
-/// ];
-/// f32x4::transpose_4x4(&mut rows);
-/// // rows[0] is now [0, 4, 8, 12]
-/// // rows[1] is now [1, 5, 9, 13]
-/// // etc.
-/// ```
 #[inline]
 pub fn transpose_4x4(rows: &mut [Self; 4]) {
     unsafe {
-        // Stage 1: Interleave pairs
-        let t0 = _mm_unpacklo_ps(rows[0].0, rows[1].0); // [r0[0], r1[0], r0[1], r1[1]]
-        let t1 = _mm_unpackhi_ps(rows[0].0, rows[1].0); // [r0[2], r1[2], r0[3], r1[3]]
-        let t2 = _mm_unpacklo_ps(rows[2].0, rows[3].0); // [r2[0], r3[0], r2[1], r3[1]]
-        let t3 = _mm_unpackhi_ps(rows[2].0, rows[3].0); // [r2[2], r3[2], r2[3], r3[3]]
+        let t0 = _mm_unpacklo_ps(rows[0].0, rows[1].0);
+        let t1 = _mm_unpackhi_ps(rows[0].0, rows[1].0);
+        let t2 = _mm_unpacklo_ps(rows[2].0, rows[3].0);
+        let t3 = _mm_unpackhi_ps(rows[2].0, rows[3].0);
 
-        // Stage 2: Combine halves
-        rows[0] = Self(_mm_movelh_ps(t0, t2)); // [r0[0], r1[0], r2[0], r3[0]]
-        rows[1] = Self(_mm_movehl_ps(t2, t0)); // [r0[1], r1[1], r2[1], r3[1]]
-        rows[2] = Self(_mm_movelh_ps(t1, t3)); // [r0[2], r1[2], r2[2], r3[2]]
-        rows[3] = Self(_mm_movehl_ps(t3, t1)); // [r0[3], r1[3], r2[3], r3[3]]
+        rows[0] = Self(_mm_movelh_ps(t0, t2));
+        rows[1] = Self(_mm_movehl_ps(t2, t0));
+        rows[2] = Self(_mm_movelh_ps(t1, t3));
+        rows[3] = Self(_mm_movehl_ps(t3, t1));
     }
 }
 
@@ -2008,6 +2042,51 @@ impl u8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
+// ========== Extend/Widen Operations ==========
+
+/// Zero-extend low 8 u8 values to i16x8.
+///
+/// Takes the lower 8 bytes and zero-extends each to 16 bits.
+#[inline(always)]
+pub fn extend_lo_i16(self) -> i16x8 {
+    i16x8(unsafe { _mm_cvtepu8_epi16(self.0) })
+}
+
+/// Zero-extend high 8 u8 values to i16x8.
+///
+/// Takes the upper 8 bytes and zero-extends each to 16 bits.
+#[inline(always)]
+pub fn extend_hi_i16(self) -> i16x8 {
+    i16x8(unsafe {
+        // Shift right by 8 bytes to get high half into low position
+        let hi = _mm_srli_si128::<8>(self.0);
+        _mm_cvtepu8_epi16(hi)
+    })
+}
+
+/// Zero-extend all 16 u8 values to two i16x8 vectors.
+///
+/// Returns (low 8 as i16x8, high 8 as i16x8).
+#[inline(always)]
+pub fn extend_i16(self) -> (i16x8, i16x8) {
+    (self.extend_lo_i16(), self.extend_hi_i16())
+}
+
+/// Zero-extend low 4 u8 values to i32x4.
+#[inline(always)]
+pub fn extend_lo_i32(self) -> i32x4 {
+    i32x4(unsafe { _mm_cvtepu8_epi32(self.0) })
+}
+
+/// Zero-extend low 4 u8 values to f32x4.
+#[inline(always)]
+pub fn extend_lo_f32(self) -> f32x4 {
+    f32x4(unsafe {
+        let i32s = _mm_cvtepu8_epi32(self.0);
+        _mm_cvtepi32_ps(i32s)
+    })
+}
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2268,6 +2347,57 @@ impl i16x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi16::<N>(self.0) })
     }
+// ========== Extend/Widen Operations ==========
+
+/// Sign-extend low 4 i16 values to i32x4.
+#[inline(always)]
+pub fn extend_lo_i32(self) -> i32x4 {
+    i32x4(unsafe { _mm_cvtepi16_epi32(self.0) })
+}
+
+/// Sign-extend high 4 i16 values to i32x4.
+#[inline(always)]
+pub fn extend_hi_i32(self) -> i32x4 {
+    i32x4(unsafe {
+        let hi = _mm_srli_si128::<8>(self.0);
+        _mm_cvtepi16_epi32(hi)
+    })
+}
+
+/// Sign-extend all 8 i16 values to two i32x4 vectors.
+#[inline(always)]
+pub fn extend_i32(self) -> (i32x4, i32x4) {
+    (self.extend_lo_i32(), self.extend_hi_i32())
+}
+
+/// Sign-extend low 4 i16 values to f32x4.
+#[inline(always)]
+pub fn extend_lo_f32(self) -> f32x4 {
+    f32x4(unsafe {
+        let i32s = _mm_cvtepi16_epi32(self.0);
+        _mm_cvtepi32_ps(i32s)
+    })
+}
+
+// ========== Pack/Narrow Operations ==========
+
+/// Pack two i16x8 vectors to u8x16 with unsigned saturation.
+///
+/// Values below 0 become 0, values above 255 become 255.
+/// `self` provides low 8 bytes, `other` provides high 8 bytes.
+#[inline(always)]
+pub fn pack_u8(self, other: Self) -> u8x16 {
+    u8x16(unsafe { _mm_packus_epi16(self.0, other.0) })
+}
+
+/// Pack two i16x8 vectors to i8x16 with signed saturation.
+///
+/// Values are clamped to [-128, 127].
+#[inline(always)]
+pub fn pack_i8(self, other: Self) -> i8x16 {
+    i8x16(unsafe { _mm_packs_epi16(self.0, other.0) })
+}
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2524,6 +2654,38 @@ impl u16x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
+// ========== Extend/Widen Operations ==========
+
+/// Zero-extend low 4 u16 values to i32x4.
+#[inline(always)]
+pub fn extend_lo_i32(self) -> i32x4 {
+    i32x4(unsafe { _mm_cvtepu16_epi32(self.0) })
+}
+
+/// Zero-extend high 4 u16 values to i32x4.
+#[inline(always)]
+pub fn extend_hi_i32(self) -> i32x4 {
+    i32x4(unsafe {
+        let hi = _mm_srli_si128::<8>(self.0);
+        _mm_cvtepu16_epi32(hi)
+    })
+}
+
+/// Zero-extend all 8 u16 values to two i32x4 vectors.
+#[inline(always)]
+pub fn extend_i32(self) -> (i32x4, i32x4) {
+    (self.extend_lo_i32(), self.extend_hi_i32())
+}
+
+/// Zero-extend low 4 u16 values to f32x4.
+#[inline(always)]
+pub fn extend_lo_f32(self) -> f32x4 {
+    f32x4(unsafe {
+        let i32s = _mm_cvtepu16_epi32(self.0);
+        _mm_cvtepi32_ps(i32s)
+    })
+}
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2794,6 +2956,32 @@ impl i32x4 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi32::<N>(self.0) })
     }
+// ========== Extend/Widen Operations ==========
+
+/// Convert to f32x4.
+#[inline(always)]
+pub fn to_f32(self) -> f32x4 {
+    f32x4(unsafe { _mm_cvtepi32_ps(self.0) })
+}
+
+// ========== Pack/Narrow Operations ==========
+
+/// Pack two i32x4 vectors to i16x8 with signed saturation.
+///
+/// `self` provides low 4 values, `other` provides high 4 values.
+#[inline(always)]
+pub fn pack_i16(self, other: Self) -> i16x8 {
+    i16x8(unsafe { _mm_packs_epi32(self.0, other.0) })
+}
+
+/// Pack two i32x4 vectors to u16x8 with unsigned saturation.
+///
+/// Requires SSE4.1.
+#[inline(always)]
+pub fn pack_u16(self, other: Self) -> u16x8 {
+    u16x8(unsafe { _mm_packus_epi32(self.0, other.0) })
+}
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -4360,7 +4548,68 @@ impl f32x8 {
         }
     }
 
-// ========== Block Operations ==========
+// ========== Load and Convert ==========
+
+/// Load 8 u8 values and convert to f32x8.
+///
+/// Useful for image processing: load pixel values directly to float.
+#[inline(always)]
+pub fn from_u8(bytes: &[u8; 8]) -> Self {
+    unsafe {
+        // Load 8 bytes into low part of XMM register
+        let b = _mm_loadl_epi64(bytes.as_ptr() as *const __m128i);
+        let i32s = _mm256_cvtepu8_epi32(b);
+        Self(_mm256_cvtepi32_ps(i32s))
+    }
+}
+
+/// Convert to 8 u8 values with saturation.
+///
+/// Values are clamped to [0, 255] and rounded.
+#[inline(always)]
+pub fn to_u8(self) -> [u8; 8] {
+    unsafe {
+        // Convert to i32
+        let i32s = _mm256_cvtps_epi32(self.0);
+        // Pack i32 to i16 (within lanes, then combine)
+        let lo = _mm256_castsi256_si128(i32s);
+        let hi = _mm256_extracti128_si256::<1>(i32s);
+        let i16s = _mm_packs_epi32(lo, hi);
+        // Pack i16 to u8
+        let u8s = _mm_packus_epi16(i16s, i16s);
+        let mut result = [0u8; 8];
+        _mm_storel_epi64(result.as_mut_ptr() as *mut __m128i, u8s);
+        result
+    }
+}
+
+// ========== Interleave Operations ==========
+
+/// Interleave low elements within 128-bit lanes.
+///
+/// [a0,a1,a2,a3,a4,a5,a6,a7] + [b0,b1,b2,b3,b4,b5,b6,b7]
+/// → [a0,b0,a1,b1,a4,b4,a5,b5]
+#[inline(always)]
+pub fn interleave_lo(self, other: Self) -> Self {
+    Self(unsafe { _mm256_unpacklo_ps(self.0, other.0) })
+}
+
+/// Interleave high elements within 128-bit lanes.
+///
+/// [a0,a1,a2,a3,a4,a5,a6,a7] + [b0,b1,b2,b3,b4,b5,b6,b7]
+/// → [a2,b2,a3,b3,a6,b6,a7,b7]
+#[inline(always)]
+pub fn interleave_hi(self, other: Self) -> Self {
+    Self(unsafe { _mm256_unpackhi_ps(self.0, other.0) })
+}
+
+/// Interleave two vectors: returns (interleave_lo, interleave_hi)
+#[inline(always)]
+pub fn interleave(self, other: Self) -> (Self, Self) {
+    (self.interleave_lo(other), self.interleave_hi(other))
+}
+
+// ========== Matrix Transpose ==========
 
 /// Transpose an 8x8 matrix represented as 8 row vectors.
 ///
@@ -4368,17 +4617,9 @@ impl f32x8 {
 /// 1. `unpacklo/hi` - interleave pairs within 128-bit lanes
 /// 2. `shuffle` - reorder within lanes
 /// 3. `permute2f128` - exchange 128-bit halves
-///
-/// # Example
-/// ```ignore
-/// let mut rows: [f32x8; 8] = /* 8 row vectors */;
-/// f32x8::transpose_8x8(&mut rows);
-/// // rows[i][j] is now original rows[j][i]
-/// ```
 #[inline]
 pub fn transpose_8x8(rows: &mut [Self; 8]) {
     unsafe {
-        // Stage 1: Interleave pairs within 128-bit lanes
         let t0 = _mm256_unpacklo_ps(rows[0].0, rows[1].0);
         let t1 = _mm256_unpackhi_ps(rows[0].0, rows[1].0);
         let t2 = _mm256_unpacklo_ps(rows[2].0, rows[3].0);
@@ -4388,9 +4629,8 @@ pub fn transpose_8x8(rows: &mut [Self; 8]) {
         let t6 = _mm256_unpacklo_ps(rows[6].0, rows[7].0);
         let t7 = _mm256_unpackhi_ps(rows[6].0, rows[7].0);
 
-        // Stage 2: Shuffle to get 4-element groups
-        let s0 = _mm256_shuffle_ps::<0x44>(t0, t2); // 0b01_00_01_00
-        let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2); // 0b11_10_11_10
+        let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
+        let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
         let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
         let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
         let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
@@ -4398,7 +4638,6 @@ pub fn transpose_8x8(rows: &mut [Self; 8]) {
         let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
         let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
 
-        // Stage 3: Exchange 128-bit halves
         rows[0] = Self(_mm256_permute2f128_ps::<0x20>(s0, s4));
         rows[1] = Self(_mm256_permute2f128_ps::<0x20>(s1, s5));
         rows[2] = Self(_mm256_permute2f128_ps::<0x20>(s2, s6));
@@ -4418,7 +4657,7 @@ pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
     result
 }
 
-/// Load an 8x8 f32 block from a contiguous array and return as 8 row vectors.
+/// Load an 8x8 f32 block from a contiguous array.
 #[inline]
 pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
     unsafe {
@@ -5380,6 +5619,91 @@ impl u8x32 {
             _mm256_xor_si256(self.0, ones)
         })
     }
+// ========== Extend/Widen Operations ==========
+
+/// Zero-extend low 16 u8 values to i16x16.
+///
+/// Takes the lower 16 bytes and zero-extends each to 16 bits.
+#[inline(always)]
+pub fn extend_lo_i16(self) -> i16x16 {
+    i16x16(unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        _mm256_cvtepu8_epi16(lo128)
+    })
+}
+
+/// Zero-extend high 16 u8 values to i16x16.
+///
+/// Takes the upper 16 bytes and zero-extends each to 16 bits.
+#[inline(always)]
+pub fn extend_hi_i16(self) -> i16x16 {
+    i16x16(unsafe {
+        let hi128 = _mm256_extracti128_si256::<1>(self.0);
+        _mm256_cvtepu8_epi16(hi128)
+    })
+}
+
+/// Zero-extend all 32 u8 values to two i16x16 vectors.
+///
+/// Returns (low 16 as i16x16, high 16 as i16x16).
+#[inline(always)]
+pub fn extend_i16(self) -> (i16x16, i16x16) {
+    (self.extend_lo_i16(), self.extend_hi_i16())
+}
+
+/// Zero-extend low 8 u8 values to i32x8.
+#[inline(always)]
+pub fn extend_lo_i32(self) -> i32x8 {
+    i32x8(unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        _mm256_cvtepu8_epi32(lo128)
+    })
+}
+
+/// Zero-extend low 8 u8 values to f32x8.
+///
+/// Useful for image processing: load 8 pixel values and convert to float.
+#[inline(always)]
+pub fn extend_lo_f32(self) -> f32x8 {
+    f32x8(unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        let i32s = _mm256_cvtepu8_epi32(lo128);
+        _mm256_cvtepi32_ps(i32s)
+    })
+}
+
+/// Zero-extend all 32 u8 values to four f32x8 vectors.
+///
+/// Returns [bytes 0-7, bytes 8-15, bytes 16-23, bytes 24-31] as f32x8.
+/// Useful for processing 32 pixels as floats.
+#[inline(always)]
+pub fn extend_f32(self) -> [f32x8; 4] {
+    unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        let hi128 = _mm256_extracti128_si256::<1>(self.0);
+
+        // bytes 0-7
+        let i0 = _mm256_cvtepu8_epi32(lo128);
+        let f0 = _mm256_cvtepi32_ps(i0);
+
+        // bytes 8-15: shift lo128 right by 8 bytes
+        let lo_hi = _mm_srli_si128::<8>(lo128);
+        let i1 = _mm256_cvtepu8_epi32(lo_hi);
+        let f1 = _mm256_cvtepi32_ps(i1);
+
+        // bytes 16-23
+        let i2 = _mm256_cvtepu8_epi32(hi128);
+        let f2 = _mm256_cvtepi32_ps(i2);
+
+        // bytes 24-31: shift hi128 right by 8 bytes
+        let hi_hi = _mm_srli_si128::<8>(hi128);
+        let i3 = _mm256_cvtepu8_epi32(hi_hi);
+        let f3 = _mm256_cvtepi32_ps(i3);
+
+        [f32x8(f0), f32x8(f1), f32x8(f2), f32x8(f3)]
+    }
+}
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5640,6 +5964,76 @@ impl i16x16 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srai_epi16::<N>(self.0) })
     }
+// ========== Extend/Widen Operations ==========
+
+/// Sign-extend low 8 i16 values to i32x8.
+#[inline(always)]
+pub fn extend_lo_i32(self) -> i32x8 {
+    i32x8(unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        _mm256_cvtepi16_epi32(lo128)
+    })
+}
+
+/// Sign-extend high 8 i16 values to i32x8.
+#[inline(always)]
+pub fn extend_hi_i32(self) -> i32x8 {
+    i32x8(unsafe {
+        let hi128 = _mm256_extracti128_si256::<1>(self.0);
+        _mm256_cvtepi16_epi32(hi128)
+    })
+}
+
+/// Sign-extend all 16 i16 values to two i32x8 vectors.
+#[inline(always)]
+pub fn extend_i32(self) -> (i32x8, i32x8) {
+    (self.extend_lo_i32(), self.extend_hi_i32())
+}
+
+/// Sign-extend low 8 i16 values to f32x8.
+#[inline(always)]
+pub fn extend_lo_f32(self) -> f32x8 {
+    f32x8(unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        let i32s = _mm256_cvtepi16_epi32(lo128);
+        _mm256_cvtepi32_ps(i32s)
+    })
+}
+
+/// Sign-extend all 16 i16 values to two f32x8 vectors.
+#[inline(always)]
+pub fn extend_f32(self) -> (f32x8, f32x8) {
+    unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        let hi128 = _mm256_extracti128_si256::<1>(self.0);
+
+        let i32_lo = _mm256_cvtepi16_epi32(lo128);
+        let i32_hi = _mm256_cvtepi16_epi32(hi128);
+
+        (f32x8(_mm256_cvtepi32_ps(i32_lo)), f32x8(_mm256_cvtepi32_ps(i32_hi)))
+    }
+}
+
+// ========== Pack/Narrow Operations ==========
+
+/// Pack two i16x16 vectors to u8x32 with unsigned saturation.
+///
+/// Values below 0 become 0, values above 255 become 255.
+/// Note: AVX2 pack works within 128-bit lanes, so results are:
+/// [self_lo[0-7], other_lo[0-7], self_hi[0-7], other_hi[0-7]]
+#[inline(always)]
+pub fn pack_u8(self, other: Self) -> u8x32 {
+    u8x32(unsafe { _mm256_packus_epi16(self.0, other.0) })
+}
+
+/// Pack two i16x16 vectors to i8x32 with signed saturation.
+///
+/// Values are clamped to [-128, 127].
+#[inline(always)]
+pub fn pack_i8(self, other: Self) -> i8x32 {
+    i8x32(unsafe { _mm256_packs_epi16(self.0, other.0) })
+}
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5896,6 +6290,56 @@ impl u16x16 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi16::<N>(self.0) })
     }
+// ========== Extend/Widen Operations ==========
+
+/// Zero-extend low 8 u16 values to i32x8.
+#[inline(always)]
+pub fn extend_lo_i32(self) -> i32x8 {
+    i32x8(unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        _mm256_cvtepu16_epi32(lo128)
+    })
+}
+
+/// Zero-extend high 8 u16 values to i32x8.
+#[inline(always)]
+pub fn extend_hi_i32(self) -> i32x8 {
+    i32x8(unsafe {
+        let hi128 = _mm256_extracti128_si256::<1>(self.0);
+        _mm256_cvtepu16_epi32(hi128)
+    })
+}
+
+/// Zero-extend all 16 u16 values to two i32x8 vectors.
+#[inline(always)]
+pub fn extend_i32(self) -> (i32x8, i32x8) {
+    (self.extend_lo_i32(), self.extend_hi_i32())
+}
+
+/// Zero-extend low 8 u16 values to f32x8.
+#[inline(always)]
+pub fn extend_lo_f32(self) -> f32x8 {
+    f32x8(unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        let i32s = _mm256_cvtepu16_epi32(lo128);
+        _mm256_cvtepi32_ps(i32s)
+    })
+}
+
+/// Zero-extend all 16 u16 values to two f32x8 vectors.
+#[inline(always)]
+pub fn extend_f32(self) -> (f32x8, f32x8) {
+    unsafe {
+        let lo128 = _mm256_castsi256_si128(self.0);
+        let hi128 = _mm256_extracti128_si256::<1>(self.0);
+
+        let i32_lo = _mm256_cvtepu16_epi32(lo128);
+        let i32_hi = _mm256_cvtepu16_epi32(hi128);
+
+        (f32x8(_mm256_cvtepi32_ps(i32_lo)), f32x8(_mm256_cvtepi32_ps(i32_hi)))
+    }
+}
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -6166,6 +6610,30 @@ impl i32x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srai_epi32::<N>(self.0) })
     }
+// ========== Extend/Widen Operations ==========
+
+/// Convert to f32x8.
+#[inline(always)]
+pub fn to_f32(self) -> f32x8 {
+    f32x8(unsafe { _mm256_cvtepi32_ps(self.0) })
+}
+
+// ========== Pack/Narrow Operations ==========
+
+/// Pack two i32x8 vectors to i16x16 with signed saturation.
+///
+/// Note: AVX2 pack works within 128-bit lanes.
+#[inline(always)]
+pub fn pack_i16(self, other: Self) -> i16x16 {
+    i16x16(unsafe { _mm256_packs_epi32(self.0, other.0) })
+}
+
+/// Pack two i32x8 vectors to u16x16 with unsigned saturation.
+#[inline(always)]
+pub fn pack_u16(self, other: Self) -> u16x16 {
+    u16x16(unsafe { _mm256_packus_epi32(self.0, other.0) })
+}
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -7735,19 +8203,14 @@ impl f32x16 {
         }
     }
 
-// ========== Block Operations ==========
+// ========== Matrix Transpose ==========
 
 /// Transpose an 8x8 matrix using AVX-512.
 ///
 /// Takes 8 f32x16 vectors where only the lower 8 elements are used.
-/// This is useful for 8x8 DCT where you want to stay in 512-bit registers.
 #[inline]
 pub fn transpose_8x8(rows: &mut [Self; 8]) {
     unsafe {
-        // Use AVX-512 2-input permute for efficient transpose
-        // idx for gathering column i from rows: [i, i+16, i+32, ...]
-
-        // Stage 1: Interleave pairs
         let idx_lo = _mm512_setr_epi32(0, 16, 1, 17, 4, 20, 5, 21, 8, 24, 9, 25, 12, 28, 13, 29);
         let idx_hi = _mm512_setr_epi32(2, 18, 3, 19, 6, 22, 7, 23, 10, 26, 11, 27, 14, 30, 15, 31);
 
@@ -7769,7 +8232,6 @@ pub fn transpose_8x8(rows: &mut [Self; 8]) {
         let t6 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r6i, idx_lo, r7i));
         let t7 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r6i, idx_hi, r7i));
 
-        // Stage 2: Shuffle 64-bit pairs
         let idx2_lo = _mm512_setr_epi64(0, 8, 1, 9, 4, 12, 5, 13);
         let idx2_hi = _mm512_setr_epi64(2, 10, 3, 11, 6, 14, 7, 15);
 
@@ -7791,7 +8253,6 @@ pub fn transpose_8x8(rows: &mut [Self; 8]) {
         let s6 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t5i, idx2_lo, t7i));
         let s7 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t5i, idx2_hi, t7i));
 
-        // Stage 3: Shuffle 128-bit lanes
         let idx3_lo = _mm512_setr_epi32(0, 1, 2, 3, 16, 17, 18, 19, 8, 9, 10, 11, 24, 25, 26, 27);
         let idx3_hi = _mm512_setr_epi32(4, 5, 6, 7, 20, 21, 22, 23, 12, 13, 14, 15, 28, 29, 30, 31);
 
@@ -7827,7 +8288,6 @@ pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
 #[inline]
 pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
     unsafe {
-        // Load 8 floats into the lower half, upper half is zeroed
         [
             Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr()))),
             Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr().add(8)))),
