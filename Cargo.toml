@@ -29,6 +29,8 @@ __experiments = []
 __composite = ["dep:safe_unaligned_simd"]
 # Integration with wide crate
 __wide = ["dep:wide"]
+# Stable alias for wide integration
+wide = ["__wide"]
 
 [dependencies]
 # Proc-macro crate for #[arcane] attribute
