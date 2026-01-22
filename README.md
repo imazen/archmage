@@ -252,7 +252,7 @@ For safe load/store operations, use the `safe_unaligned_simd` crate directly ins
 
 ```toml
 [dependencies]
-archmage = "0.4"
+archmage = "0.2"
 safe_unaligned_simd = "0.2"
 ```
 
@@ -376,7 +376,7 @@ For portable SIMD without manual intrinsics, use the `wide` crate instead.
 
 ```toml
 [dependencies]
-archmage = "0.4"
+archmage = "0.2"
 ```
 
 | Feature | Description |
