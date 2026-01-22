@@ -1,5 +1,6 @@
 //! Type structure and macro generation.
 
+use super::block_ops;
 use super::ops;
 use super::transcendental;
 use super::types::SimdType;
@@ -316,6 +317,9 @@ pub fn generate_type(ty: &SimdType) -> String {
 
     // Transcendental operations
     code.push_str(&transcendental::generate_transcendental_ops(ty));
+
+    // Block operations (transpose, etc.)
+    code.push_str(&block_ops::generate_block_ops(ty));
 
     writeln!(code, "}}\n").unwrap();
 
