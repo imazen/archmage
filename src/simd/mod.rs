@@ -822,6 +822,67 @@ impl f32x4 {
         }
     }
 
+    // ========== Cube Root ==========
+
+    /// Low-precision cube root (x^(1/3)).
+    ///
+    /// Computed via `pow_lowp(x, 1/3)`. For negative inputs, returns NaN.
+    /// For higher precision, use `cbrt_midp()`.
+    #[inline(always)]
+    pub fn cbrt_lowp(self) -> Self {
+        self.pow_lowp(1.0 / 3.0)
+    }
+
+    /// Mid-precision cube root (x^(1/3)).
+    ///
+    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    #[inline(always)]
+    pub fn cbrt_midp(self) -> Self {
+        // B1 magic constant for cube root initial approximation
+        // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130
+        const B1: u32 = 709_958_130;
+        const ONE_THIRD: f32 = 1.0 / 3.0;
+
+        unsafe {
+            // Extract to array for initial approximation (scalar division by 3)
+            let x_arr: [f32; 4] = core::mem::transmute(self.0);
+            let mut y_arr = [0.0f32; 4];
+
+            for i in 0..4 {
+                let xi = x_arr[i];
+                let ui = xi.to_bits();
+                let hx = ui & 0x7FFF_FFFF; // abs bits
+                // Initial approximation: bits/3 + B1 (always positive)
+                let approx = hx / 3 + B1;
+                y_arr[i] = f32::from_bits(approx);
+            }
+
+            let abs_x = _mm_andnot_ps(_mm_set1_ps(-0.0), self.0);
+            let sign_bits = _mm_and_ps(self.0, _mm_set1_ps(-0.0));
+            let mut y = core::mem::transmute::<_, _>(y_arr);
+
+            // Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)
+            // Two iterations for full f32 precision
+            let two = _mm_set1_ps(2.0);
+
+            // Iteration 1
+            let y3 = _mm_mul_ps(_mm_mul_ps(y, y), y);
+            let num = _mm_fmadd_ps(two, abs_x, y3);
+            let den = _mm_fmadd_ps(two, y3, abs_x);
+            y = _mm_mul_ps(y, _mm_div_ps(num, den));
+
+            // Iteration 2
+            let y3 = _mm_mul_ps(_mm_mul_ps(y, y), y);
+            let num = _mm_fmadd_ps(two, abs_x, y3);
+            let den = _mm_fmadd_ps(two, y3, abs_x);
+            y = _mm_mul_ps(y, _mm_div_ps(num, den));
+
+            // Restore sign
+            Self(_mm_or_ps(y, sign_bits))
+        }
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3969,6 +4030,67 @@ impl f32x8 {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe {
             Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp()
+        }
+    }
+
+    // ========== Cube Root ==========
+
+    /// Low-precision cube root (x^(1/3)).
+    ///
+    /// Computed via `pow_lowp(x, 1/3)`. For negative inputs, returns NaN.
+    /// For higher precision, use `cbrt_midp()`.
+    #[inline(always)]
+    pub fn cbrt_lowp(self) -> Self {
+        self.pow_lowp(1.0 / 3.0)
+    }
+
+    /// Mid-precision cube root (x^(1/3)).
+    ///
+    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    #[inline(always)]
+    pub fn cbrt_midp(self) -> Self {
+        // B1 magic constant for cube root initial approximation
+        // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130
+        const B1: u32 = 709_958_130;
+        const ONE_THIRD: f32 = 1.0 / 3.0;
+
+        unsafe {
+            // Extract to array for initial approximation (scalar division by 3)
+            let x_arr: [f32; 8] = core::mem::transmute(self.0);
+            let mut y_arr = [0.0f32; 8];
+
+            for i in 0..8 {
+                let xi = x_arr[i];
+                let ui = xi.to_bits();
+                let hx = ui & 0x7FFF_FFFF; // abs bits
+                // Initial approximation: bits/3 + B1 (always positive)
+                let approx = hx / 3 + B1;
+                y_arr[i] = f32::from_bits(approx);
+            }
+
+            let abs_x = _mm256_andnot_ps(_mm256_set1_ps(-0.0), self.0);
+            let sign_bits = _mm256_and_ps(self.0, _mm256_set1_ps(-0.0));
+            let mut y = core::mem::transmute::<_, _>(y_arr);
+
+            // Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)
+            // Two iterations for full f32 precision
+            let two = _mm256_set1_ps(2.0);
+
+            // Iteration 1
+            let y3 = _mm256_mul_ps(_mm256_mul_ps(y, y), y);
+            let num = _mm256_fmadd_ps(two, abs_x, y3);
+            let den = _mm256_fmadd_ps(two, y3, abs_x);
+            y = _mm256_mul_ps(y, _mm256_div_ps(num, den));
+
+            // Iteration 2
+            let y3 = _mm256_mul_ps(_mm256_mul_ps(y, y), y);
+            let num = _mm256_fmadd_ps(two, abs_x, y3);
+            let den = _mm256_fmadd_ps(two, y3, abs_x);
+            y = _mm256_mul_ps(y, _mm256_div_ps(num, den));
+
+            // Restore sign
+            Self(_mm256_or_ps(y, sign_bits))
         }
     }
 
@@ -7121,6 +7243,67 @@ impl f32x16 {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe {
             Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp()
+        }
+    }
+
+    // ========== Cube Root ==========
+
+    /// Low-precision cube root (x^(1/3)).
+    ///
+    /// Computed via `pow_lowp(x, 1/3)`. For negative inputs, returns NaN.
+    /// For higher precision, use `cbrt_midp()`.
+    #[inline(always)]
+    pub fn cbrt_lowp(self) -> Self {
+        self.pow_lowp(1.0 / 3.0)
+    }
+
+    /// Mid-precision cube root (x^(1/3)).
+    ///
+    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    #[inline(always)]
+    pub fn cbrt_midp(self) -> Self {
+        // B1 magic constant for cube root initial approximation
+        // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130
+        const B1: u32 = 709_958_130;
+        const ONE_THIRD: f32 = 1.0 / 3.0;
+
+        unsafe {
+            // Extract to array for initial approximation (scalar division by 3)
+            let x_arr: [f32; 16] = core::mem::transmute(self.0);
+            let mut y_arr = [0.0f32; 16];
+
+            for i in 0..16 {
+                let xi = x_arr[i];
+                let ui = xi.to_bits();
+                let hx = ui & 0x7FFF_FFFF; // abs bits
+                // Initial approximation: bits/3 + B1 (always positive)
+                let approx = hx / 3 + B1;
+                y_arr[i] = f32::from_bits(approx);
+            }
+
+            let abs_x = _mm512_andnot_ps(_mm512_set1_ps(-0.0), self.0);
+            let sign_bits = _mm512_and_ps(self.0, _mm512_set1_ps(-0.0));
+            let mut y = core::mem::transmute::<_, _>(y_arr);
+
+            // Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)
+            // Two iterations for full f32 precision
+            let two = _mm512_set1_ps(2.0);
+
+            // Iteration 1
+            let y3 = _mm512_mul_ps(_mm512_mul_ps(y, y), y);
+            let num = _mm512_fmadd_ps(two, abs_x, y3);
+            let den = _mm512_fmadd_ps(two, y3, abs_x);
+            y = _mm512_mul_ps(y, _mm512_div_ps(num, den));
+
+            // Iteration 2
+            let y3 = _mm512_mul_ps(_mm512_mul_ps(y, y), y);
+            let num = _mm512_fmadd_ps(two, abs_x, y3);
+            let den = _mm512_fmadd_ps(two, y3, abs_x);
+            y = _mm512_mul_ps(y, _mm512_div_ps(num, den));
+
+            // Restore sign
+            Self(_mm512_or_ps(y, sign_bits))
         }
     }
 

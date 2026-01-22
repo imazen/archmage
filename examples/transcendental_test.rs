@@ -35,6 +35,16 @@ fn test_log10(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).log10_lowp().to_array()
 }
 
+#[arcane]
+fn test_cbrt_lowp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    f32x8::load(token, input).cbrt_lowp().to_array()
+}
+
+#[arcane]
+fn test_cbrt_midp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    f32x8::load(token, input).cbrt_midp().to_array()
+}
+
 fn main() {
     let Some(token) = Avx2FmaToken::try_new() else {
         eprintln!("AVX2+FMA not available");
@@ -116,6 +126,41 @@ fn main() {
         assert!(err < 0.01, "log10_lowp error at {}: got {}, expected {}, err {}", i, got, exp, err);
     }
     println!("log10_lowp: PASS");
+
+    // Test cbrt_lowp
+    let input = [1.0, 8.0, 27.0, 64.0, 125.0, 0.125, 0.001, 1000.0];
+    let cbrt_arr = test_cbrt_lowp(token, &input);
+    println!("cbrt_lowp([1, 8, 27, 64, 125, 0.125, 0.001, 1000]) = {:?}", cbrt_arr);
+
+    // Expected: [1, 2, 3, 4, 5, 0.5, 0.1, 10]
+    let expected = [1.0f32, 2.0, 3.0, 4.0, 5.0, 0.5, 0.1, 10.0];
+    for (i, (&got, &exp)) in cbrt_arr.iter().zip(expected.iter()).enumerate() {
+        let err = (got - exp).abs() / exp.abs().max(0.001);
+        assert!(err < 0.02, "cbrt_lowp error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+    }
+    println!("cbrt_lowp: PASS");
+
+    // Test cbrt_midp (should be more accurate)
+    let cbrt_arr = test_cbrt_midp(token, &input);
+    println!("cbrt_midp([1, 8, 27, 64, 125, 0.125, 0.001, 1000]) = {:?}", cbrt_arr);
+
+    for (i, (&got, &exp)) in cbrt_arr.iter().zip(expected.iter()).enumerate() {
+        let err = (got - exp).abs() / exp.abs().max(0.001);
+        assert!(err < 0.0001, "cbrt_midp error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+    }
+    println!("cbrt_midp: PASS");
+
+    // Test cbrt_midp with negative values
+    let input = [-1.0, -8.0, -27.0, 1.0, 8.0, 27.0, -64.0, 64.0];
+    let cbrt_arr = test_cbrt_midp(token, &input);
+    println!("cbrt_midp([-1, -8, -27, 1, 8, 27, -64, 64]) = {:?}", cbrt_arr);
+
+    let expected = [-1.0f32, -2.0, -3.0, 1.0, 2.0, 3.0, -4.0, 4.0];
+    for (i, (&got, &exp)) in cbrt_arr.iter().zip(expected.iter()).enumerate() {
+        let err = (got - exp).abs() / exp.abs().max(0.001);
+        assert!(err < 0.0001, "cbrt_midp negative error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+    }
+    println!("cbrt_midp (negative): PASS");
 
     println!("\nAll transcendental tests PASSED!");
 }

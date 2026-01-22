@@ -2380,6 +2380,70 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
+        // ========== Cube Root ==========
+        writeln!(code, "    // ========== Cube Root ==========\n").unwrap();
+
+        // ===== F32 cbrt_lowp =====
+        writeln!(code, "    /// Low-precision cube root (x^(1/3)).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed via `pow_lowp(x, 1/3)`. For negative inputs, returns NaN.").unwrap();
+        writeln!(code, "    /// For higher precision, use `cbrt_midp()`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn cbrt_lowp(self) -> Self {{").unwrap();
+        writeln!(code, "        self.pow_lowp(1.0 / 3.0)").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 cbrt_midp =====
+        writeln!(code, "    /// Mid-precision cube root (x^(1/3)).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson.").unwrap();
+        writeln!(code, "    /// Handles negative values correctly (returns -cbrt(|x|)).").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn cbrt_midp(self) -> Self {{").unwrap();
+        writeln!(code, "        // B1 magic constant for cube root initial approximation").unwrap();
+        writeln!(code, "        // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130").unwrap();
+        writeln!(code, "        const B1: u32 = 709_958_130;").unwrap();
+        writeln!(code, "        const ONE_THIRD: f32 = 1.0 / 3.0;").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            // Extract to array for initial approximation (scalar division by 3)").unwrap();
+        writeln!(code, "            let x_arr: [f32; {}] = core::mem::transmute(self.0);", ty.lanes()).unwrap();
+        writeln!(code, "            let mut y_arr = [0.0f32; {}];", ty.lanes()).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            for i in 0..{} {{", ty.lanes()).unwrap();
+        writeln!(code, "                let xi = x_arr[i];").unwrap();
+        writeln!(code, "                let ui = xi.to_bits();").unwrap();
+        writeln!(code, "                let hx = ui & 0x7FFF_FFFF; // abs bits").unwrap();
+        writeln!(code, "                // Initial approximation: bits/3 + B1 (always positive)").unwrap();
+        writeln!(code, "                let approx = hx / 3 + B1;").unwrap();
+        writeln!(code, "                y_arr[i] = f32::from_bits(approx);").unwrap();
+        writeln!(code, "            }}").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let sign_bits = {}_and_{}(self.0, {}_set1_{}(-0.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let mut y = core::mem::transmute::<_, _>(y_arr);").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)").unwrap();
+        writeln!(code, "            // Two iterations for full f32 precision").unwrap();
+        writeln!(code, "            let two = {}_set1_{}(2.0);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Iteration 1").unwrap();
+        writeln!(code, "            let y3 = {}_mul_{}({}_mul_{}(y, y), y);", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let num = {}_fmadd_{}(two, abs_x, y3);", prefix, suffix).unwrap();
+        writeln!(code, "            let den = {}_fmadd_{}(two, y3, abs_x);", prefix, suffix).unwrap();
+        writeln!(code, "            y = {}_mul_{}(y, {}_div_{}(num, den));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Iteration 2").unwrap();
+        writeln!(code, "            let y3 = {}_mul_{}({}_mul_{}(y, y), y);", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let num = {}_fmadd_{}(two, abs_x, y3);", prefix, suffix).unwrap();
+        writeln!(code, "            let den = {}_fmadd_{}(two, y3, abs_x);", prefix, suffix).unwrap();
+        writeln!(code, "            y = {}_mul_{}(y, {}_div_{}(num, den));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Restore sign").unwrap();
+        writeln!(code, "            Self({}_or_{}(y, sign_bits))", prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
     } else if ty.elem == ElementType::F64 {
         // ===== F64 log2_lowp =====
         // For f64, we use a similar algorithm but with f64 constants

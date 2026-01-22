@@ -67,7 +67,7 @@ archmage provides two accuracy tiers for transcendental functions:
 
 #### Low-Precision Tier (`_lowp` suffix)
 
-Functions: `pow_lowp()`, `exp2_lowp()`, `log2_lowp()`, `ln_lowp()`, `exp_lowp()`
+Functions: `pow_lowp()`, `exp2_lowp()`, `log2_lowp()`, `ln_lowp()`, `exp_lowp()`, `cbrt_lowp()`
 
 **NOT SUITABLE for color-accurate work:**
 - ~90,000 ULP max error, ~0.5% relative error
@@ -81,7 +81,7 @@ Functions: `pow_lowp()`, `exp2_lowp()`, `log2_lowp()`, `ln_lowp()`, `exp_lowp()`
 
 #### Mid-Precision Tier (`_midp` suffix) - RECOMMENDED
 
-Functions: `pow_midp()`, `exp2_midp()`, `log2_midp()`, `ln_midp()`, `exp_midp()`
+Functions: `pow_midp()`, `exp2_midp()`, `log2_midp()`, `ln_midp()`, `exp_midp()`, `cbrt_midp()`
 
 **SUITABLE for production color processing:**
 - ~145 ULP max error, ~8e-6 relative error
@@ -247,6 +247,66 @@ let result = log2_lowp(x) * LN2;  // or log2_midp for midp variant
 const LOG2_E: f32 = 1.442_695_04;
 let result = exp2_lowp(x * LOG2_E);  // or exp2_midp for midp variant
 ```
+
+## Square Root and Cube Root
+
+archmage provides hardware-accelerated square root and software cube root:
+
+### sqrt - Hardware SIMD
+
+Uses hardware `sqrtps`/`vsqrtps` instruction. Full precision, fast on modern CPUs.
+
+```rust
+// Uses _mm256_sqrt_ps / _mm_sqrt_ps under the hood
+let result = v.sqrt();  // Full precision hardware sqrt
+```
+
+**Precision**: Full IEEE-754 precision
+**Latency**: ~10-14 cycles on Zen2+/Skylake+
+
+### rsqrt - Fast Reciprocal Square Root
+
+For 1/sqrt(x), archmage provides `rsqrt_approx()` (raw ~12-bit precision) and `rsqrt()` (refined with Newton-Raphson).
+
+```rust
+let approx = v.rsqrt_approx();  // ~12-bit precision, very fast
+let refined = v.rsqrt();        // ~24-bit precision with Newton-Raphson
+```
+
+### cbrt_lowp - Fast Cube Root
+
+Computed via `pow_lowp(x, 1/3)`. Fast but lower precision.
+
+```rust
+let result = v.cbrt_lowp();  // ~0.5% max error
+```
+
+**Precision**: ~0.5% max relative error (same as pow_lowp)
+**Use case**: Previews, real-time effects
+
+### cbrt_midp - Mid-Precision Cube Root
+
+Uses bit manipulation for initial guess + two Newton-Raphson iterations.
+Handles negative values correctly.
+
+```rust
+// Initial guess via exponent manipulation: bits/3 + B1
+const B1: u32 = 709_958_130;  // Magic constant
+let approx = f32::from_bits(abs_bits / 3 + B1);
+
+// Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)
+// Two iterations for full f32 precision
+```
+
+**Precision**: ~2 ULP max error
+**Use case**: XYB color space (SSIMULACRA2, butteraugli), production color processing
+
+### Cube Root Accuracy
+
+| Function | Max Rel Error | Handles Negative |
+|----------|---------------|------------------|
+| cbrt_lowp | ~0.5% | Returns NaN |
+| cbrt_midp | ~1e-7 | Yes (returns -cbrt(|x|)) |
 
 ## SIMD Intrinsics Used
 
