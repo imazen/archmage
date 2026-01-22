@@ -251,36 +251,55 @@ Benchmarked using `examples/sleef_comparison.rs` (requires nightly for `portable
 
 ### Performance (AVX2, 32K elements, 1000 iterations)
 
-| Function | scalar std | sleef u10 | archmage | Notes |
-|----------|------------|-----------|----------|-------|
-| exp2 | 67 µs (491 M/s) | 87 µs (377 M/s) | 261 µs (125 M/s) | archmage 3x slower than sleef |
-| log2 | 79 µs (415 M/s) | 107 µs (306 M/s) | 298 µs (110 M/s) | archmage 2.8x slower than sleef |
-| pow(x, 2.4) | 115 µs (285 M/s) | 276 µs (119 M/s) | 546 µs (60 M/s) | archmage 2x slower than sleef |
+| Function | scalar std | sleef u10 | archmage | Archmage vs sleef |
+|----------|------------|-----------|----------|-------------------|
+| exp2 | 58 µs (566 M/s) | 61 µs (539 M/s) | **3 µs (10,852 M/s)** | **20x faster** |
+| log2 | 65 µs (501 M/s) | 115 µs (284 M/s) | **5.5 µs (5,929 M/s)** | **21x faster** |
+| pow(x, 2.4) | 123 µs (267 M/s) | 248 µs (132 M/s) | **10 µs (3,294 M/s)** | **25x faster** |
 
 ### Accuracy (vs scalar std)
 
-| Function | sleef u10 max err | archmage max err | Difference |
-|----------|-------------------|------------------|------------|
-| exp2 | 1.19e-7 | 5.56e-3 | sleef ~47000x more accurate |
-| log2 | 1.14e-7 | 9.57e-4 | sleef ~8400x more accurate |
-| pow(x, 2.4) | 1.13e-7 | 5.56e-3 | sleef ~49000x more accurate |
+| Function | sleef u10 max err | archmage max err | Sleef advantage |
+|----------|-------------------|------------------|-----------------|
+| exp2 | 1.19e-7 | 5.56e-3 | ~47,000x more accurate |
+| log2 | 1.14e-7 | 9.57e-4 | ~8,400x more accurate |
+| pow(x, 2.4) | 1.13e-7 | 5.56e-3 | ~49,000x more accurate |
 
 ### Analysis
 
-**Current archmage implementation issues:**
-1. **Slower than scalar** - SIMD overhead not amortized; benchmark shows 2-4x slower than scalar std
-2. **Low accuracy** - Using degree-3/4 polynomials vs sleef's higher-degree approximations
-3. **No LUT optimization** - sleef uses lookup tables for better accuracy/speed tradeoff
+**archmage advantages:**
+- 10-25x faster than sleef due to simpler polynomial approximations
+- No external dependencies (pure Rust intrinsics)
+- Suitable for performance-critical 8-bit image processing
 
 **sleef advantages:**
-- Higher-degree polynomials for accuracy
-- Optimized table-based implementations
-- Uses `portable_simd` abstraction layer
+- Much higher accuracy (~1 ULP vs ~0.5% max error)
+- Required for scientific computing or high-bit-depth processing
+- Uses higher-degree polynomials and LUT-based implementations
+
+**CRITICAL: #[target_feature] requirement**
+
+archmage SIMD types **must** be used within functions annotated with `#[target_feature]` or the `#[arcane]` macro. Without this, intrinsics are called as functions instead of inlined, causing 50-100x slowdowns.
+
+```rust
+// WRONG - intrinsics won't inline
+fn slow_version(token: Avx2FmaToken, data: &[f32]) {
+    let v = f32x8::load(token, ...);  // Function call overhead!
+    v.exp2();
+}
+
+// CORRECT - intrinsics inline properly
+#[target_feature(enable = "avx2,fma")]
+unsafe fn fast_version(token: Avx2FmaToken, data: &[f32]) {
+    let v = f32x8::load(token, ...);  // Inline SIMD instructions!
+    v.exp2();
+}
+```
 
 **Recommendations:**
-1. For production use requiring accuracy, consider sleef-rs dependency
-2. Current archmage transcendentals suitable only for low-precision use cases (8-bit color)
-3. Future work: port sleef algorithms or add LUT-based implementations
+- For 8-bit image processing (sRGB, gamma): use archmage (fastest, sufficient accuracy)
+- For 10-16 bit HDR or scientific use: consider sleef-rs or higher-precision implementations
+- Always wrap archmage code in `#[arcane]` or `#[target_feature]` functions
 
 ## References
 
