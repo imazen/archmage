@@ -158,12 +158,25 @@ jobs:
 
       - name: Check for differences
         run: |
+          # Check wrappers
           if ! git diff --exit-code src/generated/; then
-            echo "::error::Generated code differs from committed code!"
+            echo "::error::Generated wrappers differ from committed code!"
             echo "Run 'cargo xtask generate' locally and commit the changes."
             exit 1
           fi
-          echo "✓ Generated code matches committed code"
+          # Check tests
+          if ! git diff --exit-code tests/generated_*.rs; then
+            echo "::error::Generated tests differ from committed code!"
+            echo "Run 'cargo xtask generate' locally and commit the changes."
+            exit 1
+          fi
+          # Check docs
+          if ! git diff --exit-code docs/INTRINSIC_REFERENCE.md; then
+            echo "::error::Generated docs differ from committed code!"
+            echo "Run 'cargo xtask generate' locally and commit the changes."
+            exit 1
+          fi
+          echo "✓ All generated code matches committed code"
 
   # ==========================================================================
   # Safety validation - ensure token bounds provide required features
