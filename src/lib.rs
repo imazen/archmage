@@ -45,7 +45,7 @@
 //! making intrinsics safe inside. The token parameter proves CPU support was verified.
 //!
 //! **Generic bounds** like `impl HasAvx2` let functions accept any token that
-//! provides AVX2 (e.g., `Avx2Token`, `Desktop64`, `Server64`).
+//! provides AVX2 (e.g., `Avx2Token`, `Desktop64`, `X64V4Token`).
 //!
 //! ## Feature Flags
 //!

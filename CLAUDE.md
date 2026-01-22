@@ -11,7 +11,7 @@
 | **v1** | SSE, SSE2 (baseline) | None | None (always available) |
 | **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | `X64V2Token` | `HasX64V2` |
 | **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` / `Desktop64` / `Avx2FmaToken` | Use token directly |
-| **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` / `Server64` | `HasX64V4` |
+| **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` | `HasX64V4` |
 | **Modern** | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | `Avx512ModernToken` | Use token directly |
 | **FP16** | AVX512FP16 (independent) | `Avx512Fp16Token` | Use token directly |
 
@@ -107,7 +107,6 @@ fn my_kernel(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
 | Alias | Token | What it means |
 |-------|-------|---------------|
 | `Desktop64` | `X64V3Token` | AVX2 + FMA (Haswell 2013+, Zen 1+) |
-| `Server64` | `X64V4Token` | + AVX-512 (Xeon 2017+, Zen 4+) |
 | `Arm64` | `NeonToken` | NEON + FP16 (all 64-bit ARM) |
 
 ```rust
@@ -145,7 +144,7 @@ xtask/
 **x86:**
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
 - `X64V3Token` / `Desktop64` / `Avx2FmaToken` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
-- `X64V4Token` / `Avx512Token` / `Server64` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
+- `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
 - `Avx512ModernToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
 - `Avx512Fp16Token` - + FP16 (Sapphire Rapids 2023+)
 

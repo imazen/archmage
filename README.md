@@ -111,7 +111,7 @@ Functions accept any token that provides the required capabilities:
 use archmage::{HasAvx2, HasFma, arcane};
 use std::arch::x86_64::*;
 
-// Accept any token with AVX2 (Avx2Token, Desktop64, Server64, etc.)
+// Accept any token with AVX2 (Avx2Token, Desktop64, X64V4Token, etc.)
 #[arcane]
 fn double(_token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
@@ -136,7 +136,7 @@ fn fma_kernel<T: HasAvx2 + HasFma>(_token: T, a: &[f32; 8], b: &[f32; 8], c: &[f
 
 The trait hierarchy means broader tokens satisfy narrower bounds:
 - `Desktop64` implements `HasAvx2`, `HasFma`, `HasSse42`, etc.
-- `Server64` implements everything `Desktop64` does, plus `HasAvx512f`, etc.
+- `X64V4Token` implements everything `Desktop64` does, plus `HasAvx512f`, etc.
 
 ## Zero-Overhead Inlining
 
@@ -200,7 +200,7 @@ vmovups   %ymm0, 32(%rdi)
 | Token | Features | Hardware Coverage |
 |-------|----------|-------------------|
 | `Desktop64` | AVX2 + FMA + BMI2 | Intel Haswell 2013+, AMD Zen 1 2017+ (~95% of x86-64) |
-| `Server64` | + AVX-512 | Intel Skylake-X 2017+, AMD Zen 4 2022+ |
+| `X64V4Token` | + AVX-512 | Intel Skylake-X 2017+, AMD Zen 4 2022+ |
 | `X64V2Token` | SSE4.2 + POPCNT | Intel Nehalem 2008+, AMD Bulldozer 2011+ |
 
 **For specific features:**
@@ -216,9 +216,9 @@ vmovups   %ymm0, 32(%rdi)
 
 | Token | Features | Hardware |
 |-------|----------|----------|
-| `NeonToken` | NEON | All AArch64 (baseline, including Apple M-series) |
-| `SveToken` | SVE | Graviton 3, A64FX |
-| `Sve2Token` | SVE2 | ARMv9: Graviton 4, Cortex-X2+ |
+| `NeonToken` / `Arm64` | NEON + FP16 | All AArch64 (baseline, including Apple M-series) |
+| `NeonAesToken` | + AES | ARM with crypto extensions |
+| `NeonSha3Token` | + SHA3 | ARM with SHA3 |
 
 ## Cross-Architecture Tokens
 
