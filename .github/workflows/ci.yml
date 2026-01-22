@@ -134,6 +134,66 @@ jobs:
         run: cross test --all-features --target ${{ matrix.target }}
 
   # ==========================================================================
+  # Generation check - ensure generated code matches committed code
+  # ==========================================================================
+  generate-check:
+    name: Generation Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Fetch safe_unaligned_simd
+        run: cargo fetch
+
+      - name: Run generator
+        run: cargo run -p xtask -- generate
+
+      - name: Check for differences
+        run: |
+          if ! git diff --exit-code src/generated/; then
+            echo "::error::Generated code differs from committed code!"
+            echo "Run 'cargo xtask generate' locally and commit the changes."
+            exit 1
+          fi
+          echo "✓ Generated code matches committed code"
+
+  # ==========================================================================
+  # Safety validation - ensure token bounds provide required features
+  # ==========================================================================
+  validate-safety:
+    name: Validate Token Safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Install cargo-expand
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-expand
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Fetch safe_unaligned_simd
+        run: cargo fetch
+
+      - name: Validate wrappers
+        run: cargo run -p xtask -- validate
+
+  # ==========================================================================
   # Clippy - primary targets only
   # ==========================================================================
   clippy:
