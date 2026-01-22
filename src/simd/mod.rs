@@ -16,9 +16,10 @@ use core::arch::x86_64::*;
 use core::arch::aarch64::*;
 
 use core::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
-    Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,
+    Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
+
 
 // ============================================================================
 // Comparison Traits (return masks, not bool)
@@ -59,6 +60,7 @@ pub trait SimdGe<Rhs = Self> {
     type Output;
     fn simd_ge(self, rhs: Rhs) -> Self::Output;
 }
+
 
 // ============================================================================
 // Implementation Macros
@@ -238,6 +240,7 @@ macro_rules! impl_index {
         }
     };
 }
+
 
 // ============================================================================
 // f32x4 - 4 x f32 (128-bit)
@@ -563,7 +566,7 @@ impl f32x4 {
         Self(unsafe {
             let ones = _mm_set1_epi32(-1);
             let as_int = _mm_castps_si128(self.0);
-            _mm_castsi128_ps(_mm_xor_si128(as_int, ones))
+            _mm_castsi128_ps (_mm_xor_si128(as_int, ones))
         })
     }
 
@@ -650,7 +653,9 @@ impl f32x4 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe { Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LN2))) }
+        unsafe {
+            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LN2)))
+        }
     }
 
     /// Low-precision natural exponential (e^x).
@@ -659,7 +664,9 @@ impl f32x4 {
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe { Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_lowp() }
+        unsafe {
+            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_lowp()
+        }
     }
 
     /// Low-precision base-10 logarithm.
@@ -668,7 +675,9 @@ impl f32x4 {
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
-        unsafe { Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LOG10_2))) }
+        unsafe {
+            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LOG10_2)))
+        }
     }
 
     /// Low-precision power function (self^n).
@@ -677,28 +686,31 @@ impl f32x4 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        unsafe { Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(n))).exp2_lowp() }
+        unsafe {
+            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(n))).exp2_lowp()
+        }
     }
 
     // ========== Mid-Precision Transcendental Operations ==========
 
-    /// Mid-precision base-2 logarithm (~3 ULP max error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error) - unchecked variant.
     ///
     /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
-    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `log2_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn log2_midp(self) -> Self {
+    pub fn log2_midp_unchecked(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
-        const ONE: u32 = 0x3f800000; // 1.0 in f32 bits
+        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
         const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
         const EXPONENT_BIAS: i32 = 127;
 
         // Coefficients for odd polynomial on y = (a-1)/(a+1)
-        const C0: f32 = 2.885_390_08; // 2/ln(2)
-        const C1: f32 = 0.961_800_76; // y^2 coefficient
-        const C2: f32 = 0.576_974_45; // y^4 coefficient
-        const C3: f32 = 0.434_411_97; // y^6 coefficient
+        const C0: f32 = 2.885_390_08;  // 2/ln(2)
+        const C1: f32 = 0.961_800_76;  // y^2 coefficient
+        const C2: f32 = 0.576_974_45;  // y^4 coefficient
+        const C3: f32 = 0.434_411_97;  // y^6 coefficient
 
         unsafe {
             let x_bits = _mm_castps_si128(self.0);
@@ -736,12 +748,46 @@ impl f32x4 {
         }
     }
 
-    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error).
+    ///
+    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// Handles edge cases correctly: log2(0) = -inf, log2(negative) = NaN,
+    /// log2(+inf) = +inf, log2(NaN) = NaN.
+    #[inline(always)]
+    pub fn log2_midp(self) -> Self {
+        unsafe {
+            let result = self.log2_midp_unchecked();
+
+            // Edge case masks
+            let zero = _mm_setzero_ps();
+            let is_zero = _mm_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
+            let is_neg = _mm_cmp_ps::<_CMP_LT_OQ>(self.0, zero);
+            let is_inf = _mm_cmp_ps::<_CMP_EQ_OQ>(self.0, _mm_set1_ps(f32::INFINITY));
+            let is_nan = _mm_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections
+            let neg_inf = _mm_set1_ps(f32::NEG_INFINITY);
+            let pos_inf = _mm_set1_ps(f32::INFINITY);
+            let nan = _mm_set1_ps(f32::NAN);
+
+            let r = _mm_blendv_ps(result.0, neg_inf, is_zero);
+            let r = _mm_blendv_ps(r, nan, is_neg);
+            let r = _mm_blendv_ps(r, pos_inf, is_inf);
+            let r = _mm_blendv_ps(r, nan, is_nan);
+            Self(r)
+        }
+    }
+
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error) - unchecked variant.
     ///
     /// Uses degree-6 minimax polynomial.
-    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow.
+    /// Use `exp2_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn exp2_midp(self) -> Self {
+    pub fn exp2_midp_unchecked(self) -> Self {
         // Degree-6 minimax polynomial for 2^x on [0, 1]
         const C0: f32 = 1.0;
         const C1: f32 = 0.693_147_180_559_945;
@@ -777,42 +823,127 @@ impl f32x4 {
         }
     }
 
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    ///
+    /// Uses degree-6 minimax polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// Handles edge cases correctly: exp2(x > 128) = +inf, exp2(x < -150) = 0,
+    /// exp2(NaN) = NaN.
+    #[inline(always)]
+    pub fn exp2_midp(self) -> Self {
+        unsafe {
+            let result = self.exp2_midp_unchecked();
+
+            // Edge case masks
+            let is_overflow = _mm_cmp_ps::<_CMP_GE_OQ>(self.0, _mm_set1_ps(128.0));
+            let is_underflow = _mm_cmp_ps::<_CMP_LT_OQ>(self.0, _mm_set1_ps(-150.0));
+            let is_nan = _mm_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections
+            let pos_inf = _mm_set1_ps(f32::INFINITY);
+            let zero = _mm_setzero_ps();
+            let nan = _mm_set1_ps(f32::NAN);
+
+            let r = _mm_blendv_ps(result.0, pos_inf, is_overflow);
+            let r = _mm_blendv_ps(r, zero, is_underflow);
+            let r = _mm_blendv_ps(r, nan, is_nan);
+            Self(r)
+        }
+    }
+
+    /// Mid-precision power function (self^n) - unchecked variant.
+    ///
+    /// Computed as `exp2_midp_unchecked(n * log2_midp_unchecked(self))`.
+    ///
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `pow_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn pow_midp_unchecked(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm_mul_ps(self.log2_midp_unchecked().0, _mm_set1_ps(n))).exp2_midp_unchecked()
+        }
+    }
+
     /// Mid-precision power function (self^n).
     ///
     /// Computed as `exp2_midp(n * log2_midp(self))`.
     /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
+    ///
+    /// Handles edge cases: pow(0, n) = 0 (n>0), pow(inf, n) = inf (n>0).
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
-        unsafe { Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(n))).exp2_midp() }
+        unsafe {
+            Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(n))).exp2_midp()
+        }
+    }
+
+    /// Mid-precision natural logarithm - unchecked variant.
+    ///
+    /// Computed as `log2_midp_unchecked(x) * ln(2)`.
+    ///
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `ln_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn ln_midp_unchecked(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm_mul_ps(self.log2_midp_unchecked().0, _mm_set1_ps(LN2)))
+        }
     }
 
     /// Mid-precision natural logarithm.
     ///
     /// Computed as `log2_midp(x) * ln(2)`.
+    ///
+    /// Handles edge cases: ln(0) = -inf, ln(negative) = NaN, ln(inf) = inf.
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe { Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(LN2))) }
+        unsafe {
+            Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(LN2)))
+        }
+    }
+
+    /// Mid-precision natural exponential (e^x) - unchecked variant.
+    ///
+    /// Computed as `exp2_midp_unchecked(x * log2(e))`.
+    ///
+    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow.
+    /// Use `exp_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn exp_midp_unchecked(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_midp_unchecked()
+        }
     }
 
     /// Mid-precision natural exponential (e^x).
     ///
     /// Computed as `exp2_midp(x * log2(e))`.
+    ///
+    /// Handles edge cases: exp(x>88) = inf, exp(x<-103) = 0, exp(NaN) = NaN.
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe { Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_midp() }
+        unsafe {
+            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_midp()
+        }
     }
 
     // ========== Cube Root ==========
 
-    /// Mid-precision cube root (x^(1/3)).
+    /// Mid-precision cube root (x^(1/3)) - unchecked variant.
     ///
-    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson.
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
     /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// **Warning**: Does not handle edge cases (0, inf, NaN, denormals).
+    /// Use `cbrt_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn cbrt_midp(self) -> Self {
+    pub fn cbrt_midp_unchecked(self) -> Self {
         // B1 magic constant for cube root initial approximation
         // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130
         const B1: u32 = 709_958_130;
@@ -856,6 +987,65 @@ impl f32x4 {
             Self(_mm_or_ps(y, sign_bits))
         }
     }
+
+    /// Mid-precision cube root (x^(1/3)).
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Handles edge cases: cbrt(0) = 0, cbrt(±inf) = ±inf, cbrt(NaN) = NaN.
+    /// Does not handle denormals (use `cbrt_midp_precise()` for full IEEE compliance).
+    #[inline(always)]
+    pub fn cbrt_midp(self) -> Self {
+        unsafe {
+            let result = self.cbrt_midp_unchecked();
+
+            // Edge case masks
+            let zero = _mm_setzero_ps();
+            let is_zero = _mm_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
+            let abs_x = _mm_andnot_ps(_mm_set1_ps(-0.0), self.0);
+            let is_inf = _mm_cmp_ps::<_CMP_EQ_OQ>(abs_x, _mm_set1_ps(f32::INFINITY));
+            let is_nan = _mm_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections (use self.0 for zero to preserve sign)
+            let r = _mm_blendv_ps(result.0, self.0, is_zero);  // ±0 -> ±0
+            let r = _mm_blendv_ps(r, self.0, is_inf);  // ±inf -> ±inf
+            let r = _mm_blendv_ps(r, _mm_set1_ps(f32::NAN), is_nan);
+            Self(r)
+        }
+    }
+
+    /// Precise cube root (x^(1/3)) with full IEEE compliance.
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`.
+    /// Use `cbrt_midp()` if denormal support is not needed (most image processing).
+    #[inline(always)]
+    pub fn cbrt_midp_precise(self) -> Self {
+        unsafe {
+            // Scale factor for denormals: 2^24
+            const SCALE_UP: f32 = 16777216.0;  // 2^24
+            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
+            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+
+            let abs_x = _mm_andnot_ps(_mm_set1_ps(-0.0), self.0);
+            let is_denorm = _mm_cmp_ps::<_CMP_LT_OQ>(abs_x, _mm_set1_ps(DENORM_LIMIT));
+
+            // Scale up denormals
+            let scaled_x = _mm_mul_ps(self.0, _mm_set1_ps(SCALE_UP));
+            let x_for_cbrt = _mm_blendv_ps(self.0, scaled_x, is_denorm);
+
+            // Compute cbrt with edge case handling
+            let result = Self(x_for_cbrt).cbrt_midp();
+
+            // Scale down results from denormal inputs
+            let scaled_result = _mm_mul_ps(result.0, _mm_set1_ps(SCALE_DOWN));
+            Self(_mm_blendv_ps(result.0, scaled_result, is_denorm))
+        }
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -868,6 +1058,7 @@ impl_neg!(f32x4, _mm_sub_ps, _mm_setzero_ps);
 impl_bitwise_ops!(f32x4, __m128, _mm_and_ps, _mm_or_ps, _mm_xor_ps);
 #[cfg(target_arch = "x86_64")]
 impl_index!(f32x4, f32, 4);
+
 
 // Scalar broadcast operations for f32x4
 // These allow `v + 2.0` instead of `v + f32x4::splat(token, 2.0)`
@@ -913,6 +1104,7 @@ impl Div<f32> for f32x4 {
         self / Self(unsafe { _mm_set1_ps(rhs) })
     }
 }
+
 
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit)
@@ -1178,7 +1370,7 @@ impl f64x2 {
         Self(unsafe {
             let ones = _mm_set1_epi64x(-1);
             let as_int = _mm_castpd_si128(self.0);
-            _mm_castsi128_pd(_mm_xor_si128(as_int, ones))
+            _mm_castsi128_pd (_mm_xor_si128(as_int, ones))
         })
     }
 
@@ -1208,7 +1400,8 @@ impl f64x2 {
             let mantissa = _mm_castsi128_pd(mantissa_bits);
             // Convert exponent to f64
             let exp_arr: [i64; 2] = core::mem::transmute(exp_shifted);
-            let exp_f64: [f64; 2] = [exp_arr[0] as f64, exp_arr[1] as f64];
+            let exp_f64: [f64; 2] = [
+exp_arr[0] as f64, exp_arr[1] as f64];
             let exp_val = _mm_loadu_pd(exp_f64.as_ptr());
 
             let one = _mm_set1_pd(1.0);
@@ -1254,9 +1447,7 @@ impl f64x2 {
             // Scale by 2^integer - extract, convert, scale
             let xi_arr: [f64; 2] = core::mem::transmute(xi);
             let scale_arr: [f64; 2] = [
-                f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64),
-            ];
+f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64)];
             let scale = _mm_loadu_pd(scale_arr.as_ptr());
 
             Self(_mm_mul_pd(poly, scale))
@@ -1267,28 +1458,37 @@ impl f64x2 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
-        unsafe { Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LN2))) }
+        unsafe {
+            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LN2)))
+        }
     }
 
     /// Low-precision natural exponential (e^x).
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
-        unsafe { Self(_mm_mul_pd(self.0, _mm_set1_pd(LOG2_E))).exp2_lowp() }
+        unsafe {
+            Self(_mm_mul_pd(self.0, _mm_set1_pd(LOG2_E))).exp2_lowp()
+        }
     }
 
     /// Low-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
-        unsafe { Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LOG10_2))) }
+        unsafe {
+            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LOG10_2)))
+        }
     }
 
     /// Low-precision power function (self^n).
     #[inline(always)]
     pub fn pow_lowp(self, n: f64) -> Self {
-        unsafe { Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(n))).exp2_lowp() }
+        unsafe {
+            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(n))).exp2_lowp()
+        }
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1301,6 +1501,7 @@ impl_neg!(f64x2, _mm_sub_pd, _mm_setzero_pd);
 impl_bitwise_ops!(f64x2, __m128d, _mm_and_pd, _mm_or_pd, _mm_xor_pd);
 #[cfg(target_arch = "x86_64")]
 impl_index!(f64x2, f64, 2);
+
 
 // Scalar broadcast operations for f64x2
 // These allow `v + 2.0` instead of `v + f64x2::splat(token, 2.0)`
@@ -1346,6 +1547,7 @@ impl Div<f64> for f64x2 {
         self / Self(unsafe { _mm_set1_pd(rhs) })
     }
 }
+
 
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit)
@@ -1555,6 +1757,7 @@ impl i8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1565,6 +1768,7 @@ impl_assign_ops!(i8x16);
 impl_bitwise_ops!(i8x16, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i8x16, i8, 16);
+
 
 // Scalar broadcast operations for i8x16
 // These allow `v + 2.0` instead of `v + i8x16::splat(token, 2.0)`
@@ -1588,6 +1792,7 @@ impl Sub<i8> for i8x16 {
         self - Self(unsafe { _mm_set1_epi8(rhs) })
     }
 }
+
 
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit)
@@ -1797,6 +2002,7 @@ impl u8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1807,6 +2013,7 @@ impl_assign_ops!(u8x16);
 impl_bitwise_ops!(u8x16, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u8x16, u8, 16);
+
 
 // Scalar broadcast operations for u8x16
 // These allow `v + 2.0` instead of `v + u8x16::splat(token, 2.0)`
@@ -1830,6 +2037,7 @@ impl Sub<u8> for u8x16 {
         self - Self(unsafe { _mm_set1_epi8(rhs as i8) })
     }
 }
+
 
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit)
@@ -2026,10 +2234,7 @@ impl i16x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i16, i16::wrapping_add)
+        self.to_array().iter().copied().fold(0_i16, i16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2068,6 +2273,7 @@ impl i16x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi16::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2080,6 +2286,7 @@ impl_assign_ops!(i16x8);
 impl_bitwise_ops!(i16x8, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i16x8, i16, 8);
+
 
 // Scalar broadcast operations for i16x8
 // These allow `v + 2.0` instead of `v + i16x8::splat(token, 2.0)`
@@ -2103,6 +2310,7 @@ impl Sub<i16> for i16x8 {
         self - Self(unsafe { _mm_set1_epi16(rhs) })
     }
 }
+
 
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit)
@@ -2299,10 +2507,7 @@ impl u16x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u16 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u16, u16::wrapping_add)
+        self.to_array().iter().copied().fold(0_u16, u16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2333,6 +2538,7 @@ impl u16x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2345,6 +2551,7 @@ impl_assign_ops!(u16x8);
 impl_bitwise_ops!(u16x8, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u16x8, u16, 8);
+
 
 // Scalar broadcast operations for u16x8
 // These allow `v + 2.0` instead of `v + u16x8::splat(token, 2.0)`
@@ -2368,6 +2575,7 @@ impl Sub<u16> for u16x8 {
         self - Self(unsafe { _mm_set1_epi16(rhs as i16) })
     }
 }
+
 
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit)
@@ -2564,10 +2772,7 @@ impl i32x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i32, i32::wrapping_add)
+        self.to_array().iter().copied().fold(0_i32, i32::wrapping_add)
     }
 
     // ========== Type Conversions ==========
@@ -2614,6 +2819,7 @@ impl i32x4 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi32::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2626,6 +2832,7 @@ impl_assign_ops!(i32x4);
 impl_bitwise_ops!(i32x4, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i32x4, i32, 4);
+
 
 // Scalar broadcast operations for i32x4
 // These allow `v + 2.0` instead of `v + i32x4::splat(token, 2.0)`
@@ -2649,6 +2856,7 @@ impl Sub<i32> for i32x4 {
         self - Self(unsafe { _mm_set1_epi32(rhs) })
     }
 }
+
 
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit)
@@ -2845,10 +3053,7 @@ impl u32x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u32, u32::wrapping_add)
+        self.to_array().iter().copied().fold(0_u32, u32::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2879,6 +3084,7 @@ impl u32x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi32::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2891,6 +3097,7 @@ impl_assign_ops!(u32x4);
 impl_bitwise_ops!(u32x4, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u32x4, u32, 4);
+
 
 // Scalar broadcast operations for u32x4
 // These allow `v + 2.0` instead of `v + u32x4::splat(token, 2.0)`
@@ -2914,6 +3121,7 @@ impl Sub<u32> for u32x4 {
         self - Self(unsafe { _mm_set1_epi32(rhs as i32) })
     }
 }
+
 
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit)
@@ -3086,10 +3294,7 @@ impl i64x2 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i64, i64::wrapping_add)
+        self.to_array().iter().copied().fold(0_i64, i64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3120,6 +3325,7 @@ impl i64x2 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3130,6 +3336,7 @@ impl_assign_ops!(i64x2);
 impl_bitwise_ops!(i64x2, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i64x2, i64, 2);
+
 
 // Scalar broadcast operations for i64x2
 // These allow `v + 2.0` instead of `v + i64x2::splat(token, 2.0)`
@@ -3153,6 +3360,7 @@ impl Sub<i64> for i64x2 {
         self - Self(unsafe { _mm_set1_epi64x(rhs) })
     }
 }
+
 
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit)
@@ -3331,10 +3539,7 @@ impl u64x2 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u64 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u64, u64::wrapping_add)
+        self.to_array().iter().copied().fold(0_u64, u64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3365,6 +3570,7 @@ impl u64x2 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3375,6 +3581,7 @@ impl_assign_ops!(u64x2);
 impl_bitwise_ops!(u64x2, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si128);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u64x2, u64, 2);
+
 
 // Scalar broadcast operations for u64x2
 // These allow `v + 2.0` instead of `v + u64x2::splat(token, 2.0)`
@@ -3398,6 +3605,7 @@ impl Sub<u64> for u64x2 {
         self - Self(unsafe { _mm_set1_epi64x(rhs as i64) })
     }
 }
+
 
 // ============================================================================
 // f32x8 - 8 x f32 (256-bit)
@@ -3526,9 +3734,7 @@ impl f32x8 {
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self(unsafe {
-            _mm256_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0)
-        })
+        Self(unsafe { _mm256_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0) })
     }
 
     /// Fused multiply-add: self * a + b
@@ -3734,7 +3940,7 @@ impl f32x8 {
         Self(unsafe {
             let ones = _mm256_set1_epi32(-1);
             let as_int = _mm256_castps_si256(self.0);
-            _mm256_castsi256_ps(_mm256_xor_si256(as_int, ones))
+            _mm256_castsi256_ps (_mm256_xor_si256(as_int, ones))
         })
     }
 
@@ -3821,7 +4027,9 @@ impl f32x8 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe { Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LN2))) }
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LN2)))
+        }
     }
 
     /// Low-precision natural exponential (e^x).
@@ -3830,7 +4038,9 @@ impl f32x8 {
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe { Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_lowp() }
+        unsafe {
+            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_lowp()
+        }
     }
 
     /// Low-precision base-10 logarithm.
@@ -3839,7 +4049,9 @@ impl f32x8 {
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
-        unsafe { Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LOG10_2))) }
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LOG10_2)))
+        }
     }
 
     /// Low-precision power function (self^n).
@@ -3848,28 +4060,31 @@ impl f32x8 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        unsafe { Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(n))).exp2_lowp() }
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(n))).exp2_lowp()
+        }
     }
 
     // ========== Mid-Precision Transcendental Operations ==========
 
-    /// Mid-precision base-2 logarithm (~3 ULP max error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error) - unchecked variant.
     ///
     /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
-    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `log2_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn log2_midp(self) -> Self {
+    pub fn log2_midp_unchecked(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
-        const ONE: u32 = 0x3f800000; // 1.0 in f32 bits
+        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
         const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
         const EXPONENT_BIAS: i32 = 127;
 
         // Coefficients for odd polynomial on y = (a-1)/(a+1)
-        const C0: f32 = 2.885_390_08; // 2/ln(2)
-        const C1: f32 = 0.961_800_76; // y^2 coefficient
-        const C2: f32 = 0.576_974_45; // y^4 coefficient
-        const C3: f32 = 0.434_411_97; // y^6 coefficient
+        const C0: f32 = 2.885_390_08;  // 2/ln(2)
+        const C1: f32 = 0.961_800_76;  // y^2 coefficient
+        const C2: f32 = 0.576_974_45;  // y^4 coefficient
+        const C3: f32 = 0.434_411_97;  // y^6 coefficient
 
         unsafe {
             let x_bits = _mm256_castps_si256(self.0);
@@ -3907,12 +4122,46 @@ impl f32x8 {
         }
     }
 
-    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error).
+    ///
+    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// Handles edge cases correctly: log2(0) = -inf, log2(negative) = NaN,
+    /// log2(+inf) = +inf, log2(NaN) = NaN.
+    #[inline(always)]
+    pub fn log2_midp(self) -> Self {
+        unsafe {
+            let result = self.log2_midp_unchecked();
+
+            // Edge case masks
+            let zero = _mm256_setzero_ps();
+            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
+            let is_neg = _mm256_cmp_ps::<_CMP_LT_OQ>(self.0, zero);
+            let is_inf = _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, _mm256_set1_ps(f32::INFINITY));
+            let is_nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections
+            let neg_inf = _mm256_set1_ps(f32::NEG_INFINITY);
+            let pos_inf = _mm256_set1_ps(f32::INFINITY);
+            let nan = _mm256_set1_ps(f32::NAN);
+
+            let r = _mm256_blendv_ps(result.0, neg_inf, is_zero);
+            let r = _mm256_blendv_ps(r, nan, is_neg);
+            let r = _mm256_blendv_ps(r, pos_inf, is_inf);
+            let r = _mm256_blendv_ps(r, nan, is_nan);
+            Self(r)
+        }
+    }
+
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error) - unchecked variant.
     ///
     /// Uses degree-6 minimax polynomial.
-    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow.
+    /// Use `exp2_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn exp2_midp(self) -> Self {
+    pub fn exp2_midp_unchecked(self) -> Self {
         // Degree-6 minimax polynomial for 2^x on [0, 1]
         const C0: f32 = 1.0;
         const C1: f32 = 0.693_147_180_559_945;
@@ -3948,42 +4197,127 @@ impl f32x8 {
         }
     }
 
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    ///
+    /// Uses degree-6 minimax polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// Handles edge cases correctly: exp2(x > 128) = +inf, exp2(x < -150) = 0,
+    /// exp2(NaN) = NaN.
+    #[inline(always)]
+    pub fn exp2_midp(self) -> Self {
+        unsafe {
+            let result = self.exp2_midp_unchecked();
+
+            // Edge case masks
+            let is_overflow = _mm256_cmp_ps::<_CMP_GE_OQ>(self.0, _mm256_set1_ps(128.0));
+            let is_underflow = _mm256_cmp_ps::<_CMP_LT_OQ>(self.0, _mm256_set1_ps(-150.0));
+            let is_nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections
+            let pos_inf = _mm256_set1_ps(f32::INFINITY);
+            let zero = _mm256_setzero_ps();
+            let nan = _mm256_set1_ps(f32::NAN);
+
+            let r = _mm256_blendv_ps(result.0, pos_inf, is_overflow);
+            let r = _mm256_blendv_ps(r, zero, is_underflow);
+            let r = _mm256_blendv_ps(r, nan, is_nan);
+            Self(r)
+        }
+    }
+
+    /// Mid-precision power function (self^n) - unchecked variant.
+    ///
+    /// Computed as `exp2_midp_unchecked(n * log2_midp_unchecked(self))`.
+    ///
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `pow_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn pow_midp_unchecked(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_midp_unchecked().0, _mm256_set1_ps(n))).exp2_midp_unchecked()
+        }
+    }
+
     /// Mid-precision power function (self^n).
     ///
     /// Computed as `exp2_midp(n * log2_midp(self))`.
     /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
+    ///
+    /// Handles edge cases: pow(0, n) = 0 (n>0), pow(inf, n) = inf (n>0).
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
-        unsafe { Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(n))).exp2_midp() }
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(n))).exp2_midp()
+        }
+    }
+
+    /// Mid-precision natural logarithm - unchecked variant.
+    ///
+    /// Computed as `log2_midp_unchecked(x) * ln(2)`.
+    ///
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `ln_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn ln_midp_unchecked(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_midp_unchecked().0, _mm256_set1_ps(LN2)))
+        }
     }
 
     /// Mid-precision natural logarithm.
     ///
     /// Computed as `log2_midp(x) * ln(2)`.
+    ///
+    /// Handles edge cases: ln(0) = -inf, ln(negative) = NaN, ln(inf) = inf.
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe { Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(LN2))) }
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(LN2)))
+        }
+    }
+
+    /// Mid-precision natural exponential (e^x) - unchecked variant.
+    ///
+    /// Computed as `exp2_midp_unchecked(x * log2(e))`.
+    ///
+    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow.
+    /// Use `exp_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn exp_midp_unchecked(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp_unchecked()
+        }
     }
 
     /// Mid-precision natural exponential (e^x).
     ///
     /// Computed as `exp2_midp(x * log2(e))`.
+    ///
+    /// Handles edge cases: exp(x>88) = inf, exp(x<-103) = 0, exp(NaN) = NaN.
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe { Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp() }
+        unsafe {
+            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp()
+        }
     }
 
     // ========== Cube Root ==========
 
-    /// Mid-precision cube root (x^(1/3)).
+    /// Mid-precision cube root (x^(1/3)) - unchecked variant.
     ///
-    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson.
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
     /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// **Warning**: Does not handle edge cases (0, inf, NaN, denormals).
+    /// Use `cbrt_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn cbrt_midp(self) -> Self {
+    pub fn cbrt_midp_unchecked(self) -> Self {
         // B1 magic constant for cube root initial approximation
         // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130
         const B1: u32 = 709_958_130;
@@ -4027,16 +4361,69 @@ impl f32x8 {
             Self(_mm256_or_ps(y, sign_bits))
         }
     }
+
+    /// Mid-precision cube root (x^(1/3)).
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Handles edge cases: cbrt(0) = 0, cbrt(±inf) = ±inf, cbrt(NaN) = NaN.
+    /// Does not handle denormals (use `cbrt_midp_precise()` for full IEEE compliance).
+    #[inline(always)]
+    pub fn cbrt_midp(self) -> Self {
+        unsafe {
+            let result = self.cbrt_midp_unchecked();
+
+            // Edge case masks
+            let zero = _mm256_setzero_ps();
+            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
+            let abs_x = _mm256_andnot_ps(_mm256_set1_ps(-0.0), self.0);
+            let is_inf = _mm256_cmp_ps::<_CMP_EQ_OQ>(abs_x, _mm256_set1_ps(f32::INFINITY));
+            let is_nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections (use self.0 for zero to preserve sign)
+            let r = _mm256_blendv_ps(result.0, self.0, is_zero);  // ±0 -> ±0
+            let r = _mm256_blendv_ps(r, self.0, is_inf);  // ±inf -> ±inf
+            let r = _mm256_blendv_ps(r, _mm256_set1_ps(f32::NAN), is_nan);
+            Self(r)
+        }
+    }
+
+    /// Precise cube root (x^(1/3)) with full IEEE compliance.
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`.
+    /// Use `cbrt_midp()` if denormal support is not needed (most image processing).
+    #[inline(always)]
+    pub fn cbrt_midp_precise(self) -> Self {
+        unsafe {
+            // Scale factor for denormals: 2^24
+            const SCALE_UP: f32 = 16777216.0;  // 2^24
+            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
+            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+
+            let abs_x = _mm256_andnot_ps(_mm256_set1_ps(-0.0), self.0);
+            let is_denorm = _mm256_cmp_ps::<_CMP_LT_OQ>(abs_x, _mm256_set1_ps(DENORM_LIMIT));
+
+            // Scale up denormals
+            let scaled_x = _mm256_mul_ps(self.0, _mm256_set1_ps(SCALE_UP));
+            let x_for_cbrt = _mm256_blendv_ps(self.0, scaled_x, is_denorm);
+
+            // Compute cbrt with edge case handling
+            let result = Self(x_for_cbrt).cbrt_midp();
+
+            // Scale down results from denormal inputs
+            let scaled_result = _mm256_mul_ps(result.0, _mm256_set1_ps(SCALE_DOWN));
+            Self(_mm256_blendv_ps(result.0, scaled_result, is_denorm))
+        }
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
-impl_arithmetic_ops!(
-    f32x8,
-    _mm256_add_ps,
-    _mm256_sub_ps,
-    _mm256_mul_ps,
-    _mm256_div_ps
-);
+impl_arithmetic_ops!(f32x8, _mm256_add_ps, _mm256_sub_ps, _mm256_mul_ps, _mm256_div_ps);
 #[cfg(target_arch = "x86_64")]
 impl_float_assign_ops!(f32x8);
 #[cfg(target_arch = "x86_64")]
@@ -4045,6 +4432,7 @@ impl_neg!(f32x8, _mm256_sub_ps, _mm256_setzero_ps);
 impl_bitwise_ops!(f32x8, __m256, _mm256_and_ps, _mm256_or_ps, _mm256_xor_ps);
 #[cfg(target_arch = "x86_64")]
 impl_index!(f32x8, f32, 8);
+
 
 // Scalar broadcast operations for f32x8
 // These allow `v + 2.0` instead of `v + f32x8::splat(token, 2.0)`
@@ -4090,6 +4478,7 @@ impl Div<f32> for f32x8 {
         self / Self(unsafe { _mm256_set1_ps(rhs) })
     }
 }
+
 
 // ============================================================================
 // f64x4 - 4 x f64 (256-bit)
@@ -4218,9 +4607,7 @@ impl f64x4 {
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self(unsafe {
-            _mm256_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0)
-        })
+        Self(unsafe { _mm256_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0) })
     }
 
     /// Fused multiply-add: self * a + b
@@ -4356,7 +4743,7 @@ impl f64x4 {
         Self(unsafe {
             let ones = _mm256_set1_epi64x(-1);
             let as_int = _mm256_castpd_si256(self.0);
-            _mm256_castsi256_pd(_mm256_xor_si256(as_int, ones))
+            _mm256_castsi256_pd (_mm256_xor_si256(as_int, ones))
         })
     }
 
@@ -4387,11 +4774,7 @@ impl f64x4 {
             // Convert exponent to f64
             let exp_arr: [i64; 4] = core::mem::transmute(exp_shifted);
             let exp_f64: [f64; 4] = [
-                exp_arr[0] as f64,
-                exp_arr[1] as f64,
-                exp_arr[2] as f64,
-                exp_arr[3] as f64,
-            ];
+exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64];
             let exp_val = _mm256_loadu_pd(exp_f64.as_ptr());
 
             let one = _mm256_set1_pd(1.0);
@@ -4437,11 +4820,7 @@ impl f64x4 {
             // Scale by 2^integer - extract, convert, scale
             let xi_arr: [f64; 4] = core::mem::transmute(xi);
             let scale_arr: [f64; 4] = [
-                f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64),
-            ];
+f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64)];
             let scale = _mm256_loadu_pd(scale_arr.as_ptr());
 
             Self(_mm256_mul_pd(poly, scale))
@@ -4452,38 +4831,41 @@ impl f64x4 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
-        unsafe { Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LN2))) }
+        unsafe {
+            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LN2)))
+        }
     }
 
     /// Low-precision natural exponential (e^x).
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
-        unsafe { Self(_mm256_mul_pd(self.0, _mm256_set1_pd(LOG2_E))).exp2_lowp() }
+        unsafe {
+            Self(_mm256_mul_pd(self.0, _mm256_set1_pd(LOG2_E))).exp2_lowp()
+        }
     }
 
     /// Low-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
-        unsafe { Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LOG10_2))) }
+        unsafe {
+            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LOG10_2)))
+        }
     }
 
     /// Low-precision power function (self^n).
     #[inline(always)]
     pub fn pow_lowp(self, n: f64) -> Self {
-        unsafe { Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(n))).exp2_lowp() }
+        unsafe {
+            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(n))).exp2_lowp()
+        }
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
-impl_arithmetic_ops!(
-    f64x4,
-    _mm256_add_pd,
-    _mm256_sub_pd,
-    _mm256_mul_pd,
-    _mm256_div_pd
-);
+impl_arithmetic_ops!(f64x4, _mm256_add_pd, _mm256_sub_pd, _mm256_mul_pd, _mm256_div_pd);
 #[cfg(target_arch = "x86_64")]
 impl_float_assign_ops!(f64x4);
 #[cfg(target_arch = "x86_64")]
@@ -4492,6 +4874,7 @@ impl_neg!(f64x4, _mm256_sub_pd, _mm256_setzero_pd);
 impl_bitwise_ops!(f64x4, __m256d, _mm256_and_pd, _mm256_or_pd, _mm256_xor_pd);
 #[cfg(target_arch = "x86_64")]
 impl_index!(f64x4, f64, 4);
+
 
 // Scalar broadcast operations for f64x4
 // These allow `v + 2.0` instead of `v + f64x4::splat(token, 2.0)`
@@ -4537,6 +4920,7 @@ impl Div<f64> for f64x4 {
         self / Self(unsafe { _mm256_set1_pd(rhs) })
     }
 }
+
 
 // ============================================================================
 // i8x32 - 32 x i8 (256-bit)
@@ -4746,6 +5130,7 @@ impl i8x32 {
             _mm256_xor_si256(self.0, ones)
         })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -4753,15 +5138,10 @@ impl_int_arithmetic_ops!(i8x32, _mm256_add_epi8, _mm256_sub_epi8);
 #[cfg(target_arch = "x86_64")]
 impl_assign_ops!(i8x32);
 #[cfg(target_arch = "x86_64")]
-impl_bitwise_ops!(
-    i8x32,
-    __m256i,
-    _mm256_and_si256,
-    _mm256_or_si256,
-    _mm256_xor_si256
-);
+impl_bitwise_ops!(i8x32, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i8x32, i8, 32);
+
 
 // Scalar broadcast operations for i8x32
 // These allow `v + 2.0` instead of `v + i8x32::splat(token, 2.0)`
@@ -4785,6 +5165,7 @@ impl Sub<i8> for i8x32 {
         self - Self(unsafe { _mm256_set1_epi8(rhs) })
     }
 }
+
 
 // ============================================================================
 // u8x32 - 32 x u8 (256-bit)
@@ -4994,6 +5375,7 @@ impl u8x32 {
             _mm256_xor_si256(self.0, ones)
         })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5001,15 +5383,10 @@ impl_int_arithmetic_ops!(u8x32, _mm256_add_epi8, _mm256_sub_epi8);
 #[cfg(target_arch = "x86_64")]
 impl_assign_ops!(u8x32);
 #[cfg(target_arch = "x86_64")]
-impl_bitwise_ops!(
-    u8x32,
-    __m256i,
-    _mm256_and_si256,
-    _mm256_or_si256,
-    _mm256_xor_si256
-);
+impl_bitwise_ops!(u8x32, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u8x32, u8, 32);
+
 
 // Scalar broadcast operations for u8x32
 // These allow `v + 2.0` instead of `v + u8x32::splat(token, 2.0)`
@@ -5033,6 +5410,7 @@ impl Sub<u8> for u8x32 {
         self - Self(unsafe { _mm256_set1_epi8(rhs as i8) })
     }
 }
+
 
 // ============================================================================
 // i16x16 - 16 x i16 (256-bit)
@@ -5229,10 +5607,7 @@ impl i16x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i16, i16::wrapping_add)
+        self.to_array().iter().copied().fold(0_i16, i16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -5271,6 +5646,7 @@ impl i16x16 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srai_epi16::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5280,15 +5656,10 @@ impl_int_mul_op!(i16x16, _mm256_mullo_epi16);
 #[cfg(target_arch = "x86_64")]
 impl_assign_ops!(i16x16);
 #[cfg(target_arch = "x86_64")]
-impl_bitwise_ops!(
-    i16x16,
-    __m256i,
-    _mm256_and_si256,
-    _mm256_or_si256,
-    _mm256_xor_si256
-);
+impl_bitwise_ops!(i16x16, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i16x16, i16, 16);
+
 
 // Scalar broadcast operations for i16x16
 // These allow `v + 2.0` instead of `v + i16x16::splat(token, 2.0)`
@@ -5312,6 +5683,7 @@ impl Sub<i16> for i16x16 {
         self - Self(unsafe { _mm256_set1_epi16(rhs) })
     }
 }
+
 
 // ============================================================================
 // u16x16 - 16 x u16 (256-bit)
@@ -5508,10 +5880,7 @@ impl u16x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u16 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u16, u16::wrapping_add)
+        self.to_array().iter().copied().fold(0_u16, u16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -5542,6 +5911,7 @@ impl u16x16 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi16::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5551,15 +5921,10 @@ impl_int_mul_op!(u16x16, _mm256_mullo_epi16);
 #[cfg(target_arch = "x86_64")]
 impl_assign_ops!(u16x16);
 #[cfg(target_arch = "x86_64")]
-impl_bitwise_ops!(
-    u16x16,
-    __m256i,
-    _mm256_and_si256,
-    _mm256_or_si256,
-    _mm256_xor_si256
-);
+impl_bitwise_ops!(u16x16, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u16x16, u16, 16);
+
 
 // Scalar broadcast operations for u16x16
 // These allow `v + 2.0` instead of `v + u16x16::splat(token, 2.0)`
@@ -5583,6 +5948,7 @@ impl Sub<u16> for u16x16 {
         self - Self(unsafe { _mm256_set1_epi16(rhs as i16) })
     }
 }
+
 
 // ============================================================================
 // i32x8 - 8 x i32 (256-bit)
@@ -5779,10 +6145,7 @@ impl i32x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i32, i32::wrapping_add)
+        self.to_array().iter().copied().fold(0_i32, i32::wrapping_add)
     }
 
     // ========== Type Conversions ==========
@@ -5829,6 +6192,7 @@ impl i32x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srai_epi32::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5838,15 +6202,10 @@ impl_int_mul_op!(i32x8, _mm256_mullo_epi32);
 #[cfg(target_arch = "x86_64")]
 impl_assign_ops!(i32x8);
 #[cfg(target_arch = "x86_64")]
-impl_bitwise_ops!(
-    i32x8,
-    __m256i,
-    _mm256_and_si256,
-    _mm256_or_si256,
-    _mm256_xor_si256
-);
+impl_bitwise_ops!(i32x8, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i32x8, i32, 8);
+
 
 // Scalar broadcast operations for i32x8
 // These allow `v + 2.0` instead of `v + i32x8::splat(token, 2.0)`
@@ -5870,6 +6229,7 @@ impl Sub<i32> for i32x8 {
         self - Self(unsafe { _mm256_set1_epi32(rhs) })
     }
 }
+
 
 // ============================================================================
 // u32x8 - 8 x u32 (256-bit)
@@ -6066,10 +6426,7 @@ impl u32x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u32, u32::wrapping_add)
+        self.to_array().iter().copied().fold(0_u32, u32::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -6100,6 +6457,7 @@ impl u32x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi32::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -6109,15 +6467,10 @@ impl_int_mul_op!(u32x8, _mm256_mullo_epi32);
 #[cfg(target_arch = "x86_64")]
 impl_assign_ops!(u32x8);
 #[cfg(target_arch = "x86_64")]
-impl_bitwise_ops!(
-    u32x8,
-    __m256i,
-    _mm256_and_si256,
-    _mm256_or_si256,
-    _mm256_xor_si256
-);
+impl_bitwise_ops!(u32x8, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u32x8, u32, 8);
+
 
 // Scalar broadcast operations for u32x8
 // These allow `v + 2.0` instead of `v + u32x8::splat(token, 2.0)`
@@ -6141,6 +6494,7 @@ impl Sub<u32> for u32x8 {
         self - Self(unsafe { _mm256_set1_epi32(rhs as i32) })
     }
 }
+
 
 // ============================================================================
 // i64x4 - 4 x i64 (256-bit)
@@ -6313,10 +6667,7 @@ impl i64x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i64, i64::wrapping_add)
+        self.to_array().iter().copied().fold(0_i64, i64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -6347,6 +6698,7 @@ impl i64x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi64::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -6354,15 +6706,10 @@ impl_int_arithmetic_ops!(i64x4, _mm256_add_epi64, _mm256_sub_epi64);
 #[cfg(target_arch = "x86_64")]
 impl_assign_ops!(i64x4);
 #[cfg(target_arch = "x86_64")]
-impl_bitwise_ops!(
-    i64x4,
-    __m256i,
-    _mm256_and_si256,
-    _mm256_or_si256,
-    _mm256_xor_si256
-);
+impl_bitwise_ops!(i64x4, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(i64x4, i64, 4);
+
 
 // Scalar broadcast operations for i64x4
 // These allow `v + 2.0` instead of `v + i64x4::splat(token, 2.0)`
@@ -6386,6 +6733,7 @@ impl Sub<i64> for i64x4 {
         self - Self(unsafe { _mm256_set1_epi64x(rhs) })
     }
 }
+
 
 // ============================================================================
 // u64x4 - 4 x u64 (256-bit)
@@ -6564,10 +6912,7 @@ impl u64x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u64 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u64, u64::wrapping_add)
+        self.to_array().iter().copied().fold(0_u64, u64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -6598,6 +6943,7 @@ impl u64x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi64::<N>(self.0) })
     }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -6605,15 +6951,10 @@ impl_int_arithmetic_ops!(u64x4, _mm256_add_epi64, _mm256_sub_epi64);
 #[cfg(target_arch = "x86_64")]
 impl_assign_ops!(u64x4);
 #[cfg(target_arch = "x86_64")]
-impl_bitwise_ops!(
-    u64x4,
-    __m256i,
-    _mm256_and_si256,
-    _mm256_or_si256,
-    _mm256_xor_si256
-);
+impl_bitwise_ops!(u64x4, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 impl_index!(u64x4, u64, 4);
+
 
 // Scalar broadcast operations for u64x4
 // These allow `v + 2.0` instead of `v + u64x4::splat(token, 2.0)`
@@ -6637,6 +6978,7 @@ impl Sub<u64> for u64x4 {
         self - Self(unsafe { _mm256_set1_epi64x(rhs as i64) })
     }
 }
+
 
 // ============================================================================
 // f32x16 - 16 x f32 (512-bit)
@@ -6974,7 +7316,7 @@ impl f32x16 {
         Self(unsafe {
             let ones = _mm512_set1_epi32(-1);
             let as_int = _mm512_castps_si512(self.0);
-            _mm512_castsi512_ps(_mm512_xor_si512(as_int, ones))
+            _mm512_castsi512_ps (_mm512_xor_si512(as_int, ones))
         })
     }
 
@@ -7061,7 +7403,9 @@ impl f32x16 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe { Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LN2))) }
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LN2)))
+        }
     }
 
     /// Low-precision natural exponential (e^x).
@@ -7070,7 +7414,9 @@ impl f32x16 {
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe { Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_lowp() }
+        unsafe {
+            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_lowp()
+        }
     }
 
     /// Low-precision base-10 logarithm.
@@ -7079,7 +7425,9 @@ impl f32x16 {
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
-        unsafe { Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LOG10_2))) }
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LOG10_2)))
+        }
     }
 
     /// Low-precision power function (self^n).
@@ -7088,28 +7436,31 @@ impl f32x16 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        unsafe { Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(n))).exp2_lowp() }
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(n))).exp2_lowp()
+        }
     }
 
     // ========== Mid-Precision Transcendental Operations ==========
 
-    /// Mid-precision base-2 logarithm (~3 ULP max error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error) - unchecked variant.
     ///
     /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
-    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `log2_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn log2_midp(self) -> Self {
+    pub fn log2_midp_unchecked(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
-        const ONE: u32 = 0x3f800000; // 1.0 in f32 bits
+        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
         const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
         const EXPONENT_BIAS: i32 = 127;
 
         // Coefficients for odd polynomial on y = (a-1)/(a+1)
-        const C0: f32 = 2.885_390_08; // 2/ln(2)
-        const C1: f32 = 0.961_800_76; // y^2 coefficient
-        const C2: f32 = 0.576_974_45; // y^4 coefficient
-        const C3: f32 = 0.434_411_97; // y^6 coefficient
+        const C0: f32 = 2.885_390_08;  // 2/ln(2)
+        const C1: f32 = 0.961_800_76;  // y^2 coefficient
+        const C2: f32 = 0.576_974_45;  // y^4 coefficient
+        const C3: f32 = 0.434_411_97;  // y^6 coefficient
 
         unsafe {
             let x_bits = _mm512_castps_si512(self.0);
@@ -7147,12 +7498,46 @@ impl f32x16 {
         }
     }
 
-    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error).
+    ///
+    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// Handles edge cases correctly: log2(0) = -inf, log2(negative) = NaN,
+    /// log2(+inf) = +inf, log2(NaN) = NaN.
+    #[inline(always)]
+    pub fn log2_midp(self) -> Self {
+        unsafe {
+            let result = self.log2_midp_unchecked();
+
+            // Edge case masks
+            let zero = _mm512_setzero_ps();
+            let is_zero = _mm512_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
+            let is_neg = _mm512_cmp_ps::<_CMP_LT_OQ>(self.0, zero);
+            let is_inf = _mm512_cmp_ps::<_CMP_EQ_OQ>(self.0, _mm512_set1_ps(f32::INFINITY));
+            let is_nan = _mm512_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections
+            let neg_inf = _mm512_set1_ps(f32::NEG_INFINITY);
+            let pos_inf = _mm512_set1_ps(f32::INFINITY);
+            let nan = _mm512_set1_ps(f32::NAN);
+
+            let r = _mm512_blendv_ps(result.0, neg_inf, is_zero);
+            let r = _mm512_blendv_ps(r, nan, is_neg);
+            let r = _mm512_blendv_ps(r, pos_inf, is_inf);
+            let r = _mm512_blendv_ps(r, nan, is_nan);
+            Self(r)
+        }
+    }
+
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error) - unchecked variant.
     ///
     /// Uses degree-6 minimax polynomial.
-    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow.
+    /// Use `exp2_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn exp2_midp(self) -> Self {
+    pub fn exp2_midp_unchecked(self) -> Self {
         // Degree-6 minimax polynomial for 2^x on [0, 1]
         const C0: f32 = 1.0;
         const C1: f32 = 0.693_147_180_559_945;
@@ -7188,42 +7573,127 @@ impl f32x16 {
         }
     }
 
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    ///
+    /// Uses degree-6 minimax polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    ///
+    /// Handles edge cases correctly: exp2(x > 128) = +inf, exp2(x < -150) = 0,
+    /// exp2(NaN) = NaN.
+    #[inline(always)]
+    pub fn exp2_midp(self) -> Self {
+        unsafe {
+            let result = self.exp2_midp_unchecked();
+
+            // Edge case masks
+            let is_overflow = _mm512_cmp_ps::<_CMP_GE_OQ>(self.0, _mm512_set1_ps(128.0));
+            let is_underflow = _mm512_cmp_ps::<_CMP_LT_OQ>(self.0, _mm512_set1_ps(-150.0));
+            let is_nan = _mm512_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections
+            let pos_inf = _mm512_set1_ps(f32::INFINITY);
+            let zero = _mm512_setzero_ps();
+            let nan = _mm512_set1_ps(f32::NAN);
+
+            let r = _mm512_blendv_ps(result.0, pos_inf, is_overflow);
+            let r = _mm512_blendv_ps(r, zero, is_underflow);
+            let r = _mm512_blendv_ps(r, nan, is_nan);
+            Self(r)
+        }
+    }
+
+    /// Mid-precision power function (self^n) - unchecked variant.
+    ///
+    /// Computed as `exp2_midp_unchecked(n * log2_midp_unchecked(self))`.
+    ///
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `pow_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn pow_midp_unchecked(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_midp_unchecked().0, _mm512_set1_ps(n))).exp2_midp_unchecked()
+        }
+    }
+
     /// Mid-precision power function (self^n).
     ///
     /// Computed as `exp2_midp(n * log2_midp(self))`.
     /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
+    ///
+    /// Handles edge cases: pow(0, n) = 0 (n>0), pow(inf, n) = inf (n>0).
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
-        unsafe { Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(n))).exp2_midp() }
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(n))).exp2_midp()
+        }
+    }
+
+    /// Mid-precision natural logarithm - unchecked variant.
+    ///
+    /// Computed as `log2_midp_unchecked(x) * ln(2)`.
+    ///
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `ln_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn ln_midp_unchecked(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_midp_unchecked().0, _mm512_set1_ps(LN2)))
+        }
     }
 
     /// Mid-precision natural logarithm.
     ///
     /// Computed as `log2_midp(x) * ln(2)`.
+    ///
+    /// Handles edge cases: ln(0) = -inf, ln(negative) = NaN, ln(inf) = inf.
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe { Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(LN2))) }
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(LN2)))
+        }
+    }
+
+    /// Mid-precision natural exponential (e^x) - unchecked variant.
+    ///
+    /// Computed as `exp2_midp_unchecked(x * log2(e))`.
+    ///
+    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow.
+    /// Use `exp_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn exp_midp_unchecked(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp_unchecked()
+        }
     }
 
     /// Mid-precision natural exponential (e^x).
     ///
     /// Computed as `exp2_midp(x * log2(e))`.
+    ///
+    /// Handles edge cases: exp(x>88) = inf, exp(x<-103) = 0, exp(NaN) = NaN.
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe { Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp() }
+        unsafe {
+            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp()
+        }
     }
 
     // ========== Cube Root ==========
 
-    /// Mid-precision cube root (x^(1/3)).
+    /// Mid-precision cube root (x^(1/3)) - unchecked variant.
     ///
-    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson.
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
     /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// **Warning**: Does not handle edge cases (0, inf, NaN, denormals).
+    /// Use `cbrt_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
-    pub fn cbrt_midp(self) -> Self {
+    pub fn cbrt_midp_unchecked(self) -> Self {
         // B1 magic constant for cube root initial approximation
         // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130
         const B1: u32 = 709_958_130;
@@ -7267,16 +7737,69 @@ impl f32x16 {
             Self(_mm512_or_ps(y, sign_bits))
         }
     }
+
+    /// Mid-precision cube root (x^(1/3)).
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Handles edge cases: cbrt(0) = 0, cbrt(±inf) = ±inf, cbrt(NaN) = NaN.
+    /// Does not handle denormals (use `cbrt_midp_precise()` for full IEEE compliance).
+    #[inline(always)]
+    pub fn cbrt_midp(self) -> Self {
+        unsafe {
+            let result = self.cbrt_midp_unchecked();
+
+            // Edge case masks
+            let zero = _mm512_setzero_ps();
+            let is_zero = _mm512_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
+            let abs_x = _mm512_andnot_ps(_mm512_set1_ps(-0.0), self.0);
+            let is_inf = _mm512_cmp_ps::<_CMP_EQ_OQ>(abs_x, _mm512_set1_ps(f32::INFINITY));
+            let is_nan = _mm512_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+
+            // Apply corrections (use self.0 for zero to preserve sign)
+            let r = _mm512_blendv_ps(result.0, self.0, is_zero);  // ±0 -> ±0
+            let r = _mm512_blendv_ps(r, self.0, is_inf);  // ±inf -> ±inf
+            let r = _mm512_blendv_ps(r, _mm512_set1_ps(f32::NAN), is_nan);
+            Self(r)
+        }
+    }
+
+    /// Precise cube root (x^(1/3)) with full IEEE compliance.
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`.
+    /// Use `cbrt_midp()` if denormal support is not needed (most image processing).
+    #[inline(always)]
+    pub fn cbrt_midp_precise(self) -> Self {
+        unsafe {
+            // Scale factor for denormals: 2^24
+            const SCALE_UP: f32 = 16777216.0;  // 2^24
+            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
+            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+
+            let abs_x = _mm512_andnot_ps(_mm512_set1_ps(-0.0), self.0);
+            let is_denorm = _mm512_cmp_ps::<_CMP_LT_OQ>(abs_x, _mm512_set1_ps(DENORM_LIMIT));
+
+            // Scale up denormals
+            let scaled_x = _mm512_mul_ps(self.0, _mm512_set1_ps(SCALE_UP));
+            let x_for_cbrt = _mm512_blendv_ps(self.0, scaled_x, is_denorm);
+
+            // Compute cbrt with edge case handling
+            let result = Self(x_for_cbrt).cbrt_midp();
+
+            // Scale down results from denormal inputs
+            let scaled_result = _mm512_mul_ps(result.0, _mm512_set1_ps(SCALE_DOWN));
+            Self(_mm512_blendv_ps(result.0, scaled_result, is_denorm))
+        }
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_arithmetic_ops!(
-    f32x16,
-    _mm512_add_ps,
-    _mm512_sub_ps,
-    _mm512_mul_ps,
-    _mm512_div_ps
-);
+impl_arithmetic_ops!(f32x16, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_float_assign_ops!(f32x16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -7285,6 +7808,7 @@ impl_neg!(f32x16, _mm512_sub_ps, _mm512_setzero_ps);
 impl_bitwise_ops!(f32x16, __m512, _mm512_and_ps, _mm512_or_ps, _mm512_xor_ps);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(f32x16, f32, 16);
+
 
 // Scalar broadcast operations for f32x16
 // These allow `v + 2.0` instead of `v + f32x16::splat(token, 2.0)`
@@ -7330,6 +7854,7 @@ impl Div<f32> for f32x16 {
         self / Self(unsafe { _mm512_set1_ps(rhs) })
     }
 }
+
 
 // ============================================================================
 // f64x8 - 8 x f64 (512-bit)
@@ -7633,7 +8158,7 @@ impl f64x8 {
         Self(unsafe {
             let ones = _mm512_set1_epi64(-1);
             let as_int = _mm512_castpd_si512(self.0);
-            _mm512_castsi512_pd(_mm512_xor_si512(as_int, ones))
+            _mm512_castsi512_pd (_mm512_xor_si512(as_int, ones))
         })
     }
 
@@ -7664,15 +8189,7 @@ impl f64x8 {
             // Convert exponent to f64
             let exp_arr: [i64; 8] = core::mem::transmute(exp_shifted);
             let exp_f64: [f64; 8] = [
-                exp_arr[0] as f64,
-                exp_arr[1] as f64,
-                exp_arr[2] as f64,
-                exp_arr[3] as f64,
-                exp_arr[4] as f64,
-                exp_arr[5] as f64,
-                exp_arr[6] as f64,
-                exp_arr[7] as f64,
-            ];
+exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64, exp_arr[4] as f64, exp_arr[5] as f64, exp_arr[6] as f64, exp_arr[7] as f64];
             let exp_val = _mm512_loadu_pd(exp_f64.as_ptr());
 
             let one = _mm512_set1_pd(1.0);
@@ -7718,15 +8235,7 @@ impl f64x8 {
             // Scale by 2^integer - extract, convert, scale
             let xi_arr: [f64; 8] = core::mem::transmute(xi);
             let scale_arr: [f64; 8] = [
-                f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[4] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[5] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[6] as i64 + 1023) << 52) as u64),
-                f64::from_bits(((xi_arr[7] as i64 + 1023) << 52) as u64),
-            ];
+f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[4] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[5] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[6] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[7] as i64 + 1023) << 52) as u64)];
             let scale = _mm512_loadu_pd(scale_arr.as_ptr());
 
             Self(_mm512_mul_pd(poly, scale))
@@ -7737,38 +8246,41 @@ impl f64x8 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
-        unsafe { Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LN2))) }
+        unsafe {
+            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LN2)))
+        }
     }
 
     /// Low-precision natural exponential (e^x).
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
-        unsafe { Self(_mm512_mul_pd(self.0, _mm512_set1_pd(LOG2_E))).exp2_lowp() }
+        unsafe {
+            Self(_mm512_mul_pd(self.0, _mm512_set1_pd(LOG2_E))).exp2_lowp()
+        }
     }
 
     /// Low-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
-        unsafe { Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LOG10_2))) }
+        unsafe {
+            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LOG10_2)))
+        }
     }
 
     /// Low-precision power function (self^n).
     #[inline(always)]
     pub fn pow_lowp(self, n: f64) -> Self {
-        unsafe { Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(n))).exp2_lowp() }
+        unsafe {
+            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(n))).exp2_lowp()
+        }
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_arithmetic_ops!(
-    f64x8,
-    _mm512_add_pd,
-    _mm512_sub_pd,
-    _mm512_mul_pd,
-    _mm512_div_pd
-);
+impl_arithmetic_ops!(f64x8, _mm512_add_pd, _mm512_sub_pd, _mm512_mul_pd, _mm512_div_pd);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_float_assign_ops!(f64x8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -7777,6 +8289,7 @@ impl_neg!(f64x8, _mm512_sub_pd, _mm512_setzero_pd);
 impl_bitwise_ops!(f64x8, __m512d, _mm512_and_pd, _mm512_or_pd, _mm512_xor_pd);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(f64x8, f64, 8);
+
 
 // Scalar broadcast operations for f64x8
 // These allow `v + 2.0` instead of `v + f64x8::splat(token, 2.0)`
@@ -7822,6 +8335,7 @@ impl Div<f64> for f64x8 {
         self / Self(unsafe { _mm512_set1_pd(rhs) })
     }
 }
+
 
 // ============================================================================
 // i8x64 - 64 x i8 (512-bit)
@@ -8047,6 +8561,7 @@ impl i8x64 {
             _mm512_xor_si512(self.0, ones)
         })
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -8054,15 +8569,10 @@ impl_int_arithmetic_ops!(i8x64, _mm512_add_epi8, _mm512_sub_epi8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_assign_ops!(i8x64);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_bitwise_ops!(
-    i8x64,
-    __m512i,
-    _mm512_and_si512,
-    _mm512_or_si512,
-    _mm512_xor_si512
-);
+impl_bitwise_ops!(i8x64, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(i8x64, i8, 64);
+
 
 // Scalar broadcast operations for i8x64
 // These allow `v + 2.0` instead of `v + i8x64::splat(token, 2.0)`
@@ -8086,6 +8596,7 @@ impl Sub<i8> for i8x64 {
         self - Self(unsafe { _mm512_set1_epi8(rhs) })
     }
 }
+
 
 // ============================================================================
 // u8x64 - 64 x u8 (512-bit)
@@ -8305,6 +8816,7 @@ impl u8x64 {
             _mm512_xor_si512(self.0, ones)
         })
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -8312,15 +8824,10 @@ impl_int_arithmetic_ops!(u8x64, _mm512_add_epi8, _mm512_sub_epi8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_assign_ops!(u8x64);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_bitwise_ops!(
-    u8x64,
-    __m512i,
-    _mm512_and_si512,
-    _mm512_or_si512,
-    _mm512_xor_si512
-);
+impl_bitwise_ops!(u8x64, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(u8x64, u8, 64);
+
 
 // Scalar broadcast operations for u8x64
 // These allow `v + 2.0` instead of `v + u8x64::splat(token, 2.0)`
@@ -8344,6 +8851,7 @@ impl Sub<u8> for u8x64 {
         self - Self(unsafe { _mm512_set1_epi8(rhs as i8) })
     }
 }
+
 
 // ============================================================================
 // i16x32 - 32 x i16 (512-bit)
@@ -8556,10 +9064,7 @@ impl i16x32 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i16, i16::wrapping_add)
+        self.to_array().iter().copied().fold(0_i16, i16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -8598,6 +9103,7 @@ impl i16x32 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi16::<N>(self.0) })
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -8607,15 +9113,10 @@ impl_int_mul_op!(i16x32, _mm512_mullo_epi16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_assign_ops!(i16x32);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_bitwise_ops!(
-    i16x32,
-    __m512i,
-    _mm512_and_si512,
-    _mm512_or_si512,
-    _mm512_xor_si512
-);
+impl_bitwise_ops!(i16x32, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(i16x32, i16, 32);
+
 
 // Scalar broadcast operations for i16x32
 // These allow `v + 2.0` instead of `v + i16x32::splat(token, 2.0)`
@@ -8639,6 +9140,7 @@ impl Sub<i16> for i16x32 {
         self - Self(unsafe { _mm512_set1_epi16(rhs) })
     }
 }
+
 
 // ============================================================================
 // u16x32 - 32 x u16 (512-bit)
@@ -8845,10 +9347,7 @@ impl u16x32 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u16 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u16, u16::wrapping_add)
+        self.to_array().iter().copied().fold(0_u16, u16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -8879,6 +9378,7 @@ impl u16x32 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi16::<N>(self.0) })
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -8888,15 +9388,10 @@ impl_int_mul_op!(u16x32, _mm512_mullo_epi16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_assign_ops!(u16x32);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_bitwise_ops!(
-    u16x32,
-    __m512i,
-    _mm512_and_si512,
-    _mm512_or_si512,
-    _mm512_xor_si512
-);
+impl_bitwise_ops!(u16x32, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(u16x32, u16, 32);
+
 
 // Scalar broadcast operations for u16x32
 // These allow `v + 2.0` instead of `v + u16x32::splat(token, 2.0)`
@@ -8920,6 +9415,7 @@ impl Sub<u16> for u16x32 {
         self - Self(unsafe { _mm512_set1_epi16(rhs as i16) })
     }
 }
+
 
 // ============================================================================
 // i32x16 - 16 x i32 (512-bit)
@@ -9132,10 +9628,7 @@ impl i32x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i32, i32::wrapping_add)
+        self.to_array().iter().copied().fold(0_i32, i32::wrapping_add)
     }
 
     // ========== Type Conversions ==========
@@ -9182,6 +9675,7 @@ impl i32x16 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi32::<N>(self.0) })
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -9191,15 +9685,10 @@ impl_int_mul_op!(i32x16, _mm512_mullo_epi32);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_assign_ops!(i32x16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_bitwise_ops!(
-    i32x16,
-    __m512i,
-    _mm512_and_si512,
-    _mm512_or_si512,
-    _mm512_xor_si512
-);
+impl_bitwise_ops!(i32x16, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(i32x16, i32, 16);
+
 
 // Scalar broadcast operations for i32x16
 // These allow `v + 2.0` instead of `v + i32x16::splat(token, 2.0)`
@@ -9223,6 +9712,7 @@ impl Sub<i32> for i32x16 {
         self - Self(unsafe { _mm512_set1_epi32(rhs) })
     }
 }
+
 
 // ============================================================================
 // u32x16 - 16 x u32 (512-bit)
@@ -9429,10 +9919,7 @@ impl u32x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u32, u32::wrapping_add)
+        self.to_array().iter().copied().fold(0_u32, u32::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -9463,6 +9950,7 @@ impl u32x16 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi32::<N>(self.0) })
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -9472,15 +9960,10 @@ impl_int_mul_op!(u32x16, _mm512_mullo_epi32);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_assign_ops!(u32x16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_bitwise_ops!(
-    u32x16,
-    __m512i,
-    _mm512_and_si512,
-    _mm512_or_si512,
-    _mm512_xor_si512
-);
+impl_bitwise_ops!(u32x16, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(u32x16, u32, 16);
+
 
 // Scalar broadcast operations for u32x16
 // These allow `v + 2.0` instead of `v + u32x16::splat(token, 2.0)`
@@ -9504,6 +9987,7 @@ impl Sub<u32> for u32x16 {
         self - Self(unsafe { _mm512_set1_epi32(rhs as i32) })
     }
 }
+
 
 // ============================================================================
 // i64x8 - 8 x i64 (512-bit)
@@ -9716,10 +10200,7 @@ impl i64x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_i64, i64::wrapping_add)
+        self.to_array().iter().copied().fold(0_i64, i64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -9758,6 +10239,7 @@ impl i64x8 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi64::<N>(self.0) })
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -9765,15 +10247,10 @@ impl_int_arithmetic_ops!(i64x8, _mm512_add_epi64, _mm512_sub_epi64);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_assign_ops!(i64x8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_bitwise_ops!(
-    i64x8,
-    __m512i,
-    _mm512_and_si512,
-    _mm512_or_si512,
-    _mm512_xor_si512
-);
+impl_bitwise_ops!(i64x8, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(i64x8, i64, 8);
+
 
 // Scalar broadcast operations for i64x8
 // These allow `v + 2.0` instead of `v + i64x8::splat(token, 2.0)`
@@ -9797,6 +10274,7 @@ impl Sub<i64> for i64x8 {
         self - Self(unsafe { _mm512_set1_epi64(rhs) })
     }
 }
+
 
 // ============================================================================
 // u64x8 - 8 x u64 (512-bit)
@@ -10003,10 +10481,7 @@ impl u64x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u64 {
-        self.to_array()
-            .iter()
-            .copied()
-            .fold(0_u64, u64::wrapping_add)
+        self.to_array().iter().copied().fold(0_u64, u64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -10037,6 +10512,7 @@ impl u64x8 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi64::<N>(self.0) })
     }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -10044,15 +10520,10 @@ impl_int_arithmetic_ops!(u64x8, _mm512_add_epi64, _mm512_sub_epi64);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_assign_ops!(u64x8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl_bitwise_ops!(
-    u64x8,
-    __m512i,
-    _mm512_and_si512,
-    _mm512_or_si512,
-    _mm512_xor_si512
-);
+impl_bitwise_ops!(u64x8, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl_index!(u64x8, u64, 8);
+
 
 // Scalar broadcast operations for u64x8
 // These allow `v + 2.0` instead of `v + u64x8::splat(token, 2.0)`
@@ -10076,3 +10547,4 @@ impl Sub<u64> for u64x8 {
         self - Self(unsafe { _mm512_set1_epi64(rhs as i64) })
     }
 }
+

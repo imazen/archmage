@@ -3175,10 +3175,10 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         )
         .unwrap();
 
-        // ===== F32 log2_midp =====
+        // ===== F32 log2_midp_unchecked =====
         writeln!(
             code,
-            "    /// Mid-precision base-2 logarithm (~3 ULP max error)."
+            "    /// Mid-precision base-2 logarithm (~3 ULP max error) - unchecked variant."
         )
         .unwrap();
         writeln!(code, "    ///").unwrap();
@@ -3189,11 +3189,16 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         .unwrap();
         writeln!(
             code,
-            "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing."
+            "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN)."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Use `log2_midp()` for correct IEEE behavior on edge cases."
         )
         .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log2_midp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn log2_midp_unchecked(self) -> Self {{").unwrap();
         writeln!(code, "        // Constants for range reduction").unwrap();
         writeln!(
             code,
@@ -3363,21 +3368,140 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 exp2_midp =====
+        // ===== F32 log2_midp (checked, default) =====
         writeln!(
             code,
-            "    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error)."
+            "    /// Mid-precision base-2 logarithm (~3 ULP max error)."
         )
         .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses degree-6 minimax polynomial.").unwrap();
+        writeln!(
+            code,
+            "    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial."
+        )
+        .unwrap();
         writeln!(
             code,
             "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing."
         )
         .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Handles edge cases correctly: log2(0) = -inf, log2(negative) = NaN,"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// log2(+inf) = +inf, log2(NaN) = NaN."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp2_midp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn log2_midp(self) -> Self {{").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            let result = self.log2_midp_unchecked();").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Edge case masks").unwrap();
+        writeln!(
+            code,
+            "            let zero = {}_setzero_{}();",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_zero = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, zero);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_neg = {}_cmp_{}::<_CMP_LT_OQ>(self.0, zero);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_inf = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, {}_set1_{}(f32::INFINITY));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Apply corrections").unwrap();
+        writeln!(
+            code,
+            "            let neg_inf = {}_set1_{}(f32::NEG_INFINITY);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let pos_inf = {}_set1_{}(f32::INFINITY);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let nan = {}_set1_{}(f32::NAN);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(result.0, neg_inf, is_zero);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(r, nan, is_neg);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(r, pos_inf, is_inf);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(r, nan, is_nan);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "            Self(r)").unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 exp2_midp_unchecked =====
+        writeln!(
+            code,
+            "    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error) - unchecked variant."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses degree-6 minimax polynomial.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Use `exp2_midp()` for correct IEEE behavior on edge cases."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp2_midp_unchecked(self) -> Self {{").unwrap();
         writeln!(
             code,
             "        // Degree-6 minimax polynomial for 2^x on [0, 1]"
@@ -3494,6 +3618,128 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
+        // ===== F32 exp2_midp (checked, default) =====
+        writeln!(
+            code,
+            "    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error)."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses degree-6 minimax polynomial.").unwrap();
+        writeln!(
+            code,
+            "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Handles edge cases correctly: exp2(x > 128) = +inf, exp2(x < -150) = 0,"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// exp2(NaN) = NaN."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp2_midp(self) -> Self {{").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            let result = self.exp2_midp_unchecked();").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Edge case masks").unwrap();
+        writeln!(
+            code,
+            "            let is_overflow = {}_cmp_{}::<_CMP_GE_OQ>(self.0, {}_set1_{}(128.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_underflow = {}_cmp_{}::<_CMP_LT_OQ>(self.0, {}_set1_{}(-150.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Apply corrections").unwrap();
+        writeln!(
+            code,
+            "            let pos_inf = {}_set1_{}(f32::INFINITY);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let zero = {}_setzero_{}();",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let nan = {}_set1_{}(f32::NAN);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(result.0, pos_inf, is_overflow);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(r, zero, is_underflow);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(r, nan, is_nan);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "            Self(r)").unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 pow_midp_unchecked =====
+        writeln!(code, "    /// Mid-precision power function (self^n) - unchecked variant.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Computed as `exp2_midp_unchecked(n * log2_midp_unchecked(self))`."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN)."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Use `pow_midp()` for correct IEEE behavior on edge cases."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn pow_midp_unchecked(self, n: f32) -> Self {{").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_midp_unchecked().0, {}_set1_{}(n))).exp2_midp_unchecked()",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
         // ===== F32 pow_midp =====
         writeln!(code, "    /// Mid-precision power function (self^n).").unwrap();
         writeln!(code, "    ///").unwrap();
@@ -3507,6 +3753,8 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
             "    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values."
         )
         .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Handles edge cases: pow(0, n) = 0 (n>0), pow(inf, n) = inf (n>0).").unwrap();
         writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn pow_midp(self, n: f32) -> Self {{").unwrap();
@@ -3520,10 +3768,40 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
+        // ===== F32 ln_midp_unchecked =====
+        writeln!(code, "    /// Mid-precision natural logarithm - unchecked variant.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `log2_midp_unchecked(x) * ln(2)`.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN)."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Use `ln_midp()` for correct IEEE behavior on edge cases."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn ln_midp_unchecked(self) -> Self {{").unwrap();
+        writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_midp_unchecked().0, {}_set1_{}(LN2)))",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
         // ===== F32 ln_midp =====
         writeln!(code, "    /// Mid-precision natural logarithm.").unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Computed as `log2_midp(x) * ln(2)`.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Handles edge cases: ln(0) = -inf, ln(negative) = NaN, ln(inf) = inf.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn ln_midp(self) -> Self {{").unwrap();
         writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
@@ -3537,10 +3815,44 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
+        // ===== F32 exp_midp_unchecked =====
+        writeln!(code, "    /// Mid-precision natural exponential (e^x) - unchecked variant.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `exp2_midp_unchecked(x * log2(e))`.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Use `exp_midp()` for correct IEEE behavior on edge cases."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp_midp_unchecked(self) -> Self {{").unwrap();
+        writeln!(
+            code,
+            "        const LOG2_E: f32 = core::f32::consts::LOG2_E;"
+        )
+        .unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_midp_unchecked()",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
         // ===== F32 exp_midp =====
         writeln!(code, "    /// Mid-precision natural exponential (e^x).").unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Computed as `exp2_midp(x * log2(e))`.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Handles edge cases: exp(x>88) = inf, exp(x<-103) = 0, exp(NaN) = NaN.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn exp_midp(self) -> Self {{").unwrap();
         writeln!(
@@ -3561,12 +3873,12 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         // ========== Cube Root ==========
         writeln!(code, "    // ========== Cube Root ==========\n").unwrap();
 
-        // ===== F32 cbrt_midp =====
-        writeln!(code, "    /// Mid-precision cube root (x^(1/3)).").unwrap();
+        // ===== F32 cbrt_midp_unchecked =====
+        writeln!(code, "    /// Mid-precision cube root (x^(1/3)) - unchecked variant.").unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(
             code,
-            "    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson."
+            "    /// Uses scalar extraction for initial guess + Newton-Raphson."
         )
         .unwrap();
         writeln!(
@@ -3574,8 +3886,19 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
             "    /// Handles negative values correctly (returns -cbrt(|x|))."
         )
         .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// **Warning**: Does not handle edge cases (0, inf, NaN, denormals)."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Use `cbrt_midp()` for correct IEEE behavior on edge cases."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn cbrt_midp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn cbrt_midp_unchecked(self) -> Self {{").unwrap();
         writeln!(
             code,
             "        // B1 magic constant for cube root initial approximation"
@@ -3712,6 +4035,168 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(
             code,
             "            Self({}_or_{}(y, sign_bits))",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 cbrt_midp (checked, default) =====
+        writeln!(code, "    /// Mid-precision cube root (x^(1/3)).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Uses scalar extraction for initial guess + Newton-Raphson."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Handles negative values correctly (returns -cbrt(|x|))."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Handles edge cases: cbrt(0) = 0, cbrt(±inf) = ±inf, cbrt(NaN) = NaN."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Does not handle denormals (use `cbrt_midp_precise()` for full IEEE compliance)."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn cbrt_midp(self) -> Self {{").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            let result = self.cbrt_midp_unchecked();").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Edge case masks").unwrap();
+        writeln!(
+            code,
+            "            let zero = {}_setzero_{}();",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_zero = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, zero);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_inf = {}_cmp_{}::<_CMP_EQ_OQ>(abs_x, {}_set1_{}(f32::INFINITY));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Apply corrections (use self.0 for zero to preserve sign)").unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(result.0, self.0, is_zero);  // ±0 -> ±0",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(r, self.0, is_inf);  // ±inf -> ±inf",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let r = {}_blendv_{}(r, {}_set1_{}(f32::NAN), is_nan);",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "            Self(r)").unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 cbrt_midp_precise =====
+        writeln!(code, "    /// Precise cube root (x^(1/3)) with full IEEE compliance.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Uses scalar extraction for initial guess + Newton-Raphson."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Handles negative values correctly (returns -cbrt(|x|))."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Use `cbrt_midp()` if denormal support is not needed (most image processing)."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn cbrt_midp_precise(self) -> Self {{").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            // Scale factor for denormals: 2^24").unwrap();
+        writeln!(code, "            const SCALE_UP: f32 = 16777216.0;  // 2^24").unwrap();
+        writeln!(code, "            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))").unwrap();
+        writeln!(code, "            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(
+            code,
+            "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let is_denorm = {}_cmp_{}::<_CMP_LT_OQ>(abs_x, {}_set1_{}(DENORM_LIMIT));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Scale up denormals").unwrap();
+        writeln!(
+            code,
+            "            let scaled_x = {}_mul_{}(self.0, {}_set1_{}(SCALE_UP));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let x_for_cbrt = {}_blendv_{}(self.0, scaled_x, is_denorm);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Compute cbrt with edge case handling").unwrap();
+        writeln!(code, "            let result = Self(x_for_cbrt).cbrt_midp();").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Scale down results from denormal inputs").unwrap();
+        writeln!(
+            code,
+            "            let scaled_result = {}_mul_{}(result.0, {}_set1_{}(SCALE_DOWN));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            Self({}_blendv_{}(result.0, scaled_result, is_denorm))",
             prefix, suffix
         )
         .unwrap();
