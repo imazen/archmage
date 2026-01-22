@@ -6,6 +6,7 @@
 //! - Math methods (min, max, abs, sqrt, fma, etc.)
 //! - Integration with archmage::mem for load/store
 
+use indoc::formatdoc;
 use std::fmt::Write;
 
 /// Element type for SIMD vectors
@@ -246,6 +247,45 @@ pub struct IntrinsicOp {
 // ============================================================================
 // Code Generation
 // ============================================================================
+
+/// Indent each line of a string by a given number of spaces.
+fn indent(s: &str, spaces: usize) -> String {
+    let prefix = " ".repeat(spaces);
+    s.lines()
+        .map(|line| {
+            if line.is_empty() {
+                String::new()
+            } else {
+                format!("{prefix}{line}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Indent continuation lines (all except the first) by a given number of spaces.
+/// Useful for multi-line strings embedded via `{variable}` in formatdoc!.
+fn indent_continuation(s: &str, spaces: usize) -> String {
+    let prefix = " ".repeat(spaces);
+    let mut lines = s.lines();
+    let mut result = String::new();
+
+    // First line: no extra indent
+    if let Some(first) = lines.next() {
+        result.push_str(first);
+    }
+
+    // Continuation lines: add indent
+    for line in lines {
+        result.push('\n');
+        if !line.is_empty() {
+            result.push_str(&prefix);
+        }
+        result.push_str(line);
+    }
+
+    result
+}
 
 /// Generate all SIMD types
 pub fn generate_simd_types() -> String {
@@ -1523,104 +1563,66 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
 }
 
 fn generate_blend_ops(ty: &SimdType) -> String {
-    let mut code = String::new();
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
+    let name = ty.name();
 
-    writeln!(code, "    // ========== Blending/Selection ==========\n").unwrap();
-
-    writeln!(
-        code,
-        "    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// The mask should come from a comparison operation like `simd_lt()`."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// # Example").unwrap();
-    writeln!(code, "    /// ```ignore").unwrap();
-    writeln!(code, "    /// let a = {}::splat(token, 1.0);", ty.name()).unwrap();
-    writeln!(code, "    /// let b = {}::splat(token, 2.0);", ty.name()).unwrap();
-    writeln!(code, "    /// let mask = a.simd_lt(b);  // all true").unwrap();
-    writeln!(
-        code,
-        "    /// let result = {}::blend(mask, a, b);  // selects a",
-        ty.name()
-    )
-    .unwrap();
-    writeln!(code, "    /// ```").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{"
-    )
-    .unwrap();
-
-    if ty.width == SimdWidth::W512 {
-        // AVX-512 uses mask registers for blend
-        // Convert vector mask to mask register by comparing against zero
-        if ty.elem.is_float() {
+    // Build the blend body based on width and element type
+    let blend_body = if ty.width == SimdWidth::W512 {
+        // AVX-512 uses mask registers for blend - multi-line body needs extra indent
+        let inner = if ty.elem.is_float() {
             let (int_suffix, cast_fn) = if ty.elem == ElementType::F32 {
                 ("epi32", "_mm512_castps_si512")
             } else {
                 ("epi64", "_mm512_castpd_si512")
             };
-            writeln!(code, "        Self(unsafe {{").unwrap();
-            writeln!(code, "            // Convert vector mask to mask register").unwrap();
-            writeln!(
-                code,
-                "            let m = _mm512_cmpneq_{}_mask({}(mask.0), _mm512_setzero_si512());",
-                int_suffix, cast_fn
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            {}_mask_blend_{}(m, if_false.0, if_true.0)",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "        }})").unwrap();
+            formatdoc! {"
+                Self(unsafe {{
+                    // Convert vector mask to mask register
+                    let m = _mm512_cmpneq_{int_suffix}_mask({cast_fn}(mask.0), _mm512_setzero_si512());
+                    {prefix}_mask_blend_{suffix}(m, if_false.0, if_true.0)
+                }})"
+            }
         } else {
             // Integer types
-            writeln!(code, "        Self(unsafe {{").unwrap();
-            writeln!(code, "            // Convert vector mask to mask register").unwrap();
-            writeln!(
-                code,
-                "            let m = _mm512_cmpneq_{}_mask(mask.0, _mm512_setzero_si512());",
-                suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            {}_mask_blend_{}(m, if_false.0, if_true.0)",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "        }})").unwrap();
-        }
+            formatdoc! {"
+                Self(unsafe {{
+                    // Convert vector mask to mask register
+                    let m = _mm512_cmpneq_{suffix}_mask(mask.0, _mm512_setzero_si512());
+                    {prefix}_mask_blend_{suffix}(m, if_false.0, if_true.0)
+                }})"
+            }
+        };
+        // Indent continuation lines (skip the first line as it's already at the right position)
+        indent_continuation(&inner, 4)
     } else if ty.elem.is_float() {
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_blendv_{}(if_false.0, if_true.0, mask.0) }})",
-            prefix, suffix
-        )
-        .unwrap();
+        format!("Self(unsafe {{ {prefix}_blendv_{suffix}(if_false.0, if_true.0, mask.0) }})")
     } else {
         // Integer blend uses blendv_epi8 which operates on bytes
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_blendv_epi8(if_false.0, if_true.0, mask.0) }})",
-            prefix
-        )
-        .unwrap();
-    }
-    writeln!(code, "    }}\n").unwrap();
+        format!("Self(unsafe {{ {prefix}_blendv_epi8(if_false.0, if_true.0, mask.0) }})")
+    };
 
-    code
+    let code = formatdoc! {"
+        // ========== Blending/Selection ==========
+
+        /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+        ///
+        /// The mask should come from a comparison operation like `simd_lt()`.
+        ///
+        /// # Example
+        /// ```ignore
+        /// let a = {name}::splat(token, 1.0);
+        /// let b = {name}::splat(token, 2.0);
+        /// let mask = a.simd_lt(b);  // all true
+        /// let result = {name}::blend(mask, a, b);  // selects a
+        /// ```
+        #[inline(always)]
+        pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{
+            {blend_body}
+        }}
+    "};
+
+    indent(&code, 4) + "\n"
 }
 
 fn generate_horizontal_ops(ty: &SimdType) -> String {

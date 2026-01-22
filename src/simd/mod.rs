@@ -454,7 +454,6 @@ impl f32x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_ps(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -1318,7 +1317,6 @@ impl f64x2 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_pd(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -1734,7 +1732,6 @@ impl i8x16 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -1979,7 +1976,6 @@ impl u8x16 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -2224,7 +2220,6 @@ impl i16x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -2497,7 +2492,6 @@ impl u16x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -2762,7 +2756,6 @@ impl i32x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -3043,7 +3036,6 @@ impl u32x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -3284,7 +3276,6 @@ impl i64x2 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -3529,7 +3520,6 @@ impl u64x2 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -3819,7 +3809,6 @@ impl f32x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_ps(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -4692,7 +4681,6 @@ impl f64x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_pd(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -5107,7 +5095,6 @@ impl i8x32 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -5352,7 +5339,6 @@ impl u8x32 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -5597,7 +5583,6 @@ impl i16x16 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -5870,7 +5855,6 @@ impl u16x16 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -6135,7 +6119,6 @@ impl i32x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -6416,7 +6399,6 @@ impl u32x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -6657,7 +6639,6 @@ impl i64x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -6902,7 +6883,6 @@ impl u64x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -7220,7 +7200,6 @@ impl f32x16 {
             _mm512_mask_blend_ps(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -8096,7 +8075,6 @@ impl f64x8 {
             _mm512_mask_blend_pd(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -8538,7 +8516,6 @@ impl i8x64 {
             _mm512_mask_blend_epi8(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -8793,7 +8770,6 @@ impl u8x64 {
             _mm512_mask_blend_epi8(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -9054,7 +9030,6 @@ impl i16x32 {
             _mm512_mask_blend_epi16(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -9337,7 +9312,6 @@ impl u16x32 {
             _mm512_mask_blend_epi16(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -9618,7 +9592,6 @@ impl i32x16 {
             _mm512_mask_blend_epi32(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -9909,7 +9882,6 @@ impl u32x16 {
             _mm512_mask_blend_epi32(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -10190,7 +10162,6 @@ impl i64x8 {
             _mm512_mask_blend_epi64(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -10471,7 +10442,6 @@ impl u64x8 {
             _mm512_mask_blend_epi64(m, if_false.0, if_true.0)
         })
     }
-
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
