@@ -848,6 +848,9 @@ fn generate_type(ty: &SimdType) -> String {
     // Shift operations (shl, shr, shr_arithmetic)
     code.push_str(&generate_shift_ops(ty));
 
+    // Transcendental operations (log2, exp2, ln, exp)
+    code.push_str(&generate_transcendental_ops(ty));
+
     writeln!(code, "}}\n").unwrap();
 
     // Operator implementations
@@ -2058,6 +2061,326 @@ fn generate_shift_ops(ty: &SimdType) -> String {
             writeln!(code, "        Self(unsafe {{ {}_srai_{}::<N>(self.0) }})", prefix, suffix).unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
+    }
+
+    code
+}
+
+fn generate_transcendental_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+
+    // Only for float types
+    if !ty.elem.is_float() {
+        return code;
+    }
+
+    let prefix = ty.width.x86_prefix();
+    let suffix = ty.elem.x86_suffix();
+    let bits = ty.width.bits();
+
+    // Determine integer suffix for cast operations
+    let int_suffix = if ty.elem == ElementType::F32 {
+        "si256"
+    } else {
+        "si256"
+    };
+    let int_suffix_512 = if ty.elem == ElementType::F32 {
+        "si512"
+    } else {
+        "si512"
+    };
+    let int_suffix_128 = if ty.elem == ElementType::F32 {
+        "si128"
+    } else {
+        "si128"
+    };
+
+    let actual_int_suffix = match ty.width {
+        SimdWidth::W128 => int_suffix_128,
+        SimdWidth::W256 => int_suffix,
+        SimdWidth::W512 => int_suffix_512,
+    };
+
+    writeln!(code, "    // ========== Transcendental Operations ==========\n").unwrap();
+
+    if ty.elem == ElementType::F32 {
+        // ===== F32 log2 =====
+        writeln!(code, "    /// Approximate base-2 logarithm.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses rational polynomial approximation with ~7.7e-5 max relative error.").unwrap();
+        writeln!(code, "    /// For natural log, use `ln()`. For log10, use `log10()`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn log2(self) -> Self {{").unwrap();
+        writeln!(code, "        // Rational polynomial coefficients from butteraugli/jpegli").unwrap();
+        writeln!(code, "        const P0: f32 = -1.850_383_34e-6;").unwrap();
+        writeln!(code, "        const P1: f32 = 1.428_716_05;").unwrap();
+        writeln!(code, "        const P2: f32 = 0.742_458_73;").unwrap();
+        writeln!(code, "        const Q0: f32 = 0.990_328_14;").unwrap();
+        writeln!(code, "        const Q1: f32 = 1.009_671_86;").unwrap();
+        writeln!(code, "        const Q2: f32 = 0.174_093_43;").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            let x_bits = {}_cast{}_{}(self.0);", prefix, suffix, actual_int_suffix).unwrap();
+        writeln!(code, "            let offset = {}_set1_epi32(0x3f2aaaab_u32 as i32);", prefix).unwrap();
+        writeln!(code, "            let exp_bits = {}_sub_epi32(x_bits, offset);", prefix).unwrap();
+        writeln!(code, "            let exp_shifted = {}_srai_epi32::<23>(exp_bits);", prefix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            let mantissa_bits = {}_sub_epi32(x_bits, {}_slli_epi32::<23>(exp_shifted));", prefix, prefix).unwrap();
+        writeln!(code, "            let mantissa = {}_cast{}_{}(mantissa_bits);", prefix, actual_int_suffix, suffix).unwrap();
+        writeln!(code, "            let exp_val = {}_cvtepi32_{}(exp_shifted);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            let one = {}_set1_{}(1.0);", prefix, suffix).unwrap();
+        writeln!(code, "            let m = {}_sub_{}(mantissa, one);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Horner's for numerator: P2*m^2 + P1*m + P0").unwrap();
+        writeln!(code, "            let yp = {}_fmadd_{}({}_set1_{}(P2), m, {}_set1_{}(P1));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let yp = {}_fmadd_{}(yp, m, {}_set1_{}(P0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Horner's for denominator: Q2*m^2 + Q1*m + Q0").unwrap();
+        writeln!(code, "            let yq = {}_fmadd_{}({}_set1_{}(Q2), m, {}_set1_{}(Q1));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let yq = {}_fmadd_{}(yq, m, {}_set1_{}(Q0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            Self({}_add_{}({}_div_{}(yp, yq), exp_val))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 exp2 =====
+        writeln!(code, "    /// Approximate base-2 exponential (2^x).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses polynomial approximation with ~5.5e-3 max relative error.").unwrap();
+        writeln!(code, "    /// For natural exp, use `exp()`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp2(self) -> Self {{").unwrap();
+        writeln!(code, "        // Polynomial coefficients").unwrap();
+        writeln!(code, "        const C0: f32 = 1.0;").unwrap();
+        writeln!(code, "        const C1: f32 = core::f32::consts::LN_2;").unwrap();
+        writeln!(code, "        const C2: f32 = 0.240_226_5;").unwrap();
+        writeln!(code, "        const C3: f32 = 0.055_504_11;").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            // Clamp to safe range").unwrap();
+        writeln!(code, "            let x = {}_max_{}(self.0, {}_set1_{}(-126.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let x = {}_min_{}(x, {}_set1_{}(126.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Split into integer and fractional parts").unwrap();
+
+        // Use appropriate floor/round intrinsic based on width
+        if ty.width == SimdWidth::W512 {
+            writeln!(code, "            let xi = {}_roundscale_{}::<0x01>(x); // floor", prefix, suffix).unwrap();
+        } else {
+            writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
+        }
+
+        writeln!(code, "            let xf = {}_sub_{}(x, xi);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Polynomial for 2^frac").unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}({}_set1_{}(C3), xf, {}_set1_{}(C2));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Scale by 2^integer using bit manipulation").unwrap();
+        writeln!(code, "            let xi_i32 = {}_cvt{}_epi32(xi);", prefix, suffix).unwrap();
+        writeln!(code, "            let bias = {}_set1_epi32(127);", prefix).unwrap();
+        writeln!(code, "            let scale_bits = {}_slli_epi32::<23>({}_add_epi32(xi_i32, bias));", prefix, prefix).unwrap();
+        writeln!(code, "            let scale = {}_cast{}_{}(scale_bits);", prefix, actual_int_suffix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            Self({}_mul_{}(poly, scale))", prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 ln (natural log) =====
+        writeln!(code, "    /// Approximate natural logarithm.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `log2(x) * ln(2)`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn ln(self) -> Self {{").unwrap();
+        writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 exp (natural exp) =====
+        writeln!(code, "    /// Approximate natural exponential (e^x).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `exp2(x * log2(e))`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp(self) -> Self {{").unwrap();
+        writeln!(code, "        const LOG2_E: f32 = core::f32::consts::LOG2_E;").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 log10 =====
+        writeln!(code, "    /// Approximate base-10 logarithm.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `log2(x) / log2(10)`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn log10(self) -> Self {{").unwrap();
+        writeln!(code, "        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(LOG10_2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 pow =====
+        writeln!(code, "    /// Approximate power function (self^n).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `exp2(n * log2(self))`.").unwrap();
+        writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn pow(self, n: f32) -> Self {{").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(n))).exp2()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+    } else if ty.elem == ElementType::F64 {
+        // ===== F64 log2 =====
+        // For f64, we use a similar algorithm but with f64 constants
+        writeln!(code, "    /// Approximate base-2 logarithm.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses polynomial approximation. For natural log, use `ln()`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn log2(self) -> Self {{").unwrap();
+        writeln!(code, "        // Polynomial coefficients for f64").unwrap();
+        writeln!(code, "        const P0: f64 = -1.850_383_340_051_831e-6;").unwrap();
+        writeln!(code, "        const P1: f64 = 1.428_716_047_008_376;").unwrap();
+        writeln!(code, "        const P2: f64 = 0.742_458_733_278_206;").unwrap();
+        writeln!(code, "        const Q0: f64 = 0.990_328_142_775_907;").unwrap();
+        writeln!(code, "        const Q1: f64 = 1.009_671_857_224_115;").unwrap();
+        writeln!(code, "        const Q2: f64 = 0.174_093_430_036_669;").unwrap();
+        writeln!(code, "        const OFFSET: i64 = 0x3fe6a09e667f3bcd_u64 as i64; // 2/3 in f64 bits").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            let x_bits = {}_cast{}_{}(self.0);", prefix, suffix, actual_int_suffix).unwrap();
+
+        // For 64-bit integers, we need different intrinsics
+        // For set1 with i64, SSE/AVX use epi64x, AVX-512 uses epi64
+        let epi64_suffix = if ty.width == SimdWidth::W512 { "epi64" } else { "epi64x" };
+
+        writeln!(code, "            let offset = {}_set1_{}(OFFSET);", prefix, epi64_suffix).unwrap();
+        writeln!(code, "            let exp_bits = {}_sub_epi64(x_bits, offset);", prefix).unwrap();
+        writeln!(code, "            let exp_shifted = {}_srai_epi64::<52>(exp_bits);", prefix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            let mantissa_bits = {}_sub_epi64(x_bits, {}_slli_epi64::<52>(exp_shifted));", prefix, prefix).unwrap();
+        writeln!(code, "            let mantissa = {}_cast{}_{}(mantissa_bits);", prefix, actual_int_suffix, suffix).unwrap();
+
+        // Convert i64 to f64 - extract and convert via scalar
+        writeln!(code, "            // Convert exponent to f64").unwrap();
+        writeln!(code, "            let exp_arr: [i64; {}] = core::mem::transmute(exp_shifted);", ty.lanes()).unwrap();
+        writeln!(code, "            let exp_f64: [f64; {}] = [", ty.lanes()).unwrap();
+        for i in 0..ty.lanes() {
+            if i > 0 {
+                write!(code, ", ").unwrap();
+            }
+            write!(code, "exp_arr[{}] as f64", i).unwrap();
+        }
+        writeln!(code, "];").unwrap();
+        writeln!(code, "            let exp_val = {}_loadu_{}(exp_f64.as_ptr());", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            let one = {}_set1_{}(1.0);", prefix, suffix).unwrap();
+        writeln!(code, "            let m = {}_sub_{}(mantissa, one);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Horner's for numerator").unwrap();
+        writeln!(code, "            let yp = {}_fmadd_{}({}_set1_{}(P2), m, {}_set1_{}(P1));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let yp = {}_fmadd_{}(yp, m, {}_set1_{}(P0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Horner's for denominator").unwrap();
+        writeln!(code, "            let yq = {}_fmadd_{}({}_set1_{}(Q2), m, {}_set1_{}(Q1));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let yq = {}_fmadd_{}(yq, m, {}_set1_{}(Q0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            Self({}_add_{}({}_div_{}(yp, yq), exp_val))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F64 exp2 =====
+        writeln!(code, "    /// Approximate base-2 exponential (2^x).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses polynomial approximation. For natural exp, use `exp()`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp2(self) -> Self {{").unwrap();
+        writeln!(code, "        const C0: f64 = 1.0;").unwrap();
+        writeln!(code, "        const C1: f64 = core::f64::consts::LN_2;").unwrap();
+        writeln!(code, "        const C2: f64 = 0.240_226_506_959_101;").unwrap();
+        writeln!(code, "        const C3: f64 = 0.055_504_108_664_822;").unwrap();
+        writeln!(code, "        const C4: f64 = 0.009_618_129_107_629;").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            // Clamp to safe range").unwrap();
+        writeln!(code, "            let x = {}_max_{}(self.0, {}_set1_{}(-1022.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let x = {}_min_{}(x, {}_set1_{}(1022.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+
+        if ty.width == SimdWidth::W512 {
+            writeln!(code, "            let xi = {}_roundscale_{}::<0x01>(x); // floor", prefix, suffix).unwrap();
+        } else {
+            writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
+        }
+
+        writeln!(code, "            let xf = {}_sub_{}(x, xi);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Polynomial for 2^frac").unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}({}_set1_{}(C4), xf, {}_set1_{}(C3));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C2));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Scale by 2^integer - extract, convert, scale").unwrap();
+        writeln!(code, "            let xi_arr: [f64; {}] = core::mem::transmute(xi);", ty.lanes()).unwrap();
+        writeln!(code, "            let scale_arr: [f64; {}] = [", ty.lanes()).unwrap();
+        for i in 0..ty.lanes() {
+            if i > 0 {
+                write!(code, ", ").unwrap();
+            }
+            write!(code, "f64::from_bits(((xi_arr[{}] as i64 + 1023) << 52) as u64)", i).unwrap();
+        }
+        writeln!(code, "];").unwrap();
+        writeln!(code, "            let scale = {}_loadu_{}(scale_arr.as_ptr());", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            Self({}_mul_{}(poly, scale))", prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F64 ln =====
+        writeln!(code, "    /// Approximate natural logarithm.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn ln(self) -> Self {{").unwrap();
+        writeln!(code, "        const LN2: f64 = core::f64::consts::LN_2;").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F64 exp =====
+        writeln!(code, "    /// Approximate natural exponential (e^x).").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp(self) -> Self {{").unwrap();
+        writeln!(code, "        const LOG2_E: f64 = core::f64::consts::LOG2_E;").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F64 log10 =====
+        writeln!(code, "    /// Approximate base-10 logarithm.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn log10(self) -> Self {{").unwrap();
+        writeln!(code, "        const LOG10_2: f64 = core::f64::consts::LOG10_2;").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(LOG10_2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F64 pow =====
+        writeln!(code, "    /// Approximate power function (self^n).").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn pow(self, n: f64) -> Self {{").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(n))).exp2()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
     }
 
     code

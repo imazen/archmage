@@ -570,6 +570,127 @@ impl f32x4 {
         })
     }
 
+    // ========== Transcendental Operations ==========
+
+    /// Approximate base-2 logarithm.
+    ///
+    /// Uses rational polynomial approximation with ~7.7e-5 max relative error.
+    /// For natural log, use `ln()`. For log10, use `log10()`.
+    #[inline(always)]
+    pub fn log2(self) -> Self {
+        // Rational polynomial coefficients from butteraugli/jpegli
+        const P0: f32 = -1.850_383_34e-6;
+        const P1: f32 = 1.428_716_05;
+        const P2: f32 = 0.742_458_73;
+        const Q0: f32 = 0.990_328_14;
+        const Q1: f32 = 1.009_671_86;
+        const Q2: f32 = 0.174_093_43;
+
+        unsafe {
+            let x_bits = _mm_castps_si128(self.0);
+            let offset = _mm_set1_epi32(0x3f2aaaab_u32 as i32);
+            let exp_bits = _mm_sub_epi32(x_bits, offset);
+            let exp_shifted = _mm_srai_epi32::<23>(exp_bits);
+
+            let mantissa_bits = _mm_sub_epi32(x_bits, _mm_slli_epi32::<23>(exp_shifted));
+            let mantissa = _mm_castsi128_ps(mantissa_bits);
+            let exp_val = _mm_cvtepi32_ps(exp_shifted);
+
+            let one = _mm_set1_ps(1.0);
+            let m = _mm_sub_ps(mantissa, one);
+
+            // Horner's for numerator: P2*m^2 + P1*m + P0
+            let yp = _mm_fmadd_ps(_mm_set1_ps(P2), m, _mm_set1_ps(P1));
+            let yp = _mm_fmadd_ps(yp, m, _mm_set1_ps(P0));
+
+            // Horner's for denominator: Q2*m^2 + Q1*m + Q0
+            let yq = _mm_fmadd_ps(_mm_set1_ps(Q2), m, _mm_set1_ps(Q1));
+            let yq = _mm_fmadd_ps(yq, m, _mm_set1_ps(Q0));
+
+            Self(_mm_add_ps(_mm_div_ps(yp, yq), exp_val))
+        }
+    }
+
+    /// Approximate base-2 exponential (2^x).
+    ///
+    /// Uses polynomial approximation with ~5.5e-3 max relative error.
+    /// For natural exp, use `exp()`.
+    #[inline(always)]
+    pub fn exp2(self) -> Self {
+        // Polynomial coefficients
+        const C0: f32 = 1.0;
+        const C1: f32 = core::f32::consts::LN_2;
+        const C2: f32 = 0.240_226_5;
+        const C3: f32 = 0.055_504_11;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm_max_ps(self.0, _mm_set1_ps(-126.0));
+            let x = _mm_min_ps(x, _mm_set1_ps(126.0));
+
+            // Split into integer and fractional parts
+            let xi = _mm_floor_ps(x);
+            let xf = _mm_sub_ps(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = _mm_fmadd_ps(_mm_set1_ps(C3), xf, _mm_set1_ps(C2));
+            let poly = _mm_fmadd_ps(poly, xf, _mm_set1_ps(C1));
+            let poly = _mm_fmadd_ps(poly, xf, _mm_set1_ps(C0));
+
+            // Scale by 2^integer using bit manipulation
+            let xi_i32 = _mm_cvtps_epi32(xi);
+            let bias = _mm_set1_epi32(127);
+            let scale_bits = _mm_slli_epi32::<23>(_mm_add_epi32(xi_i32, bias));
+            let scale = _mm_castsi128_ps(scale_bits);
+
+            Self(_mm_mul_ps(poly, scale))
+        }
+    }
+
+    /// Approximate natural logarithm.
+    ///
+    /// Computed as `log2(x) * ln(2)`.
+    #[inline(always)]
+    pub fn ln(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm_mul_ps(self.log2().0, _mm_set1_ps(LN2)))
+        }
+    }
+
+    /// Approximate natural exponential (e^x).
+    ///
+    /// Computed as `exp2(x * log2(e))`.
+    #[inline(always)]
+    pub fn exp(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2()
+        }
+    }
+
+    /// Approximate base-10 logarithm.
+    ///
+    /// Computed as `log2(x) / log2(10)`.
+    #[inline(always)]
+    pub fn log10(self) -> Self {
+        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
+        unsafe {
+            Self(_mm_mul_ps(self.log2().0, _mm_set1_ps(LOG10_2)))
+        }
+    }
+
+    /// Approximate power function (self^n).
+    ///
+    /// Computed as `exp2(n * log2(self))`.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm_mul_ps(self.log2().0, _mm_set1_ps(n))).exp2()
+        }
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -896,6 +1017,121 @@ impl f64x2 {
             let as_int = _mm_castpd_si128(self.0);
             _mm_castsi128_pd (_mm_xor_si128(as_int, ones))
         })
+    }
+
+    // ========== Transcendental Operations ==========
+
+    /// Approximate base-2 logarithm.
+    ///
+    /// Uses polynomial approximation. For natural log, use `ln()`.
+    #[inline(always)]
+    pub fn log2(self) -> Self {
+        // Polynomial coefficients for f64
+        const P0: f64 = -1.850_383_340_051_831e-6;
+        const P1: f64 = 1.428_716_047_008_376;
+        const P2: f64 = 0.742_458_733_278_206;
+        const Q0: f64 = 0.990_328_142_775_907;
+        const Q1: f64 = 1.009_671_857_224_115;
+        const Q2: f64 = 0.174_093_430_036_669;
+        const OFFSET: i64 = 0x3fe6a09e667f3bcd_u64 as i64; // 2/3 in f64 bits
+
+        unsafe {
+            let x_bits = _mm_castpd_si128(self.0);
+            let offset = _mm_set1_epi64x(OFFSET);
+            let exp_bits = _mm_sub_epi64(x_bits, offset);
+            let exp_shifted = _mm_srai_epi64::<52>(exp_bits);
+
+            let mantissa_bits = _mm_sub_epi64(x_bits, _mm_slli_epi64::<52>(exp_shifted));
+            let mantissa = _mm_castsi128_pd(mantissa_bits);
+            // Convert exponent to f64
+            let exp_arr: [i64; 2] = core::mem::transmute(exp_shifted);
+            let exp_f64: [f64; 2] = [
+exp_arr[0] as f64, exp_arr[1] as f64];
+            let exp_val = _mm_loadu_pd(exp_f64.as_ptr());
+
+            let one = _mm_set1_pd(1.0);
+            let m = _mm_sub_pd(mantissa, one);
+
+            // Horner's for numerator
+            let yp = _mm_fmadd_pd(_mm_set1_pd(P2), m, _mm_set1_pd(P1));
+            let yp = _mm_fmadd_pd(yp, m, _mm_set1_pd(P0));
+
+            // Horner's for denominator
+            let yq = _mm_fmadd_pd(_mm_set1_pd(Q2), m, _mm_set1_pd(Q1));
+            let yq = _mm_fmadd_pd(yq, m, _mm_set1_pd(Q0));
+
+            Self(_mm_add_pd(_mm_div_pd(yp, yq), exp_val))
+        }
+    }
+
+    /// Approximate base-2 exponential (2^x).
+    ///
+    /// Uses polynomial approximation. For natural exp, use `exp()`.
+    #[inline(always)]
+    pub fn exp2(self) -> Self {
+        const C0: f64 = 1.0;
+        const C1: f64 = core::f64::consts::LN_2;
+        const C2: f64 = 0.240_226_506_959_101;
+        const C3: f64 = 0.055_504_108_664_822;
+        const C4: f64 = 0.009_618_129_107_629;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm_max_pd(self.0, _mm_set1_pd(-1022.0));
+            let x = _mm_min_pd(x, _mm_set1_pd(1022.0));
+
+            let xi = _mm_floor_pd(x);
+            let xf = _mm_sub_pd(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = _mm_fmadd_pd(_mm_set1_pd(C4), xf, _mm_set1_pd(C3));
+            let poly = _mm_fmadd_pd(poly, xf, _mm_set1_pd(C2));
+            let poly = _mm_fmadd_pd(poly, xf, _mm_set1_pd(C1));
+            let poly = _mm_fmadd_pd(poly, xf, _mm_set1_pd(C0));
+
+            // Scale by 2^integer - extract, convert, scale
+            let xi_arr: [f64; 2] = core::mem::transmute(xi);
+            let scale_arr: [f64; 2] = [
+f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64)];
+            let scale = _mm_loadu_pd(scale_arr.as_ptr());
+
+            Self(_mm_mul_pd(poly, scale))
+        }
+    }
+
+    /// Approximate natural logarithm.
+    #[inline(always)]
+    pub fn ln(self) -> Self {
+        const LN2: f64 = core::f64::consts::LN_2;
+        unsafe {
+            Self(_mm_mul_pd(self.log2().0, _mm_set1_pd(LN2)))
+        }
+    }
+
+    /// Approximate natural exponential (e^x).
+    #[inline(always)]
+    pub fn exp(self) -> Self {
+        const LOG2_E: f64 = core::f64::consts::LOG2_E;
+        unsafe {
+            Self(_mm_mul_pd(self.0, _mm_set1_pd(LOG2_E))).exp2()
+        }
+    }
+
+    /// Approximate base-10 logarithm.
+    #[inline(always)]
+    pub fn log10(self) -> Self {
+        const LOG10_2: f64 = core::f64::consts::LOG10_2;
+        unsafe {
+            Self(_mm_mul_pd(self.log2().0, _mm_set1_pd(LOG10_2)))
+        }
+    }
+
+    /// Approximate power function (self^n).
+    #[inline(always)]
+    pub fn pow(self, n: f64) -> Self {
+        unsafe {
+            Self(_mm_mul_pd(self.log2().0, _mm_set1_pd(n))).exp2()
+        }
     }
 
 }
@@ -3353,6 +3589,127 @@ impl f32x8 {
         })
     }
 
+    // ========== Transcendental Operations ==========
+
+    /// Approximate base-2 logarithm.
+    ///
+    /// Uses rational polynomial approximation with ~7.7e-5 max relative error.
+    /// For natural log, use `ln()`. For log10, use `log10()`.
+    #[inline(always)]
+    pub fn log2(self) -> Self {
+        // Rational polynomial coefficients from butteraugli/jpegli
+        const P0: f32 = -1.850_383_34e-6;
+        const P1: f32 = 1.428_716_05;
+        const P2: f32 = 0.742_458_73;
+        const Q0: f32 = 0.990_328_14;
+        const Q1: f32 = 1.009_671_86;
+        const Q2: f32 = 0.174_093_43;
+
+        unsafe {
+            let x_bits = _mm256_castps_si256(self.0);
+            let offset = _mm256_set1_epi32(0x3f2aaaab_u32 as i32);
+            let exp_bits = _mm256_sub_epi32(x_bits, offset);
+            let exp_shifted = _mm256_srai_epi32::<23>(exp_bits);
+
+            let mantissa_bits = _mm256_sub_epi32(x_bits, _mm256_slli_epi32::<23>(exp_shifted));
+            let mantissa = _mm256_castsi256_ps(mantissa_bits);
+            let exp_val = _mm256_cvtepi32_ps(exp_shifted);
+
+            let one = _mm256_set1_ps(1.0);
+            let m = _mm256_sub_ps(mantissa, one);
+
+            // Horner's for numerator: P2*m^2 + P1*m + P0
+            let yp = _mm256_fmadd_ps(_mm256_set1_ps(P2), m, _mm256_set1_ps(P1));
+            let yp = _mm256_fmadd_ps(yp, m, _mm256_set1_ps(P0));
+
+            // Horner's for denominator: Q2*m^2 + Q1*m + Q0
+            let yq = _mm256_fmadd_ps(_mm256_set1_ps(Q2), m, _mm256_set1_ps(Q1));
+            let yq = _mm256_fmadd_ps(yq, m, _mm256_set1_ps(Q0));
+
+            Self(_mm256_add_ps(_mm256_div_ps(yp, yq), exp_val))
+        }
+    }
+
+    /// Approximate base-2 exponential (2^x).
+    ///
+    /// Uses polynomial approximation with ~5.5e-3 max relative error.
+    /// For natural exp, use `exp()`.
+    #[inline(always)]
+    pub fn exp2(self) -> Self {
+        // Polynomial coefficients
+        const C0: f32 = 1.0;
+        const C1: f32 = core::f32::consts::LN_2;
+        const C2: f32 = 0.240_226_5;
+        const C3: f32 = 0.055_504_11;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm256_max_ps(self.0, _mm256_set1_ps(-126.0));
+            let x = _mm256_min_ps(x, _mm256_set1_ps(126.0));
+
+            // Split into integer and fractional parts
+            let xi = _mm256_floor_ps(x);
+            let xf = _mm256_sub_ps(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = _mm256_fmadd_ps(_mm256_set1_ps(C3), xf, _mm256_set1_ps(C2));
+            let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C1));
+            let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C0));
+
+            // Scale by 2^integer using bit manipulation
+            let xi_i32 = _mm256_cvtps_epi32(xi);
+            let bias = _mm256_set1_epi32(127);
+            let scale_bits = _mm256_slli_epi32::<23>(_mm256_add_epi32(xi_i32, bias));
+            let scale = _mm256_castsi256_ps(scale_bits);
+
+            Self(_mm256_mul_ps(poly, scale))
+        }
+    }
+
+    /// Approximate natural logarithm.
+    ///
+    /// Computed as `log2(x) * ln(2)`.
+    #[inline(always)]
+    pub fn ln(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm256_mul_ps(self.log2().0, _mm256_set1_ps(LN2)))
+        }
+    }
+
+    /// Approximate natural exponential (e^x).
+    ///
+    /// Computed as `exp2(x * log2(e))`.
+    #[inline(always)]
+    pub fn exp(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2()
+        }
+    }
+
+    /// Approximate base-10 logarithm.
+    ///
+    /// Computed as `log2(x) / log2(10)`.
+    #[inline(always)]
+    pub fn log10(self) -> Self {
+        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
+        unsafe {
+            Self(_mm256_mul_ps(self.log2().0, _mm256_set1_ps(LOG10_2)))
+        }
+    }
+
+    /// Approximate power function (self^n).
+    ///
+    /// Computed as `exp2(n * log2(self))`.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm256_mul_ps(self.log2().0, _mm256_set1_ps(n))).exp2()
+        }
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3678,6 +4035,121 @@ impl f64x4 {
             let as_int = _mm256_castpd_si256(self.0);
             _mm256_castsi256_pd (_mm256_xor_si256(as_int, ones))
         })
+    }
+
+    // ========== Transcendental Operations ==========
+
+    /// Approximate base-2 logarithm.
+    ///
+    /// Uses polynomial approximation. For natural log, use `ln()`.
+    #[inline(always)]
+    pub fn log2(self) -> Self {
+        // Polynomial coefficients for f64
+        const P0: f64 = -1.850_383_340_051_831e-6;
+        const P1: f64 = 1.428_716_047_008_376;
+        const P2: f64 = 0.742_458_733_278_206;
+        const Q0: f64 = 0.990_328_142_775_907;
+        const Q1: f64 = 1.009_671_857_224_115;
+        const Q2: f64 = 0.174_093_430_036_669;
+        const OFFSET: i64 = 0x3fe6a09e667f3bcd_u64 as i64; // 2/3 in f64 bits
+
+        unsafe {
+            let x_bits = _mm256_castpd_si256(self.0);
+            let offset = _mm256_set1_epi64x(OFFSET);
+            let exp_bits = _mm256_sub_epi64(x_bits, offset);
+            let exp_shifted = _mm256_srai_epi64::<52>(exp_bits);
+
+            let mantissa_bits = _mm256_sub_epi64(x_bits, _mm256_slli_epi64::<52>(exp_shifted));
+            let mantissa = _mm256_castsi256_pd(mantissa_bits);
+            // Convert exponent to f64
+            let exp_arr: [i64; 4] = core::mem::transmute(exp_shifted);
+            let exp_f64: [f64; 4] = [
+exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64];
+            let exp_val = _mm256_loadu_pd(exp_f64.as_ptr());
+
+            let one = _mm256_set1_pd(1.0);
+            let m = _mm256_sub_pd(mantissa, one);
+
+            // Horner's for numerator
+            let yp = _mm256_fmadd_pd(_mm256_set1_pd(P2), m, _mm256_set1_pd(P1));
+            let yp = _mm256_fmadd_pd(yp, m, _mm256_set1_pd(P0));
+
+            // Horner's for denominator
+            let yq = _mm256_fmadd_pd(_mm256_set1_pd(Q2), m, _mm256_set1_pd(Q1));
+            let yq = _mm256_fmadd_pd(yq, m, _mm256_set1_pd(Q0));
+
+            Self(_mm256_add_pd(_mm256_div_pd(yp, yq), exp_val))
+        }
+    }
+
+    /// Approximate base-2 exponential (2^x).
+    ///
+    /// Uses polynomial approximation. For natural exp, use `exp()`.
+    #[inline(always)]
+    pub fn exp2(self) -> Self {
+        const C0: f64 = 1.0;
+        const C1: f64 = core::f64::consts::LN_2;
+        const C2: f64 = 0.240_226_506_959_101;
+        const C3: f64 = 0.055_504_108_664_822;
+        const C4: f64 = 0.009_618_129_107_629;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm256_max_pd(self.0, _mm256_set1_pd(-1022.0));
+            let x = _mm256_min_pd(x, _mm256_set1_pd(1022.0));
+
+            let xi = _mm256_floor_pd(x);
+            let xf = _mm256_sub_pd(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = _mm256_fmadd_pd(_mm256_set1_pd(C4), xf, _mm256_set1_pd(C3));
+            let poly = _mm256_fmadd_pd(poly, xf, _mm256_set1_pd(C2));
+            let poly = _mm256_fmadd_pd(poly, xf, _mm256_set1_pd(C1));
+            let poly = _mm256_fmadd_pd(poly, xf, _mm256_set1_pd(C0));
+
+            // Scale by 2^integer - extract, convert, scale
+            let xi_arr: [f64; 4] = core::mem::transmute(xi);
+            let scale_arr: [f64; 4] = [
+f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64)];
+            let scale = _mm256_loadu_pd(scale_arr.as_ptr());
+
+            Self(_mm256_mul_pd(poly, scale))
+        }
+    }
+
+    /// Approximate natural logarithm.
+    #[inline(always)]
+    pub fn ln(self) -> Self {
+        const LN2: f64 = core::f64::consts::LN_2;
+        unsafe {
+            Self(_mm256_mul_pd(self.log2().0, _mm256_set1_pd(LN2)))
+        }
+    }
+
+    /// Approximate natural exponential (e^x).
+    #[inline(always)]
+    pub fn exp(self) -> Self {
+        const LOG2_E: f64 = core::f64::consts::LOG2_E;
+        unsafe {
+            Self(_mm256_mul_pd(self.0, _mm256_set1_pd(LOG2_E))).exp2()
+        }
+    }
+
+    /// Approximate base-10 logarithm.
+    #[inline(always)]
+    pub fn log10(self) -> Self {
+        const LOG10_2: f64 = core::f64::consts::LOG10_2;
+        unsafe {
+            Self(_mm256_mul_pd(self.log2().0, _mm256_set1_pd(LOG10_2)))
+        }
+    }
+
+    /// Approximate power function (self^n).
+    #[inline(always)]
+    pub fn pow(self, n: f64) -> Self {
+        unsafe {
+            Self(_mm256_mul_pd(self.log2().0, _mm256_set1_pd(n))).exp2()
+        }
     }
 
 }
@@ -6138,6 +6610,127 @@ impl f32x16 {
         })
     }
 
+    // ========== Transcendental Operations ==========
+
+    /// Approximate base-2 logarithm.
+    ///
+    /// Uses rational polynomial approximation with ~7.7e-5 max relative error.
+    /// For natural log, use `ln()`. For log10, use `log10()`.
+    #[inline(always)]
+    pub fn log2(self) -> Self {
+        // Rational polynomial coefficients from butteraugli/jpegli
+        const P0: f32 = -1.850_383_34e-6;
+        const P1: f32 = 1.428_716_05;
+        const P2: f32 = 0.742_458_73;
+        const Q0: f32 = 0.990_328_14;
+        const Q1: f32 = 1.009_671_86;
+        const Q2: f32 = 0.174_093_43;
+
+        unsafe {
+            let x_bits = _mm512_castps_si512(self.0);
+            let offset = _mm512_set1_epi32(0x3f2aaaab_u32 as i32);
+            let exp_bits = _mm512_sub_epi32(x_bits, offset);
+            let exp_shifted = _mm512_srai_epi32::<23>(exp_bits);
+
+            let mantissa_bits = _mm512_sub_epi32(x_bits, _mm512_slli_epi32::<23>(exp_shifted));
+            let mantissa = _mm512_castsi512_ps(mantissa_bits);
+            let exp_val = _mm512_cvtepi32_ps(exp_shifted);
+
+            let one = _mm512_set1_ps(1.0);
+            let m = _mm512_sub_ps(mantissa, one);
+
+            // Horner's for numerator: P2*m^2 + P1*m + P0
+            let yp = _mm512_fmadd_ps(_mm512_set1_ps(P2), m, _mm512_set1_ps(P1));
+            let yp = _mm512_fmadd_ps(yp, m, _mm512_set1_ps(P0));
+
+            // Horner's for denominator: Q2*m^2 + Q1*m + Q0
+            let yq = _mm512_fmadd_ps(_mm512_set1_ps(Q2), m, _mm512_set1_ps(Q1));
+            let yq = _mm512_fmadd_ps(yq, m, _mm512_set1_ps(Q0));
+
+            Self(_mm512_add_ps(_mm512_div_ps(yp, yq), exp_val))
+        }
+    }
+
+    /// Approximate base-2 exponential (2^x).
+    ///
+    /// Uses polynomial approximation with ~5.5e-3 max relative error.
+    /// For natural exp, use `exp()`.
+    #[inline(always)]
+    pub fn exp2(self) -> Self {
+        // Polynomial coefficients
+        const C0: f32 = 1.0;
+        const C1: f32 = core::f32::consts::LN_2;
+        const C2: f32 = 0.240_226_5;
+        const C3: f32 = 0.055_504_11;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm512_max_ps(self.0, _mm512_set1_ps(-126.0));
+            let x = _mm512_min_ps(x, _mm512_set1_ps(126.0));
+
+            // Split into integer and fractional parts
+            let xi = _mm512_roundscale_ps::<0x01>(x); // floor
+            let xf = _mm512_sub_ps(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = _mm512_fmadd_ps(_mm512_set1_ps(C3), xf, _mm512_set1_ps(C2));
+            let poly = _mm512_fmadd_ps(poly, xf, _mm512_set1_ps(C1));
+            let poly = _mm512_fmadd_ps(poly, xf, _mm512_set1_ps(C0));
+
+            // Scale by 2^integer using bit manipulation
+            let xi_i32 = _mm512_cvtps_epi32(xi);
+            let bias = _mm512_set1_epi32(127);
+            let scale_bits = _mm512_slli_epi32::<23>(_mm512_add_epi32(xi_i32, bias));
+            let scale = _mm512_castsi512_ps(scale_bits);
+
+            Self(_mm512_mul_ps(poly, scale))
+        }
+    }
+
+    /// Approximate natural logarithm.
+    ///
+    /// Computed as `log2(x) * ln(2)`.
+    #[inline(always)]
+    pub fn ln(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm512_mul_ps(self.log2().0, _mm512_set1_ps(LN2)))
+        }
+    }
+
+    /// Approximate natural exponential (e^x).
+    ///
+    /// Computed as `exp2(x * log2(e))`.
+    #[inline(always)]
+    pub fn exp(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2()
+        }
+    }
+
+    /// Approximate base-10 logarithm.
+    ///
+    /// Computed as `log2(x) / log2(10)`.
+    #[inline(always)]
+    pub fn log10(self) -> Self {
+        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
+        unsafe {
+            Self(_mm512_mul_ps(self.log2().0, _mm512_set1_ps(LOG10_2)))
+        }
+    }
+
+    /// Approximate power function (self^n).
+    ///
+    /// Computed as `exp2(n * log2(self))`.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm512_mul_ps(self.log2().0, _mm512_set1_ps(n))).exp2()
+        }
+    }
+
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -6502,6 +7095,121 @@ impl f64x8 {
             let as_int = _mm512_castpd_si512(self.0);
             _mm512_castsi512_pd (_mm512_xor_si512(as_int, ones))
         })
+    }
+
+    // ========== Transcendental Operations ==========
+
+    /// Approximate base-2 logarithm.
+    ///
+    /// Uses polynomial approximation. For natural log, use `ln()`.
+    #[inline(always)]
+    pub fn log2(self) -> Self {
+        // Polynomial coefficients for f64
+        const P0: f64 = -1.850_383_340_051_831e-6;
+        const P1: f64 = 1.428_716_047_008_376;
+        const P2: f64 = 0.742_458_733_278_206;
+        const Q0: f64 = 0.990_328_142_775_907;
+        const Q1: f64 = 1.009_671_857_224_115;
+        const Q2: f64 = 0.174_093_430_036_669;
+        const OFFSET: i64 = 0x3fe6a09e667f3bcd_u64 as i64; // 2/3 in f64 bits
+
+        unsafe {
+            let x_bits = _mm512_castpd_si512(self.0);
+            let offset = _mm512_set1_epi64(OFFSET);
+            let exp_bits = _mm512_sub_epi64(x_bits, offset);
+            let exp_shifted = _mm512_srai_epi64::<52>(exp_bits);
+
+            let mantissa_bits = _mm512_sub_epi64(x_bits, _mm512_slli_epi64::<52>(exp_shifted));
+            let mantissa = _mm512_castsi512_pd(mantissa_bits);
+            // Convert exponent to f64
+            let exp_arr: [i64; 8] = core::mem::transmute(exp_shifted);
+            let exp_f64: [f64; 8] = [
+exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64, exp_arr[4] as f64, exp_arr[5] as f64, exp_arr[6] as f64, exp_arr[7] as f64];
+            let exp_val = _mm512_loadu_pd(exp_f64.as_ptr());
+
+            let one = _mm512_set1_pd(1.0);
+            let m = _mm512_sub_pd(mantissa, one);
+
+            // Horner's for numerator
+            let yp = _mm512_fmadd_pd(_mm512_set1_pd(P2), m, _mm512_set1_pd(P1));
+            let yp = _mm512_fmadd_pd(yp, m, _mm512_set1_pd(P0));
+
+            // Horner's for denominator
+            let yq = _mm512_fmadd_pd(_mm512_set1_pd(Q2), m, _mm512_set1_pd(Q1));
+            let yq = _mm512_fmadd_pd(yq, m, _mm512_set1_pd(Q0));
+
+            Self(_mm512_add_pd(_mm512_div_pd(yp, yq), exp_val))
+        }
+    }
+
+    /// Approximate base-2 exponential (2^x).
+    ///
+    /// Uses polynomial approximation. For natural exp, use `exp()`.
+    #[inline(always)]
+    pub fn exp2(self) -> Self {
+        const C0: f64 = 1.0;
+        const C1: f64 = core::f64::consts::LN_2;
+        const C2: f64 = 0.240_226_506_959_101;
+        const C3: f64 = 0.055_504_108_664_822;
+        const C4: f64 = 0.009_618_129_107_629;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm512_max_pd(self.0, _mm512_set1_pd(-1022.0));
+            let x = _mm512_min_pd(x, _mm512_set1_pd(1022.0));
+
+            let xi = _mm512_roundscale_pd::<0x01>(x); // floor
+            let xf = _mm512_sub_pd(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = _mm512_fmadd_pd(_mm512_set1_pd(C4), xf, _mm512_set1_pd(C3));
+            let poly = _mm512_fmadd_pd(poly, xf, _mm512_set1_pd(C2));
+            let poly = _mm512_fmadd_pd(poly, xf, _mm512_set1_pd(C1));
+            let poly = _mm512_fmadd_pd(poly, xf, _mm512_set1_pd(C0));
+
+            // Scale by 2^integer - extract, convert, scale
+            let xi_arr: [f64; 8] = core::mem::transmute(xi);
+            let scale_arr: [f64; 8] = [
+f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[4] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[5] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[6] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[7] as i64 + 1023) << 52) as u64)];
+            let scale = _mm512_loadu_pd(scale_arr.as_ptr());
+
+            Self(_mm512_mul_pd(poly, scale))
+        }
+    }
+
+    /// Approximate natural logarithm.
+    #[inline(always)]
+    pub fn ln(self) -> Self {
+        const LN2: f64 = core::f64::consts::LN_2;
+        unsafe {
+            Self(_mm512_mul_pd(self.log2().0, _mm512_set1_pd(LN2)))
+        }
+    }
+
+    /// Approximate natural exponential (e^x).
+    #[inline(always)]
+    pub fn exp(self) -> Self {
+        const LOG2_E: f64 = core::f64::consts::LOG2_E;
+        unsafe {
+            Self(_mm512_mul_pd(self.0, _mm512_set1_pd(LOG2_E))).exp2()
+        }
+    }
+
+    /// Approximate base-10 logarithm.
+    #[inline(always)]
+    pub fn log10(self) -> Self {
+        const LOG10_2: f64 = core::f64::consts::LOG10_2;
+        unsafe {
+            Self(_mm512_mul_pd(self.log2().0, _mm512_set1_pd(LOG10_2)))
+        }
+    }
+
+    /// Approximate power function (self^n).
+    #[inline(always)]
+    pub fn pow(self, n: f64) -> Self {
+        unsafe {
+            Self(_mm512_mul_pd(self.log2().0, _mm512_set1_pd(n))).exp2()
+        }
     }
 
 }
