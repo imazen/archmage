@@ -572,12 +572,12 @@ impl f32x4 {
 
     // ========== Transcendental Operations ==========
 
-    /// Approximate base-2 logarithm.
+    /// Low-precision base-2 logarithm (~7.7e-5 max relative error).
     ///
-    /// Uses rational polynomial approximation with ~7.7e-5 max relative error.
-    /// For natural log, use `ln()`. For log10, use `log10()`.
+    /// Uses rational polynomial approximation. Fast but not suitable for color-accurate work.
+    /// For higher precision, use `log2_midp()`.
     #[inline(always)]
-    pub fn log2(self) -> Self {
+    pub fn log2_lowp(self) -> Self {
         // Rational polynomial coefficients from butteraugli/jpegli
         const P0: f32 = -1.850_383_34e-6;
         const P1: f32 = 1.428_716_05;
@@ -611,12 +611,12 @@ impl f32x4 {
         }
     }
 
-    /// Approximate base-2 exponential (2^x).
+    /// Low-precision base-2 exponential (~5.5e-3 max relative error).
     ///
-    /// Uses polynomial approximation with ~5.5e-3 max relative error.
-    /// For natural exp, use `exp()`.
+    /// Uses degree-3 polynomial approximation. Fast but not suitable for color-accurate work.
+    /// For higher precision, use `exp2_midp()`.
     #[inline(always)]
-    pub fn exp2(self) -> Self {
+    pub fn exp2_lowp(self) -> Self {
         // Polynomial coefficients
         const C0: f32 = 1.0;
         const C1: f32 = core::f32::consts::LN_2;
@@ -647,58 +647,58 @@ impl f32x4 {
         }
     }
 
-    /// Approximate natural logarithm.
+    /// Low-precision natural logarithm.
     ///
-    /// Computed as `log2(x) * ln(2)`.
+    /// Computed as `log2_lowp(x) * ln(2)`. For higher precision, use `ln_midp()`.
     #[inline(always)]
-    pub fn ln(self) -> Self {
+    pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
         unsafe {
-            Self(_mm_mul_ps(self.log2().0, _mm_set1_ps(LN2)))
+            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LN2)))
         }
     }
 
-    /// Approximate natural exponential (e^x).
+    /// Low-precision natural exponential (e^x).
     ///
-    /// Computed as `exp2(x * log2(e))`.
+    /// Computed as `exp2_lowp(x * log2(e))`. For higher precision, use `exp_midp()`.
     #[inline(always)]
-    pub fn exp(self) -> Self {
+    pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe {
-            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2()
+            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_lowp()
         }
     }
 
-    /// Approximate base-10 logarithm.
+    /// Low-precision base-10 logarithm.
     ///
-    /// Computed as `log2(x) / log2(10)`.
+    /// Computed as `log2_lowp(x) / log2(10)`.
     #[inline(always)]
-    pub fn log10(self) -> Self {
+    pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
         unsafe {
-            Self(_mm_mul_ps(self.log2().0, _mm_set1_ps(LOG10_2)))
+            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LOG10_2)))
         }
     }
 
-    /// Approximate power function (self^n).
+    /// Low-precision power function (self^n).
     ///
-    /// Computed as `exp2(n * log2(self))`.
+    /// Computed as `exp2_lowp(n * log2_lowp(self))`. For higher precision, use `pow_midp()`.
     /// Note: Only valid for positive self values.
     #[inline(always)]
-    pub fn pow(self, n: f32) -> Self {
+    pub fn pow_lowp(self, n: f32) -> Self {
         unsafe {
-            Self(_mm_mul_ps(self.log2().0, _mm_set1_ps(n))).exp2()
+            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(n))).exp2_lowp()
         }
     }
 
-    // ========== High-Precision Transcendental Operations ==========
+    // ========== Mid-Precision Transcendental Operations ==========
 
-    /// High-precision base-2 logarithm (~3 ULP max error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error).
     ///
     /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
     /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
     #[inline(always)]
-    pub fn log2_hp(self) -> Self {
+    pub fn log2_midp(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
         const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
@@ -747,12 +747,12 @@ impl f32x4 {
         }
     }
 
-    /// High-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
     ///
     /// Uses degree-6 minimax polynomial.
     /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
     #[inline(always)]
-    pub fn exp2_hp(self) -> Self {
+    pub fn exp2_midp(self) -> Self {
         // Degree-6 minimax polynomial for 2^x on [0, 1]
         const C0: f32 = 1.0;
         const C1: f32 = 0.693_147_180_559_945;
@@ -788,37 +788,37 @@ impl f32x4 {
         }
     }
 
-    /// High-precision power function (self^n).
+    /// Mid-precision power function (self^n).
     ///
-    /// Computed as `exp2_hp(n * log2_hp(self))`.
+    /// Computed as `exp2_midp(n * log2_midp(self))`.
     /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
     /// Note: Only valid for positive self values.
     #[inline(always)]
-    pub fn pow_hp(self, n: f32) -> Self {
+    pub fn pow_midp(self, n: f32) -> Self {
         unsafe {
-            Self(_mm_mul_ps(self.log2_hp().0, _mm_set1_ps(n))).exp2_hp()
+            Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(n))).exp2_midp()
         }
     }
 
-    /// High-precision natural logarithm.
+    /// Mid-precision natural logarithm.
     ///
-    /// Computed as `log2_hp(x) * ln(2)`.
+    /// Computed as `log2_midp(x) * ln(2)`.
     #[inline(always)]
-    pub fn ln_hp(self) -> Self {
+    pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
         unsafe {
-            Self(_mm_mul_ps(self.log2_hp().0, _mm_set1_ps(LN2)))
+            Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(LN2)))
         }
     }
 
-    /// High-precision natural exponential (e^x).
+    /// Mid-precision natural exponential (e^x).
     ///
-    /// Computed as `exp2_hp(x * log2(e))`.
+    /// Computed as `exp2_midp(x * log2(e))`.
     #[inline(always)]
-    pub fn exp_hp(self) -> Self {
+    pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe {
-            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_hp()
+            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_midp()
         }
     }
 
@@ -1152,11 +1152,11 @@ impl f64x2 {
 
     // ========== Transcendental Operations ==========
 
-    /// Approximate base-2 logarithm.
+    /// Low-precision base-2 logarithm.
     ///
-    /// Uses polynomial approximation. For natural log, use `ln()`.
+    /// Uses polynomial approximation. For natural log, use `ln_lowp()`.
     #[inline(always)]
-    pub fn log2(self) -> Self {
+    pub fn log2_lowp(self) -> Self {
         // Polynomial coefficients for f64
         const P0: f64 = -1.850_383_340_051_831e-6;
         const P1: f64 = 1.428_716_047_008_376;
@@ -1195,11 +1195,11 @@ exp_arr[0] as f64, exp_arr[1] as f64];
         }
     }
 
-    /// Approximate base-2 exponential (2^x).
+    /// Low-precision base-2 exponential (2^x).
     ///
-    /// Uses polynomial approximation. For natural exp, use `exp()`.
+    /// Uses polynomial approximation. For natural exp, use `exp_lowp()`.
     #[inline(always)]
-    pub fn exp2(self) -> Self {
+    pub fn exp2_lowp(self) -> Self {
         const C0: f64 = 1.0;
         const C1: f64 = core::f64::consts::LN_2;
         const C2: f64 = 0.240_226_506_959_101;
@@ -1230,38 +1230,38 @@ f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_ar
         }
     }
 
-    /// Approximate natural logarithm.
+    /// Low-precision natural logarithm.
     #[inline(always)]
-    pub fn ln(self) -> Self {
+    pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
         unsafe {
-            Self(_mm_mul_pd(self.log2().0, _mm_set1_pd(LN2)))
+            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LN2)))
         }
     }
 
-    /// Approximate natural exponential (e^x).
+    /// Low-precision natural exponential (e^x).
     #[inline(always)]
-    pub fn exp(self) -> Self {
+    pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
         unsafe {
-            Self(_mm_mul_pd(self.0, _mm_set1_pd(LOG2_E))).exp2()
+            Self(_mm_mul_pd(self.0, _mm_set1_pd(LOG2_E))).exp2_lowp()
         }
     }
 
-    /// Approximate base-10 logarithm.
+    /// Low-precision base-10 logarithm.
     #[inline(always)]
-    pub fn log10(self) -> Self {
+    pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
         unsafe {
-            Self(_mm_mul_pd(self.log2().0, _mm_set1_pd(LOG10_2)))
+            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LOG10_2)))
         }
     }
 
-    /// Approximate power function (self^n).
+    /// Low-precision power function (self^n).
     #[inline(always)]
-    pub fn pow(self, n: f64) -> Self {
+    pub fn pow_lowp(self, n: f64) -> Self {
         unsafe {
-            Self(_mm_mul_pd(self.log2().0, _mm_set1_pd(n))).exp2()
+            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(n))).exp2_lowp()
         }
     }
 
@@ -3722,12 +3722,12 @@ impl f32x8 {
 
     // ========== Transcendental Operations ==========
 
-    /// Approximate base-2 logarithm.
+    /// Low-precision base-2 logarithm (~7.7e-5 max relative error).
     ///
-    /// Uses rational polynomial approximation with ~7.7e-5 max relative error.
-    /// For natural log, use `ln()`. For log10, use `log10()`.
+    /// Uses rational polynomial approximation. Fast but not suitable for color-accurate work.
+    /// For higher precision, use `log2_midp()`.
     #[inline(always)]
-    pub fn log2(self) -> Self {
+    pub fn log2_lowp(self) -> Self {
         // Rational polynomial coefficients from butteraugli/jpegli
         const P0: f32 = -1.850_383_34e-6;
         const P1: f32 = 1.428_716_05;
@@ -3761,12 +3761,12 @@ impl f32x8 {
         }
     }
 
-    /// Approximate base-2 exponential (2^x).
+    /// Low-precision base-2 exponential (~5.5e-3 max relative error).
     ///
-    /// Uses polynomial approximation with ~5.5e-3 max relative error.
-    /// For natural exp, use `exp()`.
+    /// Uses degree-3 polynomial approximation. Fast but not suitable for color-accurate work.
+    /// For higher precision, use `exp2_midp()`.
     #[inline(always)]
-    pub fn exp2(self) -> Self {
+    pub fn exp2_lowp(self) -> Self {
         // Polynomial coefficients
         const C0: f32 = 1.0;
         const C1: f32 = core::f32::consts::LN_2;
@@ -3797,58 +3797,58 @@ impl f32x8 {
         }
     }
 
-    /// Approximate natural logarithm.
+    /// Low-precision natural logarithm.
     ///
-    /// Computed as `log2(x) * ln(2)`.
+    /// Computed as `log2_lowp(x) * ln(2)`. For higher precision, use `ln_midp()`.
     #[inline(always)]
-    pub fn ln(self) -> Self {
+    pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
         unsafe {
-            Self(_mm256_mul_ps(self.log2().0, _mm256_set1_ps(LN2)))
+            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LN2)))
         }
     }
 
-    /// Approximate natural exponential (e^x).
+    /// Low-precision natural exponential (e^x).
     ///
-    /// Computed as `exp2(x * log2(e))`.
+    /// Computed as `exp2_lowp(x * log2(e))`. For higher precision, use `exp_midp()`.
     #[inline(always)]
-    pub fn exp(self) -> Self {
+    pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe {
-            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2()
+            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_lowp()
         }
     }
 
-    /// Approximate base-10 logarithm.
+    /// Low-precision base-10 logarithm.
     ///
-    /// Computed as `log2(x) / log2(10)`.
+    /// Computed as `log2_lowp(x) / log2(10)`.
     #[inline(always)]
-    pub fn log10(self) -> Self {
+    pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
         unsafe {
-            Self(_mm256_mul_ps(self.log2().0, _mm256_set1_ps(LOG10_2)))
+            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LOG10_2)))
         }
     }
 
-    /// Approximate power function (self^n).
+    /// Low-precision power function (self^n).
     ///
-    /// Computed as `exp2(n * log2(self))`.
+    /// Computed as `exp2_lowp(n * log2_lowp(self))`. For higher precision, use `pow_midp()`.
     /// Note: Only valid for positive self values.
     #[inline(always)]
-    pub fn pow(self, n: f32) -> Self {
+    pub fn pow_lowp(self, n: f32) -> Self {
         unsafe {
-            Self(_mm256_mul_ps(self.log2().0, _mm256_set1_ps(n))).exp2()
+            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(n))).exp2_lowp()
         }
     }
 
-    // ========== High-Precision Transcendental Operations ==========
+    // ========== Mid-Precision Transcendental Operations ==========
 
-    /// High-precision base-2 logarithm (~3 ULP max error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error).
     ///
     /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
     /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
     #[inline(always)]
-    pub fn log2_hp(self) -> Self {
+    pub fn log2_midp(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
         const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
@@ -3897,12 +3897,12 @@ impl f32x8 {
         }
     }
 
-    /// High-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
     ///
     /// Uses degree-6 minimax polynomial.
     /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
     #[inline(always)]
-    pub fn exp2_hp(self) -> Self {
+    pub fn exp2_midp(self) -> Self {
         // Degree-6 minimax polynomial for 2^x on [0, 1]
         const C0: f32 = 1.0;
         const C1: f32 = 0.693_147_180_559_945;
@@ -3938,37 +3938,37 @@ impl f32x8 {
         }
     }
 
-    /// High-precision power function (self^n).
+    /// Mid-precision power function (self^n).
     ///
-    /// Computed as `exp2_hp(n * log2_hp(self))`.
+    /// Computed as `exp2_midp(n * log2_midp(self))`.
     /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
     /// Note: Only valid for positive self values.
     #[inline(always)]
-    pub fn pow_hp(self, n: f32) -> Self {
+    pub fn pow_midp(self, n: f32) -> Self {
         unsafe {
-            Self(_mm256_mul_ps(self.log2_hp().0, _mm256_set1_ps(n))).exp2_hp()
+            Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(n))).exp2_midp()
         }
     }
 
-    /// High-precision natural logarithm.
+    /// Mid-precision natural logarithm.
     ///
-    /// Computed as `log2_hp(x) * ln(2)`.
+    /// Computed as `log2_midp(x) * ln(2)`.
     #[inline(always)]
-    pub fn ln_hp(self) -> Self {
+    pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
         unsafe {
-            Self(_mm256_mul_ps(self.log2_hp().0, _mm256_set1_ps(LN2)))
+            Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(LN2)))
         }
     }
 
-    /// High-precision natural exponential (e^x).
+    /// Mid-precision natural exponential (e^x).
     ///
-    /// Computed as `exp2_hp(x * log2(e))`.
+    /// Computed as `exp2_midp(x * log2(e))`.
     #[inline(always)]
-    pub fn exp_hp(self) -> Self {
+    pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe {
-            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_hp()
+            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp()
         }
     }
 
@@ -4301,11 +4301,11 @@ impl f64x4 {
 
     // ========== Transcendental Operations ==========
 
-    /// Approximate base-2 logarithm.
+    /// Low-precision base-2 logarithm.
     ///
-    /// Uses polynomial approximation. For natural log, use `ln()`.
+    /// Uses polynomial approximation. For natural log, use `ln_lowp()`.
     #[inline(always)]
-    pub fn log2(self) -> Self {
+    pub fn log2_lowp(self) -> Self {
         // Polynomial coefficients for f64
         const P0: f64 = -1.850_383_340_051_831e-6;
         const P1: f64 = 1.428_716_047_008_376;
@@ -4344,11 +4344,11 @@ exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64];
         }
     }
 
-    /// Approximate base-2 exponential (2^x).
+    /// Low-precision base-2 exponential (2^x).
     ///
-    /// Uses polynomial approximation. For natural exp, use `exp()`.
+    /// Uses polynomial approximation. For natural exp, use `exp_lowp()`.
     #[inline(always)]
-    pub fn exp2(self) -> Self {
+    pub fn exp2_lowp(self) -> Self {
         const C0: f64 = 1.0;
         const C1: f64 = core::f64::consts::LN_2;
         const C2: f64 = 0.240_226_506_959_101;
@@ -4379,38 +4379,38 @@ f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_ar
         }
     }
 
-    /// Approximate natural logarithm.
+    /// Low-precision natural logarithm.
     #[inline(always)]
-    pub fn ln(self) -> Self {
+    pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
         unsafe {
-            Self(_mm256_mul_pd(self.log2().0, _mm256_set1_pd(LN2)))
+            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LN2)))
         }
     }
 
-    /// Approximate natural exponential (e^x).
+    /// Low-precision natural exponential (e^x).
     #[inline(always)]
-    pub fn exp(self) -> Self {
+    pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
         unsafe {
-            Self(_mm256_mul_pd(self.0, _mm256_set1_pd(LOG2_E))).exp2()
+            Self(_mm256_mul_pd(self.0, _mm256_set1_pd(LOG2_E))).exp2_lowp()
         }
     }
 
-    /// Approximate base-10 logarithm.
+    /// Low-precision base-10 logarithm.
     #[inline(always)]
-    pub fn log10(self) -> Self {
+    pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
         unsafe {
-            Self(_mm256_mul_pd(self.log2().0, _mm256_set1_pd(LOG10_2)))
+            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LOG10_2)))
         }
     }
 
-    /// Approximate power function (self^n).
+    /// Low-precision power function (self^n).
     #[inline(always)]
-    pub fn pow(self, n: f64) -> Self {
+    pub fn pow_lowp(self, n: f64) -> Self {
         unsafe {
-            Self(_mm256_mul_pd(self.log2().0, _mm256_set1_pd(n))).exp2()
+            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(n))).exp2_lowp()
         }
     }
 
@@ -6874,12 +6874,12 @@ impl f32x16 {
 
     // ========== Transcendental Operations ==========
 
-    /// Approximate base-2 logarithm.
+    /// Low-precision base-2 logarithm (~7.7e-5 max relative error).
     ///
-    /// Uses rational polynomial approximation with ~7.7e-5 max relative error.
-    /// For natural log, use `ln()`. For log10, use `log10()`.
+    /// Uses rational polynomial approximation. Fast but not suitable for color-accurate work.
+    /// For higher precision, use `log2_midp()`.
     #[inline(always)]
-    pub fn log2(self) -> Self {
+    pub fn log2_lowp(self) -> Self {
         // Rational polynomial coefficients from butteraugli/jpegli
         const P0: f32 = -1.850_383_34e-6;
         const P1: f32 = 1.428_716_05;
@@ -6913,12 +6913,12 @@ impl f32x16 {
         }
     }
 
-    /// Approximate base-2 exponential (2^x).
+    /// Low-precision base-2 exponential (~5.5e-3 max relative error).
     ///
-    /// Uses polynomial approximation with ~5.5e-3 max relative error.
-    /// For natural exp, use `exp()`.
+    /// Uses degree-3 polynomial approximation. Fast but not suitable for color-accurate work.
+    /// For higher precision, use `exp2_midp()`.
     #[inline(always)]
-    pub fn exp2(self) -> Self {
+    pub fn exp2_lowp(self) -> Self {
         // Polynomial coefficients
         const C0: f32 = 1.0;
         const C1: f32 = core::f32::consts::LN_2;
@@ -6949,58 +6949,58 @@ impl f32x16 {
         }
     }
 
-    /// Approximate natural logarithm.
+    /// Low-precision natural logarithm.
     ///
-    /// Computed as `log2(x) * ln(2)`.
+    /// Computed as `log2_lowp(x) * ln(2)`. For higher precision, use `ln_midp()`.
     #[inline(always)]
-    pub fn ln(self) -> Self {
+    pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
         unsafe {
-            Self(_mm512_mul_ps(self.log2().0, _mm512_set1_ps(LN2)))
+            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LN2)))
         }
     }
 
-    /// Approximate natural exponential (e^x).
+    /// Low-precision natural exponential (e^x).
     ///
-    /// Computed as `exp2(x * log2(e))`.
+    /// Computed as `exp2_lowp(x * log2(e))`. For higher precision, use `exp_midp()`.
     #[inline(always)]
-    pub fn exp(self) -> Self {
+    pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe {
-            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2()
+            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_lowp()
         }
     }
 
-    /// Approximate base-10 logarithm.
+    /// Low-precision base-10 logarithm.
     ///
-    /// Computed as `log2(x) / log2(10)`.
+    /// Computed as `log2_lowp(x) / log2(10)`.
     #[inline(always)]
-    pub fn log10(self) -> Self {
+    pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
         unsafe {
-            Self(_mm512_mul_ps(self.log2().0, _mm512_set1_ps(LOG10_2)))
+            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LOG10_2)))
         }
     }
 
-    /// Approximate power function (self^n).
+    /// Low-precision power function (self^n).
     ///
-    /// Computed as `exp2(n * log2(self))`.
+    /// Computed as `exp2_lowp(n * log2_lowp(self))`. For higher precision, use `pow_midp()`.
     /// Note: Only valid for positive self values.
     #[inline(always)]
-    pub fn pow(self, n: f32) -> Self {
+    pub fn pow_lowp(self, n: f32) -> Self {
         unsafe {
-            Self(_mm512_mul_ps(self.log2().0, _mm512_set1_ps(n))).exp2()
+            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(n))).exp2_lowp()
         }
     }
 
-    // ========== High-Precision Transcendental Operations ==========
+    // ========== Mid-Precision Transcendental Operations ==========
 
-    /// High-precision base-2 logarithm (~3 ULP max error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error).
     ///
     /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
     /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
     #[inline(always)]
-    pub fn log2_hp(self) -> Self {
+    pub fn log2_midp(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
         const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
@@ -7049,12 +7049,12 @@ impl f32x16 {
         }
     }
 
-    /// High-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
     ///
     /// Uses degree-6 minimax polynomial.
     /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
     #[inline(always)]
-    pub fn exp2_hp(self) -> Self {
+    pub fn exp2_midp(self) -> Self {
         // Degree-6 minimax polynomial for 2^x on [0, 1]
         const C0: f32 = 1.0;
         const C1: f32 = 0.693_147_180_559_945;
@@ -7090,37 +7090,37 @@ impl f32x16 {
         }
     }
 
-    /// High-precision power function (self^n).
+    /// Mid-precision power function (self^n).
     ///
-    /// Computed as `exp2_hp(n * log2_hp(self))`.
+    /// Computed as `exp2_midp(n * log2_midp(self))`.
     /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
     /// Note: Only valid for positive self values.
     #[inline(always)]
-    pub fn pow_hp(self, n: f32) -> Self {
+    pub fn pow_midp(self, n: f32) -> Self {
         unsafe {
-            Self(_mm512_mul_ps(self.log2_hp().0, _mm512_set1_ps(n))).exp2_hp()
+            Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(n))).exp2_midp()
         }
     }
 
-    /// High-precision natural logarithm.
+    /// Mid-precision natural logarithm.
     ///
-    /// Computed as `log2_hp(x) * ln(2)`.
+    /// Computed as `log2_midp(x) * ln(2)`.
     #[inline(always)]
-    pub fn ln_hp(self) -> Self {
+    pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
         unsafe {
-            Self(_mm512_mul_ps(self.log2_hp().0, _mm512_set1_ps(LN2)))
+            Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(LN2)))
         }
     }
 
-    /// High-precision natural exponential (e^x).
+    /// Mid-precision natural exponential (e^x).
     ///
-    /// Computed as `exp2_hp(x * log2(e))`.
+    /// Computed as `exp2_midp(x * log2(e))`.
     #[inline(always)]
-    pub fn exp_hp(self) -> Self {
+    pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe {
-            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_hp()
+            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp()
         }
     }
 
@@ -7492,11 +7492,11 @@ impl f64x8 {
 
     // ========== Transcendental Operations ==========
 
-    /// Approximate base-2 logarithm.
+    /// Low-precision base-2 logarithm.
     ///
-    /// Uses polynomial approximation. For natural log, use `ln()`.
+    /// Uses polynomial approximation. For natural log, use `ln_lowp()`.
     #[inline(always)]
-    pub fn log2(self) -> Self {
+    pub fn log2_lowp(self) -> Self {
         // Polynomial coefficients for f64
         const P0: f64 = -1.850_383_340_051_831e-6;
         const P1: f64 = 1.428_716_047_008_376;
@@ -7535,11 +7535,11 @@ exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64, exp_
         }
     }
 
-    /// Approximate base-2 exponential (2^x).
+    /// Low-precision base-2 exponential (2^x).
     ///
-    /// Uses polynomial approximation. For natural exp, use `exp()`.
+    /// Uses polynomial approximation. For natural exp, use `exp_lowp()`.
     #[inline(always)]
-    pub fn exp2(self) -> Self {
+    pub fn exp2_lowp(self) -> Self {
         const C0: f64 = 1.0;
         const C1: f64 = core::f64::consts::LN_2;
         const C2: f64 = 0.240_226_506_959_101;
@@ -7570,38 +7570,38 @@ f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_ar
         }
     }
 
-    /// Approximate natural logarithm.
+    /// Low-precision natural logarithm.
     #[inline(always)]
-    pub fn ln(self) -> Self {
+    pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
         unsafe {
-            Self(_mm512_mul_pd(self.log2().0, _mm512_set1_pd(LN2)))
+            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LN2)))
         }
     }
 
-    /// Approximate natural exponential (e^x).
+    /// Low-precision natural exponential (e^x).
     #[inline(always)]
-    pub fn exp(self) -> Self {
+    pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
         unsafe {
-            Self(_mm512_mul_pd(self.0, _mm512_set1_pd(LOG2_E))).exp2()
+            Self(_mm512_mul_pd(self.0, _mm512_set1_pd(LOG2_E))).exp2_lowp()
         }
     }
 
-    /// Approximate base-10 logarithm.
+    /// Low-precision base-10 logarithm.
     #[inline(always)]
-    pub fn log10(self) -> Self {
+    pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
         unsafe {
-            Self(_mm512_mul_pd(self.log2().0, _mm512_set1_pd(LOG10_2)))
+            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LOG10_2)))
         }
     }
 
-    /// Approximate power function (self^n).
+    /// Low-precision power function (self^n).
     #[inline(always)]
-    pub fn pow(self, n: f64) -> Self {
+    pub fn pow_lowp(self, n: f64) -> Self {
         unsafe {
-            Self(_mm512_mul_pd(self.log2().0, _mm512_set1_pd(n))).exp2()
+            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(n))).exp2_lowp()
         }
     }
 

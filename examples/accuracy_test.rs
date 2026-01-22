@@ -3,7 +3,7 @@
 //! Measures ULP errors and round-trip accuracy for sRGB color processing
 //! at different bit depths (8-bit, 12-bit, 16-bit).
 //!
-//! Compares basic (fast) vs HP (high-precision) implementations.
+//! Compares lowp (fast) vs midp (mid-precision) implementations.
 //!
 //! Run with:
 //! ```sh
@@ -116,7 +116,7 @@ fn archmage_exp2(input: &[f32]) -> Vec<f32> {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = f32x8::load(token, arr);
-            let r = x.exp2();
+            let r = x.exp2_lowp();
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {
@@ -142,7 +142,7 @@ fn archmage_log2(input: &[f32]) -> Vec<f32> {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = f32x8::load(token, arr);
-            let r = x.log2();
+            let r = x.log2_lowp();
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {
@@ -154,8 +154,8 @@ fn archmage_log2(input: &[f32]) -> Vec<f32> {
     unsafe { inner(token, input) }
 }
 
-/// Apply archmage pow (basic, fast) to a slice
-fn archmage_pow(input: &[f32], exp: f32) -> Vec<f32> {
+/// Apply archmage pow_lowp (fast, low-precision) to a slice
+fn archmage_pow_lowp(input: &[f32], exp: f32) -> Vec<f32> {
     let Some(token) = archmage::Avx2FmaToken::try_new() else {
         return input.iter().map(|&x| x.powf(exp)).collect();
     };
@@ -168,7 +168,7 @@ fn archmage_pow(input: &[f32], exp: f32) -> Vec<f32> {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = f32x8::load(token, arr);
-            let r = x.pow(exp);
+            let r = x.pow_lowp(exp);
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {
@@ -180,8 +180,8 @@ fn archmage_pow(input: &[f32], exp: f32) -> Vec<f32> {
     unsafe { inner(token, exp, input) }
 }
 
-/// Apply archmage pow_hp (high-precision) to a slice
-fn archmage_pow_hp(input: &[f32], exp: f32) -> Vec<f32> {
+/// Apply archmage pow_midp (mid-precision) to a slice
+fn archmage_pow_midp(input: &[f32], exp: f32) -> Vec<f32> {
     let Some(token) = archmage::Avx2FmaToken::try_new() else {
         return input.iter().map(|&x| x.powf(exp)).collect();
     };
@@ -194,7 +194,7 @@ fn archmage_pow_hp(input: &[f32], exp: f32) -> Vec<f32> {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = f32x8::load(token, arr);
-            let r = x.pow_hp(exp);
+            let r = x.pow_midp(exp);
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {
@@ -267,9 +267,9 @@ fn test_srgb_roundtrip(bit_depth: u32) {
     // Generate all possible input values (normalized to 0..1)
     let inputs: Vec<f32> = (0..levels).map(|i| i as f32 / max_val).collect();
 
-    // Test basic (fast) implementation
-    let linear = archmage_pow(&inputs, 2.4);
-    let back_to_srgb = archmage_pow(&linear, 1.0 / 2.4);
+    // Test lowp (fast) implementation
+    let linear = archmage_pow_lowp(&inputs, 2.4);
+    let back_to_srgb = archmage_pow_lowp(&linear, 1.0 / 2.4);
 
     // Quantize back to integer levels
     let mut exact_matches = 0u32;
@@ -378,30 +378,30 @@ fn main() {
     println!("\n=== pow(x, 2.4) Accuracy (sRGB decode) ===\n");
 
     println!("Range (0, 1] (normalized sRGB input):");
-    let stats = measure_accuracy("pow_2.4", &range_0_1, |x| archmage_pow(x, 2.4), |x| x.powf(2.4));
+    let stats = measure_accuracy("pow_2.4", &range_0_1, |x| archmage_pow_lowp(x, 2.4), |x| x.powf(2.4));
     println!("  {}", stats);
 
-    println!("\n=== pow(x, 1/2.4) Accuracy (sRGB encode) ===\n");
+    println!("\n=== pow_lowp(x, 1/2.4) Accuracy (sRGB encode) ===\n");
 
     println!("Range (0, 1] (linear RGB input):");
-    let stats = measure_accuracy("pow_0.417", &range_0_1, |x| archmage_pow(x, 1.0/2.4), |x| x.powf(1.0/2.4));
+    let stats = measure_accuracy("pow_0.417", &range_0_1, |x| archmage_pow_lowp(x, 1.0/2.4), |x| x.powf(1.0/2.4));
     println!("  {}", stats);
 
-    println!("\n=== pow(x, 2.2) Accuracy (simple gamma) ===\n");
+    println!("\n=== pow_lowp(x, 2.2) Accuracy (simple gamma) ===\n");
 
     println!("Range (0, 1]:");
-    let stats = measure_accuracy("pow_2.2", &range_0_1, |x| archmage_pow(x, 2.2), |x| x.powf(2.2));
+    let stats = measure_accuracy("pow_2.2", &range_0_1, |x| archmage_pow_lowp(x, 2.2), |x| x.powf(2.2));
     println!("  {}", stats);
 
-    // High-precision function accuracy
-    println!("\n=== HIGH-PRECISION Functions ===\n");
+    // Mid-precision function accuracy
+    println!("\n=== MID-PRECISION Functions ===\n");
 
-    println!("pow_hp(x, 2.4) - Range (0, 1]:");
-    let stats = measure_accuracy("pow_hp_2.4", &range_0_1, |x| archmage_pow_hp(x, 2.4), |x| x.powf(2.4));
+    println!("pow_midp(x, 2.4) - Range (0, 1]:");
+    let stats = measure_accuracy("pow_midp_2.4", &range_0_1, |x| archmage_pow_midp(x, 2.4), |x| x.powf(2.4));
     println!("  {}", stats);
 
-    println!("\npow_hp(x, 1/2.4) - Range (0, 1]:");
-    let stats = measure_accuracy("pow_hp_0.417", &range_0_1, |x| archmage_pow_hp(x, 1.0/2.4), |x| x.powf(1.0/2.4));
+    println!("\npow_midp(x, 1/2.4) - Range (0, 1]:");
+    let stats = measure_accuracy("pow_midp_0.417", &range_0_1, |x| archmage_pow_midp(x, 1.0/2.4), |x| x.powf(1.0/2.4));
     println!("  {}", stats);
 
     // Round-trip comparison: basic vs HP vs std
@@ -413,20 +413,22 @@ fn main() {
     };
 
     for bits in [8, 10, 12, 16] {
-        test_roundtrip_with("pow (basic)", bits, &archmage_pow);
-        test_roundtrip_with("pow_hp", bits, &archmage_pow_hp);
+        test_roundtrip_with("pow_lowp", bits, &archmage_pow_lowp);
+        test_roundtrip_with("pow_midp", bits, &archmage_pow_midp);
         test_roundtrip_with("std::f32", bits, &std_pow);
         println!();
     }
 
     println!("=== Summary ===\n");
-    println!("BASIC functions (pow, exp2, log2):");
+    println!("LOWP functions (pow_lowp, exp2_lowp, log2_lowp):");
     println!("  - ~90,000 ULP max error, ~0.5% relative error");
     println!("  - Suitable for preview/thumbnails only");
     println!();
-    println!("HP functions (pow_hp, exp2_hp, log2_hp):");
+    println!("MIDP functions (pow_midp, exp2_midp, log2_midp):");
     println!("  - ~140 ULP max error, ~8e-6 relative error");
     println!("  - 100% exact round-trips for 8-bit, 10-bit, 12-bit");
     println!("  - 97% exact / 3% off-by-1 for 16-bit");
     println!("  - Suitable for production color processing");
+    println!();
+    println!("For perfect precision, use std::f32 (scalar) at ~7-15x slower throughput.");
 }

@@ -159,7 +159,7 @@ fn archmage_exp2_f32(input: &[f32], output: &mut [f32]) {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = am_f32x8::load(token, arr);
-            let r = x.exp2();
+            let r = x.exp2_lowp();
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {
@@ -172,7 +172,7 @@ fn archmage_exp2_f32(input: &[f32], output: &mut [f32]) {
 }
 
 fn archmage_log2_f32(input: &[f32], output: &mut [f32]) {
-    
+
     use archmage::SimdToken;
 
     let Some(token) = archmage::Avx2FmaToken::try_new() else {
@@ -187,7 +187,7 @@ fn archmage_log2_f32(input: &[f32], output: &mut [f32]) {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = am_f32x8::load(token, arr);
-            let r = x.log2();
+            let r = x.log2_lowp();
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {
@@ -199,7 +199,7 @@ fn archmage_log2_f32(input: &[f32], output: &mut [f32]) {
 }
 
 fn archmage_ln_f32(input: &[f32], output: &mut [f32]) {
-    
+
     use archmage::SimdToken;
 
     let Some(token) = archmage::Avx2FmaToken::try_new() else {
@@ -214,7 +214,7 @@ fn archmage_ln_f32(input: &[f32], output: &mut [f32]) {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = am_f32x8::load(token, arr);
-            let r = x.ln();
+            let r = x.ln_lowp();
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {
@@ -226,7 +226,7 @@ fn archmage_ln_f32(input: &[f32], output: &mut [f32]) {
 }
 
 fn archmage_exp_f32(input: &[f32], output: &mut [f32]) {
-    
+
     use archmage::SimdToken;
 
     let Some(token) = archmage::Avx2FmaToken::try_new() else {
@@ -241,7 +241,7 @@ fn archmage_exp_f32(input: &[f32], output: &mut [f32]) {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = am_f32x8::load(token, arr);
-            let r = x.exp();
+            let r = x.exp_lowp();
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {
@@ -253,7 +253,7 @@ fn archmage_exp_f32(input: &[f32], output: &mut [f32]) {
 }
 
 fn archmage_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
-    
+
     use archmage::SimdToken;
 
     let Some(token) = archmage::Avx2FmaToken::try_new() else {
@@ -268,7 +268,7 @@ fn archmage_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
             let start = i * 8;
             let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
             let x = am_f32x8::load(token, arr);
-            let r = x.pow(exp);
+            let r = x.pow_lowp(exp);
             output[start..start + 8].copy_from_slice(&r.to_array());
         }
         for i in (chunks * 8)..input.len() {

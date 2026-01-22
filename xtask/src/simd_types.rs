@@ -2104,13 +2104,13 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
     writeln!(code, "    // ========== Transcendental Operations ==========\n").unwrap();
 
     if ty.elem == ElementType::F32 {
-        // ===== F32 log2 =====
-        writeln!(code, "    /// Approximate base-2 logarithm.").unwrap();
+        // ===== F32 log2_lowp =====
+        writeln!(code, "    /// Low-precision base-2 logarithm (~7.7e-5 max relative error).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses rational polynomial approximation with ~7.7e-5 max relative error.").unwrap();
-        writeln!(code, "    /// For natural log, use `ln()`. For log10, use `log10()`.").unwrap();
+        writeln!(code, "    /// Uses rational polynomial approximation. Fast but not suitable for color-accurate work.").unwrap();
+        writeln!(code, "    /// For higher precision, use `log2_midp()`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log2(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn log2_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        // Rational polynomial coefficients from butteraugli/jpegli").unwrap();
         writeln!(code, "        const P0: f32 = -1.850_383_34e-6;").unwrap();
         writeln!(code, "        const P1: f32 = 1.428_716_05;").unwrap();
@@ -2144,13 +2144,13 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 exp2 =====
-        writeln!(code, "    /// Approximate base-2 exponential (2^x).").unwrap();
+        // ===== F32 exp2_lowp =====
+        writeln!(code, "    /// Low-precision base-2 exponential (~5.5e-3 max relative error).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses polynomial approximation with ~5.5e-3 max relative error.").unwrap();
-        writeln!(code, "    /// For natural exp, use `exp()`.").unwrap();
+        writeln!(code, "    /// Uses degree-3 polynomial approximation. Fast but not suitable for color-accurate work.").unwrap();
+        writeln!(code, "    /// For higher precision, use `exp2_midp()`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp2(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn exp2_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        // Polynomial coefficients").unwrap();
         writeln!(code, "        const C0: f32 = 1.0;").unwrap();
         writeln!(code, "        const C1: f32 = core::f32::consts::LN_2;").unwrap();
@@ -2188,64 +2188,64 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 ln (natural log) =====
-        writeln!(code, "    /// Approximate natural logarithm.").unwrap();
+        // ===== F32 ln_lowp (natural log) =====
+        writeln!(code, "    /// Low-precision natural logarithm.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `log2(x) * ln(2)`.").unwrap();
+        writeln!(code, "    /// Computed as `log2_lowp(x) * ln(2)`. For higher precision, use `ln_midp()`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn ln(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn ln_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 exp (natural exp) =====
-        writeln!(code, "    /// Approximate natural exponential (e^x).").unwrap();
+        // ===== F32 exp_lowp (natural exp) =====
+        writeln!(code, "    /// Low-precision natural exponential (e^x).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2(x * log2(e))`.").unwrap();
+        writeln!(code, "    /// Computed as `exp2_lowp(x * log2(e))`. For higher precision, use `exp_midp()`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn exp_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const LOG2_E: f32 = core::f32::consts::LOG2_E;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_lowp()", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 log10 =====
-        writeln!(code, "    /// Approximate base-10 logarithm.").unwrap();
+        // ===== F32 log10_lowp =====
+        writeln!(code, "    /// Low-precision base-10 logarithm.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `log2(x) / log2(10)`.").unwrap();
+        writeln!(code, "    /// Computed as `log2_lowp(x) / log2(10)`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log10(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn log10_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(LOG10_2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LOG10_2)))", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 pow =====
-        writeln!(code, "    /// Approximate power function (self^n).").unwrap();
+        // ===== F32 pow_lowp =====
+        writeln!(code, "    /// Low-precision power function (self^n).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2(n * log2(self))`.").unwrap();
+        writeln!(code, "    /// Computed as `exp2_lowp(n * log2_lowp(self))`. For higher precision, use `pow_midp()`.").unwrap();
         writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn pow(self, n: f32) -> Self {{").unwrap();
+        writeln!(code, "    pub fn pow_lowp(self, n: f32) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(n))).exp2()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(n))).exp2_lowp()", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ========== High-Precision Transcendental Operations ==========
-        writeln!(code, "    // ========== High-Precision Transcendental Operations ==========\n").unwrap();
+        // ========== Mid-Precision Transcendental Operations ==========
+        writeln!(code, "    // ========== Mid-Precision Transcendental Operations ==========\n").unwrap();
 
-        // ===== F32 log2_hp =====
-        writeln!(code, "    /// High-precision base-2 logarithm (~3 ULP max error).").unwrap();
+        // ===== F32 log2_midp =====
+        writeln!(code, "    /// Mid-precision base-2 logarithm (~3 ULP max error).").unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.").unwrap();
         writeln!(code, "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log2_hp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn log2_midp(self) -> Self {{").unwrap();
         writeln!(code, "        // Constants for range reduction").unwrap();
         writeln!(code, "        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits").unwrap();
         writeln!(code, "        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits").unwrap();
@@ -2294,13 +2294,13 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 exp2_hp =====
-        writeln!(code, "    /// High-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).").unwrap();
+        // ===== F32 exp2_midp =====
+        writeln!(code, "    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).").unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Uses degree-6 minimax polynomial.").unwrap();
         writeln!(code, "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp2_hp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn exp2_midp(self) -> Self {{").unwrap();
         writeln!(code, "        // Degree-6 minimax polynomial for 2^x on [0, 1]").unwrap();
         writeln!(code, "        const C0: f32 = 1.0;").unwrap();
         writeln!(code, "        const C1: f32 = 0.693_147_180_559_945;").unwrap();
@@ -2343,51 +2343,51 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 pow_hp =====
-        writeln!(code, "    /// High-precision power function (self^n).").unwrap();
+        // ===== F32 pow_midp =====
+        writeln!(code, "    /// Mid-precision power function (self^n).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2_hp(n * log2_hp(self))`.").unwrap();
+        writeln!(code, "    /// Computed as `exp2_midp(n * log2_midp(self))`.").unwrap();
         writeln!(code, "    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.").unwrap();
         writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn pow_hp(self, n: f32) -> Self {{").unwrap();
+        writeln!(code, "    pub fn pow_midp(self, n: f32) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_hp().0, {}_set1_{}(n))).exp2_hp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_midp().0, {}_set1_{}(n))).exp2_midp()", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 ln_hp =====
-        writeln!(code, "    /// High-precision natural logarithm.").unwrap();
+        // ===== F32 ln_midp =====
+        writeln!(code, "    /// Mid-precision natural logarithm.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `log2_hp(x) * ln(2)`.").unwrap();
+        writeln!(code, "    /// Computed as `log2_midp(x) * ln(2)`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn ln_hp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn ln_midp(self) -> Self {{").unwrap();
         writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_hp().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_midp().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F32 exp_hp =====
-        writeln!(code, "    /// High-precision natural exponential (e^x).").unwrap();
+        // ===== F32 exp_midp =====
+        writeln!(code, "    /// Mid-precision natural exponential (e^x).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2_hp(x * log2(e))`.").unwrap();
+        writeln!(code, "    /// Computed as `exp2_midp(x * log2(e))`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp_hp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn exp_midp(self) -> Self {{").unwrap();
         writeln!(code, "        const LOG2_E: f32 = core::f32::consts::LOG2_E;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_hp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_midp()", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
     } else if ty.elem == ElementType::F64 {
-        // ===== F64 log2 =====
+        // ===== F64 log2_lowp =====
         // For f64, we use a similar algorithm but with f64 constants
-        writeln!(code, "    /// Approximate base-2 logarithm.").unwrap();
+        writeln!(code, "    /// Low-precision base-2 logarithm.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses polynomial approximation. For natural log, use `ln()`.").unwrap();
+        writeln!(code, "    /// Uses polynomial approximation. For natural log, use `ln_lowp()`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log2(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn log2_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        // Polynomial coefficients for f64").unwrap();
         writeln!(code, "        const P0: f64 = -1.850_383_340_051_831e-6;").unwrap();
         writeln!(code, "        const P1: f64 = 1.428_716_047_008_376;").unwrap();
@@ -2439,12 +2439,12 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F64 exp2 =====
-        writeln!(code, "    /// Approximate base-2 exponential (2^x).").unwrap();
+        // ===== F64 exp2_lowp =====
+        writeln!(code, "    /// Low-precision base-2 exponential (2^x).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses polynomial approximation. For natural exp, use `exp()`.").unwrap();
+        writeln!(code, "    /// Uses polynomial approximation. For natural exp, use `exp_lowp()`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp2(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn exp2_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const C0: f64 = 1.0;").unwrap();
         writeln!(code, "        const C1: f64 = core::f64::consts::LN_2;").unwrap();
         writeln!(code, "        const C2: f64 = 0.240_226_506_959_101;").unwrap();
@@ -2487,42 +2487,42 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F64 ln =====
-        writeln!(code, "    /// Approximate natural logarithm.").unwrap();
+        // ===== F64 ln_lowp =====
+        writeln!(code, "    /// Low-precision natural logarithm.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn ln(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn ln_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const LN2: f64 = core::f64::consts::LN_2;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F64 exp =====
-        writeln!(code, "    /// Approximate natural exponential (e^x).").unwrap();
+        // ===== F64 exp_lowp =====
+        writeln!(code, "    /// Low-precision natural exponential (e^x).").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn exp_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const LOG2_E: f64 = core::f64::consts::LOG2_E;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_lowp()", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F64 log10 =====
-        writeln!(code, "    /// Approximate base-10 logarithm.").unwrap();
+        // ===== F64 log10_lowp =====
+        writeln!(code, "    /// Low-precision base-10 logarithm.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log10(self) -> Self {{").unwrap();
+        writeln!(code, "    pub fn log10_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const LOG10_2: f64 = core::f64::consts::LOG10_2;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(LOG10_2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LOG10_2)))", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        // ===== F64 pow =====
-        writeln!(code, "    /// Approximate power function (self^n).").unwrap();
+        // ===== F64 pow_lowp =====
+        writeln!(code, "    /// Low-precision power function (self^n).").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn pow(self, n: f64) -> Self {{").unwrap();
+        writeln!(code, "    pub fn pow_lowp(self, n: f64) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2().0, {}_set1_{}(n))).exp2()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(n))).exp2_lowp()", prefix, suffix, prefix, suffix).unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
