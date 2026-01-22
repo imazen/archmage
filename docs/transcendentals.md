@@ -33,13 +33,53 @@ This document describes the algorithms and benchmark results for transcendental 
 | simd hp | 14,558 | 2,251 M/s | 8.5e-5 | 1.5e-5 |
 | simd lut | 20,843 | 1,572 M/s | **7.9e-7** | 8.5e-8 |
 
-## Algorithm Recommendations
+## Accuracy Analysis for Color Processing
 
-| Use Case | Recommended | Speedup | Error |
-|----------|-------------|---------|-------|
-| 8-bit sRGB | basic | 10x | <0.5% (invisible after quantization) |
-| 10-bit HDR | hp | 6.5x | <0.01% |
-| 16-bit/scientific | lut | 4.6x | <0.0001% |
+### Round-trip Accuracy (pow(x, 2.4) → pow(x, 1/2.4))
+
+Testing all quantization levels for sRGB gamma round-trip:
+
+| Bit Depth | Levels | archmage Exact | Off by 1 | Off by >1 | Max Error | std::f32 |
+|-----------|--------|----------------|----------|-----------|-----------|----------|
+| **8-bit** | 256 | 81.2% | 15.2% | 3.5% | **2 levels** | 100% exact |
+| **10-bit** | 1,024 | 45.7% | 28.2% | 26.1% | **8 levels** | 100% exact |
+| **12-bit** | 4,096 | 24.3% | 16.8% | 58.9% | **32 levels** | 100% exact |
+| **16-bit** | 65,536 | 5.2% | 5.3% | 89.5% | **512 levels** | 100% exact |
+
+### ULP Error by Function
+
+| Function | Range | Max ULP | Avg ULP | Max Rel Error |
+|----------|-------|---------|---------|---------------|
+| exp2 | [0, 1] | 93,261 | 18,198 | 5.56e-3 |
+| exp2 | [-10, 10] | 92,913 | 18,155 | 5.54e-3 |
+| log2 | (0, 1] | varies* | 305,431 | 1.29e-2 |
+| log2 | [1, 255] | varies* | 11.97M | 1.85e-6 |
+| pow(x, 2.4) | (0, 1] | 93,350 | 20,037 | 5.56e-3 |
+| pow(x, 1/2.4) | (0, 1] | 93,308 | 29,154 | 5.56e-3 |
+
+*log2 ULP varies greatly near 0 due to floating-point representation
+
+### Current Implementation Assessment
+
+**⚠️ NOT SUITABLE for color-accurate work requiring:**
+- 8-bit: >95% exact round-trips (current: 81%)
+- 10-bit+: Any significant accuracy (current: <50%)
+
+**Current implementation IS suitable for:**
+- Preview/thumbnail generation where speed > quality
+- Real-time effects where visual artifacts are acceptable
+- Non-color-critical mathematical computations
+
+### Algorithm Recommendations (TODO: Implement Higher Accuracy Tiers)
+
+| Use Case | Algorithm | Target | Status |
+|----------|-----------|--------|--------|
+| Preview/speed | basic (current) | <1% rel error | ✅ Implemented |
+| 8-bit sRGB | hp | >99% exact round-trip | ❌ Not implemented |
+| 10-bit HDR | hp+ | >99% exact round-trip | ❌ Not implemented |
+| 12-bit+ | lut | Near-perfect round-trip | ❌ Not implemented |
+
+**Recommendation**: For production sRGB color processing, use `std::f32::powf()` until higher-accuracy SIMD implementations are added.
 
 ## Algorithms
 
