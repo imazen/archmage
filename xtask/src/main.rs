@@ -1718,26 +1718,11 @@ fn main() -> Result<()> {
 fn generate_all() -> Result<()> {
     let (x86_testable, aarch64_testable) = generate_wrappers()?;
 
-    // Generate tests
+    // Note: mem module tests are skipped because archmage::mem was removed.
+    // The safe_unaligned_simd crate should be used directly instead.
+    // See: feat!: remove archmage::mem module, use safe_unaligned_simd directly
     println!("\n=== Generating Tests ===");
-
-    let x86_tests = generate_x86_tests(&x86_testable);
-    let x86_test_path = PathBuf::from("tests/generated_x86_mem.rs");
-    fs::write(&x86_test_path, &x86_tests)?;
-    println!(
-        "Wrote {} ({} bytes)",
-        x86_test_path.display(),
-        x86_tests.len()
-    );
-
-    let aarch64_tests = generate_aarch64_tests(&aarch64_testable);
-    let aarch64_test_path = PathBuf::from("tests/generated_aarch64_mem.rs");
-    fs::write(&aarch64_test_path, &aarch64_tests)?;
-    println!(
-        "Wrote {} ({} bytes)",
-        aarch64_test_path.display(),
-        aarch64_tests.len()
-    );
+    println!("Skipping mem module tests (archmage::mem was removed)");
 
     // Generate reference documentation
     println!("\n=== Generating Reference Documentation ===");

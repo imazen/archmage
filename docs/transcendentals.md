@@ -59,27 +59,42 @@ Testing all quantization levels for sRGB gamma round-trip:
 
 *log2 ULP varies greatly near 0 due to floating-point representation
 
-### Current Implementation Assessment
+### Two Implementation Tiers
 
-**⚠️ NOT SUITABLE for color-accurate work requiring:**
-- 8-bit: >95% exact round-trips (current: 81%)
-- 10-bit+: Any significant accuracy (current: <50%)
+archmage provides two accuracy tiers for transcendental functions:
 
-**Current implementation IS suitable for:**
-- Preview/thumbnail generation where speed > quality
-- Real-time effects where visual artifacts are acceptable
-- Non-color-critical mathematical computations
+#### Basic Tier (pow, exp2, log2, ln, exp)
 
-### Algorithm Recommendations (TODO: Implement Higher Accuracy Tiers)
+**⚠️ NOT SUITABLE for color-accurate work:**
+- ~90,000 ULP max error, ~0.5% relative error
+- 8-bit round-trip: Only 81% exact
+- 10-bit+: <50% exact
+
+**Suitable for:**
+- Preview/thumbnail generation
+- Real-time effects where artifacts are acceptable
+- Non-color-critical computations
+
+#### HP Tier (pow_hp, exp2_hp, log2_hp, ln_hp, exp_hp) ✅ RECOMMENDED
+
+**✅ SUITABLE for production color processing:**
+- ~145 ULP max error, ~8e-6 relative error
+- 8-bit round-trip: **100% exact**
+- 10-bit round-trip: **100% exact**
+- 12-bit round-trip: **100% exact**
+- 16-bit round-trip: 97% exact, 3% off-by-1
+
+### Algorithm Implementation Status
 
 | Use Case | Algorithm | Target | Status |
 |----------|-----------|--------|--------|
-| Preview/speed | basic (current) | <1% rel error | ✅ Implemented |
-| 8-bit sRGB | hp | >99% exact round-trip | ❌ Not implemented |
-| 10-bit HDR | hp+ | >99% exact round-trip | ❌ Not implemented |
-| 12-bit+ | lut | Near-perfect round-trip | ❌ Not implemented |
+| Preview/speed | basic | <1% rel error | ✅ `pow()`, `exp2()`, `log2()` |
+| 8-bit sRGB | HP | 100% exact round-trip | ✅ `pow_hp()`, `exp2_hp()`, `log2_hp()` |
+| 10-bit HDR | HP | 100% exact round-trip | ✅ `pow_hp()`, `exp2_hp()`, `log2_hp()` |
+| 12-bit | HP | 100% exact round-trip | ✅ `pow_hp()`, `exp2_hp()`, `log2_hp()` |
+| 16-bit | HP | 97% exact, 3% off-by-1 | ✅ `pow_hp()`, `exp2_hp()`, `log2_hp()` |
 
-**Recommendation**: For production sRGB color processing, use `std::f32::powf()` until higher-accuracy SIMD implementations are added.
+**Recommendation**: Use HP functions (`pow_hp`, `exp2_hp`, `log2_hp`) for all color processing work.
 
 ## Algorithms
 

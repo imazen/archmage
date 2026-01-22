@@ -691,6 +691,137 @@ impl f32x4 {
         }
     }
 
+    // ========== High-Precision Transcendental Operations ==========
+
+    /// High-precision base-2 logarithm (~3 ULP max error).
+    ///
+    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    #[inline(always)]
+    pub fn log2_hp(self) -> Self {
+        // Constants for range reduction
+        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
+        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
+        const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
+        const EXPONENT_BIAS: i32 = 127;
+
+        // Coefficients for odd polynomial on y = (a-1)/(a+1)
+        const C0: f32 = 2.885_390_08;  // 2/ln(2)
+        const C1: f32 = 0.961_800_76;  // y^2 coefficient
+        const C2: f32 = 0.576_974_45;  // y^4 coefficient
+        const C3: f32 = 0.434_411_97;  // y^6 coefficient
+
+        unsafe {
+            let x_bits = _mm_castps_si128(self.0);
+
+            // Normalize mantissa to [sqrt(2)/2, sqrt(2)]
+            let offset = _mm_set1_epi32((ONE - SQRT2_OVER_2) as i32);
+            let adjusted = _mm_add_epi32(x_bits, offset);
+
+            // Extract exponent
+            let exp_raw = _mm_srai_epi32::<23>(adjusted);
+            let exp_biased = _mm_sub_epi32(exp_raw, _mm_set1_epi32(EXPONENT_BIAS));
+            let n = _mm_cvtepi32_ps(exp_biased);
+
+            // Reconstruct normalized mantissa
+            let mantissa_bits = _mm_and_si128(adjusted, _mm_set1_epi32(MANTISSA_MASK));
+            let a_bits = _mm_add_epi32(mantissa_bits, _mm_set1_epi32(SQRT2_OVER_2 as i32));
+            let a = _mm_castsi128_ps(a_bits);
+
+            // y = (a - 1) / (a + 1)
+            let one = _mm_set1_ps(1.0);
+            let a_minus_1 = _mm_sub_ps(a, one);
+            let a_plus_1 = _mm_add_ps(a, one);
+            let y = _mm_div_ps(a_minus_1, a_plus_1);
+
+            // y^2
+            let y2 = _mm_mul_ps(y, y);
+
+            // Polynomial: c0 + y^2*(c1 + y^2*(c2 + y^2*c3))
+            let poly = _mm_fmadd_ps(_mm_set1_ps(C3), y2, _mm_set1_ps(C2));
+            let poly = _mm_fmadd_ps(poly, y2, _mm_set1_ps(C1));
+            let poly = _mm_fmadd_ps(poly, y2, _mm_set1_ps(C0));
+
+            // Result: y * poly + n
+            Self(_mm_fmadd_ps(y, poly, n))
+        }
+    }
+
+    /// High-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    ///
+    /// Uses degree-6 minimax polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    #[inline(always)]
+    pub fn exp2_hp(self) -> Self {
+        // Degree-6 minimax polynomial for 2^x on [0, 1]
+        const C0: f32 = 1.0;
+        const C1: f32 = 0.693_147_180_559_945;
+        const C2: f32 = 0.240_226_506_959_101;
+        const C3: f32 = 0.055_504_108_664_822;
+        const C4: f32 = 0.009_618_129_107_629;
+        const C5: f32 = 0.001_333_355_814_497;
+        const C6: f32 = 0.000_154_035_303_933;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm_max_ps(self.0, _mm_set1_ps(-126.0));
+            let x = _mm_min_ps(x, _mm_set1_ps(126.0));
+
+            let xi = _mm_floor_ps(x);
+            let xf = _mm_sub_ps(x, xi);
+
+            // Horner's method with 6 coefficients
+            let poly = _mm_fmadd_ps(_mm_set1_ps(C6), xf, _mm_set1_ps(C5));
+            let poly = _mm_fmadd_ps(poly, xf, _mm_set1_ps(C4));
+            let poly = _mm_fmadd_ps(poly, xf, _mm_set1_ps(C3));
+            let poly = _mm_fmadd_ps(poly, xf, _mm_set1_ps(C2));
+            let poly = _mm_fmadd_ps(poly, xf, _mm_set1_ps(C1));
+            let poly = _mm_fmadd_ps(poly, xf, _mm_set1_ps(C0));
+
+            // Scale by 2^integer
+            let xi_i32 = _mm_cvtps_epi32(xi);
+            let bias = _mm_set1_epi32(127);
+            let scale_bits = _mm_slli_epi32::<23>(_mm_add_epi32(xi_i32, bias));
+            let scale = _mm_castsi128_ps(scale_bits);
+
+            Self(_mm_mul_ps(poly, scale))
+        }
+    }
+
+    /// High-precision power function (self^n).
+    ///
+    /// Computed as `exp2_hp(n * log2_hp(self))`.
+    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow_hp(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm_mul_ps(self.log2_hp().0, _mm_set1_ps(n))).exp2_hp()
+        }
+    }
+
+    /// High-precision natural logarithm.
+    ///
+    /// Computed as `log2_hp(x) * ln(2)`.
+    #[inline(always)]
+    pub fn ln_hp(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm_mul_ps(self.log2_hp().0, _mm_set1_ps(LN2)))
+        }
+    }
+
+    /// High-precision natural exponential (e^x).
+    ///
+    /// Computed as `exp2_hp(x * log2(e))`.
+    #[inline(always)]
+    pub fn exp_hp(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_hp()
+        }
+    }
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3707,6 +3838,137 @@ impl f32x8 {
     pub fn pow(self, n: f32) -> Self {
         unsafe {
             Self(_mm256_mul_ps(self.log2().0, _mm256_set1_ps(n))).exp2()
+        }
+    }
+
+    // ========== High-Precision Transcendental Operations ==========
+
+    /// High-precision base-2 logarithm (~3 ULP max error).
+    ///
+    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    #[inline(always)]
+    pub fn log2_hp(self) -> Self {
+        // Constants for range reduction
+        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
+        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
+        const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
+        const EXPONENT_BIAS: i32 = 127;
+
+        // Coefficients for odd polynomial on y = (a-1)/(a+1)
+        const C0: f32 = 2.885_390_08;  // 2/ln(2)
+        const C1: f32 = 0.961_800_76;  // y^2 coefficient
+        const C2: f32 = 0.576_974_45;  // y^4 coefficient
+        const C3: f32 = 0.434_411_97;  // y^6 coefficient
+
+        unsafe {
+            let x_bits = _mm256_castps_si256(self.0);
+
+            // Normalize mantissa to [sqrt(2)/2, sqrt(2)]
+            let offset = _mm256_set1_epi32((ONE - SQRT2_OVER_2) as i32);
+            let adjusted = _mm256_add_epi32(x_bits, offset);
+
+            // Extract exponent
+            let exp_raw = _mm256_srai_epi32::<23>(adjusted);
+            let exp_biased = _mm256_sub_epi32(exp_raw, _mm256_set1_epi32(EXPONENT_BIAS));
+            let n = _mm256_cvtepi32_ps(exp_biased);
+
+            // Reconstruct normalized mantissa
+            let mantissa_bits = _mm256_and_si256(adjusted, _mm256_set1_epi32(MANTISSA_MASK));
+            let a_bits = _mm256_add_epi32(mantissa_bits, _mm256_set1_epi32(SQRT2_OVER_2 as i32));
+            let a = _mm256_castsi256_ps(a_bits);
+
+            // y = (a - 1) / (a + 1)
+            let one = _mm256_set1_ps(1.0);
+            let a_minus_1 = _mm256_sub_ps(a, one);
+            let a_plus_1 = _mm256_add_ps(a, one);
+            let y = _mm256_div_ps(a_minus_1, a_plus_1);
+
+            // y^2
+            let y2 = _mm256_mul_ps(y, y);
+
+            // Polynomial: c0 + y^2*(c1 + y^2*(c2 + y^2*c3))
+            let poly = _mm256_fmadd_ps(_mm256_set1_ps(C3), y2, _mm256_set1_ps(C2));
+            let poly = _mm256_fmadd_ps(poly, y2, _mm256_set1_ps(C1));
+            let poly = _mm256_fmadd_ps(poly, y2, _mm256_set1_ps(C0));
+
+            // Result: y * poly + n
+            Self(_mm256_fmadd_ps(y, poly, n))
+        }
+    }
+
+    /// High-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    ///
+    /// Uses degree-6 minimax polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    #[inline(always)]
+    pub fn exp2_hp(self) -> Self {
+        // Degree-6 minimax polynomial for 2^x on [0, 1]
+        const C0: f32 = 1.0;
+        const C1: f32 = 0.693_147_180_559_945;
+        const C2: f32 = 0.240_226_506_959_101;
+        const C3: f32 = 0.055_504_108_664_822;
+        const C4: f32 = 0.009_618_129_107_629;
+        const C5: f32 = 0.001_333_355_814_497;
+        const C6: f32 = 0.000_154_035_303_933;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm256_max_ps(self.0, _mm256_set1_ps(-126.0));
+            let x = _mm256_min_ps(x, _mm256_set1_ps(126.0));
+
+            let xi = _mm256_floor_ps(x);
+            let xf = _mm256_sub_ps(x, xi);
+
+            // Horner's method with 6 coefficients
+            let poly = _mm256_fmadd_ps(_mm256_set1_ps(C6), xf, _mm256_set1_ps(C5));
+            let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C4));
+            let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C3));
+            let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C2));
+            let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C1));
+            let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C0));
+
+            // Scale by 2^integer
+            let xi_i32 = _mm256_cvtps_epi32(xi);
+            let bias = _mm256_set1_epi32(127);
+            let scale_bits = _mm256_slli_epi32::<23>(_mm256_add_epi32(xi_i32, bias));
+            let scale = _mm256_castsi256_ps(scale_bits);
+
+            Self(_mm256_mul_ps(poly, scale))
+        }
+    }
+
+    /// High-precision power function (self^n).
+    ///
+    /// Computed as `exp2_hp(n * log2_hp(self))`.
+    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow_hp(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_hp().0, _mm256_set1_ps(n))).exp2_hp()
+        }
+    }
+
+    /// High-precision natural logarithm.
+    ///
+    /// Computed as `log2_hp(x) * ln(2)`.
+    #[inline(always)]
+    pub fn ln_hp(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm256_mul_ps(self.log2_hp().0, _mm256_set1_ps(LN2)))
+        }
+    }
+
+    /// High-precision natural exponential (e^x).
+    ///
+    /// Computed as `exp2_hp(x * log2(e))`.
+    #[inline(always)]
+    pub fn exp_hp(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_hp()
         }
     }
 
@@ -6728,6 +6990,137 @@ impl f32x16 {
     pub fn pow(self, n: f32) -> Self {
         unsafe {
             Self(_mm512_mul_ps(self.log2().0, _mm512_set1_ps(n))).exp2()
+        }
+    }
+
+    // ========== High-Precision Transcendental Operations ==========
+
+    /// High-precision base-2 logarithm (~3 ULP max error).
+    ///
+    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    #[inline(always)]
+    pub fn log2_hp(self) -> Self {
+        // Constants for range reduction
+        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
+        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
+        const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
+        const EXPONENT_BIAS: i32 = 127;
+
+        // Coefficients for odd polynomial on y = (a-1)/(a+1)
+        const C0: f32 = 2.885_390_08;  // 2/ln(2)
+        const C1: f32 = 0.961_800_76;  // y^2 coefficient
+        const C2: f32 = 0.576_974_45;  // y^4 coefficient
+        const C3: f32 = 0.434_411_97;  // y^6 coefficient
+
+        unsafe {
+            let x_bits = _mm512_castps_si512(self.0);
+
+            // Normalize mantissa to [sqrt(2)/2, sqrt(2)]
+            let offset = _mm512_set1_epi32((ONE - SQRT2_OVER_2) as i32);
+            let adjusted = _mm512_add_epi32(x_bits, offset);
+
+            // Extract exponent
+            let exp_raw = _mm512_srai_epi32::<23>(adjusted);
+            let exp_biased = _mm512_sub_epi32(exp_raw, _mm512_set1_epi32(EXPONENT_BIAS));
+            let n = _mm512_cvtepi32_ps(exp_biased);
+
+            // Reconstruct normalized mantissa
+            let mantissa_bits = _mm512_and_si512(adjusted, _mm512_set1_epi32(MANTISSA_MASK));
+            let a_bits = _mm512_add_epi32(mantissa_bits, _mm512_set1_epi32(SQRT2_OVER_2 as i32));
+            let a = _mm512_castsi512_ps(a_bits);
+
+            // y = (a - 1) / (a + 1)
+            let one = _mm512_set1_ps(1.0);
+            let a_minus_1 = _mm512_sub_ps(a, one);
+            let a_plus_1 = _mm512_add_ps(a, one);
+            let y = _mm512_div_ps(a_minus_1, a_plus_1);
+
+            // y^2
+            let y2 = _mm512_mul_ps(y, y);
+
+            // Polynomial: c0 + y^2*(c1 + y^2*(c2 + y^2*c3))
+            let poly = _mm512_fmadd_ps(_mm512_set1_ps(C3), y2, _mm512_set1_ps(C2));
+            let poly = _mm512_fmadd_ps(poly, y2, _mm512_set1_ps(C1));
+            let poly = _mm512_fmadd_ps(poly, y2, _mm512_set1_ps(C0));
+
+            // Result: y * poly + n
+            Self(_mm512_fmadd_ps(y, poly, n))
+        }
+    }
+
+    /// High-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    ///
+    /// Uses degree-6 minimax polynomial.
+    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
+    #[inline(always)]
+    pub fn exp2_hp(self) -> Self {
+        // Degree-6 minimax polynomial for 2^x on [0, 1]
+        const C0: f32 = 1.0;
+        const C1: f32 = 0.693_147_180_559_945;
+        const C2: f32 = 0.240_226_506_959_101;
+        const C3: f32 = 0.055_504_108_664_822;
+        const C4: f32 = 0.009_618_129_107_629;
+        const C5: f32 = 0.001_333_355_814_497;
+        const C6: f32 = 0.000_154_035_303_933;
+
+        unsafe {
+            // Clamp to safe range
+            let x = _mm512_max_ps(self.0, _mm512_set1_ps(-126.0));
+            let x = _mm512_min_ps(x, _mm512_set1_ps(126.0));
+
+            let xi = _mm512_roundscale_ps::<0x01>(x); // floor
+            let xf = _mm512_sub_ps(x, xi);
+
+            // Horner's method with 6 coefficients
+            let poly = _mm512_fmadd_ps(_mm512_set1_ps(C6), xf, _mm512_set1_ps(C5));
+            let poly = _mm512_fmadd_ps(poly, xf, _mm512_set1_ps(C4));
+            let poly = _mm512_fmadd_ps(poly, xf, _mm512_set1_ps(C3));
+            let poly = _mm512_fmadd_ps(poly, xf, _mm512_set1_ps(C2));
+            let poly = _mm512_fmadd_ps(poly, xf, _mm512_set1_ps(C1));
+            let poly = _mm512_fmadd_ps(poly, xf, _mm512_set1_ps(C0));
+
+            // Scale by 2^integer
+            let xi_i32 = _mm512_cvtps_epi32(xi);
+            let bias = _mm512_set1_epi32(127);
+            let scale_bits = _mm512_slli_epi32::<23>(_mm512_add_epi32(xi_i32, bias));
+            let scale = _mm512_castsi512_ps(scale_bits);
+
+            Self(_mm512_mul_ps(poly, scale))
+        }
+    }
+
+    /// High-precision power function (self^n).
+    ///
+    /// Computed as `exp2_hp(n * log2_hp(self))`.
+    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow_hp(self, n: f32) -> Self {
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_hp().0, _mm512_set1_ps(n))).exp2_hp()
+        }
+    }
+
+    /// High-precision natural logarithm.
+    ///
+    /// Computed as `log2_hp(x) * ln(2)`.
+    #[inline(always)]
+    pub fn ln_hp(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {
+            Self(_mm512_mul_ps(self.log2_hp().0, _mm512_set1_ps(LN2)))
+        }
+    }
+
+    /// High-precision natural exponential (e^x).
+    ///
+    /// Computed as `exp2_hp(x * log2(e))`.
+    #[inline(always)]
+    pub fn exp_hp(self) -> Self {
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {
+            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_hp()
         }
     }
 

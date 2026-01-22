@@ -2236,6 +2236,150 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
+        // ========== High-Precision Transcendental Operations ==========
+        writeln!(code, "    // ========== High-Precision Transcendental Operations ==========\n").unwrap();
+
+        // ===== F32 log2_hp =====
+        writeln!(code, "    /// High-precision base-2 logarithm (~3 ULP max error).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.").unwrap();
+        writeln!(code, "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn log2_hp(self) -> Self {{").unwrap();
+        writeln!(code, "        // Constants for range reduction").unwrap();
+        writeln!(code, "        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits").unwrap();
+        writeln!(code, "        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits").unwrap();
+        writeln!(code, "        const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;").unwrap();
+        writeln!(code, "        const EXPONENT_BIAS: i32 = 127;").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "        // Coefficients for odd polynomial on y = (a-1)/(a+1)").unwrap();
+        writeln!(code, "        const C0: f32 = 2.885_390_08;  // 2/ln(2)").unwrap();
+        writeln!(code, "        const C1: f32 = 0.961_800_76;  // y^2 coefficient").unwrap();
+        writeln!(code, "        const C2: f32 = 0.576_974_45;  // y^4 coefficient").unwrap();
+        writeln!(code, "        const C3: f32 = 0.434_411_97;  // y^6 coefficient").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            let x_bits = {}_cast{}_{}(self.0);", prefix, suffix, actual_int_suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Normalize mantissa to [sqrt(2)/2, sqrt(2)]").unwrap();
+        writeln!(code, "            let offset = {}_set1_epi32((ONE - SQRT2_OVER_2) as i32);", prefix).unwrap();
+        writeln!(code, "            let adjusted = {}_add_epi32(x_bits, offset);", prefix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Extract exponent").unwrap();
+        writeln!(code, "            let exp_raw = {}_srai_epi32::<23>(adjusted);", prefix).unwrap();
+        writeln!(code, "            let exp_biased = {}_sub_epi32(exp_raw, {}_set1_epi32(EXPONENT_BIAS));", prefix, prefix).unwrap();
+        writeln!(code, "            let n = {}_cvtepi32_{}(exp_biased);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Reconstruct normalized mantissa").unwrap();
+        writeln!(code, "            let mantissa_bits = {}_and_{}(adjusted, {}_set1_epi32(MANTISSA_MASK));", prefix, actual_int_suffix, prefix).unwrap();
+        writeln!(code, "            let a_bits = {}_add_epi32(mantissa_bits, {}_set1_epi32(SQRT2_OVER_2 as i32));", prefix, prefix).unwrap();
+        writeln!(code, "            let a = {}_cast{}_{}(a_bits);", prefix, actual_int_suffix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // y = (a - 1) / (a + 1)").unwrap();
+        writeln!(code, "            let one = {}_set1_{}(1.0);", prefix, suffix).unwrap();
+        writeln!(code, "            let a_minus_1 = {}_sub_{}(a, one);", prefix, suffix).unwrap();
+        writeln!(code, "            let a_plus_1 = {}_add_{}(a, one);", prefix, suffix).unwrap();
+        writeln!(code, "            let y = {}_div_{}(a_minus_1, a_plus_1);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // y^2").unwrap();
+        writeln!(code, "            let y2 = {}_mul_{}(y, y);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Polynomial: c0 + y^2*(c1 + y^2*(c2 + y^2*c3))").unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}({}_set1_{}(C3), y2, {}_set1_{}(C2));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, y2, {}_set1_{}(C1));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, y2, {}_set1_{}(C0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Result: y * poly + n").unwrap();
+        writeln!(code, "            Self({}_fmadd_{}(y, poly, n))", prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 exp2_hp =====
+        writeln!(code, "    /// High-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Uses degree-6 minimax polynomial.").unwrap();
+        writeln!(code, "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp2_hp(self) -> Self {{").unwrap();
+        writeln!(code, "        // Degree-6 minimax polynomial for 2^x on [0, 1]").unwrap();
+        writeln!(code, "        const C0: f32 = 1.0;").unwrap();
+        writeln!(code, "        const C1: f32 = 0.693_147_180_559_945;").unwrap();
+        writeln!(code, "        const C2: f32 = 0.240_226_506_959_101;").unwrap();
+        writeln!(code, "        const C3: f32 = 0.055_504_108_664_822;").unwrap();
+        writeln!(code, "        const C4: f32 = 0.009_618_129_107_629;").unwrap();
+        writeln!(code, "        const C5: f32 = 0.001_333_355_814_497;").unwrap();
+        writeln!(code, "        const C6: f32 = 0.000_154_035_303_933;").unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            // Clamp to safe range").unwrap();
+        writeln!(code, "            let x = {}_max_{}(self.0, {}_set1_{}(-126.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let x = {}_min_{}(x, {}_set1_{}(126.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+
+        // Use appropriate floor intrinsic based on width
+        if ty.width == SimdWidth::W512 {
+            writeln!(code, "            let xi = {}_roundscale_{}::<0x01>(x); // floor", prefix, suffix).unwrap();
+        } else {
+            writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
+        }
+
+        writeln!(code, "            let xf = {}_sub_{}(x, xi);", prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Horner's method with 6 coefficients").unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}({}_set1_{}(C6), xf, {}_set1_{}(C5));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C4));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C3));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C2));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            // Scale by 2^integer").unwrap();
+        writeln!(code, "            let xi_i32 = {}_cvt{}_epi32(xi);", prefix, suffix).unwrap();
+        writeln!(code, "            let bias = {}_set1_epi32(127);", prefix).unwrap();
+        writeln!(code, "            let scale_bits = {}_slli_epi32::<23>({}_add_epi32(xi_i32, bias));", prefix, prefix).unwrap();
+        writeln!(code, "            let scale = {}_cast{}_{}(scale_bits);", prefix, actual_int_suffix, suffix).unwrap();
+        writeln!(code, "").unwrap();
+        writeln!(code, "            Self({}_mul_{}(poly, scale))", prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 pow_hp =====
+        writeln!(code, "    /// High-precision power function (self^n).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `exp2_hp(n * log2_hp(self))`.").unwrap();
+        writeln!(code, "    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.").unwrap();
+        writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn pow_hp(self, n: f32) -> Self {{").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_hp().0, {}_set1_{}(n))).exp2_hp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 ln_hp =====
+        writeln!(code, "    /// High-precision natural logarithm.").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `log2_hp(x) * ln(2)`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn ln_hp(self) -> Self {{").unwrap();
+        writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.log2_hp().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // ===== F32 exp_hp =====
+        writeln!(code, "    /// High-precision natural exponential (e^x).").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(code, "    /// Computed as `exp2_hp(x * log2(e))`.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn exp_hp(self) -> Self {{").unwrap();
+        writeln!(code, "        const LOG2_E: f32 = core::f32::consts::LOG2_E;").unwrap();
+        writeln!(code, "        unsafe {{").unwrap();
+        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_hp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(code, "        }}").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
     } else if ty.elem == ElementType::F64 {
         // ===== F64 log2 =====
         // For f64, we use a similar algorithm but with f64 constants

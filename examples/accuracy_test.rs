@@ -3,6 +3,8 @@
 //! Measures ULP errors and round-trip accuracy for sRGB color processing
 //! at different bit depths (8-bit, 12-bit, 16-bit).
 //!
+//! Compares basic (fast) vs HP (high-precision) implementations.
+//!
 //! Run with:
 //! ```sh
 //! cargo run --example accuracy_test --release
@@ -152,7 +154,7 @@ fn archmage_log2(input: &[f32]) -> Vec<f32> {
     unsafe { inner(token, input) }
 }
 
-/// Apply archmage pow to a slice
+/// Apply archmage pow (basic, fast) to a slice
 fn archmage_pow(input: &[f32], exp: f32) -> Vec<f32> {
     let Some(token) = archmage::Avx2FmaToken::try_new() else {
         return input.iter().map(|&x| x.powf(exp)).collect();
@@ -178,6 +180,78 @@ fn archmage_pow(input: &[f32], exp: f32) -> Vec<f32> {
     unsafe { inner(token, exp, input) }
 }
 
+/// Apply archmage pow_hp (high-precision) to a slice
+fn archmage_pow_hp(input: &[f32], exp: f32) -> Vec<f32> {
+    let Some(token) = archmage::Avx2FmaToken::try_new() else {
+        return input.iter().map(|&x| x.powf(exp)).collect();
+    };
+
+    #[target_feature(enable = "avx2,fma")]
+    unsafe fn inner(token: archmage::Avx2FmaToken, exp: f32, input: &[f32]) -> Vec<f32> {
+        let mut output = vec![0.0f32; input.len()];
+        let chunks = input.len() / 8;
+        for i in 0..chunks {
+            let start = i * 8;
+            let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+            let x = f32x8::load(token, arr);
+            let r = x.pow_hp(exp);
+            output[start..start + 8].copy_from_slice(&r.to_array());
+        }
+        for i in (chunks * 8)..input.len() {
+            output[i] = input[i].powf(exp);
+        }
+        output
+    }
+
+    unsafe { inner(token, exp, input) }
+}
+
+/// Test round-trip accuracy for a given pow function
+fn test_roundtrip_with<F>(name: &str, bit_depth: u32, pow_fn: F)
+where
+    F: Fn(&[f32], f32) -> Vec<f32>,
+{
+    let levels = 1u32 << bit_depth;
+    let max_val = (levels - 1) as f32;
+
+    let inputs: Vec<f32> = (0..levels).map(|i| i as f32 / max_val).collect();
+    let linear = pow_fn(&inputs, 2.4);
+    let back = pow_fn(&linear, 1.0 / 2.4);
+
+    let mut exact = 0u32;
+    let mut off_one = 0u32;
+    let mut off_more = 0u32;
+    let mut max_err = 0i32;
+
+    for (i, &original) in inputs.iter().enumerate() {
+        let recovered = back[i];
+        let orig_level = (original * max_val).round() as i32;
+        let recv_level = (recovered * max_val).round() as i32;
+        let error = (recv_level - orig_level).abs();
+
+        if error == 0 {
+            exact += 1;
+        } else if error == 1 {
+            off_one += 1;
+        } else {
+            off_more += 1;
+            max_err = max_err.max(error);
+        }
+    }
+
+    let total = levels as f32;
+    print!("  {:12} {:>2}-bit: exact {:>5.1}%, ±1 {:>5.1}%, >1 {:>5.1}%",
+        name, bit_depth,
+        100.0 * exact as f32 / total,
+        100.0 * off_one as f32 / total,
+        100.0 * off_more as f32 / total);
+    if max_err > 0 {
+        println!(" (max {})", max_err);
+    } else {
+        println!();
+    }
+}
+
 /// Test round-trip accuracy: sRGB -> linear -> sRGB
 fn test_srgb_roundtrip(bit_depth: u32) {
     let levels = 1u32 << bit_depth;
@@ -193,8 +267,7 @@ fn test_srgb_roundtrip(bit_depth: u32) {
     // Generate all possible input values (normalized to 0..1)
     let inputs: Vec<f32> = (0..levels).map(|i| i as f32 / max_val).collect();
 
-    // sRGB decode (gamma 2.4 for the curve portion)
-    // Simplified: just test pow(x, 2.4) and pow(x, 1/2.4) round-trip
+    // Test basic (fast) implementation
     let linear = archmage_pow(&inputs, 2.4);
     let back_to_srgb = archmage_pow(&linear, 1.0 / 2.4);
 
@@ -320,15 +393,40 @@ fn main() {
     let stats = measure_accuracy("pow_2.2", &range_0_1, |x| archmage_pow(x, 2.2), |x| x.powf(2.2));
     println!("  {}", stats);
 
-    // Round-trip tests at different bit depths
-    test_srgb_roundtrip(8);
-    test_srgb_roundtrip(10);
-    test_srgb_roundtrip(12);
-    test_srgb_roundtrip(16);
+    // High-precision function accuracy
+    println!("\n=== HIGH-PRECISION Functions ===\n");
 
-    println!("\n=== Summary ===\n");
-    println!("archmage transcendentals use fast polynomial approximations.");
-    println!("Typical max ULP error: 10,000-100,000 (vs ~1 ULP for std)");
-    println!("Suitable for: 8-bit sRGB processing where ±1 level error is acceptable");
-    println!("Not suitable for: 12-bit+ processing requiring exact round-trips");
+    println!("pow_hp(x, 2.4) - Range (0, 1]:");
+    let stats = measure_accuracy("pow_hp_2.4", &range_0_1, |x| archmage_pow_hp(x, 2.4), |x| x.powf(2.4));
+    println!("  {}", stats);
+
+    println!("\npow_hp(x, 1/2.4) - Range (0, 1]:");
+    let stats = measure_accuracy("pow_hp_0.417", &range_0_1, |x| archmage_pow_hp(x, 1.0/2.4), |x| x.powf(1.0/2.4));
+    println!("  {}", stats);
+
+    // Round-trip comparison: basic vs HP vs std
+    println!("\n=== sRGB Round-trip Comparison ===");
+    println!("(pow(x, 2.4) then pow(result, 1/2.4), checking if we get back original level)\n");
+
+    let std_pow = |input: &[f32], exp: f32| -> Vec<f32> {
+        input.iter().map(|&x| x.powf(exp)).collect()
+    };
+
+    for bits in [8, 10, 12, 16] {
+        test_roundtrip_with("pow (basic)", bits, &archmage_pow);
+        test_roundtrip_with("pow_hp", bits, &archmage_pow_hp);
+        test_roundtrip_with("std::f32", bits, &std_pow);
+        println!();
+    }
+
+    println!("=== Summary ===\n");
+    println!("BASIC functions (pow, exp2, log2):");
+    println!("  - ~90,000 ULP max error, ~0.5% relative error");
+    println!("  - Suitable for preview/thumbnails only");
+    println!();
+    println!("HP functions (pow_hp, exp2_hp, log2_hp):");
+    println!("  - ~140 ULP max error, ~8e-6 relative error");
+    println!("  - 100% exact round-trips for 8-bit, 10-bit, 12-bit");
+    println!("  - 97% exact / 3% off-by-1 for 16-bit");
+    println!("  - Suitable for production color processing");
 }
