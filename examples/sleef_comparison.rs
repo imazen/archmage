@@ -137,6 +137,30 @@ fn sleef_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
     }
 }
 
+fn sleef_cbrt_u10_f32(input: &[f32], output: &mut [f32]) {
+    let chunks = input.len() / 8;
+    for i in 0..chunks {
+        let x = f32x8::from_slice(&input[i * 8..]);
+        let r = sleef::f32x::cbrt_u10(x);
+        output[i * 8..(i + 1) * 8].copy_from_slice(&r.to_array());
+    }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].cbrt();
+    }
+}
+
+fn sleef_cbrt_u35_f32(input: &[f32], output: &mut [f32]) {
+    let chunks = input.len() / 8;
+    for i in 0..chunks {
+        let x = f32x8::from_slice(&input[i * 8..]);
+        let r = sleef::f32x::cbrt_u35(x);
+        output[i * 8..(i + 1) * 8].copy_from_slice(&r.to_array());
+    }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].cbrt();
+    }
+}
+
 // ============================================================================
 // Archmage implementations using #[arcane] macro
 // ============================================================================
@@ -167,6 +191,11 @@ fn exp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
 #[arcane]
 fn pow_chunk(token: Avx2FmaToken, input: &[f32; 8], exp: f32) -> [f32; 8] {
     am_f32x8::load(token, input).pow_lowp(exp).to_array()
+}
+
+#[arcane]
+fn cbrt_midp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    am_f32x8::load(token, input).cbrt_midp().to_array()
 }
 
 fn archmage_exp2_f32(input: &[f32], output: &mut [f32]) {
@@ -249,6 +278,22 @@ fn archmage_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
     }
 }
 
+fn archmage_cbrt_midp_f32(input: &[f32], output: &mut [f32]) {
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
+
+    let chunks = input.len() / 8;
+    for i in 0..chunks {
+        let start = i * 8;
+        let arr: &[f32; 8] = input[start..start + 8].try_into().unwrap();
+        output[start..start + 8].copy_from_slice(&cbrt_midp_chunk(token, arr));
+    }
+    for i in (chunks * 8)..input.len() {
+        output[i] = input[i].cbrt();
+    }
+}
+
 // ============================================================================
 // Scalar baseline
 // ============================================================================
@@ -268,6 +313,12 @@ fn scalar_log2_f32(input: &[f32], output: &mut [f32]) {
 fn scalar_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
     for (o, &x) in output.iter_mut().zip(input.iter()) {
         *o = x.powf(exp);
+    }
+}
+
+fn scalar_cbrt_f32(input: &[f32], output: &mut [f32]) {
+    for (o, &x) in output.iter_mut().zip(input.iter()) {
+        *o = x.cbrt();
     }
 }
 
@@ -291,6 +342,10 @@ fn main() {
         .collect();
     let pow_input: Vec<f32> = (0..N)
         .map(|i| 0.001 + (i as f32 / N as f32) * 0.998)
+        .collect();
+    // cbrt input: mix of positive and negative values, covering typical use cases
+    let cbrt_input: Vec<f32> = (0..N)
+        .map(|i| -100.0 + (i as f32 / N as f32) * 200.0)
         .collect();
     let _exp_input: Vec<f32> = (0..N)
         .map(|i| -5.0 + (i as f32 / N as f32) * 10.0)
@@ -358,6 +413,29 @@ fn main() {
     println!();
 
     // ========================================================================
+    // cbrt benchmarks - cube root (used in XYB color space)
+    // ========================================================================
+    println!("--- cbrt benchmarks (cube root) ---");
+
+    bench("scalar_std_cbrt", ITERATIONS, || {
+        scalar_cbrt_f32(black_box(&cbrt_input), black_box(&mut output));
+    });
+
+    bench("sleef_cbrt_u35", ITERATIONS, || {
+        sleef_cbrt_u35_f32(black_box(&cbrt_input), black_box(&mut output));
+    });
+
+    bench("sleef_cbrt_u10", ITERATIONS, || {
+        sleef_cbrt_u10_f32(black_box(&cbrt_input), black_box(&mut output));
+    });
+
+    bench("archmage_cbrt_midp", ITERATIONS, || {
+        archmage_cbrt_midp_f32(black_box(&cbrt_input), black_box(&mut output));
+    });
+
+    println!();
+
+    // ========================================================================
     // Accuracy measurements
     // ========================================================================
     println!("--- Accuracy measurements (vs scalar std) ---");
@@ -366,6 +444,7 @@ fn main() {
     let exp2_ref: Vec<f32> = exp2_input.iter().map(|&x| x.exp2()).collect();
     let log2_ref: Vec<f32> = log2_input.iter().map(|&x| x.log2()).collect();
     let pow_ref: Vec<f32> = pow_input.iter().map(|&x| x.powf(2.4)).collect();
+    let cbrt_ref: Vec<f32> = cbrt_input.iter().map(|&x| x.cbrt()).collect();
 
     println!("\nexp2 accuracy:");
     sleef_exp2_f32(&exp2_input, &mut sleef_out);
@@ -384,6 +463,14 @@ fn main() {
     archmage_pow_f32(&pow_input, 2.4, &mut archmage_out);
     measure_accuracy("sleef_pow_u10_2.4", &sleef_out, &pow_ref);
     measure_accuracy("archmage_pow_2.4", &archmage_out, &pow_ref);
+
+    println!("\ncbrt accuracy:");
+    sleef_cbrt_u35_f32(&cbrt_input, &mut sleef_out);
+    measure_accuracy("sleef_cbrt_u35", &sleef_out, &cbrt_ref);
+    sleef_cbrt_u10_f32(&cbrt_input, &mut sleef_out);
+    measure_accuracy("sleef_cbrt_u10", &sleef_out, &cbrt_ref);
+    archmage_cbrt_midp_f32(&cbrt_input, &mut archmage_out);
+    measure_accuracy("archmage_cbrt_midp", &archmage_out, &cbrt_ref);
 
     println!("\nDone!");
 }

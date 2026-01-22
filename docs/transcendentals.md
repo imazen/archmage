@@ -67,7 +67,7 @@ archmage provides two accuracy tiers for transcendental functions:
 
 #### Low-Precision Tier (`_lowp` suffix)
 
-Functions: `pow_lowp()`, `exp2_lowp()`, `log2_lowp()`, `ln_lowp()`, `exp_lowp()`, `cbrt_lowp()`
+Functions: `pow_lowp()`, `exp2_lowp()`, `log2_lowp()`, `ln_lowp()`, `exp_lowp()`
 
 **NOT SUITABLE for color-accurate work:**
 - ~90,000 ULP max error, ~0.5% relative error
@@ -273,18 +273,7 @@ let approx = v.rsqrt_approx();  // ~12-bit precision, very fast
 let refined = v.rsqrt();        // ~24-bit precision with Newton-Raphson
 ```
 
-### cbrt_lowp - Fast Cube Root
-
-Computed via `pow_lowp(x, 1/3)`. Fast but lower precision.
-
-```rust
-let result = v.cbrt_lowp();  // ~0.5% max error
-```
-
-**Precision**: ~0.5% max relative error (same as pow_lowp)
-**Use case**: Previews, real-time effects
-
-### cbrt_midp - Mid-Precision Cube Root
+### cbrt_midp - Cube Root
 
 Uses bit manipulation for initial guess + two Newton-Raphson iterations.
 Handles negative values correctly.
@@ -305,8 +294,7 @@ let approx = f32::from_bits(abs_bits / 3 + B1);
 
 | Function | Max Rel Error | Handles Negative |
 |----------|---------------|------------------|
-| cbrt_lowp | ~0.5% | Returns NaN |
-| cbrt_midp | ~1e-7 | Yes (returns -cbrt(|x|)) |
+| cbrt_midp | ~2e-7 | Yes (returns -cbrt(\|x\|)) |
 
 ## SIMD Intrinsics Used
 

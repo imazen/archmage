@@ -30,14 +30,8 @@ fn test_f32x8_basic() {
 
     // Test min/max
     let a = f32x8::splat(token, 5.0);
-    assert_eq!(
-        v.min(a).to_array(),
-        [1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0]
-    );
-    assert_eq!(
-        v.max(a).to_array(),
-        [5.0, 5.0, 5.0, 5.0, 5.0, 6.0, 7.0, 8.0]
-    );
+    assert_eq!(v.min(a).to_array(), [1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0]);
+    assert_eq!(v.max(a).to_array(), [5.0, 5.0, 5.0, 5.0, 5.0, 6.0, 7.0, 8.0]);
 
     // Test FMA
     let b = f32x8::splat(token, 1.0);
@@ -127,17 +121,11 @@ fn test_f32x8_scalar_ops() {
 
     // Test v + scalar
     let sum = v + 10.0;
-    assert_eq!(
-        sum.to_array(),
-        [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0]
-    );
+    assert_eq!(sum.to_array(), [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0]);
 
     // Test v * scalar
     let prod = v * 2.0;
-    assert_eq!(
-        prod.to_array(),
-        [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]
-    );
+    assert_eq!(prod.to_array(), [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
 
     // Test v - scalar
     let diff = v - 0.5;
@@ -206,22 +194,22 @@ fn test_i32x8_comparisons() {
     // simd_eq: compare each lane
     let eq = a.simd_eq(b);
     let eq_arr = eq.to_array();
-    assert_eq!(eq_arr[0], 0); // 1 == 2 = false
+    assert_eq!(eq_arr[0], 0);  // 1 == 2 = false
     assert_eq!(eq_arr[1], -1); // 2 == 2 = true (all-1s = -1 as i32)
-    assert_eq!(eq_arr[2], 0); // 3 == 2 = false
+    assert_eq!(eq_arr[2], 0);  // 3 == 2 = false
 
     // simd_gt
     let gt = a.simd_gt(b);
     let gt_arr = gt.to_array();
-    assert_eq!(gt_arr[0], 0); // 1 > 2 = false
-    assert_eq!(gt_arr[1], 0); // 2 > 2 = false
+    assert_eq!(gt_arr[0], 0);  // 1 > 2 = false
+    assert_eq!(gt_arr[1], 0);  // 2 > 2 = false
     assert_eq!(gt_arr[2], -1); // 3 > 2 = true
 
     // simd_lt
     let lt = a.simd_lt(b);
     let lt_arr = lt.to_array();
     assert_eq!(lt_arr[0], -1); // 1 < 2 = true
-    assert_eq!(lt_arr[1], 0); // 2 < 2 = false
+    assert_eq!(lt_arr[1], 0);  // 2 < 2 = false
 }
 
 #[test]
@@ -256,10 +244,10 @@ fn test_u32x8_comparisons() {
     // simd_gt for unsigned: 0xFFFF_FFFF > 1 should be true
     let gt = a.simd_gt(b);
     let gt_arr = gt.to_array();
-    assert_eq!(gt_arr[0], 0); // 1 > 2 = false
-    assert_eq!(gt_arr[1], 0); // 2 > 2 = false
+    assert_eq!(gt_arr[0], 0);           // 1 > 2 = false
+    assert_eq!(gt_arr[1], 0);           // 2 > 2 = false
     assert_eq!(gt_arr[2], 0xFFFF_FFFF); // 0xFFFF_FFFF > 1 = true (unsigned!)
-    assert_eq!(gt_arr[3], 0); // 4 > 4 = false
+    assert_eq!(gt_arr[3], 0);           // 4 > 4 = false
     assert_eq!(gt_arr[4], 0xFFFF_FFFF); // 5 > 4 = true
 }
 

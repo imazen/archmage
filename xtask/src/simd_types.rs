@@ -3561,20 +3561,6 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         // ========== Cube Root ==========
         writeln!(code, "    // ========== Cube Root ==========\n").unwrap();
 
-        // ===== F32 cbrt_lowp =====
-        writeln!(code, "    /// Low-precision cube root (x^(1/3)).").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Computed via `pow_lowp(x, 1/3)`. For negative inputs, returns NaN."
-        )
-        .unwrap();
-        writeln!(code, "    /// For higher precision, use `cbrt_midp()`.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn cbrt_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        self.pow_lowp(1.0 / 3.0)").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
         // ===== F32 cbrt_midp =====
         writeln!(code, "    /// Mid-precision cube root (x^(1/3)).").unwrap();
         writeln!(code, "    ///").unwrap();
