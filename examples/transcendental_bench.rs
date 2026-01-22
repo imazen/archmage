@@ -501,7 +501,10 @@ where
     let ns_per_iter = elapsed.as_nanos() as f64 / iterations as f64;
     let throughput = (N as f64 * 1e9) / (ns_per_iter * 1e6); // M elements/sec
 
-    println!("{:30} {:>10.2} ns/iter  {:>8.2} M elem/s", name, ns_per_iter, throughput);
+    println!(
+        "{:30} {:>10.2} ns/iter  {:>8.2} M elem/s",
+        name, ns_per_iter, throughput
+    );
     ns_per_iter
 }
 
@@ -550,7 +553,9 @@ fn main() {
 
     // Generate test data
     // For exp2: range [-10, 10] covers practical use cases
-    let exp2_input: Vec<f32> = (0..N).map(|i| -10.0 + (i as f32 / N as f32) * 20.0).collect();
+    let exp2_input: Vec<f32> = (0..N)
+        .map(|i| -10.0 + (i as f32 / N as f32) * 20.0)
+        .collect();
 
     // For log2: range [0.01, 100] covers practical use cases
     let log2_input: Vec<f32> = (0..N)
@@ -640,11 +645,15 @@ fn main() {
         });
 
         bench("simd_avx2_pow_2.4_hp", ITERATIONS, || {
-            unsafe { simd_avx2_hp::simd_pow_hp(black_box(&pow_input), 2.4, black_box(&mut output)) };
+            unsafe {
+                simd_avx2_hp::simd_pow_hp(black_box(&pow_input), 2.4, black_box(&mut output))
+            };
         });
 
         bench("simd_avx2_pow_2.4_lut", ITERATIONS, || {
-            unsafe { simd_avx2_lut::simd_pow_lut(black_box(&pow_input), 2.4, black_box(&mut output)) };
+            unsafe {
+                simd_avx2_lut::simd_pow_lut(black_box(&pow_input), 2.4, black_box(&mut output))
+            };
         });
     }
 
@@ -679,7 +688,11 @@ fn main() {
 
         bench("simd_avx2_pow_inv2.4_lut", ITERATIONS, || {
             unsafe {
-                simd_avx2_lut::simd_pow_lut(black_box(&pow_input), 1.0 / 2.4, black_box(&mut output))
+                simd_avx2_lut::simd_pow_lut(
+                    black_box(&pow_input),
+                    1.0 / 2.4,
+                    black_box(&mut output),
+                )
             };
         });
     }

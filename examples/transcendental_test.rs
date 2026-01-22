@@ -3,7 +3,7 @@
 //! Run with: `cargo run --example transcendental_test --release`
 
 use archmage::simd::f32x8;
-use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::{Avx2FmaToken, SimdToken, arcane};
 
 #[arcane]
 fn test_log2(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
@@ -60,7 +60,14 @@ fn main() {
     let expected = [-1.0f32, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
     for (i, (&got, &exp)) in lg_arr.iter().zip(expected.iter()).enumerate() {
         let err = (got - exp).abs();
-        assert!(err < 0.001, "log2_lowp error at {}: got {}, expected {}, err {}", i, got, exp, err);
+        assert!(
+            err < 0.001,
+            "log2_lowp error at {}: got {}, expected {}, err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("log2_lowp: PASS");
 
@@ -73,7 +80,14 @@ fn main() {
     let expected = [0.25f32, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0];
     for (i, (&got, &exp)) in e_arr.iter().zip(expected.iter()).enumerate() {
         let err = (got - exp).abs() / exp.abs().max(0.001);
-        assert!(err < 0.01, "exp2_lowp error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+        assert!(
+            err < 0.01,
+            "exp2_lowp error at {}: got {}, expected {}, rel_err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("exp2_lowp: PASS");
 
@@ -85,12 +99,28 @@ fn main() {
     for (i, (&got, &inp)) in p_arr.iter().zip(input.iter()).enumerate() {
         let exp = inp.powf(2.4);
         let err = (got - exp).abs() / exp.abs().max(0.001);
-        assert!(err < 0.01, "pow_lowp error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+        assert!(
+            err < 0.01,
+            "pow_lowp error at {}: got {}, expected {}, rel_err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("pow_lowp: PASS");
 
     // Test ln_lowp
-    let input = [1.0, 2.718281828, 7.389056, 20.0855, 54.598, 148.41, 403.4, 1096.6];
+    let input = [
+        1.0,
+        2.718281828,
+        7.389056,
+        20.0855,
+        54.598,
+        148.41,
+        403.4,
+        1096.6,
+    ];
     let ln_arr = test_ln(token, &input);
     println!("ln_lowp([e^0, e^1, e^2, ...]) = {:?}", ln_arr);
 
@@ -98,7 +128,14 @@ fn main() {
     let expected = [0.0f32, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
     for (i, (&got, &exp)) in ln_arr.iter().zip(expected.iter()).enumerate() {
         let err = (got - exp).abs();
-        assert!(err < 0.01, "ln_lowp error at {}: got {}, expected {}, err {}", i, got, exp, err);
+        assert!(
+            err < 0.01,
+            "ln_lowp error at {}: got {}, expected {}, err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("ln_lowp: PASS");
 
@@ -110,55 +147,102 @@ fn main() {
     for (i, (&got, &inp)) in e_arr.iter().zip(input.iter()).enumerate() {
         let exp = inp.exp();
         let err = (got - exp).abs() / exp.abs().max(0.001);
-        assert!(err < 0.01, "exp_lowp error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+        assert!(
+            err < 0.01,
+            "exp_lowp error at {}: got {}, expected {}, rel_err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("exp_lowp: PASS");
 
     // Test log10_lowp
     let input = [0.1, 1.0, 10.0, 100.0, 1000.0, 0.01, 0.001, 10000.0];
     let lg_arr = test_log10(token, &input);
-    println!("log10_lowp([0.1, 1, 10, 100, 1000, 0.01, 0.001, 10000]) = {:?}", lg_arr);
+    println!(
+        "log10_lowp([0.1, 1, 10, 100, 1000, 0.01, 0.001, 10000]) = {:?}",
+        lg_arr
+    );
 
     // Expected: [-1, 0, 1, 2, 3, -2, -3, 4]
     let expected = [-1.0f32, 0.0, 1.0, 2.0, 3.0, -2.0, -3.0, 4.0];
     for (i, (&got, &exp)) in lg_arr.iter().zip(expected.iter()).enumerate() {
         let err = (got - exp).abs();
-        assert!(err < 0.01, "log10_lowp error at {}: got {}, expected {}, err {}", i, got, exp, err);
+        assert!(
+            err < 0.01,
+            "log10_lowp error at {}: got {}, expected {}, err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("log10_lowp: PASS");
 
     // Test cbrt_lowp
     let input = [1.0, 8.0, 27.0, 64.0, 125.0, 0.125, 0.001, 1000.0];
     let cbrt_arr = test_cbrt_lowp(token, &input);
-    println!("cbrt_lowp([1, 8, 27, 64, 125, 0.125, 0.001, 1000]) = {:?}", cbrt_arr);
+    println!(
+        "cbrt_lowp([1, 8, 27, 64, 125, 0.125, 0.001, 1000]) = {:?}",
+        cbrt_arr
+    );
 
     // Expected: [1, 2, 3, 4, 5, 0.5, 0.1, 10]
     let expected = [1.0f32, 2.0, 3.0, 4.0, 5.0, 0.5, 0.1, 10.0];
     for (i, (&got, &exp)) in cbrt_arr.iter().zip(expected.iter()).enumerate() {
         let err = (got - exp).abs() / exp.abs().max(0.001);
-        assert!(err < 0.02, "cbrt_lowp error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+        assert!(
+            err < 0.02,
+            "cbrt_lowp error at {}: got {}, expected {}, rel_err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("cbrt_lowp: PASS");
 
     // Test cbrt_midp (should be more accurate)
     let cbrt_arr = test_cbrt_midp(token, &input);
-    println!("cbrt_midp([1, 8, 27, 64, 125, 0.125, 0.001, 1000]) = {:?}", cbrt_arr);
+    println!(
+        "cbrt_midp([1, 8, 27, 64, 125, 0.125, 0.001, 1000]) = {:?}",
+        cbrt_arr
+    );
 
     for (i, (&got, &exp)) in cbrt_arr.iter().zip(expected.iter()).enumerate() {
         let err = (got - exp).abs() / exp.abs().max(0.001);
-        assert!(err < 0.0001, "cbrt_midp error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+        assert!(
+            err < 0.0001,
+            "cbrt_midp error at {}: got {}, expected {}, rel_err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("cbrt_midp: PASS");
 
     // Test cbrt_midp with negative values
     let input = [-1.0, -8.0, -27.0, 1.0, 8.0, 27.0, -64.0, 64.0];
     let cbrt_arr = test_cbrt_midp(token, &input);
-    println!("cbrt_midp([-1, -8, -27, 1, 8, 27, -64, 64]) = {:?}", cbrt_arr);
+    println!(
+        "cbrt_midp([-1, -8, -27, 1, 8, 27, -64, 64]) = {:?}",
+        cbrt_arr
+    );
 
     let expected = [-1.0f32, -2.0, -3.0, 1.0, 2.0, 3.0, -4.0, 4.0];
     for (i, (&got, &exp)) in cbrt_arr.iter().zip(expected.iter()).enumerate() {
         let err = (got - exp).abs() / exp.abs().max(0.001);
-        assert!(err < 0.0001, "cbrt_midp negative error at {}: got {}, expected {}, rel_err {}", i, got, exp, err);
+        assert!(
+            err < 0.0001,
+            "cbrt_midp negative error at {}: got {}, expected {}, rel_err {}",
+            i,
+            got,
+            exp,
+            err
+        );
     }
     println!("cbrt_midp (negative): PASS");
 

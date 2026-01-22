@@ -32,4 +32,3 @@ fn ui_tests() {
     // Token type safety tests
     t.compile_fail("tests/compile_fail/wrong_token.rs");
 }
-

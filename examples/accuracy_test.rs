@@ -11,7 +11,7 @@
 //! ```
 
 use archmage::simd::f32x8;
-use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::{Avx2FmaToken, SimdToken, arcane};
 
 /// Calculate ULP difference between two f32 values
 fn ulp_diff(a: f32, b: f32) -> u32 {
@@ -257,11 +257,14 @@ where
     }
 
     let total = levels as f32;
-    print!("  {:12} {:>2}-bit: exact {:>5.1}%, ±1 {:>5.1}%, >1 {:>5.1}%",
-        name, bit_depth,
+    print!(
+        "  {:12} {:>2}-bit: exact {:>5.1}%, ±1 {:>5.1}%, >1 {:>5.1}%",
+        name,
+        bit_depth,
         100.0 * exact as f32 / total,
         100.0 * off_one as f32 / total,
-        100.0 * off_more as f32 / total);
+        100.0 * off_more as f32 / total
+    );
     if max_err > 0 {
         println!(" (max {})", max_err);
     } else {
@@ -275,7 +278,10 @@ fn test_srgb_roundtrip(bit_depth: u32) {
     let levels = 1u32 << bit_depth;
     let max_val = (levels - 1) as f32;
 
-    println!("\n=== {}-bit sRGB Round-trip Test ({} levels) ===", bit_depth, levels);
+    println!(
+        "\n=== {}-bit sRGB Round-trip Test ({} levels) ===",
+        bit_depth, levels
+    );
 
     let Some(_token) = Avx2FmaToken::try_new() else {
         eprintln!("AVX2+FMA not available");
@@ -314,9 +320,21 @@ fn test_srgb_roundtrip(bit_depth: u32) {
     }
 
     let total = levels as f32;
-    println!("  Exact matches:  {:>6} ({:>5.1}%)", exact_matches, 100.0 * exact_matches as f32 / total);
-    println!("  Off by 1 level: {:>6} ({:>5.1}%)", off_by_one, 100.0 * off_by_one as f32 / total);
-    println!("  Off by >1:      {:>6} ({:>5.1}%)", off_by_more, 100.0 * off_by_more as f32 / total);
+    println!(
+        "  Exact matches:  {:>6} ({:>5.1}%)",
+        exact_matches,
+        100.0 * exact_matches as f32 / total
+    );
+    println!(
+        "  Off by 1 level: {:>6} ({:>5.1}%)",
+        off_by_one,
+        100.0 * off_by_one as f32 / total
+    );
+    println!(
+        "  Off by >1:      {:>6} ({:>5.1}%)",
+        off_by_more,
+        100.0 * off_by_more as f32 / total
+    );
     if off_by_more > 0 {
         println!("  Max error:      {} levels", max_error_levels);
     }
@@ -345,9 +363,21 @@ fn test_srgb_roundtrip(bit_depth: u32) {
     }
 
     println!("\n  (std::f32 comparison)");
-    println!("  Exact matches:  {:>6} ({:>5.1}%)", std_exact, 100.0 * std_exact as f32 / total);
-    println!("  Off by 1 level: {:>6} ({:>5.1}%)", std_off_one, 100.0 * std_off_one as f32 / total);
-    println!("  Off by >1:      {:>6} ({:>5.1}%)", std_off_more, 100.0 * std_off_more as f32 / total);
+    println!(
+        "  Exact matches:  {:>6} ({:>5.1}%)",
+        std_exact,
+        100.0 * std_exact as f32 / total
+    );
+    println!(
+        "  Off by 1 level: {:>6} ({:>5.1}%)",
+        std_off_one,
+        100.0 * std_off_one as f32 / total
+    );
+    println!(
+        "  Off by >1:      {:>6} ({:>5.1}%)",
+        std_off_more,
+        100.0 * std_off_more as f32 / total
+    );
 }
 
 fn main() {
@@ -396,39 +426,63 @@ fn main() {
     println!("\n=== pow(x, 2.4) Accuracy (sRGB decode) ===\n");
 
     println!("Range (0, 1] (normalized sRGB input):");
-    let stats = measure_accuracy("pow_2.4", &range_0_1, |x| archmage_pow_lowp(x, 2.4), |x| x.powf(2.4));
+    let stats = measure_accuracy(
+        "pow_2.4",
+        &range_0_1,
+        |x| archmage_pow_lowp(x, 2.4),
+        |x| x.powf(2.4),
+    );
     println!("  {}", stats);
 
     println!("\n=== pow_lowp(x, 1/2.4) Accuracy (sRGB encode) ===\n");
 
     println!("Range (0, 1] (linear RGB input):");
-    let stats = measure_accuracy("pow_0.417", &range_0_1, |x| archmage_pow_lowp(x, 1.0/2.4), |x| x.powf(1.0/2.4));
+    let stats = measure_accuracy(
+        "pow_0.417",
+        &range_0_1,
+        |x| archmage_pow_lowp(x, 1.0 / 2.4),
+        |x| x.powf(1.0 / 2.4),
+    );
     println!("  {}", stats);
 
     println!("\n=== pow_lowp(x, 2.2) Accuracy (simple gamma) ===\n");
 
     println!("Range (0, 1]:");
-    let stats = measure_accuracy("pow_2.2", &range_0_1, |x| archmage_pow_lowp(x, 2.2), |x| x.powf(2.2));
+    let stats = measure_accuracy(
+        "pow_2.2",
+        &range_0_1,
+        |x| archmage_pow_lowp(x, 2.2),
+        |x| x.powf(2.2),
+    );
     println!("  {}", stats);
 
     // Mid-precision function accuracy
     println!("\n=== MID-PRECISION Functions ===\n");
 
     println!("pow_midp(x, 2.4) - Range (0, 1]:");
-    let stats = measure_accuracy("pow_midp_2.4", &range_0_1, |x| archmage_pow_midp(x, 2.4), |x| x.powf(2.4));
+    let stats = measure_accuracy(
+        "pow_midp_2.4",
+        &range_0_1,
+        |x| archmage_pow_midp(x, 2.4),
+        |x| x.powf(2.4),
+    );
     println!("  {}", stats);
 
     println!("\npow_midp(x, 1/2.4) - Range (0, 1]:");
-    let stats = measure_accuracy("pow_midp_0.417", &range_0_1, |x| archmage_pow_midp(x, 1.0/2.4), |x| x.powf(1.0/2.4));
+    let stats = measure_accuracy(
+        "pow_midp_0.417",
+        &range_0_1,
+        |x| archmage_pow_midp(x, 1.0 / 2.4),
+        |x| x.powf(1.0 / 2.4),
+    );
     println!("  {}", stats);
 
     // Round-trip comparison: lowp vs midp vs std
     println!("\n=== sRGB Round-trip Comparison ===");
     println!("(pow(x, 2.4) then pow(result, 1/2.4), checking if we get back original level)\n");
 
-    let std_pow = |input: &[f32], exp: f32| -> Vec<f32> {
-        input.iter().map(|&x| x.powf(exp)).collect()
-    };
+    let std_pow =
+        |input: &[f32], exp: f32| -> Vec<f32> { input.iter().map(|&x| x.powf(exp)).collect() };
 
     for bits in [8, 10, 12, 16] {
         test_roundtrip_with("pow_lowp", bits, &archmage_pow_lowp);

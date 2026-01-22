@@ -5,7 +5,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, Has256BitSimd, SimdToken, Desktop64};
+use archmage::{Desktop64, Has256BitSimd, SimdToken, arcane};
 use std::arch::x86_64::*;
 
 // Value intrinsics - ALL SAFE inside #[arcane], no unsafe needed!

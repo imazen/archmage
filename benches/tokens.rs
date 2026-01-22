@@ -25,9 +25,7 @@ fn bench_token_overhead(c: &mut Criterion) {
             b.iter(|| {
                 // safe_unaligned_simd is always safe inside target_feature functions
                 // but here we're outside, so we still use unsafe
-                let v = unsafe {
-                    core::arch::x86_64::_mm256_loadu_ps(black_box(&data).as_ptr())
-                };
+                let v = unsafe { core::arch::x86_64::_mm256_loadu_ps(black_box(&data).as_ptr()) };
                 black_box(v)
             })
         });

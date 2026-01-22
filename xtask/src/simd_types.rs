@@ -871,8 +871,16 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
 
     // Section header
     writeln!(code, "    // ========== Comparisons ==========").unwrap();
-    writeln!(code, "    // These return a mask where each lane is all-1s (true) or all-0s (false).").unwrap();
-    writeln!(code, "    // Use with `blend()` to select values based on the comparison result.\n").unwrap();
+    writeln!(
+        code,
+        "    // These return a mask where each lane is all-1s (true) or all-0s (false)."
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "    // Use with `blend()` to select values based on the comparison result.\n"
+    )
+    .unwrap();
 
     if ty.elem.is_float() {
         // Float comparisons use _mm*_cmp_ps/pd with comparison predicate
@@ -884,19 +892,41 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             // SSE uses separate intrinsics
             writeln!(code, "    /// Lane-wise equality comparison.").unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.").unwrap();
-            writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+            writeln!(
+                code,
+                "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise."
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    /// Use with `blend(mask, if_true, if_false)` to select values."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_cmpeq_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_cmpeq_{}(self.0, other.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise inequality comparison.").unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.").unwrap();
+            writeln!(
+                code,
+                "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_cmpneq_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_cmpneq_{}(self.0, other.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise less-than comparison.").unwrap();
@@ -904,7 +934,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_cmplt_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_cmplt_{}(self.0, other.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise less-than-or-equal comparison.").unwrap();
@@ -912,7 +947,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_cmple_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_cmple_{}(self.0, other.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise greater-than comparison.").unwrap();
@@ -920,7 +960,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_cmpgt_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_cmpgt_{}(self.0, other.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise greater-than-or-equal comparison.").unwrap();
@@ -928,13 +973,26 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_cmpge_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_cmpge_{}(self.0, other.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
         } else if ty.width == SimdWidth::W512 {
             // AVX-512 uses mask-returning intrinsics, need to expand mask to vector
             // Pattern: get mask, then use mask_blend to create all-1s where true
-            let mask_suffix = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
-            let int_suffix = if ty.elem == ElementType::F32 { "epi32" } else { "epi64" };
+            let mask_suffix = if ty.elem == ElementType::F32 {
+                "ps"
+            } else {
+                "pd"
+            };
+            let int_suffix = if ty.elem == ElementType::F32 {
+                "epi32"
+            } else {
+                "epi64"
+            };
             let cast_fn = if ty.elem == ElementType::F32 {
                 "_mm512_castsi512_ps"
             } else {
@@ -951,16 +1009,39 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             ] {
                 writeln!(code, "    /// Lane-wise {} comparison.", doc).unwrap();
                 writeln!(code, "    ///").unwrap();
-                writeln!(code, "    /// Returns a mask where each lane is all-1s if {}, all-0s otherwise.", doc).unwrap();
+                writeln!(
+                    code,
+                    "    /// Returns a mask where each lane is all-1s if {}, all-0s otherwise.",
+                    doc
+                )
+                .unwrap();
                 if method == "simd_eq" {
-                    writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+                    writeln!(
+                        code,
+                        "    /// Use with `blend(mask, if_true, if_false)` to select values."
+                    )
+                    .unwrap();
                 }
                 writeln!(code, "    #[inline(always)]").unwrap();
                 writeln!(code, "    pub fn {}(self, other: Self) -> Self {{", method).unwrap();
                 writeln!(code, "        Self(unsafe {{").unwrap();
-                writeln!(code, "            let mask = {}_cmp_{}_mask::<{}>{}(self.0, other.0);", prefix, mask_suffix, cmp_const, "").unwrap();
-                writeln!(code, "            // Expand mask to vector: -1 where true, 0 where false").unwrap();
-                writeln!(code, "            {}({}_maskz_set1_{}(mask, -1))", cast_fn, prefix, int_suffix).unwrap();
+                writeln!(
+                    code,
+                    "            let mask = {}_cmp_{}_mask::<{}>{}(self.0, other.0);",
+                    prefix, mask_suffix, cmp_const, ""
+                )
+                .unwrap();
+                writeln!(
+                    code,
+                    "            // Expand mask to vector: -1 where true, 0 where false"
+                )
+                .unwrap();
+                writeln!(
+                    code,
+                    "            {}({}_maskz_set1_{}(mask, -1))",
+                    cast_fn, prefix, int_suffix
+                )
+                .unwrap();
                 writeln!(code, "        }})").unwrap();
                 writeln!(code, "    }}\n").unwrap();
             }
@@ -969,19 +1050,41 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             // _CMP_EQ_OQ = 0, _CMP_LT_OQ = 17, _CMP_LE_OQ = 18, _CMP_NEQ_OQ = 12, _CMP_GE_OQ = 29, _CMP_GT_OQ = 30
             writeln!(code, "    /// Lane-wise equality comparison.").unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.").unwrap();
-            writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+            writeln!(
+                code,
+                "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise."
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    /// Use with `blend(mask, if_true, if_false)` to select values."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}::<_CMP_EQ_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}::<_CMP_EQ_OQ>(self.0, other.0) }})",
+                cmp_intrinsic
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise inequality comparison.").unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.").unwrap();
+            writeln!(
+                code,
+                "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}::<_CMP_NEQ_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}::<_CMP_NEQ_OQ>(self.0, other.0) }})",
+                cmp_intrinsic
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise less-than comparison.").unwrap();
@@ -989,7 +1092,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}::<_CMP_LT_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}::<_CMP_LT_OQ>(self.0, other.0) }})",
+                cmp_intrinsic
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise less-than-or-equal comparison.").unwrap();
@@ -997,7 +1105,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}::<_CMP_LE_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}::<_CMP_LE_OQ>(self.0, other.0) }})",
+                cmp_intrinsic
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise greater-than comparison.").unwrap();
@@ -1005,7 +1118,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}::<_CMP_GT_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}::<_CMP_GT_OQ>(self.0, other.0) }})",
+                cmp_intrinsic
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise greater-than-or-equal comparison.").unwrap();
@@ -1013,7 +1131,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}::<_CMP_GE_OQ>(self.0, other.0) }})", cmp_intrinsic).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}::<_CMP_GE_OQ>(self.0, other.0) }})",
+                cmp_intrinsic
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
     } else if ty.width == SimdWidth::W512 {
@@ -1053,22 +1176,54 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
         ] {
             writeln!(code, "    /// Lane-wise {} comparison.", doc).unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// Returns a mask where each lane is all-1s if {}, all-0s otherwise.", doc).unwrap();
+            writeln!(
+                code,
+                "    /// Returns a mask where each lane is all-1s if {}, all-0s otherwise.",
+                doc
+            )
+            .unwrap();
             if method == "simd_eq" {
-                writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+                writeln!(
+                    code,
+                    "    /// Use with `blend(mask, if_true, if_false)` to select values."
+                )
+                .unwrap();
             }
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn {}(self, other: Self) -> Self {{", method).unwrap();
             writeln!(code, "        Self(unsafe {{").unwrap();
             // GT and GE need swapped arguments with NLT/NLE
             if method == "simd_gt" || method == "simd_ge" {
-                let actual_cmp = if method == "simd_gt" { "_MM_CMPINT_LT" } else { "_MM_CMPINT_LE" };
-                writeln!(code, "            let mask = {}::<{}>(other.0, self.0);", cmp_fn, actual_cmp).unwrap();
+                let actual_cmp = if method == "simd_gt" {
+                    "_MM_CMPINT_LT"
+                } else {
+                    "_MM_CMPINT_LE"
+                };
+                writeln!(
+                    code,
+                    "            let mask = {}::<{}>(other.0, self.0);",
+                    cmp_fn, actual_cmp
+                )
+                .unwrap();
             } else {
-                writeln!(code, "            let mask = {}::<{}>(self.0, other.0);", cmp_fn, cmp_const).unwrap();
+                writeln!(
+                    code,
+                    "            let mask = {}::<{}>(self.0, other.0);",
+                    cmp_fn, cmp_const
+                )
+                .unwrap();
             }
-            writeln!(code, "            // Expand mask to vector: -1 where true, 0 where false").unwrap();
-            writeln!(code, "            {}_maskz_set1_{}(mask, -1)", prefix, set1_suffix).unwrap();
+            writeln!(
+                code,
+                "            // Expand mask to vector: -1 where true, 0 where false"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            {}_maskz_set1_{}(mask, -1)",
+                prefix, set1_suffix
+            )
+            .unwrap();
             writeln!(code, "        }})").unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
@@ -1079,29 +1234,63 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
 
         writeln!(code, "    /// Lane-wise equality comparison.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.").unwrap();
-        writeln!(code, "    /// Use with `blend(mask, if_true, if_false)` to select values.").unwrap();
+        writeln!(
+            code,
+            "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Use with `blend(mask, if_true, if_false)` to select values."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self(unsafe {{ {}_cmpeq_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}_cmpeq_{}(self.0, other.0) }})",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         writeln!(code, "    /// Lane-wise inequality comparison.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.").unwrap();
+        writeln!(
+            code,
+            "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
         // ne = NOT eq, so XOR with all-1s
         writeln!(code, "        Self(unsafe {{").unwrap();
-        writeln!(code, "            let eq = {}_cmpeq_{}(self.0, other.0);", prefix, suffix).unwrap();
-        writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, match ty.elem {
-            ElementType::I8 | ElementType::U8 => "epi8",
-            ElementType::I16 | ElementType::U16 => "epi16",
-            ElementType::I32 | ElementType::U32 => "epi32",
-            ElementType::I64 | ElementType::U64 => "epi64x",
-            _ => unreachable!(),
-        }).unwrap();
-        writeln!(code, "            {}_xor_si{}(eq, ones)", prefix, ty.width.bits()).unwrap();
+        writeln!(
+            code,
+            "            let eq = {}_cmpeq_{}(self.0, other.0);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let ones = {}_set1_{}(-1);",
+            prefix,
+            match ty.elem {
+                ElementType::I8 | ElementType::U8 => "epi8",
+                ElementType::I16 | ElementType::U16 => "epi16",
+                ElementType::I32 | ElementType::U32 => "epi32",
+                ElementType::I64 | ElementType::U64 => "epi64x",
+                _ => unreachable!(),
+            }
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            {}_xor_si{}(eq, ones)",
+            prefix,
+            ty.width.bits()
+        )
+        .unwrap();
         writeln!(code, "        }})").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -1112,7 +1301,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_cmpgt_{}(self.0, other.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_cmpgt_{}(self.0, other.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise less-than comparison.").unwrap();
@@ -1121,7 +1315,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
             // lt(a, b) = gt(b, a)
-            writeln!(code, "        Self(unsafe {{ {}_cmpgt_{}(other.0, self.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_cmpgt_{}(other.0, self.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
 
             writeln!(code, "    /// Lane-wise greater-than-or-equal comparison.").unwrap();
@@ -1131,15 +1330,32 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
             // ge(a, b) = NOT lt(a, b) = NOT gt(b, a)
             writeln!(code, "        Self(unsafe {{").unwrap();
-            writeln!(code, "            let lt = {}_cmpgt_{}(other.0, self.0);", prefix, suffix).unwrap();
-            writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, match ty.elem {
-                ElementType::I8 => "epi8",
-                ElementType::I16 => "epi16",
-                ElementType::I32 => "epi32",
-                ElementType::I64 => "epi64x",
-                _ => unreachable!(),
-            }).unwrap();
-            writeln!(code, "            {}_xor_si{}(lt, ones)", prefix, ty.width.bits()).unwrap();
+            writeln!(
+                code,
+                "            let lt = {}_cmpgt_{}(other.0, self.0);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let ones = {}_set1_{}(-1);",
+                prefix,
+                match ty.elem {
+                    ElementType::I8 => "epi8",
+                    ElementType::I16 => "epi16",
+                    ElementType::I32 => "epi32",
+                    ElementType::I64 => "epi64x",
+                    _ => unreachable!(),
+                }
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            {}_xor_si{}(lt, ones)",
+                prefix,
+                ty.width.bits()
+            )
+            .unwrap();
             writeln!(code, "        }})").unwrap();
             writeln!(code, "    }}\n").unwrap();
 
@@ -1150,15 +1366,32 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
             // le(a, b) = NOT gt(a, b)
             writeln!(code, "        Self(unsafe {{").unwrap();
-            writeln!(code, "            let gt = {}_cmpgt_{}(self.0, other.0);", prefix, suffix).unwrap();
-            writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, match ty.elem {
-                ElementType::I8 => "epi8",
-                ElementType::I16 => "epi16",
-                ElementType::I32 => "epi32",
-                ElementType::I64 => "epi64x",
-                _ => unreachable!(),
-            }).unwrap();
-            writeln!(code, "            {}_xor_si{}(gt, ones)", prefix, ty.width.bits()).unwrap();
+            writeln!(
+                code,
+                "            let gt = {}_cmpgt_{}(self.0, other.0);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let ones = {}_set1_{}(-1);",
+                prefix,
+                match ty.elem {
+                    ElementType::I8 => "epi8",
+                    ElementType::I16 => "epi16",
+                    ElementType::I32 => "epi32",
+                    ElementType::I64 => "epi64x",
+                    _ => unreachable!(),
+                }
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            {}_xor_si{}(gt, ones)",
+                prefix,
+                ty.width.bits()
+            )
+            .unwrap();
             writeln!(code, "        }})").unwrap();
             writeln!(code, "    }}\n").unwrap();
         } else {
@@ -1183,16 +1416,41 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
                 _ => signed_suffix,
             };
 
-            writeln!(code, "    /// Lane-wise greater-than comparison (unsigned).").unwrap();
+            writeln!(
+                code,
+                "    /// Lane-wise greater-than comparison (unsigned)."
+            )
+            .unwrap();
             writeln!(code, "    ///").unwrap();
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
             writeln!(code, "        Self(unsafe {{").unwrap();
-            writeln!(code, "            // Flip sign bit to convert unsigned to signed comparison").unwrap();
-            writeln!(code, "            let bias = {}_set1_{}({});", prefix, set1_suffix, bias_val).unwrap();
-            writeln!(code, "            let a = {}_xor_si{}(self.0, bias);", prefix, ty.width.bits()).unwrap();
-            writeln!(code, "            let b = {}_xor_si{}(other.0, bias);", prefix, ty.width.bits()).unwrap();
+            writeln!(
+                code,
+                "            // Flip sign bit to convert unsigned to signed comparison"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let bias = {}_set1_{}({});",
+                prefix, set1_suffix, bias_val
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let a = {}_xor_si{}(self.0, bias);",
+                prefix,
+                ty.width.bits()
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let b = {}_xor_si{}(other.0, bias);",
+                prefix,
+                ty.width.bits()
+            )
+            .unwrap();
             writeln!(code, "            {}_cmpgt_{}(a, b)", prefix, signed_suffix).unwrap();
             writeln!(code, "        }})").unwrap();
             writeln!(code, "    }}\n").unwrap();
@@ -1205,27 +1463,57 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
             writeln!(code, "        other.simd_gt(self)").unwrap();
             writeln!(code, "    }}\n").unwrap();
 
-            writeln!(code, "    /// Lane-wise greater-than-or-equal comparison (unsigned).").unwrap();
+            writeln!(
+                code,
+                "    /// Lane-wise greater-than-or-equal comparison (unsigned)."
+            )
+            .unwrap();
             writeln!(code, "    ///").unwrap();
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
             writeln!(code, "        Self(unsafe {{").unwrap();
             writeln!(code, "            let lt = other.simd_gt(self);").unwrap();
-            writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, set1_suffix).unwrap();
-            writeln!(code, "            {}_xor_si{}(lt.0, ones)", prefix, ty.width.bits()).unwrap();
+            writeln!(
+                code,
+                "            let ones = {}_set1_{}(-1);",
+                prefix, set1_suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            {}_xor_si{}(lt.0, ones)",
+                prefix,
+                ty.width.bits()
+            )
+            .unwrap();
             writeln!(code, "        }})").unwrap();
             writeln!(code, "    }}\n").unwrap();
 
-            writeln!(code, "    /// Lane-wise less-than-or-equal comparison (unsigned).").unwrap();
+            writeln!(
+                code,
+                "    /// Lane-wise less-than-or-equal comparison (unsigned)."
+            )
+            .unwrap();
             writeln!(code, "    ///").unwrap();
             writeln!(code, "    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.").unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
             writeln!(code, "        Self(unsafe {{").unwrap();
             writeln!(code, "            let gt = self.simd_gt(other);").unwrap();
-            writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, set1_suffix).unwrap();
-            writeln!(code, "            {}_xor_si{}(gt.0, ones)", prefix, ty.width.bits()).unwrap();
+            writeln!(
+                code,
+                "            let ones = {}_set1_{}(-1);",
+                prefix, set1_suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            {}_xor_si{}(gt.0, ones)",
+                prefix,
+                ty.width.bits()
+            )
+            .unwrap();
             writeln!(code, "        }})").unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
@@ -1241,19 +1529,36 @@ fn generate_blend_ops(ty: &SimdType) -> String {
 
     writeln!(code, "    // ========== Blending/Selection ==========\n").unwrap();
 
-    writeln!(code, "    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.").unwrap();
+    writeln!(
+        code,
+        "    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// The mask should come from a comparison operation like `simd_lt()`.").unwrap();
+    writeln!(
+        code,
+        "    /// The mask should come from a comparison operation like `simd_lt()`."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
     writeln!(code, "    /// # Example").unwrap();
     writeln!(code, "    /// ```ignore").unwrap();
     writeln!(code, "    /// let a = {}::splat(token, 1.0);", ty.name()).unwrap();
     writeln!(code, "    /// let b = {}::splat(token, 2.0);", ty.name()).unwrap();
     writeln!(code, "    /// let mask = a.simd_lt(b);  // all true").unwrap();
-    writeln!(code, "    /// let result = {}::blend(mask, a, b);  // selects a", ty.name()).unwrap();
+    writeln!(
+        code,
+        "    /// let result = {}::blend(mask, a, b);  // selects a",
+        ty.name()
+    )
+    .unwrap();
     writeln!(code, "    /// ```").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{"
+    )
+    .unwrap();
 
     if ty.width == SimdWidth::W512 {
         // AVX-512 uses mask registers for blend
@@ -1266,22 +1571,52 @@ fn generate_blend_ops(ty: &SimdType) -> String {
             };
             writeln!(code, "        Self(unsafe {{").unwrap();
             writeln!(code, "            // Convert vector mask to mask register").unwrap();
-            writeln!(code, "            let m = _mm512_cmpneq_{}_mask({}(mask.0), _mm512_setzero_si512());", int_suffix, cast_fn).unwrap();
-            writeln!(code, "            {}_mask_blend_{}(m, if_false.0, if_true.0)", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "            let m = _mm512_cmpneq_{}_mask({}(mask.0), _mm512_setzero_si512());",
+                int_suffix, cast_fn
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            {}_mask_blend_{}(m, if_false.0, if_true.0)",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "        }})").unwrap();
         } else {
             // Integer types
             writeln!(code, "        Self(unsafe {{").unwrap();
             writeln!(code, "            // Convert vector mask to mask register").unwrap();
-            writeln!(code, "            let m = _mm512_cmpneq_{}_mask(mask.0, _mm512_setzero_si512());", suffix).unwrap();
-            writeln!(code, "            {}_mask_blend_{}(m, if_false.0, if_true.0)", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "            let m = _mm512_cmpneq_{}_mask(mask.0, _mm512_setzero_si512());",
+                suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            {}_mask_blend_{}(m, if_false.0, if_true.0)",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "        }})").unwrap();
         }
     } else if ty.elem.is_float() {
-        writeln!(code, "        Self(unsafe {{ {}_blendv_{}(if_false.0, if_true.0, mask.0) }})", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}_blendv_{}(if_false.0, if_true.0, mask.0) }})",
+            prefix, suffix
+        )
+        .unwrap();
     } else {
         // Integer blend uses blendv_epi8 which operates on bytes
-        writeln!(code, "        Self(unsafe {{ {}_blendv_epi8(if_false.0, if_true.0, mask.0) }})", prefix).unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}_blendv_epi8(if_false.0, if_true.0, mask.0) }})",
+            prefix
+        )
+        .unwrap();
     }
     writeln!(code, "    }}\n").unwrap();
 
@@ -1302,7 +1637,12 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
     if ty.elem.is_float() {
         writeln!(code, "    /// Sum all lanes horizontally.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Returns a scalar containing the sum of all {} lanes.", lanes).unwrap();
+        writeln!(
+            code,
+            "    /// Returns a scalar containing the sum of all {} lanes.",
+            lanes
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn reduce_add(self) -> {} {{", elem).unwrap();
 
@@ -1325,7 +1665,11 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
             (ElementType::F32, SimdWidth::W256) => {
                 // f32x8: extract halves, add, then 128-bit reduce
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let hi = _mm256_extractf128_ps::<1>(self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let hi = _mm256_extractf128_ps::<1>(self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let lo = _mm256_castps256_ps128(self.0);").unwrap();
                 writeln!(code, "            let sum = _mm_add_ps(lo, hi);").unwrap();
                 writeln!(code, "            let h1 = _mm_hadd_ps(sum, sum);").unwrap();
@@ -1336,7 +1680,11 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
             (ElementType::F64, SimdWidth::W256) => {
                 // f64x4: extract halves, add, then 128-bit reduce
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let hi = _mm256_extractf128_pd::<1>(self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let hi = _mm256_extractf128_pd::<1>(self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let lo = _mm256_castpd256_pd128(self.0);").unwrap();
                 writeln!(code, "            let sum = _mm_add_pd(lo, hi);").unwrap();
                 writeln!(code, "            let h = _mm_hadd_pd(sum, sum);").unwrap();
@@ -1362,35 +1710,63 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
         match (ty.elem, ty.width) {
             (ElementType::F32, SimdWidth::W128) => {
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let m1 = _mm_min_ps(self.0, shuf);").unwrap();
-                writeln!(code, "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);"
+                )
+                .unwrap();
                 writeln!(code, "            let m2 = _mm_min_ps(m1, shuf2);").unwrap();
                 writeln!(code, "            _mm_cvtss_f32(m2)").unwrap();
                 writeln!(code, "        }}").unwrap();
             }
             (ElementType::F64, SimdWidth::W128) => {
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let shuf = _mm_shuffle_pd::<0b01>(self.0, self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf = _mm_shuffle_pd::<0b01>(self.0, self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let m = _mm_min_pd(self.0, shuf);").unwrap();
                 writeln!(code, "            _mm_cvtsd_f64(m)").unwrap();
                 writeln!(code, "        }}").unwrap();
             }
             (ElementType::F32, SimdWidth::W256) => {
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let hi = _mm256_extractf128_ps::<1>(self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let hi = _mm256_extractf128_ps::<1>(self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let lo = _mm256_castps256_ps128(self.0);").unwrap();
                 writeln!(code, "            let m = _mm_min_ps(lo, hi);").unwrap();
-                writeln!(code, "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(m, m);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(m, m);"
+                )
+                .unwrap();
                 writeln!(code, "            let m1 = _mm_min_ps(m, shuf);").unwrap();
-                writeln!(code, "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);"
+                )
+                .unwrap();
                 writeln!(code, "            let m2 = _mm_min_ps(m1, shuf2);").unwrap();
                 writeln!(code, "            _mm_cvtss_f32(m2)").unwrap();
                 writeln!(code, "        }}").unwrap();
             }
             (ElementType::F64, SimdWidth::W256) => {
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let hi = _mm256_extractf128_pd::<1>(self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let hi = _mm256_extractf128_pd::<1>(self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let lo = _mm256_castpd256_pd128(self.0);").unwrap();
                 writeln!(code, "            let m = _mm_min_pd(lo, hi);").unwrap();
                 writeln!(code, "            let shuf = _mm_shuffle_pd::<0b01>(m, m);").unwrap();
@@ -1414,35 +1790,63 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
         match (ty.elem, ty.width) {
             (ElementType::F32, SimdWidth::W128) => {
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let m1 = _mm_max_ps(self.0, shuf);").unwrap();
-                writeln!(code, "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);"
+                )
+                .unwrap();
                 writeln!(code, "            let m2 = _mm_max_ps(m1, shuf2);").unwrap();
                 writeln!(code, "            _mm_cvtss_f32(m2)").unwrap();
                 writeln!(code, "        }}").unwrap();
             }
             (ElementType::F64, SimdWidth::W128) => {
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let shuf = _mm_shuffle_pd::<0b01>(self.0, self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf = _mm_shuffle_pd::<0b01>(self.0, self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let m = _mm_max_pd(self.0, shuf);").unwrap();
                 writeln!(code, "            _mm_cvtsd_f64(m)").unwrap();
                 writeln!(code, "        }}").unwrap();
             }
             (ElementType::F32, SimdWidth::W256) => {
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let hi = _mm256_extractf128_ps::<1>(self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let hi = _mm256_extractf128_ps::<1>(self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let lo = _mm256_castps256_ps128(self.0);").unwrap();
                 writeln!(code, "            let m = _mm_max_ps(lo, hi);").unwrap();
-                writeln!(code, "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(m, m);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(m, m);"
+                )
+                .unwrap();
                 writeln!(code, "            let m1 = _mm_max_ps(m, shuf);").unwrap();
-                writeln!(code, "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);").unwrap();
+                writeln!(
+                    code,
+                    "            let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);"
+                )
+                .unwrap();
                 writeln!(code, "            let m2 = _mm_max_ps(m1, shuf2);").unwrap();
                 writeln!(code, "            _mm_cvtss_f32(m2)").unwrap();
                 writeln!(code, "        }}").unwrap();
             }
             (ElementType::F64, SimdWidth::W256) => {
                 writeln!(code, "        unsafe {{").unwrap();
-                writeln!(code, "            let hi = _mm256_extractf128_pd::<1>(self.0);").unwrap();
+                writeln!(
+                    code,
+                    "            let hi = _mm256_extractf128_pd::<1>(self.0);"
+                )
+                .unwrap();
                 writeln!(code, "            let lo = _mm256_castpd256_pd128(self.0);").unwrap();
                 writeln!(code, "            let m = _mm_max_pd(lo, hi);").unwrap();
                 writeln!(code, "            let shuf = _mm_shuffle_pd::<0b01>(m, m);").unwrap();
@@ -1463,12 +1867,30 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
         // Integer horizontal sum - use to_array fallback for now (complex shuffle patterns)
         writeln!(code, "    /// Sum all lanes horizontally.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Returns a scalar containing the sum of all {} lanes.", lanes).unwrap();
-        writeln!(code, "    /// Note: This uses a scalar loop. For performance-critical code,").unwrap();
-        writeln!(code, "    /// consider keeping values in SIMD until the final reduction.").unwrap();
+        writeln!(
+            code,
+            "    /// Returns a scalar containing the sum of all {} lanes.",
+            lanes
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Note: This uses a scalar loop. For performance-critical code,"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// consider keeping values in SIMD until the final reduction."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn reduce_add(self) -> {} {{", elem).unwrap();
-        writeln!(code, "        self.to_array().iter().copied().fold(0_{}, {}::wrapping_add)", elem, elem).unwrap();
+        writeln!(
+            code,
+            "        self.to_array().iter().copied().fold(0_{}, {}::wrapping_add)",
+            elem, elem
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 
@@ -1490,26 +1912,67 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
 
         writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
 
-        writeln!(code, "    /// Convert to signed 32-bit integers, rounding toward zero (truncation).").unwrap();
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers, rounding toward zero (truncation)."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Values outside the representable range become `i32::MIN` (0x80000000).").unwrap();
+        writeln!(
+            code,
+            "    /// Values outside the representable range become `i32::MIN` (0x80000000)."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn to_i32x{}(self) -> {} {{", lanes, int_name).unwrap();
-        writeln!(code, "        {}(unsafe {{ {}_cvttps_epi32(self.0) }})", int_name, prefix).unwrap();
+        writeln!(
+            code,
+            "        {}(unsafe {{ {}_cvttps_epi32(self.0) }})",
+            int_name, prefix
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        writeln!(code, "    /// Convert to signed 32-bit integers, rounding to nearest even.").unwrap();
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers, rounding to nearest even."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Values outside the representable range become `i32::MIN` (0x80000000).").unwrap();
+        writeln!(
+            code,
+            "    /// Values outside the representable range become `i32::MIN` (0x80000000)."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn to_i32x{}_round(self) -> {} {{", lanes, int_name).unwrap();
-        writeln!(code, "        {}(unsafe {{ {}_cvtps_epi32(self.0) }})", int_name, prefix).unwrap();
+        writeln!(
+            code,
+            "    pub fn to_i32x{}_round(self) -> {} {{",
+            lanes, int_name
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        {}(unsafe {{ {}_cvtps_epi32(self.0) }})",
+            int_name, prefix
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         writeln!(code, "    /// Create from signed 32-bit integers.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn from_i32x{}(v: {}) -> Self {{", lanes, int_name).unwrap();
-        writeln!(code, "        Self(unsafe {{ {}_cvtepi32_ps(v.0) }})", prefix).unwrap();
+        writeln!(
+            code,
+            "    pub fn from_i32x{}(v: {}) -> Self {{",
+            lanes, int_name
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}_cvtepi32_ps(v.0) }})",
+            prefix
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
     } else if ty.elem == ElementType::I32 {
         let float_name = format!("f32x{}", lanes);
@@ -1518,8 +1981,18 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
 
         writeln!(code, "    /// Convert to single-precision floats.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn to_f32x{}(self) -> {} {{", lanes, float_name).unwrap();
-        writeln!(code, "        {}(unsafe {{ {}_cvtepi32_ps(self.0) }})", float_name, prefix).unwrap();
+        writeln!(
+            code,
+            "    pub fn to_f32x{}(self) -> {} {{",
+            lanes, float_name
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        {}(unsafe {{ {}_cvtepi32_ps(self.0) }})",
+            float_name, prefix
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 
@@ -1527,9 +2000,17 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
     if ty.elem == ElementType::F64 && ty.width == SimdWidth::W128 {
         writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
 
-        writeln!(code, "    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero.").unwrap();
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Returns an `i32x4` where only the lower 2 lanes are valid.").unwrap();
+        writeln!(
+            code,
+            "    /// Returns an `i32x4` where only the lower 2 lanes are valid."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn to_i32x4_low(self) -> i32x4 {{").unwrap();
         writeln!(code, "        i32x4(unsafe {{ _mm_cvttpd_epi32(self.0) }})").unwrap();
@@ -1546,7 +2027,12 @@ fn generate_scalar_ops(ty: &SimdType, cfg_attr: &str) -> String {
     let token = ty.token();
 
     writeln!(code, "\n// Scalar broadcast operations for {}", name).unwrap();
-    writeln!(code, "// These allow `v + 2.0` instead of `v + {}::splat(token, 2.0)`\n", name).unwrap();
+    writeln!(
+        code,
+        "// These allow `v + 2.0` instead of `v + {}::splat(token, 2.0)`\n",
+        name
+    )
+    .unwrap();
 
     if ty.elem.is_float() {
         // Add scalar
@@ -1554,10 +2040,20 @@ fn generate_scalar_ops(ty: &SimdType, cfg_attr: &str) -> String {
         writeln!(code, "    type Output = Self;").unwrap();
         writeln!(code, "    /// Add a scalar to all lanes: `v + 2.0`").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Broadcasts the scalar to all lanes, then adds.").unwrap();
+        writeln!(
+            code,
+            "    /// Broadcasts the scalar to all lanes, then adds."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    fn add(self, rhs: {}) -> Self {{", elem).unwrap();
-        writeln!(code, "        self + Self(unsafe {{ {}({}) }})", scalar_splat_intrinsic(ty), "rhs").unwrap();
+        writeln!(
+            code,
+            "        self + Self(unsafe {{ {}({}) }})",
+            scalar_splat_intrinsic(ty),
+            "rhs"
+        )
+        .unwrap();
         writeln!(code, "    }}").unwrap();
         writeln!(code, "}}\n").unwrap();
 
@@ -1567,7 +2063,13 @@ fn generate_scalar_ops(ty: &SimdType, cfg_attr: &str) -> String {
         writeln!(code, "    /// Subtract a scalar from all lanes: `v - 2.0`").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    fn sub(self, rhs: {}) -> Self {{", elem).unwrap();
-        writeln!(code, "        self - Self(unsafe {{ {}({}) }})", scalar_splat_intrinsic(ty), "rhs").unwrap();
+        writeln!(
+            code,
+            "        self - Self(unsafe {{ {}({}) }})",
+            scalar_splat_intrinsic(ty),
+            "rhs"
+        )
+        .unwrap();
         writeln!(code, "    }}").unwrap();
         writeln!(code, "}}\n").unwrap();
 
@@ -1577,7 +2079,13 @@ fn generate_scalar_ops(ty: &SimdType, cfg_attr: &str) -> String {
         writeln!(code, "    /// Multiply all lanes by a scalar: `v * 2.0`").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    fn mul(self, rhs: {}) -> Self {{", elem).unwrap();
-        writeln!(code, "        self * Self(unsafe {{ {}({}) }})", scalar_splat_intrinsic(ty), "rhs").unwrap();
+        writeln!(
+            code,
+            "        self * Self(unsafe {{ {}({}) }})",
+            scalar_splat_intrinsic(ty),
+            "rhs"
+        )
+        .unwrap();
         writeln!(code, "    }}").unwrap();
         writeln!(code, "}}\n").unwrap();
 
@@ -1587,7 +2095,13 @@ fn generate_scalar_ops(ty: &SimdType, cfg_attr: &str) -> String {
         writeln!(code, "    /// Divide all lanes by a scalar: `v / 2.0`").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    fn div(self, rhs: {}) -> Self {{", elem).unwrap();
-        writeln!(code, "        self / Self(unsafe {{ {}({}) }})", scalar_splat_intrinsic(ty), "rhs").unwrap();
+        writeln!(
+            code,
+            "        self / Self(unsafe {{ {}({}) }})",
+            scalar_splat_intrinsic(ty),
+            "rhs"
+        )
+        .unwrap();
         writeln!(code, "    }}").unwrap();
         writeln!(code, "}}\n").unwrap();
     }
@@ -1864,40 +2378,91 @@ fn generate_approx_ops(ty: &SimdType) -> String {
 
     // Only for f32 types (f64 doesn't have rcp/rsqrt in SSE/AVX, only AVX-512)
     if ty.elem == ElementType::F32 {
-        writeln!(code, "    // ========== Approximation Operations ==========\n").unwrap();
+        writeln!(
+            code,
+            "    // ========== Approximation Operations ==========\n"
+        )
+        .unwrap();
 
         // rcp - reciprocal approximation
         if ty.width == SimdWidth::W512 {
             // AVX-512 has rcp14 with ~14-bit precision
-            writeln!(code, "    /// Fast reciprocal approximation (1/x) with ~14-bit precision.").unwrap();
+            writeln!(
+                code,
+                "    /// Fast reciprocal approximation (1/x) with ~14-bit precision."
+            )
+            .unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// For full precision, use `recip()` which applies Newton-Raphson refinement.").unwrap();
+            writeln!(
+                code,
+                "    /// For full precision, use `recip()` which applies Newton-Raphson refinement."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_rcp14_{}(self.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_rcp14_{}(self.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
         } else {
             // SSE/AVX have rcp with ~12-bit precision
-            writeln!(code, "    /// Fast reciprocal approximation (1/x) with ~12-bit precision.").unwrap();
+            writeln!(
+                code,
+                "    /// Fast reciprocal approximation (1/x) with ~12-bit precision."
+            )
+            .unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// For full precision, use `recip()` which applies Newton-Raphson refinement.").unwrap();
+            writeln!(
+                code,
+                "    /// For full precision, use `recip()` which applies Newton-Raphson refinement."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_rcp_{}(self.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_rcp_{}(self.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
 
         // recip - precise reciprocal via Newton-Raphson
-        writeln!(code, "    /// Precise reciprocal (1/x) using Newton-Raphson refinement.").unwrap();
+        writeln!(
+            code,
+            "    /// Precise reciprocal (1/x) using Newton-Raphson refinement."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// More accurate than `rcp_approx()` but slower. For maximum speed").unwrap();
-        writeln!(code, "    /// with acceptable precision loss, use `rcp_approx()`.").unwrap();
+        writeln!(
+            code,
+            "    /// More accurate than `rcp_approx()` but slower. For maximum speed"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// with acceptable precision loss, use `rcp_approx()`."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn recip(self) -> Self {{").unwrap();
         writeln!(code, "        // Newton-Raphson: x' = x * (2 - a*x)").unwrap();
         writeln!(code, "        let approx = self.rcp_approx();").unwrap();
-        writeln!(code, "        let two = Self(unsafe {{ {}_set1_ps(2.0) }});", prefix).unwrap();
-        writeln!(code, "        // One iteration gives ~24-bit precision from ~12-bit").unwrap();
+        writeln!(
+            code,
+            "        let two = Self(unsafe {{ {}_set1_ps(2.0) }});",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        // One iteration gives ~24-bit precision from ~12-bit"
+        )
+        .unwrap();
         writeln!(code, "        approx * (two - self * approx)").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -1905,64 +2470,153 @@ fn generate_approx_ops(ty: &SimdType) -> String {
         if ty.width == SimdWidth::W512 {
             writeln!(code, "    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~14-bit precision.").unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually.").unwrap();
+            writeln!(
+                code,
+                "    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_rsqrt14_{}(self.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_rsqrt14_{}(self.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
         } else {
             writeln!(code, "    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~12-bit precision.").unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually.").unwrap();
+            writeln!(
+                code,
+                "    /// For full precision, use `sqrt().recip()` or apply Newton-Raphson manually."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
             writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_rsqrt_{}(self.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_rsqrt_{}(self.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
 
         // rsqrt with refinement
-        writeln!(code, "    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.").unwrap();
+        writeln!(
+            code,
+            "    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn rsqrt(self) -> Self {{").unwrap();
-        writeln!(code, "        // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - x * y * y)").unwrap();
+        writeln!(
+            code,
+            "        // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - x * y * y)"
+        )
+        .unwrap();
         writeln!(code, "        let approx = self.rsqrt_approx();").unwrap();
-        writeln!(code, "        let half = Self(unsafe {{ {}_set1_ps(0.5) }});", prefix).unwrap();
-        writeln!(code, "        let three = Self(unsafe {{ {}_set1_ps(3.0) }});", prefix).unwrap();
-        writeln!(code, "        half * approx * (three - self * approx * approx)").unwrap();
+        writeln!(
+            code,
+            "        let half = Self(unsafe {{ {}_set1_ps(0.5) }});",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        let three = Self(unsafe {{ {}_set1_ps(3.0) }});",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        half * approx * (three - self * approx * approx)"
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 
     // AVX-512 also has rcp14/rsqrt14 for f64
     if ty.elem == ElementType::F64 && ty.width == SimdWidth::W512 {
-        writeln!(code, "    // ========== Approximation Operations ==========\n").unwrap();
+        writeln!(
+            code,
+            "    // ========== Approximation Operations ==========\n"
+        )
+        .unwrap();
 
-        writeln!(code, "    /// Fast reciprocal approximation (1/x) with ~14-bit precision.").unwrap();
+        writeln!(
+            code,
+            "    /// Fast reciprocal approximation (1/x) with ~14-bit precision."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
-        writeln!(code, "        Self(unsafe {{ {}_rcp14_{}(self.0) }})", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}_rcp14_{}(self.0) }})",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        writeln!(code, "    /// Precise reciprocal (1/x) using Newton-Raphson refinement.").unwrap();
+        writeln!(
+            code,
+            "    /// Precise reciprocal (1/x) using Newton-Raphson refinement."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn recip(self) -> Self {{").unwrap();
         writeln!(code, "        let approx = self.rcp_approx();").unwrap();
-        writeln!(code, "        let two = Self(unsafe {{ {}_set1_pd(2.0) }});", prefix).unwrap();
+        writeln!(
+            code,
+            "        let two = Self(unsafe {{ {}_set1_pd(2.0) }});",
+            prefix
+        )
+        .unwrap();
         writeln!(code, "        approx * (two - self * approx)").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        writeln!(code, "    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~14-bit precision.").unwrap();
+        writeln!(
+            code,
+            "    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~14-bit precision."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
-        writeln!(code, "        Self(unsafe {{ {}_rsqrt14_{}(self.0) }})", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}_rsqrt14_{}(self.0) }})",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
 
-        writeln!(code, "    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.").unwrap();
+        writeln!(
+            code,
+            "    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn rsqrt(self) -> Self {{").unwrap();
         writeln!(code, "        let approx = self.rsqrt_approx();").unwrap();
-        writeln!(code, "        let half = Self(unsafe {{ {}_set1_pd(0.5) }});", prefix).unwrap();
-        writeln!(code, "        let three = Self(unsafe {{ {}_set1_pd(3.0) }});", prefix).unwrap();
-        writeln!(code, "        half * approx * (three - self * approx * approx)").unwrap();
+        writeln!(
+            code,
+            "        let half = Self(unsafe {{ {}_set1_pd(0.5) }});",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        let three = Self(unsafe {{ {}_set1_pd(3.0) }});",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        half * approx * (three - self * approx * approx)"
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 
@@ -1974,7 +2628,11 @@ fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
     let prefix = ty.width.x86_prefix();
     let bits = ty.width.bits();
 
-    writeln!(code, "    // ========== Bitwise Unary Operations ==========\n").unwrap();
+    writeln!(
+        code,
+        "    // ========== Bitwise Unary Operations ==========\n"
+    )
+    .unwrap();
 
     // not - bitwise complement (XOR with all 1s)
     writeln!(code, "    /// Bitwise NOT (complement): flips all bits.").unwrap();
@@ -1983,19 +2641,46 @@ fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
 
     if ty.elem.is_float() {
         let suffix = ty.elem.x86_suffix();
-        let int_suffix = if ty.elem == ElementType::F32 { "epi32" } else { "epi64" };
+        let int_suffix = if ty.elem == ElementType::F32 {
+            "epi32"
+        } else {
+            "epi64"
+        };
         let set1_suffix = match (ty.elem, ty.width) {
             (ElementType::F32, _) => "epi32",
             (_, SimdWidth::W512) => "epi64",
             _ => "epi64x",
         };
-        let cast_to = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
-        let cast_from = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
+        let cast_to = if ty.elem == ElementType::F32 {
+            "ps"
+        } else {
+            "pd"
+        };
+        let cast_from = if ty.elem == ElementType::F32 {
+            "ps"
+        } else {
+            "pd"
+        };
 
         writeln!(code, "        Self(unsafe {{").unwrap();
-        writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, set1_suffix).unwrap();
-        writeln!(code, "            let as_int = {}_cast{}_si{}(self.0);", prefix, cast_from, bits).unwrap();
-        writeln!(code, "            {}_castsi{}_{} ({}_xor_si{}(as_int, ones))", prefix, bits, cast_to, prefix, bits).unwrap();
+        writeln!(
+            code,
+            "            let ones = {}_set1_{}(-1);",
+            prefix, set1_suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let as_int = {}_cast{}_si{}(self.0);",
+            prefix, cast_from, bits
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            {}_castsi{}_{} ({}_xor_si{}(as_int, ones))",
+            prefix, bits, cast_to, prefix, bits
+        )
+        .unwrap();
         writeln!(code, "        }})").unwrap();
     } else {
         let set1_suffix = match (ty.elem, ty.width) {
@@ -2007,7 +2692,12 @@ fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
             _ => unreachable!(),
         };
         writeln!(code, "        Self(unsafe {{").unwrap();
-        writeln!(code, "            let ones = {}_set1_{}(-1);", prefix, set1_suffix).unwrap();
+        writeln!(
+            code,
+            "            let ones = {}_set1_{}(-1);",
+            prefix, set1_suffix
+        )
+        .unwrap();
         writeln!(code, "            {}_xor_si{}(self.0, ones)", prefix, bits).unwrap();
         writeln!(code, "        }})").unwrap();
     }
@@ -2027,38 +2717,92 @@ fn generate_shift_ops(ty: &SimdType) -> String {
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
     // AVX-512 intrinsics use u32 for const generic, SSE/AVX use i32
-    let const_type = if ty.width == SimdWidth::W512 { "u32" } else { "i32" };
+    let const_type = if ty.width == SimdWidth::W512 {
+        "u32"
+    } else {
+        "i32"
+    };
 
     writeln!(code, "    // ========== Shift Operations ==========\n").unwrap();
 
     // Shift left logical
     writeln!(code, "    /// Shift each lane left by `N` bits.").unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// Bits shifted out are lost; zeros are shifted in.").unwrap();
+    writeln!(
+        code,
+        "    /// Bits shifted out are lost; zeros are shifted in."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn shl<const N: {}>(self) -> Self {{", const_type).unwrap();
-    writeln!(code, "        Self(unsafe {{ {}_slli_{}::<N>(self.0) }})", prefix, suffix).unwrap();
+    writeln!(
+        code,
+        "    pub fn shl<const N: {}>(self) -> Self {{",
+        const_type
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(unsafe {{ {}_slli_{}::<N>(self.0) }})",
+        prefix, suffix
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // Shift right logical
-    writeln!(code, "    /// Shift each lane right by `N` bits (logical/unsigned shift).").unwrap();
+    writeln!(
+        code,
+        "    /// Shift each lane right by `N` bits (logical/unsigned shift)."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// Bits shifted out are lost; zeros are shifted in.").unwrap();
+    writeln!(
+        code,
+        "    /// Bits shifted out are lost; zeros are shifted in."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn shr<const N: {}>(self) -> Self {{", const_type).unwrap();
-    writeln!(code, "        Self(unsafe {{ {}_srli_{}::<N>(self.0) }})", prefix, suffix).unwrap();
+    writeln!(
+        code,
+        "    pub fn shr<const N: {}>(self) -> Self {{",
+        const_type
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(unsafe {{ {}_srli_{}::<N>(self.0) }})",
+        prefix, suffix
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // Arithmetic shift right (signed types; 64-bit only in AVX-512)
     if ty.elem.is_signed() {
         let has_sra = ty.elem != ElementType::I64 || ty.width == SimdWidth::W512;
         if has_sra {
-            writeln!(code, "    /// Arithmetic shift right by `N` bits (sign-extending).").unwrap();
+            writeln!(
+                code,
+                "    /// Arithmetic shift right by `N` bits (sign-extending)."
+            )
+            .unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// The sign bit is replicated into the vacated positions.").unwrap();
+            writeln!(
+                code,
+                "    /// The sign bit is replicated into the vacated positions."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn shr_arithmetic<const N: {}>(self) -> Self {{", const_type).unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_srai_{}::<N>(self.0) }})", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "    pub fn shr_arithmetic<const N: {}>(self) -> Self {{",
+                const_type
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "        Self(unsafe {{ {}_srai_{}::<N>(self.0) }})",
+                prefix, suffix
+            )
+            .unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
     }
@@ -2101,17 +2845,29 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         SimdWidth::W512 => int_suffix_512,
     };
 
-    writeln!(code, "    // ========== Transcendental Operations ==========\n").unwrap();
+    writeln!(
+        code,
+        "    // ========== Transcendental Operations ==========\n"
+    )
+    .unwrap();
 
     if ty.elem == ElementType::F32 {
         // ===== F32 log2_lowp =====
-        writeln!(code, "    /// Low-precision base-2 logarithm (~7.7e-5 max relative error).").unwrap();
+        writeln!(
+            code,
+            "    /// Low-precision base-2 logarithm (~7.7e-5 max relative error)."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Uses rational polynomial approximation. Fast but not suitable for color-accurate work.").unwrap();
         writeln!(code, "    /// For higher precision, use `log2_midp()`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn log2_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        // Rational polynomial coefficients from butteraugli/jpegli").unwrap();
+        writeln!(
+            code,
+            "        // Rational polynomial coefficients from butteraugli/jpegli"
+        )
+        .unwrap();
         writeln!(code, "        const P0: f32 = -1.850_383_34e-6;").unwrap();
         writeln!(code, "        const P1: f32 = 1.428_716_05;").unwrap();
         writeln!(code, "        const P2: f32 = 0.742_458_73;").unwrap();
@@ -2120,32 +2876,109 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        const Q2: f32 = 0.174_093_43;").unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            let x_bits = {}_cast{}_{}(self.0);", prefix, suffix, actual_int_suffix).unwrap();
-        writeln!(code, "            let offset = {}_set1_epi32(0x3f2aaaab_u32 as i32);", prefix).unwrap();
-        writeln!(code, "            let exp_bits = {}_sub_epi32(x_bits, offset);", prefix).unwrap();
-        writeln!(code, "            let exp_shifted = {}_srai_epi32::<23>(exp_bits);", prefix).unwrap();
+        writeln!(
+            code,
+            "            let x_bits = {}_cast{}_{}(self.0);",
+            prefix, suffix, actual_int_suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let offset = {}_set1_epi32(0x3f2aaaab_u32 as i32);",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let exp_bits = {}_sub_epi32(x_bits, offset);",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let exp_shifted = {}_srai_epi32::<23>(exp_bits);",
+            prefix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            let mantissa_bits = {}_sub_epi32(x_bits, {}_slli_epi32::<23>(exp_shifted));", prefix, prefix).unwrap();
-        writeln!(code, "            let mantissa = {}_cast{}_{}(mantissa_bits);", prefix, actual_int_suffix, suffix).unwrap();
-        writeln!(code, "            let exp_val = {}_cvtepi32_{}(exp_shifted);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let mantissa = {}_cast{}_{}(mantissa_bits);",
+            prefix, actual_int_suffix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let exp_val = {}_cvtepi32_{}(exp_shifted);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            let one = {}_set1_{}(1.0);", prefix, suffix).unwrap();
-        writeln!(code, "            let m = {}_sub_{}(mantissa, one);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let one = {}_set1_{}(1.0);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let m = {}_sub_{}(mantissa, one);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Horner's for numerator: P2*m^2 + P1*m + P0").unwrap();
-        writeln!(code, "            let yp = {}_fmadd_{}({}_set1_{}(P2), m, {}_set1_{}(P1));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let yp = {}_fmadd_{}(yp, m, {}_set1_{}(P0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            // Horner's for numerator: P2*m^2 + P1*m + P0"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let yp = {}_fmadd_{}({}_set1_{}(P2), m, {}_set1_{}(P1));",
+            prefix, suffix, prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let yp = {}_fmadd_{}(yp, m, {}_set1_{}(P0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Horner's for denominator: Q2*m^2 + Q1*m + Q0").unwrap();
-        writeln!(code, "            let yq = {}_fmadd_{}({}_set1_{}(Q2), m, {}_set1_{}(Q1));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let yq = {}_fmadd_{}(yq, m, {}_set1_{}(Q0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            // Horner's for denominator: Q2*m^2 + Q1*m + Q0"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let yq = {}_fmadd_{}({}_set1_{}(Q2), m, {}_set1_{}(Q1));",
+            prefix, suffix, prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let yq = {}_fmadd_{}(yq, m, {}_set1_{}(Q0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            Self({}_add_{}({}_div_{}(yp, yq), exp_val))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_add_{}({}_div_{}(yp, yq), exp_val))",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 exp2_lowp =====
-        writeln!(code, "    /// Low-precision base-2 exponential (~5.5e-3 max relative error).").unwrap();
+        writeln!(
+            code,
+            "    /// Low-precision base-2 exponential (~5.5e-3 max relative error)."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Uses degree-3 polynomial approximation. Fast but not suitable for color-accurate work.").unwrap();
         writeln!(code, "    /// For higher precision, use `exp2_midp()`.").unwrap();
@@ -2159,56 +2992,141 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
         writeln!(code, "            // Clamp to safe range").unwrap();
-        writeln!(code, "            let x = {}_max_{}(self.0, {}_set1_{}(-126.0));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let x = {}_min_{}(x, {}_set1_{}(126.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let x = {}_max_{}(self.0, {}_set1_{}(-126.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let x = {}_min_{}(x, {}_set1_{}(126.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Split into integer and fractional parts").unwrap();
+        writeln!(
+            code,
+            "            // Split into integer and fractional parts"
+        )
+        .unwrap();
 
         // Use appropriate floor/round intrinsic based on width
         if ty.width == SimdWidth::W512 {
-            writeln!(code, "            let xi = {}_roundscale_{}::<0x01>(x); // floor", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "            let xi = {}_roundscale_{}::<0x01>(x); // floor",
+                prefix, suffix
+            )
+            .unwrap();
         } else {
             writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
         }
 
-        writeln!(code, "            let xf = {}_sub_{}(x, xi);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let xf = {}_sub_{}(x, xi);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Polynomial for 2^frac").unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}({}_set1_{}(C3), xf, {}_set1_{}(C2));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}({}_set1_{}(C3), xf, {}_set1_{}(C2));",
+            prefix, suffix, prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Scale by 2^integer using bit manipulation").unwrap();
-        writeln!(code, "            let xi_i32 = {}_cvt{}_epi32(xi);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            // Scale by 2^integer using bit manipulation"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let xi_i32 = {}_cvt{}_epi32(xi);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "            let bias = {}_set1_epi32(127);", prefix).unwrap();
-        writeln!(code, "            let scale_bits = {}_slli_epi32::<23>({}_add_epi32(xi_i32, bias));", prefix, prefix).unwrap();
-        writeln!(code, "            let scale = {}_cast{}_{}(scale_bits);", prefix, actual_int_suffix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let scale_bits = {}_slli_epi32::<23>({}_add_epi32(xi_i32, bias));",
+            prefix, prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let scale = {}_cast{}_{}(scale_bits);",
+            prefix, actual_int_suffix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            Self({}_mul_{}(poly, scale))", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(poly, scale))",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 ln_lowp (natural log) =====
         writeln!(code, "    /// Low-precision natural logarithm.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `log2_lowp(x) * ln(2)`. For higher precision, use `ln_midp()`.").unwrap();
+        writeln!(
+            code,
+            "    /// Computed as `log2_lowp(x) * ln(2)`. For higher precision, use `ln_midp()`."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn ln_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LN2)))",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 exp_lowp (natural exp) =====
         writeln!(code, "    /// Low-precision natural exponential (e^x).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2_lowp(x * log2(e))`. For higher precision, use `exp_midp()`.").unwrap();
+        writeln!(
+            code,
+            "    /// Computed as `exp2_lowp(x * log2(e))`. For higher precision, use `exp_midp()`."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn exp_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        const LOG2_E: f32 = core::f32::consts::LOG2_E;").unwrap();
+        writeln!(
+            code,
+            "        const LOG2_E: f32 = core::f32::consts::LOG2_E;"
+        )
+        .unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_lowp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_lowp()",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2218,9 +3136,18 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Computed as `log2_lowp(x) / log2(10)`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn log10_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)").unwrap();
+        writeln!(
+            code,
+            "        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)"
+        )
+        .unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LOG10_2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LOG10_2)))",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2232,76 +3159,230 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn pow_lowp(self, n: f32) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(n))).exp2_lowp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(n))).exp2_lowp()",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ========== Mid-Precision Transcendental Operations ==========
-        writeln!(code, "    // ========== Mid-Precision Transcendental Operations ==========\n").unwrap();
+        writeln!(
+            code,
+            "    // ========== Mid-Precision Transcendental Operations ==========\n"
+        )
+        .unwrap();
 
         // ===== F32 log2_midp =====
-        writeln!(code, "    /// Mid-precision base-2 logarithm (~3 ULP max error).").unwrap();
+        writeln!(
+            code,
+            "    /// Mid-precision base-2 logarithm (~3 ULP max error)."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.").unwrap();
-        writeln!(code, "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.").unwrap();
+        writeln!(
+            code,
+            "    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn log2_midp(self) -> Self {{").unwrap();
         writeln!(code, "        // Constants for range reduction").unwrap();
-        writeln!(code, "        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits").unwrap();
-        writeln!(code, "        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits").unwrap();
-        writeln!(code, "        const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;").unwrap();
+        writeln!(
+            code,
+            "        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;"
+        )
+        .unwrap();
         writeln!(code, "        const EXPONENT_BIAS: i32 = 127;").unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "        // Coefficients for odd polynomial on y = (a-1)/(a+1)").unwrap();
+        writeln!(
+            code,
+            "        // Coefficients for odd polynomial on y = (a-1)/(a+1)"
+        )
+        .unwrap();
         writeln!(code, "        const C0: f32 = 2.885_390_08;  // 2/ln(2)").unwrap();
-        writeln!(code, "        const C1: f32 = 0.961_800_76;  // y^2 coefficient").unwrap();
-        writeln!(code, "        const C2: f32 = 0.576_974_45;  // y^4 coefficient").unwrap();
-        writeln!(code, "        const C3: f32 = 0.434_411_97;  // y^6 coefficient").unwrap();
+        writeln!(
+            code,
+            "        const C1: f32 = 0.961_800_76;  // y^2 coefficient"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        const C2: f32 = 0.576_974_45;  // y^4 coefficient"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        const C3: f32 = 0.434_411_97;  // y^6 coefficient"
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            let x_bits = {}_cast{}_{}(self.0);", prefix, suffix, actual_int_suffix).unwrap();
+        writeln!(
+            code,
+            "            let x_bits = {}_cast{}_{}(self.0);",
+            prefix, suffix, actual_int_suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Normalize mantissa to [sqrt(2)/2, sqrt(2)]").unwrap();
-        writeln!(code, "            let offset = {}_set1_epi32((ONE - SQRT2_OVER_2) as i32);", prefix).unwrap();
-        writeln!(code, "            let adjusted = {}_add_epi32(x_bits, offset);", prefix).unwrap();
+        writeln!(
+            code,
+            "            // Normalize mantissa to [sqrt(2)/2, sqrt(2)]"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let offset = {}_set1_epi32((ONE - SQRT2_OVER_2) as i32);",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let adjusted = {}_add_epi32(x_bits, offset);",
+            prefix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Extract exponent").unwrap();
-        writeln!(code, "            let exp_raw = {}_srai_epi32::<23>(adjusted);", prefix).unwrap();
-        writeln!(code, "            let exp_biased = {}_sub_epi32(exp_raw, {}_set1_epi32(EXPONENT_BIAS));", prefix, prefix).unwrap();
-        writeln!(code, "            let n = {}_cvtepi32_{}(exp_biased);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let exp_raw = {}_srai_epi32::<23>(adjusted);",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let exp_biased = {}_sub_epi32(exp_raw, {}_set1_epi32(EXPONENT_BIAS));",
+            prefix, prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let n = {}_cvtepi32_{}(exp_biased);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Reconstruct normalized mantissa").unwrap();
-        writeln!(code, "            let mantissa_bits = {}_and_{}(adjusted, {}_set1_epi32(MANTISSA_MASK));", prefix, actual_int_suffix, prefix).unwrap();
+        writeln!(
+            code,
+            "            let mantissa_bits = {}_and_{}(adjusted, {}_set1_epi32(MANTISSA_MASK));",
+            prefix, actual_int_suffix, prefix
+        )
+        .unwrap();
         writeln!(code, "            let a_bits = {}_add_epi32(mantissa_bits, {}_set1_epi32(SQRT2_OVER_2 as i32));", prefix, prefix).unwrap();
-        writeln!(code, "            let a = {}_cast{}_{}(a_bits);", prefix, actual_int_suffix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let a = {}_cast{}_{}(a_bits);",
+            prefix, actual_int_suffix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // y = (a - 1) / (a + 1)").unwrap();
-        writeln!(code, "            let one = {}_set1_{}(1.0);", prefix, suffix).unwrap();
-        writeln!(code, "            let a_minus_1 = {}_sub_{}(a, one);", prefix, suffix).unwrap();
-        writeln!(code, "            let a_plus_1 = {}_add_{}(a, one);", prefix, suffix).unwrap();
-        writeln!(code, "            let y = {}_div_{}(a_minus_1, a_plus_1);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let one = {}_set1_{}(1.0);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let a_minus_1 = {}_sub_{}(a, one);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let a_plus_1 = {}_add_{}(a, one);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let y = {}_div_{}(a_minus_1, a_plus_1);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // y^2").unwrap();
-        writeln!(code, "            let y2 = {}_mul_{}(y, y);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let y2 = {}_mul_{}(y, y);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Polynomial: c0 + y^2*(c1 + y^2*(c2 + y^2*c3))").unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}({}_set1_{}(C3), y2, {}_set1_{}(C2));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, y2, {}_set1_{}(C1));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, y2, {}_set1_{}(C0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            // Polynomial: c0 + y^2*(c1 + y^2*(c2 + y^2*c3))"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}({}_set1_{}(C3), y2, {}_set1_{}(C2));",
+            prefix, suffix, prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, y2, {}_set1_{}(C1));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, y2, {}_set1_{}(C0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Result: y * poly + n").unwrap();
-        writeln!(code, "            Self({}_fmadd_{}(y, poly, n))", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_fmadd_{}(y, poly, n))",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 exp2_midp =====
-        writeln!(code, "    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).").unwrap();
+        writeln!(
+            code,
+            "    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error)."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Uses degree-6 minimax polynomial.").unwrap();
-        writeln!(code, "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.").unwrap();
+        writeln!(
+            code,
+            "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn exp2_midp(self) -> Self {{").unwrap();
-        writeln!(code, "        // Degree-6 minimax polynomial for 2^x on [0, 1]").unwrap();
+        writeln!(
+            code,
+            "        // Degree-6 minimax polynomial for 2^x on [0, 1]"
+        )
+        .unwrap();
         writeln!(code, "        const C0: f32 = 1.0;").unwrap();
         writeln!(code, "        const C1: f32 = 0.693_147_180_559_945;").unwrap();
         writeln!(code, "        const C2: f32 = 0.240_226_506_959_101;").unwrap();
@@ -2312,47 +3393,130 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
         writeln!(code, "            // Clamp to safe range").unwrap();
-        writeln!(code, "            let x = {}_max_{}(self.0, {}_set1_{}(-126.0));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let x = {}_min_{}(x, {}_set1_{}(126.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let x = {}_max_{}(self.0, {}_set1_{}(-126.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let x = {}_min_{}(x, {}_set1_{}(126.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
 
         // Use appropriate floor intrinsic based on width
         if ty.width == SimdWidth::W512 {
-            writeln!(code, "            let xi = {}_roundscale_{}::<0x01>(x); // floor", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "            let xi = {}_roundscale_{}::<0x01>(x); // floor",
+                prefix, suffix
+            )
+            .unwrap();
         } else {
             writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
         }
 
-        writeln!(code, "            let xf = {}_sub_{}(x, xi);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let xf = {}_sub_{}(x, xi);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Horner's method with 6 coefficients").unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}({}_set1_{}(C6), xf, {}_set1_{}(C5));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C4));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C3));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C2));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}({}_set1_{}(C6), xf, {}_set1_{}(C5));",
+            prefix, suffix, prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C4));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C3));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C2));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Scale by 2^integer").unwrap();
-        writeln!(code, "            let xi_i32 = {}_cvt{}_epi32(xi);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let xi_i32 = {}_cvt{}_epi32(xi);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "            let bias = {}_set1_epi32(127);", prefix).unwrap();
-        writeln!(code, "            let scale_bits = {}_slli_epi32::<23>({}_add_epi32(xi_i32, bias));", prefix, prefix).unwrap();
-        writeln!(code, "            let scale = {}_cast{}_{}(scale_bits);", prefix, actual_int_suffix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let scale_bits = {}_slli_epi32::<23>({}_add_epi32(xi_i32, bias));",
+            prefix, prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let scale = {}_cast{}_{}(scale_bits);",
+            prefix, actual_int_suffix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            Self({}_mul_{}(poly, scale))", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(poly, scale))",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 pow_midp =====
         writeln!(code, "    /// Mid-precision power function (self^n).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2_midp(n * log2_midp(self))`.").unwrap();
-        writeln!(code, "    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.").unwrap();
+        writeln!(
+            code,
+            "    /// Computed as `exp2_midp(n * log2_midp(self))`."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values."
+        )
+        .unwrap();
         writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn pow_midp(self, n: f32) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_midp().0, {}_set1_{}(n))).exp2_midp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_midp().0, {}_set1_{}(n))).exp2_midp()",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2364,7 +3528,12 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    pub fn ln_midp(self) -> Self {{").unwrap();
         writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_midp().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_midp().0, {}_set1_{}(LN2)))",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2374,9 +3543,18 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Computed as `exp2_midp(x * log2(e))`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn exp_midp(self) -> Self {{").unwrap();
-        writeln!(code, "        const LOG2_E: f32 = core::f32::consts::LOG2_E;").unwrap();
+        writeln!(
+            code,
+            "        const LOG2_E: f32 = core::f32::consts::LOG2_E;"
+        )
+        .unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_midp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_midp()",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2386,7 +3564,11 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         // ===== F32 cbrt_lowp =====
         writeln!(code, "    /// Low-precision cube root (x^(1/3)).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed via `pow_lowp(x, 1/3)`. For negative inputs, returns NaN.").unwrap();
+        writeln!(
+            code,
+            "    /// Computed via `pow_lowp(x, 1/3)`. For negative inputs, returns NaN."
+        )
+        .unwrap();
         writeln!(code, "    /// For higher precision, use `cbrt_midp()`.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn cbrt_lowp(self) -> Self {{").unwrap();
@@ -2396,60 +3578,169 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         // ===== F32 cbrt_midp =====
         writeln!(code, "    /// Mid-precision cube root (x^(1/3)).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson.").unwrap();
-        writeln!(code, "    /// Handles negative values correctly (returns -cbrt(|x|)).").unwrap();
+        writeln!(
+            code,
+            "    /// Uses pow_midp with scalar extraction for initial guess + Newton-Raphson."
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "    /// Handles negative values correctly (returns -cbrt(|x|))."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn cbrt_midp(self) -> Self {{").unwrap();
-        writeln!(code, "        // B1 magic constant for cube root initial approximation").unwrap();
-        writeln!(code, "        // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130").unwrap();
+        writeln!(
+            code,
+            "        // B1 magic constant for cube root initial approximation"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130"
+        )
+        .unwrap();
         writeln!(code, "        const B1: u32 = 709_958_130;").unwrap();
         writeln!(code, "        const ONE_THIRD: f32 = 1.0 / 3.0;").unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            // Extract to array for initial approximation (scalar division by 3)").unwrap();
-        writeln!(code, "            let x_arr: [f32; {}] = core::mem::transmute(self.0);", ty.lanes()).unwrap();
-        writeln!(code, "            let mut y_arr = [0.0f32; {}];", ty.lanes()).unwrap();
+        writeln!(
+            code,
+            "            // Extract to array for initial approximation (scalar division by 3)"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let x_arr: [f32; {}] = core::mem::transmute(self.0);",
+            ty.lanes()
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let mut y_arr = [0.0f32; {}];",
+            ty.lanes()
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            for i in 0..{} {{", ty.lanes()).unwrap();
         writeln!(code, "                let xi = x_arr[i];").unwrap();
         writeln!(code, "                let ui = xi.to_bits();").unwrap();
-        writeln!(code, "                let hx = ui & 0x7FFF_FFFF; // abs bits").unwrap();
-        writeln!(code, "                // Initial approximation: bits/3 + B1 (always positive)").unwrap();
+        writeln!(
+            code,
+            "                let hx = ui & 0x7FFF_FFFF; // abs bits"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "                // Initial approximation: bits/3 + B1 (always positive)"
+        )
+        .unwrap();
         writeln!(code, "                let approx = hx / 3 + B1;").unwrap();
         writeln!(code, "                y_arr[i] = f32::from_bits(approx);").unwrap();
         writeln!(code, "            }}").unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let sign_bits = {}_and_{}(self.0, {}_set1_{}(-0.0));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let mut y = core::mem::transmute::<_, _>(y_arr);").unwrap();
+        writeln!(
+            code,
+            "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let sign_bits = {}_and_{}(self.0, {}_set1_{}(-0.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let mut y = core::mem::transmute::<_, _>(y_arr);"
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)").unwrap();
+        writeln!(
+            code,
+            "            // Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)"
+        )
+        .unwrap();
         writeln!(code, "            // Two iterations for full f32 precision").unwrap();
-        writeln!(code, "            let two = {}_set1_{}(2.0);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let two = {}_set1_{}(2.0);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Iteration 1").unwrap();
-        writeln!(code, "            let y3 = {}_mul_{}({}_mul_{}(y, y), y);", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let num = {}_fmadd_{}(two, abs_x, y3);", prefix, suffix).unwrap();
-        writeln!(code, "            let den = {}_fmadd_{}(two, y3, abs_x);", prefix, suffix).unwrap();
-        writeln!(code, "            y = {}_mul_{}(y, {}_div_{}(num, den));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let y3 = {}_mul_{}({}_mul_{}(y, y), y);",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let num = {}_fmadd_{}(two, abs_x, y3);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let den = {}_fmadd_{}(two, y3, abs_x);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            y = {}_mul_{}(y, {}_div_{}(num, den));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Iteration 2").unwrap();
-        writeln!(code, "            let y3 = {}_mul_{}({}_mul_{}(y, y), y);", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let num = {}_fmadd_{}(two, abs_x, y3);", prefix, suffix).unwrap();
-        writeln!(code, "            let den = {}_fmadd_{}(two, y3, abs_x);", prefix, suffix).unwrap();
-        writeln!(code, "            y = {}_mul_{}(y, {}_div_{}(num, den));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let y3 = {}_mul_{}({}_mul_{}(y, y), y);",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let num = {}_fmadd_{}(two, abs_x, y3);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let den = {}_fmadd_{}(two, y3, abs_x);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            y = {}_mul_{}(y, {}_div_{}(num, den));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Restore sign").unwrap();
-        writeln!(code, "            Self({}_or_{}(y, sign_bits))", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_or_{}(y, sign_bits))",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
-
     } else if ty.elem == ElementType::F64 {
         // ===== F64 log2_lowp =====
         // For f64, we use a similar algorithm but with f64 constants
         writeln!(code, "    /// Low-precision base-2 logarithm.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses polynomial approximation. For natural log, use `ln_lowp()`.").unwrap();
+        writeln!(
+            code,
+            "    /// Uses polynomial approximation. For natural log, use `ln_lowp()`."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn log2_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        // Polynomial coefficients for f64").unwrap();
@@ -2459,25 +3750,63 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        const Q0: f64 = 0.990_328_142_775_907;").unwrap();
         writeln!(code, "        const Q1: f64 = 1.009_671_857_224_115;").unwrap();
         writeln!(code, "        const Q2: f64 = 0.174_093_430_036_669;").unwrap();
-        writeln!(code, "        const OFFSET: i64 = 0x3fe6a09e667f3bcd_u64 as i64; // 2/3 in f64 bits").unwrap();
+        writeln!(
+            code,
+            "        const OFFSET: i64 = 0x3fe6a09e667f3bcd_u64 as i64; // 2/3 in f64 bits"
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            let x_bits = {}_cast{}_{}(self.0);", prefix, suffix, actual_int_suffix).unwrap();
+        writeln!(
+            code,
+            "            let x_bits = {}_cast{}_{}(self.0);",
+            prefix, suffix, actual_int_suffix
+        )
+        .unwrap();
 
         // For 64-bit integers, we need different intrinsics
         // For set1 with i64, SSE/AVX use epi64x, AVX-512 uses epi64
-        let epi64_suffix = if ty.width == SimdWidth::W512 { "epi64" } else { "epi64x" };
+        let epi64_suffix = if ty.width == SimdWidth::W512 {
+            "epi64"
+        } else {
+            "epi64x"
+        };
 
-        writeln!(code, "            let offset = {}_set1_{}(OFFSET);", prefix, epi64_suffix).unwrap();
-        writeln!(code, "            let exp_bits = {}_sub_epi64(x_bits, offset);", prefix).unwrap();
-        writeln!(code, "            let exp_shifted = {}_srai_epi64::<52>(exp_bits);", prefix).unwrap();
+        writeln!(
+            code,
+            "            let offset = {}_set1_{}(OFFSET);",
+            prefix, epi64_suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let exp_bits = {}_sub_epi64(x_bits, offset);",
+            prefix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let exp_shifted = {}_srai_epi64::<52>(exp_bits);",
+            prefix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            let mantissa_bits = {}_sub_epi64(x_bits, {}_slli_epi64::<52>(exp_shifted));", prefix, prefix).unwrap();
-        writeln!(code, "            let mantissa = {}_cast{}_{}(mantissa_bits);", prefix, actual_int_suffix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let mantissa = {}_cast{}_{}(mantissa_bits);",
+            prefix, actual_int_suffix, suffix
+        )
+        .unwrap();
 
         // Convert i64 to f64 - extract and convert via scalar
         writeln!(code, "            // Convert exponent to f64").unwrap();
-        writeln!(code, "            let exp_arr: [i64; {}] = core::mem::transmute(exp_shifted);", ty.lanes()).unwrap();
+        writeln!(
+            code,
+            "            let exp_arr: [i64; {}] = core::mem::transmute(exp_shifted);",
+            ty.lanes()
+        )
+        .unwrap();
         writeln!(code, "            let exp_f64: [f64; {}] = [", ty.lanes()).unwrap();
         for i in 0..ty.lanes() {
             if i > 0 {
@@ -2486,27 +3815,71 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
             write!(code, "exp_arr[{}] as f64", i).unwrap();
         }
         writeln!(code, "];").unwrap();
-        writeln!(code, "            let exp_val = {}_loadu_{}(exp_f64.as_ptr());", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let exp_val = {}_loadu_{}(exp_f64.as_ptr());",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            let one = {}_set1_{}(1.0);", prefix, suffix).unwrap();
-        writeln!(code, "            let m = {}_sub_{}(mantissa, one);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let one = {}_set1_{}(1.0);",
+            prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let m = {}_sub_{}(mantissa, one);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Horner's for numerator").unwrap();
-        writeln!(code, "            let yp = {}_fmadd_{}({}_set1_{}(P2), m, {}_set1_{}(P1));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let yp = {}_fmadd_{}(yp, m, {}_set1_{}(P0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let yp = {}_fmadd_{}({}_set1_{}(P2), m, {}_set1_{}(P1));",
+            prefix, suffix, prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let yp = {}_fmadd_{}(yp, m, {}_set1_{}(P0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Horner's for denominator").unwrap();
-        writeln!(code, "            let yq = {}_fmadd_{}({}_set1_{}(Q2), m, {}_set1_{}(Q1));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let yq = {}_fmadd_{}(yq, m, {}_set1_{}(Q0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let yq = {}_fmadd_{}({}_set1_{}(Q2), m, {}_set1_{}(Q1));",
+            prefix, suffix, prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let yq = {}_fmadd_{}(yq, m, {}_set1_{}(Q0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            Self({}_add_{}({}_div_{}(yp, yq), exp_val))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_add_{}({}_div_{}(yp, yq), exp_val))",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F64 exp2_lowp =====
         writeln!(code, "    /// Low-precision base-2 exponential (2^x).").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses polynomial approximation. For natural exp, use `exp_lowp()`.").unwrap();
+        writeln!(
+            code,
+            "    /// Uses polynomial approximation. For natural exp, use `exp_lowp()`."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn exp2_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const C0: f64 = 1.0;").unwrap();
@@ -2517,37 +3890,101 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
         writeln!(code, "            // Clamp to safe range").unwrap();
-        writeln!(code, "            let x = {}_max_{}(self.0, {}_set1_{}(-1022.0));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let x = {}_min_{}(x, {}_set1_{}(1022.0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let x = {}_max_{}(self.0, {}_set1_{}(-1022.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let x = {}_min_{}(x, {}_set1_{}(1022.0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
 
         if ty.width == SimdWidth::W512 {
-            writeln!(code, "            let xi = {}_roundscale_{}::<0x01>(x); // floor", prefix, suffix).unwrap();
+            writeln!(
+                code,
+                "            let xi = {}_roundscale_{}::<0x01>(x); // floor",
+                prefix, suffix
+            )
+            .unwrap();
         } else {
             writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
         }
 
-        writeln!(code, "            let xf = {}_sub_{}(x, xi);", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let xf = {}_sub_{}(x, xi);",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(code, "            // Polynomial for 2^frac").unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}({}_set1_{}(C4), xf, {}_set1_{}(C3));", prefix, suffix, prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C2));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));", prefix, suffix, prefix, suffix).unwrap();
-        writeln!(code, "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}({}_set1_{}(C4), xf, {}_set1_{}(C3));",
+            prefix, suffix, prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C2));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Scale by 2^integer - extract, convert, scale").unwrap();
-        writeln!(code, "            let xi_arr: [f64; {}] = core::mem::transmute(xi);", ty.lanes()).unwrap();
+        writeln!(
+            code,
+            "            // Scale by 2^integer - extract, convert, scale"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            let xi_arr: [f64; {}] = core::mem::transmute(xi);",
+            ty.lanes()
+        )
+        .unwrap();
         writeln!(code, "            let scale_arr: [f64; {}] = [", ty.lanes()).unwrap();
         for i in 0..ty.lanes() {
             if i > 0 {
                 write!(code, ", ").unwrap();
             }
-            write!(code, "f64::from_bits(((xi_arr[{}] as i64 + 1023) << 52) as u64)", i).unwrap();
+            write!(
+                code,
+                "f64::from_bits(((xi_arr[{}] as i64 + 1023) << 52) as u64)",
+                i
+            )
+            .unwrap();
         }
         writeln!(code, "];").unwrap();
-        writeln!(code, "            let scale = {}_loadu_{}(scale_arr.as_ptr());", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            let scale = {}_loadu_{}(scale_arr.as_ptr());",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            Self({}_mul_{}(poly, scale))", prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(poly, scale))",
+            prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2557,7 +3994,12 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    pub fn ln_lowp(self) -> Self {{").unwrap();
         writeln!(code, "        const LN2: f64 = core::f64::consts::LN_2;").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LN2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LN2)))",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2565,9 +4007,18 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Low-precision natural exponential (e^x).").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn exp_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        const LOG2_E: f64 = core::f64::consts::LOG2_E;").unwrap();
+        writeln!(
+            code,
+            "        const LOG2_E: f64 = core::f64::consts::LOG2_E;"
+        )
+        .unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_lowp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_lowp()",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2575,9 +4026,18 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Low-precision base-10 logarithm.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn log10_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        const LOG10_2: f64 = core::f64::consts::LOG10_2;").unwrap();
+        writeln!(
+            code,
+            "        const LOG10_2: f64 = core::f64::consts::LOG10_2;"
+        )
+        .unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LOG10_2)))", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LOG10_2)))",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
@@ -2586,7 +4046,12 @@ fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn pow_lowp(self, n: f64) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(n))).exp2_lowp()", prefix, suffix, prefix, suffix).unwrap();
+        writeln!(
+            code,
+            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(n))).exp2_lowp()",
+            prefix, suffix, prefix, suffix
+        )
+        .unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
