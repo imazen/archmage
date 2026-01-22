@@ -326,25 +326,21 @@ impl f32x4 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm_min_ps(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm_max_ps(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Square root
     #[inline(always)]
     pub fn sqrt(self) -> Self {
         Self(unsafe { _mm_sqrt_ps(self.0) })
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -353,37 +349,31 @@ impl f32x4 {
             _mm_and_ps(self.0, mask)
         })
     }
-
     /// Round toward negative infinity
     #[inline(always)]
     pub fn floor(self) -> Self {
         Self(unsafe { _mm_floor_ps(self.0) })
     }
-
     /// Round toward positive infinity
     #[inline(always)]
     pub fn ceil(self) -> Self {
         Self(unsafe { _mm_ceil_ps(self.0) })
     }
-
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
         Self(unsafe { _mm_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0) })
     }
-
     /// Fused multiply-add: self * a + b
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm_fmadd_ps(self.0, a.0, b.0) })
     }
-
     /// Fused multiply-sub: self * a - b
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm_fmsub_ps(self.0, a.0, b.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -558,17 +548,15 @@ impl f32x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(unsafe {
             let ones = _mm_set1_epi32(-1);
             let as_int = _mm_castps_si128(self.0);
-            _mm_castsi128_ps (_mm_xor_si128(as_int, ones))
+            _mm_castsi128_ps(_mm_xor_si128(as_int, ones))
         })
     }
-
     // ========== Transcendental Operations ==========
 
     /// Low-precision base-2 logarithm (~7.7e-5 max relative error).
@@ -1189,25 +1177,21 @@ impl f64x2 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm_min_pd(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm_max_pd(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Square root
     #[inline(always)]
     pub fn sqrt(self) -> Self {
         Self(unsafe { _mm_sqrt_pd(self.0) })
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -1216,37 +1200,31 @@ impl f64x2 {
             _mm_and_pd(self.0, mask)
         })
     }
-
     /// Round toward negative infinity
     #[inline(always)]
     pub fn floor(self) -> Self {
         Self(unsafe { _mm_floor_pd(self.0) })
     }
-
     /// Round toward positive infinity
     #[inline(always)]
     pub fn ceil(self) -> Self {
         Self(unsafe { _mm_ceil_pd(self.0) })
     }
-
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
         Self(unsafe { _mm_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0) })
     }
-
     /// Fused multiply-add: self * a + b
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm_fmadd_pd(self.0, a.0, b.0) })
     }
-
     /// Fused multiply-sub: self * a - b
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm_fmsub_pd(self.0, a.0, b.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -1361,17 +1339,15 @@ impl f64x2 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(unsafe {
             let ones = _mm_set1_epi64x(-1);
             let as_int = _mm_castpd_si128(self.0);
-            _mm_castsi128_pd (_mm_xor_si128(as_int, ones))
+            _mm_castsi128_pd(_mm_xor_si128(as_int, ones))
         })
     }
-
     // ========== Transcendental Operations ==========
 
     /// Low-precision base-2 logarithm.
@@ -1631,25 +1607,21 @@ impl i8x16 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm_min_epi8(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm_max_epi8(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm_abs_epi8(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -1745,7 +1717,6 @@ impl i8x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -1754,7 +1725,6 @@ impl i8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1875,19 +1845,16 @@ impl u8x16 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm_min_epu8(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm_max_epu8(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -1989,7 +1956,6 @@ impl u8x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -1998,7 +1964,6 @@ impl u8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2119,25 +2084,21 @@ impl i16x8 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm_min_epi16(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm_max_epi16(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm_abs_epi16(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -2233,7 +2194,6 @@ impl i16x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -2242,9 +2202,7 @@ impl i16x8 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -2252,7 +2210,6 @@ impl i16x8 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi16::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -2260,7 +2217,6 @@ impl i16x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
-
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -2268,7 +2224,6 @@ impl i16x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi16::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2391,19 +2346,16 @@ impl u16x8 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm_min_epu16(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm_max_epu16(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -2505,7 +2457,6 @@ impl u16x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -2514,9 +2465,7 @@ impl u16x8 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -2524,7 +2473,6 @@ impl u16x8 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi16::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -2532,7 +2480,6 @@ impl u16x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2655,25 +2602,21 @@ impl i32x4 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm_min_epi32(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm_max_epi32(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm_abs_epi32(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -2777,7 +2720,6 @@ impl i32x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -2786,9 +2728,7 @@ impl i32x4 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -2796,7 +2736,6 @@ impl i32x4 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi32::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -2804,7 +2743,6 @@ impl i32x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi32::<N>(self.0) })
     }
-
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -2812,7 +2750,6 @@ impl i32x4 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi32::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2935,19 +2872,16 @@ impl u32x4 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm_min_epu32(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm_max_epu32(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -3049,7 +2983,6 @@ impl u32x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -3058,9 +2991,7 @@ impl u32x4 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3068,7 +2999,6 @@ impl u32x4 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi32::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3076,7 +3006,6 @@ impl u32x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi32::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3289,7 +3218,6 @@ impl i64x2 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -3298,9 +3226,7 @@ impl i64x2 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3308,7 +3234,6 @@ impl i64x2 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi64::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3316,7 +3241,6 @@ impl i64x2 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3533,7 +3457,6 @@ impl u64x2 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -3542,9 +3465,7 @@ impl u64x2 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3552,7 +3473,6 @@ impl u64x2 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi64::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3560,7 +3480,6 @@ impl u64x2 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3681,25 +3600,21 @@ impl f32x8 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm256_min_ps(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm256_max_ps(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Square root
     #[inline(always)]
     pub fn sqrt(self) -> Self {
         Self(unsafe { _mm256_sqrt_ps(self.0) })
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -3708,37 +3623,31 @@ impl f32x8 {
             _mm256_and_ps(self.0, mask)
         })
     }
-
     /// Round toward negative infinity
     #[inline(always)]
     pub fn floor(self) -> Self {
         Self(unsafe { _mm256_floor_ps(self.0) })
     }
-
     /// Round toward positive infinity
     #[inline(always)]
     pub fn ceil(self) -> Self {
         Self(unsafe { _mm256_ceil_ps(self.0) })
     }
-
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
         Self(unsafe { _mm256_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0) })
     }
-
     /// Fused multiply-add: self * a + b
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm256_fmadd_ps(self.0, a.0, b.0) })
     }
-
     /// Fused multiply-sub: self * a - b
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm256_fmsub_ps(self.0, a.0, b.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -3922,17 +3831,15 @@ impl f32x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(unsafe {
             let ones = _mm256_set1_epi32(-1);
             let as_int = _mm256_castps_si256(self.0);
-            _mm256_castsi256_ps (_mm256_xor_si256(as_int, ones))
+            _mm256_castsi256_ps(_mm256_xor_si256(as_int, ones))
         })
     }
-
     // ========== Transcendental Operations ==========
 
     /// Low-precision base-2 logarithm (~7.7e-5 max relative error).
@@ -4553,25 +4460,21 @@ impl f64x4 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm256_min_pd(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm256_max_pd(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Square root
     #[inline(always)]
     pub fn sqrt(self) -> Self {
         Self(unsafe { _mm256_sqrt_pd(self.0) })
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -4580,37 +4483,31 @@ impl f64x4 {
             _mm256_and_pd(self.0, mask)
         })
     }
-
     /// Round toward negative infinity
     #[inline(always)]
     pub fn floor(self) -> Self {
         Self(unsafe { _mm256_floor_pd(self.0) })
     }
-
     /// Round toward positive infinity
     #[inline(always)]
     pub fn ceil(self) -> Self {
         Self(unsafe { _mm256_ceil_pd(self.0) })
     }
-
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
         Self(unsafe { _mm256_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0) })
     }
-
     /// Fused multiply-add: self * a + b
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm256_fmadd_pd(self.0, a.0, b.0) })
     }
-
     /// Fused multiply-sub: self * a - b
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm256_fmsub_pd(self.0, a.0, b.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -4724,17 +4621,15 @@ impl f64x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(unsafe {
             let ones = _mm256_set1_epi64x(-1);
             let as_int = _mm256_castpd_si256(self.0);
-            _mm256_castsi256_pd (_mm256_xor_si256(as_int, ones))
+            _mm256_castsi256_pd(_mm256_xor_si256(as_int, ones))
         })
     }
-
     // ========== Transcendental Operations ==========
 
     /// Low-precision base-2 logarithm.
@@ -4994,25 +4889,21 @@ impl i8x32 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm256_min_epi8(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm256_max_epi8(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm256_abs_epi8(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -5108,7 +4999,6 @@ impl i8x32 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -5117,7 +5007,6 @@ impl i8x32 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5238,19 +5127,16 @@ impl u8x32 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm256_min_epu8(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm256_max_epu8(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -5352,7 +5238,6 @@ impl u8x32 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -5361,7 +5246,6 @@ impl u8x32 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5482,25 +5366,21 @@ impl i16x16 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm256_min_epi16(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm256_max_epi16(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm256_abs_epi16(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -5596,7 +5476,6 @@ impl i16x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -5605,9 +5484,7 @@ impl i16x16 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -5615,7 +5492,6 @@ impl i16x16 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_slli_epi16::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -5623,7 +5499,6 @@ impl i16x16 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi16::<N>(self.0) })
     }
-
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -5631,7 +5506,6 @@ impl i16x16 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srai_epi16::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -5754,19 +5628,16 @@ impl u16x16 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm256_min_epu16(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm256_max_epu16(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -5868,7 +5739,6 @@ impl u16x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -5877,9 +5747,7 @@ impl u16x16 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -5887,7 +5755,6 @@ impl u16x16 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_slli_epi16::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -5895,7 +5762,6 @@ impl u16x16 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi16::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -6018,25 +5884,21 @@ impl i32x8 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm256_min_epi32(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm256_max_epi32(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm256_abs_epi32(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -6140,7 +6002,6 @@ impl i32x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -6149,9 +6010,7 @@ impl i32x8 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -6159,7 +6018,6 @@ impl i32x8 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_slli_epi32::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -6167,7 +6025,6 @@ impl i32x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi32::<N>(self.0) })
     }
-
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -6175,7 +6032,6 @@ impl i32x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srai_epi32::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -6298,19 +6154,16 @@ impl u32x8 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm256_min_epu32(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm256_max_epu32(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -6412,7 +6265,6 @@ impl u32x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -6421,9 +6273,7 @@ impl u32x8 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -6431,7 +6281,6 @@ impl u32x8 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_slli_epi32::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -6439,7 +6288,6 @@ impl u32x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi32::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -6652,7 +6500,6 @@ impl i64x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -6661,9 +6508,7 @@ impl i64x4 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -6671,7 +6516,6 @@ impl i64x4 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_slli_epi64::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -6679,7 +6523,6 @@ impl i64x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi64::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -6896,7 +6739,6 @@ impl u64x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -6905,9 +6747,7 @@ impl u64x4 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -6915,7 +6755,6 @@ impl u64x4 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_slli_epi64::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -6923,7 +6762,6 @@ impl u64x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi64::<N>(self.0) })
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -7044,25 +6882,21 @@ impl f32x16 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_ps(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_ps(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Square root
     #[inline(always)]
     pub fn sqrt(self) -> Self {
         Self(unsafe { _mm512_sqrt_ps(self.0) })
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -7071,37 +6905,31 @@ impl f32x16 {
             _mm512_and_ps(self.0, mask)
         })
     }
-
     /// Round toward negative infinity
     #[inline(always)]
     pub fn floor(self) -> Self {
         Self(unsafe { _mm512_roundscale_ps::<0x01>(self.0) })
     }
-
     /// Round toward positive infinity
     #[inline(always)]
     pub fn ceil(self) -> Self {
         Self(unsafe { _mm512_roundscale_ps::<0x02>(self.0) })
     }
-
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
         Self(unsafe { _mm512_roundscale_ps::<0x00>(self.0) })
     }
-
     /// Fused multiply-add: self * a + b
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm512_fmadd_ps(self.0, a.0, b.0) })
     }
-
     /// Fused multiply-sub: self * a - b
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm512_fmsub_ps(self.0, a.0, b.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -7288,17 +7116,15 @@ impl f32x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(unsafe {
             let ones = _mm512_set1_epi32(-1);
             let as_int = _mm512_castps_si512(self.0);
-            _mm512_castsi512_ps (_mm512_xor_si512(as_int, ones))
+            _mm512_castsi512_ps(_mm512_xor_si512(as_int, ones))
         })
     }
-
     // ========== Transcendental Operations ==========
 
     /// Low-precision base-2 logarithm (~7.7e-5 max relative error).
@@ -7919,25 +7745,21 @@ impl f64x8 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_pd(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_pd(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Square root
     #[inline(always)]
     pub fn sqrt(self) -> Self {
         Self(unsafe { _mm512_sqrt_pd(self.0) })
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -7946,37 +7768,31 @@ impl f64x8 {
             _mm512_and_pd(self.0, mask)
         })
     }
-
     /// Round toward negative infinity
     #[inline(always)]
     pub fn floor(self) -> Self {
         Self(unsafe { _mm512_roundscale_pd::<0x01>(self.0) })
     }
-
     /// Round toward positive infinity
     #[inline(always)]
     pub fn ceil(self) -> Self {
         Self(unsafe { _mm512_roundscale_pd::<0x02>(self.0) })
     }
-
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
         Self(unsafe { _mm512_roundscale_pd::<0x00>(self.0) })
     }
-
     /// Fused multiply-add: self * a + b
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm512_fmadd_pd(self.0, a.0, b.0) })
     }
-
     /// Fused multiply-sub: self * a - b
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm512_fmsub_pd(self.0, a.0, b.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -8129,17 +7945,15 @@ impl f64x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(unsafe {
             let ones = _mm512_set1_epi64(-1);
             let as_int = _mm512_castpd_si512(self.0);
-            _mm512_castsi512_pd (_mm512_xor_si512(as_int, ones))
+            _mm512_castsi512_pd(_mm512_xor_si512(as_int, ones))
         })
     }
-
     // ========== Transcendental Operations ==========
 
     /// Low-precision base-2 logarithm.
@@ -8399,25 +8213,21 @@ impl i8x64 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_epi8(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_epi8(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm512_abs_epi8(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -8529,7 +8339,6 @@ impl i8x64 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -8538,7 +8347,6 @@ impl i8x64 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -8659,19 +8467,16 @@ impl u8x64 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_epu8(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_epu8(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -8783,7 +8588,6 @@ impl u8x64 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -8792,7 +8596,6 @@ impl u8x64 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -8913,25 +8716,21 @@ impl i16x32 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_epi16(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_epi16(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm512_abs_epi16(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -9043,7 +8842,6 @@ impl i16x32 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -9052,9 +8850,7 @@ impl i16x32 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -9062,7 +8858,6 @@ impl i16x32 {
     pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi16::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -9070,7 +8865,6 @@ impl i16x32 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi16::<N>(self.0) })
     }
-
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -9078,7 +8872,6 @@ impl i16x32 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi16::<N>(self.0) })
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -9201,19 +8994,16 @@ impl u16x32 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_epu16(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_epu16(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -9325,7 +9115,6 @@ impl u16x32 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -9334,9 +9123,7 @@ impl u16x32 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -9344,7 +9131,6 @@ impl u16x32 {
     pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi16::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -9352,7 +9138,6 @@ impl u16x32 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi16::<N>(self.0) })
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -9475,25 +9260,21 @@ impl i32x16 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_epi32(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_epi32(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm512_abs_epi32(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -9613,7 +9394,6 @@ impl i32x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -9622,9 +9402,7 @@ impl i32x16 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -9632,7 +9410,6 @@ impl i32x16 {
     pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi32::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -9640,7 +9417,6 @@ impl i32x16 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi32::<N>(self.0) })
     }
-
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -9648,7 +9424,6 @@ impl i32x16 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi32::<N>(self.0) })
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -9771,19 +9546,16 @@ impl u32x16 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_epu32(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_epu32(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -9895,7 +9667,6 @@ impl u32x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -9904,9 +9675,7 @@ impl u32x16 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -9914,7 +9683,6 @@ impl u32x16 {
     pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi32::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -9922,7 +9690,6 @@ impl u32x16 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi32::<N>(self.0) })
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -10045,25 +9812,21 @@ impl i64x8 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_epi64(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_epi64(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(unsafe { _mm512_abs_epi64(self.0) })
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -10175,7 +9938,6 @@ impl i64x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -10184,9 +9946,7 @@ impl i64x8 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -10194,7 +9954,6 @@ impl i64x8 {
     pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi64::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -10202,7 +9961,6 @@ impl i64x8 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi64::<N>(self.0) })
     }
-
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -10210,7 +9968,6 @@ impl i64x8 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi64::<N>(self.0) })
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -10331,19 +10088,16 @@ impl u64x8 {
     pub fn min(self, other: Self) -> Self {
         Self(unsafe { _mm512_min_epu64(self.0, other.0) })
     }
-
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(unsafe { _mm512_max_epu64(self.0, other.0) })
     }
-
     /// Clamp values between lo and hi
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -10455,7 +10209,6 @@ impl u64x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
-
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -10464,9 +10217,7 @@ impl u64x8 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
     // ========== Shift Operations ==========
-
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -10474,7 +10225,6 @@ impl u64x8 {
     pub fn shl<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_slli_epi64::<N>(self.0) })
     }
-
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -10482,7 +10232,6 @@ impl u64x8 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi64::<N>(self.0) })
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]

@@ -287,6 +287,49 @@ fn indent_continuation(s: &str, spaces: usize) -> String {
     result
 }
 
+/// Generate a simple unary method: `pub fn name(self) -> Self { body }`
+fn gen_unary_method(doc: &str, name: &str, body: &str) -> String {
+    indent(
+        &formatdoc! {"
+            /// {doc}
+            #[inline(always)]
+            pub fn {name}(self) -> Self {{
+                {body}
+            }}
+        "},
+        4,
+    ) + "\n"
+}
+
+/// Generate a binary method: `pub fn name(self, other: Self) -> Self { body }`
+fn gen_binary_method(doc: &str, name: &str, body: &str) -> String {
+    indent(
+        &formatdoc! {"
+            /// {doc}
+            #[inline(always)]
+            pub fn {name}(self, other: Self) -> Self {{
+                {body}
+            }}
+        "},
+        4,
+    ) + "\n"
+}
+
+/// Generate a method returning a scalar: `pub fn name(self) -> T { body }`
+fn gen_scalar_method(doc: &str, name: &str, return_type: &str, body: &str) -> String {
+    let body = indent_continuation(body, 4);
+    indent(
+        &formatdoc! {"
+            /// {doc}
+            #[inline(always)]
+            pub fn {name}(self) -> {return_type} {{
+                {body}
+            }}
+        "},
+        4,
+    ) + "\n"
+}
+
 /// Generate all SIMD types
 pub fn generate_simd_types() -> String {
     let mut code = String::new();
@@ -2166,6 +2209,7 @@ fn generate_math_ops(ty: &SimdType) -> String {
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
     let minmax_suffix = ty.elem.x86_minmax_suffix();
+    let bits = ty.width.bits();
 
     // Min/Max - i64/u64 only available in AVX-512
     let has_minmax = ty.elem.is_float()
@@ -2173,51 +2217,36 @@ fn generate_math_ops(ty: &SimdType) -> String {
         || !matches!(ty.elem, ElementType::I64 | ElementType::U64);
 
     if has_minmax {
-        writeln!(code, "    /// Element-wise minimum").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn min(self, other: Self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_min_{}(self.0, other.0) }})",
-            prefix, minmax_suffix
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        writeln!(code, "    /// Element-wise maximum").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn max(self, other: Self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_max_{}(self.0, other.0) }})",
-            prefix, minmax_suffix
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        writeln!(code, "    /// Clamp values between lo and hi").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn clamp(self, lo: Self, hi: Self) -> Self {{"
-        )
-        .unwrap();
-        writeln!(code, "        self.max(lo).min(hi)").unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&gen_binary_method(
+            "Element-wise minimum",
+            "min",
+            &format!("Self(unsafe {{ {prefix}_min_{minmax_suffix}(self.0, other.0) }})"),
+        ));
+        code.push_str(&gen_binary_method(
+            "Element-wise maximum",
+            "max",
+            &format!("Self(unsafe {{ {prefix}_max_{minmax_suffix}(self.0, other.0) }})"),
+        ));
+        code.push_str(&indent(
+            &formatdoc! {"
+                /// Clamp values between lo and hi
+                #[inline(always)]
+                pub fn clamp(self, lo: Self, hi: Self) -> Self {{
+                    self.max(lo).min(hi)
+                }}
+            "},
+            4,
+        ));
+        code.push('\n');
     }
 
     // Float-specific operations
     if ty.elem.is_float() {
-        writeln!(code, "    /// Square root").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn sqrt(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_sqrt_{}(self.0) }})",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&gen_unary_method(
+            "Square root",
+            "sqrt",
+            &format!("Self(unsafe {{ {prefix}_sqrt_{suffix}(self.0) }})"),
+        ));
 
         // Abs for floats uses AND with sign mask
         let abs_mask = if ty.elem == ElementType::F32 {
@@ -2225,148 +2254,91 @@ fn generate_math_ops(ty: &SimdType) -> String {
         } else {
             "0x7FFF_FFFF_FFFF_FFFFu64 as i64"
         };
-        // 64-bit uses epi64x for 128/256-bit, epi64 for 512-bit
         let set1_int = match (ty.elem, ty.width) {
             (ElementType::F32, _) => "epi32",
             (_, SimdWidth::W512) => "epi64",
             _ => "epi64x",
         };
-        let cast_to = if ty.elem == ElementType::F32 {
-            "ps"
-        } else {
-            "pd"
-        };
+        let cast_to = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
 
-        writeln!(code, "    /// Absolute value").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn abs(self) -> Self {{").unwrap();
-        writeln!(code, "        Self(unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            let mask = {}_castsi{}_{}({}_set1_{}({}));",
-            prefix,
-            ty.width.bits(),
-            cast_to,
-            prefix,
-            set1_int,
-            abs_mask
-        )
-        .unwrap();
-        writeln!(code, "            {}_and_{}(self.0, mask)", prefix, suffix).unwrap();
-        writeln!(code, "        }})").unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        let abs_body = formatdoc! {"
+            Self(unsafe {{
+                let mask = {prefix}_castsi{bits}_{cast_to}({prefix}_set1_{set1_int}({abs_mask}));
+                {prefix}_and_{suffix}(self.0, mask)
+            }})"
+        };
+        code.push_str(&gen_unary_method("Absolute value", "abs", &indent_continuation(&abs_body, 4)));
 
         // Floor/ceil/round for floats
         if ty.width == SimdWidth::W512 {
-            // AVX-512 uses roundscale intrinsics with different constant encoding
-            // _MM_FROUND_TO_NEG_INF = 0x01, _MM_FROUND_TO_POS_INF = 0x02, _MM_FROUND_TO_NEAREST_INT = 0x00
-            writeln!(code, "    /// Round toward negative infinity").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn floor(self) -> Self {{").unwrap();
-            writeln!(
-                code,
-                "        Self(unsafe {{ {}_roundscale_{}::<0x01>(self.0) }})",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "    }}\n").unwrap();
-
-            writeln!(code, "    /// Round toward positive infinity").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn ceil(self) -> Self {{").unwrap();
-            writeln!(
-                code,
-                "        Self(unsafe {{ {}_roundscale_{}::<0x02>(self.0) }})",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "    }}\n").unwrap();
-
-            writeln!(code, "    /// Round to nearest integer").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn round(self) -> Self {{").unwrap();
-            writeln!(
-                code,
-                "        Self(unsafe {{ {}_roundscale_{}::<0x00>(self.0) }})",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "    }}\n").unwrap();
+            // AVX-512 uses roundscale intrinsics
+            code.push_str(&gen_unary_method(
+                "Round toward negative infinity",
+                "floor",
+                &format!("Self(unsafe {{ {prefix}_roundscale_{suffix}::<0x01>(self.0) }})"),
+            ));
+            code.push_str(&gen_unary_method(
+                "Round toward positive infinity",
+                "ceil",
+                &format!("Self(unsafe {{ {prefix}_roundscale_{suffix}::<0x02>(self.0) }})"),
+            ));
+            code.push_str(&gen_unary_method(
+                "Round to nearest integer",
+                "round",
+                &format!("Self(unsafe {{ {prefix}_roundscale_{suffix}::<0x00>(self.0) }})"),
+            ));
         } else {
             // SSE4.1/AVX use floor/ceil/round intrinsics directly
-            writeln!(code, "    /// Round toward negative infinity").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn floor(self) -> Self {{").unwrap();
-            writeln!(
-                code,
-                "        Self(unsafe {{ {}_floor_{}(self.0) }})",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "    }}\n").unwrap();
-
-            writeln!(code, "    /// Round toward positive infinity").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn ceil(self) -> Self {{").unwrap();
-            writeln!(
-                code,
-                "        Self(unsafe {{ {}_ceil_{}(self.0) }})",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "    }}\n").unwrap();
-
-            writeln!(code, "    /// Round to nearest integer").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn round(self) -> Self {{").unwrap();
-            writeln!(code, "        Self(unsafe {{ {}_round_{}::<{{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }}>(self.0) }})", prefix, suffix).unwrap();
-            writeln!(code, "    }}\n").unwrap();
+            code.push_str(&gen_unary_method(
+                "Round toward negative infinity",
+                "floor",
+                &format!("Self(unsafe {{ {prefix}_floor_{suffix}(self.0) }})"),
+            ));
+            code.push_str(&gen_unary_method(
+                "Round toward positive infinity",
+                "ceil",
+                &format!("Self(unsafe {{ {prefix}_ceil_{suffix}(self.0) }})"),
+            ));
+            code.push_str(&gen_unary_method(
+                "Round to nearest integer",
+                "round",
+                &format!("Self(unsafe {{ {prefix}_round_{suffix}::<{{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }}>(self.0) }})"),
+            ));
         }
 
         // FMA (fused multiply-add)
-        writeln!(code, "    /// Fused multiply-add: self * a + b").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn mul_add(self, a: Self, b: Self) -> Self {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_fmadd_{}(self.0, a.0, b.0) }})",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&indent(
+            &formatdoc! {"
+                /// Fused multiply-add: self * a + b
+                #[inline(always)]
+                pub fn mul_add(self, a: Self, b: Self) -> Self {{
+                    Self(unsafe {{ {prefix}_fmadd_{suffix}(self.0, a.0, b.0) }})
+                }}
+            "},
+            4,
+        ));
+        code.push('\n');
 
-        writeln!(code, "    /// Fused multiply-sub: self * a - b").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn mul_sub(self, a: Self, b: Self) -> Self {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_fmsub_{}(self.0, a.0, b.0) }})",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&indent(
+            &formatdoc! {"
+                /// Fused multiply-sub: self * a - b
+                #[inline(always)]
+                pub fn mul_sub(self, a: Self, b: Self) -> Self {{
+                    Self(unsafe {{ {prefix}_fmsub_{suffix}(self.0, a.0, b.0) }})
+                }}
+            "},
+            4,
+        ));
+        code.push('\n');
     } else if ty.elem.is_signed() {
         // Abs for signed integers - i64 only available in AVX-512
         let has_abs = ty.width == SimdWidth::W512 || !matches!(ty.elem, ElementType::I64);
         if has_abs {
-            writeln!(code, "    /// Absolute value").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn abs(self) -> Self {{").unwrap();
-            writeln!(
-                code,
-                "        Self(unsafe {{ {}_abs_{}(self.0) }})",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "    }}\n").unwrap();
+            code.push_str(&gen_unary_method(
+                "Absolute value",
+                "abs",
+                &format!("Self(unsafe {{ {prefix}_abs_{suffix}(self.0) }})"),
+            ));
         }
     }
 
@@ -2630,60 +2602,26 @@ fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
     let prefix = ty.width.x86_prefix();
     let bits = ty.width.bits();
 
-    writeln!(
-        code,
-        "    // ========== Bitwise Unary Operations ==========\n"
-    )
-    .unwrap();
+    code.push_str(&indent("// ========== Bitwise Unary Operations ==========\n", 4));
+    code.push('\n');
 
-    // not - bitwise complement (XOR with all 1s)
-    writeln!(code, "    /// Bitwise NOT (complement): flips all bits.").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn not(self) -> Self {{").unwrap();
-
-    if ty.elem.is_float() {
-        let suffix = ty.elem.x86_suffix();
-        let int_suffix = if ty.elem == ElementType::F32 {
-            "epi32"
-        } else {
-            "epi64"
-        };
+    // Build the not body based on element type
+    let not_body = if ty.elem.is_float() {
         let set1_suffix = match (ty.elem, ty.width) {
             (ElementType::F32, _) => "epi32",
             (_, SimdWidth::W512) => "epi64",
             _ => "epi64x",
         };
-        let cast_to = if ty.elem == ElementType::F32 {
-            "ps"
-        } else {
-            "pd"
-        };
-        let cast_from = if ty.elem == ElementType::F32 {
-            "ps"
-        } else {
-            "pd"
-        };
+        let cast_to = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
+        let cast_from = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
 
-        writeln!(code, "        Self(unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            let ones = {}_set1_{}(-1);",
-            prefix, set1_suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let as_int = {}_cast{}_si{}(self.0);",
-            prefix, cast_from, bits
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            {}_castsi{}_{} ({}_xor_si{}(as_int, ones))",
-            prefix, bits, cast_to, prefix, bits
-        )
-        .unwrap();
-        writeln!(code, "        }})").unwrap();
+        formatdoc! {"
+            Self(unsafe {{
+                let ones = {prefix}_set1_{set1_suffix}(-1);
+                let as_int = {prefix}_cast{cast_from}_si{bits}(self.0);
+                {prefix}_castsi{bits}_{cast_to}({prefix}_xor_si{bits}(as_int, ones))
+            }})"
+        }
     } else {
         let set1_suffix = match (ty.elem, ty.width) {
             (ElementType::I8 | ElementType::U8, _) => "epi8",
@@ -2693,119 +2631,84 @@ fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
             (ElementType::I64 | ElementType::U64, _) => "epi64x",
             _ => unreachable!(),
         };
-        writeln!(code, "        Self(unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            let ones = {}_set1_{}(-1);",
-            prefix, set1_suffix
-        )
-        .unwrap();
-        writeln!(code, "            {}_xor_si{}(self.0, ones)", prefix, bits).unwrap();
-        writeln!(code, "        }})").unwrap();
-    }
-    writeln!(code, "    }}\n").unwrap();
+        formatdoc! {"
+            Self(unsafe {{
+                let ones = {prefix}_set1_{set1_suffix}(-1);
+                {prefix}_xor_si{bits}(self.0, ones)
+            }})"
+        }
+    };
+
+    code.push_str(&gen_unary_method(
+        "Bitwise NOT (complement): flips all bits.",
+        "not",
+        &indent_continuation(&not_body, 4),
+    ));
 
     code
 }
 
 fn generate_shift_ops(ty: &SimdType) -> String {
-    let mut code = String::new();
-
     // Only for integer types, and NOT for 8-bit (no 8-bit shift intrinsics in x86 SIMD)
     if ty.elem.is_float() || matches!(ty.elem, ElementType::I8 | ElementType::U8) {
-        return code;
+        return String::new();
     }
 
+    let mut code = String::new();
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
-    // AVX-512 intrinsics use u32 for const generic, SSE/AVX use i32
-    let const_type = if ty.width == SimdWidth::W512 {
-        "u32"
-    } else {
-        "i32"
-    };
+    let const_type = if ty.width == SimdWidth::W512 { "u32" } else { "i32" };
 
-    writeln!(code, "    // ========== Shift Operations ==========\n").unwrap();
+    code.push_str(&indent("// ========== Shift Operations ==========\n", 4));
+    code.push('\n');
 
     // Shift left logical
-    writeln!(code, "    /// Shift each lane left by `N` bits.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// Bits shifted out are lost; zeros are shifted in."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn shl<const N: {}>(self) -> Self {{",
-        const_type
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ {}_slli_{}::<N>(self.0) }})",
-        prefix, suffix
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+    code.push_str(&indent(
+        &formatdoc! {"
+            /// Shift each lane left by `N` bits.
+            ///
+            /// Bits shifted out are lost; zeros are shifted in.
+            #[inline(always)]
+            pub fn shl<const N: {const_type}>(self) -> Self {{
+                Self(unsafe {{ {prefix}_slli_{suffix}::<N>(self.0) }})
+            }}
+        "},
+        4,
+    ));
+    code.push('\n');
 
     // Shift right logical
-    writeln!(
-        code,
-        "    /// Shift each lane right by `N` bits (logical/unsigned shift)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// Bits shifted out are lost; zeros are shifted in."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn shr<const N: {}>(self) -> Self {{",
-        const_type
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ {}_srli_{}::<N>(self.0) }})",
-        prefix, suffix
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+    code.push_str(&indent(
+        &formatdoc! {"
+            /// Shift each lane right by `N` bits (logical/unsigned shift).
+            ///
+            /// Bits shifted out are lost; zeros are shifted in.
+            #[inline(always)]
+            pub fn shr<const N: {const_type}>(self) -> Self {{
+                Self(unsafe {{ {prefix}_srli_{suffix}::<N>(self.0) }})
+            }}
+        "},
+        4,
+    ));
+    code.push('\n');
 
     // Arithmetic shift right (signed types; 64-bit only in AVX-512)
     if ty.elem.is_signed() {
         let has_sra = ty.elem != ElementType::I64 || ty.width == SimdWidth::W512;
         if has_sra {
-            writeln!(
-                code,
-                "    /// Arithmetic shift right by `N` bits (sign-extending)."
-            )
-            .unwrap();
-            writeln!(code, "    ///").unwrap();
-            writeln!(
-                code,
-                "    /// The sign bit is replicated into the vacated positions."
-            )
-            .unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(
-                code,
-                "    pub fn shr_arithmetic<const N: {}>(self) -> Self {{",
-                const_type
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "        Self(unsafe {{ {}_srai_{}::<N>(self.0) }})",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "    }}\n").unwrap();
+            code.push_str(&indent(
+                &formatdoc! {"
+                    /// Arithmetic shift right by `N` bits (sign-extending).
+                    ///
+                    /// The sign bit is replicated into the vacated positions.
+                    #[inline(always)]
+                    pub fn shr_arithmetic<const N: {const_type}>(self) -> Self {{
+                        Self(unsafe {{ {prefix}_srai_{suffix}::<N>(self.0) }})
+                    }}
+                "},
+                4,
+            ));
+            code.push('\n');
         }
     }
 
