@@ -17,8 +17,8 @@ use archmage::SimdToken;
 fn test_cross_platform_token_types_exist() {
     // x86 tokens - should compile on ARM/WASM, summon returns None there
     use archmage::{
-        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Sse41Token, Sse42Token,
-        X64V2Token, X64V3Token,
+        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Sse41Token, Sse42Token, X64V2Token,
+        X64V3Token,
     };
     #[cfg(feature = "avx512")]
     use archmage::{Avx512Token, X64V4Token};

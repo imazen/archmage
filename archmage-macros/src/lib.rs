@@ -143,44 +143,72 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
 fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {
     match trait_name {
         // x86 tier traits - each includes all features from lower tiers
-        "HasX64V2" => Some(&[
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"
-        ]),
+        "HasX64V2" => Some(&["sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
         "HasX64V4" => Some(&[
             // v2 features
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            // v3 features
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-            // v4 features
-            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", // v3 features
+            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", // v4 features
+            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
         ]),
 
         // x86 token types - when used directly as bounds
-        "X64V2Token" => Some(&[
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"
-        ]),
+        "X64V2Token" => Some(&["sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(&[
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt"
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma", "bmi1", "bmi2",
+            "f16c", "lzcnt",
         ]),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"
+            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma", "bmi1", "bmi2",
+            "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
         ]),
         "Avx512ModernToken" => Some(&[
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
-            "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
-            "avx512bitalg", "avx512vnni", "avx512bf16",
-            "vpclmulqdq", "gfni", "vaes"
+            "sse3",
+            "ssse3",
+            "sse4.1",
+            "sse4.2",
+            "popcnt",
+            "avx",
+            "avx2",
+            "fma",
+            "bmi1",
+            "bmi2",
+            "f16c",
+            "lzcnt",
+            "avx512f",
+            "avx512bw",
+            "avx512cd",
+            "avx512dq",
+            "avx512vl",
+            "avx512vpopcntdq",
+            "avx512ifma",
+            "avx512vbmi",
+            "avx512vbmi2",
+            "avx512bitalg",
+            "avx512vnni",
+            "avx512bf16",
+            "vpclmulqdq",
+            "gfni",
+            "vaes",
         ]),
         "Avx512Fp16Token" => Some(&[
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
-            "avx512fp16"
+            "sse3",
+            "ssse3",
+            "sse4.1",
+            "sse4.2",
+            "popcnt",
+            "avx",
+            "avx2",
+            "fma",
+            "bmi1",
+            "bmi2",
+            "f16c",
+            "lzcnt",
+            "avx512f",
+            "avx512bw",
+            "avx512cd",
+            "avx512dq",
+            "avx512vl",
+            "avx512fp16",
         ]),
 
         // Width traits - minimal features to satisfy width

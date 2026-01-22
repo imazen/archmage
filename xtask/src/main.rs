@@ -19,14 +19,18 @@ use syn::{
 };
 use walkdir::WalkDir;
 
+mod simd_types;
+
 /// Version of safe_unaligned_simd we're generating from
 const SAFE_SIMD_VERSION: &str = "0.2.3";
 
 /// Intel Intrinsics Guide base URL
-const INTEL_INTRINSICS_URL: &str = "https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html";
+const INTEL_INTRINSICS_URL: &str =
+    "https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html";
 
 /// ARM Intrinsics reference base URL
-const ARM_INTRINSICS_URL: &str = "https://developer.arm.com/architectures/instruction-sets/intrinsics";
+const ARM_INTRINSICS_URL: &str =
+    "https://developer.arm.com/architectures/instruction-sets/intrinsics";
 
 /// Architecture for code generation
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -65,9 +69,9 @@ fn token_provides_features(token_or_trait: &str) -> Option<&'static [&'static st
         // x86 tier traits
         "HasX64V2" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
         "HasX64V4" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
+            "bmi1", "bmi2", "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq",
+            "avx512vl",
         ]),
 
         // x86 concrete tokens
@@ -78,25 +82,65 @@ fn token_provides_features(token_or_trait: &str) -> Option<&'static [&'static st
         "Avx2FmaToken" => Some(&["sse", "sse2", "avx", "avx2", "fma"]),
         "X64V2Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
+            "bmi1", "bmi2", "f16c", "lzcnt",
         ]),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
+            "bmi1", "bmi2", "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq",
+            "avx512vl",
         ]),
         "Avx512ModernToken" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
-            "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
-            "avx512bitalg", "avx512vnni", "avx512bf16", "vpclmulqdq", "gfni", "vaes",
+            "sse",
+            "sse2",
+            "sse3",
+            "ssse3",
+            "sse4.1",
+            "sse4.2",
+            "popcnt",
+            "avx",
+            "avx2",
+            "fma",
+            "bmi1",
+            "bmi2",
+            "f16c",
+            "lzcnt",
+            "avx512f",
+            "avx512bw",
+            "avx512cd",
+            "avx512dq",
+            "avx512vl",
+            "avx512vpopcntdq",
+            "avx512ifma",
+            "avx512vbmi",
+            "avx512vbmi2",
+            "avx512bitalg",
+            "avx512vnni",
+            "avx512bf16",
+            "vpclmulqdq",
+            "gfni",
+            "vaes",
         ]),
         "Avx512Fp16Token" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+            "sse",
+            "sse2",
+            "sse3",
+            "ssse3",
+            "sse4.1",
+            "sse4.2",
+            "popcnt",
+            "avx",
+            "avx2",
+            "fma",
+            "bmi1",
+            "bmi2",
+            "f16c",
+            "lzcnt",
+            "avx512f",
+            "avx512bw",
+            "avx512cd",
+            "avx512dq",
+            "avx512vl",
             "avx512fp16",
         ]),
 
@@ -266,9 +310,15 @@ fn arm_intrinsic_url(name: &str) -> String {
 /// Categorize an intrinsic by its operation type
 fn categorize_intrinsic(name: &str) -> &'static str {
     // x86 categorization
-    if name.contains("loadu") || name.contains("load_") || name.starts_with("_mm") && name.contains("load") {
+    if name.contains("loadu")
+        || name.contains("load_")
+        || name.starts_with("_mm") && name.contains("load")
+    {
         "Load"
-    } else if name.contains("storeu") || name.contains("store_") || name.starts_with("_mm") && name.contains("store") {
+    } else if name.contains("storeu")
+        || name.contains("store_")
+        || name.starts_with("_mm") && name.contains("store")
+    {
         "Store"
     } else if name.contains("gather") {
         "Gather"
@@ -495,9 +545,7 @@ fn parse_aarch64_via_expand(safe_simd_path: &Path) -> Result<BTreeMap<String, St
             if let Some(features) = current_features.take() {
                 // Extract function name
                 let after_fn = &trimmed[7..]; // Skip "pub fn "
-                let name_end = after_fn
-                    .find(['<', '('])
-                    .unwrap_or(after_fn.len());
+                let name_end = after_fn.find(['<', '(']).unwrap_or(after_fn.len());
                 let name = after_fn[..name_end].to_string();
 
                 // Only include aarch64-specific functions (skip any generic ones)
@@ -744,11 +792,7 @@ fn type_to_string(ty: &Type) -> String {
 }
 
 /// Generate a single wrapper function as a formatted string
-fn generate_wrapper_string(
-    func: &ParsedFunction,
-    token_info: &TokenInfo,
-    arch: Arch,
-) -> String {
+fn generate_wrapper_string(func: &ParsedFunction, token_info: &TokenInfo, arch: Arch) -> String {
     let mut out = String::new();
 
     // Doc comment
@@ -907,11 +951,7 @@ fn generate_wrapper_string(
 }
 
 /// Generate a module for a specific feature set
-fn generate_module(
-    token_info: &TokenInfo,
-    functions: &[ParsedFunction],
-    arch: Arch,
-) -> String {
+fn generate_module(token_info: &TokenInfo, functions: &[ParsedFunction], arch: Arch) -> String {
     let mut out = String::new();
 
     // Header
@@ -1007,7 +1047,11 @@ fn generate_mod_rs(
     );
 
     for (module, features, count, requires_avx512) in x86_modules {
-        let avx512_note = if *requires_avx512 { " (requires `avx512` feature)" } else { "" };
+        let avx512_note = if *requires_avx512 {
+            " (requires `avx512` feature)"
+        } else {
+            ""
+        };
         code.push_str(&format!(
             "//! - [`x86::{}`]: {} functions (`{}`){}\n",
             module, count, features, avx512_note
@@ -1049,7 +1093,10 @@ fn generate_x86_mod_rs(modules: &[(&str, &str, usize, bool)]) -> String {
 
     for (module, _features, _count, requires_avx512) in modules {
         if *requires_avx512 {
-            code.push_str(&format!("#[cfg(feature = \"avx512\")]\npub mod {};\n", module));
+            code.push_str(&format!(
+                "#[cfg(feature = \"avx512\")]\npub mod {};\n",
+                module
+            ));
         } else {
             code.push_str(&format!("pub mod {};\n", module));
         }
@@ -1512,12 +1559,17 @@ This document lists all safe SIMD intrinsics available through `archmage::mem`.
     // Count by module
     let mut x86_by_mod: BTreeMap<&str, (usize, &str, bool)> = BTreeMap::new();
     for f in x86_fns {
-        let entry = x86_by_mod.entry(&f.module).or_insert((0, &f.token_name, f.requires_avx512));
+        let entry = x86_by_mod
+            .entry(&f.module)
+            .or_insert((0, &f.token_name, f.requires_avx512));
         entry.0 += 1;
     }
     let mut aarch64_by_mod: BTreeMap<&str, (usize, &str, bool)> = BTreeMap::new();
     for f in aarch64_fns {
-        let entry = aarch64_by_mod.entry(&f.module).or_insert((0, &f.token_name, f.requires_avx512));
+        let entry =
+            aarch64_by_mod
+                .entry(&f.module)
+                .or_insert((0, &f.token_name, f.requires_avx512));
         entry.0 += 1;
     }
 
@@ -1529,10 +1581,7 @@ This document lists all safe SIMD intrinsics available through `archmage::mem`.
         ));
     }
     for (module, (count, _token, _)) in &aarch64_by_mod {
-        doc.push_str(&format!(
-            "| aarch64 | `{}` | {} | - |\n",
-            module, count
-        ));
+        doc.push_str(&format!("| aarch64 | `{}` | {} | - |\n", module, count));
     }
 
     // x86 section
@@ -1570,7 +1619,10 @@ This document lists all safe SIMD intrinsics available through `archmage::mem`.
         doc.push_str("| Function | Category | ARM Docs |\n");
         doc.push_str("|----------|----------|----------|\n");
 
-        let module_fns: Vec<_> = aarch64_fns.iter().filter(|f| &f.module == *module).collect();
+        let module_fns: Vec<_> = aarch64_fns
+            .iter()
+            .filter(|f| &f.module == *module)
+            .collect();
         for f in module_fns {
             let category = categorize_intrinsic(&f.name);
             let arm_url = arm_intrinsic_url(&f.name);
@@ -1672,12 +1724,20 @@ fn generate_all() -> Result<()> {
     let x86_tests = generate_x86_tests(&x86_testable);
     let x86_test_path = PathBuf::from("tests/generated_x86_mem.rs");
     fs::write(&x86_test_path, &x86_tests)?;
-    println!("Wrote {} ({} bytes)", x86_test_path.display(), x86_tests.len());
+    println!(
+        "Wrote {} ({} bytes)",
+        x86_test_path.display(),
+        x86_tests.len()
+    );
 
     let aarch64_tests = generate_aarch64_tests(&aarch64_testable);
     let aarch64_test_path = PathBuf::from("tests/generated_aarch64_mem.rs");
     fs::write(&aarch64_test_path, &aarch64_tests)?;
-    println!("Wrote {} ({} bytes)", aarch64_test_path.display(), aarch64_tests.len());
+    println!(
+        "Wrote {} ({} bytes)",
+        aarch64_test_path.display(),
+        aarch64_tests.len()
+    );
 
     // Generate reference documentation
     println!("\n=== Generating Reference Documentation ===");
@@ -1688,10 +1748,36 @@ fn generate_all() -> Result<()> {
     fs::write(&ref_path, &reference)?;
     println!("Wrote {} ({} bytes)", ref_path.display(), reference.len());
 
+    // Generate SIMD types (wide-like ergonomic types)
+    println!("\n=== Generating SIMD Types ===");
+
+    let simd_dir = PathBuf::from("src/simd");
+    fs::create_dir_all(&simd_dir)?;
+
+    let simd_types_code = simd_types::generate_simd_types();
+    let simd_mod_path = simd_dir.join("mod.rs");
+    fs::write(&simd_mod_path, &simd_types_code)?;
+    println!(
+        "Wrote {} ({} bytes)",
+        simd_mod_path.display(),
+        simd_types_code.len()
+    );
+
+    // Generate SIMD type tests
+    let simd_tests = simd_types::generate_simd_tests();
+    let simd_test_path = PathBuf::from("tests/generated_simd_types.rs");
+    fs::write(&simd_test_path, &simd_tests)?;
+    println!(
+        "Wrote {} ({} bytes)",
+        simd_test_path.display(),
+        simd_tests.len()
+    );
+
     println!("\n=== Generation Complete ===");
     println!("  - Wrappers: src/generated/");
     println!("  - Tests: tests/generated_*.rs");
     println!("  - Reference: docs/INTRINSIC_REFERENCE.md");
+    println!("  - SIMD types: src/simd/");
 
     Ok(())
 }
@@ -1765,7 +1851,12 @@ fn generate_wrappers() -> Result<(Vec<TestableFunction>, Vec<TestableFunction>)>
             fs::write(&out_path, &code)?;
             println!("  Wrote {} ({} bytes)", out_path.display(), code.len());
 
-            modules_info.push((module_name, feature, functions.len(), token_info.requires_avx512));
+            modules_info.push((
+                module_name,
+                feature,
+                functions.len(),
+                token_info.requires_avx512,
+            ));
 
             // Collect testable functions
             for func in functions {
@@ -1776,7 +1867,11 @@ fn generate_wrappers() -> Result<(Vec<TestableFunction>, Vec<TestableFunction>)>
                     is_trait: token_info.is_trait,
                     requires_avx512: token_info.requires_avx512,
                     category: categorize_intrinsic(&func.name).to_string(),
-                    input_types: func.inputs.iter().map(|(_, ty)| type_to_string(ty)).collect(),
+                    input_types: func
+                        .inputs
+                        .iter()
+                        .map(|(_, ty)| type_to_string(ty))
+                        .collect(),
                     output_type: func.output.as_ref().map(type_to_string),
                     arch: Arch::X86,
                 });
@@ -1939,9 +2034,7 @@ fn extract_token_bound(line: &str) -> Option<String> {
         let after_colon = after_colon.trim_start();
 
         // Find the end (comma or closing paren)
-        let end = after_colon
-            .find([',', ')'])
-            .unwrap_or(after_colon.len());
+        let end = after_colon.find([',', ')']).unwrap_or(after_colon.len());
 
         let token_part = after_colon[..end].trim();
 
@@ -2079,7 +2172,10 @@ fn validate_wrappers() -> Result<()> {
     println!("=== Archmage Wrapper Validation ===\n");
 
     // Find safe_unaligned_simd source
-    println!("Finding safe_unaligned_simd-{} in cargo cache...", SAFE_SIMD_VERSION);
+    println!(
+        "Finding safe_unaligned_simd-{} in cargo cache...",
+        SAFE_SIMD_VERSION
+    );
     let safe_simd_path = find_safe_simd_path()?;
     println!("Found at: {}\n", safe_simd_path.display());
 
@@ -2113,7 +2209,10 @@ fn validate_wrappers() -> Result<()> {
     if aarch64_source.is_empty() {
         println!("  No aarch64 functions extracted (target may not be installed)");
     } else {
-        println!("Parsed {} aarch64 source functions via macro expansion\n", aarch64_source.len());
+        println!(
+            "Parsed {} aarch64 source functions via macro expansion\n",
+            aarch64_source.len()
+        );
     }
 
     // Parse generated wrappers
@@ -2125,7 +2224,10 @@ fn validate_wrappers() -> Result<()> {
     // Parse aarch64 wrappers from macro invocations in neon.rs
     let aarch64_neon_path = PathBuf::from("src/generated/aarch64/neon.rs");
     let aarch64_wrappers = parse_generated_aarch64_wrappers(&aarch64_neon_path)?;
-    println!("Found {} aarch64 wrappers (from macro parsing)\n", aarch64_wrappers.len());
+    println!(
+        "Found {} aarch64 wrappers (from macro parsing)\n",
+        aarch64_wrappers.len()
+    );
 
     // Validation results
     let mut errors: Vec<String> = Vec::new();
@@ -2142,7 +2244,11 @@ fn validate_wrappers() -> Result<()> {
                 Err(missing) => {
                     errors.push(format!(
                         "MISMATCH: x86/{}::{}\n  Token: {} does not provide: {:?}\n  Required: {}",
-                        wrapper.module, wrapper.name, wrapper.token_bound, missing, required_features
+                        wrapper.module,
+                        wrapper.name,
+                        wrapper.token_bound,
+                        missing,
+                        required_features
                     ));
                 }
             }
@@ -2207,7 +2313,10 @@ fn validate_wrappers() -> Result<()> {
         println!("\n⚠ Unhandled x86 feature combinations (functions silently skipped):");
         for f in &unhandled_x86 {
             let count = x86_feature_coverage.get(f).unwrap_or(&0);
-            warnings.push(format!("UNHANDLED x86: {} ({} functions skipped)", f, count));
+            warnings.push(format!(
+                "UNHANDLED x86: {} ({} functions skipped)",
+                f, count
+            ));
             println!("  - {} ({} functions)", f, count);
         }
     }
@@ -2219,7 +2328,9 @@ fn validate_wrappers() -> Result<()> {
         let mut unhandled_aarch64: BTreeSet<String> = BTreeSet::new();
 
         for features in aarch64_source.values() {
-            *aarch64_feature_coverage.entry(features.clone()).or_insert(0) += 1;
+            *aarch64_feature_coverage
+                .entry(features.clone())
+                .or_insert(0) += 1;
 
             if feature_to_token(features, Arch::Aarch64).is_none() {
                 unhandled_aarch64.insert(features.clone());
@@ -2240,7 +2351,10 @@ fn validate_wrappers() -> Result<()> {
             println!("\n⚠ Unhandled aarch64 feature combinations (functions silently skipped):");
             for f in &unhandled_aarch64 {
                 let count = aarch64_feature_coverage.get(f).unwrap_or(&0);
-                warnings.push(format!("UNHANDLED aarch64: {} ({} functions skipped)", f, count));
+                warnings.push(format!(
+                    "UNHANDLED aarch64: {} ({} functions skipped)",
+                    f, count
+                ));
                 println!("  - {} ({} functions)", f, count);
             }
         }
@@ -2249,8 +2363,14 @@ fn validate_wrappers() -> Result<()> {
     // Summary
     println!("\n=== Validation Summary ===");
     println!("  Validated: {} wrappers", validated);
-    println!("  Errors:    {} (token doesn't provide required features)", errors.len());
-    println!("  Warnings:  {} (unhandled features or orphan wrappers)", warnings.len());
+    println!(
+        "  Errors:    {} (token doesn't provide required features)",
+        errors.len()
+    );
+    println!(
+        "  Warnings:  {} (unhandled features or orphan wrappers)",
+        warnings.len()
+    );
 
     if !errors.is_empty() {
         println!("\n=== ERRORS ===");

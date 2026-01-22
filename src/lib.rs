@@ -98,6 +98,12 @@ pub mod mem;
 #[cfg_attr(docsrs, doc(cfg(feature = "__experiments")))]
 pub mod experiments;
 
+// Auto-generated SIMD types with natural operators (wide-like ergonomics)
+// Token-gated construction ensures safety - no way to create without proving CPU support
+#[cfg(target_arch = "x86_64")]
+#[cfg_attr(docsrs, doc(cfg(target_arch = "x86_64")))]
+pub mod simd;
+
 // ============================================================================
 // Re-exports at crate root for convenience
 // ============================================================================
@@ -123,21 +129,21 @@ pub use tokens::{HasNeon, HasNeonAes, HasNeonSha3};
 pub use tokens::{
     // ARM tokens
     Arm64,
-    NeonToken,
-    NeonAesToken,
-    NeonSha3Token,
     // x86 tokens
     Avx2FmaToken,
     Avx2Token,
     AvxToken,
     Desktop64,
     FmaToken,
+    NeonAesToken,
+    NeonSha3Token,
+    NeonToken,
+    // WASM tokens
+    Simd128Token,
     Sse41Token,
     Sse42Token,
     X64V2Token,
     X64V3Token,
-    // WASM tokens
-    Simd128Token,
 };
 
 // AVX-512 tokens (requires "avx512" feature)

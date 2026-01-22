@@ -13,7 +13,6 @@ use super::{CompositeToken, SimdToken};
 #[cfg(feature = "avx512")]
 pub use super::x86_avx512::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, X64V4Token};
 
-
 // ============================================================================
 // SSE4.1 Token
 // ============================================================================
@@ -43,7 +42,6 @@ impl SimdToken for Sse41Token {
         Self { _private: () }
     }
 }
-
 
 // ============================================================================
 // AVX Token
@@ -317,7 +315,6 @@ impl Avx512bwToken {
         unsafe { Avx512fToken::forge_token_dangerously() }
     }
 }
-
 
 // ============================================================================
 // AVX-512 + VL Tokens (for 128/256-bit variants of AVX-512 instructions)

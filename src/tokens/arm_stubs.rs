@@ -3,8 +3,8 @@
 //! These types exist so cross-platform code can reference them without cfg guards.
 //! `summon()` always returns `None` on non-ARM.
 
-use super::SimdToken;
 use super::Has128BitSimd;
+use super::SimdToken;
 use super::{HasNeon, HasNeonAes, HasNeonSha3};
 
 macro_rules! define_arm_stub {

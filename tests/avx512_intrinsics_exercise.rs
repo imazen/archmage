@@ -1116,11 +1116,7 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
         mask16,
         &arr_i32_16,
     ));
-    black_box(v4::_mm512_maskz_loadu_epi32(
-        token,
-        mask16,
-        &arr_i32_16,
-    ));
+    black_box(v4::_mm512_maskz_loadu_epi32(token, mask16, &arr_i32_16));
     black_box(v4::_mm512_loadu_epi64(token, &arr_i64_8));
     black_box(v4::_mm512_mask_loadu_epi64(
         token,
@@ -1153,17 +1149,11 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
         mask16,
         &arr_f32_16,
     ));
-    black_box(v4::_mm512_maskz_expandloadu_ps(
-        token,
-        mask16,
-        &arr_f32_16,
-    ));
+    black_box(v4::_mm512_maskz_expandloadu_ps(token, mask16, &arr_f32_16));
     black_box(v4::_mm512_mask_expandloadu_pd(
         token, vec_512_pd, mask8, &arr_f64_8,
     ));
-    black_box(v4::_mm512_maskz_expandloadu_pd(
-        token, mask8, &arr_f64_8,
-    ));
+    black_box(v4::_mm512_maskz_expandloadu_pd(token, mask8, &arr_f64_8));
     black_box(v4::_mm512_mask_expandloadu_epi32(
         token,
         vec_512_i32,
@@ -1181,9 +1171,7 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
         mask8,
         &arr_i64_8,
     ));
-    black_box(v4::_mm512_maskz_expandloadu_epi64(
-        token, mask8, &arr_i64_8,
-    ));
+    black_box(v4::_mm512_maskz_expandloadu_epi64(token, mask8, &arr_i64_8));
 
     // Compress stores (masked store with compression)
     v4::_mm512_mask_compressstoreu_ps(token, &mut arr_f32_16, mask16, vec_512_ps);
@@ -1224,9 +1212,7 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
         mask8,
         &arr_i32_8,
     ));
-    black_box(v4_vl::_mm256_maskz_loadu_epi32(
-        token, mask8, &arr_i32_8,
-    ));
+    black_box(v4_vl::_mm256_maskz_loadu_epi32(token, mask8, &arr_i32_8));
     black_box(v4_vl::_mm256_loadu_epi64(token, &arr_i64_4));
     black_box(v4_vl::_mm256_mask_loadu_epi64(
         token,
@@ -1234,9 +1220,7 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
         mask4,
         &arr_i64_4,
     ));
-    black_box(v4_vl::_mm256_maskz_loadu_epi64(
-        token, mask4, &arr_i64_4,
-    ));
+    black_box(v4_vl::_mm256_maskz_loadu_epi64(token, mask4, &arr_i64_4));
     black_box(v4_vl::_mm256_mask_loadu_ps(
         token, vec_256_ps, mask8, &arr_f32_8,
     ));
@@ -1257,15 +1241,11 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     black_box(v4_vl::_mm256_mask_expandloadu_ps(
         token, vec_256_ps, mask8, &arr_f32_8,
     ));
-    black_box(v4_vl::_mm256_maskz_expandloadu_ps(
-        token, mask8, &arr_f32_8,
-    ));
+    black_box(v4_vl::_mm256_maskz_expandloadu_ps(token, mask8, &arr_f32_8));
     black_box(v4_vl::_mm256_mask_expandloadu_pd(
         token, vec_256_pd, mask4, &arr_f64_4,
     ));
-    black_box(v4_vl::_mm256_maskz_expandloadu_pd(
-        token, mask4, &arr_f64_4,
-    ));
+    black_box(v4_vl::_mm256_maskz_expandloadu_pd(token, mask4, &arr_f64_4));
     black_box(v4_vl::_mm256_mask_expandloadu_epi32(
         token,
         vec_256_i32,
@@ -1331,33 +1311,25 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     black_box(v4_vl::_mm_mask_expandloadu_ps(
         token, vec_128_ps, mask4, &arr_f32_4,
     ));
-    black_box(v4_vl::_mm_maskz_expandloadu_ps(
-        token, mask4, &arr_f32_4,
-    ));
+    black_box(v4_vl::_mm_maskz_expandloadu_ps(token, mask4, &arr_f32_4));
     black_box(v4_vl::_mm_mask_expandloadu_pd(
         token, vec_128_pd, mask2, &arr_f64_2,
     ));
-    black_box(v4_vl::_mm_maskz_expandloadu_pd(
-        token, mask2, &arr_f64_2,
-    ));
+    black_box(v4_vl::_mm_maskz_expandloadu_pd(token, mask2, &arr_f64_2));
     black_box(v4_vl::_mm_mask_expandloadu_epi32(
         token,
         vec_128_i32,
         mask4,
         &arr_i32_4,
     ));
-    black_box(v4_vl::_mm_maskz_expandloadu_epi32(
-        token, mask4, &arr_i32_4,
-    ));
+    black_box(v4_vl::_mm_maskz_expandloadu_epi32(token, mask4, &arr_i32_4));
     black_box(v4_vl::_mm_mask_expandloadu_epi64(
         token,
         vec_128_i64,
         mask2,
         &arr_i64_2,
     ));
-    black_box(v4_vl::_mm_maskz_expandloadu_epi64(
-        token, mask2, &arr_i64_2,
-    ));
+    black_box(v4_vl::_mm_maskz_expandloadu_epi64(token, mask2, &arr_i64_2));
 
     // 128-bit compress stores
     v4_vl::_mm_mask_compressstoreu_ps(token, &mut arr_f32_4, mask4, vec_128_ps);
@@ -1376,11 +1348,7 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
         mask32,
         &arr_i16_32,
     ));
-    black_box(v4_bw::_mm512_maskz_loadu_epi16(
-        token,
-        mask32,
-        &arr_i16_32,
-    ));
+    black_box(v4_bw::_mm512_maskz_loadu_epi16(token, mask32, &arr_i16_32));
     black_box(v4_bw::_mm512_loadu_epi8(token, &arr_i8_64));
     black_box(v4_bw::_mm512_mask_loadu_epi8(
         token, vec_512_i8, mask64, &arr_i8_64,
@@ -1417,9 +1385,7 @@ fn exercise_safe_mem_ops(token: Avx512ModernToken) {
     black_box(v4_bw_vl::_mm256_mask_loadu_epi8(
         token, vec_256_i8, mask32, &arr_i8_32,
     ));
-    black_box(v4_bw_vl::_mm256_maskz_loadu_epi8(
-        token, mask32, &arr_i8_32,
-    ));
+    black_box(v4_bw_vl::_mm256_maskz_loadu_epi8(token, mask32, &arr_i8_32));
 
     v4_bw_vl::_mm256_storeu_epi16(token, &mut arr_i16_16, vec_256_i16);
     v4_bw_vl::_mm256_mask_storeu_epi16(token, &mut arr_i16_16, mask16, vec_256_i16);
