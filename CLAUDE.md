@@ -39,6 +39,34 @@
 
 ## CRITICAL: Documentation Examples
 
+### Always prefer `#[arcane]` over manual `#[target_feature]`
+
+**DO NOT write examples with manual `#[target_feature]` + unsafe wrappers.** The `#[arcane]` macro does this automatically and is the correct pattern for archmage.
+
+```rust
+// WRONG - manual #[target_feature] wrapping
+#[cfg(target_arch = "x86_64")]
+#[inline]
+#[target_feature(enable = "avx2", enable = "fma")]
+unsafe fn process_inner(data: &[f32]) -> f32 { ... }
+
+#[cfg(target_arch = "x86_64")]
+fn process(token: Avx2FmaToken, data: &[f32]) -> f32 {
+    unsafe { process_inner(data) }
+}
+
+// CORRECT - use #[arcane] (it generates the above automatically)
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn process(token: Avx2FmaToken, data: &[f32]) -> f32 {
+    // This function body is compiled with #[target_feature(enable = "avx2,fma")]
+    // Intrinsics and operators inline properly into single SIMD instructions
+    ...
+}
+```
+
+### Use `safe_unaligned_simd` inside `#[arcane]` functions
+
 **Use `safe_unaligned_simd` directly inside `#[arcane]` functions.** The calls are safe because the target features match.
 
 ```rust
@@ -107,6 +135,7 @@ fn my_kernel(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
 | Alias | Token | What it means |
 |-------|-------|---------------|
 | `Desktop64` | `X64V3Token` | AVX2 + FMA (Haswell 2013+, Zen 1+) |
+| `Server64` | `X64V4Token` | + AVX-512 (Xeon 2017+, Zen 4+) |
 | `Arm64` | `NeonToken` | NEON + FP16 (all 64-bit ARM) |
 
 ```rust
