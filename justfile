@@ -3,13 +3,17 @@
 # Default: run all tests
 default: test
 
-# Run all tests
+# Run all tests (excludes sleef which requires nightly)
 test:
-    cargo test --all-features
+    cargo test --features "std macros bytemuck wide __composite avx512"
 
-# Run clippy
+# Run tests with all features (requires nightly for sleef)
+test-nightly:
+    cargo +nightly test --all-features
+
+# Run clippy (excludes sleef which requires nightly)
 lint:
-    cargo clippy --all-features -- -D warnings
+    cargo clippy --features "std macros bytemuck wide __composite avx512" -- -D warnings
 
 # Format code
 fmt:
