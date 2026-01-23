@@ -13,15 +13,21 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
+//! ```no_run
+//! # #[cfg(target_arch = "x86_64")]
+//! # fn main() {
 //! use archmage::{Avx2FmaToken, SimdToken};
-//! use magetypes::simd::f32x8;
+//! use magetypes::f32x8;
 //!
-//! if let Some(token) = Avx2FmaToken::summon() {
+//! if let Some(token) = Avx2FmaToken::try_new() {
 //!     let a = f32x8::splat(token, 1.0);
 //!     let b = f32x8::splat(token, 2.0);
 //!     let c = a + b;  // Natural operators!
+//!     println!("Result: {:?}", c.to_array());
 //! }
+//! # }
+//! # #[cfg(not(target_arch = "x86_64"))]
+//! # fn main() {}
 //! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]

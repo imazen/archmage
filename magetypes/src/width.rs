@@ -1,31 +1,35 @@
 //! Width dispatch trait for token-based SIMD type construction.
 //!
-//! See [`WidthDispatch`] for the main trait.
-
-#![allow(missing_docs)]
-//!
 //! The `WidthDispatch` trait provides access to ALL SIMD sizes from any token.
 //! Native types are used where the hardware supports them; polyfills are used
 //! for wider types on narrower hardware.
 //!
+//! See [`WidthDispatch`] for the main trait.
+//!
 //! # Example
 //!
-//! ```ignore
+//! ```no_run
+//! # #[cfg(target_arch = "x86_64")]
+//! # fn main() {
 //! use archmage::{Avx2FmaToken, SimdToken};
 //! use magetypes::WidthDispatch;
 //!
-//! fn process<T: WidthDispatch>(token: T, data: &[f32; 8]) -> T::F32x8 {
-//!     let v = token.f32x8_load(data);
-//!     let two = token.f32x8_splat(2.0);
-//!     v * two
+//! // Generic over any token that implements WidthDispatch
+//! fn load_data<T: WidthDispatch>(token: T, data: &[f32; 8]) -> T::F32x8 {
+//!     token.f32x8_load(data)
 //! }
 //!
-//! // On SSE: f32x8 is polyfilled (2x f32x4)
-//! // On AVX2: f32x8 is native
-//! if let Some(token) = Avx2FmaToken::summon() {
-//!     let result = process(token, &[1.0; 8]);
+//! if let Some(token) = Avx2FmaToken::try_new() {
+//!     let v = load_data(token, &[1.0; 8]);
+//!     // On AVX2: F32x8 is native magetypes::f32x8
+//!     // On SSE: F32x8 would be polyfilled (2x f32x4)
 //! }
+//! # }
+//! # #[cfg(not(target_arch = "x86_64"))]
+//! # fn main() {}
 //! ```
+
+#![allow(missing_docs)]
 
 use archmage::SimdToken;
 

@@ -4,17 +4,8 @@
 //! internally using two `f32x4` operations. This allows writing code
 //! targeting AVX2 widths while still running (slower) on SSE-only systems.
 //!
-//! # Usage
-//!
-//! ```ignore
-//! use archmage::simd::polyfill::sse as poly;
-//!
-//! // On AVX2: uses native f32x8
-//! // On SSE: uses poly::f32x8 which wraps [f32x4; 2]
-//! let a = poly::f32x8::splat(token, 1.0);
-//! let b = poly::f32x8::splat(token, 2.0);
-//! let c = a + b; // Two f32x4 adds on SSE
-//! ```
+//! Polyfills are mainly used internally by [`WidthDispatch`](crate::WidthDispatch).
+//! Direct usage is rarely needed.
 
 #[cfg(target_arch = "x86_64")]
 pub mod sse {
