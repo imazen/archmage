@@ -4,6 +4,8 @@
 
 #![allow(dead_code)]
 #![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::excessive_precision)]
+#![allow(clippy::approx_constant)]
 
 use std::arch::x86_64::*;
 use std::time::Instant;
@@ -15,7 +17,7 @@ fn black_box<T>(x: T) -> T {
     std::hint::black_box(x)
 }
 
-fn bench<F>(name: &str, mut f: F) -> f64
+fn bench<F>(_name: &str, mut f: F) -> f64
 where
     F: FnMut(),
 {

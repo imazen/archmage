@@ -10,6 +10,8 @@
 //! cargo run --example accuracy_test --release
 //! ```
 
+#![allow(clippy::needless_borrows_for_generic_args)]
+
 use archmage::simd::f32x8;
 use archmage::{Avx2FmaToken, SimdToken, arcane};
 

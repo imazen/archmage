@@ -108,7 +108,7 @@ fn main() {
     // Test ln_lowp
     let input = [
         1.0,
-        2.718281828,
+        core::f32::consts::E,
         7.389056,
         20.0855,
         54.598,
