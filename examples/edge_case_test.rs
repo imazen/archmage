@@ -2,6 +2,8 @@
 //!
 //! Run with: `cargo run --example edge_case_test --release`
 
+#![cfg(target_arch = "x86_64")]
+
 use archmage::simd::f32x8;
 use archmage::{Avx2FmaToken, SimdToken, arcane};
 

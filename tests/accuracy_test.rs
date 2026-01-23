@@ -3,6 +3,8 @@
 //! Tests all transcendental functions against std:: implementations
 //! across their valid input ranges, including edge cases.
 
+#![cfg(target_arch = "x86_64")]
+
 use archmage::simd::f32x8;
 use archmage::{Avx2FmaToken, SimdToken, arcane};
 

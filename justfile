@@ -64,13 +64,15 @@ test-all-cpus: test-p4 test-nehalem test-haswell test-skylake test-icelake
 test-i686:
     cross test --all-features --target i686-unknown-linux-gnu
 
-# Test on aarch64 (via QEMU)
+# Test on aarch64 (via QEMU) - lib and cross-platform tests only
 test-aarch64:
-    cross test --all-features --target aarch64-unknown-linux-gnu
+    cross test --lib --target aarch64-unknown-linux-gnu
+    cross test --test miri_safe --test feature_consistency --target aarch64-unknown-linux-gnu
 
-# Test on armv7 (via QEMU)
+# Test on armv7 (via QEMU) - lib and cross-platform tests only
 test-armv7:
-    cross test --all-features --target armv7-unknown-linux-gnueabihf
+    cross test --lib --target armv7-unknown-linux-gnueabihf
+    cross test --test miri_safe --test feature_consistency --target armv7-unknown-linux-gnueabihf
 
 # Build for all cross targets (faster than running tests)
 build-cross:

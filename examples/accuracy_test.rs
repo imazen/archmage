@@ -10,6 +10,7 @@
 //! cargo run --example accuracy_test --release
 //! ```
 
+#![cfg(target_arch = "x86_64")]
 #![allow(clippy::needless_borrows_for_generic_args)]
 
 use archmage::simd::f32x8;

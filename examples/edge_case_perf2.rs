@@ -2,6 +2,7 @@
 //!
 //! Run with: `cargo run --example edge_case_perf2 --release`
 
+#![cfg(target_arch = "x86_64")]
 #![allow(dead_code)]
 #![allow(unsafe_op_in_unsafe_fn)]
 #![allow(clippy::excessive_precision)]
