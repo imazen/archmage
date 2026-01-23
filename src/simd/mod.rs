@@ -269,3 +269,111 @@ pub use x86::w128::*;
 pub use x86::w256::*;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 pub use x86::w512::*;
+
+// ============================================================================
+// Width-aliased namespaces for multi-width dispatch
+//
+// Use these with the #[multiwidth] macro to write width-agnostic code:
+//   use archmage::simd::avx2::*;  // f32xN = f32x8, Token = Avx2FmaToken
+// ============================================================================
+
+#[cfg(target_arch = "x86_64")]
+pub mod sse {
+    //! SSE/SSE4.1 width aliases (128-bit SIMD)
+    //!
+    //! - `f32xN` = `f32x4` (4 lanes)
+    //! - `Token` = `Sse41Token`
+
+    pub use super::x86::w128::{
+        f32x4 as f32xN,
+        f64x2 as f64xN,
+        i8x16 as i8xN,
+        u8x16 as u8xN,
+        i16x8 as i16xN,
+        u16x8 as u16xN,
+        i32x4 as i32xN,
+        u32x4 as u32xN,
+        i64x2 as i64xN,
+        u64x2 as u64xN,
+    };
+
+    pub use super::x86::w128::*;
+
+    /// Token type for this width level
+    pub type Token = crate::Sse41Token;
+
+    /// Number of f32 lanes
+    pub const LANES_F32: usize = 4;
+    /// Number of f64 lanes
+    pub const LANES_F64: usize = 2;
+    /// Number of i32/u32 lanes
+    pub const LANES_32: usize = 4;
+    /// Number of i16/u16 lanes
+    pub const LANES_16: usize = 8;
+    /// Number of i8/u8 lanes
+    pub const LANES_8: usize = 16;
+}
+
+#[cfg(target_arch = "x86_64")]
+pub mod avx2 {
+    //! AVX2+FMA width aliases (256-bit SIMD)
+    //!
+    //! - `f32xN` = `f32x8` (8 lanes)
+    //! - `Token` = `Avx2FmaToken`
+
+    pub use super::x86::w256::{
+        f32x8 as f32xN,
+        f64x4 as f64xN,
+        i8x32 as i8xN,
+        u8x32 as u8xN,
+        i16x16 as i16xN,
+        u16x16 as u16xN,
+        i32x8 as i32xN,
+        u32x8 as u32xN,
+        i64x4 as i64xN,
+        u64x4 as u64xN,
+    };
+
+    pub use super::x86::w256::*;
+
+    /// Token type for this width level
+    pub type Token = crate::Avx2FmaToken;
+
+    pub const LANES_F32: usize = 8;
+    pub const LANES_F64: usize = 4;
+    pub const LANES_32: usize = 8;
+    pub const LANES_16: usize = 16;
+    pub const LANES_8: usize = 32;
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub mod avx512 {
+    //! AVX-512 width aliases (512-bit SIMD)
+    //!
+    //! - `f32xN` = `f32x16` (16 lanes)
+    //! - `Token` = `X64V4Token`
+
+    pub use super::x86::w512::{
+        f32x16 as f32xN,
+        f64x8 as f64xN,
+        i8x64 as i8xN,
+        u8x64 as u8xN,
+        i16x32 as i16xN,
+        u16x32 as u16xN,
+        i32x16 as i32xN,
+        u32x16 as u32xN,
+        i64x8 as i64xN,
+        u64x8 as u64xN,
+    };
+
+    pub use super::x86::w512::*;
+
+    /// Token type for this width level
+    pub type Token = crate::X64V4Token;
+
+    pub const LANES_F32: usize = 16;
+    pub const LANES_F64: usize = 8;
+    pub const LANES_32: usize = 16;
+    pub const LANES_16: usize = 32;
+    pub const LANES_8: usize = 64;
+}

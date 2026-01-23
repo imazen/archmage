@@ -98,7 +98,108 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
     code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("pub use x86::w256::*;\n");
     code.push_str("#[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
-    code.push_str("pub use x86::w512::*;\n");
+    code.push_str("pub use x86::w512::*;\n\n");
+
+    // Generate width-aliased namespaces for multi-width dispatch
+    code.push_str(&generate_width_namespaces(types));
+
+    code
+}
+
+/// Generate width-aliased namespace modules for multi-width dispatch
+///
+/// Creates modules like `sse`, `avx2`, `avx512` that export types with
+/// generic names like `f32xN`, `i32xN` etc., allowing the same code to
+/// work with different SIMD widths via namespace imports.
+fn generate_width_namespaces(types: &[SimdType]) -> String {
+    let mut code = String::new();
+
+    code.push_str(
+        "// ============================================================================\n",
+    );
+    code.push_str("// Width-aliased namespaces for multi-width dispatch\n");
+    code.push_str("//\n");
+    code.push_str("// Use these with the #[multiwidth] macro to write width-agnostic code:\n");
+    code.push_str("//   use archmage::simd::avx2::*;  // f32xN = f32x8, Token = Avx2FmaToken\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
+
+    // SSE namespace (128-bit)
+    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("pub mod sse {\n");
+    code.push_str("    //! SSE/SSE4.1 width aliases (128-bit SIMD)\n");
+    code.push_str("    //!\n");
+    code.push_str("    //! - `f32xN` = `f32x4` (4 lanes)\n");
+    code.push_str("    //! - `Token` = `Sse41Token`\n\n");
+    code.push_str("    pub use super::x86::w128::{\n");
+    for ty in types.iter().filter(|t| t.width == SimdWidth::W128) {
+        let name = ty.name();
+        code.push_str(&format!("        {name} as {}xN,\n", ty.elem.name()));
+    }
+    code.push_str("    };\n\n");
+    // Also re-export concrete types for when you need them
+    code.push_str("    pub use super::x86::w128::*;\n\n");
+    code.push_str("    /// Token type for this width level\n");
+    code.push_str("    pub type Token = crate::Sse41Token;\n\n");
+    // Lane counts
+    code.push_str("    /// Number of f32 lanes\n");
+    code.push_str("    pub const LANES_F32: usize = 4;\n");
+    code.push_str("    /// Number of f64 lanes\n");
+    code.push_str("    pub const LANES_F64: usize = 2;\n");
+    code.push_str("    /// Number of i32/u32 lanes\n");
+    code.push_str("    pub const LANES_32: usize = 4;\n");
+    code.push_str("    /// Number of i16/u16 lanes\n");
+    code.push_str("    pub const LANES_16: usize = 8;\n");
+    code.push_str("    /// Number of i8/u8 lanes\n");
+    code.push_str("    pub const LANES_8: usize = 16;\n");
+    code.push_str("}\n\n");
+
+    // AVX2 namespace (256-bit)
+    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("pub mod avx2 {\n");
+    code.push_str("    //! AVX2+FMA width aliases (256-bit SIMD)\n");
+    code.push_str("    //!\n");
+    code.push_str("    //! - `f32xN` = `f32x8` (8 lanes)\n");
+    code.push_str("    //! - `Token` = `Avx2FmaToken`\n\n");
+    code.push_str("    pub use super::x86::w256::{\n");
+    for ty in types.iter().filter(|t| t.width == SimdWidth::W256) {
+        let name = ty.name();
+        code.push_str(&format!("        {name} as {}xN,\n", ty.elem.name()));
+    }
+    code.push_str("    };\n\n");
+    code.push_str("    pub use super::x86::w256::*;\n\n");
+    code.push_str("    /// Token type for this width level\n");
+    code.push_str("    pub type Token = crate::Avx2FmaToken;\n\n");
+    code.push_str("    pub const LANES_F32: usize = 8;\n");
+    code.push_str("    pub const LANES_F64: usize = 4;\n");
+    code.push_str("    pub const LANES_32: usize = 8;\n");
+    code.push_str("    pub const LANES_16: usize = 16;\n");
+    code.push_str("    pub const LANES_8: usize = 32;\n");
+    code.push_str("}\n\n");
+
+    // AVX-512 namespace (512-bit)
+    code.push_str("#[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
+    code.push_str("pub mod avx512 {\n");
+    code.push_str("    //! AVX-512 width aliases (512-bit SIMD)\n");
+    code.push_str("    //!\n");
+    code.push_str("    //! - `f32xN` = `f32x16` (16 lanes)\n");
+    code.push_str("    //! - `Token` = `X64V4Token`\n\n");
+    code.push_str("    pub use super::x86::w512::{\n");
+    for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
+        let name = ty.name();
+        code.push_str(&format!("        {name} as {}xN,\n", ty.elem.name()));
+    }
+    code.push_str("    };\n\n");
+    code.push_str("    pub use super::x86::w512::*;\n\n");
+    code.push_str("    /// Token type for this width level\n");
+    code.push_str("    pub type Token = crate::X64V4Token;\n\n");
+    code.push_str("    pub const LANES_F32: usize = 16;\n");
+    code.push_str("    pub const LANES_F64: usize = 8;\n");
+    code.push_str("    pub const LANES_32: usize = 16;\n");
+    code.push_str("    pub const LANES_16: usize = 32;\n");
+    code.push_str("    pub const LANES_8: usize = 64;\n");
+    code.push_str("}\n");
 
     code
 }

@@ -68,7 +68,7 @@ extern crate alloc;
 // Re-export arcane macro (and simd_fn alias) from archmage-macros
 #[cfg(feature = "macros")]
 #[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
-pub use archmage_macros::{arcane, simd_fn};
+pub use archmage_macros::{arcane, multiwidth, simd_fn};
 
 // Optimized feature detection
 #[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]

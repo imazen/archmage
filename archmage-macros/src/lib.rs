@@ -732,3 +732,456 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
     arcane_impl(input_fn, "simd_fn", args)
 }
+
+// ============================================================================
+// Multiwidth macro for width-agnostic SIMD code
+// ============================================================================
+
+use syn::ItemMod;
+
+/// Arguments to the `#[multiwidth]` macro.
+struct MultiwidthArgs {
+    /// Include SSE (128-bit) specialization
+    sse: bool,
+    /// Include AVX2 (256-bit) specialization
+    avx2: bool,
+    /// Include AVX-512 (512-bit) specialization
+    avx512: bool,
+}
+
+impl Default for MultiwidthArgs {
+    fn default() -> Self {
+        Self {
+            sse: true,
+            avx2: true,
+            avx512: true,
+        }
+    }
+}
+
+impl Parse for MultiwidthArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut args = MultiwidthArgs {
+            sse: false,
+            avx2: false,
+            avx512: false,
+        };
+
+        // If no args provided, enable all
+        if input.is_empty() {
+            return Ok(MultiwidthArgs::default());
+        }
+
+        while !input.is_empty() {
+            let ident: Ident = input.parse()?;
+            match ident.to_string().as_str() {
+                "sse" => args.sse = true,
+                "avx2" => args.avx2 = true,
+                "avx512" => args.avx512 = true,
+                other => {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        format!("unknown multiwidth target: `{}`. Expected: sse, avx2, avx512", other),
+                    ))
+                }
+            }
+            // Consume optional comma
+            if input.peek(Token![,]) {
+                let _: Token![,] = input.parse()?;
+            }
+        }
+
+        Ok(args)
+    }
+}
+
+/// Width configuration for specialization.
+struct WidthConfig {
+    /// Module name suffix (e.g., "sse", "avx2", "avx512")
+    name: &'static str,
+    /// The namespace import path
+    namespace: &'static str,
+    /// Token type name
+    token: &'static str,
+    /// Whether this requires a feature flag
+    feature: Option<&'static str>,
+}
+
+const WIDTH_CONFIGS: &[WidthConfig] = &[
+    WidthConfig {
+        name: "sse",
+        namespace: "archmage::simd::sse",
+        token: "archmage::Sse41Token",
+        feature: None,
+    },
+    WidthConfig {
+        name: "avx2",
+        namespace: "archmage::simd::avx2",
+        token: "archmage::Avx2FmaToken",
+        feature: None,
+    },
+    WidthConfig {
+        name: "avx512",
+        namespace: "archmage::simd::avx512",
+        token: "archmage::X64V4Token",
+        feature: Some("avx512"),
+    },
+];
+
+/// Generate width-specialized SIMD code.
+///
+/// This macro takes a module containing width-agnostic SIMD code and generates
+/// specialized versions for each target width (SSE, AVX2, AVX-512).
+///
+/// # Usage
+///
+/// ```ignore
+/// use archmage::multiwidth;
+///
+/// #[multiwidth]
+/// mod kernels {
+///     // Inside this module, these types are available:
+///     // - f32xN, i32xN, etc. (width-appropriate SIMD types)
+///     // - Token (the token type: Sse41Token, Avx2FmaToken, or X64V4Token)
+///     // - LANES_F32, LANES_32, etc. (lane count constants)
+///
+///     use archmage::simd::*;
+///
+///     pub fn normalize(token: Token, data: &mut [f32]) {
+///         for chunk in data.chunks_exact_mut(LANES_F32) {
+///             let v = f32xN::load(token, chunk.try_into().unwrap());
+///             let result = v * f32xN::splat(token, 1.0 / 255.0);
+///             result.store(chunk.try_into().unwrap());
+///         }
+///     }
+/// }
+///
+/// // Generated modules:
+/// // - kernels::sse::normalize(token: Sse41Token, data: &mut [f32])
+/// // - kernels::avx2::normalize(token: Avx2FmaToken, data: &mut [f32])
+/// // - kernels::avx512::normalize(token: X64V4Token, data: &mut [f32])  // if avx512 feature
+/// // - kernels::normalize(data: &mut [f32])  // runtime dispatcher
+/// ```
+///
+/// # Selective Targets
+///
+/// You can specify which targets to generate:
+///
+/// ```ignore
+/// #[multiwidth(avx2, avx512)]  // Only AVX2 and AVX-512, no SSE
+/// mod fast_kernels { ... }
+/// ```
+///
+/// # How It Works
+///
+/// 1. The macro duplicates the module content for each width target
+/// 2. Each copy imports from the appropriate namespace (`archmage::simd::sse`, etc.)
+/// 3. The `use archmage::simd::*` statement is rewritten to the width-specific import
+/// 4. A dispatcher function is generated that picks the best available at runtime
+///
+/// # Requirements
+///
+/// - Functions should use `Token` as their token parameter type
+/// - Use `f32xN`, `i32xN`, etc. for SIMD types (not concrete types like `f32x8`)
+/// - Use `LANES_F32`, `LANES_32`, etc. for lane counts
+#[proc_macro_attribute]
+pub fn multiwidth(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as MultiwidthArgs);
+    let input_mod = parse_macro_input!(item as ItemMod);
+
+    multiwidth_impl(input_mod, args)
+}
+
+fn multiwidth_impl(input_mod: ItemMod, args: MultiwidthArgs) -> TokenStream {
+    let mod_name = &input_mod.ident;
+    let mod_vis = &input_mod.vis;
+    let mod_attrs = &input_mod.attrs;
+
+    // Get module content
+    let content = match &input_mod.content {
+        Some((_, items)) => items,
+        None => {
+            return syn::Error::new_spanned(
+                &input_mod,
+                "multiwidth requires an inline module (mod name { ... }), not a file module",
+            )
+            .to_compile_error()
+            .into();
+        }
+    };
+
+    // Build specialized modules
+    let mut specialized_mods = Vec::new();
+    let mut enabled_configs = Vec::new();
+
+    for config in WIDTH_CONFIGS {
+        let enabled = match config.name {
+            "sse" => args.sse,
+            "avx2" => args.avx2,
+            "avx512" => args.avx512,
+            _ => false,
+        };
+
+        if !enabled {
+            continue;
+        }
+
+        enabled_configs.push(config);
+
+        let width_mod_name = format_ident!("{}", config.name);
+        let namespace: syn::Path = syn::parse_str(config.namespace).unwrap();
+
+        // Transform the content: replace `use archmage::simd::*` with width-specific import
+        let transformed_items: Vec<syn::Item> = content
+            .iter()
+            .map(|item| transform_item_for_width(item.clone(), &namespace))
+            .collect();
+
+        let feature_attr = config.feature.map(|f| {
+            let f_lit = syn::LitStr::new(f, proc_macro2::Span::call_site());
+            quote!(#[cfg(feature = #f_lit)])
+        });
+
+        specialized_mods.push(quote! {
+            #feature_attr
+            pub mod #width_mod_name {
+                #(#transformed_items)*
+            }
+        });
+    }
+
+    // Generate dispatcher functions for each public function in the module
+    let dispatchers = generate_dispatchers(content, &enabled_configs);
+
+    let expanded = quote! {
+        #(#mod_attrs)*
+        #mod_vis mod #mod_name {
+            #(#specialized_mods)*
+
+            #dispatchers
+        }
+    };
+
+    expanded.into()
+}
+
+/// Transform a single item for a specific width namespace.
+fn transform_item_for_width(item: syn::Item, namespace: &syn::Path) -> syn::Item {
+    match item {
+        syn::Item::Use(mut use_item) => {
+            // Check if this is `use archmage::simd::*` or similar
+            if is_simd_wildcard_use(&use_item) {
+                // Replace with width-specific import
+                use_item.tree = syn::UseTree::Path(syn::UsePath {
+                    ident: format_ident!("{}", namespace.segments.first().unwrap().ident),
+                    colon2_token: Default::default(),
+                    tree: Box::new(build_use_tree_from_path(namespace, 1)),
+                });
+            }
+            syn::Item::Use(use_item)
+        }
+        // TODO: Recursively transform nested items if needed
+        other => other,
+    }
+}
+
+/// Check if a use item is `use archmage::simd::*` or `use crate::simd::*`.
+fn is_simd_wildcard_use(use_item: &syn::ItemUse) -> bool {
+    fn check_tree(tree: &syn::UseTree) -> bool {
+        match tree {
+            syn::UseTree::Path(path) => {
+                let ident = path.ident.to_string();
+                if ident == "archmage" || ident == "crate" {
+                    check_tree_for_simd(&path.tree)
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        }
+    }
+
+    fn check_tree_for_simd(tree: &syn::UseTree) -> bool {
+        match tree {
+            syn::UseTree::Path(path) => {
+                if path.ident == "simd" {
+                    matches!(path.tree.as_ref(), syn::UseTree::Glob(_))
+                } else {
+                    check_tree_for_simd(&path.tree)
+                }
+            }
+            _ => false,
+        }
+    }
+
+    check_tree(&use_item.tree)
+}
+
+/// Build a UseTree from a path, starting at a given segment index.
+fn build_use_tree_from_path(path: &syn::Path, start_idx: usize) -> syn::UseTree {
+    let segments: Vec<_> = path.segments.iter().skip(start_idx).collect();
+
+    if segments.is_empty() {
+        syn::UseTree::Glob(syn::UseGlob {
+            star_token: Default::default(),
+        })
+    } else if segments.len() == 1 {
+        syn::UseTree::Path(syn::UsePath {
+            ident: segments[0].ident.clone(),
+            colon2_token: Default::default(),
+            tree: Box::new(syn::UseTree::Glob(syn::UseGlob {
+                star_token: Default::default(),
+            })),
+        })
+    } else {
+        let first = &segments[0];
+        let rest_path = syn::Path {
+            leading_colon: None,
+            segments: path.segments.iter().skip(start_idx + 1).cloned().collect(),
+        };
+        syn::UseTree::Path(syn::UsePath {
+            ident: first.ident.clone(),
+            colon2_token: Default::default(),
+            tree: Box::new(build_use_tree_from_path(&rest_path, 0)),
+        })
+    }
+}
+
+/// Width-specific type names that can't be used in dispatcher signatures.
+const WIDTH_SPECIFIC_TYPES: &[&str] = &[
+    "f32xN", "f64xN",
+    "i8xN", "i16xN", "i32xN", "i64xN",
+    "u8xN", "u16xN", "u32xN", "u64xN",
+    "Token",
+];
+
+/// Check if a type string contains width-specific types.
+fn contains_width_specific_type(ty_str: &str) -> bool {
+    WIDTH_SPECIFIC_TYPES.iter().any(|t| ty_str.contains(t))
+}
+
+/// Check if a function signature uses width-specific types (can't have a dispatcher).
+fn uses_width_specific_types(func: &syn::ItemFn) -> bool {
+    // Check return type
+    if let syn::ReturnType::Type(_, ty) = &func.sig.output {
+        let ty_str = quote!(#ty).to_string();
+        if contains_width_specific_type(&ty_str) {
+            return true;
+        }
+    }
+
+    // Check parameters (excluding Token which we filter out anyway)
+    for arg in &func.sig.inputs {
+        if let syn::FnArg::Typed(pat_type) = arg {
+            let ty = &pat_type.ty;
+            let ty_str = quote!(#ty).to_string();
+            // Skip Token parameters - they're filtered out for dispatchers
+            if ty_str.contains("Token") {
+                continue;
+            }
+            if contains_width_specific_type(&ty_str) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Generate runtime dispatcher functions for public functions.
+///
+/// Note: Dispatchers are only generated for functions that don't use width-specific
+/// types (f32xN, Token, etc.) in their signature. Functions that take/return
+/// width-specific types can only be called via the width-specific submodules.
+fn generate_dispatchers(content: &[syn::Item], configs: &[&WidthConfig]) -> proc_macro2::TokenStream {
+    let mut dispatchers = Vec::new();
+
+    for item in content {
+        if let syn::Item::Fn(func) = item {
+            // Only generate dispatchers for public functions
+            if !matches!(func.vis, syn::Visibility::Public(_)) {
+                continue;
+            }
+
+            // Skip functions that use width-specific types - they can't have dispatchers
+            if uses_width_specific_types(func) {
+                continue;
+            }
+
+            let fn_name = &func.sig.ident;
+            let fn_generics = &func.sig.generics;
+            let fn_output = &func.sig.output;
+            let fn_attrs: Vec<_> = func.attrs.iter()
+                .filter(|a| !a.path().is_ident("arcane") && !a.path().is_ident("simd_fn"))
+                .collect();
+
+            // Filter out the token parameter from the dispatcher signature
+            let non_token_params: Vec<_> = func.sig.inputs.iter()
+                .filter(|arg| {
+                    match arg {
+                        syn::FnArg::Typed(pat_type) => {
+                            // Check if type contains "Token"
+                            let ty = &pat_type.ty;
+                            let ty_str = quote!(#ty).to_string();
+                            !ty_str.contains("Token")
+                        }
+                        _ => true,
+                    }
+                })
+                .collect();
+
+            // Extract just the parameter names for passing to specialized functions
+            let param_names: Vec<_> = non_token_params.iter()
+                .filter_map(|arg| {
+                    match arg {
+                        syn::FnArg::Typed(pat_type) => {
+                            if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
+                                Some(&pat_ident.ident)
+                            } else {
+                                None
+                            }
+                        }
+                        _ => None,
+                    }
+                })
+                .collect();
+
+            // Generate dispatch branches (highest capability first)
+            let mut branches = Vec::new();
+
+            for config in configs.iter().rev() {
+                let mod_name = format_ident!("{}", config.name);
+                let token_path: syn::Path = syn::parse_str(config.token).unwrap();
+
+                let feature_check = config.feature.map(|f| {
+                    let f_lit = syn::LitStr::new(f, proc_macro2::Span::call_site());
+                    quote!(#[cfg(feature = #f_lit)])
+                });
+
+                branches.push(quote! {
+                    #feature_check
+                    if let Some(token) = #token_path::try_new() {
+                        return #mod_name::#fn_name(token, #(#param_names),*);
+                    }
+                });
+            }
+
+            // Generate dispatcher
+            dispatchers.push(quote! {
+                #(#fn_attrs)*
+                /// Runtime dispatcher - automatically selects the best available SIMD implementation.
+                pub fn #fn_name #fn_generics (#(#non_token_params),*) #fn_output {
+                    use archmage::SimdToken;
+
+                    #(#branches)*
+
+                    // Fallback: panic if no SIMD available
+                    // TODO: Allow user-provided scalar fallback
+                    panic!("No SIMD support available for {}", stringify!(#fn_name));
+                }
+            });
+        }
+    }
+
+    quote! { #(#dispatchers)* }
+}
