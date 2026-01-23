@@ -22,7 +22,7 @@ mod structure;
 mod transcendental;
 pub mod types;
 
-pub use types::{all_simd_types, ElementType, SimdType, SimdWidth};
+pub use types::{ElementType, SimdType, SimdWidth, all_simd_types};
 
 use std::collections::BTreeMap;
 
@@ -59,9 +59,13 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
     code.push_str(&structure::generate_macros());
 
     // Module declarations and re-exports grouped by width
-    code.push_str("// ============================================================================\n");
+    code.push_str(
+        "// ============================================================================\n",
+    );
     code.push_str("// Type modules\n");
-    code.push_str("// ============================================================================\n\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
 
     // Group types by width for organized output
     let mut w128_types = Vec::new();
@@ -116,13 +120,14 @@ fn generate_width_file(types: &[SimdType], width: SimdWidth) -> String {
     // Imports
     code.push_str("use core::arch::x86_64::*;\n");
     code.push_str("use core::ops::{\n");
-    code.push_str("    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,\n");
+    code.push_str(
+        "    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,\n",
+    );
     code.push_str("    Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,\n");
     code.push_str("};\n\n");
 
     // Note: SimdEq, SimdNe, etc. traits are defined in parent but not currently used
     // Macros are exported at crate root via #[macro_export]
-
 
     // Generate each type of this width
     let width_types: Vec<_> = types.iter().filter(|t| t.width == width).collect();

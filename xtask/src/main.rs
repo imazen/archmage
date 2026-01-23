@@ -1749,7 +1749,11 @@ fn generate_all() -> Result<()> {
         total_bytes += content.len();
         println!("  Wrote {} ({} bytes)", full_path.display(), content.len());
     }
-    println!("Total SIMD types: {} files, {} bytes", simd_files.len(), total_bytes);
+    println!(
+        "Total SIMD types: {} files, {} bytes",
+        simd_files.len(),
+        total_bytes
+    );
 
     // Generate SIMD type tests
     let simd_tests = simd_types::generate_simd_tests();
