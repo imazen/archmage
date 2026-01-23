@@ -218,7 +218,7 @@ pub fn box_filter_3x3_f32(
                     let idx = row_start + x_offset;
                     let arr: &[f32; 8] = (&input[idx..idx + 8]).try_into().unwrap();
                     let vals = f32x8::load(token, arr);
-                    acc = acc + vals;
+                    acc += vals;
                 }
             }
 

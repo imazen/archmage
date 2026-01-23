@@ -97,7 +97,7 @@ fn sum_of_squares_sse(token: archmage::Sse41Token, data: &[f32]) -> f32 {
     for chunk in chunks {
         let arr: &[f32; 4] = chunk.try_into().unwrap();
         let v = f32x4::load(token, arr);
-        acc = acc + v * v; // Addition and multiplication inline properly!
+        acc += v * v; // Addition and multiplication inline properly!
     }
 
     let mut sum = acc.reduce_add();

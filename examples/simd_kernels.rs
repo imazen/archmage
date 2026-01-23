@@ -10,6 +10,8 @@
 //! Each kernel shows archmage patterns for common image processing operations.
 
 #![cfg(target_arch = "x86_64")]
+#![allow(clippy::excessive_precision)]
+#![allow(clippy::approx_constant)]
 
 use archmage::{Avx2FmaToken, SimdToken, X64V2Token, arcane};
 use core::arch::x86_64::*;
@@ -53,9 +55,9 @@ pub fn dct4x4_vp8(token: X64V2Token, block: &mut [i32; 16]) {
         let d = block[col] - block[col + 12];
 
         block[col] = (a + b + 7) >> 4;
-        block[col + 4] = ((c * K2 + d * K1 + 2048) >> 12 + 7) >> 4;
+        block[col + 4] = (((c * K2 + d * K1 + 2048) >> 12) + 7) >> 4;
         block[col + 8] = (a - b + 7) >> 4;
-        block[col + 12] = ((d * K2 - c * K1 + 2048) >> 12 + 7) >> 4;
+        block[col + 12] = (((d * K2 - c * K1 + 2048) >> 12) + 7) >> 4;
     }
 }
 
@@ -461,9 +463,9 @@ fn dct4x4_scalar(block: &mut [i32; 16]) {
         let d = block[col] - block[col + 12];
 
         block[col] = (a + b + 7) >> 4;
-        block[col + 4] = ((c * K2 + d * K1 + 2048) >> 12 + 7) >> 4;
+        block[col + 4] = (((c * K2 + d * K1 + 2048) >> 12) + 7) >> 4;
         block[col + 8] = (a - b + 7) >> 4;
-        block[col + 12] = ((d * K2 - c * K1 + 2048) >> 12 + 7) >> 4;
+        block[col + 12] = (((d * K2 - c * K1 + 2048) >> 12) + 7) >> 4;
     }
 }
 

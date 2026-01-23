@@ -11,6 +11,8 @@
 //! SIMD provides 2-4x speedup, limited by memory bandwidth.
 
 #![cfg(target_arch = "x86_64")]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::let_and_return)]
 
 use archmage::{Avx2FmaToken, SimdToken, arcane};
 use core::arch::x86_64::*;

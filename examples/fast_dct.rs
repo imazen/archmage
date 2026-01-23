@@ -12,6 +12,9 @@
 //! Performance: ~6-8x faster than scalar (37-49M blocks/sec on modern CPUs)
 
 #![cfg(target_arch = "x86_64")]
+#![allow(clippy::excessive_precision)] // DCT coefficients need reference precision
+#![allow(clippy::too_many_arguments)] // DCT functions take 8 vector arguments
+#![allow(clippy::empty_line_after_outer_attr)]
 
 use archmage::{Avx2FmaToken, SimdToken, arcane};
 use magetypes::simd::f32x8;
@@ -46,22 +49,22 @@ fn dct1d_8(
     v6: f32x8,
     v7: f32x8,
 ) -> [f32x8; 8] {
-    // DCT coefficients
-    let c0 = f32x8::splat(token, 0.353553391);
-    let c10 = f32x8::splat(token, 0.490392640);
-    let c11 = f32x8::splat(token, 0.415734806);
-    let c12 = f32x8::splat(token, 0.277785117);
-    let c13 = f32x8::splat(token, 0.097545161);
-    let c20 = f32x8::splat(token, 0.461939766);
-    let c21 = f32x8::splat(token, 0.191341716);
+    // DCT coefficients (truncated to f32 precision)
+    let c0 = f32x8::splat(token, 0.353_553_4);
+    let c10 = f32x8::splat(token, 0.490_392_6);
+    let c11 = f32x8::splat(token, 0.415_734_8);
+    let c12 = f32x8::splat(token, 0.277_785_1);
+    let c13 = f32x8::splat(token, 0.097_545_16);
+    let c20 = f32x8::splat(token, 0.461_939_8);
+    let c21 = f32x8::splat(token, 0.191_341_7);
 
     // Negative versions for mul_sub patterns
-    let nc10 = f32x8::splat(token, -0.490392640);
-    let nc11 = f32x8::splat(token, -0.415734806);
-    let nc12 = f32x8::splat(token, -0.277785117);
-    let nc13 = f32x8::splat(token, -0.097545161);
-    let nc20 = f32x8::splat(token, -0.461939766);
-    let nc21 = f32x8::splat(token, -0.191341716);
+    let nc10 = f32x8::splat(token, -0.490_392_6);
+    let nc11 = f32x8::splat(token, -0.415_734_8);
+    let nc12 = f32x8::splat(token, -0.277_785_1);
+    let nc13 = f32x8::splat(token, -0.097_545_16);
+    let nc20 = f32x8::splat(token, -0.461_939_8);
+    let nc21 = f32x8::splat(token, -0.191_341_7);
 
     // Row 0: all same coefficient - just sum and scale
     let out0 = (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7) * c0;

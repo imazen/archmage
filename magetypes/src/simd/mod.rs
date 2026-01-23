@@ -11,6 +11,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::approx_constant)]
 #![allow(clippy::missing_transmute_annotations)]
+#![allow(clippy::manual_is_multiple_of)]
 
 
 // ============================================================================
