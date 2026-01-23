@@ -20,7 +20,9 @@ mod ops;
 mod ops_comparison;
 mod structure;
 mod structure_arm;
+mod structure_wasm;
 mod transcendental;
+pub mod transcendental_wasm;
 pub mod types;
 
 pub use types::{ElementType, SimdType, SimdWidth, all_simd_types};
@@ -99,6 +101,13 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
     code.push_str("    pub mod w128;\n");
     code.push_str("}\n\n");
 
+    // WASM module (SIMD128)
+    code.push_str("// WebAssembly types (SIMD128)\n");
+    code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
+    code.push_str("mod wasm {\n");
+    code.push_str("    pub mod w128;\n");
+    code.push_str("}\n\n");
+
     // Re-exports for x86
     code.push_str("// Re-export all types\n");
     code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
@@ -112,6 +121,10 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
     code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
     code.push_str("pub use arm::w128::*;\n\n");
 
+    // Re-exports for WASM
+    code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
+    code.push_str("pub use wasm::w128::*;\n\n");
+
     // Polyfill module (handwritten, not auto-generated)
     code.push_str("// Polyfill module for emulating wider types on narrower hardware\n");
     code.push_str("pub mod polyfill;\n\n");
@@ -121,6 +134,9 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
 
     // Generate NEON namespace
     code.push_str(&generate_neon_namespace());
+
+    // Generate WASM SIMD128 namespace
+    code.push_str(&generate_simd128_namespace());
 
     code
 }
@@ -256,6 +272,39 @@ fn generate_neon_namespace() -> String {
     code
 }
 
+/// Generate WASM SIMD128 width namespace
+fn generate_simd128_namespace() -> String {
+    let mut code = String::new();
+
+    code.push_str("\n#[cfg(target_arch = \"wasm32\")]\n");
+    code.push_str("pub mod simd128 {\n");
+    code.push_str("    //! WASM SIMD128 width aliases (128-bit SIMD)\n");
+    code.push_str("    //!\n");
+    code.push_str("    //! - `f32xN` = `f32x4` (4 lanes)\n");
+    code.push_str("    //! - `Token` = `Simd128Token`\n\n");
+    code.push_str("    pub use super::wasm::w128::{\n");
+    code.push_str("        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,\n");
+    code.push_str("        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,\n");
+    code.push_str("        u32x4 as u32xN, u64x2 as u64xN,\n");
+    code.push_str("    };\n\n");
+    code.push_str("    pub use super::wasm::w128::*;\n\n");
+    code.push_str("    /// Token type for this width level\n");
+    code.push_str("    pub type Token = archmage::Simd128Token;\n\n");
+    code.push_str("    /// Number of f32 lanes\n");
+    code.push_str("    pub const LANES_F32: usize = 4;\n");
+    code.push_str("    /// Number of f64 lanes\n");
+    code.push_str("    pub const LANES_F64: usize = 2;\n");
+    code.push_str("    /// Number of i32/u32 lanes\n");
+    code.push_str("    pub const LANES_32: usize = 4;\n");
+    code.push_str("    /// Number of i16/u16 lanes\n");
+    code.push_str("    pub const LANES_16: usize = 8;\n");
+    code.push_str("    /// Number of i8/u8 lanes\n");
+    code.push_str("    pub const LANES_8: usize = 16;\n");
+    code.push_str("}\n");
+
+    code
+}
+
 /// Generate a file containing types of a specific width
 fn generate_width_file(types: &[SimdType], width: SimdWidth) -> String {
     let mut code = String::new();
@@ -336,6 +385,20 @@ pub mod w128;
     files.insert(
         "arm/w128.rs".to_string(),
         structure_arm::generate_arm_w128(&neon_types),
+    );
+
+    // WASM directory mod.rs
+    let wasm_mod = r#"//! WebAssembly SIMD types (SIMD128).
+
+pub mod w128;
+"#;
+    files.insert("wasm/mod.rs".to_string(), wasm_mod.to_string());
+
+    // Generate WASM SIMD128 types
+    let wasm_types = structure_wasm::all_wasm_types();
+    files.insert(
+        "wasm/w128.rs".to_string(),
+        structure_wasm::generate_wasm_w128(&wasm_types),
     );
 
     files

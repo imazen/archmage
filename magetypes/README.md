@@ -14,7 +14,7 @@ Token-gated SIMD types with natural operators.
 - Natural operators (`+`, `-`, `*`, `/`, `&`, `|`, `^`)
 - Token-gated construction (safe by design)
 - Zero-cost abstractions (compiles to raw SIMD instructions)
-- Cross-platform (x86-64 with AVX2/AVX-512, AArch64 with NEON)
+- Cross-platform (x86-64 with AVX2/AVX-512, AArch64 with NEON, WASM with SIMD128)
 
 ## Quick Start
 
@@ -47,6 +47,11 @@ fn main() {
 
 ### AArch64 (NEON - 128-bit)
 `f32x4`, `f64x2`, `i8x16`, `i16x8`, `i32x4`, `i64x2`, `u8x16`, `u16x8`, `u32x4`, `u64x2`
+
+### WASM (SIMD128 - 128-bit)
+`f32x4`, `f64x2`, `i8x16`, `i16x8`, `i32x4`, `i64x2`, `u8x16`, `u16x8`, `u32x4`, `u64x2`
+
+Build with `RUSTFLAGS="-C target-feature=+simd128"` for WASM targets.
 
 ## Token-Gated Construction
 
@@ -90,7 +95,7 @@ let bytes = v.as_bytes();
 |----------|--------|-------|--------------|
 | x86-64 | **Full** | `Sse41Token`, `Avx2FmaToken`, `Avx512Token` | 128, 256, 512-bit |
 | AArch64 | **Full** | `NeonToken` | 128-bit |
-| WASM | **Not yet** | Use `archmage::Simd128Token` with raw intrinsics | - |
+| WASM | **Full** | `Simd128Token` | 128-bit |
 
 ## Features
 

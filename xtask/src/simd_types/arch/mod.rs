@@ -4,6 +4,7 @@
 //! for generating SIMD code.
 
 pub mod arm;
+pub mod wasm;
 pub mod x86;
 
 use super::types::{ElementType, SimdWidth};

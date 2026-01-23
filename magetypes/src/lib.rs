@@ -9,7 +9,7 @@
 //!
 //! - **x86-64**: SSE4.1 (128-bit), AVX2 (256-bit), AVX-512 (512-bit)
 //! - **AArch64**: NEON (128-bit)
-//! - **WASM**: Not yet supported (use `archmage::Simd128Token` with raw intrinsics)
+//! - **WASM**: SIMD128 (128-bit) - compile with `RUSTFLAGS="-C target-feature=+simd128"`
 //!
 //! ## Example
 //!
@@ -43,17 +43,9 @@ extern crate alloc;
 // Re-export archmage for convenience
 pub use archmage;
 
-// WASM is not yet supported - provide clear error message
-#[cfg(target_arch = "wasm32")]
-compile_error!(
-    "magetypes does not yet support wasm32. \
-    For WASM SIMD, use `archmage::Simd128Token` with raw intrinsics from `core::arch::wasm32`. \
-    WASM SIMD types are planned for a future release."
-);
-
 // Auto-generated SIMD types with natural operators
-#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
-#[cfg_attr(docsrs, doc(cfg(any(target_arch = "x86_64", target_arch = "aarch64"))))]
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))]
+#[cfg_attr(docsrs, doc(cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))))]
 pub mod simd;
 
 // Width dispatch trait for accessing all SIMD sizes from any token
@@ -70,4 +62,7 @@ pub use simd::{u8x16, u8x32, u16x8, u16x16, u32x4, u32x8, u64x2, u64x4};
 pub use simd::{f32x16, f64x8, i8x64, i16x32, i32x16, i64x8, u8x64, u16x32, u32x16, u64x8};
 
 #[cfg(target_arch = "aarch64")]
+pub use simd::{f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2};
+
+#[cfg(target_arch = "wasm32")]
 pub use simd::{f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2};

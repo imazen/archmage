@@ -268,6 +268,12 @@ mod arm {
     pub mod w128;
 }
 
+// WebAssembly types (SIMD128)
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    pub mod w128;
+}
+
 // Re-export all types
 #[cfg(target_arch = "x86_64")]
 pub use x86::w128::*;
@@ -278,6 +284,9 @@ pub use x86::w512::*;
 
 #[cfg(target_arch = "aarch64")]
 pub use arm::w128::*;
+
+#[cfg(target_arch = "wasm32")]
+pub use wasm::w128::*;
 
 // Polyfill module for emulating wider types on narrower hardware
 pub mod polyfill;
@@ -407,6 +416,36 @@ pub mod neon {
 
     /// Token type for this width level
     pub type Token = archmage::NeonToken;
+
+    /// Number of f32 lanes
+    pub const LANES_F32: usize = 4;
+    /// Number of f64 lanes
+    pub const LANES_F64: usize = 2;
+    /// Number of i32/u32 lanes
+    pub const LANES_32: usize = 4;
+    /// Number of i16/u16 lanes
+    pub const LANES_16: usize = 8;
+    /// Number of i8/u8 lanes
+    pub const LANES_8: usize = 16;
+}
+
+#[cfg(target_arch = "wasm32")]
+pub mod simd128 {
+    //! WASM SIMD128 width aliases (128-bit SIMD)
+    //!
+    //! - `f32xN` = `f32x4` (4 lanes)
+    //! - `Token` = `Simd128Token`
+
+    pub use super::wasm::w128::{
+        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,
+        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,
+        u32x4 as u32xN, u64x2 as u64xN,
+    };
+
+    pub use super::wasm::w128::*;
+
+    /// Token type for this width level
+    pub type Token = archmage::Simd128Token;
 
     /// Number of f32 lanes
     pub const LANES_F32: usize = 4;

@@ -133,6 +133,38 @@ jobs:
         run: cross test --all-features --target ${{ matrix.target }}
 
   # ==========================================================================
+  # WASM SIMD128 testing
+  # ==========================================================================
+  test-wasm:
+    name: Test WASM SIMD128
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install wasmtime
+        run: |
+          curl https://wasmtime.dev/install.sh -sSf | bash
+          echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
+
+      - name: Build for WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+        run: cargo build -p magetypes --target wasm32-wasip1
+
+      - name: Build archmage for WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+        run: cargo build -p archmage --target wasm32-wasip1
+
+  # ==========================================================================
   # Generation check - ensure generated code matches committed code
   # ==========================================================================
   generate-check:
