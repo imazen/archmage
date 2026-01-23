@@ -815,21 +815,21 @@ struct WidthConfig {
 const WIDTH_CONFIGS: &[WidthConfig] = &[
     WidthConfig {
         name: "sse",
-        namespace: "archmage::simd::sse",
+        namespace: "magetypes::simd::sse",
         token: "archmage::Sse41Token",
         feature: None,
         target_features: &["sse4.1"],
     },
     WidthConfig {
         name: "avx2",
-        namespace: "archmage::simd::avx2",
+        namespace: "magetypes::simd::avx2",
         token: "archmage::Avx2FmaToken",
         feature: None,
         target_features: &["avx2", "fma"],
     },
     WidthConfig {
         name: "avx512",
-        namespace: "archmage::simd::avx512",
+        namespace: "magetypes::simd::avx512",
         token: "archmage::X64V4Token",
         feature: Some("avx512"),
         target_features: &["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"],
@@ -1073,13 +1073,13 @@ fn transform_fn_with_target_feature(func: syn::ItemFn, config: &WidthConfig) -> 
     syn::parse2(expanded).expect("Failed to parse transformed function")
 }
 
-/// Check if a use item is `use archmage::simd::*` or `use crate::simd::*`.
+/// Check if a use item is `use archmage::simd::*`, `use magetypes::simd::*`, or `use crate::simd::*`.
 fn is_simd_wildcard_use(use_item: &syn::ItemUse) -> bool {
     fn check_tree(tree: &syn::UseTree) -> bool {
         match tree {
             syn::UseTree::Path(path) => {
                 let ident = path.ident.to_string();
-                if ident == "archmage" || ident == "crate" {
+                if ident == "archmage" || ident == "magetypes" || ident == "crate" {
                     check_tree_for_simd(&path.tree)
                 } else {
                     false

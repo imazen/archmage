@@ -11,9 +11,9 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, Avx2FmaToken, SimdToken, X64V2Token};
-use archmage::simd::f32x8;
+use archmage::{Avx2FmaToken, SimdToken, X64V2Token, arcane};
 use core::arch::x86_64::*;
+use magetypes::simd::f32x8;
 use std::time::Instant;
 
 // ============================================================================
@@ -94,10 +94,14 @@ pub fn dct8_butterfly(token: Avx2FmaToken, m: &mut [f32x8; 8]) {
 
     let r0 = u0 + u1;
     let r2 = u0 - u1;
-    let r1 = u2.mul_add(f32x8::splat(token, 0.541196100146197),
-                        u3 * f32x8::splat(token, 1.3065629648763764));
-    let r3 = u2.mul_add(f32x8::splat(token, 0.541196100146197),
-                        u3 * f32x8::splat(token, -1.3065629648763764));
+    let r1 = u2.mul_add(
+        f32x8::splat(token, 0.541196100146197),
+        u3 * f32x8::splat(token, 1.3065629648763764),
+    );
+    let r3 = u2.mul_add(
+        f32x8::splat(token, 0.541196100146197),
+        u3 * f32x8::splat(token, -1.3065629648763764),
+    );
     let r1 = r1.mul_add(sqrt2, r3);
 
     // Stage 3: Scaled second half
@@ -114,10 +118,14 @@ pub fn dct8_butterfly(token: Avx2FmaToken, m: &mut [f32x8; 8]) {
 
     let p0 = v0 + v1;
     let p2 = v0 - v1;
-    let p1 = v2.mul_add(f32x8::splat(token, 0.541196100146197),
-                        v3 * f32x8::splat(token, 1.3065629648763764));
-    let p3 = v2.mul_add(f32x8::splat(token, 0.541196100146197),
-                        v3 * f32x8::splat(token, -1.3065629648763764));
+    let p1 = v2.mul_add(
+        f32x8::splat(token, 0.541196100146197),
+        v3 * f32x8::splat(token, 1.3065629648763764),
+    );
+    let p3 = v2.mul_add(
+        f32x8::splat(token, 0.541196100146197),
+        v3 * f32x8::splat(token, -1.3065629648763764),
+    );
 
     // B<4> cumulative
     let q0 = p0.mul_add(sqrt2, p1);
@@ -144,12 +152,7 @@ pub fn dct8_butterfly(token: Avx2FmaToken, m: &mut [f32x8; 8]) {
 /// Takes 16 consecutive inputs, extracts even/odd pairs for 8 outputs.
 /// Key operation: _mm256_permutevar8x32_ps for variable gather.
 #[arcane]
-pub fn downsample_2x2_row(
-    token: Avx2FmaToken,
-    row0: &[f32],
-    row1: &[f32],
-    output: &mut [f32],
-) {
+pub fn downsample_2x2_row(token: Avx2FmaToken, row0: &[f32], row1: &[f32], output: &mut [f32]) {
     debug_assert!(row0.len() >= output.len() * 2);
     debug_assert!(row1.len() >= output.len() * 2);
 
@@ -200,7 +203,9 @@ pub fn downsample_2x2_row(
 #[arcane]
 pub fn rgb_to_ycbcr_8px(
     token: Avx2FmaToken,
-    r: f32x8, g: f32x8, b: f32x8,
+    r: f32x8,
+    g: f32x8,
+    b: f32x8,
 ) -> (f32x8, f32x8, f32x8) {
     let offset = f32x8::splat(token, 128.0);
 
@@ -265,8 +270,7 @@ pub fn convolve_horizontal_u8(
     for out_idx in 0..k_half.min(output.len()) {
         let mut sum = half;
         for (k_idx, &k) in kernel.iter().enumerate() {
-            let in_idx = (out_idx as isize + k_idx as isize - k_half as isize)
-                .max(0) as usize;
+            let in_idx = (out_idx as isize + k_idx as isize - k_half as isize).max(0) as usize;
             sum += input[in_idx.min(input.len() - 1)] as i32 * k as i32;
         }
         output[out_idx] = (sum >> scale_shift).clamp(0, 255) as u8;
@@ -331,7 +335,10 @@ pub fn linear_to_srgb_8px(token: Avx2FmaToken, linear: f32x8) -> f32x8 {
     let x_0125 = sqrt_sqrt_x.sqrt(); // x^0.125
     let x_042_approx = sqrt_sqrt_x * x_0125; // x^0.375 ≈ x^0.417
 
-    let gamma_result = x_042_approx.mul_add(gamma_scale, offset).max(f32x8::zero(token)).min(one);
+    let gamma_result = x_042_approx
+        .mul_add(gamma_scale, offset)
+        .max(f32x8::zero(token))
+        .min(one);
 
     // Select based on threshold
     let mask = linear.simd_le(threshold);
@@ -503,10 +510,22 @@ fn test_correctness() {
         let cr_arr = cr.to_array();
 
         println!("  RGB→YCbCr conversion:");
-        println!("    Red (255,0,0)   → Y={:.1}, Cb={:.1}, Cr={:.1}", y_arr[0], cb_arr[0], cr_arr[0]);
-        println!("    Green (0,255,0) → Y={:.1}, Cb={:.1}, Cr={:.1}", y_arr[1], cb_arr[1], cr_arr[1]);
-        println!("    Blue (0,0,255)  → Y={:.1}, Cb={:.1}, Cr={:.1}", y_arr[2], cb_arr[2], cr_arr[2]);
-        println!("    Gray (128,128,128) → Y={:.1}, Cb={:.1}, Cr={:.1}\n", y_arr[3], cb_arr[3], cr_arr[3]);
+        println!(
+            "    Red (255,0,0)   → Y={:.1}, Cb={:.1}, Cr={:.1}",
+            y_arr[0], cb_arr[0], cr_arr[0]
+        );
+        println!(
+            "    Green (0,255,0) → Y={:.1}, Cb={:.1}, Cr={:.1}",
+            y_arr[1], cb_arr[1], cr_arr[1]
+        );
+        println!(
+            "    Blue (0,0,255)  → Y={:.1}, Cb={:.1}, Cr={:.1}",
+            y_arr[2], cb_arr[2], cr_arr[2]
+        );
+        println!(
+            "    Gray (128,128,128) → Y={:.1}, Cb={:.1}, Cr={:.1}\n",
+            y_arr[3], cb_arr[3], cr_arr[3]
+        );
 
         // Test blend modes
         let src = f32x8::from_array(token, [0.5, 0.3, 0.8, 1.0, 0.2, 0.6, 0.4, 0.5]);
@@ -527,7 +546,10 @@ fn benchmark() {
     const PIXELS: usize = 1920 * 1080;
     const ITERATIONS: usize = 100;
 
-    println!("=== Benchmarks ({} pixels x {} iterations) ===\n", PIXELS, ITERATIONS);
+    println!(
+        "=== Benchmarks ({} pixels x {} iterations) ===\n",
+        PIXELS, ITERATIONS
+    );
 
     if let Some(token) = Avx2FmaToken::try_new() {
         // sRGB→Linear benchmark
@@ -538,10 +560,14 @@ fn benchmark() {
         for _ in 0..ITERATIONS {
             for chunk_start in (0..PIXELS).step_by(8) {
                 if chunk_start + 8 <= PIXELS {
-                    let arr: &[f32; 8] = (&srgb_data[chunk_start..chunk_start + 8]).try_into().unwrap();
+                    let arr: &[f32; 8] = (&srgb_data[chunk_start..chunk_start + 8])
+                        .try_into()
+                        .unwrap();
                     let srgb = f32x8::load(token, arr);
                     let linear = srgb_to_linear_8px(token, srgb);
-                    let out: &mut [f32; 8] = (&mut linear_data[chunk_start..chunk_start + 8]).try_into().unwrap();
+                    let out: &mut [f32; 8] = (&mut linear_data[chunk_start..chunk_start + 8])
+                        .try_into()
+                        .unwrap();
                     linear.store(out);
                 }
             }
@@ -549,7 +575,11 @@ fn benchmark() {
         }
         let simd_time = start.elapsed();
         let mpix_s = (PIXELS * ITERATIONS) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
-        println!("  sRGB→Linear:     {:>8.2} ms ({:.1} Mpix/s)", simd_time.as_secs_f64() * 1000.0, mpix_s);
+        println!(
+            "  sRGB→Linear:     {:>8.2} ms ({:.1} Mpix/s)",
+            simd_time.as_secs_f64() * 1000.0,
+            mpix_s
+        );
 
         // RGB→YCbCr benchmark
         let r_data: Vec<f32> = (0..PIXELS).map(|i| ((i * 17) % 256) as f32).collect();
@@ -563,43 +593,90 @@ fn benchmark() {
         for _ in 0..ITERATIONS {
             for chunk_start in (0..PIXELS).step_by(8) {
                 if chunk_start + 8 <= PIXELS {
-                    let r = f32x8::load(token, (&r_data[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    let g = f32x8::load(token, (&g_data[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    let b = f32x8::load(token, (&b_data[chunk_start..chunk_start + 8]).try_into().unwrap());
+                    let r = f32x8::load(
+                        token,
+                        (&r_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
+                    );
+                    let g = f32x8::load(
+                        token,
+                        (&g_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
+                    );
+                    let b = f32x8::load(
+                        token,
+                        (&b_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
+                    );
 
                     let (y, cb, cr) = rgb_to_ycbcr_8px(token, r, g, b);
 
-                    y.store((&mut y_data[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    cb.store((&mut cb_data[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    cr.store((&mut cr_data[chunk_start..chunk_start + 8]).try_into().unwrap());
+                    y.store(
+                        (&mut y_data[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
+                    cb.store(
+                        (&mut cb_data[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
+                    cr.store(
+                        (&mut cr_data[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
                 }
             }
             std::hint::black_box(&y_data);
         }
         let simd_time = start.elapsed();
         let mpix_s = (PIXELS * ITERATIONS) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
-        println!("  RGB→YCbCr:       {:>8.2} ms ({:.1} Mpix/s)", simd_time.as_secs_f64() * 1000.0, mpix_s);
+        println!(
+            "  RGB→YCbCr:       {:>8.2} ms ({:.1} Mpix/s)",
+            simd_time.as_secs_f64() * 1000.0,
+            mpix_s
+        );
 
         // Blend modes benchmark
-        let src_data: Vec<f32> = (0..PIXELS).map(|i| ((i * 17) % 256) as f32 / 255.0).collect();
-        let dst_data: Vec<f32> = (0..PIXELS).map(|i| ((i * 31) % 256) as f32 / 255.0).collect();
+        let src_data: Vec<f32> = (0..PIXELS)
+            .map(|i| ((i * 17) % 256) as f32 / 255.0)
+            .collect();
+        let dst_data: Vec<f32> = (0..PIXELS)
+            .map(|i| ((i * 31) % 256) as f32 / 255.0)
+            .collect();
         let mut out_data = vec![0.0f32; PIXELS];
 
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             for chunk_start in (0..PIXELS).step_by(8) {
                 if chunk_start + 8 <= PIXELS {
-                    let src = f32x8::load(token, (&src_data[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    let dst = f32x8::load(token, (&dst_data[chunk_start..chunk_start + 8]).try_into().unwrap());
+                    let src = f32x8::load(
+                        token,
+                        (&src_data[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
+                    let dst = f32x8::load(
+                        token,
+                        (&dst_data[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
                     let result = blend_overlay_2px(token, src, dst);
-                    result.store((&mut out_data[chunk_start..chunk_start + 8]).try_into().unwrap());
+                    result.store(
+                        (&mut out_data[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
                 }
             }
             std::hint::black_box(&out_data);
         }
         let simd_time = start.elapsed();
         let mpix_s = (PIXELS * ITERATIONS) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
-        println!("  Overlay blend:   {:>8.2} ms ({:.1} Mpix/s)", simd_time.as_secs_f64() * 1000.0, mpix_s);
+        println!(
+            "  Overlay blend:   {:>8.2} ms ({:.1} Mpix/s)",
+            simd_time.as_secs_f64() * 1000.0,
+            mpix_s
+        );
     }
 
     println!();

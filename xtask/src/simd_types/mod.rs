@@ -160,7 +160,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     // Also re-export concrete types for when you need them
     code.push_str("    pub use super::x86::w128::*;\n\n");
     code.push_str("    /// Token type for this width level\n");
-    code.push_str("    pub type Token = crate::Sse41Token;\n\n");
+    code.push_str("    pub type Token = archmage::Sse41Token;\n\n");
     // Lane counts
     code.push_str("    /// Number of f32 lanes\n");
     code.push_str("    pub const LANES_F32: usize = 4;\n");
@@ -189,7 +189,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    };\n\n");
     code.push_str("    pub use super::x86::w256::*;\n\n");
     code.push_str("    /// Token type for this width level\n");
-    code.push_str("    pub type Token = crate::Avx2FmaToken;\n\n");
+    code.push_str("    pub type Token = archmage::Avx2FmaToken;\n\n");
     code.push_str("    pub const LANES_F32: usize = 8;\n");
     code.push_str("    pub const LANES_F64: usize = 4;\n");
     code.push_str("    pub const LANES_32: usize = 8;\n");
@@ -212,7 +212,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    };\n\n");
     code.push_str("    pub use super::x86::w512::*;\n\n");
     code.push_str("    /// Token type for this width level\n");
-    code.push_str("    pub type Token = crate::X64V4Token;\n\n");
+    code.push_str("    pub type Token = archmage::X64V4Token;\n\n");
     code.push_str("    pub const LANES_F32: usize = 16;\n");
     code.push_str("    pub const LANES_F64: usize = 8;\n");
     code.push_str("    pub const LANES_32: usize = 16;\n");
@@ -240,7 +240,7 @@ fn generate_neon_namespace() -> String {
     code.push_str("    };\n\n");
     code.push_str("    pub use super::arm::w128::*;\n\n");
     code.push_str("    /// Token type for this width level\n");
-    code.push_str("    pub type Token = crate::NeonToken;\n\n");
+    code.push_str("    pub type Token = archmage::NeonToken;\n\n");
     code.push_str("    /// Number of f32 lanes\n");
     code.push_str("    pub const LANES_F32: usize = 4;\n");
     code.push_str("    /// Number of f64 lanes\n");
@@ -386,7 +386,7 @@ pub fn generate_simd_tests() -> String {
 #![cfg(target_arch = "x86_64")]
 #![allow(clippy::needless_range_loop)]
 
-use archmage::simd::*;
+use magetypes::simd::*;
 use archmage::{SimdToken, Avx2FmaToken};
 
 "#,

@@ -13,8 +13,8 @@
 #![cfg(target_arch = "x86_64")]
 #![allow(clippy::needless_borrows_for_generic_args)]
 
-use archmage::simd::f32x8;
 use archmage::{Avx2FmaToken, SimdToken, arcane};
+use magetypes::simd::f32x8;
 
 /// Calculate ULP difference between two f32 values
 fn ulp_diff(a: f32, b: f32) -> u32 {

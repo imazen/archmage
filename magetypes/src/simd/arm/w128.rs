@@ -4,7 +4,6 @@
 
 use core::arch::aarch64::*;
 
-
 // ============================================================================
 // f32x4 - 4 x f32 (128-bit NEON)
 // ============================================================================
@@ -23,19 +22,19 @@ impl f32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[f32; 4]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[f32; 4]) -> Self {
         Self(unsafe { vld1q_f32(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: f32) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: f32) -> Self {
         Self(unsafe { vdupq_n_f32(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_f32(0.0f32) })
     }
 
@@ -43,7 +42,7 @@ impl f32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [f32; 4]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [f32; 4]) -> Self {
         // SAFETY: [f32; 4] and float32x4_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -172,7 +171,6 @@ impl f32x4 {
             vgetq_lane_f32::<0>(m)
         }
     }
-
 }
 
 impl core::ops::Add for f32x4 {
@@ -276,7 +274,6 @@ impl From<f32x4> for [f32; 4] {
     }
 }
 
-
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit NEON)
 // ============================================================================
@@ -295,19 +292,19 @@ impl f64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[f64; 2]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[f64; 2]) -> Self {
         Self(unsafe { vld1q_f64(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: f64) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: f64) -> Self {
         Self(unsafe { vdupq_n_f64(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_f64(0.0f64) })
     }
 
@@ -315,7 +312,7 @@ impl f64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [f64; 2]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [f64; 2]) -> Self {
         // SAFETY: [f64; 2] and float64x2_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -441,7 +438,6 @@ impl f64x2 {
             vgetq_lane_f64::<0>(m)
         }
     }
-
 }
 
 impl core::ops::Add for f64x2 {
@@ -545,7 +541,6 @@ impl From<f64x2> for [f64; 2] {
     }
 }
 
-
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit NEON)
 // ============================================================================
@@ -564,19 +559,19 @@ impl i8x16 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[i8; 16]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[i8; 16]) -> Self {
         Self(unsafe { vld1q_s8(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: i8) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: i8) -> Self {
         Self(unsafe { vdupq_n_s8(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_s8(0i8) })
     }
 
@@ -584,7 +579,7 @@ impl i8x16 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [i8; 16]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [i8; 16]) -> Self {
         // SAFETY: [i8; 16] and int8x16_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -665,7 +660,6 @@ impl i8x16 {
             vgetq_lane_s8::<0>(sum)
         }
     }
-
 }
 
 impl core::ops::Add for i8x16 {
@@ -739,7 +733,6 @@ impl From<i8x16> for [i8; 16] {
     }
 }
 
-
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit NEON)
 // ============================================================================
@@ -758,19 +751,19 @@ impl u8x16 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[u8; 16]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[u8; 16]) -> Self {
         Self(unsafe { vld1q_u8(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: u8) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: u8) -> Self {
         Self(unsafe { vdupq_n_u8(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_u8(0u8) })
     }
 
@@ -778,7 +771,7 @@ impl u8x16 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [u8; 16]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and uint8x16_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -841,7 +834,6 @@ impl u8x16 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
 }
 
 impl core::ops::Add for u8x16 {
@@ -907,7 +899,6 @@ impl From<u8x16> for [u8; 16] {
     }
 }
 
-
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit NEON)
 // ============================================================================
@@ -926,19 +917,19 @@ impl i16x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[i16; 8]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[i16; 8]) -> Self {
         Self(unsafe { vld1q_s16(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: i16) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: i16) -> Self {
         Self(unsafe { vdupq_n_s16(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_s16(0i16) })
     }
 
@@ -946,7 +937,7 @@ impl i16x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [i16; 8]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [i16; 8]) -> Self {
         // SAFETY: [i16; 8] and int16x8_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1026,7 +1017,6 @@ impl i16x8 {
             vgetq_lane_s16::<0>(sum)
         }
     }
-
 }
 
 impl core::ops::Add for i16x8 {
@@ -1115,7 +1105,6 @@ impl From<i16x8> for [i16; 8] {
     }
 }
 
-
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit NEON)
 // ============================================================================
@@ -1134,19 +1123,19 @@ impl u16x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[u16; 8]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[u16; 8]) -> Self {
         Self(unsafe { vld1q_u16(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: u16) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: u16) -> Self {
         Self(unsafe { vdupq_n_u16(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_u16(0u16) })
     }
 
@@ -1154,7 +1143,7 @@ impl u16x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [u16; 8]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [u16; 8]) -> Self {
         // SAFETY: [u16; 8] and uint16x8_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1217,7 +1206,6 @@ impl u16x8 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
 }
 
 impl core::ops::Add for u16x8 {
@@ -1298,7 +1286,6 @@ impl From<u16x8> for [u16; 8] {
     }
 }
 
-
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit NEON)
 // ============================================================================
@@ -1317,19 +1304,19 @@ impl i32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[i32; 4]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[i32; 4]) -> Self {
         Self(unsafe { vld1q_s32(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: i32) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: i32) -> Self {
         Self(unsafe { vdupq_n_s32(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_s32(0i32) })
     }
 
@@ -1337,7 +1324,7 @@ impl i32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [i32; 4]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [i32; 4]) -> Self {
         // SAFETY: [i32; 4] and int32x4_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1416,7 +1403,6 @@ impl i32x4 {
             vgetq_lane_s32::<0>(sum)
         }
     }
-
 }
 
 impl core::ops::Add for i32x4 {
@@ -1505,7 +1491,6 @@ impl From<i32x4> for [i32; 4] {
     }
 }
 
-
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit NEON)
 // ============================================================================
@@ -1524,19 +1509,19 @@ impl u32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[u32; 4]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[u32; 4]) -> Self {
         Self(unsafe { vld1q_u32(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: u32) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: u32) -> Self {
         Self(unsafe { vdupq_n_u32(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_u32(0u32) })
     }
 
@@ -1544,7 +1529,7 @@ impl u32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [u32; 4]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [u32; 4]) -> Self {
         // SAFETY: [u32; 4] and uint32x4_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1607,7 +1592,6 @@ impl u32x4 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
 }
 
 impl core::ops::Add for u32x4 {
@@ -1688,7 +1672,6 @@ impl From<u32x4> for [u32; 4] {
     }
 }
 
-
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit NEON)
 // ============================================================================
@@ -1707,19 +1690,19 @@ impl i64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[i64; 2]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[i64; 2]) -> Self {
         Self(unsafe { vld1q_s64(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: i64) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: i64) -> Self {
         Self(unsafe { vdupq_n_s64(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_s64(0i64) })
     }
 
@@ -1727,7 +1710,7 @@ impl i64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [i64; 2]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [i64; 2]) -> Self {
         // SAFETY: [i64; 2] and int64x2_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1805,7 +1788,6 @@ impl i64x2 {
             vgetq_lane_s64::<0>(sum)
         }
     }
-
 }
 
 impl core::ops::Add for i64x2 {
@@ -1879,7 +1861,6 @@ impl From<i64x2> for [i64; 2] {
     }
 }
 
-
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit NEON)
 // ============================================================================
@@ -1898,19 +1879,19 @@ impl u64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: crate::NeonToken, data: &[u64; 2]) -> Self {
+    pub fn load(_: archmage::NeonToken, data: &[u64; 2]) -> Self {
         Self(unsafe { vld1q_u64(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: crate::NeonToken, v: u64) -> Self {
+    pub fn splat(_: archmage::NeonToken, v: u64) -> Self {
         Self(unsafe { vdupq_n_u64(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: crate::NeonToken) -> Self {
+    pub fn zero(_: archmage::NeonToken) -> Self {
         Self(unsafe { vdupq_n_u64(0u64) })
     }
 
@@ -1918,7 +1899,7 @@ impl u64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: crate::NeonToken, arr: [u64; 2]) -> Self {
+    pub fn from_array(_: archmage::NeonToken, arr: [u64; 2]) -> Self {
         // SAFETY: [u64; 2] and uint64x2_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1981,7 +1962,6 @@ impl u64x2 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
-
 }
 
 impl core::ops::Add for u64x2 {
@@ -2046,4 +2026,3 @@ impl From<u64x2> for [u64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-

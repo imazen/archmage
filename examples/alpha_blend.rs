@@ -12,9 +12,9 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, Avx2FmaToken, SimdToken};
-use archmage::simd::f32x8;
+use archmage::{Avx2FmaToken, SimdToken, arcane};
 use core::arch::x86_64::*;
+use magetypes::simd::f32x8;
 use std::time::Instant;
 
 // ============================================================================
@@ -435,11 +435,7 @@ fn benchmark() {
     let src: Vec<f32> = (0..PIXELS * 4)
         .map(|i| {
             let val = ((i * 31) % 256) as f32 / 255.0;
-            if i % 4 == 3 {
-                0.5
-            } else {
-                val * 0.5
-            }
+            if i % 4 == 3 { 0.5 } else { val * 0.5 }
         })
         .collect();
     let dst_orig: Vec<f32> = (0..PIXELS * 4)

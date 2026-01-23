@@ -2,8 +2,8 @@
 //!
 //! Generates NEON SIMD types parallel to x86 types.
 
-use super::arch::arm::Arm;
 use super::arch::Arch;
+use super::arch::arm::Arm;
 use super::types::{ElementType, SimdType, SimdWidth};
 use std::fmt::Write;
 
@@ -81,7 +81,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(
         code,
-        "    pub fn load(_: crate::NeonToken, data: &[{}; {}]) -> Self {{",
+        "    pub fn load(_: archmage::NeonToken, data: &[{}; {}]) -> Self {{",
         elem, lanes
     )
     .unwrap();
@@ -98,7 +98,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(
         code,
-        "    pub fn splat(_: crate::NeonToken, v: {}) -> Self {{",
+        "    pub fn splat(_: archmage::NeonToken, v: {}) -> Self {{",
         elem
     )
     .unwrap();
@@ -108,23 +108,37 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     // Zero
     writeln!(code, "    /// Zero vector (token-gated)").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn zero(_: crate::NeonToken) -> Self {{").unwrap();
+    writeln!(code, "    pub fn zero(_: archmage::NeonToken) -> Self {{").unwrap();
     let zero_val = ty.elem.zero_literal();
-    writeln!(code, "        Self(unsafe {{ {}({}) }})", splat_fn, zero_val).unwrap();
+    writeln!(
+        code,
+        "        Self(unsafe {{ {}({}) }})",
+        splat_fn, zero_val
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // From array (zero-cost transmute, no load instruction)
     writeln!(code, "    /// Create from array (token-gated, zero-cost)").unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// This is a zero-cost transmute, not a memory load.").unwrap();
+    writeln!(
+        code,
+        "    /// This is a zero-cost transmute, not a memory load."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(
         code,
-        "    pub fn from_array(_: crate::NeonToken, arr: [{}; {}]) -> Self {{",
+        "    pub fn from_array(_: archmage::NeonToken, arr: [{}; {}]) -> Self {{",
         elem, lanes
     )
     .unwrap();
-    writeln!(code, "        // SAFETY: [{}; {}] and {} have identical size and layout", elem, lanes, inner).unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: [{}; {}] and {} have identical size and layout",
+        elem, lanes, inner
+    )
+    .unwrap();
     writeln!(code, "        Self(unsafe {{ core::mem::transmute(arr) }})").unwrap();
     writeln!(code, "    }}\n").unwrap();
 
@@ -148,7 +162,12 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     // To array
     writeln!(code, "    /// Convert to array").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn to_array(self) -> [{}; {}] {{", elem, lanes).unwrap();
+    writeln!(
+        code,
+        "    pub fn to_array(self) -> [{}; {}] {{",
+        elem, lanes
+    )
+    .unwrap();
     writeln!(
         code,
         "        let mut out = [{}; {}];",
@@ -233,18 +252,32 @@ fn generate_math_ops(ty: &SimdType) -> String {
     writeln!(code, "    /// Element-wise minimum").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn min(self, other: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self(unsafe {{ {}(self.0, other.0) }})", min_fn).unwrap();
+    writeln!(
+        code,
+        "        Self(unsafe {{ {}(self.0, other.0) }})",
+        min_fn
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     writeln!(code, "    /// Element-wise maximum").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn max(self, other: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self(unsafe {{ {}(self.0, other.0) }})", max_fn).unwrap();
+    writeln!(
+        code,
+        "        Self(unsafe {{ {}(self.0, other.0) }})",
+        max_fn
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     writeln!(code, "    /// Clamp values between lo and hi").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn clamp(self, lo: Self, hi: Self) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "    pub fn clamp(self, lo: Self, hi: Self) -> Self {{"
+    )
+    .unwrap();
     writeln!(code, "        self.max(lo).min(hi)").unwrap();
     writeln!(code, "    }}\n").unwrap();
 
@@ -293,7 +326,11 @@ fn generate_math_ops(ty: &SimdType) -> String {
         // So: vfmaq(b, self, a)
         writeln!(code, "    /// Fused multiply-add: self * a + b").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn mul_add(self, a: Self, b: Self) -> Self {{").unwrap();
+        writeln!(
+            code,
+            "    pub fn mul_add(self, a: Self, b: Self) -> Self {{"
+        )
+        .unwrap();
         writeln!(
             code,
             "        Self(unsafe {{ {}(b.0, self.0, a.0) }})",
@@ -551,7 +588,12 @@ fn generate_operator_impls(ty: &SimdType) -> String {
     writeln!(code, "    type Output = {};", elem).unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    fn index(&self, i: usize) -> &Self::Output {{").unwrap();
-    writeln!(code, "        assert!(i < {}, \"index out of bounds\");", lanes).unwrap();
+    writeln!(
+        code,
+        "        assert!(i < {}, \"index out of bounds\");",
+        lanes
+    )
+    .unwrap();
     writeln!(
         code,
         "        unsafe {{ &*(self as *const Self as *const {}).add(i) }}",
@@ -568,7 +610,12 @@ fn generate_operator_impls(ty: &SimdType) -> String {
         "    fn index_mut(&mut self, i: usize) -> &mut Self::Output {{"
     )
     .unwrap();
-    writeln!(code, "        assert!(i < {}, \"index out of bounds\");", lanes).unwrap();
+    writeln!(
+        code,
+        "        assert!(i < {}, \"index out of bounds\");",
+        lanes
+    )
+    .unwrap();
     writeln!(
         code,
         "        unsafe {{ &mut *(self as *mut Self as *mut {}).add(i) }}",
@@ -583,7 +630,12 @@ fn generate_operator_impls(ty: &SimdType) -> String {
     writeln!(code, "impl From<[{}; {}]> for {} {{", elem, lanes, name).unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    fn from(arr: [{}; {}]) -> Self {{", elem, lanes).unwrap();
-    writeln!(code, "        // SAFETY: [{}; {}] and {} have identical size and layout", elem, lanes, inner).unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: [{}; {}] and {} have identical size and layout",
+        elem, lanes, inner
+    )
+    .unwrap();
     writeln!(code, "        Self(unsafe {{ core::mem::transmute(arr) }})").unwrap();
     writeln!(code, "    }}").unwrap();
     writeln!(code, "}}\n").unwrap();
@@ -592,7 +644,12 @@ fn generate_operator_impls(ty: &SimdType) -> String {
     writeln!(code, "impl From<{}> for [{}; {}] {{", name, elem, lanes).unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    fn from(v: {}) -> Self {{", name).unwrap();
-    writeln!(code, "        // SAFETY: {} and [{}; {}] have identical size and layout", inner, elem, lanes).unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: {} and [{}; {}] have identical size and layout",
+        inner, elem, lanes
+    )
+    .unwrap();
     writeln!(code, "        unsafe {{ core::mem::transmute(v.0) }}").unwrap();
     writeln!(code, "    }}").unwrap();
     writeln!(code, "}}\n").unwrap();

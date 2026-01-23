@@ -165,8 +165,8 @@ fn sleef_cbrt_u35_f32(input: &[f32], output: &mut [f32]) {
 // Archmage implementations using #[arcane] macro
 // ============================================================================
 
-use archmage::simd::f32x8 as am_f32x8;
 use archmage::{Avx2FmaToken, SimdToken, arcane};
+use magetypes::simd::f32x8 as am_f32x8;
 
 #[arcane]
 fn exp2_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {

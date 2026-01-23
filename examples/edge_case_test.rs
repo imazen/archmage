@@ -4,8 +4,8 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::simd::f32x8;
 use archmage::{Avx2FmaToken, SimdToken, arcane};
+use magetypes::simd::f32x8;
 
 #[arcane]
 fn test_exp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {

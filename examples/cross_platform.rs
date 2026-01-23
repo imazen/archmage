@@ -65,7 +65,7 @@ use archmage::arcane;
 #[cfg(target_arch = "x86_64")]
 #[arcane]
 fn sum_of_squares_avx2(token: archmage::Avx2FmaToken, data: &[f32]) -> f32 {
-    use archmage::simd::f32x8;
+    use magetypes::simd::f32x8;
 
     let mut acc = f32x8::zero(token);
     let chunks = data.chunks_exact(8);
@@ -88,7 +88,7 @@ fn sum_of_squares_avx2(token: archmage::Avx2FmaToken, data: &[f32]) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[arcane]
 fn sum_of_squares_sse(token: archmage::Sse41Token, data: &[f32]) -> f32 {
-    use archmage::simd::f32x4;
+    use magetypes::simd::f32x4;
 
     let mut acc = f32x4::zero(token);
     let chunks = data.chunks_exact(4);
@@ -158,7 +158,7 @@ pub fn polynomial_eval(data: &mut [f32], a: f32, b: f32, c: f32) {
 #[cfg(target_arch = "x86_64")]
 #[arcane]
 fn polynomial_eval_avx2(token: archmage::Avx2FmaToken, data: &mut [f32], a: f32, b: f32, c: f32) {
-    use archmage::simd::f32x8;
+    use magetypes::simd::f32x8;
 
     let a_v = f32x8::splat(token, a);
     let b_v = f32x8::splat(token, b);
@@ -244,7 +244,11 @@ fn print_platform_info() {
         println!("  SIMD128:   Check browser/runtime support");
     }
 
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32")))]
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )))]
     {
         println!("  Architecture: {} (scalar only)", std::env::consts::ARCH);
     }
@@ -275,7 +279,10 @@ fn main() {
 
     println!("  Expected:  {:.6}", expected);
     println!("  Got:       {:.6}", result);
-    println!("  Error:     {:.2e}", (result - expected).abs() / expected.abs());
+    println!(
+        "  Error:     {:.2e}",
+        (result - expected).abs() / expected.abs()
+    );
 
     // Benchmark
     const ITERS: u32 = 1000;

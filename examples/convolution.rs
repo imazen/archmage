@@ -13,9 +13,9 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, Avx2FmaToken, SimdToken};
-use archmage::simd::f32x8;
+use archmage::{Avx2FmaToken, SimdToken, arcane};
 use core::arch::x86_64::*;
+use magetypes::simd::f32x8;
 use std::time::Instant;
 
 // ============================================================================
@@ -225,7 +225,8 @@ pub fn box_filter_3x3_f32(
             // Apply weight (multiply by 1/9)
             let result = acc * weight_vec;
 
-            let out_arr: &mut [f32; 8] = (&mut output[row_out_start + x_start..row_out_start + x_start + 8])
+            let out_arr: &mut [f32; 8] = (&mut output
+                [row_out_start + x_start..row_out_start + x_start + 8])
                 .try_into()
                 .unwrap();
             result.store(out_arr);
@@ -337,7 +338,10 @@ fn test_correctness() {
 
         println!("  Vertical reduction (f32):");
         println!("    Max SIMD vs scalar difference: {:.6}", max_diff);
-        println!("    Sample output[10]: SIMD={:.2}, scalar={:.2}\n", simd_out[10], scalar_out[10]);
+        println!(
+            "    Sample output[10]: SIMD={:.2}, scalar={:.2}\n",
+            simd_out[10], scalar_out[10]
+        );
 
         // Test vertical reduction u8
         let row0_u8: Vec<u8> = (0..64).map(|i| (i * 4) as u8).collect();
@@ -356,7 +360,10 @@ fn test_correctness() {
         let mut matches = true;
         for i in 0..64 {
             if simd_out_u8[i] != scalar_out_u8[i] {
-                println!("  Mismatch at {}: SIMD={}, scalar={}", i, simd_out_u8[i], scalar_out_u8[i]);
+                println!(
+                    "  Mismatch at {}: SIMD={}, scalar={}",
+                    i, simd_out_u8[i], scalar_out_u8[i]
+                );
                 matches = false;
             }
         }
@@ -364,7 +371,10 @@ fn test_correctness() {
         if matches {
             println!("    All 64 outputs match exactly!");
         }
-        println!("    Sample output[10]: SIMD={}, scalar={}\n", simd_out_u8[10], scalar_out_u8[10]);
+        println!(
+            "    Sample output[10]: SIMD={}, scalar={}\n",
+            simd_out_u8[10], scalar_out_u8[10]
+        );
 
         // Test box filter
         let width = 64;
@@ -433,7 +443,8 @@ fn benchmark() {
         std::hint::black_box(&output_f32);
     }
     let scalar_time = start.elapsed();
-    let scalar_mpix = (WIDTH * ITERATIONS * HEIGHT) as f64 / scalar_time.as_secs_f64() / 1_000_000.0;
+    let scalar_mpix =
+        (WIDTH * ITERATIONS * HEIGHT) as f64 / scalar_time.as_secs_f64() / 1_000_000.0;
     println!(
         "    Scalar:       {:>8.2} ms ({:.1} Mpix/s)",
         scalar_time.as_secs_f64() * 1000.0,
@@ -447,7 +458,8 @@ fn benchmark() {
             std::hint::black_box(&output_f32);
         }
         let simd_time = start.elapsed();
-        let simd_mpix = (WIDTH * ITERATIONS * HEIGHT) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
+        let simd_mpix =
+            (WIDTH * ITERATIONS * HEIGHT) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
         let speedup = scalar_time.as_secs_f64() / simd_time.as_secs_f64();
         println!(
             "    AVX2 f32x8:   {:>8.2} ms ({:.1} Mpix/s, {:.1}x)",
@@ -481,7 +493,8 @@ fn benchmark() {
         std::hint::black_box(&output_u8);
     }
     let scalar_time = start.elapsed();
-    let scalar_mpix = (WIDTH * ITERATIONS * HEIGHT) as f64 / scalar_time.as_secs_f64() / 1_000_000.0;
+    let scalar_mpix =
+        (WIDTH * ITERATIONS * HEIGHT) as f64 / scalar_time.as_secs_f64() / 1_000_000.0;
     println!(
         "    Scalar:       {:>8.2} ms ({:.1} Mpix/s)",
         scalar_time.as_secs_f64() * 1000.0,
@@ -495,7 +508,8 @@ fn benchmark() {
             std::hint::black_box(&output_u8);
         }
         let simd_time = start.elapsed();
-        let simd_mpix = (WIDTH * ITERATIONS * HEIGHT) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
+        let simd_mpix =
+            (WIDTH * ITERATIONS * HEIGHT) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
         let speedup = scalar_time.as_secs_f64() / simd_time.as_secs_f64();
         println!(
             "    AVX2 fixed:   {:>8.2} ms ({:.1} Mpix/s, {:.1}x)",
@@ -521,7 +535,8 @@ fn benchmark() {
         std::hint::black_box(&output_2d);
     }
     let scalar_time = start.elapsed();
-    let scalar_mpix = (WIDTH * HEIGHT * ITERATIONS) as f64 / scalar_time.as_secs_f64() / 1_000_000.0;
+    let scalar_mpix =
+        (WIDTH * HEIGHT * ITERATIONS) as f64 / scalar_time.as_secs_f64() / 1_000_000.0;
     println!(
         "    Scalar:       {:>8.2} ms ({:.1} Mpix/s)",
         scalar_time.as_secs_f64() * 1000.0,
@@ -535,7 +550,8 @@ fn benchmark() {
             std::hint::black_box(&output_2d);
         }
         let simd_time = start.elapsed();
-        let simd_mpix = (WIDTH * HEIGHT * ITERATIONS) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
+        let simd_mpix =
+            (WIDTH * HEIGHT * ITERATIONS) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
         let speedup = scalar_time.as_secs_f64() / simd_time.as_secs_f64();
         println!(
             "    AVX2 f32x8:   {:>8.2} ms ({:.1} Mpix/s, {:.1}x)",

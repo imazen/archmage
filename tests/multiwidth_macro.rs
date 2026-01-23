@@ -11,7 +11,7 @@ use archmage::multiwidth;
 #[multiwidth]
 #[allow(dead_code)] // Some generated functions may not be called in tests
 mod basic_kernels {
-    use archmage::simd::*;
+    use magetypes::simd::*;
 
     // Process a single vector's worth of data
     pub fn sum_vector(_token: Token, a: f32xN, b: f32xN) -> f32xN {
@@ -35,8 +35,8 @@ fn test_sse_module_exists() {
     use archmage::SimdToken;
 
     if let Some(token) = archmage::Sse41Token::try_new() {
-        let a = archmage::simd::sse::f32xN::splat(token, 1.0);
-        let b = archmage::simd::sse::f32xN::splat(token, 2.0);
+        let a = magetypes::simd::sse::f32xN::splat(token, 1.0);
+        let b = magetypes::simd::sse::f32xN::splat(token, 2.0);
         let sum = basic_kernels::sse::sum_vector(token, a, b);
         let result = sum.reduce_add();
         // 4 lanes * 3.0 = 12.0
@@ -54,8 +54,8 @@ fn test_avx2_module_exists() {
     use archmage::SimdToken;
 
     if let Some(token) = archmage::Avx2FmaToken::try_new() {
-        let a = archmage::simd::avx2::f32xN::splat(token, 1.0);
-        let b = archmage::simd::avx2::f32xN::splat(token, 2.0);
+        let a = magetypes::simd::avx2::f32xN::splat(token, 1.0);
+        let b = magetypes::simd::avx2::f32xN::splat(token, 2.0);
         let sum = basic_kernels::avx2::sum_vector(token, a, b);
         let result = sum.reduce_add();
         // 8 lanes * 3.0 = 24.0
@@ -74,8 +74,8 @@ fn test_avx512_module_exists() {
     use archmage::SimdToken;
 
     if let Some(token) = archmage::X64V4Token::try_new() {
-        let a = archmage::simd::avx512::f32xN::splat(token, 1.0);
-        let b = archmage::simd::avx512::f32xN::splat(token, 2.0);
+        let a = magetypes::simd::avx512::f32xN::splat(token, 1.0);
+        let b = magetypes::simd::avx512::f32xN::splat(token, 2.0);
         let sum = basic_kernels::avx512::sum_vector(token, a, b);
         let result = sum.reduce_add();
         // 16 lanes * 3.0 = 48.0
@@ -113,7 +113,7 @@ fn test_make_splat() {
 // Test selective width generation
 #[multiwidth(avx2)]
 mod avx2_only {
-    use archmage::simd::*;
+    use magetypes::simd::*;
 
     pub fn mul_vectors(_token: Token, a: f32xN, b: f32xN) -> f32xN {
         a * b
@@ -126,8 +126,8 @@ fn test_avx2_only_module() {
 
     // avx2 module should exist
     if let Some(token) = archmage::Avx2FmaToken::try_new() {
-        let a = archmage::simd::avx2::f32xN::splat(token, 3.0);
-        let b = archmage::simd::avx2::f32xN::splat(token, 4.0);
+        let a = magetypes::simd::avx2::f32xN::splat(token, 3.0);
+        let b = magetypes::simd::avx2::f32xN::splat(token, 4.0);
         let result = avx2_only::avx2::mul_vectors(token, a, b);
         let sum = result.reduce_add();
         // 8 lanes * 12.0 = 96.0
@@ -141,7 +141,7 @@ fn test_avx2_only_module() {
 // Test multiple widths explicitly
 #[multiwidth(sse, avx2)]
 mod two_widths {
-    use archmage::simd::*;
+    use magetypes::simd::*;
 
     pub fn neg_vector(_token: Token, v: f32xN) -> f32xN {
         -v
@@ -153,7 +153,7 @@ fn test_two_widths_sse() {
     use archmage::SimdToken;
 
     if let Some(token) = archmage::Sse41Token::try_new() {
-        let v = archmage::simd::sse::f32xN::splat(token, 5.0);
+        let v = magetypes::simd::sse::f32xN::splat(token, 5.0);
         let neg = two_widths::sse::neg_vector(token, v);
         let sum = neg.reduce_add();
         // 4 lanes * -5.0 = -20.0
@@ -166,7 +166,7 @@ fn test_two_widths_avx2() {
     use archmage::SimdToken;
 
     if let Some(token) = archmage::Avx2FmaToken::try_new() {
-        let v = archmage::simd::avx2::f32xN::splat(token, 5.0);
+        let v = magetypes::simd::avx2::f32xN::splat(token, 5.0);
         let neg = two_widths::avx2::neg_vector(token, v);
         let sum = neg.reduce_add();
         // 8 lanes * -5.0 = -40.0
@@ -177,7 +177,7 @@ fn test_two_widths_avx2() {
 // Test dispatcher generation for functions that take/return concrete types
 #[multiwidth]
 mod dispatchable_kernels {
-    use archmage::simd::*;
+    use magetypes::simd::*;
 
     /// Sum all elements in a slice using SIMD
     pub fn sum_slice(token: Token, data: &[f32]) -> f32 {

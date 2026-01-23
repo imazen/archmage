@@ -118,18 +118,90 @@ fn dct8x8_scalar(block: &mut [f32; 64]) {
 
 #[multiwidth]
 mod dct {
-    use archmage::simd::*;
+    use magetypes::simd::*;
 
     // DCT coefficients as flat arrays for SIMD loading
     // Row k of DCT matrix
-    const DCT_ROW_0: [f32; 8] = [0.353553391, 0.353553391, 0.353553391, 0.353553391, 0.353553391, 0.353553391, 0.353553391, 0.353553391];
-    const DCT_ROW_1: [f32; 8] = [0.490392640, 0.415734806, 0.277785117, 0.097545161, -0.097545161, -0.277785117, -0.415734806, -0.490392640];
-    const DCT_ROW_2: [f32; 8] = [0.461939766, 0.191341716, -0.191341716, -0.461939766, -0.461939766, -0.191341716, 0.191341716, 0.461939766];
-    const DCT_ROW_3: [f32; 8] = [0.415734806, -0.097545161, -0.490392640, -0.277785117, 0.277785117, 0.490392640, 0.097545161, -0.415734806];
-    const DCT_ROW_4: [f32; 8] = [0.353553391, -0.353553391, -0.353553391, 0.353553391, 0.353553391, -0.353553391, -0.353553391, 0.353553391];
-    const DCT_ROW_5: [f32; 8] = [0.277785117, -0.490392640, 0.097545161, 0.415734806, -0.415734806, -0.097545161, 0.490392640, -0.277785117];
-    const DCT_ROW_6: [f32; 8] = [0.191341716, -0.461939766, 0.461939766, -0.191341716, -0.191341716, 0.461939766, -0.461939766, 0.191341716];
-    const DCT_ROW_7: [f32; 8] = [0.097545161, -0.277785117, 0.415734806, -0.490392640, 0.490392640, -0.415734806, 0.277785117, -0.097545161];
+    const DCT_ROW_0: [f32; 8] = [
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+    ];
+    const DCT_ROW_1: [f32; 8] = [
+        0.490392640,
+        0.415734806,
+        0.277785117,
+        0.097545161,
+        -0.097545161,
+        -0.277785117,
+        -0.415734806,
+        -0.490392640,
+    ];
+    const DCT_ROW_2: [f32; 8] = [
+        0.461939766,
+        0.191341716,
+        -0.191341716,
+        -0.461939766,
+        -0.461939766,
+        -0.191341716,
+        0.191341716,
+        0.461939766,
+    ];
+    const DCT_ROW_3: [f32; 8] = [
+        0.415734806,
+        -0.097545161,
+        -0.490392640,
+        -0.277785117,
+        0.277785117,
+        0.490392640,
+        0.097545161,
+        -0.415734806,
+    ];
+    const DCT_ROW_4: [f32; 8] = [
+        0.353553391,
+        -0.353553391,
+        -0.353553391,
+        0.353553391,
+        0.353553391,
+        -0.353553391,
+        -0.353553391,
+        0.353553391,
+    ];
+    const DCT_ROW_5: [f32; 8] = [
+        0.277785117,
+        -0.490392640,
+        0.097545161,
+        0.415734806,
+        -0.415734806,
+        -0.097545161,
+        0.490392640,
+        -0.277785117,
+    ];
+    const DCT_ROW_6: [f32; 8] = [
+        0.191341716,
+        -0.461939766,
+        0.461939766,
+        -0.191341716,
+        -0.191341716,
+        0.461939766,
+        -0.461939766,
+        0.191341716,
+    ];
+    const DCT_ROW_7: [f32; 8] = [
+        0.097545161,
+        -0.277785117,
+        0.415734806,
+        -0.490392640,
+        0.490392640,
+        -0.415734806,
+        0.277785117,
+        -0.097545161,
+    ];
 
     /// Compute dot product of input with DCT row (must be pub for #[target_feature] to apply)
     pub fn dot8(token: Token, input: &[f32; 8], coeff: &[f32; 8]) -> f32 {
@@ -228,13 +300,19 @@ fn test_dct8_correctness() {
         dct8_scalar(input, &mut expected);
         dct::dct8(input, &mut simd_result);
 
-        let max_error: f32 = expected.iter()
+        let max_error: f32 = expected
+            .iter()
             .zip(simd_result.iter())
             .map(|(a, b)| (a - b).abs())
             .fold(0.0, f32::max);
 
         let status = if max_error < 1e-5 { "PASS" } else { "FAIL" };
-        println!("  Test {}: {} (max error: {:.2e})", i + 1, status, max_error);
+        println!(
+            "  Test {}: {} (max error: {:.2e})",
+            i + 1,
+            status,
+            max_error
+        );
 
         if max_error >= 1e-5 {
             println!("    Input:    {:?}", input);
@@ -259,30 +337,37 @@ fn test_dct8x8_correctness() {
     dct8x8_scalar(&mut scalar_block);
     dct::dct8x8(&mut simd_block);
 
-    let max_error: f32 = scalar_block.iter()
+    let max_error: f32 = scalar_block
+        .iter()
         .zip(simd_block.iter())
         .map(|(a, b)| (a - b).abs())
         .fold(0.0, f32::max);
 
     let status = if max_error < 1e-4 { "PASS" } else { "FAIL" };
-    println!("  Gradient block: {} (max error: {:.2e})", status, max_error);
+    println!(
+        "  Gradient block: {} (max error: {:.2e})",
+        status, max_error
+    );
 
     // Test with random-ish pattern
-    let mut scalar_block: [f32; 64] = core::array::from_fn(|i| {
-        ((i * 17 + 31) % 256) as f32 - 128.0
-    });
+    let mut scalar_block: [f32; 64] =
+        core::array::from_fn(|i| ((i * 17 + 31) % 256) as f32 - 128.0);
     let mut simd_block = scalar_block;
 
     dct8x8_scalar(&mut scalar_block);
     dct::dct8x8(&mut simd_block);
 
-    let max_error: f32 = scalar_block.iter()
+    let max_error: f32 = scalar_block
+        .iter()
         .zip(simd_block.iter())
         .map(|(a, b)| (a - b).abs())
         .fold(0.0, f32::max);
 
     let status = if max_error < 1e-4 { "PASS" } else { "FAIL" };
-    println!("  Random block:   {} (max error: {:.2e})", status, max_error);
+    println!(
+        "  Random block:   {} (max error: {:.2e})",
+        status, max_error
+    );
 
     println!();
 }
@@ -301,7 +386,8 @@ fn test_roundtrip() {
     idct8_scalar(&dct_result, &mut idct_result);
 
     // Check if roundtrip recovers original (orthonormal DCT should be self-inverse)
-    let max_error: f32 = original.iter()
+    let max_error: f32 = original
+        .iter()
         .zip(idct_result.iter())
         .map(|(a, b)| (a - b).abs())
         .fold(0.0, f32::max);
@@ -332,7 +418,10 @@ fn bench_dct8() {
         std::hint::black_box(&output);
     }
     let scalar_time = start.elapsed();
-    println!("  Scalar:    {:>8.2} ms", scalar_time.as_secs_f64() * 1000.0);
+    println!(
+        "  Scalar:    {:>8.2} ms",
+        scalar_time.as_secs_f64() * 1000.0
+    );
 
     // Auto-dispatch
     let start = Instant::now();
@@ -341,9 +430,11 @@ fn bench_dct8() {
         std::hint::black_box(&output);
     }
     let dispatch_time = start.elapsed();
-    println!("  Dispatch:  {:>8.2} ms ({:.1}x faster)",
+    println!(
+        "  Dispatch:  {:>8.2} ms ({:.1}x faster)",
         dispatch_time.as_secs_f64() * 1000.0,
-        scalar_time.as_secs_f64() / dispatch_time.as_secs_f64());
+        scalar_time.as_secs_f64() / dispatch_time.as_secs_f64()
+    );
 
     // Width-specific
     use archmage::SimdToken;
@@ -355,9 +446,11 @@ fn bench_dct8() {
             std::hint::black_box(&output);
         }
         let sse_time = start.elapsed();
-        println!("  SSE (4x):  {:>8.2} ms ({:.1}x faster)",
+        println!(
+            "  SSE (4x):  {:>8.2} ms ({:.1}x faster)",
             sse_time.as_secs_f64() * 1000.0,
-            scalar_time.as_secs_f64() / sse_time.as_secs_f64());
+            scalar_time.as_secs_f64() / sse_time.as_secs_f64()
+        );
     }
 
     if let Some(token) = archmage::Avx2FmaToken::try_new() {
@@ -367,9 +460,11 @@ fn bench_dct8() {
             std::hint::black_box(&output);
         }
         let avx2_time = start.elapsed();
-        println!("  AVX2 (8x): {:>8.2} ms ({:.1}x faster)",
+        println!(
+            "  AVX2 (8x): {:>8.2} ms ({:.1}x faster)",
             avx2_time.as_secs_f64() * 1000.0,
-            scalar_time.as_secs_f64() / avx2_time.as_secs_f64());
+            scalar_time.as_secs_f64() / avx2_time.as_secs_f64()
+        );
     }
 
     #[cfg(feature = "avx512")]
@@ -380,9 +475,11 @@ fn bench_dct8() {
             std::hint::black_box(&output);
         }
         let avx512_time = start.elapsed();
-        println!("  AVX512:    {:>8.2} ms ({:.1}x faster)",
+        println!(
+            "  AVX512:    {:>8.2} ms ({:.1}x faster)",
             avx512_time.as_secs_f64() * 1000.0,
-            scalar_time.as_secs_f64() / avx512_time.as_secs_f64());
+            scalar_time.as_secs_f64() / avx512_time.as_secs_f64()
+        );
     }
 
     println!();
@@ -403,7 +500,10 @@ fn bench_dct8x8() {
         std::hint::black_box(&block);
     }
     let scalar_time = start.elapsed();
-    println!("  Scalar:    {:>8.2} ms", scalar_time.as_secs_f64() * 1000.0);
+    println!(
+        "  Scalar:    {:>8.2} ms",
+        scalar_time.as_secs_f64() * 1000.0
+    );
 
     // Auto-dispatch
     let start = Instant::now();
@@ -413,9 +513,11 @@ fn bench_dct8x8() {
         std::hint::black_box(&block);
     }
     let dispatch_time = start.elapsed();
-    println!("  Dispatch:  {:>8.2} ms ({:.1}x faster)",
+    println!(
+        "  Dispatch:  {:>8.2} ms ({:.1}x faster)",
         dispatch_time.as_secs_f64() * 1000.0,
-        scalar_time.as_secs_f64() / dispatch_time.as_secs_f64());
+        scalar_time.as_secs_f64() / dispatch_time.as_secs_f64()
+    );
 
     // Width-specific
     use archmage::SimdToken;
@@ -428,9 +530,11 @@ fn bench_dct8x8() {
             std::hint::black_box(&block);
         }
         let sse_time = start.elapsed();
-        println!("  SSE (4x):  {:>8.2} ms ({:.1}x faster)",
+        println!(
+            "  SSE (4x):  {:>8.2} ms ({:.1}x faster)",
             sse_time.as_secs_f64() * 1000.0,
-            scalar_time.as_secs_f64() / sse_time.as_secs_f64());
+            scalar_time.as_secs_f64() / sse_time.as_secs_f64()
+        );
     }
 
     if let Some(token) = archmage::Avx2FmaToken::try_new() {
@@ -441,9 +545,11 @@ fn bench_dct8x8() {
             std::hint::black_box(&block);
         }
         let avx2_time = start.elapsed();
-        println!("  AVX2 (8x): {:>8.2} ms ({:.1}x faster)",
+        println!(
+            "  AVX2 (8x): {:>8.2} ms ({:.1}x faster)",
             avx2_time.as_secs_f64() * 1000.0,
-            scalar_time.as_secs_f64() / avx2_time.as_secs_f64());
+            scalar_time.as_secs_f64() / avx2_time.as_secs_f64()
+        );
     }
 
     #[cfg(feature = "avx512")]
@@ -455,9 +561,11 @@ fn bench_dct8x8() {
             std::hint::black_box(&block);
         }
         let avx512_time = start.elapsed();
-        println!("  AVX512:    {:>8.2} ms ({:.1}x faster)",
+        println!(
+            "  AVX512:    {:>8.2} ms ({:.1}x faster)",
             avx512_time.as_secs_f64() * 1000.0,
-            scalar_time.as_secs_f64() / avx512_time.as_secs_f64());
+            scalar_time.as_secs_f64() / avx512_time.as_secs_f64()
+        );
     }
 
     println!();
@@ -466,7 +574,10 @@ fn bench_dct8x8() {
 fn bench_batch_dct8x8() {
     const NUM_BLOCKS: usize = 1024; // Simulate small image (256x256 = 1024 8x8 blocks)
     const ITERATIONS: u32 = 100;
-    println!("=== Batch DCT-8x8 ({} blocks x {} iterations) ===\n", NUM_BLOCKS, ITERATIONS);
+    println!(
+        "=== Batch DCT-8x8 ({} blocks x {} iterations) ===\n",
+        NUM_BLOCKS, ITERATIONS
+    );
 
     let original: Vec<[f32; 64]> = (0..NUM_BLOCKS)
         .map(|b| core::array::from_fn(|i| ((b * 64 + i) % 256) as f32 - 128.0))
@@ -484,8 +595,11 @@ fn bench_batch_dct8x8() {
     }
     let scalar_time = start.elapsed();
     let scalar_blocks_per_sec = (NUM_BLOCKS as f64 * ITERATIONS as f64) / scalar_time.as_secs_f64();
-    println!("  Scalar:    {:>8.2} ms ({:.0} blocks/sec)",
-        scalar_time.as_secs_f64() * 1000.0, scalar_blocks_per_sec);
+    println!(
+        "  Scalar:    {:>8.2} ms ({:.0} blocks/sec)",
+        scalar_time.as_secs_f64() * 1000.0,
+        scalar_blocks_per_sec
+    );
 
     // Auto-dispatch batch
     let start = Instant::now();
@@ -495,11 +609,14 @@ fn bench_batch_dct8x8() {
         std::hint::black_box(&blocks);
     }
     let dispatch_time = start.elapsed();
-    let dispatch_blocks_per_sec = (NUM_BLOCKS as f64 * ITERATIONS as f64) / dispatch_time.as_secs_f64();
-    println!("  Dispatch:  {:>8.2} ms ({:.0} blocks/sec, {:.1}x faster)",
+    let dispatch_blocks_per_sec =
+        (NUM_BLOCKS as f64 * ITERATIONS as f64) / dispatch_time.as_secs_f64();
+    println!(
+        "  Dispatch:  {:>8.2} ms ({:.0} blocks/sec, {:.1}x faster)",
         dispatch_time.as_secs_f64() * 1000.0,
         dispatch_blocks_per_sec,
-        scalar_time.as_secs_f64() / dispatch_time.as_secs_f64());
+        scalar_time.as_secs_f64() / dispatch_time.as_secs_f64()
+    );
 
     // Width-specific batch
     use archmage::SimdToken;
@@ -513,10 +630,12 @@ fn bench_batch_dct8x8() {
         }
         let avx2_time = start.elapsed();
         let avx2_blocks_per_sec = (NUM_BLOCKS as f64 * ITERATIONS as f64) / avx2_time.as_secs_f64();
-        println!("  AVX2 (8x): {:>8.2} ms ({:.0} blocks/sec, {:.1}x faster)",
+        println!(
+            "  AVX2 (8x): {:>8.2} ms ({:.0} blocks/sec, {:.1}x faster)",
             avx2_time.as_secs_f64() * 1000.0,
             avx2_blocks_per_sec,
-            scalar_time.as_secs_f64() / avx2_time.as_secs_f64());
+            scalar_time.as_secs_f64() / avx2_time.as_secs_f64()
+        );
     }
 
     println!();

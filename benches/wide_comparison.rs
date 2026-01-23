@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo bench --bench wide_comparison --features wide
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main, Throughput};
+use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_main};
 
 // ============================================================================
 // f32x8 Comparisons
@@ -10,8 +10,8 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main, Throughpu
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_arithmetic(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::f32x8 as arch_f32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::f32x8 as wide_f32x8;
 
     let Some(token) = Avx2FmaToken::try_new() else {
@@ -60,11 +60,13 @@ fn bench_f32x8_arithmetic(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_math(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::f32x8 as arch_f32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else { return };
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
 
     let mut group = c.benchmark_group("f32x8_math");
     group.throughput(Throughput::Elements(8));
@@ -122,11 +124,13 @@ fn bench_f32x8_math(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_minmax(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::f32x8 as arch_f32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else { return };
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
 
     let mut group = c.benchmark_group("f32x8_minmax");
     group.throughput(Throughput::Elements(8));
@@ -158,11 +162,13 @@ fn bench_f32x8_minmax(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_fma(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::f32x8 as arch_f32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else { return };
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
 
     let mut group = c.benchmark_group("f32x8_fma");
     group.throughput(Throughput::Elements(8));
@@ -190,11 +196,13 @@ fn bench_f32x8_fma(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_reductions(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::f32x8 as arch_f32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else { return };
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
 
     let mut group = c.benchmark_group("f32x8_reductions");
     group.throughput(Throughput::Elements(8));
@@ -224,11 +232,13 @@ fn bench_f32x8_reductions(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_memory(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::f32x8 as arch_f32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else { return };
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
 
     let mut group = c.benchmark_group("f32x8_memory");
     group.throughput(Throughput::Elements(8));
@@ -273,11 +283,13 @@ fn bench_f32x8_memory(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_i32x8_arithmetic(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::i32x8 as arch_i32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::i32x8 as wide_i32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else { return };
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
 
     let mut group = c.benchmark_group("i32x8_arithmetic");
     group.throughput(Throughput::Elements(8));
@@ -309,11 +321,13 @@ fn bench_i32x8_arithmetic(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_i32x8_reductions(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::i32x8 as arch_i32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::i32x8 as wide_i32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else { return };
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
 
     let mut group = c.benchmark_group("i32x8_reductions");
     group.throughput(Throughput::Elements(8));
@@ -338,11 +352,13 @@ fn bench_i32x8_reductions(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_batch_operations(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::f32x8 as arch_f32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else { return };
+    let Some(token) = Avx2FmaToken::try_new() else {
+        return;
+    };
 
     let mut group = c.benchmark_group("batch_ops");
 
@@ -351,8 +367,16 @@ fn bench_batch_operations(c: &mut Criterion) {
     let input: Vec<[f32; 8]> = (0..N)
         .map(|i| {
             let base = (i * 8) as f32;
-            [base, base + 1.0, base + 2.0, base + 3.0,
-             base + 4.0, base + 5.0, base + 6.0, base + 7.0]
+            [
+                base,
+                base + 1.0,
+                base + 2.0,
+                base + 3.0,
+                base + 4.0,
+                base + 5.0,
+                base + 6.0,
+                base + 7.0,
+            ]
         })
         .collect();
 
@@ -428,18 +452,23 @@ mod target_feature_bench {
         let mut sum = zero;
         for arr in input {
             let v: f32x8 = (*arr).into();
-            sum = sum + v;  // This + will inline the vaddps instruction!
+            sum = sum + v; // This + will inline the vaddps instruction!
         }
         sum.reduce_add()
     }
 
     #[inline]
     #[target_feature(enable = "avx2", enable = "fma")]
-    pub unsafe fn batch_fma_inner(input: &[[f32; 8]], scale: f32x8, offset: f32x8, zero: f32x8) -> f32 {
+    pub unsafe fn batch_fma_inner(
+        input: &[[f32; 8]],
+        scale: f32x8,
+        offset: f32x8,
+        zero: f32x8,
+    ) -> f32 {
         let mut acc = zero;
         for arr in input {
             let v: f32x8 = (*arr).into();
-            acc = v.mul_add(scale, offset);  // FMA will inline too
+            acc = v.mul_add(scale, offset); // FMA will inline too
         }
         acc.reduce_add()
     }
@@ -450,8 +479,8 @@ mod target_feature_bench {
 /// from functions that have matching target_feature attributes.
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_target_feature_context(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, SimdToken};
     use archmage::simd::f32x8 as arch_f32x8;
+    use archmage::{Avx2FmaToken, SimdToken};
     use wide::f32x8 as wide_f32x8;
 
     let Some(token) = Avx2FmaToken::try_new() else {
@@ -465,8 +494,16 @@ fn bench_target_feature_context(c: &mut Criterion) {
     let input: Vec<[f32; 8]> = (0..N)
         .map(|i| {
             let base = (i * 8) as f32;
-            [base, base + 1.0, base + 2.0, base + 3.0,
-             base + 4.0, base + 5.0, base + 6.0, base + 7.0]
+            [
+                base,
+                base + 1.0,
+                base + 2.0,
+                base + 3.0,
+                base + 4.0,
+                base + 5.0,
+                base + 6.0,
+                base + 7.0,
+            ]
         })
         .collect();
 
@@ -499,8 +536,8 @@ fn bench_target_feature_context(c: &mut Criterion) {
         let scale = arch_f32x8::splat(token, 0.5);
         let offset = arch_f32x8::splat(token, 1.0);
         let zero = arch_f32x8::zero(token);
-        b.iter(|| {
-            unsafe { target_feature_bench::batch_fma_inner(black_box(&input), scale, offset, zero) }
+        b.iter(|| unsafe {
+            target_feature_bench::batch_fma_inner(black_box(&input), scale, offset, zero)
         })
     });
 

@@ -11,9 +11,9 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, Avx2FmaToken, SimdToken, X64V2Token};
-use archmage::simd::f32x8;
+use archmage::{Avx2FmaToken, SimdToken, X64V2Token, arcane};
 use core::arch::x86_64::*;
+use magetypes::simd::f32x8;
 use std::time::Instant;
 
 // ============================================================================
@@ -38,12 +38,7 @@ mod bt601 {
 /// Each input vector contains 8 values for Y, U, and V channels.
 /// Output: 3 vectors for R, G, B channels.
 #[arcane]
-fn yuv_to_rgb_f32x8(
-    token: Avx2FmaToken,
-    y: f32x8,
-    u: f32x8,
-    v: f32x8,
-) -> (f32x8, f32x8, f32x8) {
+fn yuv_to_rgb_f32x8(token: Avx2FmaToken, y: f32x8, u: f32x8, v: f32x8) -> (f32x8, f32x8, f32x8) {
     let offset = f32x8::splat(token, bt601::OFFSET);
     let zero = f32x8::splat(token, 0.0);
     let max = f32x8::splat(token, 255.0);
@@ -78,12 +73,7 @@ fn yuv_to_rgb_f32x8(
 /// U = -0.169*R - 0.331*G + 0.5*B + 128
 /// V = 0.5*R - 0.419*G - 0.081*B + 128
 #[arcane]
-fn rgb_to_yuv_f32x8(
-    token: Avx2FmaToken,
-    r: f32x8,
-    g: f32x8,
-    b: f32x8,
-) -> (f32x8, f32x8, f32x8) {
+fn rgb_to_yuv_f32x8(token: Avx2FmaToken, r: f32x8, g: f32x8, b: f32x8) -> (f32x8, f32x8, f32x8) {
     let offset = f32x8::splat(token, 128.0);
     let zero = f32x8::splat(token, 0.0);
     let max = f32x8::splat(token, 255.0);
@@ -306,11 +296,8 @@ fn test_correctness() {
         println!("  Float YUV→RGB comparison:");
         let mut max_diff = 0.0f32;
         for i in 0..8 {
-            let (r_s, g_s, b_s) = yuv_to_rgb_scalar(
-                y_vals[i] as u8,
-                u_vals[i] as u8,
-                v_vals[i] as u8,
-            );
+            let (r_s, g_s, b_s) =
+                yuv_to_rgb_scalar(y_vals[i] as u8, u_vals[i] as u8, v_vals[i] as u8);
             let diff_r = (r_arr[i] - r_s as f32).abs();
             let diff_g = (g_arr[i] - g_s as f32).abs();
             let diff_b = (b_arr[i] - b_s as f32).abs();
@@ -337,8 +324,10 @@ fn test_correctness() {
         for i in 0..8 {
             let (r_s, g_s, b_s) = yuv_to_rgb_fixed_scalar(y[i], u[i], v[i]);
             if r_simd[i] != r_s || g_simd[i] != g_s || b_simd[i] != b_s {
-                println!("    Mismatch at {}: SIMD=({},{},{}) scalar=({},{},{})",
-                    i, r_simd[i], g_simd[i], b_simd[i], r_s, g_s, b_s);
+                println!(
+                    "    Mismatch at {}: SIMD=({},{},{}) scalar=({},{},{})",
+                    i, r_simd[i], g_simd[i], b_simd[i], r_s, g_s, b_s
+                );
                 matches = false;
             }
         }
@@ -385,12 +374,19 @@ fn benchmark() {
     const PIXELS: usize = 1920 * 1080; // HD frame
     const ITERATIONS: usize = 100;
 
-    println!("=== Benchmarks ({} pixels x {} iterations) ===\n", PIXELS, ITERATIONS);
+    println!(
+        "=== Benchmarks ({} pixels x {} iterations) ===\n",
+        PIXELS, ITERATIONS
+    );
 
     // Generate test data
     let y_data: Vec<f32> = (0..PIXELS).map(|i| ((i * 7) % 256) as f32).collect();
-    let u_data: Vec<f32> = (0..PIXELS).map(|i| (((i * 11) + 64) % 256) as f32).collect();
-    let v_data: Vec<f32> = (0..PIXELS).map(|i| (((i * 13) + 128) % 256) as f32).collect();
+    let u_data: Vec<f32> = (0..PIXELS)
+        .map(|i| (((i * 11) + 64) % 256) as f32)
+        .collect();
+    let v_data: Vec<f32> = (0..PIXELS)
+        .map(|i| (((i * 13) + 128) % 256) as f32)
+        .collect();
 
     let mut r_out = vec![0.0f32; PIXELS];
     let mut g_out = vec![0.0f32; PIXELS];
@@ -400,11 +396,7 @@ fn benchmark() {
     let start = Instant::now();
     for _ in 0..ITERATIONS {
         for i in 0..PIXELS {
-            let (r, g, b) = yuv_to_rgb_scalar(
-                y_data[i] as u8,
-                u_data[i] as u8,
-                v_data[i] as u8,
-            );
+            let (r, g, b) = yuv_to_rgb_scalar(y_data[i] as u8, u_data[i] as u8, v_data[i] as u8);
             r_out[i] = r as f32;
             g_out[i] = g as f32;
             b_out[i] = b as f32;
@@ -413,8 +405,11 @@ fn benchmark() {
     }
     let scalar_time = start.elapsed();
     let scalar_mpix_sec = (PIXELS * ITERATIONS) as f64 / scalar_time.as_secs_f64() / 1_000_000.0;
-    println!("  Scalar:         {:>8.2} ms ({:.1} Mpix/s)",
-        scalar_time.as_secs_f64() * 1000.0, scalar_mpix_sec);
+    println!(
+        "  Scalar:         {:>8.2} ms ({:.1} Mpix/s)",
+        scalar_time.as_secs_f64() * 1000.0,
+        scalar_mpix_sec
+    );
 
     // SIMD f32x8 version
     if let Some(token) = Avx2FmaToken::try_new() {
@@ -422,15 +417,36 @@ fn benchmark() {
         for _ in 0..ITERATIONS {
             for chunk_start in (0..PIXELS).step_by(8) {
                 if chunk_start + 8 <= PIXELS {
-                    let y = f32x8::load(token, (&y_data[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    let u = f32x8::load(token, (&u_data[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    let v = f32x8::load(token, (&v_data[chunk_start..chunk_start + 8]).try_into().unwrap());
+                    let y = f32x8::load(
+                        token,
+                        (&y_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
+                    );
+                    let u = f32x8::load(
+                        token,
+                        (&u_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
+                    );
+                    let v = f32x8::load(
+                        token,
+                        (&v_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
+                    );
 
                     let (r, g, b) = yuv_to_rgb_f32x8(token, y, u, v);
 
-                    r.store((&mut r_out[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    g.store((&mut g_out[chunk_start..chunk_start + 8]).try_into().unwrap());
-                    b.store((&mut b_out[chunk_start..chunk_start + 8]).try_into().unwrap());
+                    r.store(
+                        (&mut r_out[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
+                    g.store(
+                        (&mut g_out[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
+                    b.store(
+                        (&mut b_out[chunk_start..chunk_start + 8])
+                            .try_into()
+                            .unwrap(),
+                    );
                 }
             }
             std::hint::black_box(&r_out);
@@ -438,8 +454,12 @@ fn benchmark() {
         let simd_time = start.elapsed();
         let simd_mpix_sec = (PIXELS * ITERATIONS) as f64 / simd_time.as_secs_f64() / 1_000_000.0;
         let speedup = scalar_time.as_secs_f64() / simd_time.as_secs_f64();
-        println!("  AVX2 f32x8:     {:>8.2} ms ({:.1} Mpix/s, {:.1}x)",
-            simd_time.as_secs_f64() * 1000.0, simd_mpix_sec, speedup);
+        println!(
+            "  AVX2 f32x8:     {:>8.2} ms ({:.1} Mpix/s, {:.1}x)",
+            simd_time.as_secs_f64() * 1000.0,
+            simd_mpix_sec,
+            speedup
+        );
     }
 
     // Fixed-point SSE2 version
@@ -471,8 +491,12 @@ fn benchmark() {
         let fixed_time = start.elapsed();
         let fixed_mpix_sec = (PIXELS * ITERATIONS) as f64 / fixed_time.as_secs_f64() / 1_000_000.0;
         let speedup = scalar_time.as_secs_f64() / fixed_time.as_secs_f64();
-        println!("  SSE2 fixed-pt:  {:>8.2} ms ({:.1} Mpix/s, {:.1}x)",
-            fixed_time.as_secs_f64() * 1000.0, fixed_mpix_sec, speedup);
+        println!(
+            "  SSE2 fixed-pt:  {:>8.2} ms ({:.1} Mpix/s, {:.1}x)",
+            fixed_time.as_secs_f64() * 1000.0,
+            fixed_mpix_sec,
+            speedup
+        );
     }
 
     println!();

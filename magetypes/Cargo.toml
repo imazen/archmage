@@ -1,0 +1,28 @@
+[package]
+name = "magetypes"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+description = "Token-gated SIMD types with natural operators. Depends on archmage for tokens."
+repository = "https://github.com/imazen/archmage"
+documentation = "https://docs.rs/magetypes"
+keywords = ["simd", "avx", "neon", "performance", "safe"]
+categories = ["development-tools", "hardware-support", "no-std"]
+
+[features]
+default = ["std", "bytemuck"]
+std = ["archmage/std"]
+bytemuck = ["dep:bytemuck", "archmage/bytemuck"]
+# AVX-512 type support
+avx512 = ["archmage/avx512"]
+
+[dependencies]
+# Core tokens and macros
+archmage = { version = "0.2.0", path = "..", default-features = false }
+# Zero-cost type casts (Pod, Zeroable)
+bytemuck = { version = "1.24", optional = true }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

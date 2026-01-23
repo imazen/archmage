@@ -1733,10 +1733,10 @@ fn generate_all() -> Result<()> {
     fs::write(&ref_path, &reference)?;
     println!("Wrote {} ({} bytes)", ref_path.display(), reference.len());
 
-    // Generate SIMD types (wide-like ergonomic types)
-    println!("\n=== Generating SIMD Types ===");
+    // Generate SIMD types (wide-like ergonomic types) into magetypes crate
+    println!("\n=== Generating SIMD Types (magetypes) ===");
 
-    let simd_dir = PathBuf::from("src/simd");
+    let simd_dir = PathBuf::from("magetypes/src/simd");
     fs::create_dir_all(&simd_dir)?;
     fs::create_dir_all(simd_dir.join("x86"))?;
 
@@ -1757,7 +1757,8 @@ fn generate_all() -> Result<()> {
 
     // Generate SIMD type tests
     let simd_tests = simd_types::generate_simd_tests();
-    let simd_test_path = PathBuf::from("tests/generated_simd_types.rs");
+    let simd_test_path = PathBuf::from("magetypes/tests/generated_simd_types.rs");
+    fs::create_dir_all("magetypes/tests")?;
     fs::write(&simd_test_path, &simd_tests)?;
     println!(
         "Wrote {} ({} bytes)",
@@ -1769,7 +1770,7 @@ fn generate_all() -> Result<()> {
     println!("  - Wrappers: src/generated/");
     println!("  - Tests: tests/generated_*.rs");
     println!("  - Reference: docs/INTRINSIC_REFERENCE.md");
-    println!("  - SIMD types: src/simd/");
+    println!("  - SIMD types: magetypes/src/simd/");
 
     Ok(())
 }

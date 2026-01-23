@@ -13,8 +13,8 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, Avx2FmaToken, SimdToken};
-use archmage::simd::f32x8;
+use archmage::{Avx2FmaToken, SimdToken, arcane};
+use magetypes::simd::f32x8;
 use std::time::Instant;
 
 // Note: The vectorized matrix multiplication approach below uses the same
@@ -37,8 +37,14 @@ use std::time::Instant;
 #[arcane]
 fn dct1d_8(
     token: Avx2FmaToken,
-    v0: f32x8, v1: f32x8, v2: f32x8, v3: f32x8,
-    v4: f32x8, v5: f32x8, v6: f32x8, v7: f32x8,
+    v0: f32x8,
+    v1: f32x8,
+    v2: f32x8,
+    v3: f32x8,
+    v4: f32x8,
+    v5: f32x8,
+    v6: f32x8,
+    v7: f32x8,
 ) -> [f32x8; 8] {
     // DCT coefficients
     let c0 = f32x8::splat(token, 0.353553391);
@@ -61,31 +67,97 @@ fn dct1d_8(
     let out0 = (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7) * c0;
 
     // Row 1: Use FMA chain
-    let out1 = v0.mul_add(c10, v1.mul_add(c11, v2.mul_add(c12, v3.mul_add(c13,
-               v4.mul_add(nc13, v5.mul_add(nc12, v6.mul_add(nc11, v7 * nc10)))))));
+    let out1 = v0.mul_add(
+        c10,
+        v1.mul_add(
+            c11,
+            v2.mul_add(
+                c12,
+                v3.mul_add(
+                    c13,
+                    v4.mul_add(nc13, v5.mul_add(nc12, v6.mul_add(nc11, v7 * nc10))),
+                ),
+            ),
+        ),
+    );
 
     // Row 2
-    let out2 = v0.mul_add(c20, v1.mul_add(c21, v2.mul_add(nc21, v3.mul_add(nc20,
-               v4.mul_add(nc20, v5.mul_add(nc21, v6.mul_add(c21, v7 * c20)))))));
+    let out2 = v0.mul_add(
+        c20,
+        v1.mul_add(
+            c21,
+            v2.mul_add(
+                nc21,
+                v3.mul_add(
+                    nc20,
+                    v4.mul_add(nc20, v5.mul_add(nc21, v6.mul_add(c21, v7 * c20))),
+                ),
+            ),
+        ),
+    );
 
     // Row 3
-    let out3 = v0.mul_add(c11, v1.mul_add(nc13, v2.mul_add(nc10, v3.mul_add(nc12,
-               v4.mul_add(c12, v5.mul_add(c10, v6.mul_add(c13, v7 * nc11)))))));
+    let out3 = v0.mul_add(
+        c11,
+        v1.mul_add(
+            nc13,
+            v2.mul_add(
+                nc10,
+                v3.mul_add(
+                    nc12,
+                    v4.mul_add(c12, v5.mul_add(c10, v6.mul_add(c13, v7 * nc11))),
+                ),
+            ),
+        ),
+    );
 
     // Row 4: alternating signs
     let out4 = (v0 - v1 - v2 + v3 + v4 - v5 - v6 + v7) * c0;
 
     // Row 5
-    let out5 = v0.mul_add(c12, v1.mul_add(nc10, v2.mul_add(c13, v3.mul_add(c11,
-               v4.mul_add(nc11, v5.mul_add(nc13, v6.mul_add(c10, v7 * nc12)))))));
+    let out5 = v0.mul_add(
+        c12,
+        v1.mul_add(
+            nc10,
+            v2.mul_add(
+                c13,
+                v3.mul_add(
+                    c11,
+                    v4.mul_add(nc11, v5.mul_add(nc13, v6.mul_add(c10, v7 * nc12))),
+                ),
+            ),
+        ),
+    );
 
     // Row 6
-    let out6 = v0.mul_add(c21, v1.mul_add(nc20, v2.mul_add(c20, v3.mul_add(nc21,
-               v4.mul_add(nc21, v5.mul_add(c20, v6.mul_add(nc20, v7 * c21)))))));
+    let out6 = v0.mul_add(
+        c21,
+        v1.mul_add(
+            nc20,
+            v2.mul_add(
+                c20,
+                v3.mul_add(
+                    nc21,
+                    v4.mul_add(nc21, v5.mul_add(c20, v6.mul_add(nc20, v7 * c21))),
+                ),
+            ),
+        ),
+    );
 
     // Row 7
-    let out7 = v0.mul_add(c13, v1.mul_add(nc12, v2.mul_add(c11, v3.mul_add(nc10,
-               v4.mul_add(c10, v5.mul_add(nc11, v6.mul_add(c12, v7 * nc13)))))));
+    let out7 = v0.mul_add(
+        c13,
+        v1.mul_add(
+            nc12,
+            v2.mul_add(
+                c11,
+                v3.mul_add(
+                    nc10,
+                    v4.mul_add(c10, v5.mul_add(nc11, v6.mul_add(c12, v7 * nc13))),
+                ),
+            ),
+        ),
+    );
 
     [out0, out1, out2, out3, out4, out5, out6, out7]
 }
@@ -138,8 +210,14 @@ fn transpose_8x8_vecs(_token: Avx2FmaToken, rows: &[f32x8; 8]) -> [f32x8; 8] {
     // SAFETY: We're inside #[arcane] which guarantees AVX2 support
     unsafe {
         [
-            f32x8::from_raw(c0), f32x8::from_raw(c1), f32x8::from_raw(c2), f32x8::from_raw(c3),
-            f32x8::from_raw(c4), f32x8::from_raw(c5), f32x8::from_raw(c6), f32x8::from_raw(c7),
+            f32x8::from_raw(c0),
+            f32x8::from_raw(c1),
+            f32x8::from_raw(c2),
+            f32x8::from_raw(c3),
+            f32x8::from_raw(c4),
+            f32x8::from_raw(c5),
+            f32x8::from_raw(c6),
+            f32x8::from_raw(c7),
         ]
     }
 }
@@ -182,9 +260,7 @@ pub fn fast_dct8x8(token: Avx2FmaToken, block: &mut [f32; 64]) {
 
     // DCT on rows
     let dct_rows = dct1d_8(
-        token,
-        rows[0], rows[1], rows[2], rows[3],
-        rows[4], rows[5], rows[6], rows[7],
+        token, rows[0], rows[1], rows[2], rows[3], rows[4], rows[5], rows[6], rows[7],
     );
 
     // Transpose
@@ -192,9 +268,7 @@ pub fn fast_dct8x8(token: Avx2FmaToken, block: &mut [f32; 64]) {
 
     // DCT on columns (now rows after transpose)
     let dct_cols = dct1d_8(
-        token,
-        cols[0], cols[1], cols[2], cols[3],
-        cols[4], cols[5], cols[6], cols[7],
+        token, cols[0], cols[1], cols[2], cols[3], cols[4], cols[5], cols[6], cols[7],
     );
 
     // Transpose back
@@ -217,14 +291,86 @@ pub fn fast_dct8x8_batch(token: Avx2FmaToken, blocks: &mut [[f32; 64]]) {
 // ============================================================================
 
 const DCT_COEFF: [[f32; 8]; 8] = [
-    [0.353553391, 0.353553391, 0.353553391, 0.353553391, 0.353553391, 0.353553391, 0.353553391, 0.353553391],
-    [0.490392640, 0.415734806, 0.277785117, 0.097545161, -0.097545161, -0.277785117, -0.415734806, -0.490392640],
-    [0.461939766, 0.191341716, -0.191341716, -0.461939766, -0.461939766, -0.191341716, 0.191341716, 0.461939766],
-    [0.415734806, -0.097545161, -0.490392640, -0.277785117, 0.277785117, 0.490392640, 0.097545161, -0.415734806],
-    [0.353553391, -0.353553391, -0.353553391, 0.353553391, 0.353553391, -0.353553391, -0.353553391, 0.353553391],
-    [0.277785117, -0.490392640, 0.097545161, 0.415734806, -0.415734806, -0.097545161, 0.490392640, -0.277785117],
-    [0.191341716, -0.461939766, 0.461939766, -0.191341716, -0.191341716, 0.461939766, -0.461939766, 0.191341716],
-    [0.097545161, -0.277785117, 0.415734806, -0.490392640, 0.490392640, -0.415734806, 0.277785117, -0.097545161],
+    [
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+        0.353553391,
+    ],
+    [
+        0.490392640,
+        0.415734806,
+        0.277785117,
+        0.097545161,
+        -0.097545161,
+        -0.277785117,
+        -0.415734806,
+        -0.490392640,
+    ],
+    [
+        0.461939766,
+        0.191341716,
+        -0.191341716,
+        -0.461939766,
+        -0.461939766,
+        -0.191341716,
+        0.191341716,
+        0.461939766,
+    ],
+    [
+        0.415734806,
+        -0.097545161,
+        -0.490392640,
+        -0.277785117,
+        0.277785117,
+        0.490392640,
+        0.097545161,
+        -0.415734806,
+    ],
+    [
+        0.353553391,
+        -0.353553391,
+        -0.353553391,
+        0.353553391,
+        0.353553391,
+        -0.353553391,
+        -0.353553391,
+        0.353553391,
+    ],
+    [
+        0.277785117,
+        -0.490392640,
+        0.097545161,
+        0.415734806,
+        -0.415734806,
+        -0.097545161,
+        0.490392640,
+        -0.277785117,
+    ],
+    [
+        0.191341716,
+        -0.461939766,
+        0.461939766,
+        -0.191341716,
+        -0.191341716,
+        0.461939766,
+        -0.461939766,
+        0.191341716,
+    ],
+    [
+        0.097545161,
+        -0.277785117,
+        0.415734806,
+        -0.490392640,
+        0.490392640,
+        -0.415734806,
+        0.277785117,
+        -0.097545161,
+    ],
 ];
 
 fn dct8_scalar(input: &[f32; 8], output: &mut [f32; 8]) {
@@ -286,7 +432,8 @@ fn test_correctness() {
         dct8x8_scalar(&mut scalar_block);
         fast_dct8x8(token, &mut fast_block);
 
-        let max_error: f32 = scalar_block.iter()
+        let max_error: f32 = scalar_block
+            .iter()
             .zip(fast_block.iter())
             .map(|(a, b)| (a - b).abs())
             .fold(0.0, f32::max);
@@ -306,8 +453,17 @@ fn test_correctness() {
         let mut const_block: [f32; 64] = [100.0; 64];
         fast_dct8x8(token, &mut const_block);
         println!("\n  Constant block (100.0):");
-        println!("    DC: {:.2} (expected ~800 for unnormalized)", const_block[0]);
-        println!("    AC max: {:.2e}", const_block[1..].iter().map(|x| x.abs()).fold(0.0f32, f32::max));
+        println!(
+            "    DC: {:.2} (expected ~800 for unnormalized)",
+            const_block[0]
+        );
+        println!(
+            "    AC max: {:.2e}",
+            const_block[1..]
+                .iter()
+                .map(|x| x.abs())
+                .fold(0.0f32, f32::max)
+        );
     } else {
         println!("  AVX2 not available, skipping tests");
     }
@@ -333,9 +489,11 @@ fn benchmark() {
     }
     let scalar_time = start.elapsed();
     let scalar_blocks_per_sec = ITERATIONS as f64 / scalar_time.as_secs_f64();
-    println!("  Scalar DCT-8x8:     {:>8.2} ms ({:.1}M blocks/sec)",
+    println!(
+        "  Scalar DCT-8x8:     {:>8.2} ms ({:.1}M blocks/sec)",
         scalar_time.as_secs_f64() * 1000.0,
-        scalar_blocks_per_sec / 1_000_000.0);
+        scalar_blocks_per_sec / 1_000_000.0
+    );
 
     // Fast AVX2 implementation
     if let Some(token) = Avx2FmaToken::try_new() {
@@ -347,13 +505,18 @@ fn benchmark() {
         }
         let fast_time = start.elapsed();
         let fast_blocks_per_sec = ITERATIONS as f64 / fast_time.as_secs_f64();
-        println!("  Fast AVX2 DCT-8x8:  {:>8.2} ms ({:.1}M blocks/sec, {:.1}x faster)",
+        println!(
+            "  Fast AVX2 DCT-8x8:  {:>8.2} ms ({:.1}M blocks/sec, {:.1}x faster)",
             fast_time.as_secs_f64() * 1000.0,
             fast_blocks_per_sec / 1_000_000.0,
-            scalar_time.as_secs_f64() / fast_time.as_secs_f64());
+            scalar_time.as_secs_f64() / fast_time.as_secs_f64()
+        );
 
         // Batch processing
-        println!("\n  Batch processing ({} blocks x {} iterations):\n", BATCH_SIZE, BATCH_ITERS);
+        println!(
+            "\n  Batch processing ({} blocks x {} iterations):\n",
+            BATCH_SIZE, BATCH_ITERS
+        );
 
         let original_batch: Vec<[f32; 64]> = (0..BATCH_SIZE)
             .map(|b| core::array::from_fn(|i| ((b * 64 + i) % 256) as f32 - 128.0))
@@ -370,10 +533,13 @@ fn benchmark() {
             std::hint::black_box(&batch);
         }
         let scalar_batch_time = start.elapsed();
-        let scalar_batch_rate = (BATCH_SIZE as f64 * BATCH_ITERS as f64) / scalar_batch_time.as_secs_f64();
-        println!("    Scalar:   {:>8.2} ms ({:.1}M blocks/sec)",
+        let scalar_batch_rate =
+            (BATCH_SIZE as f64 * BATCH_ITERS as f64) / scalar_batch_time.as_secs_f64();
+        println!(
+            "    Scalar:   {:>8.2} ms ({:.1}M blocks/sec)",
             scalar_batch_time.as_secs_f64() * 1000.0,
-            scalar_batch_rate / 1_000_000.0);
+            scalar_batch_rate / 1_000_000.0
+        );
 
         // Fast batch
         let start = Instant::now();
@@ -383,11 +549,14 @@ fn benchmark() {
             std::hint::black_box(&batch);
         }
         let fast_batch_time = start.elapsed();
-        let fast_batch_rate = (BATCH_SIZE as f64 * BATCH_ITERS as f64) / fast_batch_time.as_secs_f64();
-        println!("    Fast AVX2:{:>8.2} ms ({:.1}M blocks/sec, {:.1}x faster)",
+        let fast_batch_rate =
+            (BATCH_SIZE as f64 * BATCH_ITERS as f64) / fast_batch_time.as_secs_f64();
+        println!(
+            "    Fast AVX2:{:>8.2} ms ({:.1}M blocks/sec, {:.1}x faster)",
             fast_batch_time.as_secs_f64() * 1000.0,
             fast_batch_rate / 1_000_000.0,
-            scalar_batch_time.as_secs_f64() / fast_batch_time.as_secs_f64());
+            scalar_batch_time.as_secs_f64() / fast_batch_time.as_secs_f64()
+        );
     } else {
         println!("  AVX2 not available");
     }

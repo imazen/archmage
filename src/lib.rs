@@ -91,11 +91,8 @@ pub mod composite;
 #[cfg_attr(docsrs, doc(cfg(feature = "__experiments")))]
 pub mod experiments;
 
-// Auto-generated SIMD types with natural operators (wide-like ergonomics)
-// Token-gated construction ensures safety - no way to create without proving CPU support
-#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
-#[cfg_attr(docsrs, doc(cfg(any(target_arch = "x86_64", target_arch = "aarch64"))))]
-pub mod simd;
+// SIMD types moved to magetypes crate
+// Use `magetypes::simd` for f32x8, i32x4, etc.
 
 // ============================================================================
 // Re-exports at crate root for convenience

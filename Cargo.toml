@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "archmage-macros", "xtask"]
+members = [".", "archmage-macros", "magetypes", "xtask"]
 
 [package]
 name = "archmage"
@@ -51,6 +51,8 @@ optional = true
 criterion = { version = "0.5", features = ["html_reports"] }
 trybuild = "1.0"
 safe_unaligned_simd = { version = "0.2.3", features = ["avx512"] }
+# SIMD types for tests and examples
+magetypes = { version = "0.1.0", path = "magetypes", features = ["avx512"] }
 
 [[example]]
 name = "sleef_comparison"

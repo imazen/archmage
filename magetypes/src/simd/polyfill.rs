@@ -22,8 +22,8 @@ pub mod sse {
     //!
     //! These types emulate AVX2-width vectors using pairs of SSE vectors.
 
-    use crate::Sse41Token;
     use crate::simd::x86::w128::{f32x4, f64x2, i32x4};
+    use archmage::Sse41Token;
     use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 8-wide f32 vector using two SSE f32x4 vectors.
@@ -491,7 +491,7 @@ pub mod neon {
     //! Allows writing code targeting 256-bit widths on ARM hardware.
 
     use crate::simd::arm::w128::{f32x4, f64x2, i32x4};
-    use crate::NeonToken;
+    use archmage::NeonToken;
     use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 8-wide f32 vector using two NEON f32x4 vectors.

@@ -11,8 +11,8 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::simd::polyfill::sse as poly;
 use archmage::{SimdToken, Sse41Token, arcane};
+use magetypes::simd::polyfill::sse as poly;
 use std::time::Instant;
 
 const N: usize = 64 * 1024;
@@ -41,7 +41,7 @@ fn sum_polyfill(token: Sse41Token, data: &[f32]) -> f32 {
 /// Sum using native SSE f32x4
 #[arcane]
 fn sum_native_sse(token: archmage::Sse41Token, data: &[f32]) -> f32 {
-    use archmage::simd::f32x4;
+    use magetypes::simd::f32x4;
 
     let mut acc = f32x4::zero(token);
     let chunks = data.chunks_exact(4);
@@ -63,7 +63,7 @@ fn sum_native_sse(token: archmage::Sse41Token, data: &[f32]) -> f32 {
 /// Sum using native AVX2 f32x8
 #[arcane]
 fn sum_native_avx2(token: archmage::Avx2FmaToken, data: &[f32]) -> f32 {
-    use archmage::simd::f32x8;
+    use magetypes::simd::f32x8;
 
     let mut acc = f32x8::zero(token);
     let chunks = data.chunks_exact(8);

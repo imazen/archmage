@@ -5,9 +5,9 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::simd::polyfill::sse as poly;
-use archmage::simd::f32x8;
 use archmage::{Avx2FmaToken, SimdToken, Sse41Token};
+use magetypes::simd::f32x8;
+use magetypes::simd::polyfill::sse as poly;
 
 // ============================================================================
 // Helper: Compare polyfill f32x8 to native f32x8
@@ -82,7 +82,8 @@ fn verify_sub() {
     let data_b = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
     let native_result = (f32x8::load(avx, &data_a) - f32x8::load(avx, &data_b)).to_array();
-    let poly_result = (poly::f32x8::load(sse, &data_a) - poly::f32x8::load(sse, &data_b)).to_array();
+    let poly_result =
+        (poly::f32x8::load(sse, &data_a) - poly::f32x8::load(sse, &data_b)).to_array();
 
     assert!(
         arrays_equal(&native_result, &poly_result),
@@ -104,7 +105,8 @@ fn verify_mul() {
     let data_b = [2.0f32, 2.0, 2.0, 2.0, 0.5, 0.5, 0.5, 0.5];
 
     let native_result = (f32x8::load(avx, &data_a) * f32x8::load(avx, &data_b)).to_array();
-    let poly_result = (poly::f32x8::load(sse, &data_a) * poly::f32x8::load(sse, &data_b)).to_array();
+    let poly_result =
+        (poly::f32x8::load(sse, &data_a) * poly::f32x8::load(sse, &data_b)).to_array();
 
     assert!(
         arrays_equal(&native_result, &poly_result),
@@ -126,7 +128,8 @@ fn verify_div() {
     let data_b = [2.0f32, 4.0, 5.0, 8.0, 10.0, 12.0, 14.0, 16.0];
 
     let native_result = (f32x8::load(avx, &data_a) / f32x8::load(avx, &data_b)).to_array();
-    let poly_result = (poly::f32x8::load(sse, &data_a) / poly::f32x8::load(sse, &data_b)).to_array();
+    let poly_result =
+        (poly::f32x8::load(sse, &data_a) / poly::f32x8::load(sse, &data_b)).to_array();
 
     assert!(
         arrays_equal(&native_result, &poly_result),

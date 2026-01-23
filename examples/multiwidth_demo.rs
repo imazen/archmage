@@ -26,7 +26,7 @@ const BENCH_ITERATIONS: u32 = 1000;
 
 #[multiwidth]
 mod kernels {
-    use archmage::simd::*;
+    use magetypes::simd::*;
 
     /// Sum all elements in a slice using SIMD accumulation.
     pub fn sum(token: Token, data: &[f32]) -> f32 {

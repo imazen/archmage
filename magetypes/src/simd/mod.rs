@@ -12,7 +12,6 @@
 #![allow(clippy::approx_constant)]
 #![allow(clippy::missing_transmute_annotations)]
 
-
 // ============================================================================
 // Comparison Traits (return masks, not bool)
 // ============================================================================
@@ -52,7 +51,6 @@ pub trait SimdGe<Rhs = Self> {
     type Output;
     fn simd_ge(self, rhs: Rhs) -> Self::Output;
 }
-
 
 // ============================================================================
 // Implementation Macros
@@ -297,22 +295,14 @@ pub mod sse {
     //! - `Token` = `Sse41Token`
 
     pub use super::x86::w128::{
-        f32x4 as f32xN,
-        f64x2 as f64xN,
-        i8x16 as i8xN,
-        u8x16 as u8xN,
-        i16x8 as i16xN,
-        u16x8 as u16xN,
-        i32x4 as i32xN,
-        u32x4 as u32xN,
-        i64x2 as i64xN,
-        u64x2 as u64xN,
+        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
+        i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
     pub use super::x86::w128::*;
 
     /// Token type for this width level
-    pub type Token = crate::Sse41Token;
+    pub type Token = archmage::Sse41Token;
 
     /// Number of f32 lanes
     pub const LANES_F32: usize = 4;
@@ -334,22 +324,14 @@ pub mod avx2 {
     //! - `Token` = `Avx2FmaToken`
 
     pub use super::x86::w256::{
-        f32x8 as f32xN,
-        f64x4 as f64xN,
-        i8x32 as i8xN,
-        u8x32 as u8xN,
-        i16x16 as i16xN,
-        u16x16 as u16xN,
-        i32x8 as i32xN,
-        u32x8 as u32xN,
-        i64x4 as i64xN,
-        u64x4 as u64xN,
+        f32x8 as f32xN, f64x4 as f64xN, i8x32 as i8xN, i16x16 as i16xN, i32x8 as i32xN,
+        i64x4 as i64xN, u8x32 as u8xN, u16x16 as u16xN, u32x8 as u32xN, u64x4 as u64xN,
     };
 
     pub use super::x86::w256::*;
 
     /// Token type for this width level
-    pub type Token = crate::Avx2FmaToken;
+    pub type Token = archmage::Avx2FmaToken;
 
     pub const LANES_F32: usize = 8;
     pub const LANES_F64: usize = 4;
@@ -366,22 +348,14 @@ pub mod avx512 {
     //! - `Token` = `X64V4Token`
 
     pub use super::x86::w512::{
-        f32x16 as f32xN,
-        f64x8 as f64xN,
-        i8x64 as i8xN,
-        u8x64 as u8xN,
-        i16x32 as i16xN,
-        u16x32 as u16xN,
-        i32x16 as i32xN,
-        u32x16 as u32xN,
-        i64x8 as i64xN,
-        u64x8 as u64xN,
+        f32x16 as f32xN, f64x8 as f64xN, i8x64 as i8xN, i16x32 as i16xN, i32x16 as i32xN,
+        i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
     };
 
     pub use super::x86::w512::*;
 
     /// Token type for this width level
-    pub type Token = crate::X64V4Token;
+    pub type Token = archmage::X64V4Token;
 
     pub const LANES_F32: usize = 16;
     pub const LANES_F64: usize = 8;
@@ -398,15 +372,14 @@ pub mod neon {
     //! - `Token` = `NeonToken`
 
     pub use super::arm::w128::{
-        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,
-        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,
-        u32x4 as u32xN, u64x2 as u64xN,
+        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
+        i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
     pub use super::arm::w128::*;
 
     /// Token type for this width level
-    pub type Token = crate::NeonToken;
+    pub type Token = archmage::NeonToken;
 
     /// Number of f32 lanes
     pub const LANES_F32: usize = 4;
