@@ -115,3 +115,31 @@ validate: ci test-all-cpus
 # Full validation including cross-compilation
 validate-all: ci test-cross clippy-all
     @echo "Full cross-platform validation complete!"
+
+# ============================================================================
+# Benchmarking (requires -C target-cpu=native for accurate results)
+# ============================================================================
+
+# Run all benchmarks with native CPU optimizations
+bench:
+    RUSTFLAGS="-C target-cpu=native" cargo bench --features wide
+
+# Run wide comparison benchmark (quick mode)
+bench-wide:
+    RUSTFLAGS="-C target-cpu=native" cargo bench --bench wide_comparison --features wide -- --quick
+
+# Run wide comparison benchmark (full)
+bench-wide-full:
+    RUSTFLAGS="-C target-cpu=native" cargo bench --bench wide_comparison --features wide
+
+# Run transcendental benchmarks
+bench-transcendental:
+    RUSTFLAGS="-C target-cpu=native" cargo bench --bench transcendental_accuracy
+
+# Run edge case benchmarks
+bench-edge-cases:
+    RUSTFLAGS="-C target-cpu=native" cargo bench --bench edge_case_perf
+
+# IMPORTANT: Without -C target-cpu=native, intrinsics won't inline properly
+# and benchmarks will show archmage being 4-5x slower than wide.
+# With native CPU targeting, archmage is 1.2-1.4x faster than wide.
