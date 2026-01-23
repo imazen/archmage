@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 description = "Token-gated SIMD types with natural operators. Depends on archmage for tokens."
 repository = "https://github.com/imazen/archmage"
 documentation = "https://docs.rs/magetypes"
-keywords = ["simd", "avx", "neon", "performance", "safe"]
+keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
@@ -28,3 +28,5 @@ bytemuck = { version = "1.24", optional = true }
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+# Build docs for multiple targets to show all platform-specific types
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]

@@ -53,6 +53,18 @@ fn main() {
 
 Build with `RUSTFLAGS="-C target-feature=+simd128"` for WASM targets.
 
+```rust
+// WASM example - no runtime detection needed
+use archmage::{Simd128Token, SimdToken};
+use magetypes::f32x4;
+
+// When compiled with +simd128, token is always available
+let token = Simd128Token::summon().unwrap();
+let a = f32x4::splat(token, 1.0);
+let b = f32x4::splat(token, 2.0);
+let c = a + b;
+```
+
 ## Token-Gated Construction
 
 All constructors require a token proving CPU support:

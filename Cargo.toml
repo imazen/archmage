@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive."
 repository = "https://github.com/imazen/archmage"
 documentation = "https://docs.rs/archmage"
-keywords = ["simd", "avx", "neon", "performance", "safe"]
+keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
@@ -47,7 +47,8 @@ safe_unaligned_simd = { version = "0.2.3", optional = true, features = ["avx512"
 version = "0.3"
 optional = true
 
-[dev-dependencies]
+# Dev dependencies that don't support WASM
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 trybuild = "1.0"
 safe_unaligned_simd = { version = "0.2.3", features = ["avx512"] }
@@ -70,3 +71,5 @@ required-features = ["wide"]
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+# Build docs for multiple targets to show all platform-specific tokens
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]
