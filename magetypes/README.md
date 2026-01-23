@@ -84,6 +84,14 @@ let v = f32x8::zero(token);
 let bytes = v.as_bytes();
 ```
 
+## Platform Support
+
+| Platform | Status | Token | Vector Sizes |
+|----------|--------|-------|--------------|
+| x86-64 | **Full** | `Sse41Token`, `Avx2FmaToken`, `Avx512Token` | 128, 256, 512-bit |
+| AArch64 | **Full** | `NeonToken` | 128-bit |
+| WASM | **Not yet** | Use `archmage::Simd128Token` with raw intrinsics | - |
+
 ## Features
 
 - **`std`** (default): Enable std library support

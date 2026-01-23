@@ -5,6 +5,12 @@
 //! This crate provides SIMD vector types (`f32x8`, `i32x4`, etc.) that use
 //! [archmage](https://docs.rs/archmage) tokens for safe construction.
 //!
+//! ## Supported Platforms
+//!
+//! - **x86-64**: SSE4.1 (128-bit), AVX2 (256-bit), AVX-512 (512-bit)
+//! - **AArch64**: NEON (128-bit)
+//! - **WASM**: Not yet supported (use `archmage::Simd128Token` with raw intrinsics)
+//!
 //! ## Example
 //!
 //! ```rust,ignore
@@ -30,6 +36,14 @@ extern crate alloc;
 
 // Re-export archmage for convenience
 pub use archmage;
+
+// WASM is not yet supported - provide clear error message
+#[cfg(target_arch = "wasm32")]
+compile_error!(
+    "magetypes does not yet support wasm32. \
+    For WASM SIMD, use `archmage::Simd128Token` with raw intrinsics from `core::arch::wasm32`. \
+    WASM SIMD types are planned for a future release."
+);
 
 // Auto-generated SIMD types with natural operators
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
