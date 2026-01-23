@@ -374,11 +374,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     writeln!(code, "    }}\n").unwrap();
 
     // Splat
-    writeln!(
-        code,
-        "    /// Broadcast scalar to all lanes (token-gated)"
-    )
-    .unwrap();
+    writeln!(code, "    /// Broadcast scalar to all lanes (token-gated)").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(
         code,

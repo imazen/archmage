@@ -3,8 +3,8 @@
 pub use super::ops_comparison::{generate_blend_ops, generate_comparison_ops};
 
 use super::types::{
-    gen_binary_method, gen_unary_method, indent, indent_continuation, ElementType, SimdType,
-    SimdWidth,
+    ElementType, SimdType, SimdWidth, gen_binary_method, gen_unary_method, indent,
+    indent_continuation,
 };
 use indoc::formatdoc;
 use std::fmt::Write;
@@ -600,7 +600,11 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
             (_, SimdWidth::W512) => "epi64",
             _ => "epi64x",
         };
-        let cast_to = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
+        let cast_to = if ty.elem == ElementType::F32 {
+            "ps"
+        } else {
+            "pd"
+        };
 
         let abs_body = formatdoc! {"
             Self(unsafe {{
@@ -608,7 +612,11 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
                 {prefix}_and_{suffix}(self.0, mask)
             }})"
         };
-        code.push_str(&gen_unary_method("Absolute value", "abs", &indent_continuation(&abs_body, 4)));
+        code.push_str(&gen_unary_method(
+            "Absolute value",
+            "abs",
+            &indent_continuation(&abs_body, 4),
+        ));
 
         // Floor/ceil/round for floats
         if ty.width == SimdWidth::W512 {
@@ -943,7 +951,10 @@ pub fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
     let prefix = ty.width.x86_prefix();
     let bits = ty.width.bits();
 
-    code.push_str(&indent("// ========== Bitwise Unary Operations ==========\n", 4));
+    code.push_str(&indent(
+        "// ========== Bitwise Unary Operations ==========\n",
+        4,
+    ));
     code.push('\n');
 
     // Build the not body based on element type
@@ -953,8 +964,16 @@ pub fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
             (_, SimdWidth::W512) => "epi64",
             _ => "epi64x",
         };
-        let cast_to = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
-        let cast_from = if ty.elem == ElementType::F32 { "ps" } else { "pd" };
+        let cast_to = if ty.elem == ElementType::F32 {
+            "ps"
+        } else {
+            "pd"
+        };
+        let cast_from = if ty.elem == ElementType::F32 {
+            "ps"
+        } else {
+            "pd"
+        };
 
         formatdoc! {"
             Self(unsafe {{
@@ -998,7 +1017,11 @@ pub fn generate_shift_ops(ty: &SimdType) -> String {
     let mut code = String::new();
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
-    let const_type = if ty.width == SimdWidth::W512 { "u32" } else { "i32" };
+    let const_type = if ty.width == SimdWidth::W512 {
+        "u32"
+    } else {
+        "i32"
+    };
 
     code.push_str(&indent("// ========== Shift Operations ==========\n", 4));
     code.push('\n');

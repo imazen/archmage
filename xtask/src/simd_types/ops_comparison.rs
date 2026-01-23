@@ -1,6 +1,6 @@
 //! Comparison and blend operations for SIMD types.
 
-use super::types::{indent, indent_continuation, ElementType, SimdType, SimdWidth};
+use super::types::{ElementType, SimdType, SimdWidth, indent, indent_continuation};
 use indoc::formatdoc;
 use std::fmt::Write;
 
