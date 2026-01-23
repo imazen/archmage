@@ -11,7 +11,9 @@ keywords = ["simd", "avx", "neon", "performance", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
-default = ["std", "bytemuck"]
+# bytemuck is NOT default - it bypasses token-gated construction safety
+# Users who enable it are explicitly opting out of token safety guarantees
+default = ["std"]
 std = ["archmage/std"]
 bytemuck = ["dep:bytemuck", "archmage/bytemuck"]
 # AVX-512 type support

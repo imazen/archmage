@@ -41,6 +41,7 @@ impl SimdToken for Avx512Token {
             && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("avx")
             && crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("sse4.1")
             && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
@@ -137,6 +138,7 @@ impl SimdToken for Avx512ModernToken {
             && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("avx")
             && crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("sse4.1")
             && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
@@ -204,7 +206,7 @@ impl SimdToken for Avx512Fp16Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // FP16 requires the full v4 feature set
+        // FP16 requires the full v4 feature set + fp16
         if crate::is_x86_feature_available!("avx512fp16")
             && crate::is_x86_feature_available!("avx512f")
             && crate::is_x86_feature_available!("avx512cd")
@@ -213,8 +215,11 @@ impl SimdToken for Avx512Fp16Token {
             && crate::is_x86_feature_available!("avx512bw")
             && crate::is_x86_feature_available!("fma")
             && crate::is_x86_feature_available!("avx2")
+            && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("avx")
             && crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("sse4.1")
+            && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {

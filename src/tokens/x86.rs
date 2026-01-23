@@ -60,7 +60,10 @@ impl SimdToken for AvxToken {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        if crate::is_x86_feature_available!("avx") {
+        // Explicitly check all implied features for robustness against broken emulators
+        if crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.1")
+        {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -99,7 +102,11 @@ impl SimdToken for Avx2Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        if crate::is_x86_feature_available!("avx2") {
+        // Explicitly check all implied features for robustness against broken emulators
+        if crate::is_x86_feature_available!("avx2")
+            && crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.1")
+        {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -176,8 +183,12 @@ impl SimdToken for Avx2FmaToken {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // Both checks use compile-time optimization when features are known
-        if crate::is_x86_feature_available!("avx2") && crate::is_x86_feature_available!("fma") {
+        // Explicitly check all implied features for robustness against broken emulators
+        if crate::is_x86_feature_available!("avx2")
+            && crate::is_x86_feature_available!("fma")
+            && crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.1")
+        {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None
@@ -525,8 +536,10 @@ impl SimdToken for X64V2Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // v2 requires SSE4.2 and POPCNT (SSE4.2 implies earlier SSE versions)
-        if crate::is_x86_feature_available!("sse4.2") && crate::is_x86_feature_available!("popcnt")
+        // Explicitly check all v2 features for robustness against broken emulators
+        if crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("sse4.1")
+            && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -570,10 +583,14 @@ impl SimdToken for X64V3Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // v3 requires AVX2, FMA, and BMI2 (these imply most other v3 features)
+        // Explicitly check all v3 features for robustness against broken emulators
         if crate::is_x86_feature_available!("avx2")
             && crate::is_x86_feature_available!("fma")
             && crate::is_x86_feature_available!("bmi2")
+            && crate::is_x86_feature_available!("avx")
+            && crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("sse4.1")
+            && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
