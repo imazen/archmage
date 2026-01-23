@@ -584,92 +584,172 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
             "    /// Handles edge cases correctly: log2(0) = -inf, log2(negative) = NaN,"
         )
         .unwrap();
-        writeln!(
-            code,
-            "    /// log2(+inf) = +inf, log2(NaN) = NaN."
-        )
-        .unwrap();
+        writeln!(code, "    /// log2(+inf) = +inf, log2(NaN) = NaN.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn log2_midp(self) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
         writeln!(code, "            let result = self.log2_midp_unchecked();").unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Edge case masks").unwrap();
-        writeln!(
-            code,
-            "            let zero = {}_setzero_{}();",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_zero = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, zero);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_neg = {}_cmp_{}::<_CMP_LT_OQ>(self.0, zero);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_inf = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, {}_set1_{}(f32::INFINITY));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Apply corrections").unwrap();
-        writeln!(
-            code,
-            "            let neg_inf = {}_set1_{}(f32::NEG_INFINITY);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let pos_inf = {}_set1_{}(f32::INFINITY);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let nan = {}_set1_{}(f32::NAN);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(result.0, neg_inf, is_zero);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(r, nan, is_neg);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(r, pos_inf, is_inf);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(r, nan, is_nan);",
-            prefix, suffix
-        )
-        .unwrap();
+
+        if ty.width == SimdWidth::W512 {
+            // AVX-512 uses mask registers
+            writeln!(
+                code,
+                "            // Edge case masks (AVX-512 uses mask registers)"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let zero = {}_setzero_{}();",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_zero = {}_cmp_{}_mask::<_CMP_EQ_OQ>(self.0, zero);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_neg = {}_cmp_{}_mask::<_CMP_LT_OQ>(self.0, zero);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_inf = {}_cmp_{}_mask::<_CMP_EQ_OQ>(self.0, {}_set1_{}(f32::INFINITY));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(
+                code,
+                "            let is_nan = {}_cmp_{}_mask::<_CMP_UNORD_Q>(self.0, self.0);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Apply corrections using mask blend").unwrap();
+            writeln!(
+                code,
+                "            let neg_inf = {}_set1_{}(f32::NEG_INFINITY);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let pos_inf = {}_set1_{}(f32::INFINITY);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let nan = {}_set1_{}(f32::NAN);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_zero, result.0, neg_inf);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_neg, r, nan);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_inf, r, pos_inf);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_nan, r, nan);",
+                prefix, suffix
+            )
+            .unwrap();
+        } else {
+            // SSE/AVX use vector masks
+            writeln!(code, "            // Edge case masks").unwrap();
+            writeln!(
+                code,
+                "            let zero = {}_setzero_{}();",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_zero = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, zero);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_neg = {}_cmp_{}::<_CMP_LT_OQ>(self.0, zero);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_inf = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, {}_set1_{}(f32::INFINITY));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(
+                code,
+                "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Apply corrections").unwrap();
+            writeln!(
+                code,
+                "            let neg_inf = {}_set1_{}(f32::NEG_INFINITY);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let pos_inf = {}_set1_{}(f32::INFINITY);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let nan = {}_set1_{}(f32::NAN);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(result.0, neg_inf, is_zero);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(r, nan, is_neg);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(r, pos_inf, is_inf);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(r, nan, is_nan);",
+                prefix, suffix
+            )
+            .unwrap();
+        }
         writeln!(code, "            Self(r)").unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
@@ -830,80 +910,145 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
             "    /// Handles edge cases correctly: exp2(x > 128) = +inf, exp2(x < -150) = 0,"
         )
         .unwrap();
-        writeln!(
-            code,
-            "    /// exp2(NaN) = NaN."
-        )
-        .unwrap();
+        writeln!(code, "    /// exp2(NaN) = NaN.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn exp2_midp(self) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
         writeln!(code, "            let result = self.exp2_midp_unchecked();").unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Edge case masks").unwrap();
-        writeln!(
-            code,
-            "            let is_overflow = {}_cmp_{}::<_CMP_GE_OQ>(self.0, {}_set1_{}(128.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_underflow = {}_cmp_{}::<_CMP_LT_OQ>(self.0, {}_set1_{}(-150.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Apply corrections").unwrap();
-        writeln!(
-            code,
-            "            let pos_inf = {}_set1_{}(f32::INFINITY);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let zero = {}_setzero_{}();",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let nan = {}_set1_{}(f32::NAN);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(result.0, pos_inf, is_overflow);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(r, zero, is_underflow);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(r, nan, is_nan);",
-            prefix, suffix
-        )
-        .unwrap();
+
+        if ty.width == SimdWidth::W512 {
+            // AVX-512 uses mask registers
+            writeln!(
+                code,
+                "            // Edge case masks (AVX-512 uses mask registers)"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_overflow = {}_cmp_{}_mask::<_CMP_GE_OQ>(self.0, {}_set1_{}(128.0));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(
+                code,
+                "            let is_underflow = {}_cmp_{}_mask::<_CMP_LT_OQ>(self.0, {}_set1_{}(-150.0));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(
+                code,
+                "            let is_nan = {}_cmp_{}_mask::<_CMP_UNORD_Q>(self.0, self.0);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Apply corrections using mask blend").unwrap();
+            writeln!(
+                code,
+                "            let pos_inf = {}_set1_{}(f32::INFINITY);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let zero = {}_setzero_{}();",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let nan = {}_set1_{}(f32::NAN);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_overflow, result.0, pos_inf);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_underflow, r, zero);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_nan, r, nan);",
+                prefix, suffix
+            )
+            .unwrap();
+        } else {
+            // SSE/AVX use vector masks
+            writeln!(code, "            // Edge case masks").unwrap();
+            writeln!(
+                code,
+                "            let is_overflow = {}_cmp_{}::<_CMP_GE_OQ>(self.0, {}_set1_{}(128.0));",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_underflow = {}_cmp_{}::<_CMP_LT_OQ>(self.0, {}_set1_{}(-150.0));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(
+                code,
+                "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Apply corrections").unwrap();
+            writeln!(
+                code,
+                "            let pos_inf = {}_set1_{}(f32::INFINITY);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let zero = {}_setzero_{}();",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let nan = {}_set1_{}(f32::NAN);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(result.0, pos_inf, is_overflow);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(r, zero, is_underflow);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(r, nan, is_nan);",
+                prefix, suffix
+            )
+            .unwrap();
+        }
         writeln!(code, "            Self(r)").unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 pow_midp_unchecked =====
-        writeln!(code, "    /// Mid-precision power function (self^n) - unchecked variant.").unwrap();
+        writeln!(
+            code,
+            "    /// Mid-precision power function (self^n) - unchecked variant."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(
             code,
@@ -922,7 +1067,11 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         )
         .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn pow_midp_unchecked(self, n: f32) -> Self {{").unwrap();
+        writeln!(
+            code,
+            "    pub fn pow_midp_unchecked(self, n: f32) -> Self {{"
+        )
+        .unwrap();
         writeln!(code, "        unsafe {{").unwrap();
         writeln!(
             code,
@@ -947,7 +1096,11 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         )
         .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Handles edge cases: pow(0, n) = 0 (n>0), pow(inf, n) = inf (n>0).").unwrap();
+        writeln!(
+            code,
+            "    /// Handles edge cases: pow(0, n) = 0 (n>0), pow(inf, n) = inf (n>0)."
+        )
+        .unwrap();
         writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn pow_midp(self, n: f32) -> Self {{").unwrap();
@@ -962,9 +1115,17 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 ln_midp_unchecked =====
-        writeln!(code, "    /// Mid-precision natural logarithm - unchecked variant.").unwrap();
+        writeln!(
+            code,
+            "    /// Mid-precision natural logarithm - unchecked variant."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `log2_midp_unchecked(x) * ln(2)`.").unwrap();
+        writeln!(
+            code,
+            "    /// Computed as `log2_midp_unchecked(x) * ln(2)`."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(
             code,
@@ -994,7 +1155,11 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Computed as `log2_midp(x) * ln(2)`.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Handles edge cases: ln(0) = -inf, ln(negative) = NaN, ln(inf) = inf.").unwrap();
+        writeln!(
+            code,
+            "    /// Handles edge cases: ln(0) = -inf, ln(negative) = NaN, ln(inf) = inf."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn ln_midp(self) -> Self {{").unwrap();
         writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
@@ -1009,9 +1174,17 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 exp_midp_unchecked =====
-        writeln!(code, "    /// Mid-precision natural exponential (e^x) - unchecked variant.").unwrap();
+        writeln!(
+            code,
+            "    /// Mid-precision natural exponential (e^x) - unchecked variant."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2_midp_unchecked(x * log2(e))`.").unwrap();
+        writeln!(
+            code,
+            "    /// Computed as `exp2_midp_unchecked(x * log2(e))`."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(
             code,
@@ -1045,7 +1218,11 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    ///").unwrap();
         writeln!(code, "    /// Computed as `exp2_midp(x * log2(e))`.").unwrap();
         writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Handles edge cases: exp(x>88) = inf, exp(x<-103) = 0, exp(NaN) = NaN.").unwrap();
+        writeln!(
+            code,
+            "    /// Handles edge cases: exp(x>88) = inf, exp(x<-103) = 0, exp(NaN) = NaN."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn exp_midp(self) -> Self {{").unwrap();
         writeln!(
@@ -1067,7 +1244,11 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    // ========== Cube Root ==========\n").unwrap();
 
         // ===== F32 cbrt_midp_unchecked =====
-        writeln!(code, "    /// Mid-precision cube root (x^(1/3)) - unchecked variant.").unwrap();
+        writeln!(
+            code,
+            "    /// Mid-precision cube root (x^(1/3)) - unchecked variant."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(
             code,
@@ -1263,63 +1444,130 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "        unsafe {{").unwrap();
         writeln!(code, "            let result = self.cbrt_midp_unchecked();").unwrap();
         writeln!(code, "").unwrap();
-        writeln!(code, "            // Edge case masks").unwrap();
-        writeln!(
-            code,
-            "            let zero = {}_setzero_{}();",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_zero = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, zero);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_inf = {}_cmp_{}::<_CMP_EQ_OQ>(abs_x, {}_set1_{}(f32::INFINITY));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Apply corrections (use self.0 for zero to preserve sign)").unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(result.0, self.0, is_zero);  // ±0 -> ±0",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(r, self.0, is_inf);  // ±inf -> ±inf",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let r = {}_blendv_{}(r, {}_set1_{}(f32::NAN), is_nan);",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
+
+        if ty.width == SimdWidth::W512 {
+            // AVX-512 uses mask registers
+            writeln!(
+                code,
+                "            // Edge case masks (AVX-512 uses mask registers)"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let zero = {}_setzero_{}();",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_zero = {}_cmp_{}_mask::<_CMP_EQ_OQ>(self.0, zero);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_inf = {}_cmp_{}_mask::<_CMP_EQ_OQ>(abs_x, {}_set1_{}(f32::INFINITY));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(
+                code,
+                "            let is_nan = {}_cmp_{}_mask::<_CMP_UNORD_Q>(self.0, self.0);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Apply corrections using mask blend (use self.0 for zero to preserve sign)").unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_zero, result.0, self.0);  // ±0 -> ±0",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_inf, r, self.0);  // ±inf -> ±inf",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_mask_blend_{}(is_nan, r, {}_set1_{}(f32::NAN));",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+        } else {
+            // SSE/AVX use vector masks
+            writeln!(code, "            // Edge case masks").unwrap();
+            writeln!(
+                code,
+                "            let zero = {}_setzero_{}();",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_zero = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, zero);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let is_inf = {}_cmp_{}::<_CMP_EQ_OQ>(abs_x, {}_set1_{}(f32::INFINITY));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(
+                code,
+                "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(
+                code,
+                "            // Apply corrections (use self.0 for zero to preserve sign)"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(result.0, self.0, is_zero);  // ±0 -> ±0",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(r, self.0, is_inf);  // ±inf -> ±inf",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let r = {}_blendv_{}(r, {}_set1_{}(f32::NAN), is_nan);",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+        }
         writeln!(code, "            Self(r)").unwrap();
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // ===== F32 cbrt_midp_precise =====
-        writeln!(code, "    /// Precise cube root (x^(1/3)) with full IEEE compliance.").unwrap();
+        writeln!(
+            code,
+            "    /// Precise cube root (x^(1/3)) with full IEEE compliance."
+        )
+        .unwrap();
         writeln!(code, "    ///").unwrap();
         writeln!(
             code,
@@ -1346,9 +1594,21 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
         writeln!(code, "    pub fn cbrt_midp_precise(self) -> Self {{").unwrap();
         writeln!(code, "        unsafe {{").unwrap();
         writeln!(code, "            // Scale factor for denormals: 2^24").unwrap();
-        writeln!(code, "            const SCALE_UP: f32 = 16777216.0;  // 2^24").unwrap();
-        writeln!(code, "            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))").unwrap();
-        writeln!(code, "            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32").unwrap();
+        writeln!(
+            code,
+            "            const SCALE_UP: f32 = 16777216.0;  // 2^24"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32"
+        )
+        .unwrap();
         writeln!(code, "").unwrap();
         writeln!(
             code,
@@ -1356,43 +1616,100 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
             prefix, suffix, prefix, suffix
         )
         .unwrap();
-        writeln!(
-            code,
-            "            let is_denorm = {}_cmp_{}::<_CMP_LT_OQ>(abs_x, {}_set1_{}(DENORM_LIMIT));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Scale up denormals").unwrap();
-        writeln!(
-            code,
-            "            let scaled_x = {}_mul_{}(self.0, {}_set1_{}(SCALE_UP));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let x_for_cbrt = {}_blendv_{}(self.0, scaled_x, is_denorm);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Compute cbrt with edge case handling").unwrap();
-        writeln!(code, "            let result = Self(x_for_cbrt).cbrt_midp();").unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Scale down results from denormal inputs").unwrap();
-        writeln!(
-            code,
-            "            let scaled_result = {}_mul_{}(result.0, {}_set1_{}(SCALE_DOWN));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            Self({}_blendv_{}(result.0, scaled_result, is_denorm))",
-            prefix, suffix
-        )
-        .unwrap();
+
+        if ty.width == SimdWidth::W512 {
+            // AVX-512 uses mask registers
+            writeln!(
+                code,
+                "            let is_denorm = {}_cmp_{}_mask::<_CMP_LT_OQ>(abs_x, {}_set1_{}(DENORM_LIMIT));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Scale up denormals").unwrap();
+            writeln!(
+                code,
+                "            let scaled_x = {}_mul_{}(self.0, {}_set1_{}(SCALE_UP));",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let x_for_cbrt = {}_mask_blend_{}(is_denorm, self.0, scaled_x);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Compute cbrt with edge case handling").unwrap();
+            writeln!(
+                code,
+                "            let result = Self(x_for_cbrt).cbrt_midp();"
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(
+                code,
+                "            // Scale down results from denormal inputs"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let scaled_result = {}_mul_{}(result.0, {}_set1_{}(SCALE_DOWN));",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            Self({}_mask_blend_{}(is_denorm, result.0, scaled_result))",
+                prefix, suffix
+            )
+            .unwrap();
+        } else {
+            // SSE/AVX use vector masks
+            writeln!(
+                code,
+                "            let is_denorm = {}_cmp_{}::<_CMP_LT_OQ>(abs_x, {}_set1_{}(DENORM_LIMIT));",
+                prefix, suffix, prefix, suffix
+            ).unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Scale up denormals").unwrap();
+            writeln!(
+                code,
+                "            let scaled_x = {}_mul_{}(self.0, {}_set1_{}(SCALE_UP));",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let x_for_cbrt = {}_blendv_{}(self.0, scaled_x, is_denorm);",
+                prefix, suffix
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(code, "            // Compute cbrt with edge case handling").unwrap();
+            writeln!(
+                code,
+                "            let result = Self(x_for_cbrt).cbrt_midp();"
+            )
+            .unwrap();
+            writeln!(code, "").unwrap();
+            writeln!(
+                code,
+                "            // Scale down results from denormal inputs"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let scaled_result = {}_mul_{}(result.0, {}_set1_{}(SCALE_DOWN));",
+                prefix, suffix, prefix, suffix
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            Self({}_blendv_{}(result.0, scaled_result, is_denorm))",
+                prefix, suffix
+            )
+            .unwrap();
+        }
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
     } else if ty.elem == ElementType::F64 {
@@ -1722,4 +2039,3 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
 
     code
 }
-

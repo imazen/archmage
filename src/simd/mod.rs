@@ -8,6 +8,12 @@
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(missing_docs)]
+#![allow(clippy::excessive_precision)]
+#![allow(clippy::should_implement_trait)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::approx_constant)]
+#![allow(clippy::missing_transmute_annotations)]
 
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
@@ -8197,22 +8203,22 @@ impl f32x16 {
         unsafe {
             let result = self.log2_midp_unchecked();
 
-            // Edge case masks
+            // Edge case masks (AVX-512 uses mask registers)
             let zero = _mm512_setzero_ps();
-            let is_zero = _mm512_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
-            let is_neg = _mm512_cmp_ps::<_CMP_LT_OQ>(self.0, zero);
-            let is_inf = _mm512_cmp_ps::<_CMP_EQ_OQ>(self.0, _mm512_set1_ps(f32::INFINITY));
-            let is_nan = _mm512_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+            let is_zero = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(self.0, zero);
+            let is_neg = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(self.0, zero);
+            let is_inf = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(self.0, _mm512_set1_ps(f32::INFINITY));
+            let is_nan = _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(self.0, self.0);
 
-            // Apply corrections
+            // Apply corrections using mask blend
             let neg_inf = _mm512_set1_ps(f32::NEG_INFINITY);
             let pos_inf = _mm512_set1_ps(f32::INFINITY);
             let nan = _mm512_set1_ps(f32::NAN);
 
-            let r = _mm512_blendv_ps(result.0, neg_inf, is_zero);
-            let r = _mm512_blendv_ps(r, nan, is_neg);
-            let r = _mm512_blendv_ps(r, pos_inf, is_inf);
-            let r = _mm512_blendv_ps(r, nan, is_nan);
+            let r = _mm512_mask_blend_ps(is_zero, result.0, neg_inf);
+            let r = _mm512_mask_blend_ps(is_neg, r, nan);
+            let r = _mm512_mask_blend_ps(is_inf, r, pos_inf);
+            let r = _mm512_mask_blend_ps(is_nan, r, nan);
             Self(r)
         }
     }
@@ -8272,19 +8278,19 @@ impl f32x16 {
         unsafe {
             let result = self.exp2_midp_unchecked();
 
-            // Edge case masks
-            let is_overflow = _mm512_cmp_ps::<_CMP_GE_OQ>(self.0, _mm512_set1_ps(128.0));
-            let is_underflow = _mm512_cmp_ps::<_CMP_LT_OQ>(self.0, _mm512_set1_ps(-150.0));
-            let is_nan = _mm512_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+            // Edge case masks (AVX-512 uses mask registers)
+            let is_overflow = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(self.0, _mm512_set1_ps(128.0));
+            let is_underflow = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(self.0, _mm512_set1_ps(-150.0));
+            let is_nan = _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(self.0, self.0);
 
-            // Apply corrections
+            // Apply corrections using mask blend
             let pos_inf = _mm512_set1_ps(f32::INFINITY);
             let zero = _mm512_setzero_ps();
             let nan = _mm512_set1_ps(f32::NAN);
 
-            let r = _mm512_blendv_ps(result.0, pos_inf, is_overflow);
-            let r = _mm512_blendv_ps(r, zero, is_underflow);
-            let r = _mm512_blendv_ps(r, nan, is_nan);
+            let r = _mm512_mask_blend_ps(is_overflow, result.0, pos_inf);
+            let r = _mm512_mask_blend_ps(is_underflow, r, zero);
+            let r = _mm512_mask_blend_ps(is_nan, r, nan);
             Self(r)
         }
     }
@@ -8437,17 +8443,17 @@ impl f32x16 {
         unsafe {
             let result = self.cbrt_midp_unchecked();
 
-            // Edge case masks
+            // Edge case masks (AVX-512 uses mask registers)
             let zero = _mm512_setzero_ps();
-            let is_zero = _mm512_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
+            let is_zero = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(self.0, zero);
             let abs_x = _mm512_andnot_ps(_mm512_set1_ps(-0.0), self.0);
-            let is_inf = _mm512_cmp_ps::<_CMP_EQ_OQ>(abs_x, _mm512_set1_ps(f32::INFINITY));
-            let is_nan = _mm512_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+            let is_inf = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(abs_x, _mm512_set1_ps(f32::INFINITY));
+            let is_nan = _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(self.0, self.0);
 
-            // Apply corrections (use self.0 for zero to preserve sign)
-            let r = _mm512_blendv_ps(result.0, self.0, is_zero);  // ±0 -> ±0
-            let r = _mm512_blendv_ps(r, self.0, is_inf);  // ±inf -> ±inf
-            let r = _mm512_blendv_ps(r, _mm512_set1_ps(f32::NAN), is_nan);
+            // Apply corrections using mask blend (use self.0 for zero to preserve sign)
+            let r = _mm512_mask_blend_ps(is_zero, result.0, self.0);  // ±0 -> ±0
+            let r = _mm512_mask_blend_ps(is_inf, r, self.0);  // ±inf -> ±inf
+            let r = _mm512_mask_blend_ps(is_nan, r, _mm512_set1_ps(f32::NAN));
             Self(r)
         }
     }
@@ -8468,18 +8474,18 @@ impl f32x16 {
             const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
 
             let abs_x = _mm512_andnot_ps(_mm512_set1_ps(-0.0), self.0);
-            let is_denorm = _mm512_cmp_ps::<_CMP_LT_OQ>(abs_x, _mm512_set1_ps(DENORM_LIMIT));
+            let is_denorm = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(abs_x, _mm512_set1_ps(DENORM_LIMIT));
 
             // Scale up denormals
             let scaled_x = _mm512_mul_ps(self.0, _mm512_set1_ps(SCALE_UP));
-            let x_for_cbrt = _mm512_blendv_ps(self.0, scaled_x, is_denorm);
+            let x_for_cbrt = _mm512_mask_blend_ps(is_denorm, self.0, scaled_x);
 
             // Compute cbrt with edge case handling
             let result = Self(x_for_cbrt).cbrt_midp();
 
             // Scale down results from denormal inputs
             let scaled_result = _mm512_mul_ps(result.0, _mm512_set1_ps(SCALE_DOWN));
-            Self(_mm512_blendv_ps(result.0, scaled_result, is_denorm))
+            Self(_mm512_mask_blend_ps(is_denorm, result.0, scaled_result))
         }
     }
 

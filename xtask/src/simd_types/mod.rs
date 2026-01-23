@@ -20,7 +20,7 @@ mod structure;
 mod transcendental;
 mod types;
 
-pub use types::{all_simd_types, ElementType, SimdType, SimdWidth};
+pub use types::{ElementType, SimdType, SimdWidth, all_simd_types};
 
 /// Generate all SIMD types
 pub fn generate_simd_types() -> String {
@@ -38,6 +38,12 @@ pub fn generate_simd_types() -> String {
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(missing_docs)]
+#![allow(clippy::excessive_precision)]
+#![allow(clippy::should_implement_trait)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::approx_constant)]
+#![allow(clippy::missing_transmute_annotations)]
 
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
