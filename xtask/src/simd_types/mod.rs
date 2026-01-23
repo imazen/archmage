@@ -567,6 +567,118 @@ fn test_f32x8_load_store_rgba_u8() {
 "#,
     );
 
+    // Add AVX-512 tests
+    code.push_str(
+        r#"
+// ============================================================================
+// AVX-512 Tests (require avx512 feature)
+// ============================================================================
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+mod avx512_tests {
+    use magetypes::simd::*;
+    use archmage::{SimdToken, Avx512Token};
+
+    #[test]
+    fn test_f32x16_basic() {
+        if let Some(token) = Avx512Token::try_new() {
+            let a = f32x16::splat(token, 1.0);
+            let b = f32x16::splat(token, 2.0);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 3.0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_f32x16_load_store() {
+        if let Some(token) = Avx512Token::try_new() {
+            let data: [f32; 16] = core::array::from_fn(|i| i as f32);
+            let v = f32x16::load(token, &data);
+            let mut out = [0.0f32; 16];
+            v.store(&mut out);
+            assert_eq!(data, out);
+        }
+    }
+
+    #[test]
+    fn test_i32x16_basic() {
+        if let Some(token) = Avx512Token::try_new() {
+            let a = i32x16::splat(token, 10);
+            let b = i32x16::splat(token, 20);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 30);
+            }
+        }
+    }
+
+    #[test]
+    fn test_i32x16_load_store() {
+        if let Some(token) = Avx512Token::try_new() {
+            let data: [i32; 16] = core::array::from_fn(|i| i as i32);
+            let v = i32x16::load(token, &data);
+            let mut out = [0i32; 16];
+            v.store(&mut out);
+            assert_eq!(data, out);
+        }
+    }
+
+    #[test]
+    fn test_f64x8_basic() {
+        if let Some(token) = Avx512Token::try_new() {
+            let a = f64x8::splat(token, 2.5);
+            let b = f64x8::splat(token, 1.5);
+            let sum = a + b;
+            assert_eq!(sum.to_array(), [4.0; 8]);
+        }
+    }
+
+    #[test]
+    fn test_f32x16_math_ops() {
+        if let Some(token) = Avx512Token::try_new() {
+            let v = f32x16::from_array(token, [
+                1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0,
+                81.0, 100.0, 121.0, 144.0, 169.0, 196.0, 225.0, 256.0
+            ]);
+            let sqrt_v = v.sqrt();
+            let expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
+                          9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
+            assert_eq!(sqrt_v.to_array(), expected);
+        }
+    }
+
+    #[test]
+    fn test_f32x16_fma() {
+        if let Some(token) = Avx512Token::try_new() {
+            let a = f32x16::splat(token, 2.0);
+            let b = f32x16::splat(token, 3.0);
+            let c = f32x16::splat(token, 1.0);
+
+            // a * b + c = 2 * 3 + 1 = 7
+            let result = a.mul_add(b, c);
+            assert_eq!(result.to_array(), [7.0; 16]);
+        }
+    }
+
+    #[test]
+    fn test_cast_slice_512() {
+        if let Some(token) = Avx512Token::try_new() {
+            let data: [f32; 32] = core::array::from_fn(|i| i as f32);
+
+            let vectors = f32x16::cast_slice(token, &data).unwrap();
+            assert_eq!(vectors.len(), 2);
+            assert_eq!(vectors[0].to_array()[0], 0.0);
+            assert_eq!(vectors[1].to_array()[0], 16.0);
+        }
+    }
+}
+"#,
+    );
+
     // Add ARM tests
     code.push_str(
         r#"
