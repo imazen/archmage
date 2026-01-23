@@ -1,21 +1,16 @@
 //! ARM SIMD capability tokens
 //!
-//! Provides tokens for NEON, SVE, SVE2, and crypto extensions.
-//!
-//! Token construction uses [`crate::is_crate::is_aarch64_feature_available!`] which combines
-//! compile-time and runtime detection. When compiled with a target feature
-//! enabled (e.g., in a `#[multiversed]` function), the runtime check is
-//! completely eliminated.
+//! Provides tokens for NEON and crypto extensions.
 //!
 //! On AArch64, NEON is always available (baseline).
 //!
 //! ## Token Hierarchy
 //!
-//! - `NeonToken` - baseline, always available
+//! - `NeonToken` / `Arm64` - baseline, always available
+//! - `NeonAesToken` - NEON + AES
+//! - `NeonSha3Token` - NEON + SHA3
 //! - `ArmCryptoToken` - aes + sha2 + crc (most ARMv8 CPUs)
 //! - `ArmCrypto3Token` - + sha3 (ARMv8.4+, implies ArmCryptoToken)
-//! - `SveToken` - SVE (Graviton 3, A64FX)
-//! - `Sve2Token` - SVE2 (Graviton 4+, implies SveToken)
 
 use super::SimdToken;
 
@@ -36,13 +31,36 @@ impl SimdToken for NeonToken {
 
     #[inline]
     fn try_new() -> Option<Self> {
-        #[cfg(target_arch = "aarch64")]
-        {
-            // NEON is always available on AArch64
-            Some(Self { _private: () })
-        }
-        #[cfg(not(target_arch = "aarch64"))]
-        {
+        // NEON is always available on AArch64
+        Some(Self { _private: () })
+    }
+
+    #[inline(always)]
+    unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+// ============================================================================
+// NEON + AES Token
+// ============================================================================
+
+/// Proof that NEON + AES is available.
+///
+/// AES extension is common on modern ARM64 devices with crypto extensions.
+#[derive(Clone, Copy, Debug)]
+pub struct NeonAesToken {
+    _private: (),
+}
+
+impl SimdToken for NeonAesToken {
+    const NAME: &'static str = "NEON+AES";
+
+    #[inline(always)]
+    fn try_new() -> Option<Self> {
+        if crate::is_aarch64_feature_available!("aes") {
+            Some(unsafe { Self::forge_token_dangerously() })
+        } else {
             None
         }
     }
@@ -50,6 +68,52 @@ impl SimdToken for NeonToken {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl NeonAesToken {
+    /// Get a NEON token (AES implies NEON)
+    #[inline(always)]
+    pub fn neon(self) -> NeonToken {
+        unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+// ============================================================================
+// NEON + SHA3 Token
+// ============================================================================
+
+/// Proof that NEON + SHA3 is available.
+///
+/// SHA3 extension is available on ARMv8.2-A and later.
+#[derive(Clone, Copy, Debug)]
+pub struct NeonSha3Token {
+    _private: (),
+}
+
+impl SimdToken for NeonSha3Token {
+    const NAME: &'static str = "NEON+SHA3";
+
+    #[inline(always)]
+    fn try_new() -> Option<Self> {
+        if crate::is_aarch64_feature_available!("sha3") {
+            Some(unsafe { Self::forge_token_dangerously() })
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl NeonSha3Token {
+    /// Get a NEON token (SHA3 implies NEON)
+    #[inline(always)]
+    pub fn neon(self) -> NeonToken {
+        unsafe { NeonToken::forge_token_dangerously() }
     }
 }
 
@@ -96,6 +160,12 @@ impl ArmCryptoToken {
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
+    }
+
+    /// Get a NeonAesToken (ArmCrypto implies AES)
+    #[inline(always)]
+    pub fn neon_aes(self) -> NeonAesToken {
+        unsafe { NeonAesToken::forge_token_dangerously() }
     }
 }
 
@@ -152,83 +222,17 @@ impl ArmCrypto3Token {
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
     }
-}
 
-// ============================================================================
-// SVE Token
-// ============================================================================
-
-/// Proof that SVE (Scalable Vector Extension) is available.
-#[derive(Clone, Copy, Debug)]
-pub struct SveToken {
-    _private: (),
-}
-
-impl SimdToken for SveToken {
-    const NAME: &'static str = "SVE";
-
+    /// Get a NeonAesToken (Crypto3 implies AES)
     #[inline(always)]
-    fn try_new() -> Option<Self> {
-        if crate::is_aarch64_feature_available!("sve") {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
-        }
+    pub fn neon_aes(self) -> NeonAesToken {
+        unsafe { NeonAesToken::forge_token_dangerously() }
     }
 
+    /// Get a NeonSha3Token (Crypto3 implies SHA3)
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl SveToken {
-    /// Get a NEON token (SVE implies NEON)
-    #[inline(always)]
-    pub fn neon(self) -> NeonToken {
-        unsafe { NeonToken::forge_token_dangerously() }
-    }
-}
-
-// ============================================================================
-// SVE2 Token
-// ============================================================================
-
-/// Proof that SVE2 is available.
-#[derive(Clone, Copy, Debug)]
-pub struct Sve2Token {
-    _private: (),
-}
-
-impl SimdToken for Sve2Token {
-    const NAME: &'static str = "SVE2";
-
-    #[inline(always)]
-    fn try_new() -> Option<Self> {
-        if crate::is_aarch64_feature_available!("sve2") {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl Sve2Token {
-    /// Get an SVE token (SVE2 implies SVE)
-    #[inline(always)]
-    pub fn sve(self) -> SveToken {
-        unsafe { SveToken::forge_token_dangerously() }
-    }
-
-    /// Get a NEON token (SVE2 implies NEON)
-    #[inline(always)]
-    pub fn neon(self) -> NeonToken {
-        unsafe { NeonToken::forge_token_dangerously() }
+    pub fn neon_sha3(self) -> NeonSha3Token {
+        unsafe { NeonSha3Token::forge_token_dangerously() }
     }
 }
 
@@ -269,47 +273,30 @@ pub type Arm64 = NeonToken;
 // Capability Marker Trait Implementations
 // ============================================================================
 
-use super::{Has128BitSimd, HasFma, HasScalableVectors};
-use super::{HasNeon, HasSve, HasSve2};
+use super::{Has128BitSimd, HasNeon, HasNeonAes, HasNeonSha3};
 
-// NEON provides 128-bit SIMD and FMA
+// NEON provides 128-bit SIMD
 impl Has128BitSimd for NeonToken {}
-impl HasFma for NeonToken {} // NEON has fused multiply-add instructions
-
-// Crypto tokens inherit NEON capabilities
+impl Has128BitSimd for NeonAesToken {}
+impl Has128BitSimd for NeonSha3Token {}
 impl Has128BitSimd for ArmCryptoToken {}
-impl HasFma for ArmCryptoToken {}
-
 impl Has128BitSimd for ArmCrypto3Token {}
-impl HasFma for ArmCrypto3Token {}
-
-// SVE provides scalable vectors and inherits NEON capabilities
-impl Has128BitSimd for SveToken {}
-impl HasFma for SveToken {}
-impl HasScalableVectors for SveToken {}
-
-// SVE2 extends SVE
-impl Has128BitSimd for Sve2Token {}
-impl HasFma for Sve2Token {}
-impl HasScalableVectors for Sve2Token {}
-
-// ============================================================================
-// AArch64 Feature Marker Trait Implementations
-// ============================================================================
 
 // HasNeon: All aarch64 tokens have NEON
 impl HasNeon for NeonToken {}
+impl HasNeon for NeonAesToken {}
+impl HasNeon for NeonSha3Token {}
 impl HasNeon for ArmCryptoToken {}
 impl HasNeon for ArmCrypto3Token {}
-impl HasNeon for SveToken {}
-impl HasNeon for Sve2Token {}
 
-// HasSve: SVE and above
-impl HasSve for SveToken {}
-impl HasSve for Sve2Token {}
+// HasNeonAes: tokens with AES
+impl HasNeonAes for NeonAesToken {}
+impl HasNeonAes for ArmCryptoToken {}
+impl HasNeonAes for ArmCrypto3Token {}
 
-// HasSve2: SVE2 only
-impl HasSve2 for Sve2Token {}
+// HasNeonSha3: tokens with SHA3
+impl HasNeonSha3 for NeonSha3Token {}
+impl HasNeonSha3 for ArmCrypto3Token {}
 
 // ============================================================================
 // Tests
@@ -322,52 +309,39 @@ mod tests {
     #[test]
     fn test_token_is_zst() {
         assert_eq!(core::mem::size_of::<NeonToken>(), 0);
+        assert_eq!(core::mem::size_of::<NeonAesToken>(), 0);
+        assert_eq!(core::mem::size_of::<NeonSha3Token>(), 0);
         assert_eq!(core::mem::size_of::<ArmCryptoToken>(), 0);
         assert_eq!(core::mem::size_of::<ArmCrypto3Token>(), 0);
-        assert_eq!(core::mem::size_of::<SveToken>(), 0);
-        assert_eq!(core::mem::size_of::<Sve2Token>(), 0);
     }
 
     #[test]
     fn test_token_is_copy() {
         fn assert_copy<T: Copy>() {}
         assert_copy::<NeonToken>();
+        assert_copy::<NeonAesToken>();
+        assert_copy::<NeonSha3Token>();
         assert_copy::<ArmCryptoToken>();
         assert_copy::<ArmCrypto3Token>();
-        assert_copy::<SveToken>();
-        assert_copy::<Sve2Token>();
     }
 
     #[test]
     fn test_token_names() {
         assert_eq!(NeonToken::NAME, "NEON");
+        assert_eq!(NeonAesToken::NAME, "NEON+AES");
+        assert_eq!(NeonSha3Token::NAME, "NEON+SHA3");
         assert_eq!(ArmCryptoToken::NAME, "ARM Crypto");
         assert_eq!(ArmCrypto3Token::NAME, "ARM Crypto3");
-        assert_eq!(SveToken::NAME, "SVE");
-        assert_eq!(Sve2Token::NAME, "SVE2");
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
     fn test_neon_always_available() {
         // NEON is baseline for AArch64
         assert!(NeonToken::try_new().is_some());
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
     fn test_token_hierarchy() {
-        // If SVE2 is available, SVE and NEON must also be available
-        if Sve2Token::try_new().is_some() {
-            assert!(SveToken::try_new().is_some(), "SVE2 implies SVE");
-            assert!(NeonToken::try_new().is_some(), "SVE2 implies NEON");
-        }
-
-        // If SVE is available, NEON must also be available
-        if SveToken::try_new().is_some() {
-            assert!(NeonToken::try_new().is_some(), "SVE implies NEON");
-        }
-
         // If Crypto3 is available, base Crypto must also be available
         if ArmCrypto3Token::try_new().is_some() {
             assert!(
@@ -375,45 +349,56 @@ mod tests {
                 "Crypto3 implies Crypto"
             );
             assert!(NeonToken::try_new().is_some(), "Crypto3 implies NEON");
+            assert!(NeonAesToken::try_new().is_some(), "Crypto3 implies AES");
+            assert!(NeonSha3Token::try_new().is_some(), "Crypto3 implies SHA3");
         }
 
-        // If Crypto is available, NEON must also be available
+        // If Crypto is available, NEON and AES must also be available
         if ArmCryptoToken::try_new().is_some() {
             assert!(NeonToken::try_new().is_some(), "Crypto implies NEON");
+            assert!(NeonAesToken::try_new().is_some(), "Crypto implies AES");
+        }
+
+        // If NeonAes is available, NEON must also be available
+        if NeonAesToken::try_new().is_some() {
+            assert!(NeonToken::try_new().is_some(), "NeonAes implies NEON");
+        }
+
+        // If NeonSha3 is available, NEON must also be available
+        if NeonSha3Token::try_new().is_some() {
+            assert!(NeonToken::try_new().is_some(), "NeonSha3 implies NEON");
         }
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_sve2_token_extraction() {
-        if let Some(sve2) = Sve2Token::try_new() {
-            let _sve = sve2.sve();
-            let _neon = sve2.neon();
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_sve_token_extraction() {
-        if let Some(sve) = SveToken::try_new() {
-            let _neon = sve.neon();
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
     fn test_crypto3_token_extraction() {
         if let Some(crypto3) = ArmCrypto3Token::try_new() {
             let _crypto = crypto3.crypto();
             let _neon = crypto3.neon();
+            let _aes = crypto3.neon_aes();
+            let _sha3 = crypto3.neon_sha3();
         }
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
     fn test_crypto_token_extraction() {
         if let Some(crypto) = ArmCryptoToken::try_new() {
             let _neon = crypto.neon();
+            let _aes = crypto.neon_aes();
+        }
+    }
+
+    #[test]
+    fn test_neon_aes_token_extraction() {
+        if let Some(aes) = NeonAesToken::try_new() {
+            let _neon = aes.neon();
+        }
+    }
+
+    #[test]
+    fn test_neon_sha3_token_extraction() {
+        if let Some(sha3) = NeonSha3Token::try_new() {
+            let _neon = sha3.neon();
         }
     }
 }

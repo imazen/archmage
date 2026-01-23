@@ -172,10 +172,10 @@ For v3 (AVX2+FMA), use `Avx2FmaToken` directly - it's the recommended baseline.
 Use `safe_unaligned_simd` directly inside `#[arcane]` functions:
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane, HasAvx2};
+use archmage::{Desktop64, SimdToken, arcane};
 
 #[arcane]
-fn process(_token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
+fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd calls are SAFE inside #[arcane]
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);

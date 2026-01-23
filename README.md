@@ -110,6 +110,10 @@ Note: Intel 12th-14th gen consumer CPUs do NOT have AVX-512.
 |-------|----------|-------------|
 | **`Arm64`** | NEON | All AArch64 (baseline) |
 | `NeonToken` | NEON | Same as Arm64 (alias) |
+| `NeonAesToken` | NEON + AES | ARM with crypto extensions |
+| `NeonSha3Token` | NEON + SHA3 | ARMv8.2+ |
+| `ArmCryptoToken` | AES + SHA2 + CRC | Most ARMv8 CPUs |
+| `ArmCrypto3Token` | + SHA3 | ARMv8.4+ (M1/M2/M3, Graviton 2+) |
 
 ### WASM Tokens
 
@@ -156,6 +160,8 @@ fn process<T: HasX64V2>(_token: T, data: &[u8]) {
 | `Has256BitSimd` | Has 256-bit vectors |
 | `Has512BitSimd` | Has 512-bit vectors |
 | `HasNeon` | Has ARM NEON |
+| `HasNeonAes` | Has NEON + AES |
+| `HasNeonSha3` | Has NEON + SHA3 |
 
 ## Cross-Platform Code
 
