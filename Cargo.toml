@@ -57,6 +57,11 @@ required-features = ["sleef"]
 name = "tokens"
 harness = false
 
+[[bench]]
+name = "wide_comparison"
+harness = false
+required-features = ["wide"]
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

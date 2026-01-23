@@ -1811,7 +1811,7 @@ impl i8x32 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i8 {
-        self.to_array().iter().copied().fold(0_i8, i8::wrapping_add)
+        self.as_array().iter().copied().fold(0_i8, i8::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2050,7 +2050,7 @@ impl u8x32 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u8 {
-        self.to_array().iter().copied().fold(0_u8, u8::wrapping_add)
+        self.as_array().iter().copied().fold(0_u8, u8::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2373,7 +2373,7 @@ impl i16x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
-        self.to_array().iter().copied().fold(0_i16, i16::wrapping_add)
+        self.as_array().iter().copied().fold(0_i16, i16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2706,7 +2706,7 @@ impl u16x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u16 {
-        self.to_array().iter().copied().fold(0_u16, u16::wrapping_add)
+        self.as_array().iter().copied().fold(0_u16, u16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3011,7 +3011,7 @@ impl i32x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        self.to_array().iter().copied().fold(0_i32, i32::wrapping_add)
+        self.as_array().iter().copied().fold(0_i32, i32::wrapping_add)
     }
 
     // ========== Type Conversions ==========
@@ -3306,7 +3306,7 @@ impl u32x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        self.to_array().iter().copied().fold(0_u32, u32::wrapping_add)
+        self.as_array().iter().copied().fold(0_u32, u32::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3541,7 +3541,7 @@ impl i64x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
-        self.to_array().iter().copied().fold(0_i64, i64::wrapping_add)
+        self.as_array().iter().copied().fold(0_i64, i64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3780,7 +3780,7 @@ impl u64x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u64 {
-        self.to_array().iter().copied().fold(0_u64, u64::wrapping_add)
+        self.as_array().iter().copied().fold(0_u64, u64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========

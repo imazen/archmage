@@ -273,7 +273,7 @@ pub fn generate_horizontal_ops(ty: &SimdType) -> String {
         writeln!(code, "    pub fn reduce_add(self) -> {} {{", elem).unwrap();
         writeln!(
             code,
-            "        self.to_array().iter().copied().fold(0_{}, {}::wrapping_add)",
+            "        self.as_array().iter().copied().fold(0_{}, {}::wrapping_add)",
             elem, elem
         )
         .unwrap();

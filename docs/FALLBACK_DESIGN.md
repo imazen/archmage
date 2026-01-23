@@ -54,7 +54,8 @@ pub fn reduce_add(self) -> f32 {
 **Integer scalar fallback pattern:**
 ```rust
 pub fn reduce_add(self) -> i8 {
-    self.to_array().iter().copied().fold(0_i8, i8::wrapping_add)
+    // Uses as_array() for zero-copy access (not to_array() which copies)
+    self.as_array().iter().copied().fold(0_i8, i8::wrapping_add)
 }
 ```
 
