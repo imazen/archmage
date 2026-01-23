@@ -34,6 +34,7 @@ name = "archmage"
 version = "0.2.0"
 dependencies = [
  "archmage-macros",
+ "bytemuck",
  "criterion",
  "safe_unaligned_simd",
  "sleef",

@@ -112,6 +112,10 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
     code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
     code.push_str("pub use arm::w128::*;\n\n");
 
+    // Polyfill module (handwritten, not auto-generated)
+    code.push_str("// Polyfill module for emulating wider types on narrower hardware\n");
+    code.push_str("pub mod polyfill;\n\n");
+
     // Generate width-aliased namespaces for multi-width dispatch
     code.push_str(&generate_width_namespaces(types));
 

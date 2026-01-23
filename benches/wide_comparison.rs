@@ -235,16 +235,21 @@ fn bench_f32x8_memory(c: &mut Criterion) {
 
     let data = [1.5f32, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5];
 
+    // Memory load (explicit load vs From transmute)
     group.bench_function("archmage_load", |b| {
         b.iter(|| black_box(arch_f32x8::load(token, black_box(&data))))
     });
-    group.bench_function("wide_from_array", |b| {
+    group.bench_function("archmage_from", |b| {
+        b.iter(|| black_box(arch_f32x8::from(black_box(data))))
+    });
+    group.bench_function("wide_from", |b| {
         b.iter(|| black_box(wide_f32x8::from(black_box(data))))
     });
 
     let arch_v = arch_f32x8::from_array(token, data);
     let wide_v = wide_f32x8::from(data);
 
+    // Store / Into array
     group.bench_function("archmage_store", |b| {
         let mut out = [0.0f32; 8];
         b.iter(|| {
@@ -252,7 +257,10 @@ fn bench_f32x8_memory(c: &mut Criterion) {
             black_box(out)
         })
     });
-    group.bench_function("wide_to_array", |b| {
+    group.bench_function("archmage_into", |b| {
+        b.iter(|| black_box(<[f32; 8]>::from(black_box(arch_v))))
+    });
+    group.bench_function("wide_into", |b| {
         b.iter(|| black_box(<[f32; 8]>::from(black_box(wide_v))))
     });
 
@@ -350,12 +358,12 @@ fn bench_batch_operations(c: &mut Criterion) {
 
     group.throughput(Throughput::Elements((N * 8) as u64));
 
-    // Batch add
-    group.bench_function("archmage_batch_add", |b| {
+    // Batch add using From trait (zero-cost transmute)
+    group.bench_function("archmage_batch_add_from", |b| {
         b.iter(|| {
             let mut sum = arch_f32x8::zero(token);
             for arr in &input {
-                let v = arch_f32x8::from_array(token, *arr);
+                let v: arch_f32x8 = (*arr).into();
                 sum = sum + v;
             }
             black_box(sum.reduce_add())
@@ -373,14 +381,14 @@ fn bench_batch_operations(c: &mut Criterion) {
         })
     });
 
-    // Batch mul_add (FMA)
-    group.bench_function("archmage_batch_fma", |b| {
+    // Batch mul_add using From trait (zero-cost transmute)
+    group.bench_function("archmage_batch_fma_from", |b| {
         let scale = arch_f32x8::splat(token, 0.5);
         let offset = arch_f32x8::splat(token, 1.0);
         b.iter(|| {
             let mut acc = arch_f32x8::zero(token);
             for arr in &input {
-                let v = arch_f32x8::from_array(token, *arr);
+                let v: arch_f32x8 = (*arr).into();
                 acc = v.mul_add(scale, offset);
             }
             black_box(acc.reduce_add())

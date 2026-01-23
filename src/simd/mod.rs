@@ -279,6 +279,9 @@ pub use x86::w512::*;
 #[cfg(target_arch = "aarch64")]
 pub use arm::w128::*;
 
+// Polyfill module for emulating wider types on narrower hardware
+pub mod polyfill;
+
 // ============================================================================
 // Width-aliased namespaces for multi-width dispatch
 //

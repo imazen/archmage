@@ -300,6 +300,12 @@ pub fn generate_type(ty: &SimdType) -> String {
     writeln!(code, "#[repr(transparent)]").unwrap();
     writeln!(code, "pub struct {}({});\n", name, inner).unwrap();
 
+    // Bytemuck trait impls (zero-cost casts)
+    writeln!(code, "#[cfg(feature = \"bytemuck\")]").unwrap();
+    writeln!(code, "{}unsafe impl bytemuck::Zeroable for {} {{}}", cfg_attr, name).unwrap();
+    writeln!(code, "#[cfg(feature = \"bytemuck\")]").unwrap();
+    writeln!(code, "{}unsafe impl bytemuck::Pod for {} {{}}\n", cfg_attr, name).unwrap();
+
     // Impl block
     writeln!(code, "{}impl {} {{", cfg_attr, name).unwrap();
     writeln!(code, "    pub const LANES: usize = {};\n", lanes).unwrap();
@@ -454,16 +460,19 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     }
     writeln!(code, "    }}\n").unwrap();
 
-    // From array
-    writeln!(code, "    /// Create from array (token-gated)").unwrap();
+    // From array (zero-cost transmute, no load instruction)
+    writeln!(code, "    /// Create from array (token-gated, zero-cost)").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// This is a zero-cost transmute, not a memory load.").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(
         code,
-        "    pub fn from_array(token: crate::{}, arr: [{}; {}]) -> Self {{",
+        "    pub fn from_array(_: crate::{}, arr: [{}; {}]) -> Self {{",
         token, elem, lanes
     )
     .unwrap();
-    writeln!(code, "        Self::load(token, &arr)").unwrap();
+    writeln!(code, "        // SAFETY: [{}; {}] and {} have identical size and layout", elem, lanes, inner).unwrap();
+    writeln!(code, "        Self(unsafe {{ core::mem::transmute(arr) }})").unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // Store
@@ -676,6 +685,25 @@ fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
         ty.lanes()
     )
     .unwrap();
+
+    // From<[T; N]> for zero-cost conversion
+    writeln!(code).unwrap();
+    writeln!(code, "{}impl From<[{}; {}]> for {} {{", cfg_attr, ty.elem.name(), ty.lanes(), name).unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    fn from(arr: [{}; {}]) -> Self {{", ty.elem.name(), ty.lanes()).unwrap();
+    writeln!(code, "        // SAFETY: [{}; {}] and {} have identical size and layout", ty.elem.name(), ty.lanes(), ty.x86_inner_type()).unwrap();
+    writeln!(code, "        Self(unsafe {{ core::mem::transmute(arr) }})").unwrap();
+    writeln!(code, "    }}").unwrap();
+    writeln!(code, "}}").unwrap();
+
+    // Into<[T; N]> for zero-cost conversion back
+    writeln!(code, "{}impl From<{}> for [{}; {}] {{", cfg_attr, name, ty.elem.name(), ty.lanes()).unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    fn from(v: {}) -> Self {{", name).unwrap();
+    writeln!(code, "        // SAFETY: {} and [{}; {}] have identical size and layout", ty.x86_inner_type(), ty.elem.name(), ty.lanes()).unwrap();
+    writeln!(code, "        unsafe {{ core::mem::transmute(v.0) }}").unwrap();
+    writeln!(code, "    }}").unwrap();
+    writeln!(code, "}}").unwrap();
 
     code.push('\n');
     code

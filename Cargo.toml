@@ -14,9 +14,10 @@ keywords = ["simd", "avx", "neon", "performance", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
-default = ["std", "macros"]
+default = ["std", "macros", "bytemuck"]
 std = []
 macros = ["dep:archmage-macros"]
+bytemuck = ["dep:bytemuck"]
 # AVX-512 token support (Avx512Token, Avx512ModernToken, X64V4Token, etc.)
 avx512 = []
 # Sleef comparison example (requires nightly)
@@ -35,6 +36,8 @@ wide = ["__wide"]
 [dependencies]
 # Proc-macro crate for #[arcane] attribute
 archmage-macros = { version = "0.1.1", path = "archmage-macros", optional = true }
+# Zero-cost type casts (Pod, Zeroable)
+bytemuck = { version = "1.24", optional = true }
 # Optional integrations
 wide = { version = "1.1.1", optional = true }
 # Safe unaligned memory operations (optional, for __composite)

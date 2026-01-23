@@ -13,6 +13,11 @@ use core::arch::aarch64::*;
 #[repr(transparent)]
 pub struct f32x4(float32x4_t);
 
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for f32x4 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for f32x4 {}
+
 impl f32x4 {
     pub const LANES: usize = 4;
 
@@ -34,10 +39,13 @@ impl f32x4 {
         Self(unsafe { vdupq_n_f32(0.0f32) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [f32; 4]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [f32; 4]) -> Self {
+        // SAFETY: [f32; 4] and float32x4_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -252,6 +260,22 @@ impl core::ops::IndexMut<usize> for f32x4 {
     }
 }
 
+impl From<[f32; 4]> for f32x4 {
+    #[inline(always)]
+    fn from(arr: [f32; 4]) -> Self {
+        // SAFETY: [f32; 4] and float32x4_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<f32x4> for [f32; 4] {
+    #[inline(always)]
+    fn from(v: f32x4) -> Self {
+        // SAFETY: float32x4_t and [f32; 4] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit NEON)
@@ -260,6 +284,11 @@ impl core::ops::IndexMut<usize> for f32x4 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct f64x2(float64x2_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for f64x2 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for f64x2 {}
 
 impl f64x2 {
     pub const LANES: usize = 2;
@@ -282,10 +311,13 @@ impl f64x2 {
         Self(unsafe { vdupq_n_f64(0.0f64) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [f64; 2]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [f64; 2]) -> Self {
+        // SAFETY: [f64; 2] and float64x2_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -497,6 +529,22 @@ impl core::ops::IndexMut<usize> for f64x2 {
     }
 }
 
+impl From<[f64; 2]> for f64x2 {
+    #[inline(always)]
+    fn from(arr: [f64; 2]) -> Self {
+        // SAFETY: [f64; 2] and float64x2_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<f64x2> for [f64; 2] {
+    #[inline(always)]
+    fn from(v: f64x2) -> Self {
+        // SAFETY: float64x2_t and [f64; 2] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit NEON)
@@ -505,6 +553,11 @@ impl core::ops::IndexMut<usize> for f64x2 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct i8x16(int8x16_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for i8x16 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for i8x16 {}
 
 impl i8x16 {
     pub const LANES: usize = 16;
@@ -527,10 +580,13 @@ impl i8x16 {
         Self(unsafe { vdupq_n_s8(0i8) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [i8; 16]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [i8; 16]) -> Self {
+        // SAFETY: [i8; 16] and int8x16_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -667,6 +723,22 @@ impl core::ops::IndexMut<usize> for i8x16 {
     }
 }
 
+impl From<[i8; 16]> for i8x16 {
+    #[inline(always)]
+    fn from(arr: [i8; 16]) -> Self {
+        // SAFETY: [i8; 16] and int8x16_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<i8x16> for [i8; 16] {
+    #[inline(always)]
+    fn from(v: i8x16) -> Self {
+        // SAFETY: int8x16_t and [i8; 16] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit NEON)
@@ -675,6 +747,11 @@ impl core::ops::IndexMut<usize> for i8x16 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct u8x16(uint8x16_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for u8x16 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for u8x16 {}
 
 impl u8x16 {
     pub const LANES: usize = 16;
@@ -697,10 +774,13 @@ impl u8x16 {
         Self(unsafe { vdupq_n_u8(0u8) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [u8; 16]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and uint8x16_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -811,6 +891,22 @@ impl core::ops::IndexMut<usize> for u8x16 {
     }
 }
 
+impl From<[u8; 16]> for u8x16 {
+    #[inline(always)]
+    fn from(arr: [u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and uint8x16_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<u8x16> for [u8; 16] {
+    #[inline(always)]
+    fn from(v: u8x16) -> Self {
+        // SAFETY: uint8x16_t and [u8; 16] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit NEON)
@@ -819,6 +915,11 @@ impl core::ops::IndexMut<usize> for u8x16 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct i16x8(int16x8_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for i16x8 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for i16x8 {}
 
 impl i16x8 {
     pub const LANES: usize = 8;
@@ -841,10 +942,13 @@ impl i16x8 {
         Self(unsafe { vdupq_n_s16(0i16) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [i16; 8]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [i16; 8]) -> Self {
+        // SAFETY: [i16; 8] and int16x8_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -995,6 +1099,22 @@ impl core::ops::IndexMut<usize> for i16x8 {
     }
 }
 
+impl From<[i16; 8]> for i16x8 {
+    #[inline(always)]
+    fn from(arr: [i16; 8]) -> Self {
+        // SAFETY: [i16; 8] and int16x8_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<i16x8> for [i16; 8] {
+    #[inline(always)]
+    fn from(v: i16x8) -> Self {
+        // SAFETY: int16x8_t and [i16; 8] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit NEON)
@@ -1003,6 +1123,11 @@ impl core::ops::IndexMut<usize> for i16x8 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct u16x8(uint16x8_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for u16x8 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for u16x8 {}
 
 impl u16x8 {
     pub const LANES: usize = 8;
@@ -1025,10 +1150,13 @@ impl u16x8 {
         Self(unsafe { vdupq_n_u16(0u16) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [u16; 8]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [u16; 8]) -> Self {
+        // SAFETY: [u16; 8] and uint16x8_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -1154,6 +1282,22 @@ impl core::ops::IndexMut<usize> for u16x8 {
     }
 }
 
+impl From<[u16; 8]> for u16x8 {
+    #[inline(always)]
+    fn from(arr: [u16; 8]) -> Self {
+        // SAFETY: [u16; 8] and uint16x8_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<u16x8> for [u16; 8] {
+    #[inline(always)]
+    fn from(v: u16x8) -> Self {
+        // SAFETY: uint16x8_t and [u16; 8] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit NEON)
@@ -1162,6 +1306,11 @@ impl core::ops::IndexMut<usize> for u16x8 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct i32x4(int32x4_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for i32x4 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for i32x4 {}
 
 impl i32x4 {
     pub const LANES: usize = 4;
@@ -1184,10 +1333,13 @@ impl i32x4 {
         Self(unsafe { vdupq_n_s32(0i32) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [i32; 4]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [i32; 4]) -> Self {
+        // SAFETY: [i32; 4] and int32x4_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -1337,6 +1489,22 @@ impl core::ops::IndexMut<usize> for i32x4 {
     }
 }
 
+impl From<[i32; 4]> for i32x4 {
+    #[inline(always)]
+    fn from(arr: [i32; 4]) -> Self {
+        // SAFETY: [i32; 4] and int32x4_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<i32x4> for [i32; 4] {
+    #[inline(always)]
+    fn from(v: i32x4) -> Self {
+        // SAFETY: int32x4_t and [i32; 4] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit NEON)
@@ -1345,6 +1513,11 @@ impl core::ops::IndexMut<usize> for i32x4 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct u32x4(uint32x4_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for u32x4 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for u32x4 {}
 
 impl u32x4 {
     pub const LANES: usize = 4;
@@ -1367,10 +1540,13 @@ impl u32x4 {
         Self(unsafe { vdupq_n_u32(0u32) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [u32; 4]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [u32; 4]) -> Self {
+        // SAFETY: [u32; 4] and uint32x4_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -1496,6 +1672,22 @@ impl core::ops::IndexMut<usize> for u32x4 {
     }
 }
 
+impl From<[u32; 4]> for u32x4 {
+    #[inline(always)]
+    fn from(arr: [u32; 4]) -> Self {
+        // SAFETY: [u32; 4] and uint32x4_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<u32x4> for [u32; 4] {
+    #[inline(always)]
+    fn from(v: u32x4) -> Self {
+        // SAFETY: uint32x4_t and [u32; 4] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit NEON)
@@ -1504,6 +1696,11 @@ impl core::ops::IndexMut<usize> for u32x4 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct i64x2(int64x2_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for i64x2 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for i64x2 {}
 
 impl i64x2 {
     pub const LANES: usize = 2;
@@ -1526,10 +1723,13 @@ impl i64x2 {
         Self(unsafe { vdupq_n_s64(0i64) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [i64; 2]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [i64; 2]) -> Self {
+        // SAFETY: [i64; 2] and int64x2_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -1663,6 +1863,22 @@ impl core::ops::IndexMut<usize> for i64x2 {
     }
 }
 
+impl From<[i64; 2]> for i64x2 {
+    #[inline(always)]
+    fn from(arr: [i64; 2]) -> Self {
+        // SAFETY: [i64; 2] and int64x2_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<i64x2> for [i64; 2] {
+    #[inline(always)]
+    fn from(v: i64x2) -> Self {
+        // SAFETY: int64x2_t and [i64; 2] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit NEON)
@@ -1671,6 +1887,11 @@ impl core::ops::IndexMut<usize> for i64x2 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct u64x2(uint64x2_t);
+
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Zeroable for u64x2 {}
+#[cfg(feature = "bytemuck")]
+unsafe impl bytemuck::Pod for u64x2 {}
 
 impl u64x2 {
     pub const LANES: usize = 2;
@@ -1693,10 +1914,13 @@ impl u64x2 {
         Self(unsafe { vdupq_n_u64(0u64) })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::NeonToken, arr: [u64; 2]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::NeonToken, arr: [u64; 2]) -> Self {
+        // SAFETY: [u64; 2] and uint64x2_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -1804,6 +2028,22 @@ impl core::ops::IndexMut<usize> for u64x2 {
     fn index_mut(&mut self, i: usize) -> &mut Self::Output {
         assert!(i < 2, "index out of bounds");
         unsafe { &mut *(self as *mut Self as *mut u64).add(i) }
+    }
+}
+
+impl From<[u64; 2]> for u64x2 {
+    #[inline(always)]
+    fn from(arr: [u64; 2]) -> Self {
+        // SAFETY: [u64; 2] and uint64x2_t have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+
+impl From<u64x2> for [u64; 2] {
+    #[inline(always)]
+    fn from(v: u64x2) -> Self {
+        // SAFETY: uint64x2_t and [u64; 2] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
     }
 }
 

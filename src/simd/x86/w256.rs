@@ -18,6 +18,13 @@ use core::ops::{
 #[repr(transparent)]
 pub struct f32x8(__m256);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for f32x8 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for f32x8 {}
+
 #[cfg(target_arch = "x86_64")]
 impl f32x8 {
     pub const LANES: usize = 8;
@@ -40,10 +47,13 @@ impl f32x8 {
         Self(unsafe { _mm256_setzero_ps() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [f32; 8]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [f32; 8]) -> Self {
+        // SAFETY: [f32; 8] and __m256 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -1145,6 +1155,23 @@ crate::impl_bitwise_ops!(f32x8, __m256, _mm256_and_ps, _mm256_or_ps, _mm256_xor_
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(f32x8, f32, 8);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[f32; 8]> for f32x8 {
+    #[inline(always)]
+    fn from(arr: [f32; 8]) -> Self {
+        // SAFETY: [f32; 8] and __m256 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<f32x8> for [f32; 8] {
+    #[inline(always)]
+    fn from(v: f32x8) -> Self {
+        // SAFETY: __m256 and [f32; 8] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for f32x8
 // These allow `v + 2.0` instead of `v + f32x8::splat(token, 2.0)`
@@ -1201,6 +1228,13 @@ impl Div<f32> for f32x8 {
 #[repr(transparent)]
 pub struct f64x4(__m256d);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for f64x4 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for f64x4 {}
+
 #[cfg(target_arch = "x86_64")]
 impl f64x4 {
     pub const LANES: usize = 4;
@@ -1223,10 +1257,13 @@ impl f64x4 {
         Self(unsafe { _mm256_setzero_pd() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [f64; 4]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [f64; 4]) -> Self {
+        // SAFETY: [f64; 4] and __m256d have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -1574,6 +1611,23 @@ crate::impl_bitwise_ops!(f64x4, __m256d, _mm256_and_pd, _mm256_or_pd, _mm256_xor
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(f64x4, f64, 4);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[f64; 4]> for f64x4 {
+    #[inline(always)]
+    fn from(arr: [f64; 4]) -> Self {
+        // SAFETY: [f64; 4] and __m256d have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<f64x4> for [f64; 4] {
+    #[inline(always)]
+    fn from(v: f64x4) -> Self {
+        // SAFETY: __m256d and [f64; 4] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for f64x4
 // These allow `v + 2.0` instead of `v + f64x4::splat(token, 2.0)`
@@ -1630,6 +1684,13 @@ impl Div<f64> for f64x4 {
 #[repr(transparent)]
 pub struct i8x32(__m256i);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for i8x32 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for i8x32 {}
+
 #[cfg(target_arch = "x86_64")]
 impl i8x32 {
     pub const LANES: usize = 32;
@@ -1652,10 +1713,13 @@ impl i8x32 {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [i8; 32]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [i8; 32]) -> Self {
+        // SAFETY: [i8; 32] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -1834,6 +1898,23 @@ crate::impl_bitwise_ops!(i8x32, __m256i, _mm256_and_si256, _mm256_or_si256, _mm2
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(i8x32, i8, 32);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[i8; 32]> for i8x32 {
+    #[inline(always)]
+    fn from(arr: [i8; 32]) -> Self {
+        // SAFETY: [i8; 32] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<i8x32> for [i8; 32] {
+    #[inline(always)]
+    fn from(v: i8x32) -> Self {
+        // SAFETY: __m256i and [i8; 32] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for i8x32
 // These allow `v + 2.0` instead of `v + i8x32::splat(token, 2.0)`
@@ -1868,6 +1949,13 @@ impl Sub<i8> for i8x32 {
 #[repr(transparent)]
 pub struct u8x32(__m256i);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for u8x32 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for u8x32 {}
+
 #[cfg(target_arch = "x86_64")]
 impl u8x32 {
     pub const LANES: usize = 32;
@@ -1890,10 +1978,13 @@ impl u8x32 {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [u8; 32]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -2158,6 +2249,23 @@ crate::impl_bitwise_ops!(u8x32, __m256i, _mm256_and_si256, _mm256_or_si256, _mm2
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u8x32, u8, 32);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[u8; 32]> for u8x32 {
+    #[inline(always)]
+    fn from(arr: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<u8x32> for [u8; 32] {
+    #[inline(always)]
+    fn from(v: u8x32) -> Self {
+        // SAFETY: __m256i and [u8; 32] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for u8x32
 // These allow `v + 2.0` instead of `v + u8x32::splat(token, 2.0)`
@@ -2192,6 +2300,13 @@ impl Sub<u8> for u8x32 {
 #[repr(transparent)]
 pub struct i16x16(__m256i);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for i16x16 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for i16x16 {}
+
 #[cfg(target_arch = "x86_64")]
 impl i16x16 {
     pub const LANES: usize = 16;
@@ -2214,10 +2329,13 @@ impl i16x16 {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [i16; 16]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [i16; 16]) -> Self {
+        // SAFETY: [i16; 16] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -2490,6 +2608,23 @@ crate::impl_bitwise_ops!(i16x16, __m256i, _mm256_and_si256, _mm256_or_si256, _mm
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(i16x16, i16, 16);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[i16; 16]> for i16x16 {
+    #[inline(always)]
+    fn from(arr: [i16; 16]) -> Self {
+        // SAFETY: [i16; 16] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<i16x16> for [i16; 16] {
+    #[inline(always)]
+    fn from(v: i16x16) -> Self {
+        // SAFETY: __m256i and [i16; 16] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for i16x16
 // These allow `v + 2.0` instead of `v + i16x16::splat(token, 2.0)`
@@ -2524,6 +2659,13 @@ impl Sub<i16> for i16x16 {
 #[repr(transparent)]
 pub struct u16x16(__m256i);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for u16x16 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for u16x16 {}
+
 #[cfg(target_arch = "x86_64")]
 impl u16x16 {
     pub const LANES: usize = 16;
@@ -2546,10 +2688,13 @@ impl u16x16 {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [u16; 16]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [u16; 16]) -> Self {
+        // SAFETY: [u16; 16] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -2796,6 +2941,23 @@ crate::impl_bitwise_ops!(u16x16, __m256i, _mm256_and_si256, _mm256_or_si256, _mm
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u16x16, u16, 16);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[u16; 16]> for u16x16 {
+    #[inline(always)]
+    fn from(arr: [u16; 16]) -> Self {
+        // SAFETY: [u16; 16] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<u16x16> for [u16; 16] {
+    #[inline(always)]
+    fn from(v: u16x16) -> Self {
+        // SAFETY: __m256i and [u16; 16] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for u16x16
 // These allow `v + 2.0` instead of `v + u16x16::splat(token, 2.0)`
@@ -2830,6 +2992,13 @@ impl Sub<u16> for u16x16 {
 #[repr(transparent)]
 pub struct i32x8(__m256i);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for i32x8 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for i32x8 {}
+
 #[cfg(target_arch = "x86_64")]
 impl i32x8 {
     pub const LANES: usize = 8;
@@ -2852,10 +3021,13 @@ impl i32x8 {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [i32; 8]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [i32; 8]) -> Self {
+        // SAFETY: [i32; 8] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -3090,6 +3262,23 @@ crate::impl_bitwise_ops!(i32x8, __m256i, _mm256_and_si256, _mm256_or_si256, _mm2
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(i32x8, i32, 8);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[i32; 8]> for i32x8 {
+    #[inline(always)]
+    fn from(arr: [i32; 8]) -> Self {
+        // SAFETY: [i32; 8] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<i32x8> for [i32; 8] {
+    #[inline(always)]
+    fn from(v: i32x8) -> Self {
+        // SAFETY: __m256i and [i32; 8] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for i32x8
 // These allow `v + 2.0` instead of `v + i32x8::splat(token, 2.0)`
@@ -3124,6 +3313,13 @@ impl Sub<i32> for i32x8 {
 #[repr(transparent)]
 pub struct u32x8(__m256i);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for u32x8 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for u32x8 {}
+
 #[cfg(target_arch = "x86_64")]
 impl u32x8 {
     pub const LANES: usize = 8;
@@ -3146,10 +3342,13 @@ impl u32x8 {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [u32; 8]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [u32; 8]) -> Self {
+        // SAFETY: [u32; 8] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -3346,6 +3545,23 @@ crate::impl_bitwise_ops!(u32x8, __m256i, _mm256_and_si256, _mm256_or_si256, _mm2
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u32x8, u32, 8);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[u32; 8]> for u32x8 {
+    #[inline(always)]
+    fn from(arr: [u32; 8]) -> Self {
+        // SAFETY: [u32; 8] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<u32x8> for [u32; 8] {
+    #[inline(always)]
+    fn from(v: u32x8) -> Self {
+        // SAFETY: __m256i and [u32; 8] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for u32x8
 // These allow `v + 2.0` instead of `v + u32x8::splat(token, 2.0)`
@@ -3380,6 +3596,13 @@ impl Sub<u32> for u32x8 {
 #[repr(transparent)]
 pub struct i64x4(__m256i);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for i64x4 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for i64x4 {}
+
 #[cfg(target_arch = "x86_64")]
 impl i64x4 {
     pub const LANES: usize = 4;
@@ -3402,10 +3625,13 @@ impl i64x4 {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [i64; 4]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [i64; 4]) -> Self {
+        // SAFETY: [i64; 4] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -3579,6 +3805,23 @@ crate::impl_bitwise_ops!(i64x4, __m256i, _mm256_and_si256, _mm256_or_si256, _mm2
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(i64x4, i64, 4);
 
+#[cfg(target_arch = "x86_64")]
+impl From<[i64; 4]> for i64x4 {
+    #[inline(always)]
+    fn from(arr: [i64; 4]) -> Self {
+        // SAFETY: [i64; 4] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<i64x4> for [i64; 4] {
+    #[inline(always)]
+    fn from(v: i64x4) -> Self {
+        // SAFETY: __m256i and [i64; 4] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
+
 
 // Scalar broadcast operations for i64x4
 // These allow `v + 2.0` instead of `v + i64x4::splat(token, 2.0)`
@@ -3613,6 +3856,13 @@ impl Sub<i64> for i64x4 {
 #[repr(transparent)]
 pub struct u64x4(__m256i);
 
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Zeroable for u64x4 {}
+#[cfg(feature = "bytemuck")]
+#[cfg(target_arch = "x86_64")]
+unsafe impl bytemuck::Pod for u64x4 {}
+
 #[cfg(target_arch = "x86_64")]
 impl u64x4 {
     pub const LANES: usize = 4;
@@ -3635,10 +3885,13 @@ impl u64x4 {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
-    /// Create from array (token-gated)
+    /// Create from array (token-gated, zero-cost)
+    ///
+    /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(token: crate::Avx2FmaToken, arr: [u64; 4]) -> Self {
-        Self::load(token, &arr)
+    pub fn from_array(_: crate::Avx2FmaToken, arr: [u64; 4]) -> Self {
+        // SAFETY: [u64; 4] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
     }
 
     /// Store to array
@@ -3817,6 +4070,23 @@ crate::impl_assign_ops!(u64x4);
 crate::impl_bitwise_ops!(u64x4, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u64x4, u64, 4);
+
+#[cfg(target_arch = "x86_64")]
+impl From<[u64; 4]> for u64x4 {
+    #[inline(always)]
+    fn from(arr: [u64; 4]) -> Self {
+        // SAFETY: [u64; 4] and __m256i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl From<u64x4> for [u64; 4] {
+    #[inline(always)]
+    fn from(v: u64x4) -> Self {
+        // SAFETY: __m256i and [u64; 4] have identical size and layout
+        unsafe { core::mem::transmute(v.0) }
+    }
+}
 
 
 // Scalar broadcast operations for u64x4
