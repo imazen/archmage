@@ -194,29 +194,60 @@ For hot loops, prefer:
 
 ## archmage vs wide: Design Tradeoffs
 
-### CRITICAL: Compilation Flags
+### CRITICAL: Use `#[arcane]` for Performance-Critical Code
 
-**archmage MUST be compiled with `-C target-cpu=native` for optimal performance.**
+**archmage operators inline properly when called from `#[target_feature]` contexts.**
 
-Without proper CPU targeting, intrinsics won't inline properly and archmage will appear
-4-5x slower than wide. This is because archmage uses `#[target_feature]` attributes
-that need matching compiler flags to enable cross-function inlining.
+The `#[arcane]` macro generates functions with `#[target_feature]` attributes.
+When you use operators like `a + b` INSIDE an `#[arcane]` function, the intrinsics
+inline properly into AVX/NEON instructions.
 
-```bash
-# WRONG - baseline x86-64-v1, intrinsics don't inline
-cargo bench
+```rust
+use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::simd::f32x8;
 
-# CORRECT - native CPU, full optimization
-RUSTFLAGS="-C target-cpu=native" cargo bench
-
-# Or use justfile commands
-just bench
-just bench-wide
+// CORRECT - operators inline properly inside #[arcane]
+#[arcane]
+fn process_vectors(token: Avx2FmaToken, input: &[[f32; 8]]) -> f32 {
+    let mut sum = f32x8::zero(token);
+    for arr in input {
+        let v: f32x8 = (*arr).into();
+        sum = sum + v;  // This + compiles to a single vaddps instruction!
+    }
+    sum.reduce_add()
+}
 ```
 
-### Benchmark Results (with `-C target-cpu=native`)
+**Without `#[arcane]` or `#[target_feature]`:** Operators still work correctly, but
+intrinsics are called as separate functions rather than being inlined. This is ~1.3x
+slower but still uses proper SIMD instructions.
 
-Comparing archmage to the `wide` crate (v1.1.1) on Intel/AMD x86-64:
+**Alternative: Use `-C target-cpu=native`** for benchmarking or when you can't use
+`#[arcane]` everywhere:
+
+```bash
+# For benchmarking
+RUSTFLAGS="-C target-cpu=native" cargo bench
+just bench  # Automatically sets the flag
+```
+
+### Benchmark Results
+
+**Scenario 1: Using `#[arcane]` / `#[target_feature]` (recommended)**
+
+Without `-C target-cpu=native`, but using proper `#[target_feature]` contexts:
+
+| Operation | archmage | wide | Winner |
+|-----------|----------|------|--------|
+| batch add (1024 elements) | 83ns | 65ns | wide 1.28x |
+| batch fma (1024 elements) | 10ns | varies | competitive |
+
+This is the expected use case - archmage with runtime detection inside `#[arcane]` functions.
+Wide is slightly faster because it uses compile-time feature detection (`#[cfg(target_feature)]`).
+
+**Scenario 2: With `-C target-cpu=native` (all code benefits)**
+
+With compile-time CPU targeting, both archmage and wide compile optimally:
 
 | Operation | archmage | wide | Winner |
 |-----------|----------|------|--------|
@@ -236,7 +267,8 @@ Comparing archmage to the `wide` crate (v1.1.1) on Intel/AMD x86-64:
 | f32x8 store | 779ps | 1.3ns | **archmage 1.67x** |
 | batch add (128) | 118ns | 131ns | **archmage 1.11x** |
 
-**Summary: archmage is 15-35% faster than wide on most operations.**
+**Summary:** With `#[arcane]` alone, archmage is ~1.3x slower than wide.
+With `-C target-cpu=native`, archmage is 15-35% faster than wide on most operations.
 
 ### Design Approaches
 
