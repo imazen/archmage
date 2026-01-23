@@ -330,32 +330,71 @@ fn generate_construction_methods(ty: &SimdType) -> String {
 
 /// Generate math operations for NEON
 fn generate_math_ops(ty: &SimdType) -> String {
+    use super::types::ElementType;
+
     let mut code = String::new();
 
-    // Min/Max (for all types)
-    let min_fn = Arm::minmax_intrinsic("min", ty.elem);
-    let max_fn = Arm::minmax_intrinsic("max", ty.elem);
+    // Min/Max - NEON doesn't have native 64-bit integer min/max, so we need polyfills
+    let needs_polyfill = matches!(ty.elem, ElementType::I64 | ElementType::U64);
 
     writeln!(code, "    /// Element-wise minimum").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn min(self, other: Self) -> Self {{").unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ {}(self.0, other.0) }})",
-        min_fn
-    )
-    .unwrap();
+
+    if needs_polyfill {
+        // Use comparison + select: min(a, b) = select(a < b, a, b)
+        let cmp_fn = match ty.elem {
+            ElementType::I64 => "vcltq_s64",
+            ElementType::U64 => "vcltq_u64",
+            _ => unreachable!(),
+        };
+        let bsl_fn = match ty.elem {
+            ElementType::I64 => "vbslq_s64",
+            ElementType::U64 => "vbslq_u64",
+            _ => unreachable!(),
+        };
+        writeln!(code, "        // NEON lacks native 64-bit min, use compare+select").unwrap();
+        writeln!(code, "        let mask = unsafe {{ {}(self.0, other.0) }};", cmp_fn).unwrap();
+        writeln!(code, "        Self(unsafe {{ {}(mask, self.0, other.0) }})", bsl_fn).unwrap();
+    } else {
+        let min_fn = Arm::minmax_intrinsic("min", ty.elem);
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(self.0, other.0) }})",
+            min_fn
+        )
+        .unwrap();
+    }
     writeln!(code, "    }}\n").unwrap();
 
     writeln!(code, "    /// Element-wise maximum").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn max(self, other: Self) -> Self {{").unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ {}(self.0, other.0) }})",
-        max_fn
-    )
-    .unwrap();
+
+    if needs_polyfill {
+        // Use comparison + select: max(a, b) = select(a > b, a, b)
+        let cmp_fn = match ty.elem {
+            ElementType::I64 => "vcgtq_s64",
+            ElementType::U64 => "vcgtq_u64",
+            _ => unreachable!(),
+        };
+        let bsl_fn = match ty.elem {
+            ElementType::I64 => "vbslq_s64",
+            ElementType::U64 => "vbslq_u64",
+            _ => unreachable!(),
+        };
+        writeln!(code, "        // NEON lacks native 64-bit max, use compare+select").unwrap();
+        writeln!(code, "        let mask = unsafe {{ {}(self.0, other.0) }};", cmp_fn).unwrap();
+        writeln!(code, "        Self(unsafe {{ {}(mask, self.0, other.0) }})", bsl_fn).unwrap();
+    } else {
+        let max_fn = Arm::minmax_intrinsic("max", ty.elem);
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(self.0, other.0) }})",
+            max_fn
+        )
+        .unwrap();
+    }
     writeln!(code, "    }}\n").unwrap();
 
     writeln!(code, "    /// Clamp values between lo and hi").unwrap();

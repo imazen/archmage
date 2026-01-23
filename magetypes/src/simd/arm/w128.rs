@@ -2478,13 +2478,17 @@ impl i64x2 {
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
-        Self(unsafe { vminq_s64(self.0, other.0) })
+        // NEON lacks native 64-bit min, use compare+select
+        let mask = unsafe { vcltq_s64(self.0, other.0) };
+        Self(unsafe { vbslq_s64(mask, self.0, other.0) })
     }
 
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
-        Self(unsafe { vmaxq_s64(self.0, other.0) })
+        // NEON lacks native 64-bit max, use compare+select
+        let mask = unsafe { vcgtq_s64(self.0, other.0) };
+        Self(unsafe { vbslq_s64(mask, self.0, other.0) })
     }
 
     /// Clamp values between lo and hi
@@ -2747,13 +2751,17 @@ impl u64x2 {
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
-        Self(unsafe { vminq_u64(self.0, other.0) })
+        // NEON lacks native 64-bit min, use compare+select
+        let mask = unsafe { vcltq_u64(self.0, other.0) };
+        Self(unsafe { vbslq_u64(mask, self.0, other.0) })
     }
 
     /// Element-wise maximum
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
-        Self(unsafe { vmaxq_u64(self.0, other.0) })
+        // NEON lacks native 64-bit max, use compare+select
+        let mask = unsafe { vcgtq_u64(self.0, other.0) };
+        Self(unsafe { vbslq_u64(mask, self.0, other.0) })
     }
 
     /// Clamp values between lo and hi
