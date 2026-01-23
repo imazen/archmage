@@ -21,7 +21,7 @@ avx512 = ["archmage/avx512"]
 
 [dependencies]
 # Core tokens and macros
-archmage = { version = "0.2.0", path = "..", default-features = false }
+archmage = { version = "0.2.1", path = "..", default-features = false }
 # Zero-cost type casts (Pod, Zeroable)
 bytemuck = { version = "1.24", optional = true }
 
