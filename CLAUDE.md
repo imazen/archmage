@@ -154,18 +154,26 @@ if let Some(token) = Desktop64::summon() {
 ## Directory Structure
 
 ```
-src/
-├── lib.rs              # Main exports
-├── tokens/
-│   ├── mod.rs          # SimdToken trait, tier traits (HasX64V2, HasX64V4)
-│   ├── x86.rs          # x86 token types
-│   ├── arm.rs          # ARM token types
-│   └── wasm.rs         # WASM token types
-├── composite/          # Higher-level operations (__composite feature)
-├── integrate/          # wide crate integration (__wide feature)
-└── simd/               # Auto-generated SIMD types (wide-like ergonomics)
-xtask/
-└── src/main.rs         # SIMD type generator
+archmage/                    # Main crate: tokens, macros, detect
+├── src/
+│   ├── lib.rs              # Main exports
+│   ├── tokens/             # SIMD capability tokens
+│   │   ├── mod.rs          # SimdToken trait, tier traits (HasX64V2, HasX64V4)
+│   │   ├── x86.rs          # x86 token types
+│   │   ├── arm.rs          # ARM token types
+│   │   └── wasm.rs         # WASM token types
+│   ├── composite/          # Higher-level operations (__composite feature)
+│   └── integrate/          # wide crate integration (__wide feature)
+├── archmage-macros/        # Proc-macro crate (#[arcane], #[multiwidth])
+magetypes/                   # SIMD types crate (depends on archmage)
+├── src/
+│   ├── lib.rs              # Exports simd module
+│   └── simd/               # Auto-generated SIMD types
+│       ├── x86/            # x86-64 types (w128, w256, w512)
+│       ├── arm/            # AArch64 types (w128)
+│       └── polyfill.rs     # Width emulation
+xtask/                       # Code generator
+└── src/main.rs             # Generates magetypes/src/simd/
 ```
 
 ## Token Hierarchy
@@ -195,6 +203,37 @@ fn requires_neon(token: impl HasNeon) { ... }
 ```
 
 For v3 (AVX2+FMA), use `Avx2FmaToken` directly - it's the recommended baseline.
+
+## SIMD Types (magetypes crate)
+
+Token-gated SIMD types live in the **magetypes** crate:
+
+```rust
+use archmage::{Avx2FmaToken, SimdToken};
+use magetypes::simd::f32x8;
+
+if let Some(token) = Avx2FmaToken::summon() {
+    let a = f32x8::splat(token, 1.0);
+    let b = f32x8::splat(token, 2.0);
+    let c = a + b;  // Natural operators!
+}
+```
+
+For multiwidth code, use `magetypes::simd::*`:
+
+```rust
+use archmage::multiwidth;
+
+#[multiwidth]
+mod kernels {
+    use magetypes::simd::*;
+
+    pub fn sum(token: Token, data: &[f32]) -> f32 {
+        let mut acc = f32xN::zero(token);
+        // ...
+    }
+}
+```
 
 ## Safe Memory Operations
 
