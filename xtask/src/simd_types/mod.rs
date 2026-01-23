@@ -19,6 +19,7 @@ mod block_ops;
 mod ops;
 mod ops_comparison;
 mod structure;
+mod structure_arm;
 mod transcendental;
 pub mod types;
 
@@ -81,8 +82,8 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
         }
     }
 
-    // 128-bit types (SSE)
-    code.push_str("// 128-bit types (SSE/NEON)\n");
+    // x86 module (SSE, AVX, AVX-512)
+    code.push_str("// x86-64 types (SSE, AVX, AVX-512)\n");
     code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("mod x86 {\n");
     code.push_str("    pub mod w128;\n");
@@ -91,7 +92,14 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
     code.push_str("    pub mod w512;\n");
     code.push_str("}\n\n");
 
-    // Re-exports
+    // ARM module (NEON)
+    code.push_str("// AArch64 types (NEON)\n");
+    code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
+    code.push_str("mod arm {\n");
+    code.push_str("    pub mod w128;\n");
+    code.push_str("}\n\n");
+
+    // Re-exports for x86
     code.push_str("// Re-export all types\n");
     code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("pub use x86::w128::*;\n");
@@ -100,8 +108,15 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
     code.push_str("#[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
     code.push_str("pub use x86::w512::*;\n\n");
 
+    // Re-exports for ARM
+    code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
+    code.push_str("pub use arm::w128::*;\n\n");
+
     // Generate width-aliased namespaces for multi-width dispatch
     code.push_str(&generate_width_namespaces(types));
+
+    // Generate NEON namespace
+    code.push_str(&generate_neon_namespace());
 
     code
 }
@@ -204,6 +219,39 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code
 }
 
+/// Generate NEON width namespace for ARM
+fn generate_neon_namespace() -> String {
+    let mut code = String::new();
+
+    code.push_str("\n#[cfg(target_arch = \"aarch64\")]\n");
+    code.push_str("pub mod neon {\n");
+    code.push_str("    //! NEON width aliases (128-bit SIMD)\n");
+    code.push_str("    //!\n");
+    code.push_str("    //! - `f32xN` = `f32x4` (4 lanes)\n");
+    code.push_str("    //! - `Token` = `NeonToken`\n\n");
+    code.push_str("    pub use super::arm::w128::{\n");
+    code.push_str("        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,\n");
+    code.push_str("        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,\n");
+    code.push_str("        u32x4 as u32xN, u64x2 as u64xN,\n");
+    code.push_str("    };\n\n");
+    code.push_str("    pub use super::arm::w128::*;\n\n");
+    code.push_str("    /// Token type for this width level\n");
+    code.push_str("    pub type Token = crate::NeonToken;\n\n");
+    code.push_str("    /// Number of f32 lanes\n");
+    code.push_str("    pub const LANES_F32: usize = 4;\n");
+    code.push_str("    /// Number of f64 lanes\n");
+    code.push_str("    pub const LANES_F64: usize = 2;\n");
+    code.push_str("    /// Number of i32/u32 lanes\n");
+    code.push_str("    pub const LANES_32: usize = 4;\n");
+    code.push_str("    /// Number of i16/u16 lanes\n");
+    code.push_str("    pub const LANES_16: usize = 8;\n");
+    code.push_str("    /// Number of i8/u8 lanes\n");
+    code.push_str("    pub const LANES_8: usize = 16;\n");
+    code.push_str("}\n");
+
+    code
+}
+
 /// Generate a file containing types of a specific width
 fn generate_width_file(types: &[SimdType], width: SimdWidth) -> String {
     let mut code = String::new();
@@ -258,7 +306,7 @@ pub mod w512;
 "#;
     files.insert("x86/mod.rs".to_string(), x86_mod.to_string());
 
-    // Generate width-specific files
+    // Generate x86 width-specific files
     files.insert(
         "x86/w128.rs".to_string(),
         generate_width_file(&types, SimdWidth::W128),
@@ -270,6 +318,20 @@ pub mod w512;
     files.insert(
         "x86/w512.rs".to_string(),
         generate_width_file(&types, SimdWidth::W512),
+    );
+
+    // ARM directory mod.rs
+    let arm_mod = r#"//! ARM AArch64 SIMD types (NEON).
+
+pub mod w128;
+"#;
+    files.insert("arm/mod.rs".to_string(), arm_mod.to_string());
+
+    // Generate ARM NEON types
+    let neon_types = structure_arm::all_neon_types();
+    files.insert(
+        "arm/w128.rs".to_string(),
+        structure_arm::generate_arm_w128(&neon_types),
     );
 
     files

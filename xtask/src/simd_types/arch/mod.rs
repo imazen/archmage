@@ -3,6 +3,7 @@
 //! Each architecture module provides intrinsic names, types, and prefixes
 //! for generating SIMD code.
 
+pub mod arm;
 pub mod x86;
 
 use super::types::{ElementType, SimdWidth};

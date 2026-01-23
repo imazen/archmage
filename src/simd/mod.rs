@@ -12,6 +12,7 @@
 #![allow(clippy::approx_constant)]
 #![allow(clippy::missing_transmute_annotations)]
 
+
 // ============================================================================
 // Comparison Traits (return masks, not bool)
 // ============================================================================
@@ -51,6 +52,7 @@ pub trait SimdGe<Rhs = Self> {
     type Output;
     fn simd_ge(self, rhs: Rhs) -> Self::Output;
 }
+
 
 // ============================================================================
 // Implementation Macros
@@ -251,13 +253,19 @@ macro_rules! impl_index {
 // Type modules
 // ============================================================================
 
-// 128-bit types (SSE/NEON)
+// x86-64 types (SSE, AVX, AVX-512)
 #[cfg(target_arch = "x86_64")]
 mod x86 {
     pub mod w128;
     pub mod w256;
     #[cfg(feature = "avx512")]
     pub mod w512;
+}
+
+// AArch64 types (NEON)
+#[cfg(target_arch = "aarch64")]
+mod arm {
+    pub mod w128;
 }
 
 // Re-export all types
@@ -267,6 +275,9 @@ pub use x86::w128::*;
 pub use x86::w256::*;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 pub use x86::w512::*;
+
+#[cfg(target_arch = "aarch64")]
+pub use arm::w128::*;
 
 // ============================================================================
 // Width-aliased namespaces for multi-width dispatch
@@ -283,8 +294,16 @@ pub mod sse {
     //! - `Token` = `Sse41Token`
 
     pub use super::x86::w128::{
-        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
-        i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
+        f32x4 as f32xN,
+        f64x2 as f64xN,
+        i8x16 as i8xN,
+        u8x16 as u8xN,
+        i16x8 as i16xN,
+        u16x8 as u16xN,
+        i32x4 as i32xN,
+        u32x4 as u32xN,
+        i64x2 as i64xN,
+        u64x2 as u64xN,
     };
 
     pub use super::x86::w128::*;
@@ -312,8 +331,16 @@ pub mod avx2 {
     //! - `Token` = `Avx2FmaToken`
 
     pub use super::x86::w256::{
-        f32x8 as f32xN, f64x4 as f64xN, i8x32 as i8xN, i16x16 as i16xN, i32x8 as i32xN,
-        i64x4 as i64xN, u8x32 as u8xN, u16x16 as u16xN, u32x8 as u32xN, u64x4 as u64xN,
+        f32x8 as f32xN,
+        f64x4 as f64xN,
+        i8x32 as i8xN,
+        u8x32 as u8xN,
+        i16x16 as i16xN,
+        u16x16 as u16xN,
+        i32x8 as i32xN,
+        u32x8 as u32xN,
+        i64x4 as i64xN,
+        u64x4 as u64xN,
     };
 
     pub use super::x86::w256::*;
@@ -336,8 +363,16 @@ pub mod avx512 {
     //! - `Token` = `X64V4Token`
 
     pub use super::x86::w512::{
-        f32x16 as f32xN, f64x8 as f64xN, i8x64 as i8xN, i16x32 as i16xN, i32x16 as i32xN,
-        i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
+        f32x16 as f32xN,
+        f64x8 as f64xN,
+        i8x64 as i8xN,
+        u8x64 as u8xN,
+        i16x32 as i16xN,
+        u16x32 as u16xN,
+        i32x16 as i32xN,
+        u32x16 as u32xN,
+        i64x8 as i64xN,
+        u64x8 as u64xN,
     };
 
     pub use super::x86::w512::*;
@@ -352,9 +387,32 @@ pub mod avx512 {
     pub const LANES_8: usize = 64;
 }
 
-// ============================================================================
-// Polyfill module for emulating wider types on narrower hardware
-// ============================================================================
+#[cfg(target_arch = "aarch64")]
+pub mod neon {
+    //! NEON width aliases (128-bit SIMD)
+    //!
+    //! - `f32xN` = `f32x4` (4 lanes)
+    //! - `Token` = `NeonToken`
 
-#[cfg(target_arch = "x86_64")]
-pub mod polyfill;
+    pub use super::arm::w128::{
+        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,
+        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,
+        u32x4 as u32xN, u64x2 as u64xN,
+    };
+
+    pub use super::arm::w128::*;
+
+    /// Token type for this width level
+    pub type Token = crate::NeonToken;
+
+    /// Number of f32 lanes
+    pub const LANES_F32: usize = 4;
+    /// Number of f64 lanes
+    pub const LANES_F64: usize = 2;
+    /// Number of i32/u32 lanes
+    pub const LANES_32: usize = 4;
+    /// Number of i16/u16 lanes
+    pub const LANES_16: usize = 8;
+    /// Number of i8/u8 lanes
+    pub const LANES_8: usize = 16;
+}
