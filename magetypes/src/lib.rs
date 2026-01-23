@@ -36,6 +36,10 @@ pub use archmage;
 #[cfg_attr(docsrs, doc(cfg(any(target_arch = "x86_64", target_arch = "aarch64"))))]
 pub mod simd;
 
+// Width dispatch trait for accessing all SIMD sizes from any token
+mod width;
+pub use width::WidthDispatch;
+
 // Re-export common types at crate root for convenience
 #[cfg(target_arch = "x86_64")]
 pub use simd::{f32x4, f32x8, f64x2, f64x4, i8x16, i8x32, i16x8, i16x16, i32x4, i32x8};

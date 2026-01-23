@@ -481,6 +481,571 @@ pub mod sse {
     pub type f32xN = f32x8;
     pub type f64xN = f64x4;
     pub type i32xN = i32x8;
+
+    // ========================================================================
+    // 512-bit polyfills using 4x 128-bit SSE vectors
+    // ========================================================================
+
+    /// Emulated 16-wide f32 vector using four SSE f32x4 vectors.
+    #[derive(Clone, Copy, Debug)]
+    pub struct f32x16 {
+        a: f32x4,
+        b: f32x4,
+        c: f32x4,
+        d: f32x4,
+    }
+
+    impl f32x16 {
+        pub const LANES: usize = 16;
+
+        #[inline(always)]
+        pub fn load(token: Sse41Token, data: &[f32; 16]) -> Self {
+            Self {
+                a: f32x4::load(token, data[0..4].try_into().unwrap()),
+                b: f32x4::load(token, data[4..8].try_into().unwrap()),
+                c: f32x4::load(token, data[8..12].try_into().unwrap()),
+                d: f32x4::load(token, data[12..16].try_into().unwrap()),
+            }
+        }
+
+        #[inline(always)]
+        pub fn splat(token: Sse41Token, v: f32) -> Self {
+            let part = f32x4::splat(token, v);
+            Self { a: part, b: part, c: part, d: part }
+        }
+
+        #[inline(always)]
+        pub fn zero(token: Sse41Token) -> Self {
+            let part = f32x4::zero(token);
+            Self { a: part, b: part, c: part, d: part }
+        }
+
+        #[inline(always)]
+        pub fn store(self, out: &mut [f32; 16]) {
+            let (ab, cd) = out.split_at_mut(8);
+            let (a, b) = ab.split_at_mut(4);
+            let (c, d) = cd.split_at_mut(4);
+            self.a.store(a.try_into().unwrap());
+            self.b.store(b.try_into().unwrap());
+            self.c.store(c.try_into().unwrap());
+            self.d.store(d.try_into().unwrap());
+        }
+
+        #[inline(always)]
+        pub fn to_array(self) -> [f32; 16] {
+            let mut out = [0.0f32; 16];
+            self.store(&mut out);
+            out
+        }
+    }
+
+    impl Add for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn add(self, rhs: Self) -> Self {
+            Self {
+                a: self.a + rhs.a,
+                b: self.b + rhs.b,
+                c: self.c + rhs.c,
+                d: self.d + rhs.d,
+            }
+        }
+    }
+
+    impl Sub for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn sub(self, rhs: Self) -> Self {
+            Self {
+                a: self.a - rhs.a,
+                b: self.b - rhs.b,
+                c: self.c - rhs.c,
+                d: self.d - rhs.d,
+            }
+        }
+    }
+
+    impl Mul for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn mul(self, rhs: Self) -> Self {
+            Self {
+                a: self.a * rhs.a,
+                b: self.b * rhs.b,
+                c: self.c * rhs.c,
+                d: self.d * rhs.d,
+            }
+        }
+    }
+
+    impl Div for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn div(self, rhs: Self) -> Self {
+            Self {
+                a: self.a / rhs.a,
+                b: self.b / rhs.b,
+                c: self.c / rhs.c,
+                d: self.d / rhs.d,
+            }
+        }
+    }
+
+    impl Neg for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn neg(self) -> Self {
+            Self {
+                a: -self.a,
+                b: -self.b,
+                c: -self.c,
+                d: -self.d,
+            }
+        }
+    }
+
+    /// Emulated 8-wide f64 vector using four SSE f64x2 vectors.
+    #[derive(Clone, Copy, Debug)]
+    pub struct f64x8 {
+        a: f64x2,
+        b: f64x2,
+        c: f64x2,
+        d: f64x2,
+    }
+
+    impl f64x8 {
+        pub const LANES: usize = 8;
+
+        #[inline(always)]
+        pub fn load(token: Sse41Token, data: &[f64; 8]) -> Self {
+            Self {
+                a: f64x2::load(token, data[0..2].try_into().unwrap()),
+                b: f64x2::load(token, data[2..4].try_into().unwrap()),
+                c: f64x2::load(token, data[4..6].try_into().unwrap()),
+                d: f64x2::load(token, data[6..8].try_into().unwrap()),
+            }
+        }
+
+        #[inline(always)]
+        pub fn splat(token: Sse41Token, v: f64) -> Self {
+            let part = f64x2::splat(token, v);
+            Self { a: part, b: part, c: part, d: part }
+        }
+
+        #[inline(always)]
+        pub fn zero(token: Sse41Token) -> Self {
+            let part = f64x2::zero(token);
+            Self { a: part, b: part, c: part, d: part }
+        }
+
+        #[inline(always)]
+        pub fn store(self, out: &mut [f64; 8]) {
+            let (ab, cd) = out.split_at_mut(4);
+            let (a, b) = ab.split_at_mut(2);
+            let (c, d) = cd.split_at_mut(2);
+            self.a.store(a.try_into().unwrap());
+            self.b.store(b.try_into().unwrap());
+            self.c.store(c.try_into().unwrap());
+            self.d.store(d.try_into().unwrap());
+        }
+
+        #[inline(always)]
+        pub fn to_array(self) -> [f64; 8] {
+            let mut out = [0.0f64; 8];
+            self.store(&mut out);
+            out
+        }
+    }
+
+    impl Add for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn add(self, rhs: Self) -> Self {
+            Self {
+                a: self.a + rhs.a,
+                b: self.b + rhs.b,
+                c: self.c + rhs.c,
+                d: self.d + rhs.d,
+            }
+        }
+    }
+
+    impl Sub for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn sub(self, rhs: Self) -> Self {
+            Self {
+                a: self.a - rhs.a,
+                b: self.b - rhs.b,
+                c: self.c - rhs.c,
+                d: self.d - rhs.d,
+            }
+        }
+    }
+
+    impl Mul for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn mul(self, rhs: Self) -> Self {
+            Self {
+                a: self.a * rhs.a,
+                b: self.b * rhs.b,
+                c: self.c * rhs.c,
+                d: self.d * rhs.d,
+            }
+        }
+    }
+
+    impl Div for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn div(self, rhs: Self) -> Self {
+            Self {
+                a: self.a / rhs.a,
+                b: self.b / rhs.b,
+                c: self.c / rhs.c,
+                d: self.d / rhs.d,
+            }
+        }
+    }
+
+    impl Neg for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn neg(self) -> Self {
+            Self {
+                a: -self.a,
+                b: -self.b,
+                c: -self.c,
+                d: -self.d,
+            }
+        }
+    }
+
+    /// Emulated 16-wide i32 vector using four SSE i32x4 vectors.
+    #[derive(Clone, Copy, Debug)]
+    pub struct i32x16 {
+        a: i32x4,
+        b: i32x4,
+        c: i32x4,
+        d: i32x4,
+    }
+
+    impl i32x16 {
+        pub const LANES: usize = 16;
+
+        #[inline(always)]
+        pub fn load(token: Sse41Token, data: &[i32; 16]) -> Self {
+            Self {
+                a: i32x4::load(token, data[0..4].try_into().unwrap()),
+                b: i32x4::load(token, data[4..8].try_into().unwrap()),
+                c: i32x4::load(token, data[8..12].try_into().unwrap()),
+                d: i32x4::load(token, data[12..16].try_into().unwrap()),
+            }
+        }
+
+        #[inline(always)]
+        pub fn splat(token: Sse41Token, v: i32) -> Self {
+            let part = i32x4::splat(token, v);
+            Self { a: part, b: part, c: part, d: part }
+        }
+
+        #[inline(always)]
+        pub fn zero(token: Sse41Token) -> Self {
+            let part = i32x4::zero(token);
+            Self { a: part, b: part, c: part, d: part }
+        }
+
+        #[inline(always)]
+        pub fn store(self, out: &mut [i32; 16]) {
+            let (ab, cd) = out.split_at_mut(8);
+            let (a, b) = ab.split_at_mut(4);
+            let (c, d) = cd.split_at_mut(4);
+            self.a.store(a.try_into().unwrap());
+            self.b.store(b.try_into().unwrap());
+            self.c.store(c.try_into().unwrap());
+            self.d.store(d.try_into().unwrap());
+        }
+
+        #[inline(always)]
+        pub fn to_array(self) -> [i32; 16] {
+            let mut out = [0i32; 16];
+            self.store(&mut out);
+            out
+        }
+    }
+
+    impl Add for i32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn add(self, rhs: Self) -> Self {
+            Self {
+                a: self.a + rhs.a,
+                b: self.b + rhs.b,
+                c: self.c + rhs.c,
+                d: self.d + rhs.d,
+            }
+        }
+    }
+
+    impl Sub for i32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn sub(self, rhs: Self) -> Self {
+            Self {
+                a: self.a - rhs.a,
+                b: self.b - rhs.b,
+                c: self.c - rhs.c,
+                d: self.d - rhs.d,
+            }
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+pub mod avx2 {
+    //! AVX2-based 512-bit polyfills (more efficient than SSE-based on AVX2 hardware).
+    //!
+    //! Polyfilled 512-bit types using AVX2 (256-bit) operations.
+    //! These types emulate AVX-512-width vectors using pairs of AVX2 vectors.
+
+    use crate::simd::x86::w256::{f32x8, f64x4, i32x8};
+    use archmage::Avx2FmaToken;
+    use core::ops::{Add, Div, Mul, Neg, Sub};
+
+    /// Emulated 16-wide f32 vector using two AVX2 f32x8 vectors.
+    #[derive(Clone, Copy, Debug)]
+    pub struct f32x16 {
+        lo: f32x8,
+        hi: f32x8,
+    }
+
+    impl f32x16 {
+        pub const LANES: usize = 16;
+
+        #[inline(always)]
+        pub fn load(token: Avx2FmaToken, data: &[f32; 16]) -> Self {
+            Self {
+                lo: f32x8::load(token, data[0..8].try_into().unwrap()),
+                hi: f32x8::load(token, data[8..16].try_into().unwrap()),
+            }
+        }
+
+        #[inline(always)]
+        pub fn splat(token: Avx2FmaToken, v: f32) -> Self {
+            let part = f32x8::splat(token, v);
+            Self { lo: part, hi: part }
+        }
+
+        #[inline(always)]
+        pub fn zero(token: Avx2FmaToken) -> Self {
+            let part = f32x8::zero(token);
+            Self { lo: part, hi: part }
+        }
+
+        #[inline(always)]
+        pub fn store(self, out: &mut [f32; 16]) {
+            let (lo, hi) = out.split_at_mut(8);
+            self.lo.store(lo.try_into().unwrap());
+            self.hi.store(hi.try_into().unwrap());
+        }
+
+        #[inline(always)]
+        pub fn to_array(self) -> [f32; 16] {
+            let mut out = [0.0f32; 16];
+            self.store(&mut out);
+            out
+        }
+    }
+
+    impl Add for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn add(self, rhs: Self) -> Self {
+            Self { lo: self.lo + rhs.lo, hi: self.hi + rhs.hi }
+        }
+    }
+
+    impl Sub for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn sub(self, rhs: Self) -> Self {
+            Self { lo: self.lo - rhs.lo, hi: self.hi - rhs.hi }
+        }
+    }
+
+    impl Mul for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn mul(self, rhs: Self) -> Self {
+            Self { lo: self.lo * rhs.lo, hi: self.hi * rhs.hi }
+        }
+    }
+
+    impl Div for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn div(self, rhs: Self) -> Self {
+            Self { lo: self.lo / rhs.lo, hi: self.hi / rhs.hi }
+        }
+    }
+
+    impl Neg for f32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn neg(self) -> Self {
+            Self { lo: -self.lo, hi: -self.hi }
+        }
+    }
+
+    /// Emulated 8-wide f64 vector using two AVX2 f64x4 vectors.
+    #[derive(Clone, Copy, Debug)]
+    pub struct f64x8 {
+        lo: f64x4,
+        hi: f64x4,
+    }
+
+    impl f64x8 {
+        pub const LANES: usize = 8;
+
+        #[inline(always)]
+        pub fn load(token: Avx2FmaToken, data: &[f64; 8]) -> Self {
+            Self {
+                lo: f64x4::load(token, data[0..4].try_into().unwrap()),
+                hi: f64x4::load(token, data[4..8].try_into().unwrap()),
+            }
+        }
+
+        #[inline(always)]
+        pub fn splat(token: Avx2FmaToken, v: f64) -> Self {
+            let part = f64x4::splat(token, v);
+            Self { lo: part, hi: part }
+        }
+
+        #[inline(always)]
+        pub fn zero(token: Avx2FmaToken) -> Self {
+            let part = f64x4::zero(token);
+            Self { lo: part, hi: part }
+        }
+
+        #[inline(always)]
+        pub fn store(self, out: &mut [f64; 8]) {
+            let (lo, hi) = out.split_at_mut(4);
+            self.lo.store(lo.try_into().unwrap());
+            self.hi.store(hi.try_into().unwrap());
+        }
+
+        #[inline(always)]
+        pub fn to_array(self) -> [f64; 8] {
+            let mut out = [0.0f64; 8];
+            self.store(&mut out);
+            out
+        }
+    }
+
+    impl Add for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn add(self, rhs: Self) -> Self {
+            Self { lo: self.lo + rhs.lo, hi: self.hi + rhs.hi }
+        }
+    }
+
+    impl Sub for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn sub(self, rhs: Self) -> Self {
+            Self { lo: self.lo - rhs.lo, hi: self.hi - rhs.hi }
+        }
+    }
+
+    impl Mul for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn mul(self, rhs: Self) -> Self {
+            Self { lo: self.lo * rhs.lo, hi: self.hi * rhs.hi }
+        }
+    }
+
+    impl Div for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn div(self, rhs: Self) -> Self {
+            Self { lo: self.lo / rhs.lo, hi: self.hi / rhs.hi }
+        }
+    }
+
+    impl Neg for f64x8 {
+        type Output = Self;
+        #[inline(always)]
+        fn neg(self) -> Self {
+            Self { lo: -self.lo, hi: -self.hi }
+        }
+    }
+
+    /// Emulated 16-wide i32 vector using two AVX2 i32x8 vectors.
+    #[derive(Clone, Copy, Debug)]
+    pub struct i32x16 {
+        lo: i32x8,
+        hi: i32x8,
+    }
+
+    impl i32x16 {
+        pub const LANES: usize = 16;
+
+        #[inline(always)]
+        pub fn load(token: Avx2FmaToken, data: &[i32; 16]) -> Self {
+            Self {
+                lo: i32x8::load(token, data[0..8].try_into().unwrap()),
+                hi: i32x8::load(token, data[8..16].try_into().unwrap()),
+            }
+        }
+
+        #[inline(always)]
+        pub fn splat(token: Avx2FmaToken, v: i32) -> Self {
+            let part = i32x8::splat(token, v);
+            Self { lo: part, hi: part }
+        }
+
+        #[inline(always)]
+        pub fn zero(token: Avx2FmaToken) -> Self {
+            let part = i32x8::zero(token);
+            Self { lo: part, hi: part }
+        }
+
+        #[inline(always)]
+        pub fn store(self, out: &mut [i32; 16]) {
+            let (lo, hi) = out.split_at_mut(8);
+            self.lo.store(lo.try_into().unwrap());
+            self.hi.store(hi.try_into().unwrap());
+        }
+
+        #[inline(always)]
+        pub fn to_array(self) -> [i32; 16] {
+            let mut out = [0i32; 16];
+            self.store(&mut out);
+            out
+        }
+    }
+
+    impl Add for i32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn add(self, rhs: Self) -> Self {
+            Self { lo: self.lo + rhs.lo, hi: self.hi + rhs.hi }
+        }
+    }
+
+    impl Sub for i32x16 {
+        type Output = Self;
+        #[inline(always)]
+        fn sub(self, rhs: Self) -> Self {
+            Self { lo: self.lo - rhs.lo, hi: self.hi - rhs.hi }
+        }
+    }
+
+    /// Token type alias
+    pub type Token = Avx2FmaToken;
 }
 
 #[cfg(target_arch = "aarch64")]
