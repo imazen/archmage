@@ -190,3 +190,159 @@ fn test_f32x8_load_store_rgba_u8() {
         assert_eq!(out, rgba);
     }
 }
+
+// ============================================================================
+// AArch64 (NEON) Tests
+// ============================================================================
+
+#[cfg(target_arch = "aarch64")]
+mod arm_tests {
+    use magetypes::simd::*;
+    use archmage::{SimdToken, NeonToken};
+
+    #[test]
+    fn test_f32x4_basic() {
+        if let Some(token) = NeonToken::try_new() {
+            let a = f32x4::splat(token, 1.0);
+            let b = f32x4::splat(token, 2.0);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 3.0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_f32x4_load_store() {
+        if let Some(token) = NeonToken::try_new() {
+            let data: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
+            let v = f32x4::load(token, &data);
+            let mut out = [0.0f32; 4];
+            v.store(&mut out);
+            assert_eq!(data, out);
+        }
+    }
+
+    #[test]
+    fn test_i32x4_basic() {
+        if let Some(token) = NeonToken::try_new() {
+            let a = i32x4::splat(token, 10);
+            let b = i32x4::splat(token, 20);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 30);
+            }
+        }
+    }
+
+    #[test]
+    fn test_i32x4_load_store() {
+        if let Some(token) = NeonToken::try_new() {
+            let data: [i32; 4] = [1, 2, 3, 4];
+            let v = i32x4::load(token, &data);
+            let mut out = [0i32; 4];
+            v.store(&mut out);
+            assert_eq!(data, out);
+        }
+    }
+
+    #[test]
+    fn test_i64x2_min_max() {
+        // Test the polyfilled 64-bit min/max
+        if let Some(token) = NeonToken::try_new() {
+            let a = i64x2::from_array(token, [10, -5]);
+            let b = i64x2::from_array(token, [5, -2]);
+
+            let min_result = a.min(b);
+            assert_eq!(min_result.to_array(), [5, -5]);
+
+            let max_result = a.max(b);
+            assert_eq!(max_result.to_array(), [10, -2]);
+        }
+    }
+
+    #[test]
+    fn test_u64x2_min_max() {
+        // Test the polyfilled 64-bit unsigned min/max
+        if let Some(token) = NeonToken::try_new() {
+            let a = u64x2::from_array(token, [100, 200]);
+            let b = u64x2::from_array(token, [150, 50]);
+
+            let min_result = a.min(b);
+            assert_eq!(min_result.to_array(), [100, 50]);
+
+            let max_result = a.max(b);
+            assert_eq!(max_result.to_array(), [150, 200]);
+        }
+    }
+
+    #[test]
+    fn test_f64x2_operations() {
+        if let Some(token) = NeonToken::try_new() {
+            let a = f64x2::splat(token, 2.5);
+            let b = f64x2::splat(token, 1.5);
+
+            let sum = a + b;
+            assert_eq!(sum.to_array(), [4.0, 4.0]);
+
+            let prod = a * b;
+            assert_eq!(prod.to_array(), [3.75, 3.75]);
+        }
+    }
+
+    #[test]
+    fn test_f32x4_math_ops() {
+        if let Some(token) = NeonToken::try_new() {
+            let v = f32x4::from_array(token, [4.0, 9.0, 16.0, 25.0]);
+
+            let sqrt_v = v.sqrt();
+            assert_eq!(sqrt_v.to_array(), [2.0, 3.0, 4.0, 5.0]);
+
+            let abs_v = f32x4::from_array(token, [-1.0, 2.0, -3.0, 4.0]).abs();
+            assert_eq!(abs_v.to_array(), [1.0, 2.0, 3.0, 4.0]);
+        }
+    }
+
+    #[test]
+    fn test_f32x4_fma() {
+        if let Some(token) = NeonToken::try_new() {
+            let a = f32x4::splat(token, 2.0);
+            let b = f32x4::splat(token, 3.0);
+            let c = f32x4::splat(token, 1.0);
+
+            // a * b + c = 2 * 3 + 1 = 7
+            let result = a.mul_add(b, c);
+            assert_eq!(result.to_array(), [7.0, 7.0, 7.0, 7.0]);
+        }
+    }
+
+    #[test]
+    fn test_cast_slice() {
+        if let Some(token) = NeonToken::try_new() {
+            let data: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+
+            // Cast to f32x4 slice
+            let vectors = f32x4::cast_slice(token, &data).unwrap();
+            assert_eq!(vectors.len(), 2);
+            assert_eq!(vectors[0].to_array(), [1.0, 2.0, 3.0, 4.0]);
+            assert_eq!(vectors[1].to_array(), [5.0, 6.0, 7.0, 8.0]);
+        }
+    }
+
+    #[test]
+    fn test_from_bytes() {
+        if let Some(token) = NeonToken::try_new() {
+            let bytes: [u8; 16] = [
+                0x00, 0x00, 0x80, 0x3f, // 1.0f32
+                0x00, 0x00, 0x00, 0x40, // 2.0f32
+                0x00, 0x00, 0x40, 0x40, // 3.0f32
+                0x00, 0x00, 0x80, 0x40, // 4.0f32
+            ];
+
+            let v = f32x4::from_bytes(token, &bytes);
+            assert_eq!(v.to_array(), [1.0, 2.0, 3.0, 4.0]);
+        }
+    }
+}
