@@ -93,8 +93,8 @@ pub mod experiments;
 
 // Auto-generated SIMD types with natural operators (wide-like ergonomics)
 // Token-gated construction ensures safety - no way to create without proving CPU support
-#[cfg(target_arch = "x86_64")]
-#[cfg_attr(docsrs, doc(cfg(target_arch = "x86_64")))]
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+#[cfg_attr(docsrs, doc(cfg(any(target_arch = "x86_64", target_arch = "aarch64"))))]
 pub mod simd;
 
 // ============================================================================
