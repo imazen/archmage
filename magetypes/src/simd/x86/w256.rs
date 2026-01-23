@@ -158,13 +158,22 @@ impl f32x8 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     /// Element-wise minimum
@@ -1437,13 +1446,22 @@ impl f64x4 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     /// Element-wise minimum
@@ -1962,13 +1980,22 @@ impl i8x32 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     /// Element-wise minimum
@@ -2296,13 +2323,22 @@ impl u8x32 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     /// Element-wise minimum
@@ -2716,13 +2752,22 @@ impl i16x16 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     /// Element-wise minimum
@@ -3144,13 +3189,22 @@ impl u16x16 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     /// Element-wise minimum
@@ -3546,13 +3600,22 @@ impl i32x8 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     /// Element-wise minimum
@@ -3936,13 +3999,22 @@ impl u32x8 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     /// Element-wise minimum
@@ -4288,13 +4360,22 @@ impl i64x4 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     // ========== Comparisons ==========
@@ -4617,13 +4698,22 @@ impl u64x4 {
         unsafe { &mut *(self as *mut Self as *mut [u8; 32]) }
     }
 
-    /// Create from a byte array (token-gated).
+    /// Create from a byte array reference (token-gated).
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
     pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
+    /// Create from an owned byte array (token-gated, zero-cost).
+    ///
+    /// This is a zero-cost transmute from an owned byte array.
+    #[inline(always)]
+    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+        // SAFETY: [u8; 32] and Self have identical size
+        Self(unsafe { core::mem::transmute(bytes) })
     }
 
     // ========== Comparisons ==========

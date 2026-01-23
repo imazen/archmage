@@ -674,13 +674,23 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     writeln!(code, "    }}\n").unwrap();
 
     // from_bytes: &[u8; N] -> Self (token-gated)
-    writeln!(code, "    /// Create from a byte array (token-gated).").unwrap();
+    writeln!(code, "    /// Create from a byte array reference (token-gated).").unwrap();
     writeln!(code, "    ///").unwrap();
     writeln!(code, "    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn from_bytes(_: archmage::{}, bytes: &[u8; {}]) -> Self {{", token, byte_size).unwrap();
     writeln!(code, "        // SAFETY: [u8; {}] and Self have identical size", byte_size).unwrap();
     writeln!(code, "        Self(unsafe {{ core::mem::transmute(*bytes) }})").unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // from_bytes_owned: [u8; N] -> Self (token-gated, zero-cost)
+    writeln!(code, "    /// Create from an owned byte array (token-gated, zero-cost).").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// This is a zero-cost transmute from an owned byte array.").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn from_bytes_owned(_: archmage::{}, bytes: [u8; {}]) -> Self {{", token, byte_size).unwrap();
+    writeln!(code, "        // SAFETY: [u8; {}] and Self have identical size", byte_size).unwrap();
+    writeln!(code, "        Self(unsafe {{ core::mem::transmute(bytes) }})").unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     code
