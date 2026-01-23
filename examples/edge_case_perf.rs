@@ -175,8 +175,8 @@ unsafe fn cbrt_std_match(x: __m256) -> __m256 {
 
     // Fix edge cases
     y = _mm256_blendv_ps(y, _mm256_or_ps(zero, sign_mask), is_zero); // 0 -> ±0
-    y = _mm256_blendv_ps(y, _mm256_or_ps(inf, sign_mask), is_inf);   // inf -> ±inf
-    y = _mm256_blendv_ps(y, x, is_nan);                               // NaN -> NaN
+    y = _mm256_blendv_ps(y, _mm256_or_ps(inf, sign_mask), is_inf); // inf -> ±inf
+    y = _mm256_blendv_ps(y, x, is_nan); // NaN -> NaN
 
     y
 }
@@ -437,8 +437,8 @@ unsafe fn log2_std_match(x: __m256) -> __m256 {
     // Fix edge cases (order matters - NaN check last)
     result = _mm256_blendv_ps(result, _mm256_set1_ps(f32::NEG_INFINITY), is_zero);
     result = _mm256_blendv_ps(result, _mm256_set1_ps(f32::NAN), is_negative);
-    result = _mm256_blendv_ps(result, inf, is_inf);  // log2(inf) = inf
-    result = _mm256_blendv_ps(result, x, is_nan);    // NaN passthrough
+    result = _mm256_blendv_ps(result, inf, is_inf); // log2(inf) = inf
+    result = _mm256_blendv_ps(result, x, is_nan); // NaN passthrough
 
     result
 }
@@ -502,8 +502,14 @@ fn main() {
         black_box(&output);
     });
 
-    println!("  → critical fixes overhead: {:.1}%", (critical / current - 1.0) * 100.0);
-    println!("  → std match overhead: {:.1}%", (std_match / current - 1.0) * 100.0);
+    println!(
+        "  → critical fixes overhead: {:.1}%",
+        (critical / current - 1.0) * 100.0
+    );
+    println!(
+        "  → std match overhead: {:.1}%",
+        (std_match / current - 1.0) * 100.0
+    );
     println!();
 
     // ========================================================================
@@ -538,8 +544,14 @@ fn main() {
         black_box(&output);
     });
 
-    println!("  → critical fixes overhead: {:.1}%", (critical / current - 1.0) * 100.0);
-    println!("  → std match overhead: {:.1}%", (std_match / current - 1.0) * 100.0);
+    println!(
+        "  → critical fixes overhead: {:.1}%",
+        (critical / current - 1.0) * 100.0
+    );
+    println!(
+        "  → std match overhead: {:.1}%",
+        (std_match / current - 1.0) * 100.0
+    );
     println!();
 
     // ========================================================================
@@ -574,8 +586,14 @@ fn main() {
         black_box(&output);
     });
 
-    println!("  → critical fixes overhead: {:.1}%", (critical / current - 1.0) * 100.0);
-    println!("  → std match overhead: {:.1}%", (std_match / current - 1.0) * 100.0);
+    println!(
+        "  → critical fixes overhead: {:.1}%",
+        (critical / current - 1.0) * 100.0
+    );
+    println!(
+        "  → std match overhead: {:.1}%",
+        (std_match / current - 1.0) * 100.0
+    );
     println!();
 
     println!("Done!");

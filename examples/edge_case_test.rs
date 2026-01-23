@@ -3,7 +3,7 @@
 //! Run with: `cargo run --example edge_case_test --release`
 
 use archmage::simd::f32x8;
-use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::{Avx2FmaToken, SimdToken, arcane};
 
 #[arcane]
 fn test_exp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
@@ -95,7 +95,16 @@ fn main() {
 
     // ln edge cases
     println!("\nln() edge cases:");
-    let inputs = [1e-30f32, 1e-37, 0.0, -0.0, -1.0, 1.0, std::f32::consts::E, 1e30];
+    let inputs = [
+        1e-30f32,
+        1e-37,
+        0.0,
+        -0.0,
+        -1.0,
+        1.0,
+        std::f32::consts::E,
+        1e30,
+    ];
     let results = test_ln(token, &inputs);
     for (i, &x) in inputs.iter().enumerate() {
         compare("ln", x, x.ln(), results[i]);
@@ -111,7 +120,16 @@ fn main() {
 
     // cbrt special values
     println!("\ncbrt() special values:");
-    let inputs = [f32::INFINITY, f32::NEG_INFINITY, f32::NAN, 1.0, -1.0, 8.0, -8.0, 27.0];
+    let inputs = [
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::NAN,
+        1.0,
+        -1.0,
+        8.0,
+        -8.0,
+        27.0,
+    ];
     let results = test_cbrt(token, &inputs);
     for (i, &x) in inputs.iter().enumerate() {
         compare("cbrt", x, x.cbrt(), results[i]);

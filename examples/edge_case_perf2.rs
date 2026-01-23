@@ -106,13 +106,20 @@ unsafe fn exp2_no_checks(x: __m256) -> __m256 {
     let x = _mm256_min_ps(x, _mm256_set1_ps(126.0));
     let xi = _mm256_floor_ps(x);
     let xf = _mm256_sub_ps(x, xi);
-    let poly = _mm256_fmadd_ps(_mm256_set1_ps(0.001_333_55), xf, _mm256_set1_ps(0.009_618_13));
+    let poly = _mm256_fmadd_ps(
+        _mm256_set1_ps(0.001_333_55),
+        xf,
+        _mm256_set1_ps(0.009_618_13),
+    );
     let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(0.055_504_11));
     let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(0.240_226_51));
     let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(0.693_147_18));
     let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(1.0));
     let xi_i32 = _mm256_cvtps_epi32(xi);
-    let scale = _mm256_castsi256_ps(_mm256_slli_epi32(_mm256_add_epi32(xi_i32, _mm256_set1_epi32(127)), 23));
+    let scale = _mm256_castsi256_ps(_mm256_slli_epi32(
+        _mm256_add_epi32(xi_i32, _mm256_set1_epi32(127)),
+        23,
+    ));
     _mm256_mul_ps(poly, scale)
 }
 
@@ -126,13 +133,20 @@ unsafe fn exp2_std_match(x: __m256) -> __m256 {
     let x_clamped = _mm256_min_ps(x_clamped, _mm256_set1_ps(126.0));
     let xi = _mm256_floor_ps(x_clamped);
     let xf = _mm256_sub_ps(x_clamped, xi);
-    let poly = _mm256_fmadd_ps(_mm256_set1_ps(0.001_333_55), xf, _mm256_set1_ps(0.009_618_13));
+    let poly = _mm256_fmadd_ps(
+        _mm256_set1_ps(0.001_333_55),
+        xf,
+        _mm256_set1_ps(0.009_618_13),
+    );
     let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(0.055_504_11));
     let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(0.240_226_51));
     let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(0.693_147_18));
     let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(1.0));
     let xi_i32 = _mm256_cvtps_epi32(xi);
-    let scale = _mm256_castsi256_ps(_mm256_slli_epi32(_mm256_add_epi32(xi_i32, _mm256_set1_epi32(127)), 23));
+    let scale = _mm256_castsi256_ps(_mm256_slli_epi32(
+        _mm256_add_epi32(xi_i32, _mm256_set1_epi32(127)),
+        23,
+    ));
     let mut result = _mm256_mul_ps(poly, scale);
     result = _mm256_blendv_ps(result, _mm256_set1_ps(f32::INFINITY), is_overflow);
     result = _mm256_blendv_ps(result, _mm256_setzero_ps(), is_underflow);
@@ -152,12 +166,19 @@ unsafe fn log2_no_checks(x: __m256) -> __m256 {
     let adjusted = _mm256_add_epi32(bits, _mm256_set1_epi32((ONE - SQRT2_OVER_2) as i32));
     let exp_i32 = _mm256_sub_epi32(_mm256_srli_epi32(adjusted, 23), _mm256_set1_epi32(0x7f));
     let n = _mm256_cvtepi32_ps(exp_i32);
-    let mantissa_bits = _mm256_add_epi32(_mm256_and_si256(adjusted, _mm256_set1_epi32(0x007fffff)), _mm256_set1_epi32(SQRT2_OVER_2 as i32));
+    let mantissa_bits = _mm256_add_epi32(
+        _mm256_and_si256(adjusted, _mm256_set1_epi32(0x007fffff)),
+        _mm256_set1_epi32(SQRT2_OVER_2 as i32),
+    );
     let a = _mm256_castsi256_ps(mantissa_bits);
     let one = _mm256_set1_ps(1.0);
     let y = _mm256_div_ps(_mm256_sub_ps(a, one), _mm256_add_ps(a, one));
     let y2 = _mm256_mul_ps(y, y);
-    let mut u = _mm256_fmadd_ps(_mm256_set1_ps(0.412_198_57), y2, _mm256_set1_ps(0.577_078_04));
+    let mut u = _mm256_fmadd_ps(
+        _mm256_set1_ps(0.412_198_57),
+        y2,
+        _mm256_set1_ps(0.577_078_04),
+    );
     u = _mm256_fmadd_ps(u, y2, _mm256_set1_ps(0.961_796_7));
     u = _mm256_fmadd_ps(u, y2, _mm256_set1_ps(2.885_390_08));
     _mm256_fmadd_ps(u, y, n)
@@ -178,12 +199,19 @@ unsafe fn log2_std_match(x: __m256) -> __m256 {
     let adjusted = _mm256_add_epi32(bits, _mm256_set1_epi32((ONE - SQRT2_OVER_2) as i32));
     let exp_i32 = _mm256_sub_epi32(_mm256_srli_epi32(adjusted, 23), _mm256_set1_epi32(0x7f));
     let n = _mm256_cvtepi32_ps(exp_i32);
-    let mantissa_bits = _mm256_add_epi32(_mm256_and_si256(adjusted, _mm256_set1_epi32(0x007fffff)), _mm256_set1_epi32(SQRT2_OVER_2 as i32));
+    let mantissa_bits = _mm256_add_epi32(
+        _mm256_and_si256(adjusted, _mm256_set1_epi32(0x007fffff)),
+        _mm256_set1_epi32(SQRT2_OVER_2 as i32),
+    );
     let a = _mm256_castsi256_ps(mantissa_bits);
     let one = _mm256_set1_ps(1.0);
     let y = _mm256_div_ps(_mm256_sub_ps(a, one), _mm256_add_ps(a, one));
     let y2 = _mm256_mul_ps(y, y);
-    let mut u = _mm256_fmadd_ps(_mm256_set1_ps(0.412_198_57), y2, _mm256_set1_ps(0.577_078_04));
+    let mut u = _mm256_fmadd_ps(
+        _mm256_set1_ps(0.412_198_57),
+        y2,
+        _mm256_set1_ps(0.577_078_04),
+    );
     u = _mm256_fmadd_ps(u, y2, _mm256_set1_ps(0.961_796_7));
     u = _mm256_fmadd_ps(u, y2, _mm256_set1_ps(2.885_390_08));
     let mut result = _mm256_fmadd_ps(u, y, n);
@@ -219,7 +247,13 @@ unsafe fn pow_std_match(x: __m256, n: f32) -> __m256 {
     let mut result = exp2_std_match(scaled); // handles overflow/underflow
 
     // pow(0, n) = 0 for n > 0, inf for n < 0, 1 for n = 0
-    let pow_zero = if n > 0.0 { zero } else if n < 0.0 { inf } else { _mm256_set1_ps(1.0) };
+    let pow_zero = if n > 0.0 {
+        zero
+    } else if n < 0.0 {
+        inf
+    } else {
+        _mm256_set1_ps(1.0)
+    };
     result = _mm256_blendv_ps(result, pow_zero, is_zero);
 
     // pow(negative, n) = NaN for non-integer n
@@ -291,8 +325,12 @@ fn main() {
     println!("N = {} elements, {} iterations\n", N, ITERATIONS);
 
     // Easy data: normal range, no edge cases
-    let easy_pos: Vec<f32> = (1..=N).map(|i| 0.001 + (i as f32 / N as f32) * 999.0).collect();
-    let easy_exp: Vec<f32> = (0..N).map(|i| -20.0 + (i as f32 / N as f32) * 40.0).collect();
+    let easy_pos: Vec<f32> = (1..=N)
+        .map(|i| 0.001 + (i as f32 / N as f32) * 999.0)
+        .collect();
+    let easy_exp: Vec<f32> = (0..N)
+        .map(|i| -20.0 + (i as f32 / N as f32) * 40.0)
+        .collect();
 
     // Hard data: includes edge cases (0, inf, negative, denormals, NaN)
     let mut hard_pos: Vec<f32> = easy_pos.clone();
@@ -308,7 +346,7 @@ fn main() {
             _ => hard_pos[i],
         };
         hard_exp[i] = match i % 4000 {
-            0 => 200.0,    // overflow
+            0 => 200.0,     // overflow
             1000 => -200.0, // underflow
             2000 => f32::INFINITY,
             3000 => f32::NAN,
@@ -322,120 +360,336 @@ fn main() {
     println!("=== cbrt ===");
     // ========================================================================
 
-    let easy_no = run_bench("cbrt no_checks (easy data)", &easy_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), cbrt_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let easy_std = run_bench("cbrt std_match (easy data)", &easy_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), cbrt_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_no = run_bench("cbrt no_checks (hard data)", &hard_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), cbrt_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_std = run_bench("cbrt std_match (hard data)", &hard_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), cbrt_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    println!("  easy: std_match overhead = {:.1}%", (easy_std / easy_no - 1.0) * 100.0);
-    println!("  hard: std_match overhead = {:.1}%", (hard_std / hard_no - 1.0) * 100.0);
+    let easy_no = run_bench(
+        "cbrt no_checks (easy data)",
+        &easy_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), cbrt_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let easy_std = run_bench(
+        "cbrt std_match (easy data)",
+        &easy_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), cbrt_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_no = run_bench(
+        "cbrt no_checks (hard data)",
+        &hard_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), cbrt_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_std = run_bench(
+        "cbrt std_match (hard data)",
+        &hard_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), cbrt_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    println!(
+        "  easy: std_match overhead = {:.1}%",
+        (easy_std / easy_no - 1.0) * 100.0
+    );
+    println!(
+        "  hard: std_match overhead = {:.1}%",
+        (hard_std / hard_no - 1.0) * 100.0
+    );
     println!();
 
     // ========================================================================
     println!("=== exp2 ===");
     // ========================================================================
 
-    let easy_no = run_bench("exp2 no_checks (easy data)", &easy_exp, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), exp2_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let easy_std = run_bench("exp2 std_match (easy data)", &easy_exp, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), exp2_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_no = run_bench("exp2 no_checks (hard data)", &hard_exp, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), exp2_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_std = run_bench("exp2 std_match (hard data)", &hard_exp, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), exp2_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    println!("  easy: std_match overhead = {:.1}%", (easy_std / easy_no - 1.0) * 100.0);
-    println!("  hard: std_match overhead = {:.1}%", (hard_std / hard_no - 1.0) * 100.0);
+    let easy_no = run_bench(
+        "exp2 no_checks (easy data)",
+        &easy_exp,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), exp2_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let easy_std = run_bench(
+        "exp2 std_match (easy data)",
+        &easy_exp,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), exp2_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_no = run_bench(
+        "exp2 no_checks (hard data)",
+        &hard_exp,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), exp2_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_std = run_bench(
+        "exp2 std_match (hard data)",
+        &hard_exp,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), exp2_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    println!(
+        "  easy: std_match overhead = {:.1}%",
+        (easy_std / easy_no - 1.0) * 100.0
+    );
+    println!(
+        "  hard: std_match overhead = {:.1}%",
+        (hard_std / hard_no - 1.0) * 100.0
+    );
     println!();
 
     // ========================================================================
     println!("=== log2 ===");
     // ========================================================================
 
-    let easy_no = run_bench("log2 no_checks (easy data)", &easy_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), log2_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let easy_std = run_bench("log2 std_match (easy data)", &easy_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), log2_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_no = run_bench("log2 no_checks (hard data)", &hard_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), log2_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_std = run_bench("log2 std_match (hard data)", &hard_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), log2_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    println!("  easy: std_match overhead = {:.1}%", (easy_std / easy_no - 1.0) * 100.0);
-    println!("  hard: std_match overhead = {:.1}%", (hard_std / hard_no - 1.0) * 100.0);
+    let easy_no = run_bench(
+        "log2 no_checks (easy data)",
+        &easy_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), log2_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let easy_std = run_bench(
+        "log2 std_match (easy data)",
+        &easy_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), log2_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_no = run_bench(
+        "log2 no_checks (hard data)",
+        &hard_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), log2_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_std = run_bench(
+        "log2 std_match (hard data)",
+        &hard_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), log2_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    println!(
+        "  easy: std_match overhead = {:.1}%",
+        (easy_std / easy_no - 1.0) * 100.0
+    );
+    println!(
+        "  hard: std_match overhead = {:.1}%",
+        (hard_std / hard_no - 1.0) * 100.0
+    );
     println!();
 
     // ========================================================================
     println!("=== pow(x, 2.4) ===");
     // ========================================================================
 
-    let easy_no = run_bench("pow no_checks (easy data)", &easy_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), pow_no_checks(_mm256_loadu_ps(i.add(j * 8)), 2.4)); }
-    });
-    let easy_std = run_bench("pow std_match (easy data)", &easy_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), pow_std_match(_mm256_loadu_ps(i.add(j * 8)), 2.4)); }
-    });
-    let hard_no = run_bench("pow no_checks (hard data)", &hard_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), pow_no_checks(_mm256_loadu_ps(i.add(j * 8)), 2.4)); }
-    });
-    let hard_std = run_bench("pow std_match (hard data)", &hard_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), pow_std_match(_mm256_loadu_ps(i.add(j * 8)), 2.4)); }
-    });
-    println!("  easy: std_match overhead = {:.1}%", (easy_std / easy_no - 1.0) * 100.0);
-    println!("  hard: std_match overhead = {:.1}%", (hard_std / hard_no - 1.0) * 100.0);
+    let easy_no = run_bench(
+        "pow no_checks (easy data)",
+        &easy_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(
+                    o.add(j * 8),
+                    pow_no_checks(_mm256_loadu_ps(i.add(j * 8)), 2.4),
+                );
+            }
+        },
+    );
+    let easy_std = run_bench(
+        "pow std_match (easy data)",
+        &easy_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(
+                    o.add(j * 8),
+                    pow_std_match(_mm256_loadu_ps(i.add(j * 8)), 2.4),
+                );
+            }
+        },
+    );
+    let hard_no = run_bench(
+        "pow no_checks (hard data)",
+        &hard_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(
+                    o.add(j * 8),
+                    pow_no_checks(_mm256_loadu_ps(i.add(j * 8)), 2.4),
+                );
+            }
+        },
+    );
+    let hard_std = run_bench(
+        "pow std_match (hard data)",
+        &hard_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(
+                    o.add(j * 8),
+                    pow_std_match(_mm256_loadu_ps(i.add(j * 8)), 2.4),
+                );
+            }
+        },
+    );
+    println!(
+        "  easy: std_match overhead = {:.1}%",
+        (easy_std / easy_no - 1.0) * 100.0
+    );
+    println!(
+        "  hard: std_match overhead = {:.1}%",
+        (hard_std / hard_no - 1.0) * 100.0
+    );
     println!();
 
     // ========================================================================
     println!("=== exp ===");
     // ========================================================================
 
-    let easy_no = run_bench("exp no_checks (easy data)", &easy_exp, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), exp_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let easy_std = run_bench("exp std_match (easy data)", &easy_exp, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), exp_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_no = run_bench("exp no_checks (hard data)", &hard_exp, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), exp_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_std = run_bench("exp std_match (hard data)", &hard_exp, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), exp_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    println!("  easy: std_match overhead = {:.1}%", (easy_std / easy_no - 1.0) * 100.0);
-    println!("  hard: std_match overhead = {:.1}%", (hard_std / hard_no - 1.0) * 100.0);
+    let easy_no = run_bench(
+        "exp no_checks (easy data)",
+        &easy_exp,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), exp_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let easy_std = run_bench(
+        "exp std_match (easy data)",
+        &easy_exp,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), exp_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_no = run_bench(
+        "exp no_checks (hard data)",
+        &hard_exp,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), exp_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_std = run_bench(
+        "exp std_match (hard data)",
+        &hard_exp,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), exp_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    println!(
+        "  easy: std_match overhead = {:.1}%",
+        (easy_std / easy_no - 1.0) * 100.0
+    );
+    println!(
+        "  hard: std_match overhead = {:.1}%",
+        (hard_std / hard_no - 1.0) * 100.0
+    );
     println!();
 
     // ========================================================================
     println!("=== ln ===");
     // ========================================================================
 
-    let easy_no = run_bench("ln no_checks (easy data)", &easy_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), ln_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let easy_std = run_bench("ln std_match (easy data)", &easy_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), ln_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_no = run_bench("ln no_checks (hard data)", &hard_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), ln_no_checks(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    let hard_std = run_bench("ln std_match (hard data)", &hard_pos, &mut output, |i, o, n| unsafe {
-        for j in 0..(n / 8) { _mm256_storeu_ps(o.add(j * 8), ln_std_match(_mm256_loadu_ps(i.add(j * 8)))); }
-    });
-    println!("  easy: std_match overhead = {:.1}%", (easy_std / easy_no - 1.0) * 100.0);
-    println!("  hard: std_match overhead = {:.1}%", (hard_std / hard_no - 1.0) * 100.0);
+    let easy_no = run_bench(
+        "ln no_checks (easy data)",
+        &easy_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), ln_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let easy_std = run_bench(
+        "ln std_match (easy data)",
+        &easy_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), ln_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_no = run_bench(
+        "ln no_checks (hard data)",
+        &hard_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), ln_no_checks(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    let hard_std = run_bench(
+        "ln std_match (hard data)",
+        &hard_pos,
+        &mut output,
+        |i, o, n| unsafe {
+            for j in 0..(n / 8) {
+                _mm256_storeu_ps(o.add(j * 8), ln_std_match(_mm256_loadu_ps(i.add(j * 8))));
+            }
+        },
+    );
+    println!(
+        "  easy: std_match overhead = {:.1}%",
+        (easy_std / easy_no - 1.0) * 100.0
+    );
+    println!(
+        "  hard: std_match overhead = {:.1}%",
+        (hard_std / hard_no - 1.0) * 100.0
+    );
     println!();
 
     println!("Done!");
