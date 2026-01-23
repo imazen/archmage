@@ -99,12 +99,11 @@ jobs:
         run: cargo test --all-features
 
   # ==========================================================================
-  # Cross-compiled testing (informational - QEMU can be slow/flaky)
+  # Cross-compiled testing with QEMU emulation
   # ==========================================================================
   test-cross:
     name: Cross (${{ matrix.target }})
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -130,7 +129,7 @@ jobs:
       - name: Build (cross)
         run: cross build --all-features --target ${{ matrix.target }}
 
-      - name: Test (cross)
+      - name: Test (cross/QEMU)
         run: cross test --all-features --target ${{ matrix.target }}
 
   # ==========================================================================
@@ -164,9 +163,21 @@ jobs:
             echo "Run 'cargo xtask generate' locally and commit the changes."
             exit 1
           fi
-          # Check tests
+          # Check archmage tests
           if ! git diff --exit-code tests/generated_*.rs; then
             echo "::error::Generated tests differ from committed code!"
+            echo "Run 'cargo xtask generate' locally and commit the changes."
+            exit 1
+          fi
+          # Check magetypes SIMD types
+          if ! git diff --exit-code magetypes/src/simd/; then
+            echo "::error::Generated magetypes SIMD types differ from committed code!"
+            echo "Run 'cargo xtask generate' locally and commit the changes."
+            exit 1
+          fi
+          # Check magetypes tests
+          if ! git diff --exit-code magetypes/tests/; then
+            echo "::error::Generated magetypes tests differ from committed code!"
             echo "Run 'cargo xtask generate' locally and commit the changes."
             exit 1
           fi
