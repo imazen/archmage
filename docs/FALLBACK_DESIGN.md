@@ -191,3 +191,51 @@ For hot loops, prefer:
 - Keeping data in SIMD until final reduction
 - Using lower precision if acceptable
 - Batching reductions across multiple vectors
+
+## archmage vs wide: Design Tradeoffs
+
+Benchmark results comparing archmage to the `wide` crate (v1.1.1):
+
+| Operation | archmage | wide | Winner |
+|-----------|----------|------|--------|
+| f32x8 add | 8.6ns | 1.9ns | wide 4.5x |
+| f32x8 sqrt | 10.1ns | 1.9ns | wide 5.3x |
+| f32x8 floor | 8.1ns | 10.7ns | **archmage 1.3x** |
+| f32x8 ceil | 8.0ns | 10.6ns | **archmage 1.3x** |
+| f32x8 reduce_add | 6.9ns | 1.4ns | wide 4.9x |
+| i32x8 reduce_add | 0.78ns | 0.86ns | **archmage 1.1x** |
+| f32x8 load | 1.1ns | 6.1ns | **archmage 5.5x** |
+| batch add (128) | 1.09µs | 61ns | wide 17.8x |
+
+### Why the Difference?
+
+**wide's approach:**
+- Compile-time feature detection (`#[cfg(target_feature="avx")]`)
+- Zero-cost transmutes via bytemuck (`Pod` trait)
+- Direct struct initialization from arrays
+- No runtime checks
+
+**archmage's approach:**
+- Runtime token verification (safe construction)
+- Explicit memory loads (`_mm256_loadu_ps`)
+- Token parameter passing (zero-size but affects optimizer)
+- Safety-first design
+
+### When archmage Wins
+
+1. **Load operations**: archmage's explicit `load()` is faster than wide's `From<[f32; 8]>`
+2. **floor/ceil**: archmage uses native SSE4.1 instructions directly
+3. **Integer reductions**: archmage's SIMD shuffle tree beats wide's scalar fallback
+
+### When wide Wins
+
+1. **Arithmetic in tight loops**: No load overhead when data stays in registers
+2. **Batch operations**: Zero-cost array-to-SIMD conversion
+3. **Simple operations**: Optimizer has more freedom without unsafe blocks
+
+### Recommendations
+
+For maximum performance:
+- Use archmage for safety-critical code paths with runtime detection
+- Consider wide for hot loops where compile-time feature detection is acceptable
+- Both can coexist - use archmage's tokens to gate wide operations
