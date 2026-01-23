@@ -4,10 +4,9 @@
 
 use core::arch::x86_64::*;
 use core::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,
-    Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
+    Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
-
 
 // ============================================================================
 // f32x16 - 16 x f32 (512-bit)
@@ -419,9 +418,7 @@ impl f32x16 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe {
-            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LN2)))
-        }
+        unsafe { Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LN2))) }
     }
 
     /// Low-precision natural exponential (e^x).
@@ -430,9 +427,7 @@ impl f32x16 {
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_lowp()
-        }
+        unsafe { Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_lowp() }
     }
 
     /// Low-precision base-10 logarithm.
@@ -441,9 +436,7 @@ impl f32x16 {
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
-        unsafe {
-            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LOG10_2)))
-        }
+        unsafe { Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(LOG10_2))) }
     }
 
     /// Low-precision power function (self^n).
@@ -452,9 +445,7 @@ impl f32x16 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        unsafe {
-            Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(n))).exp2_lowp()
-        }
+        unsafe { Self(_mm512_mul_ps(self.log2_lowp().0, _mm512_set1_ps(n))).exp2_lowp() }
     }
 
     // ========== Mid-Precision Transcendental Operations ==========
@@ -468,15 +459,15 @@ impl f32x16 {
     pub fn log2_midp_unchecked(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
-        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
+        const ONE: u32 = 0x3f800000; // 1.0 in f32 bits
         const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
         const EXPONENT_BIAS: i32 = 127;
 
         // Coefficients for odd polynomial on y = (a-1)/(a+1)
-        const C0: f32 = 2.885_390_08;  // 2/ln(2)
-        const C1: f32 = 0.961_800_76;  // y^2 coefficient
-        const C2: f32 = 0.576_974_45;  // y^4 coefficient
-        const C3: f32 = 0.434_411_97;  // y^6 coefficient
+        const C0: f32 = 2.885_390_08; // 2/ln(2)
+        const C1: f32 = 0.961_800_76; // y^2 coefficient
+        const C2: f32 = 0.576_974_45; // y^4 coefficient
+        const C3: f32 = 0.434_411_97; // y^6 coefficient
 
         unsafe {
             let x_bits = _mm512_castps_si512(self.0);
@@ -627,7 +618,11 @@ impl f32x16 {
     #[inline(always)]
     pub fn pow_midp_unchecked(self, n: f32) -> Self {
         unsafe {
-            Self(_mm512_mul_ps(self.log2_midp_unchecked().0, _mm512_set1_ps(n))).exp2_midp_unchecked()
+            Self(_mm512_mul_ps(
+                self.log2_midp_unchecked().0,
+                _mm512_set1_ps(n),
+            ))
+            .exp2_midp_unchecked()
         }
     }
 
@@ -640,9 +635,7 @@ impl f32x16 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
-        unsafe {
-            Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(n))).exp2_midp()
-        }
+        unsafe { Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(n))).exp2_midp() }
     }
 
     /// Mid-precision natural logarithm - unchecked variant.
@@ -655,7 +648,10 @@ impl f32x16 {
     pub fn ln_midp_unchecked(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
         unsafe {
-            Self(_mm512_mul_ps(self.log2_midp_unchecked().0, _mm512_set1_ps(LN2)))
+            Self(_mm512_mul_ps(
+                self.log2_midp_unchecked().0,
+                _mm512_set1_ps(LN2),
+            ))
         }
     }
 
@@ -667,9 +663,7 @@ impl f32x16 {
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe {
-            Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(LN2)))
-        }
+        unsafe { Self(_mm512_mul_ps(self.log2_midp().0, _mm512_set1_ps(LN2))) }
     }
 
     /// Mid-precision natural exponential (e^x) - unchecked variant.
@@ -681,9 +675,7 @@ impl f32x16 {
     #[inline(always)]
     pub fn exp_midp_unchecked(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp_unchecked()
-        }
+        unsafe { Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp_unchecked() }
     }
 
     /// Mid-precision natural exponential (e^x).
@@ -694,9 +686,7 @@ impl f32x16 {
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp()
-        }
+        unsafe { Self(_mm512_mul_ps(self.0, _mm512_set1_ps(LOG2_E))).exp2_midp() }
     }
 
     // ========== Cube Root ==========
@@ -774,8 +764,8 @@ impl f32x16 {
             let is_nan = _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(self.0, self.0);
 
             // Apply corrections using mask blend (use self.0 for zero to preserve sign)
-            let r = _mm512_mask_blend_ps(is_zero, result.0, self.0);  // ±0 -> ±0
-            let r = _mm512_mask_blend_ps(is_inf, r, self.0);  // ±inf -> ±inf
+            let r = _mm512_mask_blend_ps(is_zero, result.0, self.0); // ±0 -> ±0
+            let r = _mm512_mask_blend_ps(is_inf, r, self.0); // ±inf -> ±inf
             let r = _mm512_mask_blend_ps(is_nan, r, _mm512_set1_ps(f32::NAN));
             Self(r)
         }
@@ -792,9 +782,9 @@ impl f32x16 {
     pub fn cbrt_midp_precise(self) -> Self {
         unsafe {
             // Scale factor for denormals: 2^24
-            const SCALE_UP: f32 = 16777216.0;  // 2^24
-            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
-            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+            const SCALE_UP: f32 = 16777216.0; // 2^24
+            const SCALE_DOWN: f32 = 0.00390625; // 2^(-8) = cbrt(2^(-24))
+            const DENORM_LIMIT: f32 = 1.17549435e-38; // Smallest normal f32
 
             let abs_x = _mm512_andnot_ps(_mm512_set1_ps(-0.0), self.0);
             let is_denorm = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(abs_x, _mm512_set1_ps(DENORM_LIMIT));
@@ -812,123 +802,180 @@ impl f32x16 {
         }
     }
 
-// ========== Matrix Transpose ==========
+    // ========== Matrix Transpose ==========
 
-/// Transpose an 8x8 matrix using AVX-512.
-///
-/// Takes 8 f32x16 vectors where only the lower 8 elements are used.
-#[inline]
-pub fn transpose_8x8(rows: &mut [Self; 8]) {
-    unsafe {
-        let idx_lo = _mm512_setr_epi32(0, 16, 1, 17, 4, 20, 5, 21, 8, 24, 9, 25, 12, 28, 13, 29);
-        let idx_hi = _mm512_setr_epi32(2, 18, 3, 19, 6, 22, 7, 23, 10, 26, 11, 27, 14, 30, 15, 31);
+    /// Transpose an 8x8 matrix using AVX-512.
+    ///
+    /// Takes 8 f32x16 vectors where only the lower 8 elements are used.
+    #[inline]
+    pub fn transpose_8x8(rows: &mut [Self; 8]) {
+        unsafe {
+            let idx_lo =
+                _mm512_setr_epi32(0, 16, 1, 17, 4, 20, 5, 21, 8, 24, 9, 25, 12, 28, 13, 29);
+            let idx_hi =
+                _mm512_setr_epi32(2, 18, 3, 19, 6, 22, 7, 23, 10, 26, 11, 27, 14, 30, 15, 31);
 
-        let r0i = _mm512_castps_si512(rows[0].0);
-        let r1i = _mm512_castps_si512(rows[1].0);
-        let r2i = _mm512_castps_si512(rows[2].0);
-        let r3i = _mm512_castps_si512(rows[3].0);
-        let r4i = _mm512_castps_si512(rows[4].0);
-        let r5i = _mm512_castps_si512(rows[5].0);
-        let r6i = _mm512_castps_si512(rows[6].0);
-        let r7i = _mm512_castps_si512(rows[7].0);
+            let r0i = _mm512_castps_si512(rows[0].0);
+            let r1i = _mm512_castps_si512(rows[1].0);
+            let r2i = _mm512_castps_si512(rows[2].0);
+            let r3i = _mm512_castps_si512(rows[3].0);
+            let r4i = _mm512_castps_si512(rows[4].0);
+            let r5i = _mm512_castps_si512(rows[5].0);
+            let r6i = _mm512_castps_si512(rows[6].0);
+            let r7i = _mm512_castps_si512(rows[7].0);
 
-        let t0 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r0i, idx_lo, r1i));
-        let t1 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r0i, idx_hi, r1i));
-        let t2 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r2i, idx_lo, r3i));
-        let t3 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r2i, idx_hi, r3i));
-        let t4 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r4i, idx_lo, r5i));
-        let t5 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r4i, idx_hi, r5i));
-        let t6 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r6i, idx_lo, r7i));
-        let t7 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r6i, idx_hi, r7i));
+            let t0 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r0i, idx_lo, r1i));
+            let t1 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r0i, idx_hi, r1i));
+            let t2 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r2i, idx_lo, r3i));
+            let t3 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r2i, idx_hi, r3i));
+            let t4 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r4i, idx_lo, r5i));
+            let t5 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r4i, idx_hi, r5i));
+            let t6 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r6i, idx_lo, r7i));
+            let t7 = _mm512_castsi512_ps(_mm512_permutex2var_epi32(r6i, idx_hi, r7i));
 
-        let idx2_lo = _mm512_setr_epi64(0, 8, 1, 9, 4, 12, 5, 13);
-        let idx2_hi = _mm512_setr_epi64(2, 10, 3, 11, 6, 14, 7, 15);
+            let idx2_lo = _mm512_setr_epi64(0, 8, 1, 9, 4, 12, 5, 13);
+            let idx2_hi = _mm512_setr_epi64(2, 10, 3, 11, 6, 14, 7, 15);
 
-        let t0i = _mm512_castps_si512(t0);
-        let t2i = _mm512_castps_si512(t2);
-        let t1i = _mm512_castps_si512(t1);
-        let t3i = _mm512_castps_si512(t3);
-        let t4i = _mm512_castps_si512(t4);
-        let t6i = _mm512_castps_si512(t6);
-        let t5i = _mm512_castps_si512(t5);
-        let t7i = _mm512_castps_si512(t7);
+            let t0i = _mm512_castps_si512(t0);
+            let t2i = _mm512_castps_si512(t2);
+            let t1i = _mm512_castps_si512(t1);
+            let t3i = _mm512_castps_si512(t3);
+            let t4i = _mm512_castps_si512(t4);
+            let t6i = _mm512_castps_si512(t6);
+            let t5i = _mm512_castps_si512(t5);
+            let t7i = _mm512_castps_si512(t7);
 
-        let s0 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t0i, idx2_lo, t2i));
-        let s1 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t0i, idx2_hi, t2i));
-        let s2 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t1i, idx2_lo, t3i));
-        let s3 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t1i, idx2_hi, t3i));
-        let s4 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t4i, idx2_lo, t6i));
-        let s5 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t4i, idx2_hi, t6i));
-        let s6 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t5i, idx2_lo, t7i));
-        let s7 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t5i, idx2_hi, t7i));
+            let s0 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t0i, idx2_lo, t2i));
+            let s1 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t0i, idx2_hi, t2i));
+            let s2 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t1i, idx2_lo, t3i));
+            let s3 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t1i, idx2_hi, t3i));
+            let s4 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t4i, idx2_lo, t6i));
+            let s5 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t4i, idx2_hi, t6i));
+            let s6 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t5i, idx2_lo, t7i));
+            let s7 = _mm512_castsi512_ps(_mm512_permutex2var_epi64(t5i, idx2_hi, t7i));
 
-        let idx3_lo = _mm512_setr_epi32(0, 1, 2, 3, 16, 17, 18, 19, 8, 9, 10, 11, 24, 25, 26, 27);
-        let idx3_hi = _mm512_setr_epi32(4, 5, 6, 7, 20, 21, 22, 23, 12, 13, 14, 15, 28, 29, 30, 31);
+            let idx3_lo =
+                _mm512_setr_epi32(0, 1, 2, 3, 16, 17, 18, 19, 8, 9, 10, 11, 24, 25, 26, 27);
+            let idx3_hi =
+                _mm512_setr_epi32(4, 5, 6, 7, 20, 21, 22, 23, 12, 13, 14, 15, 28, 29, 30, 31);
 
-        let s0i = _mm512_castps_si512(s0);
-        let s4i = _mm512_castps_si512(s4);
-        let s1i = _mm512_castps_si512(s1);
-        let s5i = _mm512_castps_si512(s5);
-        let s2i = _mm512_castps_si512(s2);
-        let s6i = _mm512_castps_si512(s6);
-        let s3i = _mm512_castps_si512(s3);
-        let s7i = _mm512_castps_si512(s7);
+            let s0i = _mm512_castps_si512(s0);
+            let s4i = _mm512_castps_si512(s4);
+            let s1i = _mm512_castps_si512(s1);
+            let s5i = _mm512_castps_si512(s5);
+            let s2i = _mm512_castps_si512(s2);
+            let s6i = _mm512_castps_si512(s6);
+            let s3i = _mm512_castps_si512(s3);
+            let s7i = _mm512_castps_si512(s7);
 
-        rows[0] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(s0i, idx3_lo, s4i)));
-        rows[1] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(s1i, idx3_lo, s5i)));
-        rows[2] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(s2i, idx3_lo, s6i)));
-        rows[3] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(s3i, idx3_lo, s7i)));
-        rows[4] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(s0i, idx3_hi, s4i)));
-        rows[5] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(s1i, idx3_hi, s5i)));
-        rows[6] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(s2i, idx3_hi, s6i)));
-        rows[7] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(s3i, idx3_hi, s7i)));
+            rows[0] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(
+                s0i, idx3_lo, s4i,
+            )));
+            rows[1] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(
+                s1i, idx3_lo, s5i,
+            )));
+            rows[2] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(
+                s2i, idx3_lo, s6i,
+            )));
+            rows[3] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(
+                s3i, idx3_lo, s7i,
+            )));
+            rows[4] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(
+                s0i, idx3_hi, s4i,
+            )));
+            rows[5] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(
+                s1i, idx3_hi, s5i,
+            )));
+            rows[6] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(
+                s2i, idx3_hi, s6i,
+            )));
+            rows[7] = Self(_mm512_castsi512_ps(_mm512_permutex2var_epi32(
+                s3i, idx3_hi, s7i,
+            )));
+        }
     }
-}
 
-/// Transpose an 8x8 matrix, returning the transposed rows.
-#[inline]
-pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
-    let mut result = rows;
-    Self::transpose_8x8(&mut result);
-    result
-}
-
-/// Load an 8x8 f32 block into 8 f32x16 vectors (lower 8 elements used).
-#[inline]
-pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
-    unsafe {
-        [
-            Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr()))),
-            Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr().add(8)))),
-            Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr().add(16)))),
-            Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr().add(24)))),
-            Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr().add(32)))),
-            Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr().add(40)))),
-            Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr().add(48)))),
-            Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr().add(56)))),
-        ]
+    /// Transpose an 8x8 matrix, returning the transposed rows.
+    #[inline]
+    pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
+        let mut result = rows;
+        Self::transpose_8x8(&mut result);
+        result
     }
-}
 
-/// Store 8 f32x16 vectors (lower 8 elements) to a contiguous 8x8 f32 block.
-#[inline]
-pub fn store_8x8(rows: &[Self; 8], block: &mut [f32; 64]) {
-    unsafe {
-        _mm256_storeu_ps(block.as_mut_ptr(), _mm512_castps512_ps256(rows[0].0));
-        _mm256_storeu_ps(block.as_mut_ptr().add(8), _mm512_castps512_ps256(rows[1].0));
-        _mm256_storeu_ps(block.as_mut_ptr().add(16), _mm512_castps512_ps256(rows[2].0));
-        _mm256_storeu_ps(block.as_mut_ptr().add(24), _mm512_castps512_ps256(rows[3].0));
-        _mm256_storeu_ps(block.as_mut_ptr().add(32), _mm512_castps512_ps256(rows[4].0));
-        _mm256_storeu_ps(block.as_mut_ptr().add(40), _mm512_castps512_ps256(rows[5].0));
-        _mm256_storeu_ps(block.as_mut_ptr().add(48), _mm512_castps512_ps256(rows[6].0));
-        _mm256_storeu_ps(block.as_mut_ptr().add(56), _mm512_castps512_ps256(rows[7].0));
+    /// Load an 8x8 f32 block into 8 f32x16 vectors (lower 8 elements used).
+    #[inline]
+    pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
+        unsafe {
+            [
+                Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr()))),
+                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
+                    block.as_ptr().add(8),
+                ))),
+                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
+                    block.as_ptr().add(16),
+                ))),
+                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
+                    block.as_ptr().add(24),
+                ))),
+                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
+                    block.as_ptr().add(32),
+                ))),
+                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
+                    block.as_ptr().add(40),
+                ))),
+                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
+                    block.as_ptr().add(48),
+                ))),
+                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
+                    block.as_ptr().add(56),
+                ))),
+            ]
+        }
     }
-}
 
+    /// Store 8 f32x16 vectors (lower 8 elements) to a contiguous 8x8 f32 block.
+    #[inline]
+    pub fn store_8x8(rows: &[Self; 8], block: &mut [f32; 64]) {
+        unsafe {
+            _mm256_storeu_ps(block.as_mut_ptr(), _mm512_castps512_ps256(rows[0].0));
+            _mm256_storeu_ps(block.as_mut_ptr().add(8), _mm512_castps512_ps256(rows[1].0));
+            _mm256_storeu_ps(
+                block.as_mut_ptr().add(16),
+                _mm512_castps512_ps256(rows[2].0),
+            );
+            _mm256_storeu_ps(
+                block.as_mut_ptr().add(24),
+                _mm512_castps512_ps256(rows[3].0),
+            );
+            _mm256_storeu_ps(
+                block.as_mut_ptr().add(32),
+                _mm512_castps512_ps256(rows[4].0),
+            );
+            _mm256_storeu_ps(
+                block.as_mut_ptr().add(40),
+                _mm512_castps512_ps256(rows[5].0),
+            );
+            _mm256_storeu_ps(
+                block.as_mut_ptr().add(48),
+                _mm512_castps512_ps256(rows[6].0),
+            );
+            _mm256_storeu_ps(
+                block.as_mut_ptr().add(56),
+                _mm512_castps512_ps256(rows[7].0),
+            );
+        }
+    }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_arithmetic_ops!(f32x16, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps);
+crate::impl_arithmetic_ops!(
+    f32x16,
+    _mm512_add_ps,
+    _mm512_sub_ps,
+    _mm512_mul_ps,
+    _mm512_div_ps
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_float_assign_ops!(f32x16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -937,7 +984,6 @@ crate::impl_neg!(f32x16, _mm512_sub_ps, _mm512_setzero_ps);
 crate::impl_bitwise_ops!(f32x16, __m512, _mm512_and_ps, _mm512_or_ps, _mm512_xor_ps);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(f32x16, f32, 16);
-
 
 // Scalar broadcast operations for f32x16
 // These allow `v + 2.0` instead of `v + f32x16::splat(token, 2.0)`
@@ -983,7 +1029,6 @@ impl Div<f32> for f32x16 {
         self / Self(unsafe { _mm512_set1_ps(rhs) })
     }
 }
-
 
 // ============================================================================
 // f64x8 - 8 x f64 (512-bit)
@@ -1305,7 +1350,15 @@ impl f64x8 {
             // Convert exponent to f64
             let exp_arr: [i64; 8] = core::mem::transmute(exp_shifted);
             let exp_f64: [f64; 8] = [
-exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64, exp_arr[4] as f64, exp_arr[5] as f64, exp_arr[6] as f64, exp_arr[7] as f64];
+                exp_arr[0] as f64,
+                exp_arr[1] as f64,
+                exp_arr[2] as f64,
+                exp_arr[3] as f64,
+                exp_arr[4] as f64,
+                exp_arr[5] as f64,
+                exp_arr[6] as f64,
+                exp_arr[7] as f64,
+            ];
             let exp_val = _mm512_loadu_pd(exp_f64.as_ptr());
 
             let one = _mm512_set1_pd(1.0);
@@ -1351,7 +1404,15 @@ exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64, exp_
             // Scale by 2^integer - extract, convert, scale
             let xi_arr: [f64; 8] = core::mem::transmute(xi);
             let scale_arr: [f64; 8] = [
-f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[4] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[5] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[6] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[7] as i64 + 1023) << 52) as u64)];
+                f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[4] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[5] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[6] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[7] as i64 + 1023) << 52) as u64),
+            ];
             let scale = _mm512_loadu_pd(scale_arr.as_ptr());
 
             Self(_mm512_mul_pd(poly, scale))
@@ -1362,41 +1423,38 @@ f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_ar
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
-        unsafe {
-            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LN2)))
-        }
+        unsafe { Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LN2))) }
     }
 
     /// Low-precision natural exponential (e^x).
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
-        unsafe {
-            Self(_mm512_mul_pd(self.0, _mm512_set1_pd(LOG2_E))).exp2_lowp()
-        }
+        unsafe { Self(_mm512_mul_pd(self.0, _mm512_set1_pd(LOG2_E))).exp2_lowp() }
     }
 
     /// Low-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
-        unsafe {
-            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LOG10_2)))
-        }
+        unsafe { Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(LOG10_2))) }
     }
 
     /// Low-precision power function (self^n).
     #[inline(always)]
     pub fn pow_lowp(self, n: f64) -> Self {
-        unsafe {
-            Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(n))).exp2_lowp()
-        }
+        unsafe { Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(n))).exp2_lowp() }
     }
-
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_arithmetic_ops!(f64x8, _mm512_add_pd, _mm512_sub_pd, _mm512_mul_pd, _mm512_div_pd);
+crate::impl_arithmetic_ops!(
+    f64x8,
+    _mm512_add_pd,
+    _mm512_sub_pd,
+    _mm512_mul_pd,
+    _mm512_div_pd
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_float_assign_ops!(f64x8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -1405,7 +1463,6 @@ crate::impl_neg!(f64x8, _mm512_sub_pd, _mm512_setzero_pd);
 crate::impl_bitwise_ops!(f64x8, __m512d, _mm512_and_pd, _mm512_or_pd, _mm512_xor_pd);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(f64x8, f64, 8);
-
 
 // Scalar broadcast operations for f64x8
 // These allow `v + 2.0` instead of `v + f64x8::splat(token, 2.0)`
@@ -1451,7 +1508,6 @@ impl Div<f64> for f64x8 {
         self / Self(unsafe { _mm512_set1_pd(rhs) })
     }
 }
-
 
 // ============================================================================
 // i8x64 - 64 x i8 (512-bit)
@@ -1678,10 +1734,15 @@ crate::impl_int_arithmetic_ops!(i8x64, _mm512_add_epi8, _mm512_sub_epi8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_assign_ops!(i8x64);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_bitwise_ops!(i8x64, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
+crate::impl_bitwise_ops!(
+    i8x64,
+    __m512i,
+    _mm512_and_si512,
+    _mm512_or_si512,
+    _mm512_xor_si512
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(i8x64, i8, 64);
-
 
 // Scalar broadcast operations for i8x64
 // These allow `v + 2.0` instead of `v + i8x64::splat(token, 2.0)`
@@ -1705,7 +1766,6 @@ impl Sub<i8> for i8x64 {
         self - Self(unsafe { _mm512_set1_epi8(rhs) })
     }
 }
-
 
 // ============================================================================
 // u8x64 - 64 x u8 (512-bit)
@@ -1927,10 +1987,15 @@ crate::impl_int_arithmetic_ops!(u8x64, _mm512_add_epi8, _mm512_sub_epi8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_assign_ops!(u8x64);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_bitwise_ops!(u8x64, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
+crate::impl_bitwise_ops!(
+    u8x64,
+    __m512i,
+    _mm512_and_si512,
+    _mm512_or_si512,
+    _mm512_xor_si512
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(u8x64, u8, 64);
-
 
 // Scalar broadcast operations for u8x64
 // These allow `v + 2.0` instead of `v + u8x64::splat(token, 2.0)`
@@ -1954,7 +2019,6 @@ impl Sub<u8> for u8x64 {
         self - Self(unsafe { _mm512_set1_epi8(rhs as i8) })
     }
 }
-
 
 // ============================================================================
 // i16x32 - 32 x i16 (512-bit)
@@ -2162,7 +2226,10 @@ impl i16x32 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
-        self.to_array().iter().copied().fold(0_i16, i16::wrapping_add)
+        self.to_array()
+            .iter()
+            .copied()
+            .fold(0_i16, i16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2205,10 +2272,15 @@ crate::impl_int_mul_op!(i16x32, _mm512_mullo_epi16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_assign_ops!(i16x32);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_bitwise_ops!(i16x32, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
+crate::impl_bitwise_ops!(
+    i16x32,
+    __m512i,
+    _mm512_and_si512,
+    _mm512_or_si512,
+    _mm512_xor_si512
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(i16x32, i16, 32);
-
 
 // Scalar broadcast operations for i16x32
 // These allow `v + 2.0` instead of `v + i16x32::splat(token, 2.0)`
@@ -2232,7 +2304,6 @@ impl Sub<i16> for i16x32 {
         self - Self(unsafe { _mm512_set1_epi16(rhs) })
     }
 }
-
 
 // ============================================================================
 // u16x32 - 32 x u16 (512-bit)
@@ -2435,7 +2506,10 @@ impl u16x32 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u16 {
-        self.to_array().iter().copied().fold(0_u16, u16::wrapping_add)
+        self.to_array()
+            .iter()
+            .copied()
+            .fold(0_u16, u16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2471,10 +2545,15 @@ crate::impl_int_mul_op!(u16x32, _mm512_mullo_epi16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_assign_ops!(u16x32);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_bitwise_ops!(u16x32, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
+crate::impl_bitwise_ops!(
+    u16x32,
+    __m512i,
+    _mm512_and_si512,
+    _mm512_or_si512,
+    _mm512_xor_si512
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(u16x32, u16, 32);
-
 
 // Scalar broadcast operations for u16x32
 // These allow `v + 2.0` instead of `v + u16x32::splat(token, 2.0)`
@@ -2498,7 +2577,6 @@ impl Sub<u16> for u16x32 {
         self - Self(unsafe { _mm512_set1_epi16(rhs as i16) })
     }
 }
-
 
 // ============================================================================
 // i32x16 - 16 x i32 (512-bit)
@@ -2706,7 +2784,10 @@ impl i32x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        self.to_array().iter().copied().fold(0_i32, i32::wrapping_add)
+        self.to_array()
+            .iter()
+            .copied()
+            .fold(0_i32, i32::wrapping_add)
     }
 
     // ========== Type Conversions ==========
@@ -2757,10 +2838,15 @@ crate::impl_int_mul_op!(i32x16, _mm512_mullo_epi32);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_assign_ops!(i32x16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_bitwise_ops!(i32x16, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
+crate::impl_bitwise_ops!(
+    i32x16,
+    __m512i,
+    _mm512_and_si512,
+    _mm512_or_si512,
+    _mm512_xor_si512
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(i32x16, i32, 16);
-
 
 // Scalar broadcast operations for i32x16
 // These allow `v + 2.0` instead of `v + i32x16::splat(token, 2.0)`
@@ -2784,7 +2870,6 @@ impl Sub<i32> for i32x16 {
         self - Self(unsafe { _mm512_set1_epi32(rhs) })
     }
 }
-
 
 // ============================================================================
 // u32x16 - 16 x u32 (512-bit)
@@ -2987,7 +3072,10 @@ impl u32x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        self.to_array().iter().copied().fold(0_u32, u32::wrapping_add)
+        self.to_array()
+            .iter()
+            .copied()
+            .fold(0_u32, u32::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3023,10 +3111,15 @@ crate::impl_int_mul_op!(u32x16, _mm512_mullo_epi32);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_assign_ops!(u32x16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_bitwise_ops!(u32x16, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
+crate::impl_bitwise_ops!(
+    u32x16,
+    __m512i,
+    _mm512_and_si512,
+    _mm512_or_si512,
+    _mm512_xor_si512
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(u32x16, u32, 16);
-
 
 // Scalar broadcast operations for u32x16
 // These allow `v + 2.0` instead of `v + u32x16::splat(token, 2.0)`
@@ -3050,7 +3143,6 @@ impl Sub<u32> for u32x16 {
         self - Self(unsafe { _mm512_set1_epi32(rhs as i32) })
     }
 }
-
 
 // ============================================================================
 // i64x8 - 8 x i64 (512-bit)
@@ -3258,7 +3350,10 @@ impl i64x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
-        self.to_array().iter().copied().fold(0_i64, i64::wrapping_add)
+        self.to_array()
+            .iter()
+            .copied()
+            .fold(0_i64, i64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3299,10 +3394,15 @@ crate::impl_int_arithmetic_ops!(i64x8, _mm512_add_epi64, _mm512_sub_epi64);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_assign_ops!(i64x8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_bitwise_ops!(i64x8, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
+crate::impl_bitwise_ops!(
+    i64x8,
+    __m512i,
+    _mm512_and_si512,
+    _mm512_or_si512,
+    _mm512_xor_si512
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(i64x8, i64, 8);
-
 
 // Scalar broadcast operations for i64x8
 // These allow `v + 2.0` instead of `v + i64x8::splat(token, 2.0)`
@@ -3326,7 +3426,6 @@ impl Sub<i64> for i64x8 {
         self - Self(unsafe { _mm512_set1_epi64(rhs) })
     }
 }
-
 
 // ============================================================================
 // u64x8 - 8 x u64 (512-bit)
@@ -3529,7 +3628,10 @@ impl u64x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u64 {
-        self.to_array().iter().copied().fold(0_u64, u64::wrapping_add)
+        self.to_array()
+            .iter()
+            .copied()
+            .fold(0_u64, u64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3563,10 +3665,15 @@ crate::impl_int_arithmetic_ops!(u64x8, _mm512_add_epi64, _mm512_sub_epi64);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_assign_ops!(u64x8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-crate::impl_bitwise_ops!(u64x8, __m512i, _mm512_and_si512, _mm512_or_si512, _mm512_xor_si512);
+crate::impl_bitwise_ops!(
+    u64x8,
+    __m512i,
+    _mm512_and_si512,
+    _mm512_or_si512,
+    _mm512_xor_si512
+);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 crate::impl_index!(u64x8, u64, 8);
-
 
 // Scalar broadcast operations for u64x8
 // These allow `v + 2.0` instead of `v + u64x8::splat(token, 2.0)`
@@ -3590,4 +3697,3 @@ impl Sub<u64> for u64x8 {
         self - Self(unsafe { _mm512_set1_epi64(rhs as i64) })
     }
 }
-
