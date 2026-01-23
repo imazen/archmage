@@ -4,6 +4,7 @@
 
 use core::arch::aarch64::*;
 
+
 // ============================================================================
 // f32x4 - 4 x f32 (128-bit NEON)
 // ============================================================================
@@ -86,6 +87,75 @@ impl f32x4 {
     #[inline(always)]
     pub unsafe fn from_raw(v: float32x4_t) -> Self {
         Self(v)
+    }
+
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 4, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[f32]) -> Option<&[Self]> {
+        if slice.len() % 4 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 4;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 4, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [f32]) -> Option<&mut [Self]> {
+        if slice.len() % 4 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 4;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over float32x4_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over float32x4_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
     }
 
     /// Element-wise minimum
@@ -171,6 +241,7 @@ impl f32x4 {
             vgetq_lane_f32::<0>(m)
         }
     }
+
 }
 
 impl core::ops::Add for f32x4 {
@@ -274,6 +345,7 @@ impl From<f32x4> for [f32; 4] {
     }
 }
 
+
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit NEON)
 // ============================================================================
@@ -358,6 +430,75 @@ impl f64x2 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 2, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[f64]) -> Option<&[Self]> {
+        if slice.len() % 2 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 2;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 2, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [f64]) -> Option<&mut [Self]> {
+        if slice.len() % 2 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 2;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over float64x2_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over float64x2_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -438,6 +579,7 @@ impl f64x2 {
             vgetq_lane_f64::<0>(m)
         }
     }
+
 }
 
 impl core::ops::Add for f64x2 {
@@ -541,6 +683,7 @@ impl From<f64x2> for [f64; 2] {
     }
 }
 
+
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit NEON)
 // ============================================================================
@@ -625,6 +768,75 @@ impl i8x16 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 16, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[i8]) -> Option<&[Self]> {
+        if slice.len() % 16 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 16;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 16, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [i8]) -> Option<&mut [Self]> {
+        if slice.len() % 16 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 16;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over int8x16_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over int8x16_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -660,6 +872,7 @@ impl i8x16 {
             vgetq_lane_s8::<0>(sum)
         }
     }
+
 }
 
 impl core::ops::Add for i8x16 {
@@ -732,6 +945,7 @@ impl From<i8x16> for [i8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit NEON)
@@ -817,6 +1031,75 @@ impl u8x16 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 16, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[u8]) -> Option<&[Self]> {
+        if slice.len() % 16 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 16;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 16, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [u8]) -> Option<&mut [Self]> {
+        if slice.len() % 16 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 16;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over uint8x16_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over uint8x16_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -834,6 +1117,7 @@ impl u8x16 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
 }
 
 impl core::ops::Add for u8x16 {
@@ -898,6 +1182,7 @@ impl From<u8x16> for [u8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit NEON)
@@ -983,6 +1268,75 @@ impl i16x8 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 8, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[i16]) -> Option<&[Self]> {
+        if slice.len() % 8 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 8;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 8, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [i16]) -> Option<&mut [Self]> {
+        if slice.len() % 8 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 8;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over int16x8_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over int16x8_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1017,6 +1371,7 @@ impl i16x8 {
             vgetq_lane_s16::<0>(sum)
         }
     }
+
 }
 
 impl core::ops::Add for i16x8 {
@@ -1105,6 +1460,7 @@ impl From<i16x8> for [i16; 8] {
     }
 }
 
+
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit NEON)
 // ============================================================================
@@ -1189,6 +1545,75 @@ impl u16x8 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 8, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[u16]) -> Option<&[Self]> {
+        if slice.len() % 8 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 8;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 8, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [u16]) -> Option<&mut [Self]> {
+        if slice.len() % 8 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 8;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over uint16x8_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over uint16x8_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1206,6 +1631,7 @@ impl u16x8 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
 }
 
 impl core::ops::Add for u16x8 {
@@ -1285,6 +1711,7 @@ impl From<u16x8> for [u16; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit NEON)
@@ -1370,6 +1797,75 @@ impl i32x4 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 4, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[i32]) -> Option<&[Self]> {
+        if slice.len() % 4 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 4;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 4, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [i32]) -> Option<&mut [Self]> {
+        if slice.len() % 4 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 4;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over int32x4_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over int32x4_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1403,6 +1899,7 @@ impl i32x4 {
             vgetq_lane_s32::<0>(sum)
         }
     }
+
 }
 
 impl core::ops::Add for i32x4 {
@@ -1491,6 +1988,7 @@ impl From<i32x4> for [i32; 4] {
     }
 }
 
+
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit NEON)
 // ============================================================================
@@ -1575,6 +2073,75 @@ impl u32x4 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 4, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[u32]) -> Option<&[Self]> {
+        if slice.len() % 4 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 4;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 4, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [u32]) -> Option<&mut [Self]> {
+        if slice.len() % 4 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 4;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over uint32x4_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over uint32x4_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1592,6 +2159,7 @@ impl u32x4 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
 }
 
 impl core::ops::Add for u32x4 {
@@ -1671,6 +2239,7 @@ impl From<u32x4> for [u32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit NEON)
@@ -1756,6 +2325,75 @@ impl i64x2 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 2, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[i64]) -> Option<&[Self]> {
+        if slice.len() % 2 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 2;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 2, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [i64]) -> Option<&mut [Self]> {
+        if slice.len() % 2 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 2;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over int64x2_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over int64x2_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1788,6 +2426,7 @@ impl i64x2 {
             vgetq_lane_s64::<0>(sum)
         }
     }
+
 }
 
 impl core::ops::Add for i64x2 {
@@ -1860,6 +2499,7 @@ impl From<i64x2> for [i64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit NEON)
@@ -1945,6 +2585,75 @@ impl u64x2 {
         Self(v)
     }
 
+    // ========== Token-gated bytemuck replacements ==========
+
+    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 2, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+    #[inline(always)]
+    pub fn cast_slice(_: archmage::NeonToken, slice: &[u64]) -> Option<&[Self]> {
+        if slice.len() % 2 != 0 {
+            return None;
+        }
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 2;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const Self, len) })
+    }
+
+    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+    ///
+    /// Returns `None` if the slice length is not a multiple of 2, or
+    /// if the slice is not properly aligned.
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+    #[inline(always)]
+    pub fn cast_slice_mut(_: archmage::NeonToken, slice: &mut [u64]) -> Option<&mut [Self]> {
+        if slice.len() % 2 != 0 {
+            return None;
+        }
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
+            return None;
+        }
+        let len = slice.len() / 2;
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr as *mut Self, len) })
+    }
+
+    /// View this vector as a byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of`.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 16] {
+        // SAFETY: Self is repr(transparent) over uint64x2_t which is 16 bytes
+        unsafe { &*(self as *const Self as *const [u8; 16]) }
+    }
+
+    /// View this vector as a mutable byte array.
+    ///
+    /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 16] {
+        // SAFETY: Self is repr(transparent) over uint64x2_t which is 16 bytes
+        unsafe { &mut *(self as *mut Self as *mut [u8; 16]) }
+    }
+
+    /// Create from a byte array (token-gated).
+    ///
+    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+    #[inline(always)]
+    pub fn from_bytes(_: archmage::NeonToken, bytes: &[u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and Self have identical size
+        Self(unsafe { core::mem::transmute(*bytes) })
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1962,6 +2671,7 @@ impl u64x2 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
 }
 
 impl core::ops::Add for u64x2 {
@@ -2026,3 +2736,4 @@ impl From<u64x2> for [u64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
