@@ -9,29 +9,26 @@
 //! ## Module Structure
 //!
 //! - `types` - Core types (ElementType, SimdWidth, SimdType) and code generation helpers
+//! - `arch` - Architecture-specific helpers (x86, arm)
 //! - `structure` - Type definition and macro generation
 //! - `ops` - Standard SIMD operations (comparison, blend, math, etc.)
 //! - `transcendental` - Transcendental functions (log, exp, pow, cbrt)
 
+pub mod arch;
 mod block_ops;
 mod ops;
 mod ops_comparison;
 mod structure;
 mod transcendental;
-mod types;
+pub mod types;
 
-pub use types::{ElementType, SimdType, SimdWidth, all_simd_types};
+pub use types::{all_simd_types, ElementType, SimdType, SimdWidth};
 
-/// Generate all SIMD types
-pub fn generate_simd_types() -> String {
-    let mut code = String::new();
+use std::collections::BTreeMap;
 
-    // Header
-    code.push_str(
-        r#"//! Token-gated SIMD types with natural operators.
-//!
-//! Provides `wide`-like ergonomics with token-gated construction.
-//! There is NO way to construct these types without proving CPU support.
+/// File header with common imports and attributes
+fn file_header() -> &'static str {
+    r#"//! Token-gated SIMD types with natural operators.
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
@@ -45,7 +42,141 @@ pub fn generate_simd_types() -> String {
 #![allow(clippy::approx_constant)]
 #![allow(clippy::missing_transmute_annotations)]
 
-#[cfg(target_arch = "x86_64")]
+"#
+}
+
+/// Generate the main mod.rs with re-exports
+fn generate_mod_rs(types: &[SimdType]) -> String {
+    let mut code = String::from(file_header());
+
+    // Note: core::ops imports are in submodules where types are defined
+    // Macros are #[macro_export] and expand in those submodules
+
+    // Generate comparison traits
+    code.push_str(&structure::generate_comparison_traits());
+
+    // Generate macros
+    code.push_str(&structure::generate_macros());
+
+    // Module declarations and re-exports grouped by width
+    code.push_str("// ============================================================================\n");
+    code.push_str("// Type modules\n");
+    code.push_str("// ============================================================================\n\n");
+
+    // Group types by width for organized output
+    let mut w128_types = Vec::new();
+    let mut w256_types = Vec::new();
+    let mut w512_types = Vec::new();
+
+    for ty in types {
+        let name = ty.name();
+        match ty.width {
+            SimdWidth::W128 => w128_types.push(name),
+            SimdWidth::W256 => w256_types.push(name),
+            SimdWidth::W512 => w512_types.push(name),
+        }
+    }
+
+    // 128-bit types (SSE)
+    code.push_str("// 128-bit types (SSE/NEON)\n");
+    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("mod x86 {\n");
+    code.push_str("    pub mod w128;\n");
+    code.push_str("    pub mod w256;\n");
+    code.push_str("    #[cfg(feature = \"avx512\")]\n");
+    code.push_str("    pub mod w512;\n");
+    code.push_str("}\n\n");
+
+    // Re-exports
+    code.push_str("// Re-export all types\n");
+    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("pub use x86::w128::*;\n");
+    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("pub use x86::w256::*;\n");
+    code.push_str("#[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
+    code.push_str("pub use x86::w512::*;\n");
+
+    code
+}
+
+/// Generate a file containing types of a specific width
+fn generate_width_file(types: &[SimdType], width: SimdWidth) -> String {
+    let mut code = String::new();
+
+    // Header comment
+    let width_name = match width {
+        SimdWidth::W128 => "128-bit (SSE)",
+        SimdWidth::W256 => "256-bit (AVX/AVX2)",
+        SimdWidth::W512 => "512-bit (AVX-512)",
+    };
+    code.push_str(&format!("//! {} SIMD types.\n", width_name));
+    code.push_str("//!\n");
+    code.push_str("//! **Auto-generated** by `cargo xtask generate` - do not edit manually.\n\n");
+
+    // Imports
+    code.push_str("use core::arch::x86_64::*;\n");
+    code.push_str("use core::ops::{\n");
+    code.push_str("    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,\n");
+    code.push_str("    Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,\n");
+    code.push_str("};\n\n");
+
+    // Note: SimdEq, SimdNe, etc. traits are defined in parent but not currently used
+    // Macros are exported at crate root via #[macro_export]
+
+
+    // Generate each type of this width
+    let width_types: Vec<_> = types.iter().filter(|t| t.width == width).collect();
+    for ty in &width_types {
+        code.push_str(&structure::generate_type(ty));
+    }
+
+    code
+}
+
+/// Generate SIMD types split into multiple files
+/// Returns a map of relative path -> file content
+pub fn generate_simd_types_split() -> BTreeMap<String, String> {
+    let mut files = BTreeMap::new();
+    let types = all_simd_types();
+
+    // Main mod.rs
+    files.insert("mod.rs".to_string(), generate_mod_rs(&types));
+
+    // x86 directory mod.rs
+    let x86_mod = r#"//! x86-64 SIMD types.
+
+pub mod w128;
+pub mod w256;
+#[cfg(feature = "avx512")]
+pub mod w512;
+"#;
+    files.insert("x86/mod.rs".to_string(), x86_mod.to_string());
+
+    // Generate width-specific files
+    files.insert(
+        "x86/w128.rs".to_string(),
+        generate_width_file(&types, SimdWidth::W128),
+    );
+    files.insert(
+        "x86/w256.rs".to_string(),
+        generate_width_file(&types, SimdWidth::W256),
+    );
+    files.insert(
+        "x86/w512.rs".to_string(),
+        generate_width_file(&types, SimdWidth::W512),
+    );
+
+    files
+}
+
+/// Generate all SIMD types (legacy single-file output)
+pub fn generate_simd_types() -> String {
+    let mut code = String::new();
+
+    // Header
+    code.push_str(file_header());
+    code.push_str(
+        r#"#[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
 
 #[cfg(target_arch = "aarch64")]
@@ -81,6 +212,7 @@ pub fn generate_simd_tests() -> String {
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
 #![cfg(target_arch = "x86_64")]
+#![allow(clippy::needless_range_loop)]
 
 use archmage::simd::*;
 use archmage::{SimdToken, Avx2FmaToken};

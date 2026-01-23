@@ -3,6 +3,7 @@
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
 #![cfg(target_arch = "x86_64")]
+#![allow(clippy::needless_range_loop)]
 
 use archmage::simd::*;
 use archmage::{SimdToken, Avx2FmaToken};

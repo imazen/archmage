@@ -1738,15 +1738,18 @@ fn generate_all() -> Result<()> {
 
     let simd_dir = PathBuf::from("src/simd");
     fs::create_dir_all(&simd_dir)?;
+    fs::create_dir_all(simd_dir.join("x86"))?;
 
-    let simd_types_code = simd_types::generate_simd_types();
-    let simd_mod_path = simd_dir.join("mod.rs");
-    fs::write(&simd_mod_path, &simd_types_code)?;
-    println!(
-        "Wrote {} ({} bytes)",
-        simd_mod_path.display(),
-        simd_types_code.len()
-    );
+    // Generate split files
+    let simd_files = simd_types::generate_simd_types_split();
+    let mut total_bytes = 0;
+    for (rel_path, content) in &simd_files {
+        let full_path = simd_dir.join(rel_path);
+        fs::write(&full_path, content)?;
+        total_bytes += content.len();
+        println!("  Wrote {} ({} bytes)", full_path.display(), content.len());
+    }
+    println!("Total SIMD types: {} files, {} bytes", simd_files.len(), total_bytes);
 
     // Generate SIMD type tests
     let simd_tests = simd_types::generate_simd_tests();

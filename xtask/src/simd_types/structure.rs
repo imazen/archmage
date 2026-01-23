@@ -60,6 +60,8 @@ pub fn generate_macros() -> String {
 // Implementation Macros
 // ============================================================================
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_arithmetic_ops {
     ($t:ty, $add:path, $sub:path, $mul:path, $div:path) => {
         impl Add for $t {
@@ -93,6 +95,8 @@ macro_rules! impl_arithmetic_ops {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_int_arithmetic_ops {
     ($t:ty, $add:path, $sub:path) => {
         impl Add for $t {
@@ -112,6 +116,8 @@ macro_rules! impl_int_arithmetic_ops {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_int_mul_op {
     ($t:ty, $mul:path) => {
         impl Mul for $t {
@@ -124,6 +130,8 @@ macro_rules! impl_int_mul_op {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_bitwise_ops {
     ($t:ty, $inner:ty, $and:path, $or:path, $xor:path) => {
         impl BitAnd for $t {
@@ -150,6 +158,8 @@ macro_rules! impl_bitwise_ops {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_assign_ops {
     ($t:ty) => {
         impl AddAssign for $t {
@@ -185,6 +195,8 @@ macro_rules! impl_assign_ops {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_float_assign_ops {
     ($t:ty) => {
         impl_assign_ops!($t);
@@ -203,6 +215,8 @@ macro_rules! impl_float_assign_ops {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_neg {
     ($t:ty, $sub:path, $zero:path) => {
         impl Neg for $t {
@@ -215,6 +229,8 @@ macro_rules! impl_neg {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_index {
     ($t:ty, $elem:ty, $lanes:expr) => {
         impl Index<usize> for $t {
@@ -577,21 +593,21 @@ fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
     if ty.elem.is_float() {
         writeln!(
             code,
-            "{}impl_arithmetic_ops!({}, {}_add_{}, {}_sub_{}, {}_mul_{}, {}_div_{});",
+            "{}crate::impl_arithmetic_ops!({}, {}_add_{}, {}_sub_{}, {}_mul_{}, {}_div_{});",
             cfg_attr, name, prefix, suffix, prefix, suffix, prefix, suffix, prefix, suffix
         )
         .unwrap();
-        writeln!(code, "{}impl_float_assign_ops!({});", cfg_attr, name).unwrap();
+        writeln!(code, "{}crate::impl_float_assign_ops!({});", cfg_attr, name).unwrap();
         writeln!(
             code,
-            "{}impl_neg!({}, {}_sub_{}, {}_setzero_{});",
+            "{}crate::impl_neg!({}, {}_sub_{}, {}_setzero_{});",
             cfg_attr, name, prefix, suffix, prefix, suffix
         )
         .unwrap();
     } else {
         writeln!(
             code,
-            "{}impl_int_arithmetic_ops!({}, {}_add_{}, {}_sub_{});",
+            "{}crate::impl_int_arithmetic_ops!({}, {}_add_{}, {}_sub_{});",
             cfg_attr, name, prefix, suffix, prefix, suffix
         )
         .unwrap();
@@ -607,13 +623,13 @@ fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
             };
             writeln!(
                 code,
-                "{}impl_int_mul_op!({}, {}_mullo_{});",
+                "{}crate::impl_int_mul_op!({}, {}_mullo_{});",
                 cfg_attr, name, prefix, mul_suffix
             )
             .unwrap();
         }
 
-        writeln!(code, "{}impl_assign_ops!({});", cfg_attr, name).unwrap();
+        writeln!(code, "{}crate::impl_assign_ops!({});", cfg_attr, name).unwrap();
     }
 
     // Bitwise
@@ -623,7 +639,7 @@ fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
         let xor_fn = format!("{}_xor_{}", prefix, suffix);
         writeln!(
             code,
-            "{}impl_bitwise_ops!({}, {}, {}, {}, {});",
+            "{}crate::impl_bitwise_ops!({}, {}, {}, {}, {});",
             cfg_attr,
             name,
             ty.x86_inner_type(),
@@ -636,7 +652,7 @@ fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
         let width = ty.width.bits();
         writeln!(
             code,
-            "{}impl_bitwise_ops!({}, {}, {}_and_si{}, {}_or_si{}, {}_xor_si{});",
+            "{}crate::impl_bitwise_ops!({}, {}, {}_and_si{}, {}_or_si{}, {}_xor_si{});",
             cfg_attr,
             name,
             ty.x86_inner_type(),
@@ -653,7 +669,7 @@ fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
     // Index
     writeln!(
         code,
-        "{}impl_index!({}, {}, {});",
+        "{}crate::impl_index!({}, {}, {});",
         cfg_attr,
         name,
         ty.elem.name(),
