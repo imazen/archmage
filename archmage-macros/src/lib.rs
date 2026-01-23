@@ -781,7 +781,10 @@ impl Parse for MultiwidthArgs {
                 other => {
                     return Err(syn::Error::new(
                         ident.span(),
-                        format!("unknown multiwidth target: `{}`. Expected: sse, avx2, avx512", other),
+                        format!(
+                            "unknown multiwidth target: `{}`. Expected: sse, avx2, avx512",
+                            other
+                        ),
                     ))
                 }
             }
@@ -805,6 +808,8 @@ struct WidthConfig {
     token: &'static str,
     /// Whether this requires a feature flag
     feature: Option<&'static str>,
+    /// Target features to enable for this width
+    target_features: &'static [&'static str],
 }
 
 const WIDTH_CONFIGS: &[WidthConfig] = &[
@@ -813,18 +818,21 @@ const WIDTH_CONFIGS: &[WidthConfig] = &[
         namespace: "archmage::simd::sse",
         token: "archmage::Sse41Token",
         feature: None,
+        target_features: &["sse4.1"],
     },
     WidthConfig {
         name: "avx2",
         namespace: "archmage::simd::avx2",
         token: "archmage::Avx2FmaToken",
         feature: None,
+        target_features: &["avx2", "fma"],
     },
     WidthConfig {
         name: "avx512",
         namespace: "archmage::simd::avx512",
         token: "archmage::X64V4Token",
         feature: Some("avx512"),
+        target_features: &["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"],
     },
 ];
 
@@ -932,9 +940,10 @@ fn multiwidth_impl(input_mod: ItemMod, args: MultiwidthArgs) -> TokenStream {
         let namespace: syn::Path = syn::parse_str(config.namespace).unwrap();
 
         // Transform the content: replace `use archmage::simd::*` with width-specific import
+        // and add target_feature attributes for optimization
         let transformed_items: Vec<syn::Item> = content
             .iter()
-            .map(|item| transform_item_for_width(item.clone(), &namespace))
+            .map(|item| transform_item_for_width(item.clone(), &namespace, config))
             .collect();
 
         let feature_attr = config.feature.map(|f| {
@@ -966,7 +975,11 @@ fn multiwidth_impl(input_mod: ItemMod, args: MultiwidthArgs) -> TokenStream {
 }
 
 /// Transform a single item for a specific width namespace.
-fn transform_item_for_width(item: syn::Item, namespace: &syn::Path) -> syn::Item {
+fn transform_item_for_width(
+    item: syn::Item,
+    namespace: &syn::Path,
+    config: &WidthConfig,
+) -> syn::Item {
     match item {
         syn::Item::Use(mut use_item) => {
             // Check if this is `use archmage::simd::*` or similar
@@ -980,9 +993,84 @@ fn transform_item_for_width(item: syn::Item, namespace: &syn::Path) -> syn::Item
             }
             syn::Item::Use(use_item)
         }
-        // TODO: Recursively transform nested items if needed
+        syn::Item::Fn(func) => {
+            // Transform function to use inner function pattern with target_feature
+            // This is the same pattern as #[arcane], enabling SIMD optimization
+            // without requiring -C target-cpu=native
+            transform_fn_with_target_feature(func, config)
+        }
         other => other,
     }
+}
+
+/// Transform a function to use the inner function pattern with target_feature.
+/// This generates:
+/// ```ignore
+/// pub fn example(token: Token, data: &[f32]) -> f32 {
+///     #[target_feature(enable = "avx2", enable = "fma")]
+///     #[inline]
+///     unsafe fn inner(token: Token, data: &[f32]) -> f32 {
+///         // original body
+///     }
+///     // SAFETY: Token proves CPU support
+///     unsafe { inner(token, data) }
+/// }
+/// ```
+fn transform_fn_with_target_feature(func: syn::ItemFn, config: &WidthConfig) -> syn::Item {
+    let vis = &func.vis;
+    let sig = &func.sig;
+    let fn_name = &sig.ident;
+    let generics = &sig.generics;
+    let where_clause = &generics.where_clause;
+    let inputs = &sig.inputs;
+    let output = &sig.output;
+    let body = &func.block;
+    let attrs = &func.attrs;
+
+    // Build target_feature attributes
+    let target_feature_attrs: Vec<syn::Attribute> = config
+        .target_features
+        .iter()
+        .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
+        .collect();
+
+    // Build parameter list for inner function
+    let inner_params: Vec<proc_macro2::TokenStream> =
+        inputs.iter().map(|arg| quote!(#arg)).collect();
+
+    // Build argument list for calling inner function
+    let call_args: Vec<proc_macro2::TokenStream> = inputs
+        .iter()
+        .filter_map(|arg| match arg {
+            syn::FnArg::Typed(pat_type) => {
+                if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
+                    let ident = &pat_ident.ident;
+                    Some(quote!(#ident))
+                } else {
+                    None
+                }
+            }
+            syn::FnArg::Receiver(_) => Some(quote!(self)),
+        })
+        .collect();
+
+    let inner_fn_name = format_ident!("__multiwidth_inner_{}", fn_name);
+
+    let expanded = quote! {
+        #(#attrs)*
+        #vis #sig {
+            #(#target_feature_attrs)*
+            #[inline]
+            unsafe fn #inner_fn_name #generics (#(#inner_params),*) #output #where_clause
+            #body
+
+            // SAFETY: The Token parameter proves the required CPU features are available.
+            // Tokens can only be constructed via try_new() which checks CPU support.
+            unsafe { #inner_fn_name(#(#call_args),*) }
+        }
+    };
+
+    syn::parse2(expanded).expect("Failed to parse transformed function")
 }
 
 /// Check if a use item is `use archmage::simd::*` or `use crate::simd::*`.
@@ -1049,10 +1137,7 @@ fn build_use_tree_from_path(path: &syn::Path, start_idx: usize) -> syn::UseTree 
 
 /// Width-specific type names that can't be used in dispatcher signatures.
 const WIDTH_SPECIFIC_TYPES: &[&str] = &[
-    "f32xN", "f64xN",
-    "i8xN", "i16xN", "i32xN", "i64xN",
-    "u8xN", "u16xN", "u32xN", "u64xN",
-    "Token",
+    "f32xN", "f64xN", "i8xN", "i16xN", "i32xN", "i64xN", "u8xN", "u16xN", "u32xN", "u64xN", "Token",
 ];
 
 /// Check if a type string contains width-specific types.
@@ -1093,7 +1178,10 @@ fn uses_width_specific_types(func: &syn::ItemFn) -> bool {
 /// Note: Dispatchers are only generated for functions that don't use width-specific
 /// types (f32xN, Token, etc.) in their signature. Functions that take/return
 /// width-specific types can only be called via the width-specific submodules.
-fn generate_dispatchers(content: &[syn::Item], configs: &[&WidthConfig]) -> proc_macro2::TokenStream {
+fn generate_dispatchers(
+    content: &[syn::Item],
+    configs: &[&WidthConfig],
+) -> proc_macro2::TokenStream {
     let mut dispatchers = Vec::new();
 
     for item in content {
@@ -1111,12 +1199,17 @@ fn generate_dispatchers(content: &[syn::Item], configs: &[&WidthConfig]) -> proc
             let fn_name = &func.sig.ident;
             let fn_generics = &func.sig.generics;
             let fn_output = &func.sig.output;
-            let fn_attrs: Vec<_> = func.attrs.iter()
+            let fn_attrs: Vec<_> = func
+                .attrs
+                .iter()
                 .filter(|a| !a.path().is_ident("arcane") && !a.path().is_ident("simd_fn"))
                 .collect();
 
             // Filter out the token parameter from the dispatcher signature
-            let non_token_params: Vec<_> = func.sig.inputs.iter()
+            let non_token_params: Vec<_> = func
+                .sig
+                .inputs
+                .iter()
                 .filter(|arg| {
                     match arg {
                         syn::FnArg::Typed(pat_type) => {
@@ -1131,18 +1224,17 @@ fn generate_dispatchers(content: &[syn::Item], configs: &[&WidthConfig]) -> proc
                 .collect();
 
             // Extract just the parameter names for passing to specialized functions
-            let param_names: Vec<_> = non_token_params.iter()
-                .filter_map(|arg| {
-                    match arg {
-                        syn::FnArg::Typed(pat_type) => {
-                            if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
-                                Some(&pat_ident.ident)
-                            } else {
-                                None
-                            }
+            let param_names: Vec<_> = non_token_params
+                .iter()
+                .filter_map(|arg| match arg {
+                    syn::FnArg::Typed(pat_type) => {
+                        if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
+                            Some(&pat_ident.ident)
+                        } else {
+                            None
                         }
-                        _ => None,
                     }
+                    _ => None,
                 })
                 .collect();
 

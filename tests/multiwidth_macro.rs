@@ -40,7 +40,11 @@ fn test_sse_module_exists() {
         let sum = basic_kernels::sse::sum_vector(token, a, b);
         let result = sum.reduce_add();
         // 4 lanes * 3.0 = 12.0
-        assert!((result - 12.0).abs() < 0.001, "Expected 12.0, got {}", result);
+        assert!(
+            (result - 12.0).abs() < 0.001,
+            "Expected 12.0, got {}",
+            result
+        );
     }
 }
 
@@ -55,7 +59,11 @@ fn test_avx2_module_exists() {
         let sum = basic_kernels::avx2::sum_vector(token, a, b);
         let result = sum.reduce_add();
         // 8 lanes * 3.0 = 24.0
-        assert!((result - 24.0).abs() < 0.001, "Expected 24.0, got {}", result);
+        assert!(
+            (result - 24.0).abs() < 0.001,
+            "Expected 24.0, got {}",
+            result
+        );
     }
 }
 
@@ -71,7 +79,11 @@ fn test_avx512_module_exists() {
         let sum = basic_kernels::avx512::sum_vector(token, a, b);
         let result = sum.reduce_add();
         // 16 lanes * 3.0 = 48.0
-        assert!((result - 48.0).abs() < 0.001, "Expected 48.0, got {}", result);
+        assert!(
+            (result - 48.0).abs() < 0.001,
+            "Expected 48.0, got {}",
+            result
+        );
     }
 }
 
@@ -217,8 +229,9 @@ fn test_dispatcher_sum_slice() {
 #[test]
 fn test_dispatcher_scale_slice() {
     // Need at least 16 elements to have a full chunk on AVX-512
-    let mut data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-                        9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
+    let mut data = vec![
+        1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+    ];
     dispatchable_kernels::scale_slice(&mut data, 2.0);
     assert!((data[0] - 2.0).abs() < 0.001);
     assert!((data[15] - 32.0).abs() < 0.001);
