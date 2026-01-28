@@ -4,6 +4,7 @@
 
 use core::arch::wasm32::*;
 
+
 // ============================================================================
 // f32x4 - 4 x f32 (128-bit WASM SIMD)
 // ============================================================================
@@ -148,10 +149,7 @@ impl f32x4 {
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> f32 {
-        f32x4_extract_lane::<0>(self.0)
-            + f32x4_extract_lane::<1>(self.0)
-            + f32x4_extract_lane::<2>(self.0)
-            + f32x4_extract_lane::<3>(self.0)
+        f32x4_extract_lane::<0>(self.0) + f32x4_extract_lane::<1>(self.0) + f32x4_extract_lane::<2>(self.0) + f32x4_extract_lane::<3>(self.0)
     }
 
     /// Reduce: max of all lanes
@@ -166,6 +164,67 @@ impl f32x4 {
     pub fn reduce_min(self) -> f32 {
         let arr = self.to_array();
         arr.iter().copied().fold(f32::INFINITY, f32::min)
+    }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(f32x4_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(f32x4_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(f32x4_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(f32x4_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(f32x4_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(f32x4_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f32x4::splat(token, 1.0);
+    /// let b = f32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
     }
 
     // ========== Transcendental Operations (Polynomial Approximations) ==========
@@ -238,10 +297,10 @@ impl f32x4 {
         let pos_inf = f32x4_splat(f32::INFINITY);
         let nan = f32x4_splat(f32::NAN);
 
-        let r = v128_bitselect(neg_inf, result.0, is_zero); // 0 -> -inf
-        let r = v128_bitselect(nan, r, is_neg); // neg -> NaN
-        let r = v128_bitselect(pos_inf, r, is_inf); // inf -> inf
-        let r = v128_bitselect(nan, r, is_nan); // NaN -> NaN
+        let r = v128_bitselect(neg_inf, result.0, is_zero);  // 0 -> -inf
+        let r = v128_bitselect(nan, r, is_neg);              // neg -> NaN
+        let r = v128_bitselect(pos_inf, r, is_inf);          // inf -> inf
+        let r = v128_bitselect(nan, r, is_nan);              // NaN -> NaN
         Self(r)
     }
 
@@ -419,9 +478,9 @@ impl f32x4 {
     #[inline(always)]
     pub fn log2_midp_precise(self) -> Self {
         // Scale factor for denormals: 2^24
-        const SCALE_UP: f32 = 16777216.0; // 2^24
-        const SCALE_ADJUST: f32 = 24.0; // log2(2^24)
-        const DENORM_LIMIT: f32 = 1.17549435e-38; // Smallest normal f32
+        const SCALE_UP: f32 = 16777216.0;  // 2^24
+        const SCALE_ADJUST: f32 = 24.0;    // log2(2^24)
+        const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
 
         // Detect denormals (positive values smaller than smallest normal)
         let zero = f32x4_splat(0.0);
@@ -526,6 +585,7 @@ impl f32x4 {
     pub fn pow_midp(self, n: f32) -> Self {
         Self(f32x4_mul(self.log2_midp().0, f32x4_splat(n))).exp2_midp()
     }
+
 }
 
 impl core::ops::Add for f32x4 {
@@ -673,6 +733,7 @@ impl From<f32x4> for [f32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit WASM SIMD)
@@ -835,6 +896,67 @@ impl f64x2 {
         arr.iter().copied().fold(f64::INFINITY, f64::min)
     }
 
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(f64x2_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(f64x2_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(f64x2_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(f64x2_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(f64x2_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(f64x2_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f64x2::splat(token, 1.0);
+    /// let b = f64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
     // ========== Transcendental Operations (Polynomial Approximations) ==========
     //
     // WASM SIMD has no native transcendental intrinsics.
@@ -890,6 +1012,7 @@ impl f64x2 {
         let result = [arr[0].powf(n), arr[1].powf(n)];
         Self::from(result)
     }
+
 }
 
 impl core::ops::Add for f64x2 {
@@ -1038,6 +1161,7 @@ impl From<f64x2> for [f64; 2] {
     }
 }
 
+
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit WASM SIMD)
 // ============================================================================
@@ -1152,6 +1276,100 @@ impl i8x16 {
         let arr = self.to_array();
         arr.iter().copied().fold(0i8, |a, b| a.wrapping_add(b))
     }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(i8x16_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(i8x16_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(i8x16_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(i8x16_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(i8x16_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(i8x16_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i8x16::splat(token, 1.0);
+    /// let b = i8x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
+    /// Shift left by constant
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        Self(i8x16_shl(self.0, N))
+    }
+
+    /// Shift right by constant
+    ///
+    /// For signed types, this is an arithmetic shift (sign-extending).
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        Self(i8x16_shr(self.0, N))
+    }
+
+    /// Check if all lanes are non-zero (all true)
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        i8x16_all_true(self.0)
+    }
+
+    /// Check if any lane is non-zero (any true)
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        v128_any_true(self.0)
+    }
+
+    /// Extract the high bit of each lane as a bitmask
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        i8x16_bitmask(self.0) as u32
+    }
+
 }
 
 impl core::ops::Add for i8x16 {
@@ -1270,6 +1488,7 @@ impl From<i8x16> for [i8; 16] {
     }
 }
 
+
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit WASM SIMD)
 // ============================================================================
@@ -1378,6 +1597,98 @@ impl u8x16 {
         let arr = self.to_array();
         arr.iter().copied().fold(0u8, |a, b| a.wrapping_add(b))
     }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(u8x16_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(u8x16_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(u8x16_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(u8x16_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(u8x16_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(u8x16_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u8x16::splat(token, 1.0);
+    /// let b = u8x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
+    /// Shift left by constant
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        Self(u8x16_shl(self.0, N))
+    }
+
+    /// Shift right by constant
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        Self(u8x16_shr(self.0, N))
+    }
+
+    /// Check if all lanes are non-zero (all true)
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        u8x16_all_true(self.0)
+    }
+
+    /// Check if any lane is non-zero (any true)
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        v128_any_true(self.0)
+    }
+
+    /// Extract the high bit of each lane as a bitmask
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        u8x16_bitmask(self.0) as u32
+    }
+
 }
 
 impl core::ops::Add for u8x16 {
@@ -1487,6 +1798,7 @@ impl From<u8x16> for [u8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit WASM SIMD)
@@ -1602,6 +1914,100 @@ impl i16x8 {
         let arr = self.to_array();
         arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7]
     }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(i16x8_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(i16x8_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(i16x8_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(i16x8_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(i16x8_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(i16x8_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i16x8::splat(token, 1.0);
+    /// let b = i16x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
+    /// Shift left by constant
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        Self(i16x8_shl(self.0, N))
+    }
+
+    /// Shift right by constant
+    ///
+    /// For signed types, this is an arithmetic shift (sign-extending).
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        Self(i16x8_shr(self.0, N))
+    }
+
+    /// Check if all lanes are non-zero (all true)
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        i16x8_all_true(self.0)
+    }
+
+    /// Check if any lane is non-zero (any true)
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        v128_any_true(self.0)
+    }
+
+    /// Extract the high bit of each lane as a bitmask
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        i16x8_bitmask(self.0) as u32
+    }
+
 }
 
 impl core::ops::Add for i16x8 {
@@ -1735,6 +2141,7 @@ impl From<i16x8> for [i16; 8] {
     }
 }
 
+
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit WASM SIMD)
 // ============================================================================
@@ -1843,6 +2250,98 @@ impl u16x8 {
         let arr = self.to_array();
         arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7]
     }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(u16x8_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(u16x8_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(u16x8_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(u16x8_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(u16x8_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(u16x8_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u16x8::splat(token, 1.0);
+    /// let b = u16x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
+    /// Shift left by constant
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        Self(u16x8_shl(self.0, N))
+    }
+
+    /// Shift right by constant
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        Self(u16x8_shr(self.0, N))
+    }
+
+    /// Check if all lanes are non-zero (all true)
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        u16x8_all_true(self.0)
+    }
+
+    /// Check if any lane is non-zero (any true)
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        v128_any_true(self.0)
+    }
+
+    /// Extract the high bit of each lane as a bitmask
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        u16x8_bitmask(self.0) as u32
+    }
+
 }
 
 impl core::ops::Add for u16x8 {
@@ -1968,6 +2467,7 @@ impl From<u16x8> for [u16; 8] {
     }
 }
 
+
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit WASM SIMD)
 // ============================================================================
@@ -2079,11 +2579,102 @@ impl i32x4 {
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        i32x4_extract_lane::<0>(self.0)
-            + i32x4_extract_lane::<1>(self.0)
-            + i32x4_extract_lane::<2>(self.0)
-            + i32x4_extract_lane::<3>(self.0)
+        i32x4_extract_lane::<0>(self.0) + i32x4_extract_lane::<1>(self.0) + i32x4_extract_lane::<2>(self.0) + i32x4_extract_lane::<3>(self.0)
     }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(i32x4_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(i32x4_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(i32x4_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(i32x4_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(i32x4_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(i32x4_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i32x4::splat(token, 1.0);
+    /// let b = i32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
+    /// Shift left by constant
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        Self(i32x4_shl(self.0, N))
+    }
+
+    /// Shift right by constant
+    ///
+    /// For signed types, this is an arithmetic shift (sign-extending).
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        Self(i32x4_shr(self.0, N))
+    }
+
+    /// Check if all lanes are non-zero (all true)
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        i32x4_all_true(self.0)
+    }
+
+    /// Check if any lane is non-zero (any true)
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        v128_any_true(self.0)
+    }
+
+    /// Extract the high bit of each lane as a bitmask
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        i32x4_bitmask(self.0) as u32
+    }
+
 }
 
 impl core::ops::Add for i32x4 {
@@ -2217,6 +2808,7 @@ impl From<i32x4> for [i32; 4] {
     }
 }
 
+
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit WASM SIMD)
 // ============================================================================
@@ -2322,11 +2914,100 @@ impl u32x4 {
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        u32x4_extract_lane::<0>(self.0)
-            + u32x4_extract_lane::<1>(self.0)
-            + u32x4_extract_lane::<2>(self.0)
-            + u32x4_extract_lane::<3>(self.0)
+        u32x4_extract_lane::<0>(self.0) + u32x4_extract_lane::<1>(self.0) + u32x4_extract_lane::<2>(self.0) + u32x4_extract_lane::<3>(self.0)
     }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(u32x4_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(u32x4_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(u32x4_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(u32x4_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(u32x4_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(u32x4_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u32x4::splat(token, 1.0);
+    /// let b = u32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
+    /// Shift left by constant
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        Self(u32x4_shl(self.0, N))
+    }
+
+    /// Shift right by constant
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        Self(u32x4_shr(self.0, N))
+    }
+
+    /// Check if all lanes are non-zero (all true)
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        u32x4_all_true(self.0)
+    }
+
+    /// Check if any lane is non-zero (any true)
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        v128_any_true(self.0)
+    }
+
+    /// Extract the high bit of each lane as a bitmask
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        u32x4_bitmask(self.0) as u32
+    }
+
 }
 
 impl core::ops::Add for u32x4 {
@@ -2452,6 +3133,7 @@ impl From<u32x4> for [u32; 4] {
     }
 }
 
+
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit WASM SIMD)
 // ============================================================================
@@ -2541,6 +3223,100 @@ impl i64x2 {
     pub fn reduce_add(self) -> i64 {
         i64x2_extract_lane::<0>(self.0) + i64x2_extract_lane::<1>(self.0)
     }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(i64x2_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(i64x2_eq(self.0, other.0)))
+    }
+
+    /// Element-wise less-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(i64x2_lt(self.0, other.0))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(i64x2_le(self.0, other.0))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(i64x2_gt(self.0, other.0))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(i64x2_ge(self.0, other.0))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i64x2::splat(token, 1.0);
+    /// let b = i64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
+    /// Shift left by constant
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        Self(i64x2_shl(self.0, N))
+    }
+
+    /// Shift right by constant
+    ///
+    /// For signed types, this is an arithmetic shift (sign-extending).
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        Self(i64x2_shr(self.0, N))
+    }
+
+    /// Check if all lanes are non-zero (all true)
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        i64x2_all_true(self.0)
+    }
+
+    /// Check if any lane is non-zero (any true)
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        v128_any_true(self.0)
+    }
+
+    /// Extract the high bit of each lane as a bitmask
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        i64x2_bitmask(self.0) as u32
+    }
+
 }
 
 impl core::ops::Add for i64x2 {
@@ -2674,6 +3450,7 @@ impl From<i64x2> for [i64; 2] {
     }
 }
 
+
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit WASM SIMD)
 // ============================================================================
@@ -2763,6 +3540,74 @@ impl u64x2 {
     pub fn reduce_add(self) -> u64 {
         u64x2_extract_lane::<0>(self.0) + u64x2_extract_lane::<1>(self.0)
     }
+
+    /// Element-wise equality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(u64x2_eq(self.0, other.0))
+    }
+
+    /// Element-wise inequality comparison (returns mask)
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        Self(v128_not(u64x2_eq(self.0, other.0)))
+    }
+
+    /// Blend two vectors based on a mask
+    ///
+    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `other`.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u64x2::splat(token, 1.0);
+    /// let b = u64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// ```
+    #[inline(always)]
+    pub fn blend(self, other: Self, mask: Self) -> Self {
+        Self(v128_bitselect(self.0, other.0, mask.0))
+    }
+
+    /// Bitwise NOT
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(v128_not(self.0))
+    }
+
+    /// Shift left by constant
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        Self(u64x2_shl(self.0, N))
+    }
+
+    /// Shift right by constant
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        Self(u64x2_shr(self.0, N))
+    }
+
+    /// Check if all lanes are non-zero (all true)
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        u64x2_all_true(self.0)
+    }
+
+    /// Check if any lane is non-zero (any true)
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        v128_any_true(self.0)
+    }
+
+    /// Extract the high bit of each lane as a bitmask
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        u64x2_bitmask(self.0) as u32
+    }
+
 }
 
 impl core::ops::Add for u64x2 {
@@ -2887,3 +3732,4 @@ impl From<u64x2> for [u64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+

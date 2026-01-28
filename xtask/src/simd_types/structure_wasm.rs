@@ -61,6 +61,12 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Horizontal operations
     code.push_str(&generate_horizontal_ops(ty));
 
+    // Comparison operations
+    code.push_str(&generate_comparison_ops(ty));
+
+    // Bitwise operations (not, shift, blend)
+    code.push_str(&generate_bitwise_ops(ty));
+
     // Transcendental operations (log, exp, pow) for float types
     code.push_str(&super::transcendental_wasm::generate_wasm_transcendental_ops(ty));
 
@@ -87,7 +93,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(
         code,
-        "    pub fn load(_: crate::Simd128Token, data: &[{}; {}]) -> Self {{",
+        "    pub fn load(_: archmage::Simd128Token, data: &[{}; {}]) -> Self {{",
         elem, lanes
     )
     .unwrap();
@@ -103,7 +109,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(
         code,
-        "    pub fn splat(_: crate::Simd128Token, v: {}) -> Self {{",
+        "    pub fn splat(_: archmage::Simd128Token, v: {}) -> Self {{",
         elem
     )
     .unwrap();
@@ -113,7 +119,11 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     // Zero
     writeln!(code, "    /// Zero vector (token-gated)").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn zero(_: crate::Simd128Token) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "    pub fn zero(_: archmage::Simd128Token) -> Self {{"
+    )
+    .unwrap();
     let zero_val = ty.elem.zero_literal();
     writeln!(code, "        Self({}({}))", splat_fn, zero_val).unwrap();
     writeln!(code, "    }}\n").unwrap();
@@ -129,7 +139,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(
         code,
-        "    pub fn from_array(_: crate::Simd128Token, arr: [{}; {}]) -> Self {{",
+        "    pub fn from_array(_: archmage::Simd128Token, arr: [{}; {}]) -> Self {{",
         elem, lanes
     )
     .unwrap();
@@ -444,6 +454,201 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
             elem, elem
         )
         .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    code
+}
+
+/// Generate comparison operations for WASM
+fn generate_comparison_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+    let name = ty.name();
+
+    let eq_fn = Wasm::cmp_intrinsic("eq", ty.elem);
+
+    // simd_eq - available for all types
+    writeln!(
+        code,
+        "    /// Element-wise equality comparison (returns mask)"
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
+    writeln!(code, "        Self({}(self.0, other.0))", eq_fn).unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // simd_ne - available for all types (use not(eq))
+    writeln!(
+        code,
+        "    /// Element-wise inequality comparison (returns mask)"
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
+    writeln!(code, "        Self(v128_not({}(self.0, other.0)))", eq_fn).unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // WASM doesn't have lt/le/gt/ge for u64x2 - skip ordering comparisons for u64
+    let has_ordering = ty.elem != ElementType::U64;
+
+    if has_ordering {
+        let lt_fn = Wasm::cmp_intrinsic("lt", ty.elem);
+        // simd_lt
+        writeln!(
+            code,
+            "    /// Element-wise less-than comparison (returns mask)"
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
+        writeln!(code, "        Self({}(self.0, other.0))", lt_fn).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // simd_le
+        let le_fn = Wasm::cmp_intrinsic("le", ty.elem);
+        writeln!(
+            code,
+            "    /// Element-wise less-than-or-equal comparison (returns mask)"
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
+        writeln!(code, "        Self({}(self.0, other.0))", le_fn).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // simd_gt
+        let gt_fn = Wasm::cmp_intrinsic("gt", ty.elem);
+        writeln!(
+            code,
+            "    /// Element-wise greater-than comparison (returns mask)"
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
+        writeln!(code, "        Self({}(self.0, other.0))", gt_fn).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // simd_ge
+        let ge_fn = Wasm::cmp_intrinsic("ge", ty.elem);
+        writeln!(
+            code,
+            "    /// Element-wise greater-than-or-equal comparison (returns mask)"
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
+        writeln!(code, "        Self({}(self.0, other.0))", ge_fn).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    // blend (conditional select using mask)
+    writeln!(code, "    /// Blend two vectors based on a mask").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,"
+    )
+    .unwrap();
+    writeln!(code, "    /// otherwise selects from `other`.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// The mask should come from a comparison operation like `simd_lt()`."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// # Example").unwrap();
+    writeln!(code, "    /// ```ignore").unwrap();
+    writeln!(code, "    /// let a = {}::splat(token, 1.0);", name).unwrap();
+    writeln!(code, "    /// let b = {}::splat(token, 2.0);", name).unwrap();
+    writeln!(code, "    /// let mask = a.simd_lt(b);  // all true").unwrap();
+    writeln!(
+        code,
+        "    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)"
+    )
+    .unwrap();
+    writeln!(code, "    /// ```").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(
+        code,
+        "    pub fn blend(self, other: Self, mask: Self) -> Self {{"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(v128_bitselect(self.0, other.0, mask.0))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    code
+}
+
+/// Generate bitwise operations (not, shift) for WASM
+fn generate_bitwise_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+
+    // not() - available for all types
+    writeln!(code, "    /// Bitwise NOT").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn not(self) -> Self {{").unwrap();
+    writeln!(code, "        Self(v128_not(self.0))").unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // Shift operations for integer types
+    if !ty.elem.is_float() {
+        let shl_fn = Wasm::shl_intrinsic(ty.elem);
+        let shr_fn = Wasm::shr_intrinsic(ty.elem);
+
+        // shl<const N>
+        writeln!(code, "    /// Shift left by constant").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn shl<const N: u32>(self) -> Self {{").unwrap();
+        writeln!(code, "        Self({}(self.0, N))", shl_fn).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // shr<const N>
+        writeln!(code, "    /// Shift right by constant").unwrap();
+        if ty.elem.is_signed() {
+            writeln!(code, "    ///").unwrap();
+            writeln!(
+                code,
+                "    /// For signed types, this is an arithmetic shift (sign-extending)."
+            )
+            .unwrap();
+        }
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn shr<const N: u32>(self) -> Self {{").unwrap();
+        writeln!(code, "        Self({}(self.0, N))", shr_fn).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    // all_true and any_true - only for integer types (WASM doesn't have float versions)
+    if !ty.elem.is_float() {
+        let all_true_fn = Wasm::all_true_intrinsic(ty.elem);
+        writeln!(code, "    /// Check if all lanes are non-zero (all true)").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn all_true(self) -> bool {{").unwrap();
+        writeln!(code, "        {}(self.0)", all_true_fn).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        writeln!(code, "    /// Check if any lane is non-zero (any true)").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn any_true(self) -> bool {{").unwrap();
+        writeln!(code, "        v128_any_true(self.0)").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // bitmask for extracting lane results - only integers
+        let bitmask_fn = Wasm::bitmask_intrinsic(ty.elem);
+        writeln!(
+            code,
+            "    /// Extract the high bit of each lane as a bitmask"
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn bitmask(self) -> u32 {{").unwrap();
+        writeln!(code, "        {}(self.0) as u32", bitmask_fn).unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 

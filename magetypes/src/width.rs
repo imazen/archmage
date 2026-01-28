@@ -303,8 +303,8 @@ mod x86_impl {
 
     // Import native types (re-exported at simd level)
     use crate::simd::{
-        f32x4, f32x8, f64x2, f64x4, i8x16, i8x32, i16x8, i16x16, i32x4, i32x8, i64x2, i64x4,
-        u8x16, u8x32, u16x8, u16x16, u32x4, u32x8, u64x2, u64x4,
+        f32x4, f32x8, f64x2, f64x4, i8x16, i8x32, i16x8, i16x16, i32x4, i32x8, i64x2, i64x4, u8x16,
+        u8x32, u16x8, u16x16, u32x4, u32x8, u64x2, u64x4,
     };
 
     // Import polyfills for 512-bit on AVX2

@@ -747,6 +747,10 @@ struct MultiwidthArgs {
     avx2: bool,
     /// Include AVX-512 (512-bit) specialization
     avx512: bool,
+    /// Include WASM SIMD128 (128-bit) specialization
+    wasm: bool,
+    /// Include NEON (128-bit ARM) specialization
+    neon: bool,
 }
 
 impl Default for MultiwidthArgs {
@@ -755,6 +759,8 @@ impl Default for MultiwidthArgs {
             sse: true,
             avx2: true,
             avx512: true,
+            wasm: true,
+            neon: true,
         }
     }
 }
@@ -765,6 +771,8 @@ impl Parse for MultiwidthArgs {
             sse: false,
             avx2: false,
             avx512: false,
+            wasm: false,
+            neon: false,
         };
 
         // If no args provided, enable all
@@ -778,15 +786,15 @@ impl Parse for MultiwidthArgs {
                 "sse" => args.sse = true,
                 "avx2" => args.avx2 = true,
                 "avx512" => args.avx512 = true,
-                other => {
-                    return Err(syn::Error::new(
-                        ident.span(),
-                        format!(
-                            "unknown multiwidth target: `{}`. Expected: sse, avx2, avx512",
-                            other
-                        ),
-                    ))
-                }
+                "wasm" | "simd128" => args.wasm = true,
+                "neon" | "arm" => args.neon = true,
+                other => return Err(syn::Error::new(
+                    ident.span(),
+                    format!(
+                        "unknown multiwidth target: `{}`. Expected: sse, avx2, avx512, wasm, neon",
+                        other
+                    ),
+                )),
             }
             // Consume optional comma
             if input.peek(Token![,]) {
@@ -812,7 +820,8 @@ struct WidthConfig {
     target_features: &'static [&'static str],
 }
 
-const WIDTH_CONFIGS: &[WidthConfig] = &[
+/// Width configuration for x86_64 targets
+const X86_WIDTH_CONFIGS: &[WidthConfig] = &[
     WidthConfig {
         name: "sse",
         namespace: "magetypes::simd::sse",
@@ -835,6 +844,24 @@ const WIDTH_CONFIGS: &[WidthConfig] = &[
         target_features: &["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"],
     },
 ];
+
+/// Width configuration for wasm32 targets
+const WASM_WIDTH_CONFIGS: &[WidthConfig] = &[WidthConfig {
+    name: "simd128",
+    namespace: "magetypes::simd::simd128",
+    token: "archmage::Simd128Token",
+    feature: None,
+    target_features: &["simd128"],
+}];
+
+/// Width configuration for aarch64 targets
+const ARM_WIDTH_CONFIGS: &[WidthConfig] = &[WidthConfig {
+    name: "neon",
+    namespace: "magetypes::simd::neon",
+    token: "archmage::NeonToken",
+    feature: None,
+    target_features: &["neon"],
+}];
 
 /// Generate width-specialized SIMD code.
 ///
@@ -900,6 +927,12 @@ pub fn multiwidth(attr: TokenStream, item: TokenStream) -> TokenStream {
     multiwidth_impl(input_mod, args)
 }
 
+/// Configuration with target arch for conditional compilation
+struct ArchConfig<'a> {
+    config: &'a WidthConfig,
+    target_arch: Option<&'static str>,
+}
+
 fn multiwidth_impl(input_mod: ItemMod, args: MultiwidthArgs) -> TokenStream {
     let mod_name = &input_mod.ident;
     let mod_vis = &input_mod.vis;
@@ -918,22 +951,51 @@ fn multiwidth_impl(input_mod: ItemMod, args: MultiwidthArgs) -> TokenStream {
         }
     };
 
-    // Build specialized modules
-    let mut specialized_mods = Vec::new();
-    let mut enabled_configs = Vec::new();
+    // Build list of all enabled configs across architectures
+    let mut all_configs: Vec<ArchConfig> = Vec::new();
 
-    for config in WIDTH_CONFIGS {
+    // x86_64 configs
+    for config in X86_WIDTH_CONFIGS {
         let enabled = match config.name {
             "sse" => args.sse,
             "avx2" => args.avx2,
             "avx512" => args.avx512,
             _ => false,
         };
-
-        if !enabled {
-            continue;
+        if enabled {
+            all_configs.push(ArchConfig {
+                config,
+                target_arch: Some("x86_64"),
+            });
         }
+    }
 
+    // WASM configs
+    if args.wasm {
+        for config in WASM_WIDTH_CONFIGS {
+            all_configs.push(ArchConfig {
+                config,
+                target_arch: Some("wasm32"),
+            });
+        }
+    }
+
+    // ARM configs
+    if args.neon {
+        for config in ARM_WIDTH_CONFIGS {
+            all_configs.push(ArchConfig {
+                config,
+                target_arch: Some("aarch64"),
+            });
+        }
+    }
+
+    // Build specialized modules
+    let mut specialized_mods = Vec::new();
+    let mut enabled_configs = Vec::new();
+
+    for arch_config in &all_configs {
+        let config = arch_config.config;
         enabled_configs.push(config);
 
         let width_mod_name = format_ident!("{}", config.name);
@@ -946,12 +1008,18 @@ fn multiwidth_impl(input_mod: ItemMod, args: MultiwidthArgs) -> TokenStream {
             .map(|item| transform_item_for_width(item.clone(), &namespace, config))
             .collect();
 
+        // Build cfg attributes for target arch and optional feature
+        let arch_attr = arch_config
+            .target_arch
+            .map(|arch| quote!(#[cfg(target_arch = #arch)]));
+
         let feature_attr = config.feature.map(|f| {
             let f_lit = syn::LitStr::new(f, proc_macro2::Span::call_site());
             quote!(#[cfg(feature = #f_lit)])
         });
 
         specialized_mods.push(quote! {
+            #arch_attr
             #feature_attr
             pub mod #width_mod_name {
                 #(#transformed_items)*
@@ -960,14 +1028,37 @@ fn multiwidth_impl(input_mod: ItemMod, args: MultiwidthArgs) -> TokenStream {
     }
 
     // Generate dispatcher functions for each public function in the module
-    let dispatchers = generate_dispatchers(content, &enabled_configs);
+    // The dispatcher is x86_64-specific (runtime feature detection)
+    // For WASM and ARM, features are compile-time only
+    let x86_configs: Vec<_> = all_configs
+        .iter()
+        .filter(|c| c.target_arch == Some("x86_64"))
+        .map(|c| c.config)
+        .collect();
+
+    // Only generate dispatcher section if we have x86 configs
+    let dispatcher_section = if !x86_configs.is_empty() {
+        let dispatchers = generate_dispatchers(content, &x86_configs);
+        quote! {
+            // Runtime dispatcher (x86_64 only - WASM/ARM use compile-time features)
+            #[cfg(target_arch = "x86_64")]
+            mod __dispatchers {
+                use super::*;
+                #dispatchers
+            }
+            #[cfg(target_arch = "x86_64")]
+            pub use __dispatchers::*;
+        }
+    } else {
+        quote! {}
+    };
 
     let expanded = quote! {
         #(#mod_attrs)*
         #mod_vis mod #mod_name {
             #(#specialized_mods)*
 
-            #dispatchers
+            #dispatcher_section
         }
     };
 

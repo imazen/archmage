@@ -154,7 +154,7 @@ jobs:
           curl https://wasmtime.dev/install.sh -sSf | bash
           echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
 
-      - name: Build for WASM
+      - name: Build magetypes for WASM
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
         run: cargo build -p magetypes --target wasm32-wasip1
@@ -163,6 +163,12 @@ jobs:
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
         run: cargo build -p archmage --target wasm32-wasip1
+
+      - name: Test magetypes on WASM (wasmtime)
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --wasm-features=simd"
+        run: cargo test -p magetypes --target wasm32-wasip1
 
   # ==========================================================================
   # Generation check - ensure generated code matches committed code

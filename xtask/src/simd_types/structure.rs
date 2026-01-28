@@ -609,88 +609,234 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     // Token-gated bytemuck replacements
     let byte_size = ty.lanes() * ty.elem.size_bytes();
 
-    writeln!(code, "    // ========== Token-gated bytemuck replacements ==========\n").unwrap();
+    writeln!(
+        code,
+        "    // ========== Token-gated bytemuck replacements ==========\n"
+    )
+    .unwrap();
 
     // cast_slice: &[T] -> &[Self]
-    writeln!(code, "    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).").unwrap();
+    writeln!(
+        code,
+        "    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated)."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// Returns `None` if the slice length is not a multiple of {}, or", lanes).unwrap();
+    writeln!(
+        code,
+        "    /// Returns `None` if the slice length is not a multiple of {}, or",
+        lanes
+    )
+    .unwrap();
     writeln!(code, "    /// if the slice is not properly aligned.").unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.").unwrap();
+    writeln!(
+        code,
+        "    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn cast_slice(_: archmage::{}, slice: &[{}]) -> Option<&[Self]> {{", token, elem).unwrap();
+    writeln!(
+        code,
+        "    pub fn cast_slice(_: archmage::{}, slice: &[{}]) -> Option<&[Self]> {{",
+        token, elem
+    )
+    .unwrap();
     writeln!(code, "        if slice.len() % {} != 0 {{", lanes).unwrap();
     writeln!(code, "            return None;").unwrap();
     writeln!(code, "        }}").unwrap();
     writeln!(code, "        let ptr = slice.as_ptr();").unwrap();
-    writeln!(code, "        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{").unwrap();
+    writeln!(
+        code,
+        "        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{"
+    )
+    .unwrap();
     writeln!(code, "            return None;").unwrap();
     writeln!(code, "        }}").unwrap();
     writeln!(code, "        let len = slice.len() / {};", lanes).unwrap();
-    writeln!(code, "        // SAFETY: alignment and length checked, layout is compatible").unwrap();
-    writeln!(code, "        Some(unsafe {{ core::slice::from_raw_parts(ptr as *const Self, len) }})").unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: alignment and length checked, layout is compatible"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Some(unsafe {{ core::slice::from_raw_parts(ptr as *const Self, len) }})"
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // cast_slice_mut: &mut [T] -> &mut [Self]
-    writeln!(code, "    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).").unwrap();
+    writeln!(
+        code,
+        "    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated)."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// Returns `None` if the slice length is not a multiple of {}, or", lanes).unwrap();
+    writeln!(
+        code,
+        "    /// Returns `None` if the slice length is not a multiple of {}, or",
+        lanes
+    )
+    .unwrap();
     writeln!(code, "    /// if the slice is not properly aligned.").unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.").unwrap();
+    writeln!(
+        code,
+        "    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn cast_slice_mut(_: archmage::{}, slice: &mut [{}]) -> Option<&mut [Self]> {{", token, elem).unwrap();
+    writeln!(
+        code,
+        "    pub fn cast_slice_mut(_: archmage::{}, slice: &mut [{}]) -> Option<&mut [Self]> {{",
+        token, elem
+    )
+    .unwrap();
     writeln!(code, "        if slice.len() % {} != 0 {{", lanes).unwrap();
     writeln!(code, "            return None;").unwrap();
     writeln!(code, "        }}").unwrap();
     writeln!(code, "        let ptr = slice.as_mut_ptr();").unwrap();
-    writeln!(code, "        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{").unwrap();
+    writeln!(
+        code,
+        "        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{"
+    )
+    .unwrap();
     writeln!(code, "            return None;").unwrap();
     writeln!(code, "        }}").unwrap();
     writeln!(code, "        let len = slice.len() / {};", lanes).unwrap();
-    writeln!(code, "        // SAFETY: alignment and length checked, layout is compatible").unwrap();
-    writeln!(code, "        Some(unsafe {{ core::slice::from_raw_parts_mut(ptr as *mut Self, len) }})").unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: alignment and length checked, layout is compatible"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Some(unsafe {{ core::slice::from_raw_parts_mut(ptr as *mut Self, len) }})"
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // as_bytes: &self -> &[u8; N]
     writeln!(code, "    /// View this vector as a byte array.").unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// This is a safe replacement for `bytemuck::bytes_of`.").unwrap();
+    writeln!(
+        code,
+        "    /// This is a safe replacement for `bytemuck::bytes_of`."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn as_bytes(&self) -> &[u8; {}] {{", byte_size).unwrap();
-    writeln!(code, "        // SAFETY: Self is repr(transparent) over {} which is {} bytes", inner, byte_size).unwrap();
-    writeln!(code, "        unsafe {{ &*(self as *const Self as *const [u8; {}]) }}", byte_size).unwrap();
+    writeln!(
+        code,
+        "    pub fn as_bytes(&self) -> &[u8; {}] {{",
+        byte_size
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: Self is repr(transparent) over {} which is {} bytes",
+        inner, byte_size
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        unsafe {{ &*(self as *const Self as *const [u8; {}]) }}",
+        byte_size
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // as_bytes_mut: &mut self -> &mut [u8; N]
     writeln!(code, "    /// View this vector as a mutable byte array.").unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// This is a safe replacement for `bytemuck::bytes_of_mut`.").unwrap();
+    writeln!(
+        code,
+        "    /// This is a safe replacement for `bytemuck::bytes_of_mut`."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn as_bytes_mut(&mut self) -> &mut [u8; {}] {{", byte_size).unwrap();
-    writeln!(code, "        // SAFETY: Self is repr(transparent) over {} which is {} bytes", inner, byte_size).unwrap();
-    writeln!(code, "        unsafe {{ &mut *(self as *mut Self as *mut [u8; {}]) }}", byte_size).unwrap();
+    writeln!(
+        code,
+        "    pub fn as_bytes_mut(&mut self) -> &mut [u8; {}] {{",
+        byte_size
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: Self is repr(transparent) over {} which is {} bytes",
+        inner, byte_size
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        unsafe {{ &mut *(self as *mut Self as *mut [u8; {}]) }}",
+        byte_size
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // from_bytes: &[u8; N] -> Self (token-gated)
-    writeln!(code, "    /// Create from a byte array reference (token-gated).").unwrap();
+    writeln!(
+        code,
+        "    /// Create from a byte array reference (token-gated)."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.").unwrap();
+    writeln!(
+        code,
+        "    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn from_bytes(_: archmage::{}, bytes: &[u8; {}]) -> Self {{", token, byte_size).unwrap();
-    writeln!(code, "        // SAFETY: [u8; {}] and Self have identical size", byte_size).unwrap();
-    writeln!(code, "        Self(unsafe {{ core::mem::transmute(*bytes) }})").unwrap();
+    writeln!(
+        code,
+        "    pub fn from_bytes(_: archmage::{}, bytes: &[u8; {}]) -> Self {{",
+        token, byte_size
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: [u8; {}] and Self have identical size",
+        byte_size
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(unsafe {{ core::mem::transmute(*bytes) }})"
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     // from_bytes_owned: [u8; N] -> Self (token-gated, zero-cost)
-    writeln!(code, "    /// Create from an owned byte array (token-gated, zero-cost).").unwrap();
+    writeln!(
+        code,
+        "    /// Create from an owned byte array (token-gated, zero-cost)."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// This is a zero-cost transmute from an owned byte array.").unwrap();
+    writeln!(
+        code,
+        "    /// This is a zero-cost transmute from an owned byte array."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn from_bytes_owned(_: archmage::{}, bytes: [u8; {}]) -> Self {{", token, byte_size).unwrap();
-    writeln!(code, "        // SAFETY: [u8; {}] and Self have identical size", byte_size).unwrap();
-    writeln!(code, "        Self(unsafe {{ core::mem::transmute(bytes) }})").unwrap();
+    writeln!(
+        code,
+        "    pub fn from_bytes_owned(_: archmage::{}, bytes: [u8; {}]) -> Self {{",
+        token, byte_size
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        // SAFETY: [u8; {}] and Self have identical size",
+        byte_size
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(unsafe {{ core::mem::transmute(bytes) }})"
+    )
+    .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
     code

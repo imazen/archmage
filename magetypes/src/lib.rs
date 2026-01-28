@@ -44,8 +44,19 @@ extern crate alloc;
 pub use archmage;
 
 // Auto-generated SIMD types with natural operators
-#[cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))]
-#[cfg_attr(docsrs, doc(cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))))]
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )))
+)]
 pub mod simd;
 
 // Width dispatch trait for accessing all SIMD sizes from any token

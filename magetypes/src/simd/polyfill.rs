@@ -502,13 +502,23 @@ pub mod sse {
         #[inline(always)]
         pub fn splat(token: Sse41Token, v: f32) -> Self {
             let part = f32x4::splat(token, v);
-            Self { a: part, b: part, c: part, d: part }
+            Self {
+                a: part,
+                b: part,
+                c: part,
+                d: part,
+            }
         }
 
         #[inline(always)]
         pub fn zero(token: Sse41Token) -> Self {
             let part = f32x4::zero(token);
-            Self { a: part, b: part, c: part, d: part }
+            Self {
+                a: part,
+                b: part,
+                c: part,
+                d: part,
+            }
         }
 
         #[inline(always)]
@@ -620,13 +630,23 @@ pub mod sse {
         #[inline(always)]
         pub fn splat(token: Sse41Token, v: f64) -> Self {
             let part = f64x2::splat(token, v);
-            Self { a: part, b: part, c: part, d: part }
+            Self {
+                a: part,
+                b: part,
+                c: part,
+                d: part,
+            }
         }
 
         #[inline(always)]
         pub fn zero(token: Sse41Token) -> Self {
             let part = f64x2::zero(token);
-            Self { a: part, b: part, c: part, d: part }
+            Self {
+                a: part,
+                b: part,
+                c: part,
+                d: part,
+            }
         }
 
         #[inline(always)]
@@ -738,13 +758,23 @@ pub mod sse {
         #[inline(always)]
         pub fn splat(token: Sse41Token, v: i32) -> Self {
             let part = i32x4::splat(token, v);
-            Self { a: part, b: part, c: part, d: part }
+            Self {
+                a: part,
+                b: part,
+                c: part,
+                d: part,
+            }
         }
 
         #[inline(always)]
         pub fn zero(token: Sse41Token) -> Self {
             let part = i32x4::zero(token);
-            Self { a: part, b: part, c: part, d: part }
+            Self {
+                a: part,
+                b: part,
+                c: part,
+                d: part,
+            }
         }
 
         #[inline(always)]
@@ -853,7 +883,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn add(self, rhs: Self) -> Self {
-            Self { lo: self.lo + rhs.lo, hi: self.hi + rhs.hi }
+            Self {
+                lo: self.lo + rhs.lo,
+                hi: self.hi + rhs.hi,
+            }
         }
     }
 
@@ -861,7 +894,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn sub(self, rhs: Self) -> Self {
-            Self { lo: self.lo - rhs.lo, hi: self.hi - rhs.hi }
+            Self {
+                lo: self.lo - rhs.lo,
+                hi: self.hi - rhs.hi,
+            }
         }
     }
 
@@ -869,7 +905,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn mul(self, rhs: Self) -> Self {
-            Self { lo: self.lo * rhs.lo, hi: self.hi * rhs.hi }
+            Self {
+                lo: self.lo * rhs.lo,
+                hi: self.hi * rhs.hi,
+            }
         }
     }
 
@@ -877,7 +916,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn div(self, rhs: Self) -> Self {
-            Self { lo: self.lo / rhs.lo, hi: self.hi / rhs.hi }
+            Self {
+                lo: self.lo / rhs.lo,
+                hi: self.hi / rhs.hi,
+            }
         }
     }
 
@@ -885,7 +927,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn neg(self) -> Self {
-            Self { lo: -self.lo, hi: -self.hi }
+            Self {
+                lo: -self.lo,
+                hi: -self.hi,
+            }
         }
     }
 
@@ -938,7 +983,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn add(self, rhs: Self) -> Self {
-            Self { lo: self.lo + rhs.lo, hi: self.hi + rhs.hi }
+            Self {
+                lo: self.lo + rhs.lo,
+                hi: self.hi + rhs.hi,
+            }
         }
     }
 
@@ -946,7 +994,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn sub(self, rhs: Self) -> Self {
-            Self { lo: self.lo - rhs.lo, hi: self.hi - rhs.hi }
+            Self {
+                lo: self.lo - rhs.lo,
+                hi: self.hi - rhs.hi,
+            }
         }
     }
 
@@ -954,7 +1005,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn mul(self, rhs: Self) -> Self {
-            Self { lo: self.lo * rhs.lo, hi: self.hi * rhs.hi }
+            Self {
+                lo: self.lo * rhs.lo,
+                hi: self.hi * rhs.hi,
+            }
         }
     }
 
@@ -962,7 +1016,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn div(self, rhs: Self) -> Self {
-            Self { lo: self.lo / rhs.lo, hi: self.hi / rhs.hi }
+            Self {
+                lo: self.lo / rhs.lo,
+                hi: self.hi / rhs.hi,
+            }
         }
     }
 
@@ -970,7 +1027,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn neg(self) -> Self {
-            Self { lo: -self.lo, hi: -self.hi }
+            Self {
+                lo: -self.lo,
+                hi: -self.hi,
+            }
         }
     }
 
@@ -1023,7 +1083,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn add(self, rhs: Self) -> Self {
-            Self { lo: self.lo + rhs.lo, hi: self.hi + rhs.hi }
+            Self {
+                lo: self.lo + rhs.lo,
+                hi: self.hi + rhs.hi,
+            }
         }
     }
 
@@ -1031,7 +1094,10 @@ pub mod avx2 {
         type Output = Self;
         #[inline(always)]
         fn sub(self, rhs: Self) -> Self {
-            Self { lo: self.lo - rhs.lo, hi: self.hi - rhs.hi }
+            Self {
+                lo: self.lo - rhs.lo,
+                hi: self.hi - rhs.hi,
+            }
         }
     }
 

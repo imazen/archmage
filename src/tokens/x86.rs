@@ -61,9 +61,7 @@ impl SimdToken for AvxToken {
     #[inline(always)]
     fn try_new() -> Option<Self> {
         // Explicitly check all implied features for robustness against broken emulators
-        if crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("sse4.1")
-        {
+        if crate::is_x86_feature_available!("avx") && crate::is_x86_feature_available!("sse4.1") {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
             None

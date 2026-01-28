@@ -288,12 +288,9 @@ mod avx512_tests {
     #[test]
     fn test_cast_slice_512() {
         if let Some(token) = Avx512Token::try_new() {
-            // AVX-512 vectors need 64-byte alignment
-            #[repr(C, align(64))]
-            struct Aligned([f32; 32]);
-            let data = Aligned(core::array::from_fn(|i| i as f32));
+            let data: [f32; 32] = core::array::from_fn(|i| i as f32);
 
-            let vectors = f32x16::cast_slice(token, &data.0).unwrap();
+            let vectors = f32x16::cast_slice(token, &data).unwrap();
             assert_eq!(vectors.len(), 2);
             assert_eq!(vectors[0].to_array()[0], 0.0);
             assert_eq!(vectors[1].to_array()[0], 16.0);
@@ -431,13 +428,10 @@ mod arm_tests {
     #[test]
     fn test_cast_slice() {
         if let Some(token) = NeonToken::try_new() {
-            // NEON vectors need 16-byte alignment
-            #[repr(C, align(16))]
-            struct Aligned([f32; 8]);
-            let data = Aligned([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+            let data: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
             // Cast to f32x4 slice
-            let vectors = f32x4::cast_slice(token, &data.0).unwrap();
+            let vectors = f32x4::cast_slice(token, &data).unwrap();
             assert_eq!(vectors.len(), 2);
             assert_eq!(vectors[0].to_array(), [1.0, 2.0, 3.0, 4.0]);
             assert_eq!(vectors[1].to_array(), [5.0, 6.0, 7.0, 8.0]);
