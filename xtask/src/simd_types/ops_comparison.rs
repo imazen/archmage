@@ -6,10 +6,10 @@ use std::fmt::Write;
 
 pub fn generate_comparison_ops(ty: &SimdType) -> String {
     let mut code = String::new();
-    let name = ty.name();
+    let _name = ty.name();
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
-    let lanes = ty.lanes();
+    let _lanes = ty.lanes();
 
     // Section header
     writeln!(code, "    // ========== Comparisons ==========").unwrap();

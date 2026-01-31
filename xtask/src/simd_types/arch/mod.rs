@@ -3,6 +3,8 @@
 //! Each architecture module provides intrinsic names, types, and prefixes
 //! for generating SIMD code.
 
+#![allow(dead_code)]
+
 pub mod arm;
 pub mod wasm;
 pub mod x86;

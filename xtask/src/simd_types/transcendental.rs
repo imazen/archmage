@@ -13,7 +13,7 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
 
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
-    let bits = ty.width.bits();
+    let _bits = ty.width.bits();
 
     // Determine integer suffix for cast operations
     let int_suffix = if ty.elem == ElementType::F32 {

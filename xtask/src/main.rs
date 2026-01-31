@@ -337,6 +337,7 @@ fn categorize_intrinsic(name: &str) -> &'static str {
 }
 
 /// Determine if an intrinsic is a load operation
+#[allow(dead_code)]
 fn is_load_intrinsic(name: &str) -> bool {
     name.contains("load") || name.starts_with("vld")
 }
@@ -1127,7 +1128,7 @@ fn generate_aarch64_mod_rs(modules: &[(&str, &str, usize)]) -> String {
 // ============================================================================
 
 /// Generate exhaustive test file for x86 intrinsics
-#[allow(unused_variables)] // testable_fns reserved for future dynamic generation
+#[allow(dead_code, unused_variables)] // testable_fns reserved for future dynamic generation
 fn generate_x86_tests(testable_fns: &[TestableFunction]) -> String {
     let mut code = String::from(
         r#"//! Auto-generated exhaustive tests for x86 mem module intrinsics.
@@ -1324,6 +1325,7 @@ fn test_v4_vl_mem_intrinsics_exhaustive() {
 }
 
 /// Generate a test call for an AVX intrinsic
+#[allow(dead_code)]
 fn generate_avx_test_call(func: &TestableFunction) -> String {
     let name = &func.name;
 
@@ -1348,7 +1350,7 @@ fn generate_avx_test_call(func: &TestableFunction) -> String {
 }
 
 /// Generate exhaustive test file for aarch64 intrinsics
-#[allow(unused_variables)] // testable_fns reserved for future dynamic generation
+#[allow(dead_code, unused_variables)] // testable_fns reserved for future dynamic generation
 fn generate_aarch64_tests(testable_fns: &[TestableFunction]) -> String {
     let mut code = String::from(
         r#"//! Auto-generated exhaustive tests for aarch64 mem module intrinsics.

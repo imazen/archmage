@@ -67,7 +67,7 @@ pub fn generate_type(ty: &SimdType) -> String {
 /// Generate construction and extraction methods
 fn generate_construction_methods(ty: &SimdType) -> String {
     let mut code = String::new();
-    let name = ty.name();
+    let _name = ty.name();
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = Arm::intrinsic_type(ty.elem, ty.width);
@@ -580,7 +580,7 @@ fn generate_math_ops(ty: &SimdType) -> String {
     if ty.elem.is_float() {
         let sqrt_fn = Arm::sqrt_intrinsic(ty.elem);
         let abs_fn = Arm::abs_intrinsic(ty.elem);
-        let neg_fn = Arm::neg_intrinsic(ty.elem);
+        let _neg_fn = Arm::neg_intrinsic(ty.elem);
         let floor_fn = Arm::floor_intrinsic(ty.elem);
         let ceil_fn = Arm::ceil_intrinsic(ty.elem);
         let round_fn = Arm::round_intrinsic(ty.elem);

@@ -4,6 +4,8 @@
 //! Unlike x86 with multiple width tiers, NEON is exclusively 128-bit.
 //! For 256-bit operations, use polyfills (2×128-bit).
 
+#![allow(dead_code)]
+
 use super::Arch;
 use crate::simd_types::types::{ElementType, SimdWidth};
 

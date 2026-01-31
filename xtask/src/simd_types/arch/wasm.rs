@@ -3,6 +3,8 @@
 //! WASM SIMD provides 128-bit SIMD on all supporting browsers/runtimes.
 //! Uses a single `v128` type with typed operations.
 
+#![allow(dead_code)]
+
 use super::Arch;
 use crate::simd_types::types::{ElementType, SimdWidth};
 

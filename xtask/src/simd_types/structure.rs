@@ -262,9 +262,9 @@ pub fn generate_type(ty: &SimdType) -> String {
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = ty.x86_inner_type();
-    let token = ty.token();
-    let prefix = ty.width.x86_prefix();
-    let suffix = ty.elem.x86_suffix();
+    let _token = ty.token();
+    let _prefix = ty.width.x86_prefix();
+    let _suffix = ty.elem.x86_suffix();
 
     // Feature gate for AVX-512
     let cfg_attr = match ty.width.required_feature() {
@@ -369,7 +369,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     use super::types::ElementType;
 
     let mut code = String::new();
-    let name = ty.name();
+    let _name = ty.name();
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = ty.x86_inner_type();

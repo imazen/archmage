@@ -297,7 +297,7 @@ fn generate_math_ops(ty: &SimdType) -> String {
     if ty.elem.is_float() {
         let sqrt_fn = Wasm::sqrt_intrinsic(ty.elem);
         let abs_fn = Wasm::abs_intrinsic(ty.elem);
-        let neg_fn = Wasm::neg_intrinsic(ty.elem);
+        let _neg_fn = Wasm::neg_intrinsic(ty.elem);
         let floor_fn = Wasm::floor_intrinsic(ty.elem);
         let ceil_fn = Wasm::ceil_intrinsic(ty.elem);
         let nearest_fn = Wasm::nearest_intrinsic(ty.elem);

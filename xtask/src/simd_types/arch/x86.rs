@@ -1,5 +1,7 @@
 //! x86-64 architecture code generation.
 
+#![allow(dead_code)]
+
 use super::Arch;
 use crate::simd_types::types::{ElementType, SimdWidth};
 

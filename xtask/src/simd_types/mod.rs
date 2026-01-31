@@ -25,7 +25,7 @@ mod transcendental;
 pub mod transcendental_wasm;
 pub mod types;
 
-pub use types::{ElementType, SimdType, SimdWidth, all_simd_types};
+pub use types::{SimdType, SimdWidth, all_simd_types};
 
 use std::collections::BTreeMap;
 
@@ -406,6 +406,7 @@ pub mod w128;
 }
 
 /// Generate all SIMD types (legacy single-file output)
+#[allow(dead_code)]
 pub fn generate_simd_types() -> String {
     let mut code = String::new();
 

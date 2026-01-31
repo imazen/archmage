@@ -11,9 +11,9 @@ use std::fmt::Write;
 
 pub fn generate_horizontal_ops(ty: &SimdType) -> String {
     let mut code = String::new();
-    let prefix = ty.width.x86_prefix();
-    let suffix = ty.elem.x86_suffix();
-    let name = ty.name();
+    let _prefix = ty.width.x86_prefix();
+    let _suffix = ty.elem.x86_suffix();
+    let _name = ty.name();
     let elem = ty.elem.name();
     let lanes = ty.lanes();
 
@@ -286,15 +286,15 @@ pub fn generate_horizontal_ops(ty: &SimdType) -> String {
 pub fn generate_conversion_ops(ty: &SimdType) -> String {
     let mut code = String::new();
     let prefix = ty.width.x86_prefix();
-    let name = ty.name();
+    let _name = ty.name();
     let lanes = ty.lanes();
-    let token = ty.token();
+    let _token = ty.token();
 
     // Only generate conversions for matching lane counts
     // f32 <-> i32 conversions
     if ty.elem == ElementType::F32 {
         let int_name = format!("i32x{}", lanes);
-        let uint_name = format!("u32x{}", lanes);
+        let _uint_name = format!("u32x{}", lanes);
 
         writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
 
@@ -410,7 +410,7 @@ pub fn generate_scalar_ops(ty: &SimdType, cfg_attr: &str) -> String {
     let mut code = String::new();
     let name = ty.name();
     let elem = ty.elem.name();
-    let token = ty.token();
+    let _token = ty.token();
 
     writeln!(code, "\n// Scalar broadcast operations for {}", name).unwrap();
     writeln!(
