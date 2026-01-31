@@ -3,7 +3,7 @@ members = [".", "archmage-macros", "magetypes", "xtask"]
 
 [package]
 name = "archmage"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -35,7 +35,7 @@ wide = ["__wide"]
 
 [dependencies]
 # Proc-macro crate for #[arcane] attribute
-archmage-macros = { version = "0.3.0", path = "archmage-macros", optional = true }
+archmage-macros = { version = "0.3.1", path = "archmage-macros", optional = true }
 # Zero-cost type casts (Pod, Zeroable)
 bytemuck = { version = "1.24", optional = true }
 # Optional integrations
