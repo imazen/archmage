@@ -13,7 +13,7 @@
 
 ```toml
 [dependencies]
-archmage = "0.2"
+archmage = "0.3"
 safe_unaligned_simd = "0.2"  # For safe memory operations
 ```
 
@@ -93,7 +93,7 @@ Individual feature tokens for fine-grained control:
 
 ```toml
 [dependencies]
-archmage = { version = "0.2", features = ["avx512"] }
+archmage = { version = "0.3", features = ["avx512"] }
 ```
 
 | Token | Features | CPU Support |
@@ -201,9 +201,9 @@ if let Some(token) = Desktop64::summon() {
 
 | Width | Float | Signed Int | Unsigned Int | Token Required |
 |-------|-------|------------|--------------|----------------|
-| 128-bit | `f32x4`, `f64x2` | `i8x16`, `i16x8`, `i32x4`, `i64x2` | `u8x16`, `u16x8`, `u32x4`, `u64x2` | `Sse41Token` |
-| 256-bit | `f32x8`, `f64x4` | `i8x32`, `i16x16`, `i32x8`, `i64x4` | `u8x32`, `u16x16`, `u32x8`, `u64x4` | `Avx2FmaToken` |
-| 512-bit | `f32x16`, `f64x8` | `i8x64`, `i16x32`, `i32x16`, `i64x8` | `u8x64`, `u16x32`, `u32x16`, `u64x8` | `Avx512Token` |
+| 128-bit | `f32x4`, `f64x2` | `i8x16`, `i16x8`, `i32x4`, `i64x2` | `u8x16`, `u16x8`, `u32x4`, `u64x2` | `X64V3Token` |
+| 256-bit | `f32x8`, `f64x4` | `i8x32`, `i16x16`, `i32x8`, `i64x4` | `u8x32`, `u16x16`, `u32x8`, `u64x4` | `X64V3Token` |
+| 512-bit | `f32x16`, `f64x8` | `i8x64`, `i16x32`, `i32x16`, `i64x8` | `u8x64`, `u16x32`, `u32x16`, `u64x8` | `X64V4Token` |
 
 ### Operations
 
