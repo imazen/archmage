@@ -5,9 +5,8 @@
 #![cfg(target_arch = "x86_64")]
 #![allow(clippy::needless_range_loop)]
 
-use magetypes::simd::*;
 use archmage::{SimdToken, X64V3Token};
-
+use magetypes::simd::*;
 
 #[test]
 fn test_f32x8_basic() {
@@ -89,7 +88,11 @@ fn test_f32x8_transpose_8x8() {
             let arr = rows[i].to_array();
             for j in 0..8 {
                 let expected = (i * 8 + j) as f32;
-                assert_eq!(arr[j], expected, "Double transpose mismatch at rows[{}][{}]", i, j);
+                assert_eq!(
+                    arr[j], expected,
+                    "Double transpose mismatch at rows[{}][{}]",
+                    i, j
+                );
             }
         }
     }
@@ -127,10 +130,10 @@ fn test_f32x4_4ch_interleave() {
 
         // Interleave to AoS: each output vector is one RGBA pixel
         let aos = f32x4::interleave_4ch([r, g, b, a]);
-        assert_eq!(aos[0].to_array(), [1.0, 10.0, 100.0, 255.0]);   // pixel 0
-        assert_eq!(aos[1].to_array(), [2.0, 20.0, 200.0, 255.0]);   // pixel 1
-        assert_eq!(aos[2].to_array(), [3.0, 30.0, 300.0, 255.0]);   // pixel 2
-        assert_eq!(aos[3].to_array(), [4.0, 40.0, 400.0, 255.0]);   // pixel 3
+        assert_eq!(aos[0].to_array(), [1.0, 10.0, 100.0, 255.0]); // pixel 0
+        assert_eq!(aos[1].to_array(), [2.0, 20.0, 200.0, 255.0]); // pixel 1
+        assert_eq!(aos[2].to_array(), [3.0, 30.0, 300.0, 255.0]); // pixel 2
+        assert_eq!(aos[3].to_array(), [4.0, 40.0, 400.0, 255.0]); // pixel 3
 
         // Deinterleave back to SoA
         let [r2, g2, b2, a2] = f32x4::deinterleave_4ch(aos);
@@ -146,9 +149,9 @@ fn test_f32x4_load_store_rgba_u8() {
     if let Some(_token) = archmage::X64V3Token::try_new() {
         // 4 RGBA pixels: red, green, blue, white
         let rgba: [u8; 16] = [
-            255, 0, 0, 255,     // red
-            0, 255, 0, 255,     // green
-            0, 0, 255, 255,     // blue
+            255, 0, 0, 255, // red
+            0, 255, 0, 255, // green
+            0, 0, 255, 255, // blue
             255, 255, 255, 255, // white
         ];
 
@@ -169,21 +172,33 @@ fn test_f32x8_load_store_rgba_u8() {
     if let Some(_token) = X64V3Token::try_new() {
         // 8 RGBA pixels
         let rgba: [u8; 32] = [
-            255, 0, 0, 255,     // red
-            0, 255, 0, 255,     // green
-            0, 0, 255, 255,     // blue
+            255, 0, 0, 255, // red
+            0, 255, 0, 255, // green
+            0, 0, 255, 255, // blue
             255, 255, 255, 255, // white
             128, 128, 128, 255, // gray
-            0, 0, 0, 255,       // black
-            255, 128, 0, 255,   // orange
-            128, 0, 255, 255,   // purple
+            0, 0, 0, 255, // black
+            255, 128, 0, 255, // orange
+            128, 0, 255, 255, // purple
         ];
 
         let (r, g, b, a) = f32x8::load_8_rgba_u8(&rgba);
-        assert_eq!(r.to_array(), [255.0, 0.0, 0.0, 255.0, 128.0, 0.0, 255.0, 128.0]);
-        assert_eq!(g.to_array(), [0.0, 255.0, 0.0, 255.0, 128.0, 0.0, 128.0, 0.0]);
-        assert_eq!(b.to_array(), [0.0, 0.0, 255.0, 255.0, 128.0, 0.0, 0.0, 255.0]);
-        assert_eq!(a.to_array(), [255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0]);
+        assert_eq!(
+            r.to_array(),
+            [255.0, 0.0, 0.0, 255.0, 128.0, 0.0, 255.0, 128.0]
+        );
+        assert_eq!(
+            g.to_array(),
+            [0.0, 255.0, 0.0, 255.0, 128.0, 0.0, 128.0, 0.0]
+        );
+        assert_eq!(
+            b.to_array(),
+            [0.0, 0.0, 255.0, 255.0, 128.0, 0.0, 0.0, 255.0]
+        );
+        assert_eq!(
+            a.to_array(),
+            [255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0]
+        );
 
         // Roundtrip
         let out = f32x8::store_8_rgba_u8(r, g, b, a);
@@ -197,8 +212,8 @@ fn test_f32x8_load_store_rgba_u8() {
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod avx512_tests {
+    use archmage::{Avx512Token, SimdToken};
     use magetypes::simd::*;
-    use archmage::{SimdToken, Avx512Token};
 
     #[test]
     fn test_f32x16_basic() {
@@ -261,13 +276,18 @@ mod avx512_tests {
     #[test]
     fn test_f32x16_math_ops() {
         if let Some(token) = Avx512Token::try_new() {
-            let v = f32x16::from_array(token, [
-                1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0,
-                81.0, 100.0, 121.0, 144.0, 169.0, 196.0, 225.0, 256.0
-            ]);
+            let v = f32x16::from_array(
+                token,
+                [
+                    1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0, 100.0, 121.0, 144.0, 169.0,
+                    196.0, 225.0, 256.0,
+                ],
+            );
             let sqrt_v = v.sqrt();
-            let expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-                          9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
+            let expected = [
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+                16.0,
+            ];
             assert_eq!(sqrt_v.to_array(), expected);
         }
     }
@@ -304,8 +324,8 @@ mod avx512_tests {
 
 #[cfg(target_arch = "aarch64")]
 mod arm_tests {
+    use archmage::{NeonToken, SimdToken};
     use magetypes::simd::*;
-    use archmage::{SimdToken, NeonToken};
 
     #[test]
     fn test_f32x4_basic() {

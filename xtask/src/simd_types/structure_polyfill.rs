@@ -44,11 +44,7 @@ fn has_neg(elem: ElementType) -> bool {
 fn has_abs(elem: ElementType) -> bool {
     matches!(
         elem,
-        ElementType::F32
-            | ElementType::F64
-            | ElementType::I8
-            | ElementType::I16
-            | ElementType::I32
+        ElementType::F32 | ElementType::F64 | ElementType::I8 | ElementType::I16 | ElementType::I32
     )
 }
 
@@ -184,25 +180,44 @@ fn generate_platform_module(platform: &PlatformConfig) -> String {
     for elem in ALL_ELEMENTS {
         let full = SimdType::new(*elem, SimdWidth::W256);
         let full_name = full.name();
-        writeln!(
-            code,
-            "    pub type {}xN = {};",
-            elem.name(),
-            full_name
-        )
-        .unwrap();
+        writeln!(code, "    pub type {}xN = {};", elem.name(), full_name).unwrap();
     }
     writeln!(code).unwrap();
     writeln!(code, "    /// Number of f32 lanes").unwrap();
-    writeln!(code, "    pub const LANES_F32: usize = {};", SimdType::new(ElementType::F32, SimdWidth::W256).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_F32: usize = {};",
+        SimdType::new(ElementType::F32, SimdWidth::W256).lanes()
+    )
+    .unwrap();
     writeln!(code, "    /// Number of f64 lanes").unwrap();
-    writeln!(code, "    pub const LANES_F64: usize = {};", SimdType::new(ElementType::F64, SimdWidth::W256).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_F64: usize = {};",
+        SimdType::new(ElementType::F64, SimdWidth::W256).lanes()
+    )
+    .unwrap();
     writeln!(code, "    /// Number of i32/u32 lanes").unwrap();
-    writeln!(code, "    pub const LANES_32: usize = {};", SimdType::new(ElementType::I32, SimdWidth::W256).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_32: usize = {};",
+        SimdType::new(ElementType::I32, SimdWidth::W256).lanes()
+    )
+    .unwrap();
     writeln!(code, "    /// Number of i16/u16 lanes").unwrap();
-    writeln!(code, "    pub const LANES_16: usize = {};", SimdType::new(ElementType::I16, SimdWidth::W256).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_16: usize = {};",
+        SimdType::new(ElementType::I16, SimdWidth::W256).lanes()
+    )
+    .unwrap();
     writeln!(code, "    /// Number of i8/u8 lanes").unwrap();
-    writeln!(code, "    pub const LANES_8: usize = {};", SimdType::new(ElementType::I8, SimdWidth::W256).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_8: usize = {};",
+        SimdType::new(ElementType::I8, SimdWidth::W256).lanes()
+    )
+    .unwrap();
     writeln!(code).unwrap();
     writeln!(code, "    /// Token type for this polyfill level").unwrap();
     writeln!(code, "    pub type Token = archmage::{};", platform.token).unwrap();
@@ -535,25 +550,44 @@ fn generate_w512_platform_module(platform: &W512PlatformConfig) -> String {
     for elem in ALL_ELEMENTS {
         let full = SimdType::new(*elem, SimdWidth::W512);
         let full_name = full.name();
-        writeln!(
-            code,
-            "    pub type {}xN = {};",
-            elem.name(),
-            full_name
-        )
-        .unwrap();
+        writeln!(code, "    pub type {}xN = {};", elem.name(), full_name).unwrap();
     }
     writeln!(code).unwrap();
     writeln!(code, "    /// Number of f32 lanes").unwrap();
-    writeln!(code, "    pub const LANES_F32: usize = {};", SimdType::new(ElementType::F32, SimdWidth::W512).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_F32: usize = {};",
+        SimdType::new(ElementType::F32, SimdWidth::W512).lanes()
+    )
+    .unwrap();
     writeln!(code, "    /// Number of f64 lanes").unwrap();
-    writeln!(code, "    pub const LANES_F64: usize = {};", SimdType::new(ElementType::F64, SimdWidth::W512).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_F64: usize = {};",
+        SimdType::new(ElementType::F64, SimdWidth::W512).lanes()
+    )
+    .unwrap();
     writeln!(code, "    /// Number of i32/u32 lanes").unwrap();
-    writeln!(code, "    pub const LANES_32: usize = {};", SimdType::new(ElementType::I32, SimdWidth::W512).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_32: usize = {};",
+        SimdType::new(ElementType::I32, SimdWidth::W512).lanes()
+    )
+    .unwrap();
     writeln!(code, "    /// Number of i16/u16 lanes").unwrap();
-    writeln!(code, "    pub const LANES_16: usize = {};", SimdType::new(ElementType::I16, SimdWidth::W512).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_16: usize = {};",
+        SimdType::new(ElementType::I16, SimdWidth::W512).lanes()
+    )
+    .unwrap();
     writeln!(code, "    /// Number of i8/u8 lanes").unwrap();
-    writeln!(code, "    pub const LANES_8: usize = {};", SimdType::new(ElementType::I8, SimdWidth::W512).lanes()).unwrap();
+    writeln!(
+        code,
+        "    pub const LANES_8: usize = {};",
+        SimdType::new(ElementType::I8, SimdWidth::W512).lanes()
+    )
+    .unwrap();
     writeln!(code).unwrap();
     writeln!(code, "    /// Token type for this polyfill level").unwrap();
     writeln!(code, "    pub type Token = archmage::{};", platform.token).unwrap();

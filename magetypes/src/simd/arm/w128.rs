@@ -4,7 +4,6 @@
 
 use core::arch::aarch64::*;
 
-
 // ============================================================================
 // f32x4 - 4 x f32 (128-bit NEON)
 // ============================================================================
@@ -246,7 +245,6 @@ impl f32x4 {
         }
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `i32x4` (zero-cost).
@@ -284,7 +282,6 @@ impl f32x4 {
     pub fn bitcast_mut_u32x4(&mut self) -> &mut u32x4 {
         unsafe { &mut *(self as *mut Self as *mut u32x4) }
     }
-
 }
 
 impl core::ops::Add for f32x4 {
@@ -387,7 +384,6 @@ impl From<f32x4> for [f32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit NEON)
@@ -627,7 +623,6 @@ impl f64x2 {
         }
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `i64x2` (zero-cost).
@@ -665,7 +660,6 @@ impl f64x2 {
     pub fn bitcast_mut_u64x2(&mut self) -> &mut u64x2 {
         unsafe { &mut *(self as *mut Self as *mut u64x2) }
     }
-
 }
 
 impl core::ops::Add for f64x2 {
@@ -768,7 +762,6 @@ impl From<f64x2> for [f64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit NEON)
@@ -963,7 +956,6 @@ impl i8x16 {
         }
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `u8x16` (zero-cost).
@@ -983,7 +975,6 @@ impl i8x16 {
     pub fn bitcast_mut_u8x16(&mut self) -> &mut u8x16 {
         unsafe { &mut *(self as *mut Self as *mut u8x16) }
     }
-
 }
 
 impl core::ops::Add for i8x16 {
@@ -1056,7 +1047,6 @@ impl From<i8x16> for [i8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit NEON)
@@ -1233,7 +1223,6 @@ impl u8x16 {
         self.max(lo).min(hi)
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `i8x16` (zero-cost).
@@ -1253,7 +1242,6 @@ impl u8x16 {
     pub fn bitcast_mut_i8x16(&mut self) -> &mut i8x16 {
         unsafe { &mut *(self as *mut Self as *mut i8x16) }
     }
-
 }
 
 impl core::ops::Add for u8x16 {
@@ -1318,7 +1306,6 @@ impl From<u8x16> for [u8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit NEON)
@@ -1512,7 +1499,6 @@ impl i16x8 {
         }
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `u16x8` (zero-cost).
@@ -1532,7 +1518,6 @@ impl i16x8 {
     pub fn bitcast_mut_u16x8(&mut self) -> &mut u16x8 {
         unsafe { &mut *(self as *mut Self as *mut u16x8) }
     }
-
 }
 
 impl core::ops::Add for i16x8 {
@@ -1620,7 +1605,6 @@ impl From<i16x8> for [i16; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit NEON)
@@ -1797,7 +1781,6 @@ impl u16x8 {
         self.max(lo).min(hi)
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `i16x8` (zero-cost).
@@ -1817,7 +1800,6 @@ impl u16x8 {
     pub fn bitcast_mut_i16x8(&mut self) -> &mut i16x8 {
         unsafe { &mut *(self as *mut Self as *mut i16x8) }
     }
-
 }
 
 impl core::ops::Add for u16x8 {
@@ -1897,7 +1879,6 @@ impl From<u16x8> for [u16; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit NEON)
@@ -2090,7 +2071,6 @@ impl i32x4 {
         }
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `f32x4` (zero-cost).
@@ -2128,7 +2108,6 @@ impl i32x4 {
     pub fn bitcast_mut_u32x4(&mut self) -> &mut u32x4 {
         unsafe { &mut *(self as *mut Self as *mut u32x4) }
     }
-
 }
 
 impl core::ops::Add for i32x4 {
@@ -2216,7 +2195,6 @@ impl From<i32x4> for [i32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit NEON)
@@ -2393,7 +2371,6 @@ impl u32x4 {
         self.max(lo).min(hi)
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `f32x4` (zero-cost).
@@ -2431,7 +2408,6 @@ impl u32x4 {
     pub fn bitcast_mut_i32x4(&mut self) -> &mut i32x4 {
         unsafe { &mut *(self as *mut Self as *mut i32x4) }
     }
-
 }
 
 impl core::ops::Add for u32x4 {
@@ -2511,7 +2487,6 @@ impl From<u32x4> for [u32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit NEON)
@@ -2707,7 +2682,6 @@ impl i64x2 {
         }
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `f64x2` (zero-cost).
@@ -2745,7 +2719,6 @@ impl i64x2 {
     pub fn bitcast_mut_u64x2(&mut self) -> &mut u64x2 {
         unsafe { &mut *(self as *mut Self as *mut u64x2) }
     }
-
 }
 
 impl core::ops::Add for i64x2 {
@@ -2818,7 +2791,6 @@ impl From<i64x2> for [i64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit NEON)
@@ -2999,7 +2971,6 @@ impl u64x2 {
         self.max(lo).min(hi)
     }
 
-
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `f64x2` (zero-cost).
@@ -3037,7 +3008,6 @@ impl u64x2 {
     pub fn bitcast_mut_i64x2(&mut self) -> &mut i64x2 {
         unsafe { &mut *(self as *mut Self as *mut i64x2) }
     }
-
 }
 
 impl core::ops::Add for u64x2 {
@@ -3102,4 +3072,3 @@ impl From<u64x2> for [u64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
