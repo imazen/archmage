@@ -9,7 +9,8 @@
 //!   cargo xtask check-version - Check for safe_unaligned_simd updates
 
 use anyhow::{Context, Result, bail};
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use regex::Regex;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -1693,20 +1694,286 @@ fn process_f32_512(data: &mut [f32; 16]) {
     doc
 }
 
+// ============================================================================
+// Intrinsic Database (CSV-based)
+// ============================================================================
+
+/// Entry from the intrinsics CSV database.
+struct IntrinsicEntry {
+    features: String,
+    #[allow(dead_code)]
+    is_unsafe: bool,
+}
+
+/// Load the intrinsic database from docs/intrinsics/complete_intrinsics.csv.
+///
+/// This CSV is extracted from stdarch source by xtask/extract_intrinsics.py
+/// and covers ALL intrinsics: x86 shared, x86_64 specific, arm_shared,
+/// aarch64 specific, and wasm32 — including pub use re-exports.
+///
+/// Format: arch,name,features,unsafe,stability,file
+fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
+    let mut db = HashMap::new();
+
+    let csv_path = PathBuf::from("docs/intrinsics/complete_intrinsics.csv");
+    let content = fs::read_to_string(&csv_path)
+        .with_context(|| format!("Failed to read {}. Run: python3 xtask/extract_intrinsics.py > docs/intrinsics/complete_intrinsics.csv", csv_path.display()))?;
+
+    for line in content.lines().skip(1) {
+        let fields: Vec<&str> = line.splitn(6, ',').collect();
+        if fields.len() >= 4 {
+            let name = fields[1].to_string();
+            let features = fields[2].to_string();
+            let is_unsafe = fields[3] == "True";
+            db.insert(name, IntrinsicEntry { features, is_unsafe });
+        }
+    }
+
+    if db.is_empty() {
+        bail!("Intrinsic database is empty — CSV may be corrupt");
+    }
+
+    Ok(db)
+}
+
+// ============================================================================
+// Magetypes Validation
+// ============================================================================
+
+/// File-to-token mapping for magetypes generated code.
+struct MagetypesFileMapping {
+    /// Relative path within magetypes/src/simd/
+    rel_path: &'static str,
+    /// Gating token name
+    token: &'static str,
+    /// Architecture
+    arch: &'static str,
+}
+
+const MAGETYPES_FILE_MAPPINGS: &[MagetypesFileMapping] = &[
+    MagetypesFileMapping {
+        rel_path: "x86/w128.rs",
+        token: "Sse41Token",
+        arch: "x86",
+    },
+    MagetypesFileMapping {
+        rel_path: "x86/w256.rs",
+        token: "Avx2FmaToken",
+        arch: "x86",
+    },
+    MagetypesFileMapping {
+        rel_path: "x86/w512.rs",
+        token: "X64V4Token",
+        arch: "x86",
+    },
+    MagetypesFileMapping {
+        rel_path: "arm/w128.rs",
+        token: "NeonToken",
+        arch: "arm",
+    },
+    MagetypesFileMapping {
+        rel_path: "wasm/w128.rs",
+        token: "Simd128Token",
+        arch: "wasm",
+    },
+];
+
+/// Validate that all intrinsic calls in magetypes generated code are safe
+/// under their gating token.
+///
+/// Every intrinsic found in generated code MUST exist in complete_intrinsics.csv.
+/// If an intrinsic is missing from the CSV, that's an error — the CSV must be
+/// regenerated with `python3 xtask/extract_intrinsics.py`.
+fn validate_magetypes() -> Result<()> {
+    println!("=== Magetypes Safety Validation ===\n");
+
+    let db = load_intrinsic_database()?;
+    println!("Loaded {} intrinsics from CSV database", db.len());
+
+    // Compile regex patterns for intrinsic extraction
+    // x86: _mm_*, _mm256_*, _mm512_* followed by '(' or '::<' (function call or turbofish)
+    let x86_re =
+        Regex::new(r"\b(_mm(?:256|512)?_\w+)\s*(?:\(|::<)").expect("invalid x86 regex");
+    // ARM NEON: v*q?_* patterns (NEON intrinsics all start with 'v')
+    let arm_re = Regex::new(
+        r"\b(v(?:abs|add|and|bic|bsl|ceq|cge|cgt|cle|clt|cnt|cvt|div|dup|eor|ext|fma|fms|get|hadd|ld[1234]|max|min|ml[as]|mov|mul|mvn|neg|not|orn|orr|padd|pmax|pmin|qadd|qsub|reinterpret|rev|rnd|rsqrte|set|shl|shr|sqrt|st[1234]|sub|tbl|tbx|trn|uzp|zip)\w*)\s*\("
+    ).expect("invalid arm regex");
+    // WASM SIMD128: f32x4_*, i32x4_*, v128_*, u8x16_*, etc.
+    let wasm_re = Regex::new(
+        r"\b((?:f32x4|f64x2|i8x16|i16x8|i32x4|i64x2|u8x16|u16x8|u32x4|u64x2|v128)_\w+)\s*[\(<]",
+    )
+    .expect("invalid wasm regex");
+
+    let simd_dir = PathBuf::from("magetypes/src/simd");
+    let mut errors: Vec<String> = Vec::new();
+    let mut validated = 0usize;
+
+    for mapping in MAGETYPES_FILE_MAPPINGS {
+        let file_path = simd_dir.join(mapping.rel_path);
+        if !file_path.exists() {
+            errors.push(format!("File not found: {}", file_path.display()));
+            continue;
+        }
+
+        let content = fs::read_to_string(&file_path)
+            .with_context(|| format!("Failed to read {}", file_path.display()))?;
+
+        let token = mapping.token;
+        let provided_features: HashSet<&str> = match token_provides_features(token) {
+            Some(f) => f.iter().copied().collect(),
+            None => {
+                // Simd128Token isn't in token_provides_features — handle WASM specially
+                if token == "Simd128Token" {
+                    let mut s = HashSet::new();
+                    s.insert("simd128");
+                    s
+                } else {
+                    errors.push(format!(
+                        "Unknown token '{}' for {}",
+                        token, mapping.rel_path
+                    ));
+                    continue;
+                }
+            }
+        };
+
+        // Select regex based on architecture
+        let re = match mapping.arch {
+            "x86" => &x86_re,
+            "arm" => &arm_re,
+            "wasm" => &wasm_re,
+            _ => continue,
+        };
+
+        // Extract all unique intrinsic calls
+        let mut intrinsics_found: BTreeSet<String> = BTreeSet::new();
+        for cap in re.captures_iter(&content) {
+            intrinsics_found.insert(cap[1].to_string());
+        }
+
+        println!(
+            "{}: {} unique intrinsics, token: {}",
+            mapping.rel_path,
+            intrinsics_found.len(),
+            token
+        );
+
+        for intrinsic in &intrinsics_found {
+            // 1. Width-prefix validation (x86 only — catches wrong-width intrinsics)
+            if mapping.arch == "x86" {
+                let intrinsic_width = if intrinsic.starts_with("_mm512_") {
+                    3u8
+                } else if intrinsic.starts_with("_mm256_") {
+                    2
+                } else if intrinsic.starts_with("_mm_") {
+                    1
+                } else {
+                    0
+                };
+
+                let file_width = if mapping.rel_path.contains("w512") {
+                    3u8
+                } else if mapping.rel_path.contains("w256") {
+                    2
+                } else if mapping.rel_path.contains("w128") {
+                    1
+                } else {
+                    0
+                };
+
+                if intrinsic_width > 0
+                    && file_width > 0
+                    && intrinsic_width > file_width
+                {
+                    errors.push(format!(
+                        "WIDTH MISMATCH: {} in {} — intrinsic is {}bit but file only provides {}bit",
+                        intrinsic,
+                        mapping.rel_path,
+                        match intrinsic_width {
+                            1 => "128",
+                            2 => "256",
+                            3 => "512",
+                            _ => "?",
+                        },
+                        match file_width {
+                            1 => "128",
+                            2 => "256",
+                            3 => "512",
+                            _ => "?",
+                        }
+                    ));
+                    continue;
+                }
+            }
+
+            // 2. CSV database lookup — REQUIRED for every intrinsic
+            match db.get(intrinsic.as_str()) {
+                Some(entry) => {
+                    let required: HashSet<&str> =
+                        entry.features.split(',').map(|s| s.trim()).collect();
+                    let missing: Vec<&str> = required
+                        .iter()
+                        .copied()
+                        .filter(|f| !provided_features.contains(*f))
+                        .collect();
+
+                    if missing.is_empty() {
+                        validated += 1;
+                    } else {
+                        errors.push(format!(
+                            "FEATURE MISMATCH: {} in {} requires [{}] but {} only provides [{}] — missing: {:?}",
+                            intrinsic,
+                            mapping.rel_path,
+                            entry.features,
+                            token,
+                            provided_features.iter().copied().collect::<BTreeSet<_>>().iter().copied().collect::<Vec<_>>().join(", "),
+                            missing
+                        ));
+                    }
+                }
+                None => {
+                    errors.push(format!(
+                        "UNKNOWN INTRINSIC: {} in {} — not found in complete_intrinsics.csv. \
+                         Regenerate CSV: python3 xtask/extract_intrinsics.py > docs/intrinsics/complete_intrinsics.csv",
+                        intrinsic, mapping.rel_path
+                    ));
+                }
+            }
+        }
+    }
+
+    // Summary
+    println!("\n=== Validation Summary ===");
+    println!("  Validated: {} intrinsic calls (all CSV-verified)", validated);
+    println!("  Errors:    {}", errors.len());
+
+    if !errors.is_empty() {
+        println!("\n=== ERRORS ===");
+        for e in &errors {
+            println!("  {}", e);
+        }
+    }
+
+    if errors.is_empty() {
+        println!("\nAll validations passed!");
+        Ok(())
+    } else {
+        bail!("Validation failed with {} errors", errors.len())
+    }
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("Usage: cargo xtask generate       - Generate wrappers, tests, and docs");
-        eprintln!("       cargo xtask validate       - Validate token bounds");
-        eprintln!("       cargo xtask check-version  - Check for updates");
+        eprintln!("Usage: cargo xtask generate   - Generate SIMD types and reference docs");
+        eprintln!("       cargo xtask validate   - Validate magetypes safety");
         std::process::exit(1);
     }
 
     match args[1].as_str() {
         "generate" => generate_all()?,
-        "validate" => validate_wrappers()?,
-        "check-version" => check_version()?,
+        "validate" => validate_magetypes()?,
         _ => {
             eprintln!("Unknown command: {}", args[1]);
             std::process::exit(1);
@@ -1768,10 +2035,11 @@ fn generate_all() -> Result<()> {
         simd_tests.len()
     );
 
+    // Run safety validation on generated code
+    println!("\n=== Validating Magetypes Safety ===");
+    validate_magetypes()?;
+
     println!("\n=== Generation Complete ===");
-    println!("  - Wrappers: src/generated/");
-    println!("  - Tests: tests/generated_*.rs");
-    println!("  - Reference: docs/INTRINSIC_REFERENCE.md");
     println!("  - SIMD types: magetypes/src/simd/");
 
     Ok(())

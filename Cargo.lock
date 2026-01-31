@@ -798,6 +798,7 @@ dependencies = [
  "indoc",
  "proc-macro2",
  "quote",
+ "regex",
  "semver",
  "syn",
  "toml 0.8.23",
