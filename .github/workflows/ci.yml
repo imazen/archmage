@@ -181,32 +181,15 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-unknown-linux-gnu
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
-
-      - name: Fetch safe_unaligned_simd
-        run: cargo fetch
 
       - name: Run generator
         run: cargo run -p xtask -- generate
 
       - name: Check for differences
         run: |
-          # Check wrappers
-          if ! git diff --exit-code src/generated/; then
-            echo "::error::Generated wrappers differ from committed code!"
-            echo "Run 'cargo xtask generate' locally and commit the changes."
-            exit 1
-          fi
-          # Check archmage tests
-          if ! git diff --exit-code tests/generated_*.rs; then
-            echo "::error::Generated tests differ from committed code!"
-            echo "Run 'cargo xtask generate' locally and commit the changes."
-            exit 1
-          fi
           # Check magetypes SIMD types
           if ! git diff --exit-code magetypes/src/simd/; then
             echo "::error::Generated magetypes SIMD types differ from committed code!"
@@ -219,13 +202,13 @@ jobs:
             echo "Run 'cargo xtask generate' locally and commit the changes."
             exit 1
           fi
-          # Check docs
-          if ! git diff --exit-code docs/INTRINSIC_REFERENCE.md; then
-            echo "::error::Generated docs differ from committed code!"
+          # Check reference docs
+          if ! git diff --exit-code docs/x86-intrinsics-by-token.md docs/aarch64-intrinsics-by-token.md docs/memory-ops-reference.md; then
+            echo "::error::Generated reference docs differ from committed code!"
             echo "Run 'cargo xtask generate' locally and commit the changes."
             exit 1
           fi
-          echo "✓ All generated code matches committed code"
+          echo "All generated code matches committed code"
 
   # ==========================================================================
   # Safety validation - ensure token bounds provide required features
@@ -238,21 +221,11 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-unknown-linux-gnu
-
-      - name: Install cargo-expand
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-expand
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Fetch safe_unaligned_simd
-        run: cargo fetch
-
-      - name: Validate wrappers
+      - name: Validate magetypes safety
         run: cargo run -p xtask -- validate
 
   # ==========================================================================
