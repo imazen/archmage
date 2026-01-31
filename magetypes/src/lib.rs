@@ -7,7 +7,7 @@
 //!
 //! ## Supported Platforms
 //!
-//! - **x86-64**: SSE4.1 (128-bit), AVX2 (256-bit), AVX-512 (512-bit)
+//! - **x86-64**: x86-64-v3 (128-bit, 256-bit), AVX-512 (512-bit)
 //! - **AArch64**: NEON (128-bit)
 //! - **WASM**: SIMD128 (128-bit) - compile with `RUSTFLAGS="-C target-feature=+simd128"`
 //!
@@ -16,10 +16,10 @@
 //! ```no_run
 //! # #[cfg(target_arch = "x86_64")]
 //! # fn main() {
-//! use archmage::{Avx2FmaToken, SimdToken};
+//! use archmage::{X64V3Token, SimdToken};
 //! use magetypes::f32x8;
 //!
-//! if let Some(token) = Avx2FmaToken::try_new() {
+//! if let Some(token) = X64V3Token::try_new() {
 //!     let a = f32x8::splat(token, 1.0);
 //!     let b = f32x8::splat(token, 2.0);
 //!     let c = a + b;  // Natural operators!

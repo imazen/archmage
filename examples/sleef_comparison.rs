@@ -165,41 +165,41 @@ fn sleef_cbrt_u35_f32(input: &[f32], output: &mut [f32]) {
 // Archmage implementations using #[arcane] macro
 // ============================================================================
 
-use archmage::{Avx2FmaToken, SimdToken, arcane};
+use archmage::{SimdToken, X64V3Token, arcane};
 use magetypes::simd::f32x8 as am_f32x8;
 
 #[arcane]
-fn exp2_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn exp2_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     am_f32x8::load(token, input).exp2_lowp().to_array()
 }
 
 #[arcane]
-fn log2_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn log2_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     am_f32x8::load(token, input).log2_lowp().to_array()
 }
 
 #[arcane]
-fn ln_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn ln_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     am_f32x8::load(token, input).ln_lowp().to_array()
 }
 
 #[arcane]
-fn exp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn exp_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     am_f32x8::load(token, input).exp_lowp().to_array()
 }
 
 #[arcane]
-fn pow_chunk(token: Avx2FmaToken, input: &[f32; 8], exp: f32) -> [f32; 8] {
+fn pow_chunk(token: X64V3Token, input: &[f32; 8], exp: f32) -> [f32; 8] {
     am_f32x8::load(token, input).pow_lowp(exp).to_array()
 }
 
 #[arcane]
-fn cbrt_midp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn cbrt_midp_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     am_f32x8::load(token, input).cbrt_midp().to_array()
 }
 
 fn archmage_exp2_f32(input: &[f32], output: &mut [f32]) {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -215,7 +215,7 @@ fn archmage_exp2_f32(input: &[f32], output: &mut [f32]) {
 }
 
 fn archmage_log2_f32(input: &[f32], output: &mut [f32]) {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -231,7 +231,7 @@ fn archmage_log2_f32(input: &[f32], output: &mut [f32]) {
 }
 
 fn archmage_ln_f32(input: &[f32], output: &mut [f32]) {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -247,7 +247,7 @@ fn archmage_ln_f32(input: &[f32], output: &mut [f32]) {
 }
 
 fn archmage_exp_f32(input: &[f32], output: &mut [f32]) {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -263,7 +263,7 @@ fn archmage_exp_f32(input: &[f32], output: &mut [f32]) {
 }
 
 fn archmage_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -279,7 +279,7 @@ fn archmage_pow_f32(input: &[f32], exp: f32, output: &mut [f32]) {
 }
 
 fn archmage_cbrt_midp_f32(input: &[f32], output: &mut [f32]) {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -328,7 +328,7 @@ fn main() {
     println!("N = {} elements, {} iterations\n", N, ITERATIONS);
 
     // Check if AVX2+FMA is available
-    if Avx2FmaToken::try_new().is_none() {
+    if X64V3Token::try_new().is_none() {
         eprintln!("AVX2+FMA not available, skipping archmage benchmarks");
         return;
     }

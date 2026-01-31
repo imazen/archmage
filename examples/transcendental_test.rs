@@ -8,46 +8,46 @@ fn main() {}
 
 #[cfg(target_arch = "x86_64")]
 mod x86_impl {
-    use archmage::{Avx2FmaToken, SimdToken, arcane};
+    use archmage::{SimdToken, X64V3Token, arcane};
     use magetypes::simd::f32x8;
 
     #[arcane]
-    pub fn test_log2(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    pub fn test_log2(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
         f32x8::load(token, input).log2_lowp().to_array()
     }
 
     #[arcane]
-    pub fn test_exp2(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    pub fn test_exp2(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
         f32x8::load(token, input).exp2_lowp().to_array()
     }
 
     #[arcane]
-    pub fn test_pow(token: Avx2FmaToken, input: &[f32; 8], n: f32) -> [f32; 8] {
+    pub fn test_pow(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
         f32x8::load(token, input).pow_lowp(n).to_array()
     }
 
     #[arcane]
-    pub fn test_ln(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    pub fn test_ln(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
         f32x8::load(token, input).ln_lowp().to_array()
     }
 
     #[arcane]
-    pub fn test_exp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    pub fn test_exp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
         f32x8::load(token, input).exp_lowp().to_array()
     }
 
     #[arcane]
-    pub fn test_log10(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    pub fn test_log10(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
         f32x8::load(token, input).log10_lowp().to_array()
     }
 
     #[arcane]
-    pub fn test_cbrt_midp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+    pub fn test_cbrt_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
         f32x8::load(token, input).cbrt_midp().to_array()
     }
 
     pub fn main() {
-        let Some(token) = Avx2FmaToken::try_new() else {
+        let Some(token) = X64V3Token::try_new() else {
             eprintln!("AVX2+FMA not available");
             return;
         };

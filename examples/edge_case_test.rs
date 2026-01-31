@@ -4,31 +4,31 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{Avx2FmaToken, SimdToken, arcane};
+use archmage::{SimdToken, X64V3Token, arcane};
 use magetypes::simd::f32x8;
 
 #[arcane]
-fn test_exp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn test_exp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).exp_midp().to_array()
 }
 
 #[arcane]
-fn test_exp2(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn test_exp2(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).exp2_midp().to_array()
 }
 
 #[arcane]
-fn test_log2(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn test_log2(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).log2_midp().to_array()
 }
 
 #[arcane]
-fn test_ln(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn test_ln(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).ln_midp().to_array()
 }
 
 #[arcane]
-fn test_cbrt(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn test_cbrt(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).cbrt_midp().to_array()
 }
 
@@ -56,7 +56,7 @@ fn compare(name: &str, input: f32, std_result: f32, our_result: f32) {
 }
 
 fn main() {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available");
         return;
     };

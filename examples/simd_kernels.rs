@@ -13,7 +13,7 @@
 #![allow(clippy::excessive_precision)]
 #![allow(clippy::approx_constant)]
 
-use archmage::{Avx2FmaToken, SimdToken, X64V2Token, arcane};
+use archmage::{SimdToken, X64V2Token, X64V3Token, arcane};
 use core::arch::x86_64::*;
 use magetypes::simd::f32x8;
 use std::time::Instant;
@@ -70,7 +70,7 @@ pub fn dct4x4_vp8(token: X64V2Token, block: &mut [i32; 16]) {
 /// Based on the jpegli-rs implementation. Processes 8 independent
 /// 8-point DCTs in parallel (one per lane).
 #[arcane]
-pub fn dct8_butterfly(token: Avx2FmaToken, m: &mut [f32x8; 8]) {
+pub fn dct8_butterfly(token: X64V3Token, m: &mut [f32x8; 8]) {
     // WC8 coefficients
     let wc0 = f32x8::splat(token, 0.5097955791041592);
     let wc1 = f32x8::splat(token, 0.6013448869350453);
@@ -154,7 +154,7 @@ pub fn dct8_butterfly(token: Avx2FmaToken, m: &mut [f32x8; 8]) {
 /// Takes 16 consecutive inputs, extracts even/odd pairs for 8 outputs.
 /// Key operation: _mm256_permutevar8x32_ps for variable gather.
 #[arcane]
-pub fn downsample_2x2_row(token: Avx2FmaToken, row0: &[f32], row1: &[f32], output: &mut [f32]) {
+pub fn downsample_2x2_row(token: X64V3Token, row0: &[f32], row1: &[f32], output: &mut [f32]) {
     debug_assert!(row0.len() >= output.len() * 2);
     debug_assert!(row1.len() >= output.len() * 2);
 
@@ -203,12 +203,7 @@ pub fn downsample_2x2_row(token: Avx2FmaToken, row0: &[f32], row1: &[f32], outpu
 /// Cb = -0.169 R - 0.331 G + 0.500 B + 128
 /// Cr =  0.500 R - 0.419 G - 0.081 B + 128
 #[arcane]
-pub fn rgb_to_ycbcr_8px(
-    token: Avx2FmaToken,
-    r: f32x8,
-    g: f32x8,
-    b: f32x8,
-) -> (f32x8, f32x8, f32x8) {
+pub fn rgb_to_ycbcr_8px(token: X64V3Token, r: f32x8, g: f32x8, b: f32x8) -> (f32x8, f32x8, f32x8) {
     let offset = f32x8::splat(token, 128.0);
 
     // Y coefficients
@@ -291,7 +286,7 @@ pub fn convolve_horizontal_u8(
 ///
 /// Uses sqrt chains to approximate x^2.4 ≈ x^2 * x^0.4
 #[arcane]
-pub fn srgb_to_linear_8px(token: Avx2FmaToken, srgb: f32x8) -> f32x8 {
+pub fn srgb_to_linear_8px(token: X64V3Token, srgb: f32x8) -> f32x8 {
     let threshold = f32x8::splat(token, 0.04045);
     let linear_scale = f32x8::splat(token, 1.0 / 12.92);
     let offset = f32x8::splat(token, 0.055);
@@ -320,7 +315,7 @@ pub fn srgb_to_linear_8px(token: Avx2FmaToken, srgb: f32x8) -> f32x8 {
 
 /// Linear to sRGB conversion
 #[arcane]
-pub fn linear_to_srgb_8px(token: Avx2FmaToken, linear: f32x8) -> f32x8 {
+pub fn linear_to_srgb_8px(token: X64V3Token, linear: f32x8) -> f32x8 {
     let threshold = f32x8::splat(token, 0.0031308);
     let linear_scale = f32x8::splat(token, 12.92);
     let gamma_scale = f32x8::splat(token, 1.055);
@@ -354,7 +349,7 @@ pub fn linear_to_srgb_8px(token: Avx2FmaToken, linear: f32x8) -> f32x8 {
 
 /// Multiply blend: out = src * dst (per channel)
 #[arcane]
-pub fn blend_multiply_2px(_token: Avx2FmaToken, src: f32x8, dst: f32x8) -> f32x8 {
+pub fn blend_multiply_2px(_token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
     let result = src * dst;
 
     // Preserve alpha (indices 3 and 7) from src
@@ -365,7 +360,7 @@ pub fn blend_multiply_2px(_token: Avx2FmaToken, src: f32x8, dst: f32x8) -> f32x8
 
 /// Screen blend: out = 1 - (1-src) * (1-dst)
 #[arcane]
-pub fn blend_screen_2px(token: Avx2FmaToken, src: f32x8, dst: f32x8) -> f32x8 {
+pub fn blend_screen_2px(token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
     let one = f32x8::splat(token, 1.0);
 
     let inv_src = one - src;
@@ -381,7 +376,7 @@ pub fn blend_screen_2px(token: Avx2FmaToken, src: f32x8, dst: f32x8) -> f32x8 {
 
 /// Overlay blend: if dst < 0.5: 2*src*dst, else: 1-2*(1-src)*(1-dst)
 #[arcane]
-pub fn blend_overlay_2px(token: Avx2FmaToken, src: f32x8, dst: f32x8) -> f32x8 {
+pub fn blend_overlay_2px(token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
     let one = f32x8::splat(token, 1.0);
     let two = f32x8::splat(token, 2.0);
     let half = f32x8::splat(token, 0.5);
@@ -413,7 +408,7 @@ pub fn blend_overlay_2px(token: Avx2FmaToken, src: f32x8, dst: f32x8) -> f32x8 {
 /// Each output is a weighted sum of `n_points` inputs spaced `stride` apart.
 #[arcane]
 pub fn reduce_horizontal_f32(
-    _token: Avx2FmaToken,
+    _token: X64V3Token,
     input: &[f32],
     output: &mut [f32],
     weights: &[f32],
@@ -485,7 +480,7 @@ fn test_correctness() {
     println!("=== Correctness Tests ===\n");
 
     // Test sRGB conversion
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let srgb_vals = [0.0, 0.04, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0];
         let srgb = f32x8::from_array(token, srgb_vals);
         let linear = srgb_to_linear_8px(token, srgb);
@@ -553,7 +548,7 @@ fn benchmark() {
         PIXELS, ITERATIONS
     );
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         // sRGB→Linear benchmark
         let srgb_data: Vec<f32> = (0..PIXELS).map(|i| (i % 256) as f32 / 255.0).collect();
         let mut linear_data = vec![0.0f32; PIXELS];
@@ -704,7 +699,7 @@ fn main() {
 
     println!("=== Key Patterns ===\n");
     println!("  Token-gated dispatch:");
-    println!("    if let Some(token) = Avx2FmaToken::try_new() {{ ... }}");
+    println!("    if let Some(token) = X64V3Token::try_new() {{ ... }}");
     println!();
     println!("  FMA chains for matrix ops:");
     println!("    y = r.mul_add(ky_r, g.mul_add(ky_g, b * ky_b));");

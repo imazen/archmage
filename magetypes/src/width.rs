@@ -11,7 +11,7 @@
 //! ```no_run
 //! # #[cfg(target_arch = "x86_64")]
 //! # fn main() {
-//! use archmage::{Avx2FmaToken, SimdToken};
+//! use archmage::{X64V3Token, SimdToken};
 //! use magetypes::WidthDispatch;
 //!
 //! // Generic over any token that implements WidthDispatch
@@ -19,7 +19,7 @@
 //!     token.f32x8_load(data)
 //! }
 //!
-//! if let Some(token) = Avx2FmaToken::try_new() {
+//! if let Some(token) = X64V3Token::try_new() {
 //!     let v = load_data(token, &[1.0; 8]);
 //!     // On AVX2: F32x8 is native magetypes::f32x8
 //!     // On SSE: F32x8 would be polyfilled (2x f32x4)
@@ -299,7 +299,7 @@ pub trait WidthDispatch: SimdToken + Copy {
 #[cfg(target_arch = "x86_64")]
 mod x86_impl {
     use super::WidthDispatch;
-    use archmage::{Avx2FmaToken, SimdToken, Sse41Token};
+    use archmage::{SimdToken, X64V3Token};
 
     // Import native types (re-exported at simd level)
     use crate::simd::{
@@ -311,10 +311,10 @@ mod x86_impl {
     use crate::simd::polyfill::avx2 as poly512;
 
     // ========================================================================
-    // Avx2FmaToken Implementation
+    // X64V3Token Implementation
     // ========================================================================
 
-    impl WidthDispatch for Avx2FmaToken {
+    impl WidthDispatch for X64V3Token {
         // 128-bit types (native SSE, but accessible via AVX2 token)
         type F32x4 = f32x4;
         type F64x2 = f64x2;
@@ -355,19 +355,19 @@ mod x86_impl {
         // f32x4 constructors
         #[inline(always)]
         fn f32x4_splat(self, v: f32) -> Self::F32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             f32x4::splat(token, v)
         }
 
         #[inline(always)]
         fn f32x4_zero(self) -> Self::F32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             f32x4::zero(token)
         }
 
         #[inline(always)]
         fn f32x4_load(self, data: &[f32; 4]) -> Self::F32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             f32x4::load(token, data)
         }
 
@@ -406,19 +406,19 @@ mod x86_impl {
         // f64x2 constructors
         #[inline(always)]
         fn f64x2_splat(self, v: f64) -> Self::F64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             f64x2::splat(token, v)
         }
 
         #[inline(always)]
         fn f64x2_zero(self) -> Self::F64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             f64x2::zero(token)
         }
 
         #[inline(always)]
         fn f64x2_load(self, data: &[f64; 2]) -> Self::F64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             f64x2::load(token, data)
         }
 
@@ -457,19 +457,19 @@ mod x86_impl {
         // i32x4 constructors
         #[inline(always)]
         fn i32x4_splat(self, v: i32) -> Self::I32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i32x4::splat(token, v)
         }
 
         #[inline(always)]
         fn i32x4_zero(self) -> Self::I32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i32x4::zero(token)
         }
 
         #[inline(always)]
         fn i32x4_load(self, data: &[i32; 4]) -> Self::I32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i32x4::load(token, data)
         }
 
@@ -508,19 +508,19 @@ mod x86_impl {
         // u8x16 constructors
         #[inline(always)]
         fn u8x16_splat(self, v: u8) -> Self::U8x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u8x16::splat(token, v)
         }
 
         #[inline(always)]
         fn u8x16_zero(self) -> Self::U8x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u8x16::zero(token)
         }
 
         #[inline(always)]
         fn u8x16_load(self, data: &[u8; 16]) -> Self::U8x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u8x16::load(token, data)
         }
 
@@ -543,21 +543,21 @@ mod x86_impl {
         // u8x64 constructors (array-based polyfill)
         #[inline(always)]
         fn u8x64_splat(self, v: u8) -> Self::U8x64 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = u8x16::splat(token, v);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn u8x64_zero(self) -> Self::U8x64 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = u8x16::zero(token);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn u8x64_load(self, data: &[u8; 64]) -> Self::U8x64 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             [
                 u8x16::load(token, data[0..16].try_into().unwrap()),
                 u8x16::load(token, data[16..32].try_into().unwrap()),
@@ -569,19 +569,19 @@ mod x86_impl {
         // i8x16 constructors
         #[inline(always)]
         fn i8x16_splat(self, v: i8) -> Self::I8x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i8x16::splat(token, v)
         }
 
         #[inline(always)]
         fn i8x16_zero(self) -> Self::I8x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i8x16::zero(token)
         }
 
         #[inline(always)]
         fn i8x16_load(self, data: &[i8; 16]) -> Self::I8x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i8x16::load(token, data)
         }
 
@@ -604,21 +604,21 @@ mod x86_impl {
         // i8x64 constructors (array-based polyfill)
         #[inline(always)]
         fn i8x64_splat(self, v: i8) -> Self::I8x64 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = i8x16::splat(token, v);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn i8x64_zero(self) -> Self::I8x64 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = i8x16::zero(token);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn i8x64_load(self, data: &[i8; 64]) -> Self::I8x64 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             [
                 i8x16::load(token, data[0..16].try_into().unwrap()),
                 i8x16::load(token, data[16..32].try_into().unwrap()),
@@ -630,19 +630,19 @@ mod x86_impl {
         // u16x8 constructors
         #[inline(always)]
         fn u16x8_splat(self, v: u16) -> Self::U16x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u16x8::splat(token, v)
         }
 
         #[inline(always)]
         fn u16x8_zero(self) -> Self::U16x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u16x8::zero(token)
         }
 
         #[inline(always)]
         fn u16x8_load(self, data: &[u16; 8]) -> Self::U16x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u16x8::load(token, data)
         }
 
@@ -665,21 +665,21 @@ mod x86_impl {
         // u16x32 constructors (array-based polyfill)
         #[inline(always)]
         fn u16x32_splat(self, v: u16) -> Self::U16x32 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = u16x8::splat(token, v);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn u16x32_zero(self) -> Self::U16x32 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = u16x8::zero(token);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn u16x32_load(self, data: &[u16; 32]) -> Self::U16x32 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             [
                 u16x8::load(token, data[0..8].try_into().unwrap()),
                 u16x8::load(token, data[8..16].try_into().unwrap()),
@@ -691,19 +691,19 @@ mod x86_impl {
         // i16x8 constructors
         #[inline(always)]
         fn i16x8_splat(self, v: i16) -> Self::I16x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i16x8::splat(token, v)
         }
 
         #[inline(always)]
         fn i16x8_zero(self) -> Self::I16x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i16x8::zero(token)
         }
 
         #[inline(always)]
         fn i16x8_load(self, data: &[i16; 8]) -> Self::I16x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i16x8::load(token, data)
         }
 
@@ -726,21 +726,21 @@ mod x86_impl {
         // i16x32 constructors (array-based polyfill)
         #[inline(always)]
         fn i16x32_splat(self, v: i16) -> Self::I16x32 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = i16x8::splat(token, v);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn i16x32_zero(self) -> Self::I16x32 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = i16x8::zero(token);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn i16x32_load(self, data: &[i16; 32]) -> Self::I16x32 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             [
                 i16x8::load(token, data[0..8].try_into().unwrap()),
                 i16x8::load(token, data[8..16].try_into().unwrap()),
@@ -752,19 +752,19 @@ mod x86_impl {
         // u32x4 constructors
         #[inline(always)]
         fn u32x4_splat(self, v: u32) -> Self::U32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u32x4::splat(token, v)
         }
 
         #[inline(always)]
         fn u32x4_zero(self) -> Self::U32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u32x4::zero(token)
         }
 
         #[inline(always)]
         fn u32x4_load(self, data: &[u32; 4]) -> Self::U32x4 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u32x4::load(token, data)
         }
 
@@ -787,21 +787,21 @@ mod x86_impl {
         // u32x16 constructors (array-based polyfill)
         #[inline(always)]
         fn u32x16_splat(self, v: u32) -> Self::U32x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = u32x4::splat(token, v);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn u32x16_zero(self) -> Self::U32x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = u32x4::zero(token);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn u32x16_load(self, data: &[u32; 16]) -> Self::U32x16 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             [
                 u32x4::load(token, data[0..4].try_into().unwrap()),
                 u32x4::load(token, data[4..8].try_into().unwrap()),
@@ -813,19 +813,19 @@ mod x86_impl {
         // i64x2 constructors
         #[inline(always)]
         fn i64x2_splat(self, v: i64) -> Self::I64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i64x2::splat(token, v)
         }
 
         #[inline(always)]
         fn i64x2_zero(self) -> Self::I64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i64x2::zero(token)
         }
 
         #[inline(always)]
         fn i64x2_load(self, data: &[i64; 2]) -> Self::I64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             i64x2::load(token, data)
         }
 
@@ -848,21 +848,21 @@ mod x86_impl {
         // i64x8 constructors (array-based polyfill)
         #[inline(always)]
         fn i64x8_splat(self, v: i64) -> Self::I64x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = i64x2::splat(token, v);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn i64x8_zero(self) -> Self::I64x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = i64x2::zero(token);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn i64x8_load(self, data: &[i64; 8]) -> Self::I64x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             [
                 i64x2::load(token, data[0..2].try_into().unwrap()),
                 i64x2::load(token, data[2..4].try_into().unwrap()),
@@ -874,19 +874,19 @@ mod x86_impl {
         // u64x2 constructors
         #[inline(always)]
         fn u64x2_splat(self, v: u64) -> Self::U64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u64x2::splat(token, v)
         }
 
         #[inline(always)]
         fn u64x2_zero(self) -> Self::U64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u64x2::zero(token)
         }
 
         #[inline(always)]
         fn u64x2_load(self, data: &[u64; 2]) -> Self::U64x2 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             u64x2::load(token, data)
         }
 
@@ -909,21 +909,21 @@ mod x86_impl {
         // u64x8 constructors (array-based polyfill)
         #[inline(always)]
         fn u64x8_splat(self, v: u64) -> Self::U64x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = u64x2::splat(token, v);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn u64x8_zero(self) -> Self::U64x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             let part = u64x2::zero(token);
             [part, part, part, part]
         }
 
         #[inline(always)]
         fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8 {
-            let token = unsafe { Sse41Token::forge_token_dangerously() };
+            let token = unsafe { X64V3Token::forge_token_dangerously() };
             [
                 u64x2::load(token, data[0..2].try_into().unwrap()),
                 u64x2::load(token, data[2..4].try_into().unwrap()),

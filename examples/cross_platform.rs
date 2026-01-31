@@ -26,10 +26,10 @@ pub fn sum_of_squares(data: &[f32]) -> f32 {
     {
         use archmage::SimdToken;
         // Try AVX2 first (8 lanes), then SSE (4 lanes)
-        if let Some(token) = archmage::Avx2FmaToken::try_new() {
+        if let Some(token) = archmage::X64V3Token::try_new() {
             return sum_of_squares_avx2(token, data);
         }
-        if let Some(token) = archmage::Sse41Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::try_new() {
             return sum_of_squares_sse(token, data);
         }
     }
@@ -64,7 +64,7 @@ use archmage::arcane;
 /// 3. Calls that inner function safely (token proves CPU support)
 #[cfg(target_arch = "x86_64")]
 #[arcane]
-fn sum_of_squares_avx2(token: archmage::Avx2FmaToken, data: &[f32]) -> f32 {
+fn sum_of_squares_avx2(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     use magetypes::simd::f32x8;
 
     let mut acc = f32x8::zero(token);
@@ -87,7 +87,7 @@ fn sum_of_squares_avx2(token: archmage::Avx2FmaToken, data: &[f32]) -> f32 {
 /// SSE4.1 implementation (4 lanes)
 #[cfg(target_arch = "x86_64")]
 #[arcane]
-fn sum_of_squares_sse(token: archmage::Sse41Token, data: &[f32]) -> f32 {
+fn sum_of_squares_sse(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     use magetypes::simd::f32x4;
 
     let mut acc = f32x4::zero(token);
@@ -130,7 +130,7 @@ pub fn polynomial_eval(data: &mut [f32], a: f32, b: f32, c: f32) {
     #[cfg(target_arch = "x86_64")]
     {
         use archmage::SimdToken;
-        if let Some(token) = archmage::Avx2FmaToken::try_new() {
+        if let Some(token) = archmage::X64V3Token::try_new() {
             polynomial_eval_avx2(token, data, a, b, c);
             return;
         }
@@ -157,7 +157,7 @@ pub fn polynomial_eval(data: &mut [f32], a: f32, b: f32, c: f32) {
 /// a*x^2 + b*x + c = x * (a*x + b) + c = x.mul_add(x.mul_add(a, b), c)
 #[cfg(target_arch = "x86_64")]
 #[arcane]
-fn polynomial_eval_avx2(token: archmage::Avx2FmaToken, data: &mut [f32], a: f32, b: f32, c: f32) {
+fn polynomial_eval_avx2(token: archmage::X64V3Token, data: &mut [f32], a: f32, b: f32, c: f32) {
     use magetypes::simd::f32x8;
 
     let a_v = f32x8::splat(token, a);

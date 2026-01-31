@@ -156,7 +156,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("// Width-aliased namespaces for multi-width dispatch\n");
     code.push_str("//\n");
     code.push_str("// Use these with the #[multiwidth] macro to write width-agnostic code:\n");
-    code.push_str("//   use archmage::simd::avx2::*;  // f32xN = f32x8, Token = Avx2FmaToken\n");
+    code.push_str("//   use archmage::simd::avx2::*;  // f32xN = f32x8, Token = X64V3Token\n");
     code.push_str(
         "// ============================================================================\n\n",
     );
@@ -167,7 +167,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    //! SSE/SSE4.1 width aliases (128-bit SIMD)\n");
     code.push_str("    //!\n");
     code.push_str("    //! - `f32xN` = `f32x4` (4 lanes)\n");
-    code.push_str("    //! - `Token` = `Sse41Token`\n\n");
+    code.push_str("    //! - `Token` = `X64V3Token`\n\n");
     code.push_str("    pub use super::x86::w128::{\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W128) {
         let name = ty.name();
@@ -177,7 +177,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     // Also re-export concrete types for when you need them
     code.push_str("    pub use super::x86::w128::*;\n\n");
     code.push_str("    /// Token type for this width level\n");
-    code.push_str("    pub type Token = archmage::Sse41Token;\n\n");
+    code.push_str("    pub type Token = archmage::X64V3Token;\n\n");
     // Lane counts
     code.push_str("    /// Number of f32 lanes\n");
     code.push_str("    pub const LANES_F32: usize = 4;\n");
@@ -197,7 +197,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    //! AVX2+FMA width aliases (256-bit SIMD)\n");
     code.push_str("    //!\n");
     code.push_str("    //! - `f32xN` = `f32x8` (8 lanes)\n");
-    code.push_str("    //! - `Token` = `Avx2FmaToken`\n\n");
+    code.push_str("    //! - `Token` = `X64V3Token`\n\n");
     code.push_str("    pub use super::x86::w256::{\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W256) {
         let name = ty.name();
@@ -206,7 +206,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    };\n\n");
     code.push_str("    pub use super::x86::w256::*;\n\n");
     code.push_str("    /// Token type for this width level\n");
-    code.push_str("    pub type Token = archmage::Avx2FmaToken;\n\n");
+    code.push_str("    pub type Token = archmage::X64V3Token;\n\n");
     code.push_str("    pub const LANES_F32: usize = 8;\n");
     code.push_str("    pub const LANES_F64: usize = 4;\n");
     code.push_str("    pub const LANES_32: usize = 8;\n");
@@ -452,15 +452,15 @@ pub fn generate_simd_tests() -> String {
 #![allow(clippy::needless_range_loop)]
 
 use magetypes::simd::*;
-use archmage::{SimdToken, Avx2FmaToken};
+use archmage::{SimdToken, X64V3Token};
 
 "#,
     );
 
     // Basic tests for 256-bit types (most common)
     let test_types = [
-        ("f32x8", "Avx2FmaToken", "f32", "1.0", "2.0"),
-        ("i32x8", "Avx2FmaToken", "i32", "1", "2"),
+        ("f32x8", "X64V3Token", "f32", "1.0", "2.0"),
+        ("i32x8", "X64V3Token", "i32", "1", "2"),
     ];
 
     for (ty_name, token, elem, val1, val2) in test_types {
@@ -498,7 +498,7 @@ fn test_{ty_name}_load_store() {{
         r#"
 #[test]
 fn test_f32x8_transpose_8x8() {
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         // Create 8 row vectors: row[i] = [i*8, i*8+1, ..., i*8+7]
         let mut rows = [
             f32x8::from_array(token, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]),
@@ -536,7 +536,7 @@ fn test_f32x8_transpose_8x8() {
 
 #[test]
 fn test_f32x8_load_store_8x8() {
-    if let Some(_token) = Avx2FmaToken::try_new() {
+    if let Some(_token) = X64V3Token::try_new() {
         let input: [f32; 64] = core::array::from_fn(|i| i as f32);
         let rows = f32x8::load_8x8(&input);
 
@@ -557,7 +557,7 @@ fn test_f32x8_load_store_8x8() {
 
 #[test]
 fn test_f32x4_4ch_interleave() {
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         // Create 4 channel vectors (SoA format)
         let r = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
         let g = f32x4::from_array(token, [10.0, 20.0, 30.0, 40.0]);
@@ -582,7 +582,7 @@ fn test_f32x4_4ch_interleave() {
 
 #[test]
 fn test_f32x4_load_store_rgba_u8() {
-    if let Some(_token) = archmage::Sse41Token::try_new() {
+    if let Some(_token) = archmage::X64V3Token::try_new() {
         // 4 RGBA pixels: red, green, blue, white
         let rgba: [u8; 16] = [
             255, 0, 0, 255,     // red
@@ -605,7 +605,7 @@ fn test_f32x4_load_store_rgba_u8() {
 
 #[test]
 fn test_f32x8_load_store_rgba_u8() {
-    if let Some(_token) = Avx2FmaToken::try_new() {
+    if let Some(_token) = X64V3Token::try_new() {
         // 8 RGBA pixels
         let rgba: [u8; 32] = [
             255, 0, 0, 255,     // red

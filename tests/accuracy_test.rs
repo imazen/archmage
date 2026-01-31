@@ -5,7 +5,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{Avx2FmaToken, SimdToken, arcane};
+use archmage::{SimdToken, X64V3Token, arcane};
 use magetypes::simd::f32x8;
 
 // ============================================================================
@@ -13,62 +13,62 @@ use magetypes::simd::f32x8;
 // ============================================================================
 
 #[arcane]
-fn simd_cbrt_midp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_cbrt_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).cbrt_midp().to_array()
 }
 
 #[arcane]
-fn simd_pow_lowp(token: Avx2FmaToken, input: &[f32; 8], n: f32) -> [f32; 8] {
+fn simd_pow_lowp(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
     f32x8::load(token, input).pow_lowp(n).to_array()
 }
 
 #[arcane]
-fn simd_pow_midp(token: Avx2FmaToken, input: &[f32; 8], n: f32) -> [f32; 8] {
+fn simd_pow_midp(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
     f32x8::load(token, input).pow_midp(n).to_array()
 }
 
 #[arcane]
-fn simd_exp2_lowp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_exp2_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).exp2_lowp().to_array()
 }
 
 #[arcane]
-fn simd_exp2_midp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_exp2_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).exp2_midp().to_array()
 }
 
 #[arcane]
-fn simd_log2_lowp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_log2_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).log2_lowp().to_array()
 }
 
 #[arcane]
-fn simd_log2_midp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_log2_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).log2_midp().to_array()
 }
 
 #[arcane]
-fn simd_ln_lowp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_ln_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).ln_lowp().to_array()
 }
 
 #[arcane]
-fn simd_ln_midp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_ln_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).ln_midp().to_array()
 }
 
 #[arcane]
-fn simd_exp_lowp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_exp_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).exp_lowp().to_array()
 }
 
 #[arcane]
-fn simd_exp_midp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_exp_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).exp_midp().to_array()
 }
 
 #[arcane]
-fn simd_log10_lowp(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn simd_log10_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).log10_lowp().to_array()
 }
 
@@ -185,7 +185,7 @@ impl AccuracyStats {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_cbrt_midp_brute_force() {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -284,7 +284,7 @@ fn test_cbrt_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_pow_midp_brute_force() {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -356,7 +356,7 @@ fn test_pow_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_exp2_midp_brute_force() {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -388,7 +388,7 @@ fn test_exp2_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_log2_midp_brute_force() {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -428,7 +428,7 @@ fn test_log2_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_ln_midp_brute_force() {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -463,7 +463,7 @@ fn test_ln_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_exp_midp_brute_force() {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -501,7 +501,7 @@ fn test_exp_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_lowp_functions_brute_force() {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };

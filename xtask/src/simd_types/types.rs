@@ -152,16 +152,10 @@ impl SimdWidth {
     }
 
     /// Required token for this width
-    pub fn required_token(&self, needs_int_ops: bool) -> &'static str {
+    pub fn required_token(&self, _needs_int_ops: bool) -> &'static str {
         match self {
-            Self::W128 => "Sse41Token", // SSE4.1 for most useful ops
-            Self::W256 => {
-                if needs_int_ops {
-                    "Avx2FmaToken" // AVX2 for integer ops
-                } else {
-                    "Avx2FmaToken" // Use AVX2+FMA for consistency
-                }
-            }
+            Self::W128 => "X64V3Token",
+            Self::W256 => "X64V3Token",
             Self::W512 => "X64V4Token",
         }
     }

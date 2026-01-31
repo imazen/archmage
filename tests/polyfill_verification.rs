@@ -5,7 +5,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{Avx2FmaToken, SimdToken, Sse41Token};
+use archmage::{SimdToken, X64V3Token};
 use magetypes::simd::f32x8;
 use magetypes::simd::polyfill::sse as poly;
 
@@ -40,8 +40,8 @@ fn arrays_close(a: &[f32; 8], b: &[f32; 8], tolerance: f32) -> bool {
 
 #[test]
 fn verify_add() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => {
             eprintln!("AVX2 not available, skipping native comparison");
@@ -72,8 +72,8 @@ fn verify_add() {
 
 #[test]
 fn verify_sub() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -95,8 +95,8 @@ fn verify_sub() {
 
 #[test]
 fn verify_mul() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -118,8 +118,8 @@ fn verify_mul() {
 
 #[test]
 fn verify_div() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -141,8 +141,8 @@ fn verify_div() {
 
 #[test]
 fn verify_neg() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -166,8 +166,8 @@ fn verify_neg() {
 
 #[test]
 fn verify_min() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -192,8 +192,8 @@ fn verify_min() {
 
 #[test]
 fn verify_max() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -218,8 +218,8 @@ fn verify_max() {
 
 #[test]
 fn verify_abs() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -239,8 +239,8 @@ fn verify_abs() {
 
 #[test]
 fn verify_sqrt() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -260,8 +260,8 @@ fn verify_sqrt() {
 
 #[test]
 fn verify_floor() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -281,8 +281,8 @@ fn verify_floor() {
 
 #[test]
 fn verify_ceil() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -302,8 +302,8 @@ fn verify_ceil() {
 
 #[test]
 fn verify_round() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -327,8 +327,8 @@ fn verify_round() {
 
 #[test]
 fn verify_reduce_add() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -348,8 +348,8 @@ fn verify_reduce_add() {
 
 #[test]
 fn verify_reduce_max() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -369,8 +369,8 @@ fn verify_reduce_max() {
 
 #[test]
 fn verify_reduce_min() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -394,8 +394,8 @@ fn verify_reduce_min() {
 
 #[test]
 fn verify_edge_cases_infinity() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -442,8 +442,8 @@ fn verify_edge_cases_infinity() {
 
 #[test]
 fn verify_edge_cases_denormals() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -479,8 +479,8 @@ fn verify_edge_cases_denormals() {
 
 #[test]
 fn verify_mul_add() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -517,7 +517,7 @@ fn verify_mul_add() {
 
 #[test]
 fn verify_load_store_roundtrip() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
 
     let original = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     let v = poly::f32x8::load(sse, &original);
@@ -528,8 +528,8 @@ fn verify_load_store_roundtrip() {
 
 #[test]
 fn verify_splat() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -548,8 +548,8 @@ fn verify_splat() {
 
 #[test]
 fn verify_zero() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };
@@ -570,8 +570,8 @@ fn verify_zero() {
 
 #[test]
 fn verify_clamp() {
-    let sse = Sse41Token::try_new().expect("SSE4.1 required");
-    let avx = match Avx2FmaToken::try_new() {
+    let sse = X64V3Token::try_new().expect("SSE4.1 required");
+    let avx = match X64V3Token::try_new() {
         Some(t) => t,
         None => return,
     };

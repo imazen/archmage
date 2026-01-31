@@ -788,13 +788,15 @@ impl Parse for MultiwidthArgs {
                 "avx512" => args.avx512 = true,
                 "wasm" | "simd128" => args.wasm = true,
                 "neon" | "arm" => args.neon = true,
-                other => return Err(syn::Error::new(
-                    ident.span(),
-                    format!(
+                other => {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        format!(
                         "unknown multiwidth target: `{}`. Expected: sse, avx2, avx512, wasm, neon",
                         other
                     ),
-                )),
+                    ))
+                }
             }
             // Consume optional comma
             if input.peek(Token![,]) {
@@ -825,16 +827,16 @@ const X86_WIDTH_CONFIGS: &[WidthConfig] = &[
     WidthConfig {
         name: "sse",
         namespace: "magetypes::simd::sse",
-        token: "archmage::Sse41Token",
+        token: "archmage::X64V3Token",
         feature: None,
-        target_features: &["sse4.1"],
+        target_features: &["avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt"],
     },
     WidthConfig {
         name: "avx2",
         namespace: "magetypes::simd::avx2",
-        token: "archmage::Avx2FmaToken",
+        token: "archmage::X64V3Token",
         feature: None,
-        target_features: &["avx2", "fma"],
+        target_features: &["avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt"],
     },
     WidthConfig {
         name: "avx512",
@@ -877,7 +879,7 @@ const ARM_WIDTH_CONFIGS: &[WidthConfig] = &[WidthConfig {
 /// mod kernels {
 ///     // Inside this module, these types are available:
 ///     // - f32xN, i32xN, etc. (width-appropriate SIMD types)
-///     // - Token (the token type: Sse41Token, Avx2FmaToken, or X64V4Token)
+///     // - Token (the token type: X64V3Token for SSE/AVX2, or X64V4Token for AVX-512)
 ///     // - LANES_F32, LANES_32, etc. (lane count constants)
 ///
 ///     use archmage::simd::*;
@@ -892,8 +894,8 @@ const ARM_WIDTH_CONFIGS: &[WidthConfig] = &[WidthConfig {
 /// }
 ///
 /// // Generated modules:
-/// // - kernels::sse::normalize(token: Sse41Token, data: &mut [f32])
-/// // - kernels::avx2::normalize(token: Avx2FmaToken, data: &mut [f32])
+/// // - kernels::sse::normalize(token: X64V3Token, data: &mut [f32])
+/// // - kernels::avx2::normalize(token: X64V3Token, data: &mut [f32])
 /// // - kernels::avx512::normalize(token: X64V4Token, data: &mut [f32])  // if avx512 feature
 /// // - kernels::normalize(data: &mut [f32])  // runtime dispatcher
 /// ```

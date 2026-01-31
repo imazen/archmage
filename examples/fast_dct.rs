@@ -16,7 +16,7 @@
 #![allow(clippy::too_many_arguments)] // DCT functions take 8 vector arguments
 #![allow(clippy::empty_line_after_outer_attr)]
 
-use archmage::{Avx2FmaToken, SimdToken, arcane};
+use archmage::{SimdToken, X64V3Token, arcane};
 use magetypes::simd::f32x8;
 use std::time::Instant;
 
@@ -39,7 +39,7 @@ use std::time::Instant;
 /// Uses FMA (fused multiply-add) for maximum throughput.
 #[arcane]
 fn dct1d_8(
-    token: Avx2FmaToken,
+    token: X64V3Token,
     v0: f32x8,
     v1: f32x8,
     v2: f32x8,
@@ -167,7 +167,7 @@ fn dct1d_8(
 
 /// Transpose 8x8 matrix stored as 8 f32x8 vectors
 #[arcane]
-fn transpose_8x8_vecs(_token: Avx2FmaToken, rows: &[f32x8; 8]) -> [f32x8; 8] {
+fn transpose_8x8_vecs(_token: X64V3Token, rows: &[f32x8; 8]) -> [f32x8; 8] {
     use core::arch::x86_64::*;
 
     // Extract raw __m256 from our f32x8 wrappers
@@ -227,7 +227,7 @@ fn transpose_8x8_vecs(_token: Avx2FmaToken, rows: &[f32x8; 8]) -> [f32x8; 8] {
 
 /// Load 8x8 block from memory into 8 f32x8 vectors (one per row)
 #[arcane]
-fn load_block(token: Avx2FmaToken, block: &[f32; 64]) -> [f32x8; 8] {
+fn load_block(token: X64V3Token, block: &[f32; 64]) -> [f32x8; 8] {
     [
         f32x8::load(token, block[0..8].try_into().unwrap()),
         f32x8::load(token, block[8..16].try_into().unwrap()),
@@ -242,7 +242,7 @@ fn load_block(token: Avx2FmaToken, block: &[f32; 64]) -> [f32x8; 8] {
 
 /// Store 8 f32x8 vectors back to 8x8 block
 #[arcane]
-fn store_block(_token: Avx2FmaToken, vecs: &[f32x8; 8], block: &mut [f32; 64]) {
+fn store_block(_token: X64V3Token, vecs: &[f32x8; 8], block: &mut [f32; 64]) {
     vecs[0].store((&mut block[0..8]).try_into().unwrap());
     vecs[1].store((&mut block[8..16]).try_into().unwrap());
     vecs[2].store((&mut block[16..24]).try_into().unwrap());
@@ -257,7 +257,7 @@ fn store_block(_token: Avx2FmaToken, vecs: &[f32x8; 8], block: &mut [f32; 64]) {
 ///
 /// Process: DCT on rows -> transpose -> DCT on columns -> transpose
 #[arcane]
-pub fn fast_dct8x8(token: Avx2FmaToken, block: &mut [f32; 64]) {
+pub fn fast_dct8x8(token: X64V3Token, block: &mut [f32; 64]) {
     // Load block into vectors (one row per vector)
     let rows = load_block(token, block);
 
@@ -283,7 +283,7 @@ pub fn fast_dct8x8(token: Avx2FmaToken, block: &mut [f32; 64]) {
 
 /// Batch process multiple 8x8 blocks
 #[arcane]
-pub fn fast_dct8x8_batch(token: Avx2FmaToken, blocks: &mut [[f32; 64]]) {
+pub fn fast_dct8x8_batch(token: X64V3Token, blocks: &mut [[f32; 64]]) {
     for block in blocks {
         fast_dct8x8(token, block);
     }
@@ -427,7 +427,7 @@ fn dct8x8_scalar(block: &mut [f32; 64]) {
 fn test_correctness() {
     println!("=== Correctness Tests ===\n");
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         // Test with gradient pattern
         let mut scalar_block: [f32; 64] = core::array::from_fn(|i| i as f32);
         let mut fast_block = scalar_block;
@@ -499,7 +499,7 @@ fn benchmark() {
     );
 
     // Fast AVX2 implementation
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             block = original;

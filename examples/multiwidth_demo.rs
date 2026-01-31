@@ -393,7 +393,7 @@ fn bench_sum() {
     // Width-specific implementations
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..BENCH_ITERATIONS {
             result = kernels::sse::sum(token, &data);
@@ -407,7 +407,7 @@ fn bench_sum() {
         );
     }
 
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..BENCH_ITERATIONS {
             result = kernels::avx2::sum(token, &data);
@@ -479,7 +479,7 @@ fn bench_dot_product() {
 
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..BENCH_ITERATIONS {
             result = kernels::sse::dot_product(token, &a, &b);
@@ -493,7 +493,7 @@ fn bench_dot_product() {
         );
     }
 
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..BENCH_ITERATIONS {
             result = kernels::avx2::dot_product(token, &a, &b);
@@ -563,7 +563,7 @@ fn bench_scale() {
 
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..BENCH_ITERATIONS {
             data.copy_from_slice(&original);
@@ -578,7 +578,7 @@ fn bench_scale() {
         );
     }
 
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..BENCH_ITERATIONS {
             data.copy_from_slice(&original);
@@ -649,7 +649,7 @@ fn bench_l2_norm() {
 
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..BENCH_ITERATIONS {
             result = kernels::sse::l2_norm(token, &data);
@@ -663,7 +663,7 @@ fn bench_l2_norm() {
         );
     }
 
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..BENCH_ITERATIONS {
             result = kernels::avx2::l2_norm(token, &data);
@@ -701,14 +701,14 @@ fn show_available_widths() {
     use archmage::SimdToken;
 
     print!("  SSE4.1 (128-bit, 4 lanes):  ");
-    if archmage::Sse41Token::try_new().is_some() {
+    if archmage::X64V3Token::try_new().is_some() {
         println!("AVAILABLE");
     } else {
         println!("not available");
     }
 
     print!("  AVX2+FMA (256-bit, 8 lanes): ");
-    if archmage::Avx2FmaToken::try_new().is_some() {
+    if archmage::X64V3Token::try_new().is_some() {
         println!("AVAILABLE");
     } else {
         println!("not available");

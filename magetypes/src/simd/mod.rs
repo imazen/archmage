@@ -13,7 +13,6 @@
 #![allow(clippy::missing_transmute_annotations)]
 #![allow(clippy::manual_is_multiple_of)]
 
-
 // ============================================================================
 // Comparison Traits (return masks, not bool)
 // ============================================================================
@@ -53,7 +52,6 @@ pub trait SimdGe<Rhs = Self> {
     type Output;
     fn simd_ge(self, rhs: Rhs) -> Self::Output;
 }
-
 
 // ============================================================================
 // Implementation Macros
@@ -296,7 +294,7 @@ pub mod polyfill;
 // Width-aliased namespaces for multi-width dispatch
 //
 // Use these with the #[multiwidth] macro to write width-agnostic code:
-//   use archmage::simd::avx2::*;  // f32xN = f32x8, Token = Avx2FmaToken
+//   use archmage::simd::avx2::*;  // f32xN = f32x8, Token = X64V3Token
 // ============================================================================
 
 #[cfg(target_arch = "x86_64")]
@@ -304,25 +302,17 @@ pub mod sse {
     //! SSE/SSE4.1 width aliases (128-bit SIMD)
     //!
     //! - `f32xN` = `f32x4` (4 lanes)
-    //! - `Token` = `Sse41Token`
+    //! - `Token` = `X64V3Token`
 
     pub use super::x86::w128::{
-        f32x4 as f32xN,
-        f64x2 as f64xN,
-        i8x16 as i8xN,
-        u8x16 as u8xN,
-        i16x8 as i16xN,
-        u16x8 as u16xN,
-        i32x4 as i32xN,
-        u32x4 as u32xN,
-        i64x2 as i64xN,
-        u64x2 as u64xN,
+        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
+        i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
     pub use super::x86::w128::*;
 
     /// Token type for this width level
-    pub type Token = archmage::Sse41Token;
+    pub type Token = archmage::X64V3Token;
 
     /// Number of f32 lanes
     pub const LANES_F32: usize = 4;
@@ -341,25 +331,17 @@ pub mod avx2 {
     //! AVX2+FMA width aliases (256-bit SIMD)
     //!
     //! - `f32xN` = `f32x8` (8 lanes)
-    //! - `Token` = `Avx2FmaToken`
+    //! - `Token` = `X64V3Token`
 
     pub use super::x86::w256::{
-        f32x8 as f32xN,
-        f64x4 as f64xN,
-        i8x32 as i8xN,
-        u8x32 as u8xN,
-        i16x16 as i16xN,
-        u16x16 as u16xN,
-        i32x8 as i32xN,
-        u32x8 as u32xN,
-        i64x4 as i64xN,
-        u64x4 as u64xN,
+        f32x8 as f32xN, f64x4 as f64xN, i8x32 as i8xN, i16x16 as i16xN, i32x8 as i32xN,
+        i64x4 as i64xN, u8x32 as u8xN, u16x16 as u16xN, u32x8 as u32xN, u64x4 as u64xN,
     };
 
     pub use super::x86::w256::*;
 
     /// Token type for this width level
-    pub type Token = archmage::Avx2FmaToken;
+    pub type Token = archmage::X64V3Token;
 
     pub const LANES_F32: usize = 8;
     pub const LANES_F64: usize = 4;
@@ -376,16 +358,8 @@ pub mod avx512 {
     //! - `Token` = `X64V4Token`
 
     pub use super::x86::w512::{
-        f32x16 as f32xN,
-        f64x8 as f64xN,
-        i8x64 as i8xN,
-        u8x64 as u8xN,
-        i16x32 as i16xN,
-        u16x32 as u16xN,
-        i32x16 as i32xN,
-        u32x16 as u32xN,
-        i64x8 as i64xN,
-        u64x8 as u64xN,
+        f32x16 as f32xN, f64x8 as f64xN, i8x64 as i8xN, i16x32 as i16xN, i32x16 as i32xN,
+        i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
     };
 
     pub use super::x86::w512::*;
@@ -408,9 +382,8 @@ pub mod neon {
     //! - `Token` = `NeonToken`
 
     pub use super::arm::w128::{
-        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,
-        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,
-        u32x4 as u32xN, u64x2 as u64xN,
+        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
+        i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
     pub use super::arm::w128::*;
@@ -438,9 +411,8 @@ pub mod simd128 {
     //! - `Token` = `Simd128Token`
 
     pub use super::wasm::w128::{
-        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,
-        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,
-        u32x4 as u32xN, u64x2 as u64xN,
+        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
+        i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
     pub use super::wasm::w128::*;

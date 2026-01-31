@@ -1765,12 +1765,40 @@ pub fn generate_transcendental_ops(ty: &SimdType) -> String {
             prefix
         )
         .unwrap();
-        writeln!(
-            code,
-            "            let exp_shifted = {}_srai_epi64::<52>(exp_bits);",
-            prefix
-        )
-        .unwrap();
+        // _mm_srai_epi64 / _mm256_srai_epi64 require AVX-512F.
+        // For W128/W256, polyfill via scalar extraction.
+        if ty.width == SimdWidth::W512 {
+            writeln!(
+                code,
+                "            let exp_shifted = {}_srai_epi64::<52>(exp_bits);",
+                prefix
+            )
+            .unwrap();
+        } else {
+            let lanes = ty.lanes();
+            writeln!(
+                code,
+                "            let exp_arr_raw: [i64; {lanes}] = core::mem::transmute(exp_bits);"
+            )
+            .unwrap();
+            match ty.width {
+                SimdWidth::W128 => {
+                    writeln!(
+                        code,
+                        "            let exp_shifted = _mm_set_epi64x(exp_arr_raw[1] >> 52, exp_arr_raw[0] >> 52);"
+                    )
+                    .unwrap();
+                }
+                SimdWidth::W256 => {
+                    writeln!(
+                        code,
+                        "            let exp_shifted = _mm256_set_epi64x(exp_arr_raw[3] >> 52, exp_arr_raw[2] >> 52, exp_arr_raw[1] >> 52, exp_arr_raw[0] >> 52);"
+                    )
+                    .unwrap();
+                }
+                _ => unreachable!(),
+            }
+        }
         writeln!(code, "").unwrap();
         writeln!(code, "            let mantissa_bits = {}_sub_epi64(x_bits, {}_slli_epi64::<52>(exp_shifted));", prefix, prefix).unwrap();
         writeln!(

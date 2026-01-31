@@ -65,8 +65,8 @@ impl Arch for X86 {
 
     fn required_token(width: SimdWidth, _needs_int_ops: bool) -> &'static str {
         match width {
-            SimdWidth::W128 => "Sse41Token",
-            SimdWidth::W256 => "Avx2FmaToken",
+            SimdWidth::W128 => "X64V3Token",
+            SimdWidth::W256 => "X64V3Token",
             SimdWidth::W512 => "X64V4Token",
         }
     }

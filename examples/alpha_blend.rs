@@ -14,7 +14,7 @@
 #![allow(clippy::manual_is_multiple_of)]
 #![allow(clippy::let_and_return)]
 
-use archmage::{Avx2FmaToken, SimdToken, arcane};
+use archmage::{SimdToken, X64V3Token, arcane};
 use core::arch::x86_64::*;
 use magetypes::simd::f32x8;
 use std::time::Instant;
@@ -30,7 +30,7 @@ use std::time::Instant;
 ///
 /// Memory layout: [R0,G0,B0,A0, R1,G1,B1,A1]
 #[arcane]
-fn premultiply_2px(_token: Avx2FmaToken, pixels: f32x8) -> f32x8 {
+fn premultiply_2px(_token: X64V3Token, pixels: f32x8) -> f32x8 {
     // Extract alpha values and broadcast to all channels of each pixel
     // We need: [A0,A0,A0,A0, A1,A1,A1,A1]
     let raw = pixels.raw();
@@ -53,7 +53,7 @@ fn premultiply_2px(_token: Avx2FmaToken, pixels: f32x8) -> f32x8 {
 
 /// Premultiply alpha for a slice of RGBA pixels
 #[arcane]
-pub fn premultiply_alpha_simd(token: Avx2FmaToken, data: &mut [f32]) {
+pub fn premultiply_alpha_simd(token: X64V3Token, data: &mut [f32]) {
     debug_assert!(data.len() % 4 == 0, "Must be RGBA pixels");
 
     // Process 2 pixels (8 floats) at a time
@@ -87,7 +87,7 @@ pub fn premultiply_alpha_simd(token: Avx2FmaToken, data: &mut [f32]) {
 ///
 /// Uses epsilon protection to avoid division by zero.
 #[arcane]
-fn unpremultiply_2px(token: Avx2FmaToken, pixels: f32x8) -> f32x8 {
+fn unpremultiply_2px(token: X64V3Token, pixels: f32x8) -> f32x8 {
     const ALPHA_EPSILON: f32 = 1.0 / 255.0;
 
     let raw = pixels.raw();
@@ -124,7 +124,7 @@ fn unpremultiply_2px(token: Avx2FmaToken, pixels: f32x8) -> f32x8 {
 
 /// Unpremultiply alpha for a slice of RGBA pixels
 #[arcane]
-pub fn unpremultiply_alpha_simd(token: Avx2FmaToken, data: &mut [f32]) {
+pub fn unpremultiply_alpha_simd(token: X64V3Token, data: &mut [f32]) {
     const ALPHA_EPSILON: f32 = 1.0 / 255.0;
 
     debug_assert!(data.len() % 4 == 0, "Must be RGBA pixels");
@@ -164,7 +164,7 @@ pub fn unpremultiply_alpha_simd(token: Avx2FmaToken, data: &mut [f32]) {
 ///
 /// Both src and dst must be premultiplied.
 #[arcane]
-fn composite_over_2px(token: Avx2FmaToken, src: f32x8, dst: f32x8) -> f32x8 {
+fn composite_over_2px(token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
     let one = f32x8::splat(token, 1.0);
     let src_raw = src.raw();
 
@@ -187,7 +187,7 @@ fn composite_over_2px(token: Avx2FmaToken, src: f32x8, dst: f32x8) -> f32x8 {
 ///
 /// Both layers must be premultiplied RGBA.
 #[arcane]
-pub fn composite_over_simd(token: Avx2FmaToken, src: &[f32], dst: &mut [f32]) {
+pub fn composite_over_simd(token: X64V3Token, src: &[f32], dst: &mut [f32]) {
     debug_assert_eq!(src.len(), dst.len());
     debug_assert!(src.len() % 4 == 0, "Must be RGBA pixels");
 
@@ -263,7 +263,7 @@ fn composite_over_scalar(src: &[f32], dst: &mut [f32]) {
 fn test_correctness() {
     println!("=== Correctness Tests ===\n");
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         // Test premultiply
         let original = [
             0.5, 0.3, 0.8, 0.5, // 50% alpha pixel
@@ -373,7 +373,7 @@ fn benchmark() {
         scalar_mpix
     );
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             data.copy_from_slice(&original);
@@ -413,7 +413,7 @@ fn benchmark() {
         scalar_mpix
     );
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             data.copy_from_slice(&premul_data);
@@ -464,7 +464,7 @@ fn benchmark() {
         scalar_mpix
     );
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             dst.copy_from_slice(&dst_orig);

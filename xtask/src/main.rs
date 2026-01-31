@@ -44,7 +44,10 @@ fn token_provides_features(token_or_trait: &str) -> Option<&'static [&'static st
         "Sse42Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2"]),
         "AvxToken" => Some(&["sse", "sse2", "avx"]),
         "Avx2Token" => Some(&["sse", "sse2", "avx", "avx2"]),
-        "Avx2FmaToken" => Some(&["sse", "sse2", "avx", "avx2", "fma"]),
+        "Avx2FmaToken" => Some(&[
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", // ISA-implied by sse4.1 check
+            "avx", "avx2", "fma", // explicitly checked
+        ]),
         "X64V2Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" => Some(&[
             "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
@@ -183,7 +186,13 @@ fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
             let name = fields[1].to_string();
             let features = fields[2].to_string();
             let is_unsafe = fields[3] == "True";
-            db.insert(name, IntrinsicEntry { features, is_unsafe });
+            db.insert(
+                name,
+                IntrinsicEntry {
+                    features,
+                    is_unsafe,
+                },
+            );
         }
     }
 
@@ -211,12 +220,12 @@ struct MagetypesFileMapping {
 const MAGETYPES_FILE_MAPPINGS: &[MagetypesFileMapping] = &[
     MagetypesFileMapping {
         rel_path: "x86/w128.rs",
-        token: "Sse41Token",
+        token: "X64V3Token",
         arch: "x86",
     },
     MagetypesFileMapping {
         rel_path: "x86/w256.rs",
-        token: "Avx2FmaToken",
+        token: "X64V3Token",
         arch: "x86",
     },
     MagetypesFileMapping {
@@ -250,8 +259,7 @@ fn validate_magetypes() -> Result<()> {
 
     // Compile regex patterns for intrinsic extraction
     // x86: _mm_*, _mm256_*, _mm512_* followed by '(' or '::<' (function call or turbofish)
-    let x86_re =
-        Regex::new(r"\b(_mm(?:256|512)?_\w+)\s*(?:\(|::<)").expect("invalid x86 regex");
+    let x86_re = Regex::new(r"\b(_mm(?:256|512)?_\w+)\s*(?:\(|::<)").expect("invalid x86 regex");
     // ARM NEON: v*q?_* patterns (NEON intrinsics all start with 'v')
     let arm_re = Regex::new(
         r"\b(v(?:abs|add|and|bic|bsl|ceq|cge|cgt|cle|clt|cnt|cvt|div|dup|eor|ext|fma|fms|get|hadd|ld[1234]|max|min|ml[as]|mov|mul|mvn|neg|not|orn|orr|padd|pmax|pmin|qadd|qsub|reinterpret|rev|rnd|rsqrte|set|shl|shr|sqrt|st[1234]|sub|tbl|tbx|trn|uzp|zip)\w*)\s*\("
@@ -339,10 +347,7 @@ fn validate_magetypes() -> Result<()> {
                     0
                 };
 
-                if intrinsic_width > 0
-                    && file_width > 0
-                    && intrinsic_width > file_width
-                {
+                if intrinsic_width > 0 && file_width > 0 && intrinsic_width > file_width {
                     errors.push(format!(
                         "WIDTH MISMATCH: {} in {} — intrinsic is {}bit but file only provides {}bit",
                         intrinsic,
@@ -402,7 +407,10 @@ fn validate_magetypes() -> Result<()> {
 
     // Summary
     println!("\n=== Validation Summary ===");
-    println!("  Validated: {} intrinsic calls (all CSV-verified)", validated);
+    println!(
+        "  Validated: {} intrinsic calls (all CSV-verified)",
+        validated
+    );
     println!("  Errors:    {}", errors.len());
 
     if !errors.is_empty() {
@@ -447,9 +455,7 @@ fn find_safe_simd_path_simple() -> Result<PathBuf> {
             for crate_entry in fs::read_dir(&index_dir)? {
                 let crate_entry = crate_entry?;
                 let name = crate_entry.file_name().to_string_lossy().to_string();
-                if name.starts_with("safe_unaligned_simd-")
-                    && name.contains(SAFE_SIMD_VERSION)
-                {
+                if name.starts_with("safe_unaligned_simd-") && name.contains(SAFE_SIMD_VERSION) {
                     return Ok(crate_entry.path());
                 }
             }
@@ -465,8 +471,8 @@ fn find_safe_simd_path_simple() -> Result<PathBuf> {
 /// Extract safe memory operations from safe_unaligned_simd source using regex.
 fn extract_safe_simd_functions(safe_simd_path: &Path) -> Result<Vec<SafeMemOp>> {
     let mut ops = Vec::new();
-    let tf_re = Regex::new(r#"#\[target_feature\(enable\s*=\s*"([^"]+)"\)\]"#)
-        .expect("invalid tf regex");
+    let tf_re =
+        Regex::new(r#"#\[target_feature\(enable\s*=\s*"([^"]+)"\)\]"#).expect("invalid tf regex");
     let fn_re = Regex::new(r"pub\s+fn\s+(\w+)(<[^>]+>)?\(([^)]*)\)(?:\s*->\s*(.+?))?\s*\{")
         .expect("invalid fn regex");
     let doc_re = Regex::new(r"///\s*(.*)").expect("invalid doc regex");
@@ -596,8 +602,16 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
 
     writeln!(doc, "# x86 Intrinsics by Archmage Token").unwrap();
     writeln!(doc).unwrap();
-    writeln!(doc, "Auto-generated reference mapping stdarch intrinsics to archmage tokens.").unwrap();
-    writeln!(doc, "Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`").unwrap();
+    writeln!(
+        doc,
+        "Auto-generated reference mapping stdarch intrinsics to archmage tokens."
+    )
+    .unwrap();
+    writeln!(
+        doc,
+        "Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`"
+    )
+    .unwrap();
     writeln!(doc).unwrap();
 
     // Collect x86 intrinsics and organize by token tier
@@ -637,8 +651,16 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             name: "Avx512ModernToken (Modern Extensions)",
             token: "Avx512ModernToken",
             features: &[
-                "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
-                "avx512bitalg", "avx512vnni", "avx512bf16", "vpclmulqdq", "gfni", "vaes",
+                "avx512vpopcntdq",
+                "avx512ifma",
+                "avx512vbmi",
+                "avx512vbmi2",
+                "avx512bitalg",
+                "avx512vnni",
+                "avx512bf16",
+                "vpclmulqdq",
+                "gfni",
+                "vaes",
             ],
             intrinsics: BTreeMap::new(),
         },
@@ -680,10 +702,12 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
                 let tier_features: HashSet<&str> = tier.features.iter().copied().collect();
                 if required.iter().all(|f| {
                     tier_features.contains(f)
-                        || ["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-                            "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
-                            "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]
-                            .contains(f)
+                        || [
+                            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx",
+                            "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "avx512f", "avx512bw",
+                            "avx512cd", "avx512dq", "avx512vl",
+                        ]
+                        .contains(f)
                 }) {
                     let category = categorize_intrinsic(name);
                     tier.intrinsics
@@ -711,10 +735,7 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             sorted.sort();
             writeln!(doc, "### {}\n", category).unwrap();
             for name in &sorted {
-                let safe = db
-                    .get(name.as_str())
-                    .map(|e| !e.is_unsafe)
-                    .unwrap_or(false);
+                let safe = db.get(name.as_str()).map(|e| !e.is_unsafe).unwrap_or(false);
                 let marker = if safe { "" } else { " (unsafe)" };
                 writeln!(doc, "- `{}`{}", name, marker).unwrap();
             }
@@ -731,8 +752,16 @@ fn generate_aarch64_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
 
     writeln!(doc, "# AArch64 Intrinsics by Archmage Token").unwrap();
     writeln!(doc).unwrap();
-    writeln!(doc, "Auto-generated reference mapping stdarch intrinsics to archmage tokens.").unwrap();
-    writeln!(doc, "Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`").unwrap();
+    writeln!(
+        doc,
+        "Auto-generated reference mapping stdarch intrinsics to archmage tokens."
+    )
+    .unwrap();
+    writeln!(
+        doc,
+        "Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`"
+    )
+    .unwrap();
     writeln!(doc).unwrap();
 
     // Group by feature set
@@ -774,10 +803,7 @@ fn generate_aarch64_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             sorted.sort();
             writeln!(doc, "### {}\n", category).unwrap();
             for name in &sorted {
-                let safe = db
-                    .get(name.as_str())
-                    .map(|e| !e.is_unsafe)
-                    .unwrap_or(false);
+                let safe = db.get(name.as_str()).map(|e| !e.is_unsafe).unwrap_or(false);
                 let marker = if safe { "" } else { " (unsafe)" };
                 writeln!(doc, "- `{}`{}", name, marker).unwrap();
             }
@@ -794,8 +820,17 @@ fn generate_memory_ops_reference(safe_simd_ops: &[SafeMemOp]) -> String {
 
     writeln!(doc, "# Safe Memory Operations Reference").unwrap();
     writeln!(doc).unwrap();
-    writeln!(doc, "Safe unaligned load/store operations from `safe_unaligned_simd` v{},", SAFE_SIMD_VERSION).unwrap();
-    writeln!(doc, "organized by the archmage token required to use them inside `#[arcane]` functions.").unwrap();
+    writeln!(
+        doc,
+        "Safe unaligned load/store operations from `safe_unaligned_simd` v{},",
+        SAFE_SIMD_VERSION
+    )
+    .unwrap();
+    writeln!(
+        doc,
+        "organized by the archmage token required to use them inside `#[arcane]` functions."
+    )
+    .unwrap();
     writeln!(doc).unwrap();
     writeln!(doc, "Regenerate: `cargo xtask generate`").unwrap();
     writeln!(doc).unwrap();
@@ -924,16 +959,9 @@ fn generate_all() -> Result<()> {
     println!("\n=== Generating Reference Documentation ===");
     generate_reference_docs_new()?;
 
-    // Run safety validation on generated code (report errors but don't fail generate)
+    // Run safety validation on generated code (hard failure)
     println!("\n=== Validating Magetypes Safety ===");
-    match validate_magetypes() {
-        Ok(()) => {}
-        Err(e) => {
-            println!("\nWARNING: Validation found issues: {}", e);
-            println!("Run `cargo xtask validate` for the full report.");
-            println!("These are pre-existing bugs in the code generator (xtask/src/simd_types/).");
-        }
-    }
+    validate_magetypes()?;
 
     println!("\n=== Generation Complete ===");
     println!("  - SIMD types: magetypes/src/simd/");

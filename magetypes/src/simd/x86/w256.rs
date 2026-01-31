@@ -4,10 +4,9 @@
 
 use core::arch::x86_64::*;
 use core::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,
-    Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
+    Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
-
 
 // ============================================================================
 // f32x8 - 8 x f32 (256-bit)
@@ -31,19 +30,19 @@ impl f32x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[f32; 8]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[f32; 8]) -> Self {
         Self(unsafe { _mm256_loadu_ps(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: f32) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: f32) -> Self {
         Self(unsafe { _mm256_set1_ps(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_ps() })
     }
 
@@ -51,7 +50,7 @@ impl f32x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [f32; 8]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [f32; 8]) -> Self {
         // SAFETY: [f32; 8] and __m256 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -107,7 +106,7 @@ impl f32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[f32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[f32]) -> Option<&[Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -127,7 +126,7 @@ impl f32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [f32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [f32]) -> Option<&mut [Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -162,7 +161,7 @@ impl f32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -171,7 +170,7 @@ impl f32x8 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -217,7 +216,9 @@ impl f32x8 {
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self(unsafe { _mm256_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0) })
+        Self(unsafe {
+            _mm256_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0)
+        })
     }
     /// Fused multiply-add: self * a + b
     #[inline(always)]
@@ -504,9 +505,7 @@ impl f32x8 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe {
-            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LN2)))
-        }
+        unsafe { Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LN2))) }
     }
 
     /// Low-precision natural exponential (e^x).
@@ -515,9 +514,7 @@ impl f32x8 {
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_lowp()
-        }
+        unsafe { Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_lowp() }
     }
 
     /// Low-precision base-10 logarithm.
@@ -526,9 +523,7 @@ impl f32x8 {
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
-        unsafe {
-            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LOG10_2)))
-        }
+        unsafe { Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(LOG10_2))) }
     }
 
     /// Low-precision power function (self^n).
@@ -537,9 +532,7 @@ impl f32x8 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        unsafe {
-            Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(n))).exp2_lowp()
-        }
+        unsafe { Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(n))).exp2_lowp() }
     }
 
     // ========== Mid-Precision Transcendental Operations ==========
@@ -553,15 +546,15 @@ impl f32x8 {
     pub fn log2_midp_unchecked(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
-        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
+        const ONE: u32 = 0x3f800000; // 1.0 in f32 bits
         const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
         const EXPONENT_BIAS: i32 = 127;
 
         // Coefficients for odd polynomial on y = (a-1)/(a+1)
-        const C0: f32 = 2.885_390_08;  // 2/ln(2)
-        const C1: f32 = 0.961_800_76;  // y^2 coefficient
-        const C2: f32 = 0.576_974_45;  // y^4 coefficient
-        const C3: f32 = 0.434_411_97;  // y^6 coefficient
+        const C0: f32 = 2.885_390_08; // 2/ln(2)
+        const C1: f32 = 0.961_800_76; // y^2 coefficient
+        const C2: f32 = 0.576_974_45; // y^4 coefficient
+        const C3: f32 = 0.434_411_97; // y^6 coefficient
 
         unsafe {
             let x_bits = _mm256_castps_si256(self.0);
@@ -712,7 +705,11 @@ impl f32x8 {
     #[inline(always)]
     pub fn pow_midp_unchecked(self, n: f32) -> Self {
         unsafe {
-            Self(_mm256_mul_ps(self.log2_midp_unchecked().0, _mm256_set1_ps(n))).exp2_midp_unchecked()
+            Self(_mm256_mul_ps(
+                self.log2_midp_unchecked().0,
+                _mm256_set1_ps(n),
+            ))
+            .exp2_midp_unchecked()
         }
     }
 
@@ -725,9 +722,7 @@ impl f32x8 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
-        unsafe {
-            Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(n))).exp2_midp()
-        }
+        unsafe { Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(n))).exp2_midp() }
     }
 
     /// Mid-precision natural logarithm - unchecked variant.
@@ -740,7 +735,10 @@ impl f32x8 {
     pub fn ln_midp_unchecked(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
         unsafe {
-            Self(_mm256_mul_ps(self.log2_midp_unchecked().0, _mm256_set1_ps(LN2)))
+            Self(_mm256_mul_ps(
+                self.log2_midp_unchecked().0,
+                _mm256_set1_ps(LN2),
+            ))
         }
     }
 
@@ -752,9 +750,7 @@ impl f32x8 {
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe {
-            Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(LN2)))
-        }
+        unsafe { Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(LN2))) }
     }
 
     /// Mid-precision natural exponential (e^x) - unchecked variant.
@@ -766,9 +762,7 @@ impl f32x8 {
     #[inline(always)]
     pub fn exp_midp_unchecked(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp_unchecked()
-        }
+        unsafe { Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp_unchecked() }
     }
 
     /// Mid-precision natural exponential (e^x).
@@ -779,9 +773,7 @@ impl f32x8 {
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp()
-        }
+        unsafe { Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp() }
     }
 
     // ========== Cube Root ==========
@@ -859,8 +851,8 @@ impl f32x8 {
             let is_nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
 
             // Apply corrections (use self.0 for zero to preserve sign)
-            let r = _mm256_blendv_ps(result.0, self.0, is_zero);  // ±0 -> ±0
-            let r = _mm256_blendv_ps(r, self.0, is_inf);  // ±inf -> ±inf
+            let r = _mm256_blendv_ps(result.0, self.0, is_zero); // ±0 -> ±0
+            let r = _mm256_blendv_ps(r, self.0, is_inf); // ±inf -> ±inf
             let r = _mm256_blendv_ps(r, _mm256_set1_ps(f32::NAN), is_nan);
             Self(r)
         }
@@ -877,9 +869,9 @@ impl f32x8 {
     pub fn cbrt_midp_precise(self) -> Self {
         unsafe {
             // Scale factor for denormals: 2^24
-            const SCALE_UP: f32 = 16777216.0;  // 2^24
-            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
-            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+            const SCALE_UP: f32 = 16777216.0; // 2^24
+            const SCALE_DOWN: f32 = 0.00390625; // 2^(-8) = cbrt(2^(-24))
+            const DENORM_LIMIT: f32 = 1.17549435e-38; // Smallest normal f32
 
             let abs_x = _mm256_andnot_ps(_mm256_set1_ps(-0.0), self.0);
             let is_denorm = _mm256_cmp_ps::<_CMP_LT_OQ>(abs_x, _mm256_set1_ps(DENORM_LIMIT));
@@ -897,333 +889,338 @@ impl f32x8 {
         }
     }
 
-// ========== Load and Convert ==========
+    // ========== Load and Convert ==========
 
-/// Load 8 u8 values and convert to f32x8.
-///
-/// Useful for image processing: load pixel values directly to float.
-#[inline(always)]
-pub fn from_u8(bytes: &[u8; 8]) -> Self {
-    unsafe {
-        // Load 8 bytes into low part of XMM register
-        let b = _mm_loadl_epi64(bytes.as_ptr() as *const __m128i);
-        let i32s = _mm256_cvtepu8_epi32(b);
-        Self(_mm256_cvtepi32_ps(i32s))
+    /// Load 8 u8 values and convert to f32x8.
+    ///
+    /// Useful for image processing: load pixel values directly to float.
+    #[inline(always)]
+    pub fn from_u8(bytes: &[u8; 8]) -> Self {
+        unsafe {
+            // Load 8 bytes into low part of XMM register
+            let b = _mm_loadl_epi64(bytes.as_ptr() as *const __m128i);
+            let i32s = _mm256_cvtepu8_epi32(b);
+            Self(_mm256_cvtepi32_ps(i32s))
+        }
     }
-}
 
-/// Convert to 8 u8 values with saturation.
-///
-/// Values are clamped to [0, 255] and rounded.
-#[inline(always)]
-pub fn to_u8(self) -> [u8; 8] {
-    unsafe {
-        // Convert to i32
-        let i32s = _mm256_cvtps_epi32(self.0);
-        // Pack i32 to i16 (within lanes, then combine)
-        let lo = _mm256_castsi256_si128(i32s);
-        let hi = _mm256_extracti128_si256::<1>(i32s);
-        let i16s = _mm_packs_epi32(lo, hi);
-        // Pack i16 to u8
-        let u8s = _mm_packus_epi16(i16s, i16s);
-        let mut result = [0u8; 8];
-        _mm_storel_epi64(result.as_mut_ptr() as *mut __m128i, u8s);
+    /// Convert to 8 u8 values with saturation.
+    ///
+    /// Values are clamped to [0, 255] and rounded.
+    #[inline(always)]
+    pub fn to_u8(self) -> [u8; 8] {
+        unsafe {
+            // Convert to i32
+            let i32s = _mm256_cvtps_epi32(self.0);
+            // Pack i32 to i16 (within lanes, then combine)
+            let lo = _mm256_castsi256_si128(i32s);
+            let hi = _mm256_extracti128_si256::<1>(i32s);
+            let i16s = _mm_packs_epi32(lo, hi);
+            // Pack i16 to u8
+            let u8s = _mm_packus_epi16(i16s, i16s);
+            let mut result = [0u8; 8];
+            _mm_storel_epi64(result.as_mut_ptr() as *mut __m128i, u8s);
+            result
+        }
+    }
+
+    // ========== Interleave Operations ==========
+
+    /// Interleave low elements within 128-bit lanes.
+    ///
+    /// [a0,a1,a2,a3,a4,a5,a6,a7] + [b0,b1,b2,b3,b4,b5,b6,b7]
+    /// → [a0,b0,a1,b1,a4,b4,a5,b5]
+    #[inline(always)]
+    pub fn interleave_lo(self, other: Self) -> Self {
+        Self(unsafe { _mm256_unpacklo_ps(self.0, other.0) })
+    }
+
+    /// Interleave high elements within 128-bit lanes.
+    ///
+    /// [a0,a1,a2,a3,a4,a5,a6,a7] + [b0,b1,b2,b3,b4,b5,b6,b7]
+    /// → [a2,b2,a3,b3,a6,b6,a7,b7]
+    #[inline(always)]
+    pub fn interleave_hi(self, other: Self) -> Self {
+        Self(unsafe { _mm256_unpackhi_ps(self.0, other.0) })
+    }
+
+    /// Interleave two vectors: returns (interleave_lo, interleave_hi)
+    #[inline(always)]
+    pub fn interleave(self, other: Self) -> (Self, Self) {
+        (self.interleave_lo(other), self.interleave_hi(other))
+    }
+
+    // ========== 4-Channel Interleave/Deinterleave ==========
+
+    /// Deinterleave 8 RGBA pixels from AoS to SoA format.
+    ///
+    /// Input: 4 f32x8 vectors, where pairs of adjacent elements form RGBA pixels.
+    /// Each input vector contains 2 complete RGBA pixels:
+    /// - `rgba[0]` = [R0, G0, B0, A0, R1, G1, B1, A1]
+    /// - `rgba[1]` = [R2, G2, B2, A2, R3, G3, B3, A3]
+    /// - `rgba[2]` = [R4, G4, B4, A4, R5, G5, B5, A5]
+    /// - `rgba[3]` = [R6, G6, B6, A6, R7, G7, B7, A7]
+    ///
+    /// Output: 4 f32x8 vectors, one per channel:
+    /// - `[0]` = [R0, R1, R2, R3, R4, R5, R6, R7]
+    /// - `[1]` = [G0, G1, G2, G3, G4, G5, G6, G7]
+    /// - `[2]` = [B0, B1, B2, B3, B4, B5, B6, B7]
+    /// - `[3]` = [A0, A1, A2, A3, A4, A5, A6, A7]
+    #[inline]
+    pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
+        unsafe {
+            // Stage 1: Unpack pairs
+            // unpacklo: [a0,b0,a1,b1, a4,b4,a5,b5]
+            // unpackhi: [a2,b2,a3,b3, a6,b6,a7,b7]
+            let rg_lo = _mm256_unpacklo_ps(rgba[0].0, rgba[1].0); // [R0,R2,G0,G2, R1,R3,G1,G3]
+            let rg_hi = _mm256_unpackhi_ps(rgba[0].0, rgba[1].0); // [B0,B2,A0,A2, B1,B3,A1,A3]
+            let rg_lo2 = _mm256_unpacklo_ps(rgba[2].0, rgba[3].0); // [R4,R6,G4,G6, R5,R7,G5,G7]
+            let rg_hi2 = _mm256_unpackhi_ps(rgba[2].0, rgba[3].0); // [B4,B6,A4,A6, B5,B7,A5,A7]
+
+            // Stage 2: Shuffle to separate R,G and B,A
+            let r_g_01 = _mm256_unpacklo_ps(rg_lo, rg_lo2); // [R0,R4,R2,R6, R1,R5,R3,R7]
+            let r_g_23 = _mm256_unpackhi_ps(rg_lo, rg_lo2); // [G0,G4,G2,G6, G1,G5,G3,G7]
+            let b_a_01 = _mm256_unpacklo_ps(rg_hi, rg_hi2); // [B0,B4,B2,B6, B1,B5,B3,B7]
+            let b_a_23 = _mm256_unpackhi_ps(rg_hi, rg_hi2); // [A0,A4,A2,A6, A1,A5,A3,A7]
+
+            // Stage 3: Final permute to get contiguous channels
+            // Need to reorder: [0,4,2,6,1,5,3,7] → [0,1,2,3,4,5,6,7]
+            let perm = _mm256_setr_epi32(0, 4, 2, 6, 1, 5, 3, 7);
+            let r = _mm256_permutevar8x32_ps(r_g_01, perm);
+            let g = _mm256_permutevar8x32_ps(r_g_23, perm);
+            let b = _mm256_permutevar8x32_ps(b_a_01, perm);
+            let a = _mm256_permutevar8x32_ps(b_a_23, perm);
+
+            [Self(r), Self(g), Self(b), Self(a)]
+        }
+    }
+
+    /// Interleave 4 channels from SoA to AoS format.
+    ///
+    /// Input: 4 f32x8 vectors, one per channel (R, G, B, A).
+    /// Output: 4 f32x8 vectors in interleaved AoS format.
+    ///
+    /// This is the inverse of `deinterleave_4ch`.
+    #[inline]
+    pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
+        unsafe {
+            let r = channels[0].0;
+            let g = channels[1].0;
+            let b = channels[2].0;
+            let a = channels[3].0;
+
+            // Interleave R with G: [R0,G0,R1,G1, R4,G4,R5,G5]
+            let rg_lo = _mm256_unpacklo_ps(r, g);
+            // [R2,G2,R3,G3, R6,G6,R7,G7]
+            let rg_hi = _mm256_unpackhi_ps(r, g);
+
+            // Interleave B with A
+            let ba_lo = _mm256_unpacklo_ps(b, a);
+            let ba_hi = _mm256_unpackhi_ps(b, a);
+
+            // Combine RG with BA: [R0,G0,B0,A0, R4,G4,B4,A4]
+            let rgba_0 = _mm256_shuffle_ps::<0x44>(rg_lo, ba_lo);
+            let rgba_1 = _mm256_shuffle_ps::<0xEE>(rg_lo, ba_lo);
+            let rgba_2 = _mm256_shuffle_ps::<0x44>(rg_hi, ba_hi);
+            let rgba_3 = _mm256_shuffle_ps::<0xEE>(rg_hi, ba_hi);
+
+            // Permute to get final layout
+            let out0 = _mm256_permute2f128_ps::<0x20>(rgba_0, rgba_1);
+            let out1 = _mm256_permute2f128_ps::<0x20>(rgba_2, rgba_3);
+            let out2 = _mm256_permute2f128_ps::<0x31>(rgba_0, rgba_1);
+            let out3 = _mm256_permute2f128_ps::<0x31>(rgba_2, rgba_3);
+
+            [Self(out0), Self(out1), Self(out2), Self(out3)]
+        }
+    }
+
+    /// Load 8 RGBA u8 pixels and deinterleave to 4 f32x8 channel vectors.
+    ///
+    /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
+    /// Output: (R, G, B, A) where each is f32x8 with values in [0.0, 255.0].
+    #[inline]
+    pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
+        unsafe {
+            // Load 32 bytes
+            let v = _mm256_loadu_si256(rgba.as_ptr() as *const __m256i);
+
+            // Use vpshufb to gather channels within each 128-bit lane
+            // Lane 0: pixels 0-3, Lane 1: pixels 4-7
+            let r_mask = _mm256_setr_epi8(
+                0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 4, 8, 12, -1, -1,
+                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            );
+            let g_mask = _mm256_setr_epi8(
+                1, 5, 9, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 5, 9, 13, -1, -1,
+                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            );
+            let b_mask = _mm256_setr_epi8(
+                2, 6, 10, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, 6, 10, 14, -1, -1,
+                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            );
+            let a_mask = _mm256_setr_epi8(
+                3, 7, 11, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3, 7, 11, 15, -1, -1,
+                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            );
+
+            // Gather each channel's bytes into low 4 bytes of each lane
+            let r_bytes = _mm256_shuffle_epi8(v, r_mask);
+            let g_bytes = _mm256_shuffle_epi8(v, g_mask);
+            let b_bytes = _mm256_shuffle_epi8(v, b_mask);
+            let a_bytes = _mm256_shuffle_epi8(v, a_mask);
+
+            // Extract low 128-bit and high 128-bit lanes, combine low 4 bytes of each
+            // to get 8 consecutive bytes, then extend to f32x8
+            let r_lo = _mm256_castsi256_si128(r_bytes);
+            let r_hi = _mm256_extracti128_si256::<1>(r_bytes);
+            let r_combined = _mm_unpacklo_epi32(r_lo, r_hi); // [R0-3, R4-7, ...]
+            let r_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(r_combined));
+
+            let g_lo = _mm256_castsi256_si128(g_bytes);
+            let g_hi = _mm256_extracti128_si256::<1>(g_bytes);
+            let g_combined = _mm_unpacklo_epi32(g_lo, g_hi);
+            let g_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(g_combined));
+
+            let b_lo = _mm256_castsi256_si128(b_bytes);
+            let b_hi = _mm256_extracti128_si256::<1>(b_bytes);
+            let b_combined = _mm_unpacklo_epi32(b_lo, b_hi);
+            let b_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(b_combined));
+
+            let a_lo = _mm256_castsi256_si128(a_bytes);
+            let a_hi = _mm256_extracti128_si256::<1>(a_bytes);
+            let a_combined = _mm_unpacklo_epi32(a_lo, a_hi);
+            let a_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(a_combined));
+
+            (Self(r_f32), Self(g_f32), Self(b_f32), Self(a_f32))
+        }
+    }
+
+    /// Interleave 4 f32x8 channels and store as 8 RGBA u8 pixels.
+    ///
+    /// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
+    /// Output: 32 bytes = 8 RGBA pixels in interleaved format.
+    #[inline]
+    pub fn store_8_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {
+        unsafe {
+            // Convert f32 to i32
+            let ri = _mm256_cvtps_epi32(r.0);
+            let gi = _mm256_cvtps_epi32(g.0);
+            let bi = _mm256_cvtps_epi32(b.0);
+            let ai = _mm256_cvtps_epi32(a.0);
+
+            // Pack to i16 (need to handle AVX2's lane-wise packing)
+            // _mm256_packs_epi32 packs within lanes: [lo0-3, hi0-3] + [lo4-7, hi4-7]
+            // → [lo0-3 as i16, lo4-7 as i16, hi0-3 as i16, hi4-7 as i16]
+
+            // Pack R,G and B,A together
+            let rg = _mm256_packs_epi32(ri, gi); // [R0-3,G0-3, R4-7,G4-7] as i16
+            let ba = _mm256_packs_epi32(bi, ai); // [B0-3,A0-3, B4-7,A4-7] as i16
+
+            // Pack i16 to u8
+            let rgba = _mm256_packus_epi16(rg, ba); // [R0-3,G0-3,B0-3,A0-3, R4-7,G4-7,B4-7,A4-7]
+
+            // Shuffle within each lane to get RGBA order
+            let shuf = _mm256_setr_epi8(
+                0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0, 4, 8, 12, 1, 5, 9, 13, 2,
+                6, 10, 14, 3, 7, 11, 15,
+            );
+            let shuffled = _mm256_shuffle_epi8(rgba, shuf);
+
+            let mut out = [0u8; 32];
+            _mm256_storeu_si256(out.as_mut_ptr() as *mut __m256i, shuffled);
+            out
+        }
+    }
+
+    // ========== Matrix Transpose ==========
+
+    /// Transpose an 8x8 matrix represented as 8 row vectors.
+    ///
+    /// Uses the Highway-style 3-stage transpose:
+    /// 1. `unpacklo/hi` - interleave pairs within 128-bit lanes
+    /// 2. `shuffle` - reorder within lanes
+    /// 3. `permute2f128` - exchange 128-bit halves
+    #[inline]
+    pub fn transpose_8x8(rows: &mut [Self; 8]) {
+        unsafe {
+            let t0 = _mm256_unpacklo_ps(rows[0].0, rows[1].0);
+            let t1 = _mm256_unpackhi_ps(rows[0].0, rows[1].0);
+            let t2 = _mm256_unpacklo_ps(rows[2].0, rows[3].0);
+            let t3 = _mm256_unpackhi_ps(rows[2].0, rows[3].0);
+            let t4 = _mm256_unpacklo_ps(rows[4].0, rows[5].0);
+            let t5 = _mm256_unpackhi_ps(rows[4].0, rows[5].0);
+            let t6 = _mm256_unpacklo_ps(rows[6].0, rows[7].0);
+            let t7 = _mm256_unpackhi_ps(rows[6].0, rows[7].0);
+
+            let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
+            let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
+            let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
+            let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
+            let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
+            let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
+            let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
+            let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
+
+            rows[0] = Self(_mm256_permute2f128_ps::<0x20>(s0, s4));
+            rows[1] = Self(_mm256_permute2f128_ps::<0x20>(s1, s5));
+            rows[2] = Self(_mm256_permute2f128_ps::<0x20>(s2, s6));
+            rows[3] = Self(_mm256_permute2f128_ps::<0x20>(s3, s7));
+            rows[4] = Self(_mm256_permute2f128_ps::<0x31>(s0, s4));
+            rows[5] = Self(_mm256_permute2f128_ps::<0x31>(s1, s5));
+            rows[6] = Self(_mm256_permute2f128_ps::<0x31>(s2, s6));
+            rows[7] = Self(_mm256_permute2f128_ps::<0x31>(s3, s7));
+        }
+    }
+
+    /// Transpose an 8x8 matrix, returning the transposed rows.
+    #[inline]
+    pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
+        let mut result = rows;
+        Self::transpose_8x8(&mut result);
         result
     }
-}
 
-// ========== Interleave Operations ==========
-
-/// Interleave low elements within 128-bit lanes.
-///
-/// [a0,a1,a2,a3,a4,a5,a6,a7] + [b0,b1,b2,b3,b4,b5,b6,b7]
-/// → [a0,b0,a1,b1,a4,b4,a5,b5]
-#[inline(always)]
-pub fn interleave_lo(self, other: Self) -> Self {
-    Self(unsafe { _mm256_unpacklo_ps(self.0, other.0) })
-}
-
-/// Interleave high elements within 128-bit lanes.
-///
-/// [a0,a1,a2,a3,a4,a5,a6,a7] + [b0,b1,b2,b3,b4,b5,b6,b7]
-/// → [a2,b2,a3,b3,a6,b6,a7,b7]
-#[inline(always)]
-pub fn interleave_hi(self, other: Self) -> Self {
-    Self(unsafe { _mm256_unpackhi_ps(self.0, other.0) })
-}
-
-/// Interleave two vectors: returns (interleave_lo, interleave_hi)
-#[inline(always)]
-pub fn interleave(self, other: Self) -> (Self, Self) {
-    (self.interleave_lo(other), self.interleave_hi(other))
-}
-
-// ========== 4-Channel Interleave/Deinterleave ==========
-
-/// Deinterleave 8 RGBA pixels from AoS to SoA format.
-///
-/// Input: 4 f32x8 vectors, where pairs of adjacent elements form RGBA pixels.
-/// Each input vector contains 2 complete RGBA pixels:
-/// - `rgba[0]` = [R0, G0, B0, A0, R1, G1, B1, A1]
-/// - `rgba[1]` = [R2, G2, B2, A2, R3, G3, B3, A3]
-/// - `rgba[2]` = [R4, G4, B4, A4, R5, G5, B5, A5]
-/// - `rgba[3]` = [R6, G6, B6, A6, R7, G7, B7, A7]
-///
-/// Output: 4 f32x8 vectors, one per channel:
-/// - `[0]` = [R0, R1, R2, R3, R4, R5, R6, R7]
-/// - `[1]` = [G0, G1, G2, G3, G4, G5, G6, G7]
-/// - `[2]` = [B0, B1, B2, B3, B4, B5, B6, B7]
-/// - `[3]` = [A0, A1, A2, A3, A4, A5, A6, A7]
-#[inline]
-pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
-    unsafe {
-        // Stage 1: Unpack pairs
-        // unpacklo: [a0,b0,a1,b1, a4,b4,a5,b5]
-        // unpackhi: [a2,b2,a3,b3, a6,b6,a7,b7]
-        let rg_lo = _mm256_unpacklo_ps(rgba[0].0, rgba[1].0); // [R0,R2,G0,G2, R1,R3,G1,G3]
-        let rg_hi = _mm256_unpackhi_ps(rgba[0].0, rgba[1].0); // [B0,B2,A0,A2, B1,B3,A1,A3]
-        let rg_lo2 = _mm256_unpacklo_ps(rgba[2].0, rgba[3].0); // [R4,R6,G4,G6, R5,R7,G5,G7]
-        let rg_hi2 = _mm256_unpackhi_ps(rgba[2].0, rgba[3].0); // [B4,B6,A4,A6, B5,B7,A5,A7]
-
-        // Stage 2: Shuffle to separate R,G and B,A
-        let r_g_01 = _mm256_unpacklo_ps(rg_lo, rg_lo2);   // [R0,R4,R2,R6, R1,R5,R3,R7]
-        let r_g_23 = _mm256_unpackhi_ps(rg_lo, rg_lo2);   // [G0,G4,G2,G6, G1,G5,G3,G7]
-        let b_a_01 = _mm256_unpacklo_ps(rg_hi, rg_hi2);   // [B0,B4,B2,B6, B1,B5,B3,B7]
-        let b_a_23 = _mm256_unpackhi_ps(rg_hi, rg_hi2);   // [A0,A4,A2,A6, A1,A5,A3,A7]
-
-        // Stage 3: Final permute to get contiguous channels
-        // Need to reorder: [0,4,2,6,1,5,3,7] → [0,1,2,3,4,5,6,7]
-        let perm = _mm256_setr_epi32(0, 4, 2, 6, 1, 5, 3, 7);
-        let r = _mm256_permutevar8x32_ps(r_g_01, perm);
-        let g = _mm256_permutevar8x32_ps(r_g_23, perm);
-        let b = _mm256_permutevar8x32_ps(b_a_01, perm);
-        let a = _mm256_permutevar8x32_ps(b_a_23, perm);
-
-        [Self(r), Self(g), Self(b), Self(a)]
+    /// Load an 8x8 f32 block from a contiguous array.
+    #[inline]
+    pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
+        unsafe {
+            [
+                Self(_mm256_loadu_ps(block.as_ptr())),
+                Self(_mm256_loadu_ps(block.as_ptr().add(8))),
+                Self(_mm256_loadu_ps(block.as_ptr().add(16))),
+                Self(_mm256_loadu_ps(block.as_ptr().add(24))),
+                Self(_mm256_loadu_ps(block.as_ptr().add(32))),
+                Self(_mm256_loadu_ps(block.as_ptr().add(40))),
+                Self(_mm256_loadu_ps(block.as_ptr().add(48))),
+                Self(_mm256_loadu_ps(block.as_ptr().add(56))),
+            ]
+        }
     }
-}
 
-/// Interleave 4 channels from SoA to AoS format.
-///
-/// Input: 4 f32x8 vectors, one per channel (R, G, B, A).
-/// Output: 4 f32x8 vectors in interleaved AoS format.
-///
-/// This is the inverse of `deinterleave_4ch`.
-#[inline]
-pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
-    unsafe {
-        let r = channels[0].0;
-        let g = channels[1].0;
-        let b = channels[2].0;
-        let a = channels[3].0;
-
-        // Interleave R with G: [R0,G0,R1,G1, R4,G4,R5,G5]
-        let rg_lo = _mm256_unpacklo_ps(r, g);
-        // [R2,G2,R3,G3, R6,G6,R7,G7]
-        let rg_hi = _mm256_unpackhi_ps(r, g);
-
-        // Interleave B with A
-        let ba_lo = _mm256_unpacklo_ps(b, a);
-        let ba_hi = _mm256_unpackhi_ps(b, a);
-
-        // Combine RG with BA: [R0,G0,B0,A0, R4,G4,B4,A4]
-        let rgba_0 = _mm256_shuffle_ps::<0x44>(rg_lo, ba_lo);
-        let rgba_1 = _mm256_shuffle_ps::<0xEE>(rg_lo, ba_lo);
-        let rgba_2 = _mm256_shuffle_ps::<0x44>(rg_hi, ba_hi);
-        let rgba_3 = _mm256_shuffle_ps::<0xEE>(rg_hi, ba_hi);
-
-        // Permute to get final layout
-        let out0 = _mm256_permute2f128_ps::<0x20>(rgba_0, rgba_1);
-        let out1 = _mm256_permute2f128_ps::<0x20>(rgba_2, rgba_3);
-        let out2 = _mm256_permute2f128_ps::<0x31>(rgba_0, rgba_1);
-        let out3 = _mm256_permute2f128_ps::<0x31>(rgba_2, rgba_3);
-
-        [Self(out0), Self(out1), Self(out2), Self(out3)]
+    /// Store 8 row vectors to a contiguous 8x8 f32 block.
+    #[inline]
+    pub fn store_8x8(rows: &[Self; 8], block: &mut [f32; 64]) {
+        unsafe {
+            _mm256_storeu_ps(block.as_mut_ptr(), rows[0].0);
+            _mm256_storeu_ps(block.as_mut_ptr().add(8), rows[1].0);
+            _mm256_storeu_ps(block.as_mut_ptr().add(16), rows[2].0);
+            _mm256_storeu_ps(block.as_mut_ptr().add(24), rows[3].0);
+            _mm256_storeu_ps(block.as_mut_ptr().add(32), rows[4].0);
+            _mm256_storeu_ps(block.as_mut_ptr().add(40), rows[5].0);
+            _mm256_storeu_ps(block.as_mut_ptr().add(48), rows[6].0);
+            _mm256_storeu_ps(block.as_mut_ptr().add(56), rows[7].0);
+        }
     }
-}
-
-/// Load 8 RGBA u8 pixels and deinterleave to 4 f32x8 channel vectors.
-///
-/// Input: 32 bytes = 8 RGBA pixels in interleaved format.
-/// Output: (R, G, B, A) where each is f32x8 with values in [0.0, 255.0].
-#[inline]
-pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
-    unsafe {
-        // Load 32 bytes
-        let v = _mm256_loadu_si256(rgba.as_ptr() as *const __m256i);
-
-        // Use vpshufb to gather channels within each 128-bit lane
-        // Lane 0: pixels 0-3, Lane 1: pixels 4-7
-        let r_mask = _mm256_setr_epi8(
-            0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-        );
-        let g_mask = _mm256_setr_epi8(
-            1, 5, 9, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            1, 5, 9, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-        );
-        let b_mask = _mm256_setr_epi8(
-            2, 6, 10, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            2, 6, 10, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-        );
-        let a_mask = _mm256_setr_epi8(
-            3, 7, 11, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            3, 7, 11, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-        );
-
-        // Gather each channel's bytes into low 4 bytes of each lane
-        let r_bytes = _mm256_shuffle_epi8(v, r_mask);
-        let g_bytes = _mm256_shuffle_epi8(v, g_mask);
-        let b_bytes = _mm256_shuffle_epi8(v, b_mask);
-        let a_bytes = _mm256_shuffle_epi8(v, a_mask);
-
-        // Extract low 128-bit and high 128-bit lanes, combine low 4 bytes of each
-        // to get 8 consecutive bytes, then extend to f32x8
-        let r_lo = _mm256_castsi256_si128(r_bytes);
-        let r_hi = _mm256_extracti128_si256::<1>(r_bytes);
-        let r_combined = _mm_unpacklo_epi32(r_lo, r_hi); // [R0-3, R4-7, ...]
-        let r_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(r_combined));
-
-        let g_lo = _mm256_castsi256_si128(g_bytes);
-        let g_hi = _mm256_extracti128_si256::<1>(g_bytes);
-        let g_combined = _mm_unpacklo_epi32(g_lo, g_hi);
-        let g_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(g_combined));
-
-        let b_lo = _mm256_castsi256_si128(b_bytes);
-        let b_hi = _mm256_extracti128_si256::<1>(b_bytes);
-        let b_combined = _mm_unpacklo_epi32(b_lo, b_hi);
-        let b_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(b_combined));
-
-        let a_lo = _mm256_castsi256_si128(a_bytes);
-        let a_hi = _mm256_extracti128_si256::<1>(a_bytes);
-        let a_combined = _mm_unpacklo_epi32(a_lo, a_hi);
-        let a_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(a_combined));
-
-        (Self(r_f32), Self(g_f32), Self(b_f32), Self(a_f32))
-    }
-}
-
-/// Interleave 4 f32x8 channels and store as 8 RGBA u8 pixels.
-///
-/// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
-/// Output: 32 bytes = 8 RGBA pixels in interleaved format.
-#[inline]
-pub fn store_8_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {
-    unsafe {
-        // Convert f32 to i32
-        let ri = _mm256_cvtps_epi32(r.0);
-        let gi = _mm256_cvtps_epi32(g.0);
-        let bi = _mm256_cvtps_epi32(b.0);
-        let ai = _mm256_cvtps_epi32(a.0);
-
-        // Pack to i16 (need to handle AVX2's lane-wise packing)
-        // _mm256_packs_epi32 packs within lanes: [lo0-3, hi0-3] + [lo4-7, hi4-7]
-        // → [lo0-3 as i16, lo4-7 as i16, hi0-3 as i16, hi4-7 as i16]
-
-        // Pack R,G and B,A together
-        let rg = _mm256_packs_epi32(ri, gi); // [R0-3,G0-3, R4-7,G4-7] as i16
-        let ba = _mm256_packs_epi32(bi, ai); // [B0-3,A0-3, B4-7,A4-7] as i16
-
-        // Pack i16 to u8
-        let rgba = _mm256_packus_epi16(rg, ba); // [R0-3,G0-3,B0-3,A0-3, R4-7,G4-7,B4-7,A4-7]
-
-        // Shuffle within each lane to get RGBA order
-        let shuf = _mm256_setr_epi8(
-            0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
-            0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15
-        );
-        let shuffled = _mm256_shuffle_epi8(rgba, shuf);
-
-        let mut out = [0u8; 32];
-        _mm256_storeu_si256(out.as_mut_ptr() as *mut __m256i, shuffled);
-        out
-    }
-}
-
-// ========== Matrix Transpose ==========
-
-/// Transpose an 8x8 matrix represented as 8 row vectors.
-///
-/// Uses the Highway-style 3-stage transpose:
-/// 1. `unpacklo/hi` - interleave pairs within 128-bit lanes
-/// 2. `shuffle` - reorder within lanes
-/// 3. `permute2f128` - exchange 128-bit halves
-#[inline]
-pub fn transpose_8x8(rows: &mut [Self; 8]) {
-    unsafe {
-        let t0 = _mm256_unpacklo_ps(rows[0].0, rows[1].0);
-        let t1 = _mm256_unpackhi_ps(rows[0].0, rows[1].0);
-        let t2 = _mm256_unpacklo_ps(rows[2].0, rows[3].0);
-        let t3 = _mm256_unpackhi_ps(rows[2].0, rows[3].0);
-        let t4 = _mm256_unpacklo_ps(rows[4].0, rows[5].0);
-        let t5 = _mm256_unpackhi_ps(rows[4].0, rows[5].0);
-        let t6 = _mm256_unpacklo_ps(rows[6].0, rows[7].0);
-        let t7 = _mm256_unpackhi_ps(rows[6].0, rows[7].0);
-
-        let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
-        let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
-        let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
-        let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
-        let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
-        let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
-        let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
-        let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
-
-        rows[0] = Self(_mm256_permute2f128_ps::<0x20>(s0, s4));
-        rows[1] = Self(_mm256_permute2f128_ps::<0x20>(s1, s5));
-        rows[2] = Self(_mm256_permute2f128_ps::<0x20>(s2, s6));
-        rows[3] = Self(_mm256_permute2f128_ps::<0x20>(s3, s7));
-        rows[4] = Self(_mm256_permute2f128_ps::<0x31>(s0, s4));
-        rows[5] = Self(_mm256_permute2f128_ps::<0x31>(s1, s5));
-        rows[6] = Self(_mm256_permute2f128_ps::<0x31>(s2, s6));
-        rows[7] = Self(_mm256_permute2f128_ps::<0x31>(s3, s7));
-    }
-}
-
-/// Transpose an 8x8 matrix, returning the transposed rows.
-#[inline]
-pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
-    let mut result = rows;
-    Self::transpose_8x8(&mut result);
-    result
-}
-
-/// Load an 8x8 f32 block from a contiguous array.
-#[inline]
-pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
-    unsafe {
-        [
-            Self(_mm256_loadu_ps(block.as_ptr())),
-            Self(_mm256_loadu_ps(block.as_ptr().add(8))),
-            Self(_mm256_loadu_ps(block.as_ptr().add(16))),
-            Self(_mm256_loadu_ps(block.as_ptr().add(24))),
-            Self(_mm256_loadu_ps(block.as_ptr().add(32))),
-            Self(_mm256_loadu_ps(block.as_ptr().add(40))),
-            Self(_mm256_loadu_ps(block.as_ptr().add(48))),
-            Self(_mm256_loadu_ps(block.as_ptr().add(56))),
-        ]
-    }
-}
-
-/// Store 8 row vectors to a contiguous 8x8 f32 block.
-#[inline]
-pub fn store_8x8(rows: &[Self; 8], block: &mut [f32; 64]) {
-    unsafe {
-        _mm256_storeu_ps(block.as_mut_ptr(), rows[0].0);
-        _mm256_storeu_ps(block.as_mut_ptr().add(8), rows[1].0);
-        _mm256_storeu_ps(block.as_mut_ptr().add(16), rows[2].0);
-        _mm256_storeu_ps(block.as_mut_ptr().add(24), rows[3].0);
-        _mm256_storeu_ps(block.as_mut_ptr().add(32), rows[4].0);
-        _mm256_storeu_ps(block.as_mut_ptr().add(40), rows[5].0);
-        _mm256_storeu_ps(block.as_mut_ptr().add(48), rows[6].0);
-        _mm256_storeu_ps(block.as_mut_ptr().add(56), rows[7].0);
-    }
-}
-
 }
 
 #[cfg(target_arch = "x86_64")]
-crate::impl_arithmetic_ops!(f32x8, _mm256_add_ps, _mm256_sub_ps, _mm256_mul_ps, _mm256_div_ps);
+crate::impl_arithmetic_ops!(
+    f32x8,
+    _mm256_add_ps,
+    _mm256_sub_ps,
+    _mm256_mul_ps,
+    _mm256_div_ps
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_float_assign_ops!(f32x8);
 #[cfg(target_arch = "x86_64")]
@@ -1249,7 +1246,6 @@ impl From<f32x8> for [f32; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for f32x8
 // These allow `v + 2.0` instead of `v + f32x8::splat(token, 2.0)`
@@ -1296,7 +1292,6 @@ impl Div<f32> for f32x8 {
     }
 }
 
-
 // ============================================================================
 // f64x4 - 4 x f64 (256-bit)
 // ============================================================================
@@ -1319,19 +1314,19 @@ impl f64x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[f64; 4]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[f64; 4]) -> Self {
         Self(unsafe { _mm256_loadu_pd(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: f64) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: f64) -> Self {
         Self(unsafe { _mm256_set1_pd(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_pd() })
     }
 
@@ -1339,7 +1334,7 @@ impl f64x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [f64; 4]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [f64; 4]) -> Self {
         // SAFETY: [f64; 4] and __m256d have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1395,7 +1390,7 @@ impl f64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[f64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[f64]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -1415,7 +1410,7 @@ impl f64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [f64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [f64]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -1450,7 +1445,7 @@ impl f64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -1459,7 +1454,7 @@ impl f64x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -1505,7 +1500,9 @@ impl f64x4 {
     /// Round to nearest integer
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self(unsafe { _mm256_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0) })
+        Self(unsafe {
+            _mm256_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(self.0)
+        })
     }
     /// Fused multiply-add: self * a + b
     #[inline(always)]
@@ -1659,14 +1656,24 @@ impl f64x4 {
             let x_bits = _mm256_castpd_si256(self.0);
             let offset = _mm256_set1_epi64x(OFFSET);
             let exp_bits = _mm256_sub_epi64(x_bits, offset);
-            let exp_shifted = _mm256_srai_epi64::<52>(exp_bits);
+            let exp_arr_raw: [i64; 4] = core::mem::transmute(exp_bits);
+            let exp_shifted = _mm256_set_epi64x(
+                exp_arr_raw[3] >> 52,
+                exp_arr_raw[2] >> 52,
+                exp_arr_raw[1] >> 52,
+                exp_arr_raw[0] >> 52,
+            );
 
             let mantissa_bits = _mm256_sub_epi64(x_bits, _mm256_slli_epi64::<52>(exp_shifted));
             let mantissa = _mm256_castsi256_pd(mantissa_bits);
             // Convert exponent to f64
             let exp_arr: [i64; 4] = core::mem::transmute(exp_shifted);
             let exp_f64: [f64; 4] = [
-exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64];
+                exp_arr[0] as f64,
+                exp_arr[1] as f64,
+                exp_arr[2] as f64,
+                exp_arr[3] as f64,
+            ];
             let exp_val = _mm256_loadu_pd(exp_f64.as_ptr());
 
             let one = _mm256_set1_pd(1.0);
@@ -1712,7 +1719,11 @@ exp_arr[0] as f64, exp_arr[1] as f64, exp_arr[2] as f64, exp_arr[3] as f64];
             // Scale by 2^integer - extract, convert, scale
             let xi_arr: [f64; 4] = core::mem::transmute(xi);
             let scale_arr: [f64; 4] = [
-f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64)];
+                f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[2] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[3] as i64 + 1023) << 52) as u64),
+            ];
             let scale = _mm256_loadu_pd(scale_arr.as_ptr());
 
             Self(_mm256_mul_pd(poly, scale))
@@ -1723,41 +1734,38 @@ f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_ar
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
-        unsafe {
-            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LN2)))
-        }
+        unsafe { Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LN2))) }
     }
 
     /// Low-precision natural exponential (e^x).
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
-        unsafe {
-            Self(_mm256_mul_pd(self.0, _mm256_set1_pd(LOG2_E))).exp2_lowp()
-        }
+        unsafe { Self(_mm256_mul_pd(self.0, _mm256_set1_pd(LOG2_E))).exp2_lowp() }
     }
 
     /// Low-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
-        unsafe {
-            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LOG10_2)))
-        }
+        unsafe { Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(LOG10_2))) }
     }
 
     /// Low-precision power function (self^n).
     #[inline(always)]
     pub fn pow_lowp(self, n: f64) -> Self {
-        unsafe {
-            Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(n))).exp2_lowp()
-        }
+        unsafe { Self(_mm256_mul_pd(self.log2_lowp().0, _mm256_set1_pd(n))).exp2_lowp() }
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
-crate::impl_arithmetic_ops!(f64x4, _mm256_add_pd, _mm256_sub_pd, _mm256_mul_pd, _mm256_div_pd);
+crate::impl_arithmetic_ops!(
+    f64x4,
+    _mm256_add_pd,
+    _mm256_sub_pd,
+    _mm256_mul_pd,
+    _mm256_div_pd
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_float_assign_ops!(f64x4);
 #[cfg(target_arch = "x86_64")]
@@ -1783,7 +1791,6 @@ impl From<f64x4> for [f64; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for f64x4
 // These allow `v + 2.0` instead of `v + f64x4::splat(token, 2.0)`
@@ -1830,7 +1837,6 @@ impl Div<f64> for f64x4 {
     }
 }
 
-
 // ============================================================================
 // i8x32 - 32 x i8 (256-bit)
 // ============================================================================
@@ -1853,19 +1859,19 @@ impl i8x32 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[i8; 32]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[i8; 32]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: i8) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: i8) -> Self {
         Self(unsafe { _mm256_set1_epi8(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -1873,7 +1879,7 @@ impl i8x32 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [i8; 32]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [i8; 32]) -> Self {
         // SAFETY: [i8; 32] and __m256i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1929,7 +1935,7 @@ impl i8x32 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[i8]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[i8]) -> Option<&[Self]> {
         if slice.len() % 32 != 0 {
             return None;
         }
@@ -1949,7 +1955,7 @@ impl i8x32 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [i8]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [i8]) -> Option<&mut [Self]> {
         if slice.len() % 32 != 0 {
             return None;
         }
@@ -1984,7 +1990,7 @@ impl i8x32 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -1993,7 +1999,7 @@ impl i8x32 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -2128,7 +2134,13 @@ crate::impl_int_arithmetic_ops!(i8x32, _mm256_add_epi8, _mm256_sub_epi8);
 #[cfg(target_arch = "x86_64")]
 crate::impl_assign_ops!(i8x32);
 #[cfg(target_arch = "x86_64")]
-crate::impl_bitwise_ops!(i8x32, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
+crate::impl_bitwise_ops!(
+    i8x32,
+    __m256i,
+    _mm256_and_si256,
+    _mm256_or_si256,
+    _mm256_xor_si256
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(i8x32, i8, 32);
 
@@ -2148,7 +2160,6 @@ impl From<i8x32> for [i8; 32] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for i8x32
 // These allow `v + 2.0` instead of `v + i8x32::splat(token, 2.0)`
@@ -2173,7 +2184,6 @@ impl Sub<i8> for i8x32 {
     }
 }
 
-
 // ============================================================================
 // u8x32 - 32 x u8 (256-bit)
 // ============================================================================
@@ -2196,19 +2206,19 @@ impl u8x32 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[u8; 32]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[u8; 32]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: u8) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: u8) -> Self {
         Self(unsafe { _mm256_set1_epi8(v as i8) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -2216,7 +2226,7 @@ impl u8x32 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [u8; 32]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and __m256i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2272,7 +2282,7 @@ impl u8x32 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[u8]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[u8]) -> Option<&[Self]> {
         if slice.len() % 32 != 0 {
             return None;
         }
@@ -2292,7 +2302,7 @@ impl u8x32 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [u8]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [u8]) -> Option<&mut [Self]> {
         if slice.len() % 32 != 0 {
             return None;
         }
@@ -2327,7 +2337,7 @@ impl u8x32 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -2336,7 +2346,7 @@ impl u8x32 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -2465,91 +2475,90 @@ impl u8x32 {
             _mm256_xor_si256(self.0, ones)
         })
     }
-// ========== Extend/Widen Operations ==========
+    // ========== Extend/Widen Operations ==========
 
-/// Zero-extend low 16 u8 values to i16x16.
-///
-/// Takes the lower 16 bytes and zero-extends each to 16 bits.
-#[inline(always)]
-pub fn extend_lo_i16(self) -> i16x16 {
-    i16x16(unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        _mm256_cvtepu8_epi16(lo128)
-    })
-}
-
-/// Zero-extend high 16 u8 values to i16x16.
-///
-/// Takes the upper 16 bytes and zero-extends each to 16 bits.
-#[inline(always)]
-pub fn extend_hi_i16(self) -> i16x16 {
-    i16x16(unsafe {
-        let hi128 = _mm256_extracti128_si256::<1>(self.0);
-        _mm256_cvtepu8_epi16(hi128)
-    })
-}
-
-/// Zero-extend all 32 u8 values to two i16x16 vectors.
-///
-/// Returns (low 16 as i16x16, high 16 as i16x16).
-#[inline(always)]
-pub fn extend_i16(self) -> (i16x16, i16x16) {
-    (self.extend_lo_i16(), self.extend_hi_i16())
-}
-
-/// Zero-extend low 8 u8 values to i32x8.
-#[inline(always)]
-pub fn extend_lo_i32(self) -> i32x8 {
-    i32x8(unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        _mm256_cvtepu8_epi32(lo128)
-    })
-}
-
-/// Zero-extend low 8 u8 values to f32x8.
-///
-/// Useful for image processing: load 8 pixel values and convert to float.
-#[inline(always)]
-pub fn extend_lo_f32(self) -> f32x8 {
-    f32x8(unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        let i32s = _mm256_cvtepu8_epi32(lo128);
-        _mm256_cvtepi32_ps(i32s)
-    })
-}
-
-/// Zero-extend all 32 u8 values to four f32x8 vectors.
-///
-/// Returns [bytes 0-7, bytes 8-15, bytes 16-23, bytes 24-31] as f32x8.
-/// Useful for processing 32 pixels as floats.
-#[inline(always)]
-pub fn extend_f32(self) -> [f32x8; 4] {
-    unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        let hi128 = _mm256_extracti128_si256::<1>(self.0);
-
-        // bytes 0-7
-        let i0 = _mm256_cvtepu8_epi32(lo128);
-        let f0 = _mm256_cvtepi32_ps(i0);
-
-        // bytes 8-15: shift lo128 right by 8 bytes
-        let lo_hi = _mm_srli_si128::<8>(lo128);
-        let i1 = _mm256_cvtepu8_epi32(lo_hi);
-        let f1 = _mm256_cvtepi32_ps(i1);
-
-        // bytes 16-23
-        let i2 = _mm256_cvtepu8_epi32(hi128);
-        let f2 = _mm256_cvtepi32_ps(i2);
-
-        // bytes 24-31: shift hi128 right by 8 bytes
-        let hi_hi = _mm_srli_si128::<8>(hi128);
-        let i3 = _mm256_cvtepu8_epi32(hi_hi);
-        let f3 = _mm256_cvtepi32_ps(i3);
-
-        [f32x8(f0), f32x8(f1), f32x8(f2), f32x8(f3)]
+    /// Zero-extend low 16 u8 values to i16x16.
+    ///
+    /// Takes the lower 16 bytes and zero-extends each to 16 bits.
+    #[inline(always)]
+    pub fn extend_lo_i16(self) -> i16x16 {
+        i16x16(unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            _mm256_cvtepu8_epi16(lo128)
+        })
     }
-}
 
+    /// Zero-extend high 16 u8 values to i16x16.
+    ///
+    /// Takes the upper 16 bytes and zero-extends each to 16 bits.
+    #[inline(always)]
+    pub fn extend_hi_i16(self) -> i16x16 {
+        i16x16(unsafe {
+            let hi128 = _mm256_extracti128_si256::<1>(self.0);
+            _mm256_cvtepu8_epi16(hi128)
+        })
+    }
+
+    /// Zero-extend all 32 u8 values to two i16x16 vectors.
+    ///
+    /// Returns (low 16 as i16x16, high 16 as i16x16).
+    #[inline(always)]
+    pub fn extend_i16(self) -> (i16x16, i16x16) {
+        (self.extend_lo_i16(), self.extend_hi_i16())
+    }
+
+    /// Zero-extend low 8 u8 values to i32x8.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x8 {
+        i32x8(unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            _mm256_cvtepu8_epi32(lo128)
+        })
+    }
+
+    /// Zero-extend low 8 u8 values to f32x8.
+    ///
+    /// Useful for image processing: load 8 pixel values and convert to float.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x8 {
+        f32x8(unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            let i32s = _mm256_cvtepu8_epi32(lo128);
+            _mm256_cvtepi32_ps(i32s)
+        })
+    }
+
+    /// Zero-extend all 32 u8 values to four f32x8 vectors.
+    ///
+    /// Returns [bytes 0-7, bytes 8-15, bytes 16-23, bytes 24-31] as f32x8.
+    /// Useful for processing 32 pixels as floats.
+    #[inline(always)]
+    pub fn extend_f32(self) -> [f32x8; 4] {
+        unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            let hi128 = _mm256_extracti128_si256::<1>(self.0);
+
+            // bytes 0-7
+            let i0 = _mm256_cvtepu8_epi32(lo128);
+            let f0 = _mm256_cvtepi32_ps(i0);
+
+            // bytes 8-15: shift lo128 right by 8 bytes
+            let lo_hi = _mm_srli_si128::<8>(lo128);
+            let i1 = _mm256_cvtepu8_epi32(lo_hi);
+            let f1 = _mm256_cvtepi32_ps(i1);
+
+            // bytes 16-23
+            let i2 = _mm256_cvtepu8_epi32(hi128);
+            let f2 = _mm256_cvtepi32_ps(i2);
+
+            // bytes 24-31: shift hi128 right by 8 bytes
+            let hi_hi = _mm_srli_si128::<8>(hi128);
+            let i3 = _mm256_cvtepu8_epi32(hi_hi);
+            let f3 = _mm256_cvtepi32_ps(i3);
+
+            [f32x8(f0), f32x8(f1), f32x8(f2), f32x8(f3)]
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2557,7 +2566,13 @@ crate::impl_int_arithmetic_ops!(u8x32, _mm256_add_epi8, _mm256_sub_epi8);
 #[cfg(target_arch = "x86_64")]
 crate::impl_assign_ops!(u8x32);
 #[cfg(target_arch = "x86_64")]
-crate::impl_bitwise_ops!(u8x32, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
+crate::impl_bitwise_ops!(
+    u8x32,
+    __m256i,
+    _mm256_and_si256,
+    _mm256_or_si256,
+    _mm256_xor_si256
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u8x32, u8, 32);
 
@@ -2577,7 +2592,6 @@ impl From<u8x32> for [u8; 32] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for u8x32
 // These allow `v + 2.0` instead of `v + u8x32::splat(token, 2.0)`
@@ -2602,7 +2616,6 @@ impl Sub<u8> for u8x32 {
     }
 }
 
-
 // ============================================================================
 // i16x16 - 16 x i16 (256-bit)
 // ============================================================================
@@ -2625,19 +2638,19 @@ impl i16x16 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[i16; 16]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[i16; 16]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: i16) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: i16) -> Self {
         Self(unsafe { _mm256_set1_epi16(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -2645,7 +2658,7 @@ impl i16x16 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [i16; 16]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [i16; 16]) -> Self {
         // SAFETY: [i16; 16] and __m256i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2701,7 +2714,7 @@ impl i16x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[i16]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[i16]) -> Option<&[Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -2721,7 +2734,7 @@ impl i16x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [i16]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [i16]) -> Option<&mut [Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -2756,7 +2769,7 @@ impl i16x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -2765,7 +2778,7 @@ impl i16x16 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -2881,7 +2894,10 @@ impl i16x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
-        self.as_array().iter().copied().fold(0_i16, i16::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_i16, i16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2915,76 +2931,78 @@ impl i16x16 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srai_epi16::<N>(self.0) })
     }
-// ========== Extend/Widen Operations ==========
+    // ========== Extend/Widen Operations ==========
 
-/// Sign-extend low 8 i16 values to i32x8.
-#[inline(always)]
-pub fn extend_lo_i32(self) -> i32x8 {
-    i32x8(unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        _mm256_cvtepi16_epi32(lo128)
-    })
-}
-
-/// Sign-extend high 8 i16 values to i32x8.
-#[inline(always)]
-pub fn extend_hi_i32(self) -> i32x8 {
-    i32x8(unsafe {
-        let hi128 = _mm256_extracti128_si256::<1>(self.0);
-        _mm256_cvtepi16_epi32(hi128)
-    })
-}
-
-/// Sign-extend all 16 i16 values to two i32x8 vectors.
-#[inline(always)]
-pub fn extend_i32(self) -> (i32x8, i32x8) {
-    (self.extend_lo_i32(), self.extend_hi_i32())
-}
-
-/// Sign-extend low 8 i16 values to f32x8.
-#[inline(always)]
-pub fn extend_lo_f32(self) -> f32x8 {
-    f32x8(unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        let i32s = _mm256_cvtepi16_epi32(lo128);
-        _mm256_cvtepi32_ps(i32s)
-    })
-}
-
-/// Sign-extend all 16 i16 values to two f32x8 vectors.
-#[inline(always)]
-pub fn extend_f32(self) -> (f32x8, f32x8) {
-    unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        let hi128 = _mm256_extracti128_si256::<1>(self.0);
-
-        let i32_lo = _mm256_cvtepi16_epi32(lo128);
-        let i32_hi = _mm256_cvtepi16_epi32(hi128);
-
-        (f32x8(_mm256_cvtepi32_ps(i32_lo)), f32x8(_mm256_cvtepi32_ps(i32_hi)))
+    /// Sign-extend low 8 i16 values to i32x8.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x8 {
+        i32x8(unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            _mm256_cvtepi16_epi32(lo128)
+        })
     }
-}
 
-// ========== Pack/Narrow Operations ==========
+    /// Sign-extend high 8 i16 values to i32x8.
+    #[inline(always)]
+    pub fn extend_hi_i32(self) -> i32x8 {
+        i32x8(unsafe {
+            let hi128 = _mm256_extracti128_si256::<1>(self.0);
+            _mm256_cvtepi16_epi32(hi128)
+        })
+    }
 
-/// Pack two i16x16 vectors to u8x32 with unsigned saturation.
-///
-/// Values below 0 become 0, values above 255 become 255.
-/// Note: AVX2 pack works within 128-bit lanes, so results are:
-/// [self_lo[0-7], other_lo[0-7], self_hi[0-7], other_hi[0-7]]
-#[inline(always)]
-pub fn pack_u8(self, other: Self) -> u8x32 {
-    u8x32(unsafe { _mm256_packus_epi16(self.0, other.0) })
-}
+    /// Sign-extend all 16 i16 values to two i32x8 vectors.
+    #[inline(always)]
+    pub fn extend_i32(self) -> (i32x8, i32x8) {
+        (self.extend_lo_i32(), self.extend_hi_i32())
+    }
 
-/// Pack two i16x16 vectors to i8x32 with signed saturation.
-///
-/// Values are clamped to [-128, 127].
-#[inline(always)]
-pub fn pack_i8(self, other: Self) -> i8x32 {
-    i8x32(unsafe { _mm256_packs_epi16(self.0, other.0) })
-}
+    /// Sign-extend low 8 i16 values to f32x8.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x8 {
+        f32x8(unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            let i32s = _mm256_cvtepi16_epi32(lo128);
+            _mm256_cvtepi32_ps(i32s)
+        })
+    }
 
+    /// Sign-extend all 16 i16 values to two f32x8 vectors.
+    #[inline(always)]
+    pub fn extend_f32(self) -> (f32x8, f32x8) {
+        unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            let hi128 = _mm256_extracti128_si256::<1>(self.0);
+
+            let i32_lo = _mm256_cvtepi16_epi32(lo128);
+            let i32_hi = _mm256_cvtepi16_epi32(hi128);
+
+            (
+                f32x8(_mm256_cvtepi32_ps(i32_lo)),
+                f32x8(_mm256_cvtepi32_ps(i32_hi)),
+            )
+        }
+    }
+
+    // ========== Pack/Narrow Operations ==========
+
+    /// Pack two i16x16 vectors to u8x32 with unsigned saturation.
+    ///
+    /// Values below 0 become 0, values above 255 become 255.
+    /// Note: AVX2 pack works within 128-bit lanes, so results are:
+    /// [self_lo[0-7], other_lo[0-7], self_hi[0-7], other_hi[0-7]]
+    #[inline(always)]
+    pub fn pack_u8(self, other: Self) -> u8x32 {
+        u8x32(unsafe { _mm256_packus_epi16(self.0, other.0) })
+    }
+
+    /// Pack two i16x16 vectors to i8x32 with signed saturation.
+    ///
+    /// Values are clamped to [-128, 127].
+    #[inline(always)]
+    pub fn pack_i8(self, other: Self) -> i8x32 {
+        i8x32(unsafe { _mm256_packs_epi16(self.0, other.0) })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2994,7 +3012,13 @@ crate::impl_int_mul_op!(i16x16, _mm256_mullo_epi16);
 #[cfg(target_arch = "x86_64")]
 crate::impl_assign_ops!(i16x16);
 #[cfg(target_arch = "x86_64")]
-crate::impl_bitwise_ops!(i16x16, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
+crate::impl_bitwise_ops!(
+    i16x16,
+    __m256i,
+    _mm256_and_si256,
+    _mm256_or_si256,
+    _mm256_xor_si256
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(i16x16, i16, 16);
 
@@ -3014,7 +3038,6 @@ impl From<i16x16> for [i16; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for i16x16
 // These allow `v + 2.0` instead of `v + i16x16::splat(token, 2.0)`
@@ -3039,7 +3062,6 @@ impl Sub<i16> for i16x16 {
     }
 }
 
-
 // ============================================================================
 // u16x16 - 16 x u16 (256-bit)
 // ============================================================================
@@ -3062,19 +3084,19 @@ impl u16x16 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[u16; 16]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[u16; 16]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: u16) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: u16) -> Self {
         Self(unsafe { _mm256_set1_epi16(v as i16) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -3082,7 +3104,7 @@ impl u16x16 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [u16; 16]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [u16; 16]) -> Self {
         // SAFETY: [u16; 16] and __m256i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3138,7 +3160,7 @@ impl u16x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[u16]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[u16]) -> Option<&[Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -3158,7 +3180,7 @@ impl u16x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [u16]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [u16]) -> Option<&mut [Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -3193,7 +3215,7 @@ impl u16x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -3202,7 +3224,7 @@ impl u16x16 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -3319,7 +3341,10 @@ impl u16x16 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u16 {
-        self.as_array().iter().copied().fold(0_u16, u16::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_u16, u16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3346,56 +3371,58 @@ impl u16x16 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srli_epi16::<N>(self.0) })
     }
-// ========== Extend/Widen Operations ==========
+    // ========== Extend/Widen Operations ==========
 
-/// Zero-extend low 8 u16 values to i32x8.
-#[inline(always)]
-pub fn extend_lo_i32(self) -> i32x8 {
-    i32x8(unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        _mm256_cvtepu16_epi32(lo128)
-    })
-}
-
-/// Zero-extend high 8 u16 values to i32x8.
-#[inline(always)]
-pub fn extend_hi_i32(self) -> i32x8 {
-    i32x8(unsafe {
-        let hi128 = _mm256_extracti128_si256::<1>(self.0);
-        _mm256_cvtepu16_epi32(hi128)
-    })
-}
-
-/// Zero-extend all 16 u16 values to two i32x8 vectors.
-#[inline(always)]
-pub fn extend_i32(self) -> (i32x8, i32x8) {
-    (self.extend_lo_i32(), self.extend_hi_i32())
-}
-
-/// Zero-extend low 8 u16 values to f32x8.
-#[inline(always)]
-pub fn extend_lo_f32(self) -> f32x8 {
-    f32x8(unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        let i32s = _mm256_cvtepu16_epi32(lo128);
-        _mm256_cvtepi32_ps(i32s)
-    })
-}
-
-/// Zero-extend all 16 u16 values to two f32x8 vectors.
-#[inline(always)]
-pub fn extend_f32(self) -> (f32x8, f32x8) {
-    unsafe {
-        let lo128 = _mm256_castsi256_si128(self.0);
-        let hi128 = _mm256_extracti128_si256::<1>(self.0);
-
-        let i32_lo = _mm256_cvtepu16_epi32(lo128);
-        let i32_hi = _mm256_cvtepu16_epi32(hi128);
-
-        (f32x8(_mm256_cvtepi32_ps(i32_lo)), f32x8(_mm256_cvtepi32_ps(i32_hi)))
+    /// Zero-extend low 8 u16 values to i32x8.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x8 {
+        i32x8(unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            _mm256_cvtepu16_epi32(lo128)
+        })
     }
-}
 
+    /// Zero-extend high 8 u16 values to i32x8.
+    #[inline(always)]
+    pub fn extend_hi_i32(self) -> i32x8 {
+        i32x8(unsafe {
+            let hi128 = _mm256_extracti128_si256::<1>(self.0);
+            _mm256_cvtepu16_epi32(hi128)
+        })
+    }
+
+    /// Zero-extend all 16 u16 values to two i32x8 vectors.
+    #[inline(always)]
+    pub fn extend_i32(self) -> (i32x8, i32x8) {
+        (self.extend_lo_i32(), self.extend_hi_i32())
+    }
+
+    /// Zero-extend low 8 u16 values to f32x8.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x8 {
+        f32x8(unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            let i32s = _mm256_cvtepu16_epi32(lo128);
+            _mm256_cvtepi32_ps(i32s)
+        })
+    }
+
+    /// Zero-extend all 16 u16 values to two f32x8 vectors.
+    #[inline(always)]
+    pub fn extend_f32(self) -> (f32x8, f32x8) {
+        unsafe {
+            let lo128 = _mm256_castsi256_si128(self.0);
+            let hi128 = _mm256_extracti128_si256::<1>(self.0);
+
+            let i32_lo = _mm256_cvtepu16_epi32(lo128);
+            let i32_hi = _mm256_cvtepu16_epi32(hi128);
+
+            (
+                f32x8(_mm256_cvtepi32_ps(i32_lo)),
+                f32x8(_mm256_cvtepi32_ps(i32_hi)),
+            )
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3405,7 +3432,13 @@ crate::impl_int_mul_op!(u16x16, _mm256_mullo_epi16);
 #[cfg(target_arch = "x86_64")]
 crate::impl_assign_ops!(u16x16);
 #[cfg(target_arch = "x86_64")]
-crate::impl_bitwise_ops!(u16x16, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
+crate::impl_bitwise_ops!(
+    u16x16,
+    __m256i,
+    _mm256_and_si256,
+    _mm256_or_si256,
+    _mm256_xor_si256
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u16x16, u16, 16);
 
@@ -3425,7 +3458,6 @@ impl From<u16x16> for [u16; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for u16x16
 // These allow `v + 2.0` instead of `v + u16x16::splat(token, 2.0)`
@@ -3450,7 +3482,6 @@ impl Sub<u16> for u16x16 {
     }
 }
 
-
 // ============================================================================
 // i32x8 - 8 x i32 (256-bit)
 // ============================================================================
@@ -3473,19 +3504,19 @@ impl i32x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[i32; 8]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[i32; 8]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: i32) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: i32) -> Self {
         Self(unsafe { _mm256_set1_epi32(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -3493,7 +3524,7 @@ impl i32x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [i32; 8]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [i32; 8]) -> Self {
         // SAFETY: [i32; 8] and __m256i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3549,7 +3580,7 @@ impl i32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[i32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[i32]) -> Option<&[Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -3569,7 +3600,7 @@ impl i32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [i32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [i32]) -> Option<&mut [Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -3604,7 +3635,7 @@ impl i32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -3613,7 +3644,7 @@ impl i32x8 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -3729,7 +3760,10 @@ impl i32x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        self.as_array().iter().copied().fold(0_i32, i32::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_i32, i32::wrapping_add)
     }
 
     // ========== Type Conversions ==========
@@ -3771,30 +3805,29 @@ impl i32x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srai_epi32::<N>(self.0) })
     }
-// ========== Extend/Widen Operations ==========
+    // ========== Extend/Widen Operations ==========
 
-/// Convert to f32x8.
-#[inline(always)]
-pub fn to_f32(self) -> f32x8 {
-    f32x8(unsafe { _mm256_cvtepi32_ps(self.0) })
-}
+    /// Convert to f32x8.
+    #[inline(always)]
+    pub fn to_f32(self) -> f32x8 {
+        f32x8(unsafe { _mm256_cvtepi32_ps(self.0) })
+    }
 
-// ========== Pack/Narrow Operations ==========
+    // ========== Pack/Narrow Operations ==========
 
-/// Pack two i32x8 vectors to i16x16 with signed saturation.
-///
-/// Note: AVX2 pack works within 128-bit lanes.
-#[inline(always)]
-pub fn pack_i16(self, other: Self) -> i16x16 {
-    i16x16(unsafe { _mm256_packs_epi32(self.0, other.0) })
-}
+    /// Pack two i32x8 vectors to i16x16 with signed saturation.
+    ///
+    /// Note: AVX2 pack works within 128-bit lanes.
+    #[inline(always)]
+    pub fn pack_i16(self, other: Self) -> i16x16 {
+        i16x16(unsafe { _mm256_packs_epi32(self.0, other.0) })
+    }
 
-/// Pack two i32x8 vectors to u16x16 with unsigned saturation.
-#[inline(always)]
-pub fn pack_u16(self, other: Self) -> u16x16 {
-    u16x16(unsafe { _mm256_packus_epi32(self.0, other.0) })
-}
-
+    /// Pack two i32x8 vectors to u16x16 with unsigned saturation.
+    #[inline(always)]
+    pub fn pack_u16(self, other: Self) -> u16x16 {
+        u16x16(unsafe { _mm256_packus_epi32(self.0, other.0) })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3804,7 +3837,13 @@ crate::impl_int_mul_op!(i32x8, _mm256_mullo_epi32);
 #[cfg(target_arch = "x86_64")]
 crate::impl_assign_ops!(i32x8);
 #[cfg(target_arch = "x86_64")]
-crate::impl_bitwise_ops!(i32x8, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
+crate::impl_bitwise_ops!(
+    i32x8,
+    __m256i,
+    _mm256_and_si256,
+    _mm256_or_si256,
+    _mm256_xor_si256
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(i32x8, i32, 8);
 
@@ -3824,7 +3863,6 @@ impl From<i32x8> for [i32; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for i32x8
 // These allow `v + 2.0` instead of `v + i32x8::splat(token, 2.0)`
@@ -3849,7 +3887,6 @@ impl Sub<i32> for i32x8 {
     }
 }
 
-
 // ============================================================================
 // u32x8 - 8 x u32 (256-bit)
 // ============================================================================
@@ -3872,19 +3909,19 @@ impl u32x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[u32; 8]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[u32; 8]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: u32) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: u32) -> Self {
         Self(unsafe { _mm256_set1_epi32(v as i32) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -3892,7 +3929,7 @@ impl u32x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [u32; 8]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [u32; 8]) -> Self {
         // SAFETY: [u32; 8] and __m256i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3948,7 +3985,7 @@ impl u32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[u32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[u32]) -> Option<&[Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -3968,7 +4005,7 @@ impl u32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [u32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [u32]) -> Option<&mut [Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -4003,7 +4040,7 @@ impl u32x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -4012,7 +4049,7 @@ impl u32x8 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -4129,7 +4166,10 @@ impl u32x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        self.as_array().iter().copied().fold(0_u32, u32::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_u32, u32::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -4165,7 +4205,13 @@ crate::impl_int_mul_op!(u32x8, _mm256_mullo_epi32);
 #[cfg(target_arch = "x86_64")]
 crate::impl_assign_ops!(u32x8);
 #[cfg(target_arch = "x86_64")]
-crate::impl_bitwise_ops!(u32x8, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
+crate::impl_bitwise_ops!(
+    u32x8,
+    __m256i,
+    _mm256_and_si256,
+    _mm256_or_si256,
+    _mm256_xor_si256
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u32x8, u32, 8);
 
@@ -4185,7 +4231,6 @@ impl From<u32x8> for [u32; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for u32x8
 // These allow `v + 2.0` instead of `v + u32x8::splat(token, 2.0)`
@@ -4210,7 +4255,6 @@ impl Sub<u32> for u32x8 {
     }
 }
 
-
 // ============================================================================
 // i64x4 - 4 x i64 (256-bit)
 // ============================================================================
@@ -4233,19 +4277,19 @@ impl i64x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[i64; 4]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[i64; 4]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: i64) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: i64) -> Self {
         Self(unsafe { _mm256_set1_epi64x(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -4253,7 +4297,7 @@ impl i64x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [i64; 4]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [i64; 4]) -> Self {
         // SAFETY: [i64; 4] and __m256i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4309,7 +4353,7 @@ impl i64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[i64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[i64]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -4329,7 +4373,7 @@ impl i64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [i64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [i64]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -4364,7 +4408,7 @@ impl i64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -4373,7 +4417,7 @@ impl i64x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -4469,7 +4513,10 @@ impl i64x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
-        self.as_array().iter().copied().fold(0_i64, i64::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_i64, i64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -4503,7 +4550,13 @@ crate::impl_int_arithmetic_ops!(i64x4, _mm256_add_epi64, _mm256_sub_epi64);
 #[cfg(target_arch = "x86_64")]
 crate::impl_assign_ops!(i64x4);
 #[cfg(target_arch = "x86_64")]
-crate::impl_bitwise_ops!(i64x4, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
+crate::impl_bitwise_ops!(
+    i64x4,
+    __m256i,
+    _mm256_and_si256,
+    _mm256_or_si256,
+    _mm256_xor_si256
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(i64x4, i64, 4);
 
@@ -4523,7 +4576,6 @@ impl From<i64x4> for [i64; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for i64x4
 // These allow `v + 2.0` instead of `v + i64x4::splat(token, 2.0)`
@@ -4548,7 +4600,6 @@ impl Sub<i64> for i64x4 {
     }
 }
 
-
 // ============================================================================
 // u64x4 - 4 x u64 (256-bit)
 // ============================================================================
@@ -4571,19 +4622,19 @@ impl u64x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Avx2FmaToken, data: &[u64; 4]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[u64; 4]) -> Self {
         Self(unsafe { _mm256_loadu_si256(data.as_ptr() as *const __m256i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Avx2FmaToken, v: u64) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: u64) -> Self {
         Self(unsafe { _mm256_set1_epi64x(v as i64) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Avx2FmaToken) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm256_setzero_si256() })
     }
 
@@ -4591,7 +4642,7 @@ impl u64x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Avx2FmaToken, arr: [u64; 4]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [u64; 4]) -> Self {
         // SAFETY: [u64; 4] and __m256i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4647,7 +4698,7 @@ impl u64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Avx2FmaToken, slice: &[u64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[u64]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -4667,7 +4718,7 @@ impl u64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Avx2FmaToken, slice: &mut [u64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [u64]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -4702,7 +4753,7 @@ impl u64x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Avx2FmaToken, bytes: &[u8; 32]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -4711,7 +4762,7 @@ impl u64x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Avx2FmaToken, bytes: [u8; 32]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -4813,7 +4864,10 @@ impl u64x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u64 {
-        self.as_array().iter().copied().fold(0_u64, u64::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_u64, u64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -4847,7 +4901,13 @@ crate::impl_int_arithmetic_ops!(u64x4, _mm256_add_epi64, _mm256_sub_epi64);
 #[cfg(target_arch = "x86_64")]
 crate::impl_assign_ops!(u64x4);
 #[cfg(target_arch = "x86_64")]
-crate::impl_bitwise_ops!(u64x4, __m256i, _mm256_and_si256, _mm256_or_si256, _mm256_xor_si256);
+crate::impl_bitwise_ops!(
+    u64x4,
+    __m256i,
+    _mm256_and_si256,
+    _mm256_or_si256,
+    _mm256_xor_si256
+);
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u64x4, u64, 4);
 
@@ -4867,7 +4927,6 @@ impl From<u64x4> for [u64; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for u64x4
 // These allow `v + 2.0` instead of `v + u64x4::splat(token, 2.0)`
@@ -4891,4 +4950,3 @@ impl Sub<u64> for u64x4 {
         self - Self(unsafe { _mm256_set1_epi64x(rhs as i64) })
     }
 }
-

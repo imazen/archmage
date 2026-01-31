@@ -4,7 +4,6 @@
 
 use core::arch::wasm32::*;
 
-
 // ============================================================================
 // f32x4 - 4 x f32 (128-bit WASM SIMD)
 // ============================================================================
@@ -149,7 +148,10 @@ impl f32x4 {
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> f32 {
-        f32x4_extract_lane::<0>(self.0) + f32x4_extract_lane::<1>(self.0) + f32x4_extract_lane::<2>(self.0) + f32x4_extract_lane::<3>(self.0)
+        f32x4_extract_lane::<0>(self.0)
+            + f32x4_extract_lane::<1>(self.0)
+            + f32x4_extract_lane::<2>(self.0)
+            + f32x4_extract_lane::<3>(self.0)
     }
 
     /// Reduce: max of all lanes
@@ -297,10 +299,10 @@ impl f32x4 {
         let pos_inf = f32x4_splat(f32::INFINITY);
         let nan = f32x4_splat(f32::NAN);
 
-        let r = v128_bitselect(neg_inf, result.0, is_zero);  // 0 -> -inf
-        let r = v128_bitselect(nan, r, is_neg);              // neg -> NaN
-        let r = v128_bitselect(pos_inf, r, is_inf);          // inf -> inf
-        let r = v128_bitselect(nan, r, is_nan);              // NaN -> NaN
+        let r = v128_bitselect(neg_inf, result.0, is_zero); // 0 -> -inf
+        let r = v128_bitselect(nan, r, is_neg); // neg -> NaN
+        let r = v128_bitselect(pos_inf, r, is_inf); // inf -> inf
+        let r = v128_bitselect(nan, r, is_nan); // NaN -> NaN
         Self(r)
     }
 
@@ -478,9 +480,9 @@ impl f32x4 {
     #[inline(always)]
     pub fn log2_midp_precise(self) -> Self {
         // Scale factor for denormals: 2^24
-        const SCALE_UP: f32 = 16777216.0;  // 2^24
-        const SCALE_ADJUST: f32 = 24.0;    // log2(2^24)
-        const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+        const SCALE_UP: f32 = 16777216.0; // 2^24
+        const SCALE_ADJUST: f32 = 24.0; // log2(2^24)
+        const DENORM_LIMIT: f32 = 1.17549435e-38; // Smallest normal f32
 
         // Detect denormals (positive values smaller than smallest normal)
         let zero = f32x4_splat(0.0);
@@ -585,7 +587,6 @@ impl f32x4 {
     pub fn pow_midp(self, n: f32) -> Self {
         Self(f32x4_mul(self.log2_midp().0, f32x4_splat(n))).exp2_midp()
     }
-
 }
 
 impl core::ops::Add for f32x4 {
@@ -733,7 +734,6 @@ impl From<f32x4> for [f32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit WASM SIMD)
@@ -1012,7 +1012,6 @@ impl f64x2 {
         let result = [arr[0].powf(n), arr[1].powf(n)];
         Self::from(result)
     }
-
 }
 
 impl core::ops::Add for f64x2 {
@@ -1160,7 +1159,6 @@ impl From<f64x2> for [f64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit WASM SIMD)
@@ -1369,7 +1367,6 @@ impl i8x16 {
     pub fn bitmask(self) -> u32 {
         i8x16_bitmask(self.0) as u32
     }
-
 }
 
 impl core::ops::Add for i8x16 {
@@ -1487,7 +1484,6 @@ impl From<i8x16> for [i8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit WASM SIMD)
@@ -1688,7 +1684,6 @@ impl u8x16 {
     pub fn bitmask(self) -> u32 {
         u8x16_bitmask(self.0) as u32
     }
-
 }
 
 impl core::ops::Add for u8x16 {
@@ -1798,7 +1793,6 @@ impl From<u8x16> for [u8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit WASM SIMD)
@@ -2007,7 +2001,6 @@ impl i16x8 {
     pub fn bitmask(self) -> u32 {
         i16x8_bitmask(self.0) as u32
     }
-
 }
 
 impl core::ops::Add for i16x8 {
@@ -2140,7 +2133,6 @@ impl From<i16x8> for [i16; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit WASM SIMD)
@@ -2341,7 +2333,6 @@ impl u16x8 {
     pub fn bitmask(self) -> u32 {
         u16x8_bitmask(self.0) as u32
     }
-
 }
 
 impl core::ops::Add for u16x8 {
@@ -2467,7 +2458,6 @@ impl From<u16x8> for [u16; 8] {
     }
 }
 
-
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit WASM SIMD)
 // ============================================================================
@@ -2579,7 +2569,10 @@ impl i32x4 {
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        i32x4_extract_lane::<0>(self.0) + i32x4_extract_lane::<1>(self.0) + i32x4_extract_lane::<2>(self.0) + i32x4_extract_lane::<3>(self.0)
+        i32x4_extract_lane::<0>(self.0)
+            + i32x4_extract_lane::<1>(self.0)
+            + i32x4_extract_lane::<2>(self.0)
+            + i32x4_extract_lane::<3>(self.0)
     }
 
     /// Element-wise equality comparison (returns mask)
@@ -2674,7 +2667,6 @@ impl i32x4 {
     pub fn bitmask(self) -> u32 {
         i32x4_bitmask(self.0) as u32
     }
-
 }
 
 impl core::ops::Add for i32x4 {
@@ -2808,7 +2800,6 @@ impl From<i32x4> for [i32; 4] {
     }
 }
 
-
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit WASM SIMD)
 // ============================================================================
@@ -2914,7 +2905,10 @@ impl u32x4 {
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        u32x4_extract_lane::<0>(self.0) + u32x4_extract_lane::<1>(self.0) + u32x4_extract_lane::<2>(self.0) + u32x4_extract_lane::<3>(self.0)
+        u32x4_extract_lane::<0>(self.0)
+            + u32x4_extract_lane::<1>(self.0)
+            + u32x4_extract_lane::<2>(self.0)
+            + u32x4_extract_lane::<3>(self.0)
     }
 
     /// Element-wise equality comparison (returns mask)
@@ -3007,7 +3001,6 @@ impl u32x4 {
     pub fn bitmask(self) -> u32 {
         u32x4_bitmask(self.0) as u32
     }
-
 }
 
 impl core::ops::Add for u32x4 {
@@ -3132,7 +3125,6 @@ impl From<u32x4> for [u32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit WASM SIMD)
@@ -3316,7 +3308,6 @@ impl i64x2 {
     pub fn bitmask(self) -> u32 {
         i64x2_bitmask(self.0) as u32
     }
-
 }
 
 impl core::ops::Add for i64x2 {
@@ -3449,7 +3440,6 @@ impl From<i64x2> for [i64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit WASM SIMD)
@@ -3607,7 +3597,6 @@ impl u64x2 {
     pub fn bitmask(self) -> u32 {
         u64x2_bitmask(self.0) as u32
     }
-
 }
 
 impl core::ops::Add for u64x2 {
@@ -3732,4 +3721,3 @@ impl From<u64x2> for [u64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-

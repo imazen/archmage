@@ -13,7 +13,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{Avx2FmaToken, SimdToken, arcane};
+use archmage::{SimdToken, X64V3Token, arcane};
 use core::arch::x86_64::*;
 use magetypes::simd::f32x8;
 use std::time::Instant;
@@ -30,7 +30,7 @@ use std::time::Instant;
 /// Formula: out[x] = sum(input[i][x] * weight[i]) for all rows i
 #[arcane]
 pub fn reduce_vertical_f32_simd(
-    token: Avx2FmaToken,
+    token: X64V3Token,
     inputs: &[&[f32]],
     weights: &[f32],
     output: &mut [f32],
@@ -87,7 +87,7 @@ pub fn reduce_vertical_f32_simd(
 /// Formula: out[x] = (sum(input[i][x] * weight[i]) + HALF) >> 15
 #[arcane]
 pub fn reduce_vertical_u8_simd(
-    token: Avx2FmaToken,
+    token: X64V3Token,
     inputs: &[&[u8]],
     weights: &[i16],
     output: &mut [u8],
@@ -182,7 +182,7 @@ pub fn reduce_vertical_u8_simd(
 /// Uses vertical reduction as the inner loop for best SIMD utilization.
 #[arcane]
 pub fn box_filter_3x3_f32(
-    token: Avx2FmaToken,
+    token: X64V3Token,
     input: &[f32],
     output: &mut [f32],
     width: usize,
@@ -316,7 +316,7 @@ fn box_filter_3x3_f32_scalar(input: &[f32], output: &mut [f32], width: usize, he
 fn test_correctness() {
     println!("=== Correctness Tests ===\n");
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         // Test vertical reduction f32
         let row0: Vec<f32> = (0..32).map(|i| i as f32).collect();
         let row1: Vec<f32> = (0..32).map(|i| (i * 2) as f32).collect();
@@ -451,7 +451,7 @@ fn benchmark() {
         scalar_mpix
     );
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS * HEIGHT {
             reduce_vertical_f32_simd(token, &row_refs_f32, &weights_f32, &mut output_f32);
@@ -501,7 +501,7 @@ fn benchmark() {
         scalar_mpix
     );
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS * HEIGHT {
             reduce_vertical_u8_simd(token, &row_refs_u8, &weights_i16, &mut output_u8);
@@ -543,7 +543,7 @@ fn benchmark() {
         scalar_mpix
     );
 
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             box_filter_3x3_f32(token, &input_2d, &mut output_2d, WIDTH, HEIGHT);

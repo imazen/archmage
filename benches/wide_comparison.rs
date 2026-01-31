@@ -11,10 +11,10 @@ use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_mai
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_arithmetic(c: &mut Criterion) {
     use archmage::simd::f32x8 as arch_f32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping benchmarks");
         return;
     };
@@ -61,10 +61,10 @@ fn bench_f32x8_arithmetic(c: &mut Criterion) {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_math(c: &mut Criterion) {
     use archmage::simd::f32x8 as arch_f32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -125,10 +125,10 @@ fn bench_f32x8_math(c: &mut Criterion) {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_minmax(c: &mut Criterion) {
     use archmage::simd::f32x8 as arch_f32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -163,10 +163,10 @@ fn bench_f32x8_minmax(c: &mut Criterion) {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_fma(c: &mut Criterion) {
     use archmage::simd::f32x8 as arch_f32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -197,10 +197,10 @@ fn bench_f32x8_fma(c: &mut Criterion) {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_reductions(c: &mut Criterion) {
     use archmage::simd::f32x8 as arch_f32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -233,10 +233,10 @@ fn bench_f32x8_reductions(c: &mut Criterion) {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_f32x8_memory(c: &mut Criterion) {
     use archmage::simd::f32x8 as arch_f32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -284,10 +284,10 @@ fn bench_f32x8_memory(c: &mut Criterion) {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_i32x8_arithmetic(c: &mut Criterion) {
     use archmage::simd::i32x8 as arch_i32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::i32x8 as wide_i32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -322,10 +322,10 @@ fn bench_i32x8_arithmetic(c: &mut Criterion) {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_i32x8_reductions(c: &mut Criterion) {
     use archmage::simd::i32x8 as arch_i32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::i32x8 as wide_i32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -353,10 +353,10 @@ fn bench_i32x8_reductions(c: &mut Criterion) {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_batch_operations(c: &mut Criterion) {
     use archmage::simd::f32x8 as arch_f32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return;
     };
 
@@ -480,10 +480,10 @@ mod target_feature_bench {
 #[cfg(all(target_arch = "x86_64", feature = "wide"))]
 fn bench_target_feature_context(c: &mut Criterion) {
     use archmage::simd::f32x8 as arch_f32x8;
-    use archmage::{Avx2FmaToken, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
     use wide::f32x8 as wide_f32x8;
 
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available, skipping benchmarks");
         return;
     };

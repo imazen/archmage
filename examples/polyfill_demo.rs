@@ -11,7 +11,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{SimdToken, Sse41Token, arcane};
+use archmage::{SimdToken, X64V3Token, arcane};
 use magetypes::simd::polyfill::sse as poly;
 use std::time::Instant;
 
@@ -20,7 +20,7 @@ const ITERATIONS: u32 = 1000;
 
 /// Sum using polyfilled f32x8 on SSE
 #[arcane]
-fn sum_polyfill(token: Sse41Token, data: &[f32]) -> f32 {
+fn sum_polyfill(token: X64V3Token, data: &[f32]) -> f32 {
     let mut acc = poly::f32xN::zero(token);
     let chunks = data.chunks_exact(poly::LANES_F32);
     let remainder = chunks.remainder();
@@ -40,7 +40,7 @@ fn sum_polyfill(token: Sse41Token, data: &[f32]) -> f32 {
 
 /// Sum using native SSE f32x4
 #[arcane]
-fn sum_native_sse(token: archmage::Sse41Token, data: &[f32]) -> f32 {
+fn sum_native_sse(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     use magetypes::simd::f32x4;
 
     let mut acc = f32x4::zero(token);
@@ -62,7 +62,7 @@ fn sum_native_sse(token: archmage::Sse41Token, data: &[f32]) -> f32 {
 
 /// Sum using native AVX2 f32x8
 #[arcane]
-fn sum_native_avx2(token: archmage::Avx2FmaToken, data: &[f32]) -> f32 {
+fn sum_native_avx2(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     use magetypes::simd::f32x8;
 
     let mut acc = f32x8::zero(token);
@@ -98,7 +98,7 @@ fn main() {
     let expected = sum_scalar(&data);
     println!("Expected sum: {:.2}\n", expected);
 
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let polyfill_result = sum_polyfill(token, &data);
         let native_sse_result = sum_native_sse(token, &data);
 
@@ -111,7 +111,7 @@ fn main() {
         );
     }
 
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let native_avx2_result = sum_native_avx2(token, &data);
         println!("Native AVX2 f32x8:       {:.2}", native_avx2_result);
     }
@@ -135,7 +135,7 @@ fn main() {
     );
 
     // SSE polyfill (f32x8 emulated with 2x f32x4)
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             result = sum_polyfill(token, &data);
@@ -163,7 +163,7 @@ fn main() {
     }
 
     // Native AVX2 f32x8
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             result = sum_native_avx2(token, &data);

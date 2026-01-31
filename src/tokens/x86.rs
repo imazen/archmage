@@ -584,7 +584,10 @@ impl SimdToken for X64V3Token {
         // Explicitly check all v3 features for robustness against broken emulators
         if crate::is_x86_feature_available!("avx2")
             && crate::is_x86_feature_available!("fma")
+            && crate::is_x86_feature_available!("bmi1")
             && crate::is_x86_feature_available!("bmi2")
+            && crate::is_x86_feature_available!("f16c")
+            && crate::is_x86_feature_available!("lzcnt")
             && crate::is_x86_feature_available!("avx")
             && crate::is_x86_feature_available!("sse4.2")
             && crate::is_x86_feature_available!("sse4.1")

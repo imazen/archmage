@@ -4,10 +4,9 @@
 
 use core::arch::x86_64::*;
 use core::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,
-    Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
+    Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
-
 
 // ============================================================================
 // f32x4 - 4 x f32 (128-bit)
@@ -31,19 +30,19 @@ impl f32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[f32; 4]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[f32; 4]) -> Self {
         Self(unsafe { _mm_loadu_ps(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: f32) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: f32) -> Self {
         Self(unsafe { _mm_set1_ps(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_ps() })
     }
 
@@ -51,7 +50,7 @@ impl f32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [f32; 4]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [f32; 4]) -> Self {
         // SAFETY: [f32; 4] and __m128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -107,7 +106,7 @@ impl f32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[f32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[f32]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -127,7 +126,7 @@ impl f32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [f32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [f32]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -162,7 +161,7 @@ impl f32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -171,7 +170,7 @@ impl f32x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -495,9 +494,7 @@ impl f32x4 {
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe {
-            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LN2)))
-        }
+        unsafe { Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LN2))) }
     }
 
     /// Low-precision natural exponential (e^x).
@@ -506,9 +503,7 @@ impl f32x4 {
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_lowp()
-        }
+        unsafe { Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_lowp() }
     }
 
     /// Low-precision base-10 logarithm.
@@ -517,9 +512,7 @@ impl f32x4 {
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
-        unsafe {
-            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LOG10_2)))
-        }
+        unsafe { Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(LOG10_2))) }
     }
 
     /// Low-precision power function (self^n).
@@ -528,9 +521,7 @@ impl f32x4 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        unsafe {
-            Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(n))).exp2_lowp()
-        }
+        unsafe { Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(n))).exp2_lowp() }
     }
 
     // ========== Mid-Precision Transcendental Operations ==========
@@ -544,15 +535,15 @@ impl f32x4 {
     pub fn log2_midp_unchecked(self) -> Self {
         // Constants for range reduction
         const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
-        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
+        const ONE: u32 = 0x3f800000; // 1.0 in f32 bits
         const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
         const EXPONENT_BIAS: i32 = 127;
 
         // Coefficients for odd polynomial on y = (a-1)/(a+1)
-        const C0: f32 = 2.885_390_08;  // 2/ln(2)
-        const C1: f32 = 0.961_800_76;  // y^2 coefficient
-        const C2: f32 = 0.576_974_45;  // y^4 coefficient
-        const C3: f32 = 0.434_411_97;  // y^6 coefficient
+        const C0: f32 = 2.885_390_08; // 2/ln(2)
+        const C1: f32 = 0.961_800_76; // y^2 coefficient
+        const C2: f32 = 0.576_974_45; // y^4 coefficient
+        const C3: f32 = 0.434_411_97; // y^6 coefficient
 
         unsafe {
             let x_bits = _mm_castps_si128(self.0);
@@ -716,9 +707,7 @@ impl f32x4 {
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
-        unsafe {
-            Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(n))).exp2_midp()
-        }
+        unsafe { Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(n))).exp2_midp() }
     }
 
     /// Mid-precision natural logarithm - unchecked variant.
@@ -730,9 +719,7 @@ impl f32x4 {
     #[inline(always)]
     pub fn ln_midp_unchecked(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe {
-            Self(_mm_mul_ps(self.log2_midp_unchecked().0, _mm_set1_ps(LN2)))
-        }
+        unsafe { Self(_mm_mul_ps(self.log2_midp_unchecked().0, _mm_set1_ps(LN2))) }
     }
 
     /// Mid-precision natural logarithm.
@@ -743,9 +730,7 @@ impl f32x4 {
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
-        unsafe {
-            Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(LN2)))
-        }
+        unsafe { Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(LN2))) }
     }
 
     /// Mid-precision natural exponential (e^x) - unchecked variant.
@@ -757,9 +742,7 @@ impl f32x4 {
     #[inline(always)]
     pub fn exp_midp_unchecked(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_midp_unchecked()
-        }
+        unsafe { Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_midp_unchecked() }
     }
 
     /// Mid-precision natural exponential (e^x).
@@ -770,9 +753,7 @@ impl f32x4 {
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
-        unsafe {
-            Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_midp()
-        }
+        unsafe { Self(_mm_mul_ps(self.0, _mm_set1_ps(LOG2_E))).exp2_midp() }
     }
 
     // ========== Cube Root ==========
@@ -850,8 +831,8 @@ impl f32x4 {
             let is_nan = _mm_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
 
             // Apply corrections (use self.0 for zero to preserve sign)
-            let r = _mm_blendv_ps(result.0, self.0, is_zero);  // ±0 -> ±0
-            let r = _mm_blendv_ps(r, self.0, is_inf);  // ±inf -> ±inf
+            let r = _mm_blendv_ps(result.0, self.0, is_zero); // ±0 -> ±0
+            let r = _mm_blendv_ps(r, self.0, is_inf); // ±inf -> ±inf
             let r = _mm_blendv_ps(r, _mm_set1_ps(f32::NAN), is_nan);
             Self(r)
         }
@@ -868,9 +849,9 @@ impl f32x4 {
     pub fn cbrt_midp_precise(self) -> Self {
         unsafe {
             // Scale factor for denormals: 2^24
-            const SCALE_UP: f32 = 16777216.0;  // 2^24
-            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
-            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+            const SCALE_UP: f32 = 16777216.0; // 2^24
+            const SCALE_DOWN: f32 = 0.00390625; // 2^(-8) = cbrt(2^(-24))
+            const DENORM_LIMIT: f32 = 1.17549435e-38; // Smallest normal f32
 
             let abs_x = _mm_andnot_ps(_mm_set1_ps(-0.0), self.0);
             let is_denorm = _mm_cmp_ps::<_CMP_LT_OQ>(abs_x, _mm_set1_ps(DENORM_LIMIT));
@@ -888,182 +869,183 @@ impl f32x4 {
         }
     }
 
-// ========== Load and Convert ==========
+    // ========== Load and Convert ==========
 
-/// Load 4 u8 values and convert to f32x4.
-///
-/// Useful for image processing: load pixel values directly to float.
-#[inline(always)]
-pub fn from_u8(bytes: &[u8; 4]) -> Self {
-    unsafe {
-        // Load 4 bytes into low part of XMM register
-        let b = _mm_cvtsi32_si128(i32::from_ne_bytes(*bytes));
-        let i32s = _mm_cvtepu8_epi32(b);
-        Self(_mm_cvtepi32_ps(i32s))
+    /// Load 4 u8 values and convert to f32x4.
+    ///
+    /// Useful for image processing: load pixel values directly to float.
+    #[inline(always)]
+    pub fn from_u8(bytes: &[u8; 4]) -> Self {
+        unsafe {
+            // Load 4 bytes into low part of XMM register
+            let b = _mm_cvtsi32_si128(i32::from_ne_bytes(*bytes));
+            let i32s = _mm_cvtepu8_epi32(b);
+            Self(_mm_cvtepi32_ps(i32s))
+        }
     }
-}
 
-/// Convert to 4 u8 values with saturation.
-///
-/// Values are clamped to [0, 255] and rounded.
-#[inline(always)]
-pub fn to_u8(self) -> [u8; 4] {
-    unsafe {
-        // Convert to i32, pack to i16, pack to u8
-        let i32s = _mm_cvtps_epi32(self.0);
-        let i16s = _mm_packs_epi32(i32s, i32s);
-        let u8s = _mm_packus_epi16(i16s, i16s);
-        let val = _mm_cvtsi128_si32(u8s) as u32;
-        val.to_ne_bytes()
+    /// Convert to 4 u8 values with saturation.
+    ///
+    /// Values are clamped to [0, 255] and rounded.
+    #[inline(always)]
+    pub fn to_u8(self) -> [u8; 4] {
+        unsafe {
+            // Convert to i32, pack to i16, pack to u8
+            let i32s = _mm_cvtps_epi32(self.0);
+            let i16s = _mm_packs_epi32(i32s, i32s);
+            let u8s = _mm_packus_epi16(i16s, i16s);
+            let val = _mm_cvtsi128_si32(u8s) as u32;
+            val.to_ne_bytes()
+        }
     }
-}
 
-// ========== Interleave Operations ==========
+    // ========== Interleave Operations ==========
 
-/// Interleave low elements: [a0,a1,a2,a3] + [b0,b1,b2,b3] → [a0,b0,a1,b1]
-#[inline(always)]
-pub fn interleave_lo(self, other: Self) -> Self {
-    Self(unsafe { _mm_unpacklo_ps(self.0, other.0) })
-}
-
-/// Interleave high elements: [a0,a1,a2,a3] + [b0,b1,b2,b3] → [a2,b2,a3,b3]
-#[inline(always)]
-pub fn interleave_hi(self, other: Self) -> Self {
-    Self(unsafe { _mm_unpackhi_ps(self.0, other.0) })
-}
-
-/// Interleave two vectors: returns (interleave_lo, interleave_hi)
-#[inline(always)]
-pub fn interleave(self, other: Self) -> (Self, Self) {
-    (self.interleave_lo(other), self.interleave_hi(other))
-}
-
-// ========== 4-Channel Interleave/Deinterleave ==========
-
-/// Deinterleave 4 RGBA pixels from AoS to SoA format.
-///
-/// Input: 4 vectors where each contains one pixel `[R, G, B, A]`.
-/// Output: 4 vectors where each contains one channel across all pixels.
-///
-/// ```text
-/// Input:  rgba[0] = [R0, G0, B0, A0]  (pixel 0)
-///         rgba[1] = [R1, G1, B1, A1]  (pixel 1)
-///         rgba[2] = [R2, G2, B2, A2]  (pixel 2)
-///         rgba[3] = [R3, G3, B3, A3]  (pixel 3)
-///
-/// Output: [0] = [R0, R1, R2, R3]  (red channel)
-///         [1] = [G0, G1, G2, G3]  (green channel)
-///         [2] = [B0, B1, B2, B3]  (blue channel)
-///         [3] = [A0, A1, A2, A3]  (alpha channel)
-/// ```
-#[inline]
-pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
-    Self::transpose_4x4_copy(rgba)
-}
-
-/// Interleave 4 channels from SoA to AoS format.
-///
-/// Input: 4 vectors where each contains one channel across pixels.
-/// Output: 4 vectors where each contains one complete RGBA pixel.
-///
-/// This is the inverse of `deinterleave_4ch`.
-#[inline]
-pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
-    Self::transpose_4x4_copy(channels)
-}
-
-/// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
-///
-/// Input: 16 bytes = 4 RGBA pixels in interleaved format.
-/// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
-#[inline]
-pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
-    unsafe {
-        let v = _mm_loadu_si128(rgba.as_ptr() as *const __m128i);
-
-        // Shuffle masks to gather each channel
-        // R: bytes 0, 4, 8, 12 → positions 0, 1, 2, 3
-        let r_mask = _mm_setr_epi8(0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1);
-        // G: bytes 1, 5, 9, 13
-        let g_mask = _mm_setr_epi8(1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1);
-        // B: bytes 2, 6, 10, 14
-        let b_mask = _mm_setr_epi8(2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1);
-        // A: bytes 3, 7, 11, 15
-        let a_mask = _mm_setr_epi8(3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1);
-
-        // Shuffle and convert to f32
-        let r_i32 = _mm_shuffle_epi8(v, r_mask);
-        let g_i32 = _mm_shuffle_epi8(v, g_mask);
-        let b_i32 = _mm_shuffle_epi8(v, b_mask);
-        let a_i32 = _mm_shuffle_epi8(v, a_mask);
-
-        (
-            Self(_mm_cvtepi32_ps(r_i32)),
-            Self(_mm_cvtepi32_ps(g_i32)),
-            Self(_mm_cvtepi32_ps(b_i32)),
-            Self(_mm_cvtepi32_ps(a_i32)),
-        )
+    /// Interleave low elements: [a0,a1,a2,a3] + [b0,b1,b2,b3] → [a0,b0,a1,b1]
+    #[inline(always)]
+    pub fn interleave_lo(self, other: Self) -> Self {
+        Self(unsafe { _mm_unpacklo_ps(self.0, other.0) })
     }
-}
 
-/// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
-///
-/// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
-/// Output: 16 bytes = 4 RGBA pixels in interleaved format.
-#[inline]
-pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
-    unsafe {
-        // Convert to i32 with rounding
-        let ri = _mm_cvtps_epi32(r.0);
-        let gi = _mm_cvtps_epi32(g.0);
-        let bi = _mm_cvtps_epi32(b.0);
-        let ai = _mm_cvtps_epi32(a.0);
-
-        // Pack i32 to i16 (saturating)
-        let rg = _mm_packs_epi32(ri, gi); // [R0,R1,R2,R3,G0,G1,G2,G3]
-        let ba = _mm_packs_epi32(bi, ai); // [B0,B1,B2,B3,A0,A1,A2,A3]
-
-        // Pack i16 to u8 (saturating)
-        let rgba_packed = _mm_packus_epi16(rg, ba); // [R0-3,G0-3,B0-3,A0-3]
-
-        // Shuffle to interleaved RGBA format
-        let shuffle = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-        let result = _mm_shuffle_epi8(rgba_packed, shuffle);
-
-        let mut out = [0u8; 16];
-        _mm_storeu_si128(out.as_mut_ptr() as *mut __m128i, result);
-        out
+    /// Interleave high elements: [a0,a1,a2,a3] + [b0,b1,b2,b3] → [a2,b2,a3,b3]
+    #[inline(always)]
+    pub fn interleave_hi(self, other: Self) -> Self {
+        Self(unsafe { _mm_unpackhi_ps(self.0, other.0) })
     }
-}
 
-// ========== Matrix Transpose ==========
-
-/// Transpose a 4x4 matrix represented as 4 row vectors.
-///
-/// After transpose, `rows[i][j]` becomes `rows[j][i]`.
-#[inline]
-pub fn transpose_4x4(rows: &mut [Self; 4]) {
-    unsafe {
-        let t0 = _mm_unpacklo_ps(rows[0].0, rows[1].0);
-        let t1 = _mm_unpackhi_ps(rows[0].0, rows[1].0);
-        let t2 = _mm_unpacklo_ps(rows[2].0, rows[3].0);
-        let t3 = _mm_unpackhi_ps(rows[2].0, rows[3].0);
-
-        rows[0] = Self(_mm_movelh_ps(t0, t2));
-        rows[1] = Self(_mm_movehl_ps(t2, t0));
-        rows[2] = Self(_mm_movelh_ps(t1, t3));
-        rows[3] = Self(_mm_movehl_ps(t3, t1));
+    /// Interleave two vectors: returns (interleave_lo, interleave_hi)
+    #[inline(always)]
+    pub fn interleave(self, other: Self) -> (Self, Self) {
+        (self.interleave_lo(other), self.interleave_hi(other))
     }
-}
 
-/// Transpose a 4x4 matrix, returning the transposed rows.
-#[inline]
-pub fn transpose_4x4_copy(rows: [Self; 4]) -> [Self; 4] {
-    let mut result = rows;
-    Self::transpose_4x4(&mut result);
-    result
-}
+    // ========== 4-Channel Interleave/Deinterleave ==========
 
+    /// Deinterleave 4 RGBA pixels from AoS to SoA format.
+    ///
+    /// Input: 4 vectors where each contains one pixel `[R, G, B, A]`.
+    /// Output: 4 vectors where each contains one channel across all pixels.
+    ///
+    /// ```text
+    /// Input:  rgba[0] = [R0, G0, B0, A0]  (pixel 0)
+    ///         rgba[1] = [R1, G1, B1, A1]  (pixel 1)
+    ///         rgba[2] = [R2, G2, B2, A2]  (pixel 2)
+    ///         rgba[3] = [R3, G3, B3, A3]  (pixel 3)
+    ///
+    /// Output: [0] = [R0, R1, R2, R3]  (red channel)
+    ///         [1] = [G0, G1, G2, G3]  (green channel)
+    ///         [2] = [B0, B1, B2, B3]  (blue channel)
+    ///         [3] = [A0, A1, A2, A3]  (alpha channel)
+    /// ```
+    #[inline]
+    pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
+        Self::transpose_4x4_copy(rgba)
+    }
+
+    /// Interleave 4 channels from SoA to AoS format.
+    ///
+    /// Input: 4 vectors where each contains one channel across pixels.
+    /// Output: 4 vectors where each contains one complete RGBA pixel.
+    ///
+    /// This is the inverse of `deinterleave_4ch`.
+    #[inline]
+    pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
+        Self::transpose_4x4_copy(channels)
+    }
+
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
+    ///
+    /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
+    /// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
+    #[inline]
+    pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+        unsafe {
+            let v = _mm_loadu_si128(rgba.as_ptr() as *const __m128i);
+
+            // Shuffle masks to gather each channel
+            // R: bytes 0, 4, 8, 12 → positions 0, 1, 2, 3
+            let r_mask = _mm_setr_epi8(0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1);
+            // G: bytes 1, 5, 9, 13
+            let g_mask = _mm_setr_epi8(1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1);
+            // B: bytes 2, 6, 10, 14
+            let b_mask =
+                _mm_setr_epi8(2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1);
+            // A: bytes 3, 7, 11, 15
+            let a_mask =
+                _mm_setr_epi8(3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1);
+
+            // Shuffle and convert to f32
+            let r_i32 = _mm_shuffle_epi8(v, r_mask);
+            let g_i32 = _mm_shuffle_epi8(v, g_mask);
+            let b_i32 = _mm_shuffle_epi8(v, b_mask);
+            let a_i32 = _mm_shuffle_epi8(v, a_mask);
+
+            (
+                Self(_mm_cvtepi32_ps(r_i32)),
+                Self(_mm_cvtepi32_ps(g_i32)),
+                Self(_mm_cvtepi32_ps(b_i32)),
+                Self(_mm_cvtepi32_ps(a_i32)),
+            )
+        }
+    }
+
+    /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
+    ///
+    /// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
+    /// Output: 16 bytes = 4 RGBA pixels in interleaved format.
+    #[inline]
+    pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
+        unsafe {
+            // Convert to i32 with rounding
+            let ri = _mm_cvtps_epi32(r.0);
+            let gi = _mm_cvtps_epi32(g.0);
+            let bi = _mm_cvtps_epi32(b.0);
+            let ai = _mm_cvtps_epi32(a.0);
+
+            // Pack i32 to i16 (saturating)
+            let rg = _mm_packs_epi32(ri, gi); // [R0,R1,R2,R3,G0,G1,G2,G3]
+            let ba = _mm_packs_epi32(bi, ai); // [B0,B1,B2,B3,A0,A1,A2,A3]
+
+            // Pack i16 to u8 (saturating)
+            let rgba_packed = _mm_packus_epi16(rg, ba); // [R0-3,G0-3,B0-3,A0-3]
+
+            // Shuffle to interleaved RGBA format
+            let shuffle = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+            let result = _mm_shuffle_epi8(rgba_packed, shuffle);
+
+            let mut out = [0u8; 16];
+            _mm_storeu_si128(out.as_mut_ptr() as *mut __m128i, result);
+            out
+        }
+    }
+
+    // ========== Matrix Transpose ==========
+
+    /// Transpose a 4x4 matrix represented as 4 row vectors.
+    ///
+    /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
+    #[inline]
+    pub fn transpose_4x4(rows: &mut [Self; 4]) {
+        unsafe {
+            let t0 = _mm_unpacklo_ps(rows[0].0, rows[1].0);
+            let t1 = _mm_unpackhi_ps(rows[0].0, rows[1].0);
+            let t2 = _mm_unpacklo_ps(rows[2].0, rows[3].0);
+            let t3 = _mm_unpackhi_ps(rows[2].0, rows[3].0);
+
+            rows[0] = Self(_mm_movelh_ps(t0, t2));
+            rows[1] = Self(_mm_movehl_ps(t2, t0));
+            rows[2] = Self(_mm_movelh_ps(t1, t3));
+            rows[3] = Self(_mm_movehl_ps(t3, t1));
+        }
+    }
+
+    /// Transpose a 4x4 matrix, returning the transposed rows.
+    #[inline]
+    pub fn transpose_4x4_copy(rows: [Self; 4]) -> [Self; 4] {
+        let mut result = rows;
+        Self::transpose_4x4(&mut result);
+        result
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1093,7 +1075,6 @@ impl From<f32x4> for [f32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for f32x4
 // These allow `v + 2.0` instead of `v + f32x4::splat(token, 2.0)`
@@ -1140,7 +1121,6 @@ impl Div<f32> for f32x4 {
     }
 }
 
-
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit)
 // ============================================================================
@@ -1163,19 +1143,19 @@ impl f64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[f64; 2]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[f64; 2]) -> Self {
         Self(unsafe { _mm_loadu_pd(data.as_ptr()) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: f64) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: f64) -> Self {
         Self(unsafe { _mm_set1_pd(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_pd() })
     }
 
@@ -1183,7 +1163,7 @@ impl f64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [f64; 2]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [f64; 2]) -> Self {
         // SAFETY: [f64; 2] and __m128d have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1239,7 +1219,7 @@ impl f64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[f64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[f64]) -> Option<&[Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -1259,7 +1239,7 @@ impl f64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [f64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [f64]) -> Option<&mut [Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -1294,7 +1274,7 @@ impl f64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -1303,7 +1283,7 @@ impl f64x2 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -1504,14 +1484,14 @@ impl f64x2 {
             let x_bits = _mm_castpd_si128(self.0);
             let offset = _mm_set1_epi64x(OFFSET);
             let exp_bits = _mm_sub_epi64(x_bits, offset);
-            let exp_shifted = _mm_srai_epi64::<52>(exp_bits);
+            let exp_arr_raw: [i64; 2] = core::mem::transmute(exp_bits);
+            let exp_shifted = _mm_set_epi64x(exp_arr_raw[1] >> 52, exp_arr_raw[0] >> 52);
 
             let mantissa_bits = _mm_sub_epi64(x_bits, _mm_slli_epi64::<52>(exp_shifted));
             let mantissa = _mm_castsi128_pd(mantissa_bits);
             // Convert exponent to f64
             let exp_arr: [i64; 2] = core::mem::transmute(exp_shifted);
-            let exp_f64: [f64; 2] = [
-exp_arr[0] as f64, exp_arr[1] as f64];
+            let exp_f64: [f64; 2] = [exp_arr[0] as f64, exp_arr[1] as f64];
             let exp_val = _mm_loadu_pd(exp_f64.as_ptr());
 
             let one = _mm_set1_pd(1.0);
@@ -1557,7 +1537,9 @@ exp_arr[0] as f64, exp_arr[1] as f64];
             // Scale by 2^integer - extract, convert, scale
             let xi_arr: [f64; 2] = core::mem::transmute(xi);
             let scale_arr: [f64; 2] = [
-f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64)];
+                f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64),
+                f64::from_bits(((xi_arr[1] as i64 + 1023) << 52) as u64),
+            ];
             let scale = _mm_loadu_pd(scale_arr.as_ptr());
 
             Self(_mm_mul_pd(poly, scale))
@@ -1568,37 +1550,28 @@ f64::from_bits(((xi_arr[0] as i64 + 1023) << 52) as u64), f64::from_bits(((xi_ar
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         const LN2: f64 = core::f64::consts::LN_2;
-        unsafe {
-            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LN2)))
-        }
+        unsafe { Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LN2))) }
     }
 
     /// Low-precision natural exponential (e^x).
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         const LOG2_E: f64 = core::f64::consts::LOG2_E;
-        unsafe {
-            Self(_mm_mul_pd(self.0, _mm_set1_pd(LOG2_E))).exp2_lowp()
-        }
+        unsafe { Self(_mm_mul_pd(self.0, _mm_set1_pd(LOG2_E))).exp2_lowp() }
     }
 
     /// Low-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         const LOG10_2: f64 = core::f64::consts::LOG10_2;
-        unsafe {
-            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LOG10_2)))
-        }
+        unsafe { Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(LOG10_2))) }
     }
 
     /// Low-precision power function (self^n).
     #[inline(always)]
     pub fn pow_lowp(self, n: f64) -> Self {
-        unsafe {
-            Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(n))).exp2_lowp()
-        }
+        unsafe { Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(n))).exp2_lowp() }
     }
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1628,7 +1601,6 @@ impl From<f64x2> for [f64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
-
 
 // Scalar broadcast operations for f64x2
 // These allow `v + 2.0` instead of `v + f64x2::splat(token, 2.0)`
@@ -1675,7 +1647,6 @@ impl Div<f64> for f64x2 {
     }
 }
 
-
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit)
 // ============================================================================
@@ -1698,19 +1669,19 @@ impl i8x16 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[i8; 16]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[i8; 16]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: i8) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: i8) -> Self {
         Self(unsafe { _mm_set1_epi8(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -1718,7 +1689,7 @@ impl i8x16 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [i8; 16]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [i8; 16]) -> Self {
         // SAFETY: [i8; 16] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1774,7 +1745,7 @@ impl i8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[i8]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[i8]) -> Option<&[Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -1794,7 +1765,7 @@ impl i8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [i8]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [i8]) -> Option<&mut [Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -1829,7 +1800,7 @@ impl i8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -1838,7 +1809,7 @@ impl i8x16 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -1994,7 +1965,6 @@ impl From<i8x16> for [i8; 16] {
     }
 }
 
-
 // Scalar broadcast operations for i8x16
 // These allow `v + 2.0` instead of `v + i8x16::splat(token, 2.0)`
 
@@ -2018,7 +1988,6 @@ impl Sub<i8> for i8x16 {
     }
 }
 
-
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit)
 // ============================================================================
@@ -2041,19 +2010,19 @@ impl u8x16 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[u8; 16]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[u8; 16]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: u8) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: u8) -> Self {
         Self(unsafe { _mm_set1_epi8(v as i8) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -2061,7 +2030,7 @@ impl u8x16 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [u8; 16]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2117,7 +2086,7 @@ impl u8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[u8]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[u8]) -> Option<&[Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -2137,7 +2106,7 @@ impl u8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [u8]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [u8]) -> Option<&mut [Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -2172,7 +2141,7 @@ impl u8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -2181,7 +2150,7 @@ impl u8x16 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -2310,51 +2279,50 @@ impl u8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
-// ========== Extend/Widen Operations ==========
+    // ========== Extend/Widen Operations ==========
 
-/// Zero-extend low 8 u8 values to i16x8.
-///
-/// Takes the lower 8 bytes and zero-extends each to 16 bits.
-#[inline(always)]
-pub fn extend_lo_i16(self) -> i16x8 {
-    i16x8(unsafe { _mm_cvtepu8_epi16(self.0) })
-}
+    /// Zero-extend low 8 u8 values to i16x8.
+    ///
+    /// Takes the lower 8 bytes and zero-extends each to 16 bits.
+    #[inline(always)]
+    pub fn extend_lo_i16(self) -> i16x8 {
+        i16x8(unsafe { _mm_cvtepu8_epi16(self.0) })
+    }
 
-/// Zero-extend high 8 u8 values to i16x8.
-///
-/// Takes the upper 8 bytes and zero-extends each to 16 bits.
-#[inline(always)]
-pub fn extend_hi_i16(self) -> i16x8 {
-    i16x8(unsafe {
-        // Shift right by 8 bytes to get high half into low position
-        let hi = _mm_srli_si128::<8>(self.0);
-        _mm_cvtepu8_epi16(hi)
-    })
-}
+    /// Zero-extend high 8 u8 values to i16x8.
+    ///
+    /// Takes the upper 8 bytes and zero-extends each to 16 bits.
+    #[inline(always)]
+    pub fn extend_hi_i16(self) -> i16x8 {
+        i16x8(unsafe {
+            // Shift right by 8 bytes to get high half into low position
+            let hi = _mm_srli_si128::<8>(self.0);
+            _mm_cvtepu8_epi16(hi)
+        })
+    }
 
-/// Zero-extend all 16 u8 values to two i16x8 vectors.
-///
-/// Returns (low 8 as i16x8, high 8 as i16x8).
-#[inline(always)]
-pub fn extend_i16(self) -> (i16x8, i16x8) {
-    (self.extend_lo_i16(), self.extend_hi_i16())
-}
+    /// Zero-extend all 16 u8 values to two i16x8 vectors.
+    ///
+    /// Returns (low 8 as i16x8, high 8 as i16x8).
+    #[inline(always)]
+    pub fn extend_i16(self) -> (i16x8, i16x8) {
+        (self.extend_lo_i16(), self.extend_hi_i16())
+    }
 
-/// Zero-extend low 4 u8 values to i32x4.
-#[inline(always)]
-pub fn extend_lo_i32(self) -> i32x4 {
-    i32x4(unsafe { _mm_cvtepu8_epi32(self.0) })
-}
+    /// Zero-extend low 4 u8 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        i32x4(unsafe { _mm_cvtepu8_epi32(self.0) })
+    }
 
-/// Zero-extend low 4 u8 values to f32x4.
-#[inline(always)]
-pub fn extend_lo_f32(self) -> f32x4 {
-    f32x4(unsafe {
-        let i32s = _mm_cvtepu8_epi32(self.0);
-        _mm_cvtepi32_ps(i32s)
-    })
-}
-
+    /// Zero-extend low 4 u8 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        f32x4(unsafe {
+            let i32s = _mm_cvtepu8_epi32(self.0);
+            _mm_cvtepi32_ps(i32s)
+        })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2383,7 +2351,6 @@ impl From<u8x16> for [u8; 16] {
     }
 }
 
-
 // Scalar broadcast operations for u8x16
 // These allow `v + 2.0` instead of `v + u8x16::splat(token, 2.0)`
 
@@ -2407,7 +2374,6 @@ impl Sub<u8> for u8x16 {
     }
 }
 
-
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit)
 // ============================================================================
@@ -2430,19 +2396,19 @@ impl i16x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[i16; 8]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[i16; 8]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: i16) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: i16) -> Self {
         Self(unsafe { _mm_set1_epi16(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -2450,7 +2416,7 @@ impl i16x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [i16; 8]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [i16; 8]) -> Self {
         // SAFETY: [i16; 8] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2506,7 +2472,7 @@ impl i16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[i16]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[i16]) -> Option<&[Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -2526,7 +2492,7 @@ impl i16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [i16]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [i16]) -> Option<&mut [Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -2561,7 +2527,7 @@ impl i16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -2570,7 +2536,7 @@ impl i16x8 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -2686,7 +2652,10 @@ impl i16x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
-        self.as_array().iter().copied().fold(0_i16, i16::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_i16, i16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -2720,57 +2689,56 @@ impl i16x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi16::<N>(self.0) })
     }
-// ========== Extend/Widen Operations ==========
+    // ========== Extend/Widen Operations ==========
 
-/// Sign-extend low 4 i16 values to i32x4.
-#[inline(always)]
-pub fn extend_lo_i32(self) -> i32x4 {
-    i32x4(unsafe { _mm_cvtepi16_epi32(self.0) })
-}
+    /// Sign-extend low 4 i16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        i32x4(unsafe { _mm_cvtepi16_epi32(self.0) })
+    }
 
-/// Sign-extend high 4 i16 values to i32x4.
-#[inline(always)]
-pub fn extend_hi_i32(self) -> i32x4 {
-    i32x4(unsafe {
-        let hi = _mm_srli_si128::<8>(self.0);
-        _mm_cvtepi16_epi32(hi)
-    })
-}
+    /// Sign-extend high 4 i16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_hi_i32(self) -> i32x4 {
+        i32x4(unsafe {
+            let hi = _mm_srli_si128::<8>(self.0);
+            _mm_cvtepi16_epi32(hi)
+        })
+    }
 
-/// Sign-extend all 8 i16 values to two i32x4 vectors.
-#[inline(always)]
-pub fn extend_i32(self) -> (i32x4, i32x4) {
-    (self.extend_lo_i32(), self.extend_hi_i32())
-}
+    /// Sign-extend all 8 i16 values to two i32x4 vectors.
+    #[inline(always)]
+    pub fn extend_i32(self) -> (i32x4, i32x4) {
+        (self.extend_lo_i32(), self.extend_hi_i32())
+    }
 
-/// Sign-extend low 4 i16 values to f32x4.
-#[inline(always)]
-pub fn extend_lo_f32(self) -> f32x4 {
-    f32x4(unsafe {
-        let i32s = _mm_cvtepi16_epi32(self.0);
-        _mm_cvtepi32_ps(i32s)
-    })
-}
+    /// Sign-extend low 4 i16 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        f32x4(unsafe {
+            let i32s = _mm_cvtepi16_epi32(self.0);
+            _mm_cvtepi32_ps(i32s)
+        })
+    }
 
-// ========== Pack/Narrow Operations ==========
+    // ========== Pack/Narrow Operations ==========
 
-/// Pack two i16x8 vectors to u8x16 with unsigned saturation.
-///
-/// Values below 0 become 0, values above 255 become 255.
-/// `self` provides low 8 bytes, `other` provides high 8 bytes.
-#[inline(always)]
-pub fn pack_u8(self, other: Self) -> u8x16 {
-    u8x16(unsafe { _mm_packus_epi16(self.0, other.0) })
-}
+    /// Pack two i16x8 vectors to u8x16 with unsigned saturation.
+    ///
+    /// Values below 0 become 0, values above 255 become 255.
+    /// `self` provides low 8 bytes, `other` provides high 8 bytes.
+    #[inline(always)]
+    pub fn pack_u8(self, other: Self) -> u8x16 {
+        u8x16(unsafe { _mm_packus_epi16(self.0, other.0) })
+    }
 
-/// Pack two i16x8 vectors to i8x16 with signed saturation.
-///
-/// Values are clamped to [-128, 127].
-#[inline(always)]
-pub fn pack_i8(self, other: Self) -> i8x16 {
-    i8x16(unsafe { _mm_packs_epi16(self.0, other.0) })
-}
-
+    /// Pack two i16x8 vectors to i8x16 with signed saturation.
+    ///
+    /// Values are clamped to [-128, 127].
+    #[inline(always)]
+    pub fn pack_i8(self, other: Self) -> i8x16 {
+        i8x16(unsafe { _mm_packs_epi16(self.0, other.0) })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2801,7 +2769,6 @@ impl From<i16x8> for [i16; 8] {
     }
 }
 
-
 // Scalar broadcast operations for i16x8
 // These allow `v + 2.0` instead of `v + i16x8::splat(token, 2.0)`
 
@@ -2825,7 +2792,6 @@ impl Sub<i16> for i16x8 {
     }
 }
 
-
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit)
 // ============================================================================
@@ -2848,19 +2814,19 @@ impl u16x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[u16; 8]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[u16; 8]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: u16) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: u16) -> Self {
         Self(unsafe { _mm_set1_epi16(v as i16) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -2868,7 +2834,7 @@ impl u16x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [u16; 8]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [u16; 8]) -> Self {
         // SAFETY: [u16; 8] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2924,7 +2890,7 @@ impl u16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[u16]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[u16]) -> Option<&[Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -2944,7 +2910,7 @@ impl u16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [u16]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [u16]) -> Option<&mut [Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -2979,7 +2945,7 @@ impl u16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -2988,7 +2954,7 @@ impl u16x8 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -3105,7 +3071,10 @@ impl u16x8 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u16 {
-        self.as_array().iter().copied().fold(0_u16, u16::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_u16, u16::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3132,38 +3101,37 @@ impl u16x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
-// ========== Extend/Widen Operations ==========
+    // ========== Extend/Widen Operations ==========
 
-/// Zero-extend low 4 u16 values to i32x4.
-#[inline(always)]
-pub fn extend_lo_i32(self) -> i32x4 {
-    i32x4(unsafe { _mm_cvtepu16_epi32(self.0) })
-}
+    /// Zero-extend low 4 u16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        i32x4(unsafe { _mm_cvtepu16_epi32(self.0) })
+    }
 
-/// Zero-extend high 4 u16 values to i32x4.
-#[inline(always)]
-pub fn extend_hi_i32(self) -> i32x4 {
-    i32x4(unsafe {
-        let hi = _mm_srli_si128::<8>(self.0);
-        _mm_cvtepu16_epi32(hi)
-    })
-}
+    /// Zero-extend high 4 u16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_hi_i32(self) -> i32x4 {
+        i32x4(unsafe {
+            let hi = _mm_srli_si128::<8>(self.0);
+            _mm_cvtepu16_epi32(hi)
+        })
+    }
 
-/// Zero-extend all 8 u16 values to two i32x4 vectors.
-#[inline(always)]
-pub fn extend_i32(self) -> (i32x4, i32x4) {
-    (self.extend_lo_i32(), self.extend_hi_i32())
-}
+    /// Zero-extend all 8 u16 values to two i32x4 vectors.
+    #[inline(always)]
+    pub fn extend_i32(self) -> (i32x4, i32x4) {
+        (self.extend_lo_i32(), self.extend_hi_i32())
+    }
 
-/// Zero-extend low 4 u16 values to f32x4.
-#[inline(always)]
-pub fn extend_lo_f32(self) -> f32x4 {
-    f32x4(unsafe {
-        let i32s = _mm_cvtepu16_epi32(self.0);
-        _mm_cvtepi32_ps(i32s)
-    })
-}
-
+    /// Zero-extend low 4 u16 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        f32x4(unsafe {
+            let i32s = _mm_cvtepu16_epi32(self.0);
+            _mm_cvtepi32_ps(i32s)
+        })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3194,7 +3162,6 @@ impl From<u16x8> for [u16; 8] {
     }
 }
 
-
 // Scalar broadcast operations for u16x8
 // These allow `v + 2.0` instead of `v + u16x8::splat(token, 2.0)`
 
@@ -3218,7 +3185,6 @@ impl Sub<u16> for u16x8 {
     }
 }
 
-
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit)
 // ============================================================================
@@ -3241,19 +3207,19 @@ impl i32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[i32; 4]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[i32; 4]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: i32) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: i32) -> Self {
         Self(unsafe { _mm_set1_epi32(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -3261,7 +3227,7 @@ impl i32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [i32; 4]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [i32; 4]) -> Self {
         // SAFETY: [i32; 4] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3317,7 +3283,7 @@ impl i32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[i32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[i32]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -3337,7 +3303,7 @@ impl i32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [i32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [i32]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -3372,7 +3338,7 @@ impl i32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -3381,7 +3347,7 @@ impl i32x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -3497,7 +3463,10 @@ impl i32x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i32 {
-        self.as_array().iter().copied().fold(0_i32, i32::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_i32, i32::wrapping_add)
     }
 
     // ========== Type Conversions ==========
@@ -3539,32 +3508,31 @@ impl i32x4 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi32::<N>(self.0) })
     }
-// ========== Extend/Widen Operations ==========
+    // ========== Extend/Widen Operations ==========
 
-/// Convert to f32x4.
-#[inline(always)]
-pub fn to_f32(self) -> f32x4 {
-    f32x4(unsafe { _mm_cvtepi32_ps(self.0) })
-}
+    /// Convert to f32x4.
+    #[inline(always)]
+    pub fn to_f32(self) -> f32x4 {
+        f32x4(unsafe { _mm_cvtepi32_ps(self.0) })
+    }
 
-// ========== Pack/Narrow Operations ==========
+    // ========== Pack/Narrow Operations ==========
 
-/// Pack two i32x4 vectors to i16x8 with signed saturation.
-///
-/// `self` provides low 4 values, `other` provides high 4 values.
-#[inline(always)]
-pub fn pack_i16(self, other: Self) -> i16x8 {
-    i16x8(unsafe { _mm_packs_epi32(self.0, other.0) })
-}
+    /// Pack two i32x4 vectors to i16x8 with signed saturation.
+    ///
+    /// `self` provides low 4 values, `other` provides high 4 values.
+    #[inline(always)]
+    pub fn pack_i16(self, other: Self) -> i16x8 {
+        i16x8(unsafe { _mm_packs_epi32(self.0, other.0) })
+    }
 
-/// Pack two i32x4 vectors to u16x8 with unsigned saturation.
-///
-/// Requires SSE4.1.
-#[inline(always)]
-pub fn pack_u16(self, other: Self) -> u16x8 {
-    u16x8(unsafe { _mm_packus_epi32(self.0, other.0) })
-}
-
+    /// Pack two i32x4 vectors to u16x8 with unsigned saturation.
+    ///
+    /// Requires SSE4.1.
+    #[inline(always)]
+    pub fn pack_u16(self, other: Self) -> u16x8 {
+        u16x8(unsafe { _mm_packus_epi32(self.0, other.0) })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3595,7 +3563,6 @@ impl From<i32x4> for [i32; 4] {
     }
 }
 
-
 // Scalar broadcast operations for i32x4
 // These allow `v + 2.0` instead of `v + i32x4::splat(token, 2.0)`
 
@@ -3619,7 +3586,6 @@ impl Sub<i32> for i32x4 {
     }
 }
 
-
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit)
 // ============================================================================
@@ -3642,19 +3608,19 @@ impl u32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[u32; 4]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[u32; 4]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: u32) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: u32) -> Self {
         Self(unsafe { _mm_set1_epi32(v as i32) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -3662,7 +3628,7 @@ impl u32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [u32; 4]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [u32; 4]) -> Self {
         // SAFETY: [u32; 4] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3718,7 +3684,7 @@ impl u32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[u32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[u32]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -3738,7 +3704,7 @@ impl u32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [u32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [u32]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -3773,7 +3739,7 @@ impl u32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -3782,7 +3748,7 @@ impl u32x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -3899,7 +3865,10 @@ impl u32x4 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u32 {
-        self.as_array().iter().copied().fold(0_u32, u32::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_u32, u32::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -3956,7 +3925,6 @@ impl From<u32x4> for [u32; 4] {
     }
 }
 
-
 // Scalar broadcast operations for u32x4
 // These allow `v + 2.0` instead of `v + u32x4::splat(token, 2.0)`
 
@@ -3980,7 +3948,6 @@ impl Sub<u32> for u32x4 {
     }
 }
 
-
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit)
 // ============================================================================
@@ -4003,19 +3970,19 @@ impl i64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[i64; 2]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[i64; 2]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: i64) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: i64) -> Self {
         Self(unsafe { _mm_set1_epi64x(v) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -4023,7 +3990,7 @@ impl i64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [i64; 2]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [i64; 2]) -> Self {
         // SAFETY: [i64; 2] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4079,7 +4046,7 @@ impl i64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[i64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[i64]) -> Option<&[Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -4099,7 +4066,7 @@ impl i64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [i64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [i64]) -> Option<&mut [Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -4134,7 +4101,7 @@ impl i64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -4143,7 +4110,7 @@ impl i64x2 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -4239,7 +4206,10 @@ impl i64x2 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
-        self.as_array().iter().copied().fold(0_i64, i64::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_i64, i64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -4294,7 +4264,6 @@ impl From<i64x2> for [i64; 2] {
     }
 }
 
-
 // Scalar broadcast operations for i64x2
 // These allow `v + 2.0` instead of `v + i64x2::splat(token, 2.0)`
 
@@ -4318,7 +4287,6 @@ impl Sub<i64> for i64x2 {
     }
 }
 
-
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit)
 // ============================================================================
@@ -4341,19 +4309,19 @@ impl u64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Sse41Token, data: &[u64; 2]) -> Self {
+    pub fn load(_: archmage::X64V3Token, data: &[u64; 2]) -> Self {
         Self(unsafe { _mm_loadu_si128(data.as_ptr() as *const __m128i) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Sse41Token, v: u64) -> Self {
+    pub fn splat(_: archmage::X64V3Token, v: u64) -> Self {
         Self(unsafe { _mm_set1_epi64x(v as i64) })
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Sse41Token) -> Self {
+    pub fn zero(_: archmage::X64V3Token) -> Self {
         Self(unsafe { _mm_setzero_si128() })
     }
 
@@ -4361,7 +4329,7 @@ impl u64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Sse41Token, arr: [u64; 2]) -> Self {
+    pub fn from_array(_: archmage::X64V3Token, arr: [u64; 2]) -> Self {
         // SAFETY: [u64; 2] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4417,7 +4385,7 @@ impl u64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Sse41Token, slice: &[u64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::X64V3Token, slice: &[u64]) -> Option<&[Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -4437,7 +4405,7 @@ impl u64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Sse41Token, slice: &mut [u64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::X64V3Token, slice: &mut [u64]) -> Option<&mut [Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -4472,7 +4440,7 @@ impl u64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Sse41Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::X64V3Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -4481,7 +4449,7 @@ impl u64x2 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Sse41Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -4583,7 +4551,10 @@ impl u64x2 {
     /// consider keeping values in SIMD until the final reduction.
     #[inline(always)]
     pub fn reduce_add(self) -> u64 {
-        self.as_array().iter().copied().fold(0_u64, u64::wrapping_add)
+        self.as_array()
+            .iter()
+            .copied()
+            .fold(0_u64, u64::wrapping_add)
     }
 
     // ========== Bitwise Unary Operations ==========
@@ -4638,7 +4609,6 @@ impl From<u64x2> for [u64; 2] {
     }
 }
 
-
 // Scalar broadcast operations for u64x2
 // These allow `v + 2.0` instead of `v + u64x2::splat(token, 2.0)`
 
@@ -4661,4 +4631,3 @@ impl Sub<u64> for u64x2 {
         self - Self(unsafe { _mm_set1_epi64x(rhs as i64) })
     }
 }
-

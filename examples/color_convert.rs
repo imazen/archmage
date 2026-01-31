@@ -11,7 +11,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{Avx2FmaToken, SimdToken, X64V2Token, arcane};
+use archmage::{SimdToken, X64V2Token, X64V3Token, arcane};
 use core::arch::x86_64::*;
 use magetypes::simd::f32x8;
 use std::time::Instant;
@@ -38,7 +38,7 @@ mod bt601 {
 /// Each input vector contains 8 values for Y, U, and V channels.
 /// Output: 3 vectors for R, G, B channels.
 #[arcane]
-fn yuv_to_rgb_f32x8(token: Avx2FmaToken, y: f32x8, u: f32x8, v: f32x8) -> (f32x8, f32x8, f32x8) {
+fn yuv_to_rgb_f32x8(token: X64V3Token, y: f32x8, u: f32x8, v: f32x8) -> (f32x8, f32x8, f32x8) {
     let offset = f32x8::splat(token, bt601::OFFSET);
     let zero = f32x8::splat(token, 0.0);
     let max = f32x8::splat(token, 255.0);
@@ -73,7 +73,7 @@ fn yuv_to_rgb_f32x8(token: Avx2FmaToken, y: f32x8, u: f32x8, v: f32x8) -> (f32x8
 /// U = -0.169*R - 0.331*G + 0.5*B + 128
 /// V = 0.5*R - 0.419*G - 0.081*B + 128
 #[arcane]
-fn rgb_to_yuv_f32x8(token: Avx2FmaToken, r: f32x8, g: f32x8, b: f32x8) -> (f32x8, f32x8, f32x8) {
+fn rgb_to_yuv_f32x8(token: X64V3Token, r: f32x8, g: f32x8, b: f32x8) -> (f32x8, f32x8, f32x8) {
     let offset = f32x8::splat(token, 128.0);
     let zero = f32x8::splat(token, 0.0);
     let max = f32x8::splat(token, 255.0);
@@ -279,7 +279,7 @@ fn test_correctness() {
     println!("=== Correctness Tests ===\n");
 
     // Test YUV→RGB float vs scalar
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let y_vals = [16.0, 128.0, 235.0, 100.0, 200.0, 50.0, 180.0, 80.0];
         let u_vals = [128.0, 128.0, 128.0, 90.0, 180.0, 200.0, 60.0, 150.0];
         let v_vals = [128.0, 128.0, 128.0, 200.0, 60.0, 100.0, 180.0, 80.0];
@@ -337,7 +337,7 @@ fn test_correctness() {
     }
 
     // Test round-trip RGB→YUV→RGB
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let r_orig = [255.0, 0.0, 0.0, 128.0, 64.0, 192.0, 100.0, 200.0];
         let g_orig = [0.0, 255.0, 0.0, 128.0, 128.0, 64.0, 150.0, 100.0];
         let b_orig = [0.0, 0.0, 255.0, 128.0, 192.0, 128.0, 50.0, 150.0];
@@ -412,7 +412,7 @@ fn benchmark() {
     );
 
     // SIMD f32x8 version
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             for chunk_start in (0..PIXELS).step_by(8) {

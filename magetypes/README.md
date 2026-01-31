@@ -19,12 +19,12 @@ Token-gated SIMD types with natural operators.
 ## Quick Start
 
 ```rust
-use archmage::{Avx2FmaToken, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 use magetypes::f32x8;
 
 fn main() {
     // Token proves CPU supports AVX2+FMA
-    if let Some(token) = Avx2FmaToken::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let a = f32x8::splat(token, 1.0);
         let b = f32x8::splat(token, 2.0);
         let c = a + b;  // Natural operators!
@@ -36,10 +36,10 @@ fn main() {
 
 ## Available Types
 
-### x86-64 (SSE4.1 - 128-bit)
+### x86-64 (x86-64-v3 - 128-bit)
 `f32x4`, `f64x2`, `i8x16`, `i16x8`, `i32x4`, `i64x2`, `u8x16`, `u16x8`, `u32x4`, `u64x2`
 
-### x86-64 (AVX2 - 256-bit)
+### x86-64 (x86-64-v3 - 256-bit)
 `f32x8`, `f64x4`, `i8x32`, `i16x16`, `i32x8`, `i64x4`, `u8x32`, `u16x16`, `u32x8`, `u64x4`
 
 ### x86-64 (AVX-512 - 512-bit, requires `avx512` feature)
@@ -105,7 +105,7 @@ let bytes = v.as_bytes();
 
 | Platform | Status | Token | Vector Sizes |
 |----------|--------|-------|--------------|
-| x86-64 | **Full** | `Sse41Token`, `Avx2FmaToken`, `Avx512Token` | 128, 256, 512-bit |
+| x86-64 | **Full** | `X64V3Token`, `X64V4Token` | 128, 256, 512-bit |
 | AArch64 | **Full** | `NeonToken` | 128-bit |
 | WASM | **Full** | `Simd128Token` | 128-bit |
 
@@ -118,7 +118,7 @@ let bytes = v.as_bytes();
 ## Relationship to archmage
 
 `magetypes` depends on `archmage` for:
-- Token types (`Avx2FmaToken`, `NeonToken`, etc.)
+- Token types (`X64V3Token`, `NeonToken`, etc.)
 - The `#[arcane]` macro for writing SIMD kernels
 - Runtime CPU feature detection
 

@@ -14,7 +14,7 @@ pub mod sse {
     //! These types emulate AVX2-width vectors using pairs of SSE vectors.
 
     use crate::simd::x86::w128::{f32x4, f64x2, i32x4};
-    use archmage::Sse41Token;
+    use archmage::X64V3Token;
     use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 8-wide f32 vector using two SSE f32x4 vectors.
@@ -29,7 +29,7 @@ pub mod sse {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Sse41Token, data: &[f32; 8]) -> Self {
+        pub fn load(token: X64V3Token, data: &[f32; 8]) -> Self {
             let lo_arr: &[f32; 4] = data[0..4].try_into().unwrap();
             let hi_arr: &[f32; 4] = data[4..8].try_into().unwrap();
             Self {
@@ -40,7 +40,7 @@ pub mod sse {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Sse41Token, v: f32) -> Self {
+        pub fn splat(token: X64V3Token, v: f32) -> Self {
             Self {
                 lo: f32x4::splat(token, v),
                 hi: f32x4::splat(token, v),
@@ -49,7 +49,7 @@ pub mod sse {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Sse41Token) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             Self {
                 lo: f32x4::zero(token),
                 hi: f32x4::zero(token),
@@ -267,7 +267,7 @@ pub mod sse {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Sse41Token, data: &[f64; 4]) -> Self {
+        pub fn load(token: X64V3Token, data: &[f64; 4]) -> Self {
             let lo_arr: &[f64; 2] = data[0..2].try_into().unwrap();
             let hi_arr: &[f64; 2] = data[2..4].try_into().unwrap();
             Self {
@@ -278,7 +278,7 @@ pub mod sse {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Sse41Token, v: f64) -> Self {
+        pub fn splat(token: X64V3Token, v: f64) -> Self {
             Self {
                 lo: f64x2::splat(token, v),
                 hi: f64x2::splat(token, v),
@@ -287,7 +287,7 @@ pub mod sse {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Sse41Token) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             Self {
                 lo: f64x2::zero(token),
                 hi: f64x2::zero(token),
@@ -386,7 +386,7 @@ pub mod sse {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Sse41Token, data: &[i32; 8]) -> Self {
+        pub fn load(token: X64V3Token, data: &[i32; 8]) -> Self {
             let lo_arr: &[i32; 4] = data[0..4].try_into().unwrap();
             let hi_arr: &[i32; 4] = data[4..8].try_into().unwrap();
             Self {
@@ -397,7 +397,7 @@ pub mod sse {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Sse41Token, v: i32) -> Self {
+        pub fn splat(token: X64V3Token, v: i32) -> Self {
             Self {
                 lo: i32x4::splat(token, v),
                 hi: i32x4::splat(token, v),
@@ -406,7 +406,7 @@ pub mod sse {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Sse41Token) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             Self {
                 lo: i32x4::zero(token),
                 hi: i32x4::zero(token),
@@ -461,7 +461,7 @@ pub mod sse {
     }
 
     /// Token type alias for SSE polyfill module
-    pub type Token = Sse41Token;
+    pub type Token = X64V3Token;
 
     /// Lane count constants for polyfilled types
     pub const LANES_F32: usize = 8;
@@ -490,7 +490,7 @@ pub mod sse {
         pub const LANES: usize = 16;
 
         #[inline(always)]
-        pub fn load(token: Sse41Token, data: &[f32; 16]) -> Self {
+        pub fn load(token: X64V3Token, data: &[f32; 16]) -> Self {
             Self {
                 a: f32x4::load(token, data[0..4].try_into().unwrap()),
                 b: f32x4::load(token, data[4..8].try_into().unwrap()),
@@ -500,7 +500,7 @@ pub mod sse {
         }
 
         #[inline(always)]
-        pub fn splat(token: Sse41Token, v: f32) -> Self {
+        pub fn splat(token: X64V3Token, v: f32) -> Self {
             let part = f32x4::splat(token, v);
             Self {
                 a: part,
@@ -511,7 +511,7 @@ pub mod sse {
         }
 
         #[inline(always)]
-        pub fn zero(token: Sse41Token) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             let part = f32x4::zero(token);
             Self {
                 a: part,
@@ -618,7 +618,7 @@ pub mod sse {
         pub const LANES: usize = 8;
 
         #[inline(always)]
-        pub fn load(token: Sse41Token, data: &[f64; 8]) -> Self {
+        pub fn load(token: X64V3Token, data: &[f64; 8]) -> Self {
             Self {
                 a: f64x2::load(token, data[0..2].try_into().unwrap()),
                 b: f64x2::load(token, data[2..4].try_into().unwrap()),
@@ -628,7 +628,7 @@ pub mod sse {
         }
 
         #[inline(always)]
-        pub fn splat(token: Sse41Token, v: f64) -> Self {
+        pub fn splat(token: X64V3Token, v: f64) -> Self {
             let part = f64x2::splat(token, v);
             Self {
                 a: part,
@@ -639,7 +639,7 @@ pub mod sse {
         }
 
         #[inline(always)]
-        pub fn zero(token: Sse41Token) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             let part = f64x2::zero(token);
             Self {
                 a: part,
@@ -746,7 +746,7 @@ pub mod sse {
         pub const LANES: usize = 16;
 
         #[inline(always)]
-        pub fn load(token: Sse41Token, data: &[i32; 16]) -> Self {
+        pub fn load(token: X64V3Token, data: &[i32; 16]) -> Self {
             Self {
                 a: i32x4::load(token, data[0..4].try_into().unwrap()),
                 b: i32x4::load(token, data[4..8].try_into().unwrap()),
@@ -756,7 +756,7 @@ pub mod sse {
         }
 
         #[inline(always)]
-        pub fn splat(token: Sse41Token, v: i32) -> Self {
+        pub fn splat(token: X64V3Token, v: i32) -> Self {
             let part = i32x4::splat(token, v);
             Self {
                 a: part,
@@ -767,7 +767,7 @@ pub mod sse {
         }
 
         #[inline(always)]
-        pub fn zero(token: Sse41Token) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             let part = i32x4::zero(token);
             Self {
                 a: part,
@@ -831,7 +831,7 @@ pub mod avx2 {
     //! These types emulate AVX-512-width vectors using pairs of AVX2 vectors.
 
     use crate::simd::x86::w256::{f32x8, f64x4, i32x8};
-    use archmage::Avx2FmaToken;
+    use archmage::X64V3Token;
     use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 16-wide f32 vector using two AVX2 f32x8 vectors.
@@ -845,7 +845,7 @@ pub mod avx2 {
         pub const LANES: usize = 16;
 
         #[inline(always)]
-        pub fn load(token: Avx2FmaToken, data: &[f32; 16]) -> Self {
+        pub fn load(token: X64V3Token, data: &[f32; 16]) -> Self {
             Self {
                 lo: f32x8::load(token, data[0..8].try_into().unwrap()),
                 hi: f32x8::load(token, data[8..16].try_into().unwrap()),
@@ -853,13 +853,13 @@ pub mod avx2 {
         }
 
         #[inline(always)]
-        pub fn splat(token: Avx2FmaToken, v: f32) -> Self {
+        pub fn splat(token: X64V3Token, v: f32) -> Self {
             let part = f32x8::splat(token, v);
             Self { lo: part, hi: part }
         }
 
         #[inline(always)]
-        pub fn zero(token: Avx2FmaToken) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             let part = f32x8::zero(token);
             Self { lo: part, hi: part }
         }
@@ -945,7 +945,7 @@ pub mod avx2 {
         pub const LANES: usize = 8;
 
         #[inline(always)]
-        pub fn load(token: Avx2FmaToken, data: &[f64; 8]) -> Self {
+        pub fn load(token: X64V3Token, data: &[f64; 8]) -> Self {
             Self {
                 lo: f64x4::load(token, data[0..4].try_into().unwrap()),
                 hi: f64x4::load(token, data[4..8].try_into().unwrap()),
@@ -953,13 +953,13 @@ pub mod avx2 {
         }
 
         #[inline(always)]
-        pub fn splat(token: Avx2FmaToken, v: f64) -> Self {
+        pub fn splat(token: X64V3Token, v: f64) -> Self {
             let part = f64x4::splat(token, v);
             Self { lo: part, hi: part }
         }
 
         #[inline(always)]
-        pub fn zero(token: Avx2FmaToken) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             let part = f64x4::zero(token);
             Self { lo: part, hi: part }
         }
@@ -1045,7 +1045,7 @@ pub mod avx2 {
         pub const LANES: usize = 16;
 
         #[inline(always)]
-        pub fn load(token: Avx2FmaToken, data: &[i32; 16]) -> Self {
+        pub fn load(token: X64V3Token, data: &[i32; 16]) -> Self {
             Self {
                 lo: i32x8::load(token, data[0..8].try_into().unwrap()),
                 hi: i32x8::load(token, data[8..16].try_into().unwrap()),
@@ -1053,13 +1053,13 @@ pub mod avx2 {
         }
 
         #[inline(always)]
-        pub fn splat(token: Avx2FmaToken, v: i32) -> Self {
+        pub fn splat(token: X64V3Token, v: i32) -> Self {
             let part = i32x8::splat(token, v);
             Self { lo: part, hi: part }
         }
 
         #[inline(always)]
-        pub fn zero(token: Avx2FmaToken) -> Self {
+        pub fn zero(token: X64V3Token) -> Self {
             let part = i32x8::zero(token);
             Self { lo: part, hi: part }
         }
@@ -1102,7 +1102,7 @@ pub mod avx2 {
     }
 
     /// Token type alias
-    pub type Token = Avx2FmaToken;
+    pub type Token = X64V3Token;
 }
 
 #[cfg(target_arch = "aarch64")]

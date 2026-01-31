@@ -13,7 +13,7 @@
 #![cfg(target_arch = "x86_64")]
 #![allow(clippy::needless_borrows_for_generic_args)]
 
-use archmage::{Avx2FmaToken, SimdToken, arcane};
+use archmage::{SimdToken, X64V3Token, arcane};
 use magetypes::simd::f32x8;
 
 /// Calculate ULP difference between two f32 values
@@ -111,25 +111,25 @@ where
 
 /// Process a single chunk of 8 floats with exp2_lowp
 #[arcane]
-fn exp2_lowp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn exp2_lowp_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).exp2_lowp().to_array()
 }
 
 /// Process a single chunk of 8 floats with log2_lowp
 #[arcane]
-fn log2_lowp_chunk(token: Avx2FmaToken, input: &[f32; 8]) -> [f32; 8] {
+fn log2_lowp_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).log2_lowp().to_array()
 }
 
 /// Process a single chunk of 8 floats with pow_lowp
 #[arcane]
-fn pow_lowp_chunk(token: Avx2FmaToken, input: &[f32; 8], exp: f32) -> [f32; 8] {
+fn pow_lowp_chunk(token: X64V3Token, input: &[f32; 8], exp: f32) -> [f32; 8] {
     f32x8::load(token, input).pow_lowp(exp).to_array()
 }
 
 /// Process a single chunk of 8 floats with pow_midp
 #[arcane]
-fn pow_midp_chunk(token: Avx2FmaToken, input: &[f32; 8], exp: f32) -> [f32; 8] {
+fn pow_midp_chunk(token: X64V3Token, input: &[f32; 8], exp: f32) -> [f32; 8] {
     f32x8::load(token, input).pow_midp(exp).to_array()
 }
 
@@ -139,7 +139,7 @@ fn pow_midp_chunk(token: Avx2FmaToken, input: &[f32; 8], exp: f32) -> [f32; 8] {
 
 /// Apply archmage exp2_lowp to a slice
 fn archmage_exp2(input: &[f32]) -> Vec<f32> {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return input.iter().map(|&x| x.exp2()).collect();
     };
 
@@ -162,7 +162,7 @@ fn archmage_exp2(input: &[f32]) -> Vec<f32> {
 
 /// Apply archmage log2_lowp to a slice
 fn archmage_log2(input: &[f32]) -> Vec<f32> {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return input.iter().map(|&x| x.log2()).collect();
     };
 
@@ -184,7 +184,7 @@ fn archmage_log2(input: &[f32]) -> Vec<f32> {
 
 /// Apply archmage pow_lowp (fast, low-precision) to a slice
 fn archmage_pow_lowp(input: &[f32], exp: f32) -> Vec<f32> {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return input.iter().map(|&x| x.powf(exp)).collect();
     };
 
@@ -206,7 +206,7 @@ fn archmage_pow_lowp(input: &[f32], exp: f32) -> Vec<f32> {
 
 /// Apply archmage pow_midp (mid-precision) to a slice
 fn archmage_pow_midp(input: &[f32], exp: f32) -> Vec<f32> {
-    let Some(token) = Avx2FmaToken::try_new() else {
+    let Some(token) = X64V3Token::try_new() else {
         return input.iter().map(|&x| x.powf(exp)).collect();
     };
 
@@ -286,7 +286,7 @@ fn test_srgb_roundtrip(bit_depth: u32) {
         bit_depth, levels
     );
 
-    let Some(_token) = Avx2FmaToken::try_new() else {
+    let Some(_token) = X64V3Token::try_new() else {
         eprintln!("AVX2+FMA not available");
         return;
     };
@@ -387,7 +387,7 @@ fn main() {
     println!("Archmage Transcendental Accuracy Analysis");
     println!("=========================================\n");
 
-    if Avx2FmaToken::try_new().is_none() {
+    if X64V3Token::try_new().is_none() {
         eprintln!("AVX2+FMA not available, skipping");
         return;
     }

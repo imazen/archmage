@@ -439,7 +439,7 @@ fn bench_dct8() {
     // Width-specific
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             dct::sse::dct8(token, &input, &mut output);
@@ -453,7 +453,7 @@ fn bench_dct8() {
         );
     }
 
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             dct::avx2::dct8(token, &input, &mut output);
@@ -522,7 +522,7 @@ fn bench_dct8x8() {
     // Width-specific
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::Sse41Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             block = original;
@@ -537,7 +537,7 @@ fn bench_dct8x8() {
         );
     }
 
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             block = original;
@@ -621,7 +621,7 @@ fn bench_batch_dct8x8() {
     // Width-specific batch
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::Avx2FmaToken::try_new() {
+    if let Some(token) = archmage::X64V3Token::try_new() {
         let start = Instant::now();
         for _ in 0..ITERATIONS {
             blocks.copy_from_slice(&original);
@@ -647,14 +647,14 @@ fn show_available_widths() {
     use archmage::SimdToken;
 
     print!("  SSE4.1 (128-bit, 4 lanes):   ");
-    if archmage::Sse41Token::try_new().is_some() {
+    if archmage::X64V3Token::try_new().is_some() {
         println!("AVAILABLE");
     } else {
         println!("not available");
     }
 
     print!("  AVX2+FMA (256-bit, 8 lanes): ");
-    if archmage::Avx2FmaToken::try_new().is_some() {
+    if archmage::X64V3Token::try_new().is_some() {
         println!("AVAILABLE");
     } else {
         println!("not available");
