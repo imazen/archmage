@@ -97,6 +97,11 @@ impl Avx512Token {
 /// This is the Xeon Skylake-SP (2017) / Zen 4 (2022) baseline.
 pub type X64V4Token = Avx512Token;
 
+/// Friendly alias for [`Avx512Token`] / [`X64V4Token`].
+///
+/// Pairs with [`Desktop64`](super::Desktop64) (x86-64-v3).
+pub type Server64 = Avx512Token;
+
 // ============================================================================
 // AVX-512 Modern Token (Ice Lake / Zen 4)
 // ============================================================================

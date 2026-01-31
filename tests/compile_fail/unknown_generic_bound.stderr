@@ -1,0 +1,9 @@
+error: arcane requires a token parameter. Supported forms:
+       - Concrete: `token: X64V3Token`
+       - impl Trait: `token: impl Has256BitSimd`
+       - Generic: `fn foo<T: HasX64V2>(token: T, ...)`
+       - With self: `#[arcane(_self = Type)] fn method(&self, token: impl HasNeon, ...)`
+ --> tests/compile_fail/unknown_generic_bound.rs:8:1
+  |
+8 | fn bad_generic<T: HasFma>(token: T, data: &[f32]) -> f32 {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

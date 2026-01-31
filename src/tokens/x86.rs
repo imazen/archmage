@@ -11,7 +11,9 @@ use super::{CompositeToken, SimdToken};
 
 // Re-export AVX-512 tokens from the dedicated module
 #[cfg(feature = "avx512")]
-pub use super::x86_avx512::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, X64V4Token};
+pub use super::x86_avx512::{
+    Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token,
+};
 
 // ============================================================================
 // SSE4.1 Token

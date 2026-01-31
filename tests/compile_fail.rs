@@ -31,4 +31,8 @@ fn ui_tests() {
 
     // Token type safety tests
     t.compile_fail("tests/compile_fail/wrong_token.rs");
+
+    // Macro rejects unknown trait bounds (e.g., removed HasAvx2, HasFma)
+    t.compile_fail("tests/compile_fail/unknown_trait_bound.rs");
+    t.compile_fail("tests/compile_fail/unknown_generic_bound.rs");
 }

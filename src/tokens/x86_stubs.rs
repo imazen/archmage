@@ -63,6 +63,10 @@ define_x86_stub!(Avx512ModernToken, "AVX-512Modern");
 #[cfg(feature = "avx512")]
 define_x86_stub!(Avx512Fp16Token, "AVX-512FP16");
 
+/// Friendly alias for [`Avx512Token`] / [`X64V4Token`].
+#[cfg(feature = "avx512")]
+pub type Server64 = Avx512Token;
+
 /// Stub for AVX2+FMA combined token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct Avx2FmaToken {

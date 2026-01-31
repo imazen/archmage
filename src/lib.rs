@@ -9,11 +9,11 @@
 //! ## Quick Example
 //!
 //! ```rust,ignore
-//! use archmage::{Desktop64, HasAvx2, SimdToken, arcane};
+//! use archmage::{Desktop64, Has256BitSimd, SimdToken, arcane};
 //! use std::arch::x86_64::*;
 //!
 //! #[arcane]
-//! fn multiply_add(_token: impl HasAvx2, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+//! fn multiply_add(_token: impl Has256BitSimd, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 //!     // safe_unaligned_simd calls are SAFE inside #[arcane] - no unsafe needed!
 //!     let va = safe_unaligned_simd::x86_64::_mm256_loadu_ps(a);
 //!     let vb = safe_unaligned_simd::x86_64::_mm256_loadu_ps(b);
@@ -44,8 +44,8 @@
 //! **The `#[arcane]` macro** generates an inner function with `#[target_feature]`,
 //! making intrinsics safe inside. The token parameter proves CPU support was verified.
 //!
-//! **Generic bounds** like `impl HasAvx2` let functions accept any token that
-//! provides AVX2 (e.g., `Avx2Token`, `Desktop64`, `X64V4Token`).
+//! **Generic bounds** like `impl Has256BitSimd` let functions accept any token that
+//! provides 256-bit SIMD (e.g., `Avx2Token`, `Desktop64`, `X64V4Token`).
 //!
 //! ## Feature Flags
 //!
@@ -140,5 +140,5 @@ pub use tokens::{
 #[cfg(feature = "avx512")]
 pub use tokens::{
     Avx512Fp16Token, Avx512ModernToken, Avx512Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken,
-    Avx512bwToken, Avx512bwVlToken, Avx512fToken, Avx512fVlToken, X64V4Token,
+    Avx512bwToken, Avx512bwVlToken, Avx512fToken, Avx512fVlToken, Server64, X64V4Token,
 };

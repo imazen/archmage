@@ -87,6 +87,10 @@ fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
         "Avx2FmaToken" => Some(&["avx2", "fma"]),
         "Avx512fToken" => Some(&["avx512f"]),
         "Avx512bwToken" => Some(&["avx512bw"]),
+        "Avx512fVlToken" => Some(&["avx512f", "avx512vl"]),
+        "Avx512bwVlToken" => Some(&["avx512bw", "avx512vl"]),
+        "Avx512Vbmi2Token" => Some(&["avx512vbmi2"]),
+        "Avx512Vbmi2VlToken" => Some(&["avx512vbmi2", "avx512vl"]),
 
         // x86_64 tier tokens
         "X64V2Token" => Some(&["sse4.2", "popcnt"]),
@@ -236,7 +240,7 @@ fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {
 enum TokenTypeInfo {
     /// Concrete token type (e.g., `Avx2Token`)
     Concrete(String),
-    /// impl Trait with the trait names (e.g., `impl HasAvx2`)
+    /// impl Trait with the trait names (e.g., `impl Has256BitSimd`)
     ImplTrait(Vec<String>),
     /// Generic type parameter name (e.g., `T`)
     Generic(String),
@@ -263,7 +267,7 @@ fn extract_token_type_info(ty: &Type) -> Option<TokenTypeInfo> {
             extract_token_type_info(&type_ref.elem)
         }
         Type::ImplTrait(impl_trait) => {
-            // Handle `impl HasAvx2` or `impl HasAvx2 + HasFma`
+            // Handle `impl Has256BitSimd` or `impl HasX64V2 + HasNeon`
             let traits: Vec<String> = extract_trait_names_from_bounds(&impl_trait.bounds);
             if traits.is_empty() {
                 None
@@ -297,7 +301,7 @@ fn extract_trait_names_from_bounds(
 
 /// Look up a generic type parameter in the function's generics.
 fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Vec<String>> {
-    // Check inline bounds first (e.g., `fn foo<T: HasAvx2>(token: T)`)
+    // Check inline bounds first (e.g., `fn foo<T: HasX64V2>(token: T)`)
     for param in &sig.generics.params {
         if let GenericParam::Type(type_param) = param {
             if type_param.ident == type_name {
@@ -309,7 +313,7 @@ fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Vec<String>> 
         }
     }
 
-    // Check where clause (e.g., `fn foo<T>(token: T) where T: HasAvx2`)
+    // Check where clause (e.g., `fn foo<T>(token: T) where T: HasX64V2`)
     if let Some(where_clause) = &sig.generics.where_clause {
         for predicate in &where_clause.predicates {
             if let syn::WherePredicate::Type(pred_type) = predicate {
@@ -429,10 +433,10 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
         None => {
             let msg = format!(
                 "{} requires a token parameter. Supported forms:\n\
-                 - Concrete: `token: Avx2Token`\n\
-                 - impl Trait: `token: impl HasAvx2`\n\
-                 - Generic: `fn foo<T: HasAvx2>(token: T, ...)`\n\
-                 - With self: `#[{}(_self = Type)] fn method(&self, token: impl HasAvx2, ...)`",
+                 - Concrete: `token: X64V3Token`\n\
+                 - impl Trait: `token: impl Has256BitSimd`\n\
+                 - Generic: `fn foo<T: HasX64V2>(token: T, ...)`\n\
+                 - With self: `#[{}(_self = Type)] fn method(&self, token: impl HasNeon, ...)`",
                 macro_name, macro_name
             );
             return syn::Error::new_spanned(&input_fn.sig, msg)
@@ -575,8 +579,8 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// ```ignore
 /// #[arcane]
-/// fn process(token: impl HasAvx2, data: &[f32; 8]) -> [f32; 8] {
-///     // Accepts any token that provides AVX2
+/// fn process(token: impl Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
+///     // Accepts any token that provides 256-bit SIMD
 /// }
 /// ```
 ///
@@ -584,15 +588,15 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// ```ignore
 /// #[arcane]
-/// fn process<T: HasAvx2>(token: T, data: &[f32; 8]) -> [f32; 8] {
-///     // Generic over any AVX2-capable token
+/// fn process<T: Has256BitSimd>(token: T, data: &[f32; 8]) -> [f32; 8] {
+///     // Generic over any 256-bit-capable token
 /// }
 ///
 /// // Also works with where clauses:
 /// #[arcane]
 /// fn process<T>(token: T, data: &[f32; 8]) -> [f32; 8]
 /// where
-///     T: HasAvx2
+///     T: Has256BitSimd
 /// {
 ///     // ...
 /// }
@@ -604,29 +608,29 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// `_self = Type` argument. Use `_self` in the function body instead of `self`:
 ///
 /// ```ignore
-/// use archmage::{HasAvx2, arcane};
+/// use archmage::{Has256BitSimd, arcane};
 /// use wide::f32x8;
 ///
-/// trait Avx2Ops {
-///     fn double(&self, token: impl HasAvx2) -> Self;
-///     fn square(self, token: impl HasAvx2) -> Self;
-///     fn scale(&mut self, token: impl HasAvx2, factor: f32);
+/// trait SimdOps {
+///     fn double(&self, token: impl Has256BitSimd) -> Self;
+///     fn square(self, token: impl Has256BitSimd) -> Self;
+///     fn scale(&mut self, token: impl Has256BitSimd, factor: f32);
 /// }
 ///
-/// impl Avx2Ops for f32x8 {
+/// impl SimdOps for f32x8 {
 ///     #[arcane(_self = f32x8)]
-///     fn double(&self, _token: impl HasAvx2) -> Self {
+///     fn double(&self, _token: impl Has256BitSimd) -> Self {
 ///         // Use _self instead of self in the body
 ///         *_self + *_self
 ///     }
 ///
 ///     #[arcane(_self = f32x8)]
-///     fn square(self, _token: impl HasAvx2) -> Self {
+///     fn square(self, _token: impl Has256BitSimd) -> Self {
 ///         _self * _self
 ///     }
 ///
 ///     #[arcane(_self = f32x8)]
-///     fn scale(&mut self, _token: impl HasAvx2, factor: f32) {
+///     fn scale(&mut self, _token: impl Has256BitSimd, factor: f32) {
 ///         *_self = *_self * f32x8::splat(factor);
 ///     }
 /// }
@@ -648,8 +652,8 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// ```ignore
 /// #[arcane]
-/// fn fma_kernel(token: impl HasAvx2 + HasFma, data: &[f32; 8]) -> [f32; 8] {
-///     // Both AVX2 and FMA intrinsics are safe here
+/// fn fma_kernel(token: impl HasX64V2 + Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
+///     // Both SSE4.2 and AVX features are enabled here
 /// }
 /// ```
 ///
@@ -686,18 +690,22 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// # Supported Tokens
 ///
-/// - **x86_64**: `Sse2Token`, `Sse41Token`, `Sse42Token`, `AvxToken`, `Avx2Token`,
-///   `FmaToken`, `Avx2FmaToken`, `Avx512fToken`, `Avx512bwToken`
-/// - **x86_64 profiles**: `X64V2Token`, `X64V3Token`, `X64V4Token`
-/// - **ARM**: `NeonToken`, `SveToken`, `Sve2Token`
+/// - **x86_64**: `Sse41Token`, `Sse42Token`, `AvxToken`, `Avx2Token`, `FmaToken`,
+///   `Avx2FmaToken`, `Avx512fToken`, `Avx512bwToken`, `Avx512fVlToken`,
+///   `Avx512bwVlToken`, `Avx512Vbmi2Token`, `Avx512Vbmi2VlToken`
+/// - **x86_64 tiers**: `X64V2Token`, `X64V3Token` / `Desktop64`, `X64V4Token` / `Avx512Token`,
+///   `Avx512ModernToken`, `Avx512Fp16Token`
+/// - **ARM**: `NeonToken` / `Arm64`, `NeonAesToken`, `NeonSha3Token`,
+///   `ArmCryptoToken`, `ArmCrypto3Token`
 /// - **WASM**: `Simd128Token`
 ///
 /// # Supported Trait Bounds
 ///
-/// - **x86_64**: `HasSse`, `HasSse2`, `HasSse41`, `HasSse42`, `HasAvx`, `HasAvx2`,
-///   `HasAvx512f`, `HasAvx512vl`, `HasAvx512bw`, `HasAvx512vbmi2`, `HasFma`
-/// - **ARM**: `HasNeon`, `HasSve`, `HasSve2`
-/// - **Generic**: `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
+/// - **x86_64 tiers**: `HasX64V2`, `HasX64V4`
+/// - **x86_64 width**: `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
+/// - **ARM**: `HasNeon`, `HasNeonAes`, `HasNeonSha3`
+///
+/// Concrete token types also work as trait bounds (e.g., `impl X64V3Token`).
 ///
 /// # Options
 ///
@@ -1369,4 +1377,254 @@ fn generate_dispatchers(
     }
 
     quote! { #(#dispatchers)* }
+}
+
+// =============================================================================
+// Unit tests for token/trait recognition maps
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// All concrete token names that exist in the runtime crate.
+    /// If a token is added to archmage but not here, this test will catch it
+    /// next time someone audits the list.
+    const ALL_CONCRETE_TOKENS: &[&str] = &[
+        // SSE-level
+        "Sse41Token",
+        "Sse42Token",
+        // AVX-level
+        "AvxToken",
+        "Avx2Token",
+        "FmaToken",
+        "Avx2FmaToken",
+        // AVX-512 granular
+        "Avx512fToken",
+        "Avx512bwToken",
+        "Avx512fVlToken",
+        "Avx512bwVlToken",
+        "Avx512Vbmi2Token",
+        "Avx512Vbmi2VlToken",
+        // Tier tokens
+        "X64V2Token",
+        "X64V3Token",
+        "X64V4Token",
+        "Avx512Token",
+        "Avx512ModernToken",
+        "Avx512Fp16Token",
+        // Aliases
+        "Desktop64",
+        "Server64",
+        // ARM
+        "NeonToken",
+        "Arm64",
+        "NeonAesToken",
+        "NeonSha3Token",
+        "ArmCryptoToken",
+        "ArmCrypto3Token",
+        // WASM
+        "Simd128Token",
+    ];
+
+    /// All trait names that exist in the runtime crate.
+    const ALL_TRAIT_NAMES: &[&str] = &[
+        // x86 tiers
+        "HasX64V2",
+        "HasX64V4",
+        // Width traits
+        "Has128BitSimd",
+        "Has256BitSimd",
+        "Has512BitSimd",
+        // ARM traits
+        "HasNeon",
+        "HasNeonAes",
+        "HasNeonSha3",
+    ];
+
+    #[test]
+    fn every_concrete_token_is_in_token_to_features() {
+        for &name in ALL_CONCRETE_TOKENS {
+            assert!(
+                token_to_features(name).is_some(),
+                "Token `{}` exists in runtime crate but is NOT recognized by \
+                 token_to_features() in the proc macro. Add it!",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn every_trait_is_in_trait_to_features() {
+        for &name in ALL_TRAIT_NAMES {
+            assert!(
+                trait_to_features(name).is_some(),
+                "Trait `{}` exists in runtime crate but is NOT recognized by \
+                 trait_to_features() in the proc macro. Add it!",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn token_aliases_map_to_same_features() {
+        // Desktop64 = X64V3Token
+        assert_eq!(
+            token_to_features("Desktop64"),
+            token_to_features("X64V3Token"),
+            "Desktop64 and X64V3Token should map to identical features"
+        );
+
+        // Server64 = X64V4Token = Avx512Token
+        assert_eq!(
+            token_to_features("Server64"),
+            token_to_features("X64V4Token"),
+            "Server64 and X64V4Token should map to identical features"
+        );
+        assert_eq!(
+            token_to_features("X64V4Token"),
+            token_to_features("Avx512Token"),
+            "X64V4Token and Avx512Token should map to identical features"
+        );
+
+        // Arm64 = NeonToken
+        assert_eq!(
+            token_to_features("Arm64"),
+            token_to_features("NeonToken"),
+            "Arm64 and NeonToken should map to identical features"
+        );
+    }
+
+    #[test]
+    fn trait_to_features_includes_tokens_as_bounds() {
+        // Tier tokens should also work as trait bounds
+        // (for `impl X64V3Token` patterns, even though Rust won't allow it,
+        // the macro processes AST before type checking)
+        let tier_tokens = [
+            "X64V2Token",
+            "X64V3Token",
+            "Desktop64",
+            "Avx2FmaToken",
+            "X64V4Token",
+            "Avx512Token",
+            "Server64",
+            "Avx512ModernToken",
+            "Avx512Fp16Token",
+            "NeonToken",
+            "Arm64",
+            "NeonAesToken",
+            "NeonSha3Token",
+            "ArmCryptoToken",
+            "ArmCrypto3Token",
+        ];
+
+        for &name in &tier_tokens {
+            assert!(
+                trait_to_features(name).is_some(),
+                "Tier token `{}` should also be recognized in trait_to_features() \
+                 for use as a generic bound. Add it!",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn trait_features_are_cumulative() {
+        // HasX64V4 should include all HasX64V2 features plus more
+        let v2_features = trait_to_features("HasX64V2").unwrap();
+        let v4_features = trait_to_features("HasX64V4").unwrap();
+
+        for &f in v2_features {
+            assert!(
+                v4_features.contains(&f),
+                "HasX64V4 should include v2 feature `{}` but doesn't",
+                f
+            );
+        }
+
+        // v4 should have more features than v2
+        assert!(
+            v4_features.len() > v2_features.len(),
+            "HasX64V4 should have more features than HasX64V2"
+        );
+    }
+
+    #[test]
+    fn x64v3_trait_features_include_v2() {
+        // X64V3Token as trait bound should include v2 features
+        let v2 = trait_to_features("HasX64V2").unwrap();
+        let v3 = trait_to_features("X64V3Token").unwrap();
+
+        for &f in v2 {
+            assert!(
+                v3.contains(&f),
+                "X64V3Token trait features should include v2 feature `{}` but don't",
+                f
+            );
+        }
+    }
+
+    #[test]
+    fn has_neon_aes_includes_neon() {
+        let neon = trait_to_features("HasNeon").unwrap();
+        let neon_aes = trait_to_features("HasNeonAes").unwrap();
+
+        for &f in neon {
+            assert!(
+                neon_aes.contains(&f),
+                "HasNeonAes should include NEON feature `{}`",
+                f
+            );
+        }
+    }
+
+    #[test]
+    fn no_removed_traits_are_recognized() {
+        // These traits were removed in 0.3.0 and should NOT be recognized
+        let removed = [
+            "HasSse",
+            "HasSse2",
+            "HasSse41",
+            "HasSse42",
+            "HasAvx",
+            "HasAvx2",
+            "HasFma",
+            "HasAvx512f",
+            "HasAvx512bw",
+            "HasAvx512vl",
+            "HasAvx512vbmi2",
+            "HasSve",
+            "HasSve2",
+        ];
+
+        for &name in &removed {
+            assert!(
+                trait_to_features(name).is_none(),
+                "Removed trait `{}` should NOT be in trait_to_features(). \
+                 It was removed in 0.3.0 — users should migrate to tier traits.",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn no_nonexistent_tokens_are_recognized() {
+        // These tokens don't exist and should NOT be recognized
+        let fake = [
+            "Sse2Token",
+            "SveToken",
+            "Sve2Token",
+            "Avx512VnniToken",
+            "X64V4ModernToken",
+            "NeonFp16Token",
+        ];
+
+        for &name in &fake {
+            assert!(
+                token_to_features(name).is_none(),
+                "Non-existent token `{}` should NOT be in token_to_features()",
+                name
+            );
+        }
+    }
 }
