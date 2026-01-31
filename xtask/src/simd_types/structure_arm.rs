@@ -4,6 +4,7 @@
 
 use super::arch::Arch;
 use super::arch::arm::Arm;
+use super::ops_bitcast;
 use super::types::{ElementType, SimdType, SimdWidth};
 use std::fmt::Write;
 
@@ -49,6 +50,9 @@ pub fn generate_type(ty: &SimdType) -> String {
 
     // Horizontal operations
     code.push_str(&generate_horizontal_ops(ty));
+
+    // Bitcast operations (reinterpret bits between same-width types)
+    code.push_str(&ops_bitcast::generate_arm_bitcasts(ty));
 
     writeln!(code, "}}\n").unwrap();
 

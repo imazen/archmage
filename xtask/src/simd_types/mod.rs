@@ -17,9 +17,11 @@
 pub mod arch;
 mod block_ops;
 mod ops;
+pub mod ops_bitcast;
 mod ops_comparison;
 mod structure;
 mod structure_arm;
+pub mod structure_polyfill;
 mod structure_wasm;
 mod transcendental;
 pub mod transcendental_wasm;
@@ -126,7 +128,7 @@ fn generate_mod_rs(types: &[SimdType]) -> String {
     code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
     code.push_str("pub use wasm::w128::*;\n\n");
 
-    // Polyfill module (handwritten, not auto-generated)
+    // Polyfill module (auto-generated W256 from pairs of W128)
     code.push_str("// Polyfill module for emulating wider types on narrower hardware\n");
     code.push_str("pub mod polyfill;\n\n");
 
@@ -400,6 +402,12 @@ pub mod w128;
     files.insert(
         "wasm/w128.rs".to_string(),
         structure_wasm::generate_wasm_w128(&wasm_types),
+    );
+
+    // Generate polyfill types (W256 from pairs of W128)
+    files.insert(
+        "polyfill.rs".to_string(),
+        structure_polyfill::generate_polyfill(),
     );
 
     files
@@ -900,6 +908,100 @@ mod arm_tests {
             let v = f32x4::from_bytes(token, &bytes);
             assert_eq!(v.to_array(), [1.0, 2.0, 3.0, 4.0]);
         }
+    }
+}
+"#,
+    );
+
+    // Bitcast tests
+    code.push_str(
+        r#"
+// ============================================================================
+// Bitcast Tests
+// ============================================================================
+
+#[test]
+fn test_f32x8_bitcast_i32x8_roundtrip() {
+    if let Some(token) = X64V3Token::try_new() {
+        let f = f32x8::splat(token, 1.0f32);
+        let i = f.bitcast_i32x8();
+        // IEEE 754: 1.0f32 = 0x3F800000
+        assert_eq!(i[0], 0x3F80_0000_i32);
+        let f2 = i.bitcast_f32x8();
+        assert_eq!(f2.to_array(), f.to_array());
+    }
+}
+
+#[test]
+fn test_f32x4_bitcast_i32x4_roundtrip() {
+    if let Some(token) = X64V3Token::try_new() {
+        let f = f32x4::splat(token, -1.0f32);
+        let i = f.bitcast_i32x4();
+        // IEEE 754: -1.0f32 = 0xBF800000
+        assert_eq!(i[0], -0x4080_0000_i32); // 0xBF800000 as i32
+        let f2 = i.bitcast_f32x4();
+        assert_eq!(f2.to_array(), f.to_array());
+    }
+}
+
+#[test]
+fn test_i32x8_bitcast_u32x8() {
+    if let Some(token) = X64V3Token::try_new() {
+        let i = i32x8::splat(token, -1);
+        let u = i.bitcast_u32x8();
+        assert_eq!(u[0], u32::MAX);
+        let i2 = u.bitcast_i32x8();
+        assert_eq!(i2[0], -1);
+    }
+}
+
+#[test]
+fn test_f32x8_bitcast_ref() {
+    if let Some(token) = X64V3Token::try_new() {
+        let f = f32x8::splat(token, 1.0f32);
+        let i_ref: &i32x8 = f.bitcast_ref_i32x8();
+        assert_eq!(i_ref[0], 0x3F80_0000_i32);
+    }
+}
+
+#[test]
+fn test_f32x8_bitcast_mut() {
+    if let Some(token) = X64V3Token::try_new() {
+        let mut f = f32x8::splat(token, 1.0f32);
+        let i_mut: &mut i32x8 = f.bitcast_mut_i32x8();
+        // Modify via the bitcast reference
+        i_mut[0] = 0x4000_0000; // 2.0f32 in IEEE 754
+        assert_eq!(f[0], 2.0f32);
+    }
+}
+
+#[test]
+fn test_f64x4_bitcast_i64x4_roundtrip() {
+    if let Some(token) = X64V3Token::try_new() {
+        let f = f64x4::splat(token, 1.0f64);
+        let i = f.bitcast_i64x4();
+        // IEEE 754: 1.0f64 = 0x3FF0000000000000
+        assert_eq!(i[0], 0x3FF0_0000_0000_0000_i64);
+        let f2 = i.bitcast_f64x4();
+        assert_eq!(f2.to_array(), f.to_array());
+    }
+}
+
+#[test]
+fn test_i8x32_bitcast_u8x32() {
+    if let Some(token) = X64V3Token::try_new() {
+        let i = i8x32::splat(token, -128);
+        let u = i.bitcast_u8x32();
+        assert_eq!(u[0], 128u8);
+    }
+}
+
+#[test]
+fn test_i16x16_bitcast_u16x16() {
+    if let Some(token) = X64V3Token::try_new() {
+        let i = i16x16::splat(token, -1);
+        let u = i.bitcast_u16x16();
+        assert_eq!(u[0], u16::MAX);
     }
 }
 "#,

@@ -4,6 +4,7 @@
 
 use core::arch::aarch64::*;
 
+
 // ============================================================================
 // f32x4 - 4 x f32 (128-bit NEON)
 // ============================================================================
@@ -244,6 +245,46 @@ impl f32x4 {
             vgetq_lane_f32::<0>(m)
         }
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `i32x4` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x4(self) -> i32x4 {
+        i32x4(unsafe { vreinterpretq_s32_f32(self.0) })
+    }
+
+    /// Reinterpret bits as `&i32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x4(&self) -> &i32x4 {
+        unsafe { &*(self as *const Self as *const i32x4) }
+    }
+
+    /// Reinterpret bits as `&mut i32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x4(&mut self) -> &mut i32x4 {
+        unsafe { &mut *(self as *mut Self as *mut i32x4) }
+    }
+
+    /// Reinterpret bits as `u32x4` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x4(self) -> u32x4 {
+        u32x4(unsafe { vreinterpretq_u32_f32(self.0) })
+    }
+
+    /// Reinterpret bits as `&u32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x4(&self) -> &u32x4 {
+        unsafe { &*(self as *const Self as *const u32x4) }
+    }
+
+    /// Reinterpret bits as `&mut u32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x4(&mut self) -> &mut u32x4 {
+        unsafe { &mut *(self as *mut Self as *mut u32x4) }
+    }
+
 }
 
 impl core::ops::Add for f32x4 {
@@ -346,6 +387,7 @@ impl From<f32x4> for [f32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // f64x2 - 2 x f64 (128-bit NEON)
@@ -584,6 +626,46 @@ impl f64x2 {
             vgetq_lane_f64::<0>(m)
         }
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `i64x2` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x2(self) -> i64x2 {
+        i64x2(unsafe { vreinterpretq_s64_f64(self.0) })
+    }
+
+    /// Reinterpret bits as `&i64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x2(&self) -> &i64x2 {
+        unsafe { &*(self as *const Self as *const i64x2) }
+    }
+
+    /// Reinterpret bits as `&mut i64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x2(&mut self) -> &mut i64x2 {
+        unsafe { &mut *(self as *mut Self as *mut i64x2) }
+    }
+
+    /// Reinterpret bits as `u64x2` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x2(self) -> u64x2 {
+        u64x2(unsafe { vreinterpretq_u64_f64(self.0) })
+    }
+
+    /// Reinterpret bits as `&u64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x2(&self) -> &u64x2 {
+        unsafe { &*(self as *const Self as *const u64x2) }
+    }
+
+    /// Reinterpret bits as `&mut u64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x2(&mut self) -> &mut u64x2 {
+        unsafe { &mut *(self as *mut Self as *mut u64x2) }
+    }
+
 }
 
 impl core::ops::Add for f64x2 {
@@ -686,6 +768,7 @@ impl From<f64x2> for [f64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // i8x16 - 16 x i8 (128-bit NEON)
@@ -879,6 +962,28 @@ impl i8x16 {
             vgetq_lane_s8::<0>(sum)
         }
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `u8x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x16(self) -> u8x16 {
+        u8x16(unsafe { vreinterpretq_u8_s8(self.0) })
+    }
+
+    /// Reinterpret bits as `&u8x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x16(&self) -> &u8x16 {
+        unsafe { &*(self as *const Self as *const u8x16) }
+    }
+
+    /// Reinterpret bits as `&mut u8x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x16(&mut self) -> &mut u8x16 {
+        unsafe { &mut *(self as *mut Self as *mut u8x16) }
+    }
+
 }
 
 impl core::ops::Add for i8x16 {
@@ -951,6 +1056,7 @@ impl From<i8x16> for [i8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // u8x16 - 16 x u8 (128-bit NEON)
@@ -1126,6 +1232,28 @@ impl u8x16 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `i8x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x16(self) -> i8x16 {
+        i8x16(unsafe { vreinterpretq_s8_u8(self.0) })
+    }
+
+    /// Reinterpret bits as `&i8x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x16(&self) -> &i8x16 {
+        unsafe { &*(self as *const Self as *const i8x16) }
+    }
+
+    /// Reinterpret bits as `&mut i8x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x16(&mut self) -> &mut i8x16 {
+        unsafe { &mut *(self as *mut Self as *mut i8x16) }
+    }
+
 }
 
 impl core::ops::Add for u8x16 {
@@ -1190,6 +1318,7 @@ impl From<u8x16> for [u8; 16] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // i16x8 - 8 x i16 (128-bit NEON)
@@ -1382,6 +1511,28 @@ impl i16x8 {
             vgetq_lane_s16::<0>(sum)
         }
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `u16x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x8(self) -> u16x8 {
+        u16x8(unsafe { vreinterpretq_u16_s16(self.0) })
+    }
+
+    /// Reinterpret bits as `&u16x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x8(&self) -> &u16x8 {
+        unsafe { &*(self as *const Self as *const u16x8) }
+    }
+
+    /// Reinterpret bits as `&mut u16x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x8(&mut self) -> &mut u16x8 {
+        unsafe { &mut *(self as *mut Self as *mut u16x8) }
+    }
+
 }
 
 impl core::ops::Add for i16x8 {
@@ -1469,6 +1620,7 @@ impl From<i16x8> for [i16; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // u16x8 - 8 x u16 (128-bit NEON)
@@ -1644,6 +1796,28 @@ impl u16x8 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `i16x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x8(self) -> i16x8 {
+        i16x8(unsafe { vreinterpretq_s16_u16(self.0) })
+    }
+
+    /// Reinterpret bits as `&i16x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x8(&self) -> &i16x8 {
+        unsafe { &*(self as *const Self as *const i16x8) }
+    }
+
+    /// Reinterpret bits as `&mut i16x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x8(&mut self) -> &mut i16x8 {
+        unsafe { &mut *(self as *mut Self as *mut i16x8) }
+    }
+
 }
 
 impl core::ops::Add for u16x8 {
@@ -1723,6 +1897,7 @@ impl From<u16x8> for [u16; 8] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // i32x4 - 4 x i32 (128-bit NEON)
@@ -1914,6 +2089,46 @@ impl i32x4 {
             vgetq_lane_s32::<0>(sum)
         }
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `f32x4` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f32x4(self) -> f32x4 {
+        f32x4(unsafe { vreinterpretq_f32_s32(self.0) })
+    }
+
+    /// Reinterpret bits as `&f32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f32x4(&self) -> &f32x4 {
+        unsafe { &*(self as *const Self as *const f32x4) }
+    }
+
+    /// Reinterpret bits as `&mut f32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f32x4(&mut self) -> &mut f32x4 {
+        unsafe { &mut *(self as *mut Self as *mut f32x4) }
+    }
+
+    /// Reinterpret bits as `u32x4` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x4(self) -> u32x4 {
+        u32x4(unsafe { vreinterpretq_u32_s32(self.0) })
+    }
+
+    /// Reinterpret bits as `&u32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x4(&self) -> &u32x4 {
+        unsafe { &*(self as *const Self as *const u32x4) }
+    }
+
+    /// Reinterpret bits as `&mut u32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x4(&mut self) -> &mut u32x4 {
+        unsafe { &mut *(self as *mut Self as *mut u32x4) }
+    }
+
 }
 
 impl core::ops::Add for i32x4 {
@@ -2001,6 +2216,7 @@ impl From<i32x4> for [i32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // u32x4 - 4 x u32 (128-bit NEON)
@@ -2176,6 +2392,46 @@ impl u32x4 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `f32x4` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f32x4(self) -> f32x4 {
+        f32x4(unsafe { vreinterpretq_f32_u32(self.0) })
+    }
+
+    /// Reinterpret bits as `&f32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f32x4(&self) -> &f32x4 {
+        unsafe { &*(self as *const Self as *const f32x4) }
+    }
+
+    /// Reinterpret bits as `&mut f32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f32x4(&mut self) -> &mut f32x4 {
+        unsafe { &mut *(self as *mut Self as *mut f32x4) }
+    }
+
+    /// Reinterpret bits as `i32x4` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x4(self) -> i32x4 {
+        i32x4(unsafe { vreinterpretq_s32_u32(self.0) })
+    }
+
+    /// Reinterpret bits as `&i32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x4(&self) -> &i32x4 {
+        unsafe { &*(self as *const Self as *const i32x4) }
+    }
+
+    /// Reinterpret bits as `&mut i32x4` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x4(&mut self) -> &mut i32x4 {
+        unsafe { &mut *(self as *mut Self as *mut i32x4) }
+    }
+
 }
 
 impl core::ops::Add for u32x4 {
@@ -2255,6 +2511,7 @@ impl From<u32x4> for [u32; 4] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // i64x2 - 2 x i64 (128-bit NEON)
@@ -2449,6 +2706,46 @@ impl i64x2 {
             vgetq_lane_s64::<0>(sum)
         }
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `f64x2` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f64x2(self) -> f64x2 {
+        f64x2(unsafe { vreinterpretq_f64_s64(self.0) })
+    }
+
+    /// Reinterpret bits as `&f64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x2(&self) -> &f64x2 {
+        unsafe { &*(self as *const Self as *const f64x2) }
+    }
+
+    /// Reinterpret bits as `&mut f64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x2(&mut self) -> &mut f64x2 {
+        unsafe { &mut *(self as *mut Self as *mut f64x2) }
+    }
+
+    /// Reinterpret bits as `u64x2` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x2(self) -> u64x2 {
+        u64x2(unsafe { vreinterpretq_u64_s64(self.0) })
+    }
+
+    /// Reinterpret bits as `&u64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x2(&self) -> &u64x2 {
+        unsafe { &*(self as *const Self as *const u64x2) }
+    }
+
+    /// Reinterpret bits as `&mut u64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x2(&mut self) -> &mut u64x2 {
+        unsafe { &mut *(self as *mut Self as *mut u64x2) }
+    }
+
 }
 
 impl core::ops::Add for i64x2 {
@@ -2521,6 +2818,7 @@ impl From<i64x2> for [i64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+
 
 // ============================================================================
 // u64x2 - 2 x u64 (128-bit NEON)
@@ -2700,6 +2998,46 @@ impl u64x2 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
+
+    // ========== Bitcast (reinterpret bits, zero-cost) ==========
+
+    /// Reinterpret bits as `f64x2` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f64x2(self) -> f64x2 {
+        f64x2(unsafe { vreinterpretq_f64_u64(self.0) })
+    }
+
+    /// Reinterpret bits as `&f64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x2(&self) -> &f64x2 {
+        unsafe { &*(self as *const Self as *const f64x2) }
+    }
+
+    /// Reinterpret bits as `&mut f64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x2(&mut self) -> &mut f64x2 {
+        unsafe { &mut *(self as *mut Self as *mut f64x2) }
+    }
+
+    /// Reinterpret bits as `i64x2` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x2(self) -> i64x2 {
+        i64x2(unsafe { vreinterpretq_s64_u64(self.0) })
+    }
+
+    /// Reinterpret bits as `&i64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x2(&self) -> &i64x2 {
+        unsafe { &*(self as *const Self as *const i64x2) }
+    }
+
+    /// Reinterpret bits as `&mut i64x2` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x2(&mut self) -> &mut i64x2 {
+        unsafe { &mut *(self as *mut Self as *mut i64x2) }
+    }
+
 }
 
 impl core::ops::Add for u64x2 {
@@ -2764,3 +3102,4 @@ impl From<u64x2> for [u64; 2] {
         unsafe { core::mem::transmute(v.0) }
     }
 }
+

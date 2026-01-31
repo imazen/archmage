@@ -4,6 +4,7 @@
 
 use super::arch::Arch;
 use super::arch::wasm::Wasm;
+use super::ops_bitcast;
 use super::types::{ElementType, SimdType, SimdWidth};
 use std::fmt::Write;
 
@@ -63,6 +64,9 @@ pub fn generate_type(ty: &SimdType) -> String {
 
     // Transcendental operations (log, exp, pow) for float types
     code.push_str(&super::transcendental_wasm::generate_wasm_transcendental_ops(ty));
+
+    // Bitcast operations (reinterpret bits between same-width types)
+    code.push_str(&ops_bitcast::generate_wasm_bitcasts(ty));
 
     writeln!(code, "}}\n").unwrap();
 

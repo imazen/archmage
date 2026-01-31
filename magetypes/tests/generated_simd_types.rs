@@ -5,8 +5,9 @@
 #![cfg(target_arch = "x86_64")]
 #![allow(clippy::needless_range_loop)]
 
-use archmage::{SimdToken, X64V3Token};
 use magetypes::simd::*;
+use archmage::{SimdToken, X64V3Token};
+
 
 #[test]
 fn test_f32x8_basic() {
@@ -88,11 +89,7 @@ fn test_f32x8_transpose_8x8() {
             let arr = rows[i].to_array();
             for j in 0..8 {
                 let expected = (i * 8 + j) as f32;
-                assert_eq!(
-                    arr[j], expected,
-                    "Double transpose mismatch at rows[{}][{}]",
-                    i, j
-                );
+                assert_eq!(arr[j], expected, "Double transpose mismatch at rows[{}][{}]", i, j);
             }
         }
     }
@@ -130,10 +127,10 @@ fn test_f32x4_4ch_interleave() {
 
         // Interleave to AoS: each output vector is one RGBA pixel
         let aos = f32x4::interleave_4ch([r, g, b, a]);
-        assert_eq!(aos[0].to_array(), [1.0, 10.0, 100.0, 255.0]); // pixel 0
-        assert_eq!(aos[1].to_array(), [2.0, 20.0, 200.0, 255.0]); // pixel 1
-        assert_eq!(aos[2].to_array(), [3.0, 30.0, 300.0, 255.0]); // pixel 2
-        assert_eq!(aos[3].to_array(), [4.0, 40.0, 400.0, 255.0]); // pixel 3
+        assert_eq!(aos[0].to_array(), [1.0, 10.0, 100.0, 255.0]);   // pixel 0
+        assert_eq!(aos[1].to_array(), [2.0, 20.0, 200.0, 255.0]);   // pixel 1
+        assert_eq!(aos[2].to_array(), [3.0, 30.0, 300.0, 255.0]);   // pixel 2
+        assert_eq!(aos[3].to_array(), [4.0, 40.0, 400.0, 255.0]);   // pixel 3
 
         // Deinterleave back to SoA
         let [r2, g2, b2, a2] = f32x4::deinterleave_4ch(aos);
@@ -149,9 +146,9 @@ fn test_f32x4_load_store_rgba_u8() {
     if let Some(_token) = archmage::X64V3Token::try_new() {
         // 4 RGBA pixels: red, green, blue, white
         let rgba: [u8; 16] = [
-            255, 0, 0, 255, // red
-            0, 255, 0, 255, // green
-            0, 0, 255, 255, // blue
+            255, 0, 0, 255,     // red
+            0, 255, 0, 255,     // green
+            0, 0, 255, 255,     // blue
             255, 255, 255, 255, // white
         ];
 
@@ -172,33 +169,21 @@ fn test_f32x8_load_store_rgba_u8() {
     if let Some(_token) = X64V3Token::try_new() {
         // 8 RGBA pixels
         let rgba: [u8; 32] = [
-            255, 0, 0, 255, // red
-            0, 255, 0, 255, // green
-            0, 0, 255, 255, // blue
+            255, 0, 0, 255,     // red
+            0, 255, 0, 255,     // green
+            0, 0, 255, 255,     // blue
             255, 255, 255, 255, // white
             128, 128, 128, 255, // gray
-            0, 0, 0, 255, // black
-            255, 128, 0, 255, // orange
-            128, 0, 255, 255, // purple
+            0, 0, 0, 255,       // black
+            255, 128, 0, 255,   // orange
+            128, 0, 255, 255,   // purple
         ];
 
         let (r, g, b, a) = f32x8::load_8_rgba_u8(&rgba);
-        assert_eq!(
-            r.to_array(),
-            [255.0, 0.0, 0.0, 255.0, 128.0, 0.0, 255.0, 128.0]
-        );
-        assert_eq!(
-            g.to_array(),
-            [0.0, 255.0, 0.0, 255.0, 128.0, 0.0, 128.0, 0.0]
-        );
-        assert_eq!(
-            b.to_array(),
-            [0.0, 0.0, 255.0, 255.0, 128.0, 0.0, 0.0, 255.0]
-        );
-        assert_eq!(
-            a.to_array(),
-            [255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0]
-        );
+        assert_eq!(r.to_array(), [255.0, 0.0, 0.0, 255.0, 128.0, 0.0, 255.0, 128.0]);
+        assert_eq!(g.to_array(), [0.0, 255.0, 0.0, 255.0, 128.0, 0.0, 128.0, 0.0]);
+        assert_eq!(b.to_array(), [0.0, 0.0, 255.0, 255.0, 128.0, 0.0, 0.0, 255.0]);
+        assert_eq!(a.to_array(), [255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0]);
 
         // Roundtrip
         let out = f32x8::store_8_rgba_u8(r, g, b, a);
@@ -212,8 +197,8 @@ fn test_f32x8_load_store_rgba_u8() {
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod avx512_tests {
-    use archmage::{Avx512Token, SimdToken};
     use magetypes::simd::*;
+    use archmage::{SimdToken, Avx512Token};
 
     #[test]
     fn test_f32x16_basic() {
@@ -276,18 +261,13 @@ mod avx512_tests {
     #[test]
     fn test_f32x16_math_ops() {
         if let Some(token) = Avx512Token::try_new() {
-            let v = f32x16::from_array(
-                token,
-                [
-                    1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0, 100.0, 121.0, 144.0, 169.0,
-                    196.0, 225.0, 256.0,
-                ],
-            );
+            let v = f32x16::from_array(token, [
+                1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0,
+                81.0, 100.0, 121.0, 144.0, 169.0, 196.0, 225.0, 256.0
+            ]);
             let sqrt_v = v.sqrt();
-            let expected = [
-                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
-                16.0,
-            ];
+            let expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
+                          9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
             assert_eq!(sqrt_v.to_array(), expected);
         }
     }
@@ -324,8 +304,8 @@ mod avx512_tests {
 
 #[cfg(target_arch = "aarch64")]
 mod arm_tests {
-    use archmage::{NeonToken, SimdToken};
     use magetypes::simd::*;
+    use archmage::{SimdToken, NeonToken};
 
     #[test]
     fn test_f32x4_basic() {
@@ -471,5 +451,94 @@ mod arm_tests {
             let v = f32x4::from_bytes(token, &bytes);
             assert_eq!(v.to_array(), [1.0, 2.0, 3.0, 4.0]);
         }
+    }
+}
+
+// ============================================================================
+// Bitcast Tests
+// ============================================================================
+
+#[test]
+fn test_f32x8_bitcast_i32x8_roundtrip() {
+    if let Some(token) = X64V3Token::try_new() {
+        let f = f32x8::splat(token, 1.0f32);
+        let i = f.bitcast_i32x8();
+        // IEEE 754: 1.0f32 = 0x3F800000
+        assert_eq!(i[0], 0x3F80_0000_i32);
+        let f2 = i.bitcast_f32x8();
+        assert_eq!(f2.to_array(), f.to_array());
+    }
+}
+
+#[test]
+fn test_f32x4_bitcast_i32x4_roundtrip() {
+    if let Some(token) = X64V3Token::try_new() {
+        let f = f32x4::splat(token, -1.0f32);
+        let i = f.bitcast_i32x4();
+        // IEEE 754: -1.0f32 = 0xBF800000
+        assert_eq!(i[0], -0x4080_0000_i32); // 0xBF800000 as i32
+        let f2 = i.bitcast_f32x4();
+        assert_eq!(f2.to_array(), f.to_array());
+    }
+}
+
+#[test]
+fn test_i32x8_bitcast_u32x8() {
+    if let Some(token) = X64V3Token::try_new() {
+        let i = i32x8::splat(token, -1);
+        let u = i.bitcast_u32x8();
+        assert_eq!(u[0], u32::MAX);
+        let i2 = u.bitcast_i32x8();
+        assert_eq!(i2[0], -1);
+    }
+}
+
+#[test]
+fn test_f32x8_bitcast_ref() {
+    if let Some(token) = X64V3Token::try_new() {
+        let f = f32x8::splat(token, 1.0f32);
+        let i_ref: &i32x8 = f.bitcast_ref_i32x8();
+        assert_eq!(i_ref[0], 0x3F80_0000_i32);
+    }
+}
+
+#[test]
+fn test_f32x8_bitcast_mut() {
+    if let Some(token) = X64V3Token::try_new() {
+        let mut f = f32x8::splat(token, 1.0f32);
+        let i_mut: &mut i32x8 = f.bitcast_mut_i32x8();
+        // Modify via the bitcast reference
+        i_mut[0] = 0x4000_0000; // 2.0f32 in IEEE 754
+        assert_eq!(f[0], 2.0f32);
+    }
+}
+
+#[test]
+fn test_f64x4_bitcast_i64x4_roundtrip() {
+    if let Some(token) = X64V3Token::try_new() {
+        let f = f64x4::splat(token, 1.0f64);
+        let i = f.bitcast_i64x4();
+        // IEEE 754: 1.0f64 = 0x3FF0000000000000
+        assert_eq!(i[0], 0x3FF0_0000_0000_0000_i64);
+        let f2 = i.bitcast_f64x4();
+        assert_eq!(f2.to_array(), f.to_array());
+    }
+}
+
+#[test]
+fn test_i8x32_bitcast_u8x32() {
+    if let Some(token) = X64V3Token::try_new() {
+        let i = i8x32::splat(token, -128);
+        let u = i.bitcast_u8x32();
+        assert_eq!(u[0], 128u8);
+    }
+}
+
+#[test]
+fn test_i16x16_bitcast_u16x16() {
+    if let Some(token) = X64V3Token::try_new() {
+        let i = i16x16::splat(token, -1);
+        let u = i.bitcast_u16x16();
+        assert_eq!(u[0], u16::MAX);
     }
 }

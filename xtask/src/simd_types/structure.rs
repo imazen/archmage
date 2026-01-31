@@ -2,6 +2,7 @@
 
 use super::block_ops;
 use super::ops;
+use super::ops_bitcast;
 use super::transcendental;
 use super::types::SimdType;
 use std::fmt::Write;
@@ -336,6 +337,9 @@ pub fn generate_type(ty: &SimdType) -> String {
 
     // Block operations (transpose, etc.)
     code.push_str(&block_ops::generate_block_ops(ty));
+
+    // Bitcast operations (reinterpret bits between same-width types)
+    code.push_str(&ops_bitcast::generate_x86_bitcasts(ty));
 
     writeln!(code, "}}\n").unwrap();
 
