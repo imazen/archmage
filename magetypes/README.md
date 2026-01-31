@@ -86,21 +86,6 @@ let v = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 let v = f32x8::from_bytes(token, &bytes);
 ```
 
-## Safe Bytemuck Replacements
-
-Instead of using `bytemuck` (which bypasses token safety), use the token-gated methods:
-
-```rust
-// Instead of: bytemuck::cast_slice(&floats)
-let vectors = f32x8::cast_slice(token, &floats);
-
-// Instead of: bytemuck::zeroed()
-let v = f32x8::zero(token);
-
-// View as bytes (no token needed, type already exists)
-let bytes = v.as_bytes();
-```
-
 ## Platform Support
 
 | Platform | Status | Token | Vector Sizes |
@@ -112,7 +97,6 @@ let bytes = v.as_bytes();
 ## Features
 
 - **`std`** (default): Enable std library support
-- **`bytemuck`**: Enable bytemuck Pod/Zeroable traits (bypasses token safety)
 - **`avx512`**: Enable 512-bit types for AVX-512
 
 ## Relationship to archmage

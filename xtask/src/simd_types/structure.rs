@@ -300,22 +300,6 @@ pub fn generate_type(ty: &SimdType) -> String {
     writeln!(code, "#[repr(transparent)]").unwrap();
     writeln!(code, "pub struct {}({});\n", name, inner).unwrap();
 
-    // Bytemuck trait impls (zero-cost casts)
-    writeln!(code, "#[cfg(feature = \"bytemuck\")]").unwrap();
-    writeln!(
-        code,
-        "{}unsafe impl bytemuck::Zeroable for {} {{}}",
-        cfg_attr, name
-    )
-    .unwrap();
-    writeln!(code, "#[cfg(feature = \"bytemuck\")]").unwrap();
-    writeln!(
-        code,
-        "{}unsafe impl bytemuck::Pod for {} {{}}\n",
-        cfg_attr, name
-    )
-    .unwrap();
-
     // Impl block
     writeln!(code, "{}impl {} {{", cfg_attr, name).unwrap();
     writeln!(code, "    pub const LANES: usize = {};\n", lanes).unwrap();

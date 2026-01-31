@@ -314,7 +314,6 @@ name = "magetypes"
 version = "0.3.0"
 dependencies = [
  "archmage",
- "bytemuck",
 ]
 
 [[package]]

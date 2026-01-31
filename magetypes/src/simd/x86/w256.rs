@@ -17,13 +17,6 @@ use core::ops::{
 #[repr(transparent)]
 pub struct f32x8(__m256);
 
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for f32x8 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for f32x8 {}
-
 #[cfg(target_arch = "x86_64")]
 impl f32x8 {
     pub const LANES: usize = 8;
@@ -1301,13 +1294,6 @@ impl Div<f32> for f32x8 {
 #[repr(transparent)]
 pub struct f64x4(__m256d);
 
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for f64x4 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for f64x4 {}
-
 #[cfg(target_arch = "x86_64")]
 impl f64x4 {
     pub const LANES: usize = 4;
@@ -1846,13 +1832,6 @@ impl Div<f64> for f64x4 {
 #[repr(transparent)]
 pub struct i8x32(__m256i);
 
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for i8x32 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for i8x32 {}
-
 #[cfg(target_arch = "x86_64")]
 impl i8x32 {
     pub const LANES: usize = 32;
@@ -2192,13 +2171,6 @@ impl Sub<i8> for i8x32 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct u8x32(__m256i);
-
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for u8x32 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for u8x32 {}
 
 #[cfg(target_arch = "x86_64")]
 impl u8x32 {
@@ -2624,13 +2596,6 @@ impl Sub<u8> for u8x32 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct i16x16(__m256i);
-
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for i16x16 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for i16x16 {}
 
 #[cfg(target_arch = "x86_64")]
 impl i16x16 {
@@ -3071,13 +3036,6 @@ impl Sub<i16> for i16x16 {
 #[repr(transparent)]
 pub struct u16x16(__m256i);
 
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for u16x16 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for u16x16 {}
-
 #[cfg(target_arch = "x86_64")]
 impl u16x16 {
     pub const LANES: usize = 16;
@@ -3491,13 +3449,6 @@ impl Sub<u16> for u16x16 {
 #[repr(transparent)]
 pub struct i32x8(__m256i);
 
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for i32x8 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for i32x8 {}
-
 #[cfg(target_arch = "x86_64")]
 impl i32x8 {
     pub const LANES: usize = 8;
@@ -3896,13 +3847,6 @@ impl Sub<i32> for i32x8 {
 #[repr(transparent)]
 pub struct u32x8(__m256i);
 
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for u32x8 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for u32x8 {}
-
 #[cfg(target_arch = "x86_64")]
 impl u32x8 {
     pub const LANES: usize = 8;
@@ -4264,13 +4208,6 @@ impl Sub<u32> for u32x8 {
 #[repr(transparent)]
 pub struct i64x4(__m256i);
 
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for i64x4 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for i64x4 {}
-
 #[cfg(target_arch = "x86_64")]
 impl i64x4 {
     pub const LANES: usize = 4;
@@ -4608,13 +4545,6 @@ impl Sub<i64> for i64x4 {
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct u64x4(__m256i);
-
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Zeroable for u64x4 {}
-#[cfg(feature = "bytemuck")]
-#[cfg(target_arch = "x86_64")]
-unsafe impl bytemuck::Pod for u64x4 {}
 
 #[cfg(target_arch = "x86_64")]
 impl u64x4 {

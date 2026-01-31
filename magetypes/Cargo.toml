@@ -1,6 +1,6 @@
 [package]
 name = "magetypes"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -15,15 +15,12 @@ categories = ["development-tools", "hardware-support", "no-std"]
 # Users who enable it are explicitly opting out of token safety guarantees
 default = ["std"]
 std = ["archmage/std"]
-bytemuck = ["dep:bytemuck", "archmage/bytemuck"]
 # AVX-512 type support
 avx512 = ["archmage/avx512"]
 
 [dependencies]
 # Core tokens and macros
-archmage = { version = "0.3.0", path = "..", default-features = false }
-# Zero-cost type casts (Pod, Zeroable)
-bytemuck = { version = "1.24", optional = true }
+archmage = { version = "0.3.1", path = "..", default-features = false }
 
 [package.metadata.docs.rs]
 all-features = true
