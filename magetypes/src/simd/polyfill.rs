@@ -10,9 +10,11 @@
 pub mod sse {
     //! Polyfilled 256-bit types using SSE (128-bit) operations.
 
-    use crate::simd::x86::w128::{f32x4, f64x2, i8x16, u8x16, i16x8, u16x8, i32x4, u32x4, i64x2, u64x2};
+    use crate::simd::x86::w128::{
+        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
+    };
     use archmage::X64V3Token;
-    use core::ops::{Add, Sub, Mul, Div, Neg};
+    use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 8-wide f32 vector using two f32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -173,9 +175,8 @@ pub mod sse {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -184,19 +185,19 @@ pub mod sse {
                 hi: self.hi.bitcast_i32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i32x8(&self) -> &i32x8 {
             unsafe { &*(self as *const Self as *const i32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-    
+
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -205,20 +206,19 @@ pub mod sse {
                 hi: self.hi.bitcast_u32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u32x8(&self) -> &u32x8 {
             unsafe { &*(self as *const Self as *const u32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
-    
-        }
+    }
 
     impl Add for f32x8 {
         type Output = Self;
@@ -302,7 +302,6 @@ pub mod sse {
             *self = *self / rhs;
         }
     }
-
 
     /// Emulated 4-wide f64 vector using two f64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -463,9 +462,8 @@ pub mod sse {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -474,19 +472,19 @@ pub mod sse {
                 hi: self.hi.bitcast_i64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i64x4(&self) -> &i64x4 {
             unsafe { &*(self as *const Self as *const i64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-    
+
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -495,20 +493,19 @@ pub mod sse {
                 hi: self.hi.bitcast_u64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u64x4(&self) -> &u64x4 {
             unsafe { &*(self as *const Self as *const u64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
-    
-        }
+    }
 
     impl Add for f64x4 {
         type Output = Self;
@@ -592,7 +589,6 @@ pub mod sse {
             *self = *self / rhs;
         }
     }
-
 
     /// Emulated 32-wide i8 vector using two i8x16 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -696,9 +692,8 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `u8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u8x32(self) -> u8x32 {
@@ -707,20 +702,19 @@ pub mod sse {
                 hi: self.hi.bitcast_u8x16(),
             }
         }
-    
+
         /// Reinterpret bits as `&u8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u8x32(&self) -> &u8x32 {
             unsafe { &*(self as *const Self as *const u8x32) }
         }
-    
+
         /// Reinterpret bits as `&mut u8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u8x32(&mut self) -> &mut u8x32 {
             unsafe { &mut *(self as *mut Self as *mut u8x32) }
         }
-    
-        }
+    }
 
     impl Add for i8x32 {
         type Output = Self;
@@ -757,7 +751,6 @@ pub mod sse {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 32-wide u8 vector using two u8x16 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -852,9 +845,8 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i8x32(self) -> i8x32 {
@@ -863,20 +855,19 @@ pub mod sse {
                 hi: self.hi.bitcast_i8x16(),
             }
         }
-    
+
         /// Reinterpret bits as `&i8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i8x32(&self) -> &i8x32 {
             unsafe { &*(self as *const Self as *const i8x32) }
         }
-    
+
         /// Reinterpret bits as `&mut i8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i8x32(&mut self) -> &mut i8x32 {
             unsafe { &mut *(self as *mut Self as *mut i8x32) }
         }
-    
-        }
+    }
 
     impl Add for u8x32 {
         type Output = Self;
@@ -913,7 +904,6 @@ pub mod sse {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 16-wide i16 vector using two i16x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -1017,9 +1007,8 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `u16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u16x16(self) -> u16x16 {
@@ -1028,20 +1017,19 @@ pub mod sse {
                 hi: self.hi.bitcast_u16x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&u16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u16x16(&self) -> &u16x16 {
             unsafe { &*(self as *const Self as *const u16x16) }
         }
-    
+
         /// Reinterpret bits as `&mut u16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u16x16(&mut self) -> &mut u16x16 {
             unsafe { &mut *(self as *mut Self as *mut u16x16) }
         }
-    
-        }
+    }
 
     impl Add for i16x16 {
         type Output = Self;
@@ -1096,7 +1084,6 @@ pub mod sse {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 16-wide u16 vector using two u16x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -1191,9 +1178,8 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i16x16(self) -> i16x16 {
@@ -1202,20 +1188,19 @@ pub mod sse {
                 hi: self.hi.bitcast_i16x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&i16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i16x16(&self) -> &i16x16 {
             unsafe { &*(self as *const Self as *const i16x16) }
         }
-    
+
         /// Reinterpret bits as `&mut i16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i16x16(&mut self) -> &mut i16x16 {
             unsafe { &mut *(self as *mut Self as *mut i16x16) }
         }
-    
-        }
+    }
 
     impl Add for u16x16 {
         type Output = Self;
@@ -1270,7 +1255,6 @@ pub mod sse {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 8-wide i32 vector using two i32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -1374,9 +1358,8 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -1385,19 +1368,19 @@ pub mod sse {
                 hi: self.hi.bitcast_f32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f32x8(&self) -> &f32x8 {
             unsafe { &*(self as *const Self as *const f32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-    
+
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -1406,20 +1389,19 @@ pub mod sse {
                 hi: self.hi.bitcast_u32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u32x8(&self) -> &u32x8 {
             unsafe { &*(self as *const Self as *const u32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
-    
-        }
+    }
 
     impl Add for i32x8 {
         type Output = Self;
@@ -1474,7 +1456,6 @@ pub mod sse {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 8-wide u32 vector using two u32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -1569,9 +1550,8 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -1580,19 +1560,19 @@ pub mod sse {
                 hi: self.hi.bitcast_f32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f32x8(&self) -> &f32x8 {
             unsafe { &*(self as *const Self as *const f32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-    
+
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -1601,20 +1581,19 @@ pub mod sse {
                 hi: self.hi.bitcast_i32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i32x8(&self) -> &i32x8 {
             unsafe { &*(self as *const Self as *const i32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-    
-        }
+    }
 
     impl Add for u32x8 {
         type Output = Self;
@@ -1669,7 +1648,6 @@ pub mod sse {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 4-wide i64 vector using two i64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -1740,9 +1718,8 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -1751,19 +1728,19 @@ pub mod sse {
                 hi: self.hi.bitcast_f64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f64x4(&self) -> &f64x4 {
             unsafe { &*(self as *const Self as *const f64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-    
+
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -1772,20 +1749,19 @@ pub mod sse {
                 hi: self.hi.bitcast_u64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u64x4(&self) -> &u64x4 {
             unsafe { &*(self as *const Self as *const u64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
-    
-        }
+    }
 
     impl Add for i64x4 {
         type Output = Self;
@@ -1822,7 +1798,6 @@ pub mod sse {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 4-wide u64 vector using two u64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -1893,9 +1868,8 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -1904,19 +1878,19 @@ pub mod sse {
                 hi: self.hi.bitcast_f64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f64x4(&self) -> &f64x4 {
             unsafe { &*(self as *const Self as *const f64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-    
+
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -1925,20 +1899,19 @@ pub mod sse {
                 hi: self.hi.bitcast_i64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i64x4(&self) -> &i64x4 {
             unsafe { &*(self as *const Self as *const i64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-    
-        }
+    }
 
     impl Add for u64x4 {
         type Output = Self;
@@ -1976,8 +1949,6 @@ pub mod sse {
         }
     }
 
-
-
     // Width-aliased type names
     pub type f32xN = f32x8;
     pub type f64xN = f64x4;
@@ -2009,9 +1980,11 @@ pub mod sse {
 pub mod neon {
     //! Polyfilled 256-bit types using NEON (128-bit) operations.
 
-    use crate::simd::arm::w128::{f32x4, f64x2, i8x16, u8x16, i16x8, u16x8, i32x4, u32x4, i64x2, u64x2};
+    use crate::simd::arm::w128::{
+        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
+    };
     use archmage::NeonToken;
-    use core::ops::{Add, Sub, Mul, Div, Neg};
+    use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 8-wide f32 vector using two f32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -2172,9 +2145,8 @@ pub mod neon {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -2183,19 +2155,19 @@ pub mod neon {
                 hi: self.hi.bitcast_i32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i32x8(&self) -> &i32x8 {
             unsafe { &*(self as *const Self as *const i32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-    
+
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -2204,20 +2176,19 @@ pub mod neon {
                 hi: self.hi.bitcast_u32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u32x8(&self) -> &u32x8 {
             unsafe { &*(self as *const Self as *const u32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
-    
-        }
+    }
 
     impl Add for f32x8 {
         type Output = Self;
@@ -2301,7 +2272,6 @@ pub mod neon {
             *self = *self / rhs;
         }
     }
-
 
     /// Emulated 4-wide f64 vector using two f64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -2462,9 +2432,8 @@ pub mod neon {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -2473,19 +2442,19 @@ pub mod neon {
                 hi: self.hi.bitcast_i64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i64x4(&self) -> &i64x4 {
             unsafe { &*(self as *const Self as *const i64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-    
+
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -2494,20 +2463,19 @@ pub mod neon {
                 hi: self.hi.bitcast_u64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u64x4(&self) -> &u64x4 {
             unsafe { &*(self as *const Self as *const u64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
-    
-        }
+    }
 
     impl Add for f64x4 {
         type Output = Self;
@@ -2591,7 +2559,6 @@ pub mod neon {
             *self = *self / rhs;
         }
     }
-
 
     /// Emulated 32-wide i8 vector using two i8x16 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -2695,9 +2662,8 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `u8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u8x32(self) -> u8x32 {
@@ -2706,20 +2672,19 @@ pub mod neon {
                 hi: self.hi.bitcast_u8x16(),
             }
         }
-    
+
         /// Reinterpret bits as `&u8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u8x32(&self) -> &u8x32 {
             unsafe { &*(self as *const Self as *const u8x32) }
         }
-    
+
         /// Reinterpret bits as `&mut u8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u8x32(&mut self) -> &mut u8x32 {
             unsafe { &mut *(self as *mut Self as *mut u8x32) }
         }
-    
-        }
+    }
 
     impl Add for i8x32 {
         type Output = Self;
@@ -2756,7 +2721,6 @@ pub mod neon {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 32-wide u8 vector using two u8x16 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -2851,9 +2815,8 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i8x32(self) -> i8x32 {
@@ -2862,20 +2825,19 @@ pub mod neon {
                 hi: self.hi.bitcast_i8x16(),
             }
         }
-    
+
         /// Reinterpret bits as `&i8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i8x32(&self) -> &i8x32 {
             unsafe { &*(self as *const Self as *const i8x32) }
         }
-    
+
         /// Reinterpret bits as `&mut i8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i8x32(&mut self) -> &mut i8x32 {
             unsafe { &mut *(self as *mut Self as *mut i8x32) }
         }
-    
-        }
+    }
 
     impl Add for u8x32 {
         type Output = Self;
@@ -2912,7 +2874,6 @@ pub mod neon {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 16-wide i16 vector using two i16x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -3016,9 +2977,8 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `u16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u16x16(self) -> u16x16 {
@@ -3027,20 +2987,19 @@ pub mod neon {
                 hi: self.hi.bitcast_u16x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&u16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u16x16(&self) -> &u16x16 {
             unsafe { &*(self as *const Self as *const u16x16) }
         }
-    
+
         /// Reinterpret bits as `&mut u16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u16x16(&mut self) -> &mut u16x16 {
             unsafe { &mut *(self as *mut Self as *mut u16x16) }
         }
-    
-        }
+    }
 
     impl Add for i16x16 {
         type Output = Self;
@@ -3095,7 +3054,6 @@ pub mod neon {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 16-wide u16 vector using two u16x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -3190,9 +3148,8 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i16x16(self) -> i16x16 {
@@ -3201,20 +3158,19 @@ pub mod neon {
                 hi: self.hi.bitcast_i16x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&i16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i16x16(&self) -> &i16x16 {
             unsafe { &*(self as *const Self as *const i16x16) }
         }
-    
+
         /// Reinterpret bits as `&mut i16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i16x16(&mut self) -> &mut i16x16 {
             unsafe { &mut *(self as *mut Self as *mut i16x16) }
         }
-    
-        }
+    }
 
     impl Add for u16x16 {
         type Output = Self;
@@ -3269,7 +3225,6 @@ pub mod neon {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 8-wide i32 vector using two i32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -3373,9 +3328,8 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -3384,19 +3338,19 @@ pub mod neon {
                 hi: self.hi.bitcast_f32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f32x8(&self) -> &f32x8 {
             unsafe { &*(self as *const Self as *const f32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-    
+
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -3405,20 +3359,19 @@ pub mod neon {
                 hi: self.hi.bitcast_u32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u32x8(&self) -> &u32x8 {
             unsafe { &*(self as *const Self as *const u32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
-    
-        }
+    }
 
     impl Add for i32x8 {
         type Output = Self;
@@ -3473,7 +3426,6 @@ pub mod neon {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 8-wide u32 vector using two u32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -3568,9 +3520,8 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -3579,19 +3530,19 @@ pub mod neon {
                 hi: self.hi.bitcast_f32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f32x8(&self) -> &f32x8 {
             unsafe { &*(self as *const Self as *const f32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-    
+
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -3600,20 +3551,19 @@ pub mod neon {
                 hi: self.hi.bitcast_i32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i32x8(&self) -> &i32x8 {
             unsafe { &*(self as *const Self as *const i32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-    
-        }
+    }
 
     impl Add for u32x8 {
         type Output = Self;
@@ -3668,7 +3618,6 @@ pub mod neon {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 4-wide i64 vector using two i64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -3739,9 +3688,8 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -3750,19 +3698,19 @@ pub mod neon {
                 hi: self.hi.bitcast_f64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f64x4(&self) -> &f64x4 {
             unsafe { &*(self as *const Self as *const f64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-    
+
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -3771,20 +3719,19 @@ pub mod neon {
                 hi: self.hi.bitcast_u64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u64x4(&self) -> &u64x4 {
             unsafe { &*(self as *const Self as *const u64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
-    
-        }
+    }
 
     impl Add for i64x4 {
         type Output = Self;
@@ -3821,7 +3768,6 @@ pub mod neon {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 4-wide u64 vector using two u64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -3892,9 +3838,8 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -3903,19 +3848,19 @@ pub mod neon {
                 hi: self.hi.bitcast_f64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f64x4(&self) -> &f64x4 {
             unsafe { &*(self as *const Self as *const f64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-    
+
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -3924,20 +3869,19 @@ pub mod neon {
                 hi: self.hi.bitcast_i64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i64x4(&self) -> &i64x4 {
             unsafe { &*(self as *const Self as *const i64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-    
-        }
+    }
 
     impl Add for u64x4 {
         type Output = Self;
@@ -3975,8 +3919,6 @@ pub mod neon {
         }
     }
 
-
-
     // Width-aliased type names
     pub type f32xN = f32x8;
     pub type f64xN = f64x4;
@@ -4008,9 +3950,11 @@ pub mod neon {
 pub mod simd128 {
     //! Polyfilled 256-bit types using WASM SIMD128 (128-bit) operations.
 
-    use crate::simd::wasm::w128::{f32x4, f64x2, i8x16, u8x16, i16x8, u16x8, i32x4, u32x4, i64x2, u64x2};
+    use crate::simd::wasm::w128::{
+        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
+    };
     use archmage::Simd128Token;
-    use core::ops::{Add, Sub, Mul, Div, Neg};
+    use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 8-wide f32 vector using two f32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -4171,9 +4115,8 @@ pub mod simd128 {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -4182,19 +4125,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_i32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i32x8(&self) -> &i32x8 {
             unsafe { &*(self as *const Self as *const i32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-    
+
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -4203,20 +4146,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_u32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u32x8(&self) -> &u32x8 {
             unsafe { &*(self as *const Self as *const u32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
-    
-        }
+    }
 
     impl Add for f32x8 {
         type Output = Self;
@@ -4300,7 +4242,6 @@ pub mod simd128 {
             *self = *self / rhs;
         }
     }
-
 
     /// Emulated 4-wide f64 vector using two f64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -4461,9 +4402,8 @@ pub mod simd128 {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -4472,19 +4412,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_i64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i64x4(&self) -> &i64x4 {
             unsafe { &*(self as *const Self as *const i64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-    
+
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -4493,20 +4433,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_u64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u64x4(&self) -> &u64x4 {
             unsafe { &*(self as *const Self as *const u64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
-    
-        }
+    }
 
     impl Add for f64x4 {
         type Output = Self;
@@ -4590,7 +4529,6 @@ pub mod simd128 {
             *self = *self / rhs;
         }
     }
-
 
     /// Emulated 32-wide i8 vector using two i8x16 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -4694,9 +4632,8 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `u8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u8x32(self) -> u8x32 {
@@ -4705,20 +4642,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_u8x16(),
             }
         }
-    
+
         /// Reinterpret bits as `&u8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u8x32(&self) -> &u8x32 {
             unsafe { &*(self as *const Self as *const u8x32) }
         }
-    
+
         /// Reinterpret bits as `&mut u8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u8x32(&mut self) -> &mut u8x32 {
             unsafe { &mut *(self as *mut Self as *mut u8x32) }
         }
-    
-        }
+    }
 
     impl Add for i8x32 {
         type Output = Self;
@@ -4755,7 +4691,6 @@ pub mod simd128 {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 32-wide u8 vector using two u8x16 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -4850,9 +4785,8 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i8x32(self) -> i8x32 {
@@ -4861,20 +4795,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_i8x16(),
             }
         }
-    
+
         /// Reinterpret bits as `&i8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i8x32(&self) -> &i8x32 {
             unsafe { &*(self as *const Self as *const i8x32) }
         }
-    
+
         /// Reinterpret bits as `&mut i8x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i8x32(&mut self) -> &mut i8x32 {
             unsafe { &mut *(self as *mut Self as *mut i8x32) }
         }
-    
-        }
+    }
 
     impl Add for u8x32 {
         type Output = Self;
@@ -4911,7 +4844,6 @@ pub mod simd128 {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 16-wide i16 vector using two i16x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -5015,9 +4947,8 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `u16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u16x16(self) -> u16x16 {
@@ -5026,20 +4957,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_u16x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&u16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u16x16(&self) -> &u16x16 {
             unsafe { &*(self as *const Self as *const u16x16) }
         }
-    
+
         /// Reinterpret bits as `&mut u16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u16x16(&mut self) -> &mut u16x16 {
             unsafe { &mut *(self as *mut Self as *mut u16x16) }
         }
-    
-        }
+    }
 
     impl Add for i16x16 {
         type Output = Self;
@@ -5094,7 +5024,6 @@ pub mod simd128 {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 16-wide u16 vector using two u16x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -5189,9 +5118,8 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i16x16(self) -> i16x16 {
@@ -5200,20 +5128,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_i16x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&i16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i16x16(&self) -> &i16x16 {
             unsafe { &*(self as *const Self as *const i16x16) }
         }
-    
+
         /// Reinterpret bits as `&mut i16x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i16x16(&mut self) -> &mut i16x16 {
             unsafe { &mut *(self as *mut Self as *mut i16x16) }
         }
-    
-        }
+    }
 
     impl Add for u16x16 {
         type Output = Self;
@@ -5268,7 +5195,6 @@ pub mod simd128 {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 8-wide i32 vector using two i32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -5372,9 +5298,8 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -5383,19 +5308,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_f32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f32x8(&self) -> &f32x8 {
             unsafe { &*(self as *const Self as *const f32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-    
+
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -5404,20 +5329,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_u32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u32x8(&self) -> &u32x8 {
             unsafe { &*(self as *const Self as *const u32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut u32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
-    
-        }
+    }
 
     impl Add for i32x8 {
         type Output = Self;
@@ -5472,7 +5396,6 @@ pub mod simd128 {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 8-wide u32 vector using two u32x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -5567,9 +5490,8 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -5578,19 +5500,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_f32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f32x8(&self) -> &f32x8 {
             unsafe { &*(self as *const Self as *const f32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut f32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-    
+
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -5599,20 +5521,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_i32x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i32x8(&self) -> &i32x8 {
             unsafe { &*(self as *const Self as *const i32x8) }
         }
-    
+
         /// Reinterpret bits as `&mut i32x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-    
-        }
+    }
 
     impl Add for u32x8 {
         type Output = Self;
@@ -5667,7 +5588,6 @@ pub mod simd128 {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 4-wide i64 vector using two i64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -5738,9 +5658,8 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -5749,19 +5668,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_f64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f64x4(&self) -> &f64x4 {
             unsafe { &*(self as *const Self as *const f64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-    
+
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -5770,20 +5689,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_u64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u64x4(&self) -> &u64x4 {
             unsafe { &*(self as *const Self as *const u64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut u64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
-    
-        }
+    }
 
     impl Add for i64x4 {
         type Output = Self;
@@ -5820,7 +5738,6 @@ pub mod simd128 {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 4-wide u64 vector using two u64x2 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -5891,9 +5808,8 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -5902,19 +5818,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_f64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f64x4(&self) -> &f64x4 {
             unsafe { &*(self as *const Self as *const f64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut f64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-    
+
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -5923,20 +5839,19 @@ pub mod simd128 {
                 hi: self.hi.bitcast_i64x2(),
             }
         }
-    
+
         /// Reinterpret bits as `&i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i64x4(&self) -> &i64x4 {
             unsafe { &*(self as *const Self as *const i64x4) }
         }
-    
+
         /// Reinterpret bits as `&mut i64x4` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-    
-        }
+    }
 
     impl Add for u64x4 {
         type Output = Self;
@@ -5974,8 +5889,6 @@ pub mod simd128 {
         }
     }
 
-
-
     // Width-aliased type names
     pub type f32xN = f32x8;
     pub type f64xN = f64x4;
@@ -6007,9 +5920,11 @@ pub mod simd128 {
 pub mod avx2 {
     //! Polyfilled 512-bit types using AVX2 (256-bit) operations.
 
-    use crate::simd::x86::w256::{f32x8, f64x4, i8x32, u8x32, i16x16, u16x16, i32x8, u32x8, i64x4, u64x4};
+    use crate::simd::x86::w256::{
+        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
+    };
     use archmage::X64V3Token;
-    use core::ops::{Add, Sub, Mul, Div, Neg};
+    use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 16-wide f32 vector using two f32x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -6164,9 +6079,8 @@ pub mod avx2 {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x16(self) -> i32x16 {
@@ -6175,19 +6089,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_i32x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
             unsafe { &*(self as *const Self as *const i32x16) }
         }
-    
+
         /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
             unsafe { &mut *(self as *mut Self as *mut i32x16) }
         }
-    
+
         /// Reinterpret bits as `u32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x16(self) -> u32x16 {
@@ -6196,20 +6110,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_u32x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
             unsafe { &*(self as *const Self as *const u32x16) }
         }
-    
+
         /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
             unsafe { &mut *(self as *mut Self as *mut u32x16) }
         }
-    
-        }
+    }
 
     impl Add for f32x16 {
         type Output = Self;
@@ -6293,7 +6206,6 @@ pub mod avx2 {
             *self = *self / rhs;
         }
     }
-
 
     /// Emulated 8-wide f64 vector using two f64x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -6448,9 +6360,8 @@ pub mod avx2 {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x8(self) -> i64x8 {
@@ -6459,19 +6370,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_i64x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
             unsafe { &*(self as *const Self as *const i64x8) }
         }
-    
+
         /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
             unsafe { &mut *(self as *mut Self as *mut i64x8) }
         }
-    
+
         /// Reinterpret bits as `u64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x8(self) -> u64x8 {
@@ -6480,20 +6391,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_u64x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
             unsafe { &*(self as *const Self as *const u64x8) }
         }
-    
+
         /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
             unsafe { &mut *(self as *mut Self as *mut u64x8) }
         }
-    
-        }
+    }
 
     impl Add for f64x8 {
         type Output = Self;
@@ -6577,7 +6487,6 @@ pub mod avx2 {
             *self = *self / rhs;
         }
     }
-
 
     /// Emulated 64-wide i8 vector using two i8x32 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -6675,9 +6584,8 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `u8x64` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u8x64(self) -> u8x64 {
@@ -6686,20 +6594,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_u8x32(),
             }
         }
-    
+
         /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
             unsafe { &*(self as *const Self as *const u8x64) }
         }
-    
+
         /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
             unsafe { &mut *(self as *mut Self as *mut u8x64) }
         }
-    
-        }
+    }
 
     impl Add for i8x64 {
         type Output = Self;
@@ -6736,7 +6643,6 @@ pub mod avx2 {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 64-wide u8 vector using two u8x32 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -6825,9 +6731,8 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i8x64` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i8x64(self) -> i8x64 {
@@ -6836,20 +6741,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_i8x32(),
             }
         }
-    
+
         /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
             unsafe { &*(self as *const Self as *const i8x64) }
         }
-    
+
         /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
             unsafe { &mut *(self as *mut Self as *mut i8x64) }
         }
-    
-        }
+    }
 
     impl Add for u8x64 {
         type Output = Self;
@@ -6886,7 +6790,6 @@ pub mod avx2 {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 32-wide i16 vector using two i16x16 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -6984,9 +6887,8 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `u16x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u16x32(self) -> u16x32 {
@@ -6995,20 +6897,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_u16x16(),
             }
         }
-    
+
         /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
             unsafe { &*(self as *const Self as *const u16x32) }
         }
-    
+
         /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
             unsafe { &mut *(self as *mut Self as *mut u16x32) }
         }
-    
-        }
+    }
 
     impl Add for i16x32 {
         type Output = Self;
@@ -7063,7 +6964,6 @@ pub mod avx2 {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 32-wide u16 vector using two u16x16 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -7152,9 +7052,8 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `i16x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i16x32(self) -> i16x32 {
@@ -7163,20 +7062,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_i16x16(),
             }
         }
-    
+
         /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
             unsafe { &*(self as *const Self as *const i16x32) }
         }
-    
+
         /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
             unsafe { &mut *(self as *mut Self as *mut i16x32) }
         }
-    
-        }
+    }
 
     impl Add for u16x32 {
         type Output = Self;
@@ -7231,7 +7129,6 @@ pub mod avx2 {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 16-wide i32 vector using two i32x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -7329,9 +7226,8 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x16(self) -> f32x16 {
@@ -7340,19 +7236,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_f32x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&f32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f32x16(&self) -> &f32x16 {
             unsafe { &*(self as *const Self as *const f32x16) }
         }
-    
+
         /// Reinterpret bits as `&mut f32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
             unsafe { &mut *(self as *mut Self as *mut f32x16) }
         }
-    
+
         /// Reinterpret bits as `u32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x16(self) -> u32x16 {
@@ -7361,20 +7257,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_u32x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
             unsafe { &*(self as *const Self as *const u32x16) }
         }
-    
+
         /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
             unsafe { &mut *(self as *mut Self as *mut u32x16) }
         }
-    
-        }
+    }
 
     impl Add for i32x16 {
         type Output = Self;
@@ -7429,7 +7324,6 @@ pub mod avx2 {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 16-wide u32 vector using two u32x8 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -7518,9 +7412,8 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x16(self) -> f32x16 {
@@ -7529,19 +7422,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_f32x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&f32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f32x16(&self) -> &f32x16 {
             unsafe { &*(self as *const Self as *const f32x16) }
         }
-    
+
         /// Reinterpret bits as `&mut f32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
             unsafe { &mut *(self as *mut Self as *mut f32x16) }
         }
-    
+
         /// Reinterpret bits as `i32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x16(self) -> i32x16 {
@@ -7550,20 +7443,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_i32x8(),
             }
         }
-    
+
         /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
             unsafe { &*(self as *const Self as *const i32x16) }
         }
-    
+
         /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
             unsafe { &mut *(self as *mut Self as *mut i32x16) }
         }
-    
-        }
+    }
 
     impl Add for u32x16 {
         type Output = Self;
@@ -7618,7 +7510,6 @@ pub mod avx2 {
             *self = *self * rhs;
         }
     }
-
 
     /// Emulated 8-wide i64 vector using two i64x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -7683,9 +7574,8 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x8(self) -> f64x8 {
@@ -7694,19 +7584,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_f64x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&f64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f64x8(&self) -> &f64x8 {
             unsafe { &*(self as *const Self as *const f64x8) }
         }
-    
+
         /// Reinterpret bits as `&mut f64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
             unsafe { &mut *(self as *mut Self as *mut f64x8) }
         }
-    
+
         /// Reinterpret bits as `u64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x8(self) -> u64x8 {
@@ -7715,20 +7605,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_u64x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
             unsafe { &*(self as *const Self as *const u64x8) }
         }
-    
+
         /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
             unsafe { &mut *(self as *mut Self as *mut u64x8) }
         }
-    
-        }
+    }
 
     impl Add for i64x8 {
         type Output = Self;
@@ -7765,7 +7654,6 @@ pub mod avx2 {
             *self = *self - rhs;
         }
     }
-
 
     /// Emulated 8-wide u64 vector using two u64x4 vectors.
     #[derive(Clone, Copy, Debug)]
@@ -7830,9 +7718,8 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-
         // ========== Bitcast (reinterpret bits, zero-cost) ==========
-    
+
         /// Reinterpret bits as `f64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x8(self) -> f64x8 {
@@ -7841,19 +7728,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_f64x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&f64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_f64x8(&self) -> &f64x8 {
             unsafe { &*(self as *const Self as *const f64x8) }
         }
-    
+
         /// Reinterpret bits as `&mut f64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
             unsafe { &mut *(self as *mut Self as *mut f64x8) }
         }
-    
+
         /// Reinterpret bits as `i64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x8(self) -> i64x8 {
@@ -7862,20 +7749,19 @@ pub mod avx2 {
                 hi: self.hi.bitcast_i64x4(),
             }
         }
-    
+
         /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
             unsafe { &*(self as *const Self as *const i64x8) }
         }
-    
+
         /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
         #[inline(always)]
         pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
             unsafe { &mut *(self as *mut Self as *mut i64x8) }
         }
-    
-        }
+    }
 
     impl Add for u64x8 {
         type Output = Self;
@@ -7913,8 +7799,6 @@ pub mod avx2 {
         }
     }
 
-
-
     // Width-aliased type names
     pub type f32xN = f32x16;
     pub type f64xN = f64x8;
@@ -7941,4 +7825,3 @@ pub mod avx2 {
     /// Token type for this polyfill level
     pub type Token = archmage::X64V3Token;
 }
-
