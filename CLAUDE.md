@@ -103,12 +103,12 @@ CI checks (all must pass):
 1. `cargo xtask generate` — regenerate all code
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
 3. `cargo xtask validate` — intrinsic safety + try_new() feature verification
-4. `cargo xtask parity` — parity warnings (currently 94 issues - see Pending Work section)
-5. `cargo clippy --all-features` — zero warnings
-6. `cargo test --all-features` — all tests pass
+4. `cargo xtask parity` — parity warnings (currently 81 issues, 72 actionable)
+5. `cargo clippy --features "std macros bytemuck wide __composite avx512"` — zero warnings
+6. `cargo test --features "std macros bytemuck wide __composite avx512"` — all tests pass
 7. `cargo fmt --check` — code is formatted
 
-**Note:** Parity check currently reports 94 issues. These are tracked in the "Pending Work" section. Some gaps (x86 8-bit shifts, WASM u64 comparisons) have no efficient intrinsic and may remain as known limitations.
+**Note:** Parity check reports 81 issues (9 known gaps with no efficient intrinsic, 72 actionable). CI warns but doesn't fail on parity issues. Full parity required before 1.0 release. See "Pending Work" section for details.
 
 If ANY check fails:
 - Do NOT push
@@ -350,31 +350,35 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 ## Pending Work
 
-### API Parity Status (94 issues remaining)
+### API Parity Status (81 issues remaining, 72 actionable)
 
-**Current state:** Reduced from 270 → 94 parity issues (65% reduction). Run `cargo xtask parity` to see full list.
+**Current state:** Reduced from 270 → 81 parity issues (70% reduction). Of these, 9 are "known gaps" with no efficient native intrinsic, leaving 72 actionable issues.
 
-**Remaining gaps by category:**
+Run `cargo xtask parity` to see full list.
 
-| Category | Missing From | Notes |
-|----------|--------------|-------|
-| Transcendentals (exp, ln, log2, log10, pow, cbrt) | ARM | Need to port x86 polynomial implementations |
-| Block ops (transpose, interleave, deinterleave) | ARM, WASM | Matrix operations |
-| Type conversions (from_i32x4, to_i32x4, from_u8, to_u8) | ARM, WASM | Int↔float conversions |
-| Approximations (rcp_approx, rsqrt, rsqrt_approx, recip) | ARM, WASM | ARM has vrecpe/vrsqrte intrinsics |
-| 8-bit shifts (i8x16::shl/shr, u8x16::shl/shr) | x86 | **No native intrinsic** - x86 lacks per-byte immediate shifts |
-| u64x2 ordering comparisons (simd_lt, simd_le, simd_gt, simd_ge) | WASM | **No native intrinsic** - WASM SIMD lacks u64 ordering |
-| mul_sub (fused multiply-subtract) | ARM, WASM | ARM has vfms, WASM needs emulation |
-| log10_midp variants | x86 | Missing midp-precision log10 |
+**Known gaps (intentionally not implemented):**
+| Method | Missing From | Reason |
+|--------|--------------|--------|
+| i8x16::shl, shr, shr_arithmetic | x86 | No 8-bit shift-by-immediate intrinsics |
+| u8x16::shl, shr | x86 | No 8-bit shift-by-immediate intrinsics |
+| u64x2::simd_lt/le/gt/ge | WASM | No u64 ordering comparison intrinsics |
 
-**Flagged as "no efficient intrinsic available":**
-- x86 i8x16/u8x16 shifts - would require expensive emulation (unpack to 16-bit, shift, repack)
-- WASM u64x2 ordering comparisons - would require scalar fallback or complex emulation
+**Remaining actionable gaps by category:**
+
+| Category | Count | Missing From | Notes |
+|----------|-------|--------------|-------|
+| Transcendentals (exp, ln, log2, log10, pow, cbrt) | 37 | ARM | Need polynomial implementations |
+| Extension/pack ops | 17 | ARM, WASM | Integer widening/narrowing |
+| RGBA ops (load/store u8, from_u8, to_u8) | 10 | ARM, WASM | Pixel format conversion |
+| Block ops (transpose, interleave, deinterleave) | 7 | ARM, WASM | Matrix operations |
+| i64x2/u64x2 abs/min/max/clamp | 6 | x86, WASM | Need compare+select polyfill |
+| log10_midp variants | 5 | x86 | Missing midp-precision log10 |
 
 ### Long-Term
 
-- **Transcendental parity for ARM**: Port x86 polynomial approximations to NEON. WASM has complete implementations that can serve as reference.
-- **Transcendental `_precise` variants**: WASM has complete `_precise` variants (denormal handling) for log2, ln, log10, pow. x86/ARM only have `_precise` for cbrt.
+- **Transcendental parity for ARM**: Port x86/WASM polynomial approximations to NEON.
+- **Transcendental `_precise` variants**: WASM has complete `_precise` variants. x86/ARM only have `_precise` for cbrt.
+- **Extension ops**: Add integer widening (extend_lo, extend_hi) for ARM/WASM.
 
 ### Completed
 
@@ -387,6 +391,10 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 - ~~**x86 boolean reductions**~~: Done. Added all_true, any_true, bitmask for all integer types (128/256/512-bit).
 - ~~**WASM bytemuck methods**~~: Done. Added cast_slice, cast_slice_mut, as_bytes, as_bytes_mut, from_bytes, from_bytes_owned.
 - ~~**ARM reduce_add for unsigned**~~: Done. Extended reduce_add to all integer types including unsigned.
+- ~~**Approximations (rcp, rsqrt) for ARM/WASM**~~: Done. ARM uses native vrecpe/vrsqrte, WASM uses division.
+- ~~**mul_sub for ARM/WASM**~~: Done. ARM uses vfma with negation, WASM uses mul+sub.
+- ~~**Type conversions for ARM/WASM**~~: Done. Added to_i32x4, to_i32x4_round, from_i32x4, to_f32x4, to_i32x4_low.
+- ~~**shr_arithmetic for ARM/WASM**~~: Done. Added for i8x16, i16x8, i32x4.
 
 ## License
 
