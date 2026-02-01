@@ -1073,12 +1073,24 @@ pub(crate) use registry::*;
         simd_tests.len()
     );
 
+    // Generate width dispatch (WidthDispatch trait + impls)
+    println!("\n=== Generating Width Dispatch ===");
+    let width_code = simd_types::width_dispatch::generate_width_dispatch(&reg);
+    let width_path = PathBuf::from("magetypes/src/width.rs");
+    fs::write(&width_path, &width_code)?;
+    println!(
+        "  Wrote {} ({} bytes)",
+        width_path.display(),
+        width_code.len()
+    );
+
     // Run rustfmt on all generated .rs files for idempotent output
     let mut fmt_paths: Vec<PathBuf> = simd_files
         .iter()
         .map(|(rel, _)| simd_dir.join(rel))
         .collect();
     fmt_paths.push(simd_test_path.clone());
+    fmt_paths.push(width_path);
     for path in &fmt_paths {
         let _ = std::process::Command::new("rustfmt")
             .arg("--edition")
@@ -1511,7 +1523,7 @@ fn run_ci() -> Result<()> {
         .args([
             "clippy",
             "--features",
-            "std macros bytemuck __composite avx512",
+            "std macros bytemuck avx512",
             "--",
             "-D",
             "warnings",
@@ -1528,11 +1540,7 @@ fn run_ci() -> Result<()> {
     println!("┌─ Step 7/8: Running tests ──────────────────────────────────────────┐");
     // Use specific features instead of --all-features to avoid sleef (requires nightly)
     let tests = std::process::Command::new("cargo")
-        .args([
-            "test",
-            "--features",
-            "std macros bytemuck __composite avx512",
-        ])
+        .args(["test", "--features", "std macros bytemuck avx512"])
         .status()
         .context("Failed to run tests")?;
     if !tests.success() {

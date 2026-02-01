@@ -104,8 +104,8 @@ CI checks (all must pass):
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
 3. `cargo xtask validate` — intrinsic safety + try_new() feature verification
 4. `cargo xtask parity` — parity warnings (currently 81 issues, 72 actionable)
-5. `cargo clippy --features "std macros bytemuck __composite avx512"` — zero warnings
-6. `cargo test --features "std macros bytemuck __composite avx512"` — all tests pass
+5. `cargo clippy --features "std macros bytemuck avx512"` — zero warnings
+6. `cargo test --features "std macros bytemuck avx512"` — all tests pass
 7. `cargo fmt --check` — code is formatted
 
 **Note:** Parity check reports 81 issues (9 known gaps with no efficient intrinsic, 72 actionable). CI warns but doesn't fail on parity issues. Full parity required before 1.0 release. See "Pending Work" section for details.
@@ -217,7 +217,6 @@ archmage/                    # Main crate: tokens, macros, detect
 │   │       ├── x86_stubs.rs   # x86 stubs (try_new → None)
 │   │       ├── arm_stubs.rs   # ARM stubs
 │   │       └── wasm_stubs.rs  # WASM stubs
-│   └── composite/          # Higher-level operations (__composite feature)
 archmage-macros/             # Proc-macro crate (#[arcane], #[multiwidth])
 └── src/
     ├── lib.rs              # Macro implementation

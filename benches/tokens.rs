@@ -30,45 +30,8 @@ fn bench_token_overhead(c: &mut Criterion) {
     group.finish();
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "__composite"))]
-fn bench_composite_ops(c: &mut Criterion) {
-    use archmage::{SimdToken, X64V3Token, composite};
-
-    let mut group = c.benchmark_group("composite");
-
-    if let Some(token) = X64V3Token::try_new() {
-        let mut block: [f32; 64] = core::array::from_fn(|i| i as f32);
-
-        group.bench_function("transpose_8x8", |b| {
-            b.iter(|| {
-                composite::transpose_8x8(token, black_box(&mut block));
-            })
-        });
-
-        let a: Vec<f32> = (0..1024).map(|i| i as f32).collect();
-        let b: Vec<f32> = vec![1.0; 1024];
-
-        group.bench_function("dot_product_1024", |b_iter| {
-            b_iter.iter(|| {
-                black_box(composite::dot_product_f32(
-                    token,
-                    black_box(&a),
-                    black_box(&b),
-                ))
-            })
-        });
-    }
-
-    group.finish();
-}
-
-#[cfg(all(target_arch = "x86_64", not(feature = "__composite")))]
-fn bench_composite_ops(_c: &mut Criterion) {
-    // Composite feature not enabled
-}
-
 #[cfg(target_arch = "x86_64")]
-criterion_group!(benches, bench_token_overhead, bench_composite_ops);
+criterion_group!(benches, bench_token_overhead);
 
 #[cfg(not(target_arch = "x86_64"))]
 fn placeholder(_c: &mut Criterion) {}

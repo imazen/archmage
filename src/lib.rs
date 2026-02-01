@@ -52,7 +52,6 @@
 //! - `std` (default): Enable std library support
 //! - `macros` (default): Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`)
 //! - `avx512`: AVX-512 token support
-//! - `__composite`: Higher-level ops (transpose, dot product) - unstable API
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -75,11 +74,6 @@ pub mod detect;
 
 // Core token types and traits
 pub mod tokens;
-
-// Composite operations (requires "__composite" feature, unstable API)
-#[cfg(feature = "__composite")]
-#[cfg_attr(docsrs, doc(cfg(feature = "__composite")))]
-pub mod composite;
 
 // SIMD types moved to magetypes crate
 // Use `magetypes::simd` for f32x8, i32x4, etc.

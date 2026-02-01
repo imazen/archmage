@@ -23,18 +23,11 @@ avx512 = []
 # Sleef comparison example (requires nightly)
 sleef = ["dep:sleef"]
 
-# Unstable features (API may change, prefixed with __)
-# Transpose, dot product, horizontal ops - requires safe_unaligned_simd
-__composite = ["dep:safe_unaligned_simd"]
-
 [dependencies]
 # Proc-macro crate for #[arcane] attribute
 archmage-macros = { version = "0.4.0", path = "archmage-macros", optional = true }
 # Zero-cost type casts (Pod, Zeroable)
 bytemuck = { version = "1.24", optional = true }
-# Safe unaligned memory operations (optional, for __composite)
-safe_unaligned_simd = { version = "0.2.3", optional = true, features = ["avx512"] }
-
 [dependencies.sleef]
 version = "0.3"
 optional = true

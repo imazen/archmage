@@ -232,8 +232,6 @@ if let Some(token) = Desktop64::summon() {
 | `std` (default) | Standard library support |
 | `macros` (default) | `#[arcane]` macro |
 | `avx512` | AVX-512 tokens |
-| `__composite` | Transpose, dot product (unstable) |
-| `__wide` | `wide` crate integration (unstable) |
 
 ## Testing Fallback Paths
 

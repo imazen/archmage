@@ -5,7 +5,7 @@ default: test
 
 # Run all tests (excludes sleef which requires nightly)
 test:
-    cargo test --features "std macros bytemuck wide __composite avx512"
+    cargo test --features "std macros bytemuck avx512"
 
 # Run tests with all features (requires nightly for sleef)
 test-nightly:
@@ -13,7 +13,7 @@ test-nightly:
 
 # Run clippy (excludes sleef which requires nightly)
 lint:
-    cargo clippy --features "std macros bytemuck wide __composite avx512" -- -D warnings
+    cargo clippy --features "std macros bytemuck avx512" -- -D warnings
 
 # Format code
 fmt:
@@ -144,15 +144,7 @@ validate-cross: ci test-cross clippy-all
 
 # Run all benchmarks with native CPU optimizations
 bench:
-    RUSTFLAGS="-C target-cpu=native" cargo bench --features wide
-
-# Run wide comparison benchmark (quick mode)
-bench-wide:
-    RUSTFLAGS="-C target-cpu=native" cargo bench --bench wide_comparison --features wide -- --quick
-
-# Run wide comparison benchmark (full)
-bench-wide-full:
-    RUSTFLAGS="-C target-cpu=native" cargo bench --bench wide_comparison --features wide
+    RUSTFLAGS="-C target-cpu=native" cargo bench
 
 # Run transcendental benchmarks
 bench-transcendental:
