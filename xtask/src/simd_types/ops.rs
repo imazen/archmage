@@ -725,9 +725,13 @@ pub fn generate_bitwise_unary_ops(ty: &SimdType) -> String {
 }
 
 pub fn generate_shift_ops(ty: &SimdType) -> String {
-    // Only for integer types, and NOT for 8-bit (no 8-bit shift intrinsics in x86 SIMD)
-    if ty.elem.is_float() || matches!(ty.elem, ElementType::I8 | ElementType::U8) {
+    if ty.elem.is_float() {
         return String::new();
+    }
+
+    // 8-bit types need polyfill (no native shift-by-immediate in any x86 ISA)
+    if matches!(ty.elem, ElementType::I8 | ElementType::U8) {
+        return generate_byte_shift_polyfill(ty);
     }
 
     let prefix = ty.width.x86_prefix();
@@ -770,6 +774,109 @@ pub fn generate_shift_ops(ty: &SimdType) -> String {
                 #[inline(always)]
                 pub fn shr_arithmetic<const N: {const_type}>(self) -> Self {{
                 Self(unsafe {{ {prefix}_srai_{suffix}::<N>(self.0) }})
+                }}
+
+            "});
+        }
+    }
+
+    code
+}
+
+/// Generate 8-bit shift polyfills using 16-bit shift + mask.
+///
+/// x86 has no native 8-bit shift-by-immediate at any ISA level.
+/// Polyfill: shift 16-bit lanes, then AND to clear cross-byte bits.
+fn generate_byte_shift_polyfill(ty: &SimdType) -> String {
+    let prefix = ty.width.x86_prefix();
+    let bits = ty.width.bits();
+    let si_suffix = format!("si{bits}");
+    let const_type = if ty.width == SimdWidth::W512 {
+        "u32"
+    } else {
+        "i32"
+    };
+    // W512 const generic is already u32, avoid clippy unnecessary_cast
+    let n_u32 = if ty.width == SimdWidth::W512 {
+        "N"
+    } else {
+        "N as u32"
+    };
+
+    let mut code = formatdoc! {"
+        // ========== Shift Operations (polyfill) ==========
+        // x86 has no native 8-bit shift-by-immediate; uses 16-bit shift + mask.
+
+        /// Shift each byte left by `N` bits.
+        ///
+        /// Bits shifted out are lost; zeros are shifted in.
+        /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+        #[inline(always)]
+        pub fn shl<const N: {const_type}>(self) -> Self {{
+        unsafe {{
+        let shifted = {prefix}_slli_epi16::<N>(self.0);
+        let mask = {prefix}_set1_epi8((0xFFu8.wrapping_shl({n_u32})) as i8);
+        Self({prefix}_and_{si_suffix}(shifted, mask))
+        }}
+        }}
+
+        /// Shift each byte right by `N` bits (logical/unsigned shift).
+        ///
+        /// Bits shifted out are lost; zeros are shifted in.
+        /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+        #[inline(always)]
+        pub fn shr<const N: {const_type}>(self) -> Self {{
+        unsafe {{
+        let shifted = {prefix}_srli_epi16::<N>(self.0);
+        let mask = {prefix}_set1_epi8((0xFFu8.wrapping_shr({n_u32})) as i8);
+        Self({prefix}_and_{si_suffix}(shifted, mask))
+        }}
+        }}
+
+    "};
+
+    // Arithmetic shift right for i8 only
+    if ty.elem == ElementType::I8 {
+        if ty.width == SimdWidth::W512 {
+            // AVX-512: cmpgt returns __mmask, use maskz_mov for sign extension
+            code.push_str(&formatdoc! {"
+                /// Arithmetic shift right by `N` bits (sign-extending).
+                ///
+                /// The sign bit is replicated into the vacated positions.
+                /// Implemented via logical shift + sign bit fill (no native 8-bit shift in x86).
+                #[inline(always)]
+                pub fn shr_arithmetic<const N: {const_type}>(self) -> Self {{
+                unsafe {{
+                let shifted = {prefix}_srli_epi16::<N>(self.0);
+                let byte_mask = {prefix}_set1_epi8((0xFFu8.wrapping_shr({n_u32})) as i8);
+                let logical = {prefix}_and_{si_suffix}(shifted, byte_mask);
+                let zero = {prefix}_setzero_{si_suffix}();
+                let neg = {prefix}_cmpgt_epi8_mask(zero, self.0);
+                let fill = {prefix}_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub({n_u32}))) as i8);
+                let sign_bits = {prefix}_maskz_mov_epi8(neg, fill);
+                Self({prefix}_or_{si_suffix}(logical, sign_bits))
+                }}
+                }}
+
+            "});
+        } else {
+            // SSE/AVX2: cmpgt returns vector mask
+            code.push_str(&formatdoc! {"
+                /// Arithmetic shift right by `N` bits (sign-extending).
+                ///
+                /// The sign bit is replicated into the vacated positions.
+                /// Implemented via logical shift + sign bit fill (no native 8-bit shift in x86).
+                #[inline(always)]
+                pub fn shr_arithmetic<const N: {const_type}>(self) -> Self {{
+                unsafe {{
+                let shifted = {prefix}_srli_epi16::<N>(self.0);
+                let byte_mask = {prefix}_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+                let logical = {prefix}_and_{si_suffix}(shifted, byte_mask);
+                let zero = {prefix}_setzero_{si_suffix}();
+                let sign = {prefix}_cmpgt_epi8(zero, self.0);
+                let fill = {prefix}_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub(N as u32))) as i8);
+                Self({prefix}_or_{si_suffix}(logical, {prefix}_and_{si_suffix}(sign, fill)))
+                }}
                 }}
 
             "});

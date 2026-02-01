@@ -2204,6 +2204,53 @@ impl i8x64 {
             _mm512_xor_si512(self.0, ones)
         })
     }
+    // ========== Shift Operations (polyfill) ==========
+    // x86 has no native 8-bit shift-by-immediate; uses 16-bit shift + mask.
+
+    /// Shift each byte left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        unsafe {
+            let shifted = _mm512_slli_epi16::<N>(self.0);
+            let mask = _mm512_set1_epi8((0xFFu8.wrapping_shl(N)) as i8);
+            Self(_mm512_and_si512(shifted, mask))
+        }
+    }
+
+    /// Shift each byte right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        unsafe {
+            let shifted = _mm512_srli_epi16::<N>(self.0);
+            let mask = _mm512_set1_epi8((0xFFu8.wrapping_shr(N)) as i8);
+            Self(_mm512_and_si512(shifted, mask))
+        }
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    /// Implemented via logical shift + sign bit fill (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: u32>(self) -> Self {
+        unsafe {
+            let shifted = _mm512_srli_epi16::<N>(self.0);
+            let byte_mask = _mm512_set1_epi8((0xFFu8.wrapping_shr(N)) as i8);
+            let logical = _mm512_and_si512(shifted, byte_mask);
+            let zero = _mm512_setzero_si512();
+            let neg = _mm512_cmpgt_epi8_mask(zero, self.0);
+            let fill = _mm512_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub(N))) as i8);
+            let sign_bits = _mm512_maskz_mov_epi8(neg, fill);
+            Self(_mm512_or_si512(logical, sign_bits))
+        }
+    }
+
     // ========== Bitcast ==========
     /// Reinterpret bits as `u8x64` (zero-cost).
     #[inline(always)]
@@ -2606,6 +2653,35 @@ impl u8x64 {
             _mm512_xor_si512(self.0, ones)
         })
     }
+    // ========== Shift Operations (polyfill) ==========
+    // x86 has no native 8-bit shift-by-immediate; uses 16-bit shift + mask.
+
+    /// Shift each byte left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shl<const N: u32>(self) -> Self {
+        unsafe {
+            let shifted = _mm512_slli_epi16::<N>(self.0);
+            let mask = _mm512_set1_epi8((0xFFu8.wrapping_shl(N)) as i8);
+            Self(_mm512_and_si512(shifted, mask))
+        }
+    }
+
+    /// Shift each byte right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shr<const N: u32>(self) -> Self {
+        unsafe {
+            let shifted = _mm512_srli_epi16::<N>(self.0);
+            let mask = _mm512_set1_epi8((0xFFu8.wrapping_shr(N)) as i8);
+            Self(_mm512_and_si512(shifted, mask))
+        }
+    }
+
     // ========== Bitcast ==========
     /// Reinterpret bits as `i8x64` (zero-cost).
     #[inline(always)]

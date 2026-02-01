@@ -2088,6 +2088,52 @@ impl i8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
+    // ========== Shift Operations (polyfill) ==========
+    // x86 has no native 8-bit shift-by-immediate; uses 16-bit shift + mask.
+
+    /// Shift each byte left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        unsafe {
+            let shifted = _mm_slli_epi16::<N>(self.0);
+            let mask = _mm_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
+            Self(_mm_and_si128(shifted, mask))
+        }
+    }
+
+    /// Shift each byte right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        unsafe {
+            let shifted = _mm_srli_epi16::<N>(self.0);
+            let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            Self(_mm_and_si128(shifted, mask))
+        }
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    /// Implemented via logical shift + sign bit fill (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        unsafe {
+            let shifted = _mm_srli_epi16::<N>(self.0);
+            let byte_mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            let logical = _mm_and_si128(shifted, byte_mask);
+            let zero = _mm_setzero_si128();
+            let sign = _mm_cmpgt_epi8(zero, self.0);
+            let fill = _mm_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub(N as u32))) as i8);
+            Self(_mm_or_si128(logical, _mm_and_si128(sign, fill)))
+        }
+    }
+
     // ========== Bitcast ==========
     /// Reinterpret bits as `u8x16` (zero-cost).
     #[inline(always)]
@@ -2468,6 +2514,35 @@ impl u8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
+    // ========== Shift Operations (polyfill) ==========
+    // x86 has no native 8-bit shift-by-immediate; uses 16-bit shift + mask.
+
+    /// Shift each byte left by `N` bits.
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        unsafe {
+            let shifted = _mm_slli_epi16::<N>(self.0);
+            let mask = _mm_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
+            Self(_mm_and_si128(shifted, mask))
+        }
+    }
+
+    /// Shift each byte right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
+    /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        unsafe {
+            let shifted = _mm_srli_epi16::<N>(self.0);
+            let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            Self(_mm_and_si128(shifted, mask))
+        }
+    }
+
     // ========== Extend/Widen Operations ==========
 
     /// Zero-extend low 8 u8 values to i16x8.
