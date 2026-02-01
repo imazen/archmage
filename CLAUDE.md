@@ -103,12 +103,12 @@ CI checks (all must pass):
 1. `cargo xtask generate` — regenerate all code
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
 3. `cargo xtask validate` — intrinsic safety + try_new() feature verification
-4. `cargo xtask parity` — parity warnings (currently 47 issues, 38 actionable)
+4. `cargo xtask parity` — parity warnings (currently 37 issues, 28 actionable)
 5. `cargo clippy --features "std macros bytemuck avx512"` — zero warnings
 6. `cargo test --features "std macros bytemuck avx512"` — all tests pass
 7. `cargo fmt --check` — code is formatted
 
-**Note:** Parity check reports 47 issues (9 known gaps with no efficient intrinsic, 38 actionable). CI warns but doesn't fail on parity issues. Full parity required before 1.0 release. See "Pending Work" section for details.
+**Note:** Parity check reports 37 issues (9 known gaps with no efficient intrinsic, 28 actionable). CI warns but doesn't fail on parity issues. Full parity required before 1.0 release. See "Pending Work" section for details.
 
 If ANY check fails:
 - Do NOT push
@@ -354,9 +354,9 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 ## Pending Work
 
-### API Parity Status (47 issues remaining, 38 actionable)
+### API Parity Status (37 issues remaining, 28 actionable)
 
-**Current state:** Reduced from 270 → 47 parity issues (83% reduction). Of these, 9 are "known gaps" with no efficient native intrinsic, leaving 38 actionable issues.
+**Current state:** Reduced from 270 → 37 parity issues (86% reduction). Of these, 9 are "known gaps" with no efficient native intrinsic, leaving 28 actionable issues.
 
 Run `cargo xtask parity` to see full list.
 
@@ -372,11 +372,8 @@ Run `cargo xtask parity` to see full list.
 | Category | Count | Missing From | Notes |
 |----------|-------|--------------|-------|
 | Extension/pack ops | 17 | ARM, WASM | Integer widening/narrowing |
-| RGBA ops (load/store u8, from_u8, to_u8) | 3 | ARM, WASM | Pixel format conversion |
-| Block ops (transpose, interleave, deinterleave) | 7 | ARM, WASM | Matrix operations |
+| RGBA ops (load/store u8, from_u8, to_u8) | 4 | ARM, WASM | Pixel format conversion |
 | i64x2/u64x2 abs/min/max/clamp | 6 | x86, WASM | Need compare+select polyfill |
-| cbrt for WASM | 2 | WASM | cbrt_midp, cbrt_midp_precise |
-| f64x2 log10_lowp | 1 | WASM | Scalar fallback needed |
 
 ### Long-Term
 
@@ -385,6 +382,8 @@ Run `cargo xtask parity` to see full list.
 
 ### Completed
 
+- ~~**ARM/WASM block ops**~~: Done. ARM uses native vzip1q/vzip2q, WASM uses i32x4_shuffle. Both gained interleave_lo/hi, interleave, deinterleave_4ch, interleave_4ch, transpose_4x4, transpose_4x4_copy. Parity: 47 → 37.
+- ~~**WASM cbrt + f64x2 log10_lowp**~~: Done. WASM f32x4 gained cbrt_midp/cbrt_midp_precise (scalar initial guess + Newton-Raphson). WASM f64x2 gained log10_lowp via scalar fallback.
 - ~~**ARM transcendentals + x86 missing variants**~~: Done. ARM f32x4 has full lowp+midp transcendentals (log2, exp2, ln, exp, log10, pow, cbrt) with all variant coverage. ARM f64x2 has lowp transcendentals via scalar fallback. x86 gained lowp _unchecked aliases, midp _precise variants, and log10_midp family. Parity: 80 → 47.
 - ~~**API surface parity detection tool**~~: Done. Use `cargo xtask parity` to detect API variances between x86/ARM/WASM.
 - ~~**Move generated files to subfolder**~~: Done. All generated code now lives in `generated/` subfolders.
@@ -399,6 +398,25 @@ Run `cargo xtask parity` to see full list.
 - ~~**mul_sub for ARM/WASM**~~: Done. ARM uses vfma with negation, WASM uses mul+sub.
 - ~~**Type conversions for ARM/WASM**~~: Done. Added to_i32x4, to_i32x4_round, from_i32x4, to_f32x4, to_i32x4_low.
 - ~~**shr_arithmetic for ARM/WASM**~~: Done. Added for i8x16, i16x8, i32x4.
+
+## Suboptimal Intrinsics (needs faster-path overloads)
+
+Track places where we use polyfills or slower instruction sequences because the base token lacks a native intrinsic, but a higher token would have one. Each entry should get a method overload that accepts the higher token for the fast path.
+
+| Method | Token (slow) | Polyfill | Token (fast) | Native Intrinsic | Status |
+|--------|-------------|----------|-------------|------------------|--------|
+| i64x2::min | X64V3Token | compare + blend | X64V4Token | `_mm_min_epi64` (AVX-512VL) | **TODO** |
+| i64x2::max | X64V3Token | compare + blend | X64V4Token | `_mm_max_epi64` (AVX-512VL) | **TODO** |
+| i64x2::abs | X64V3Token | compare + blend + negate | X64V4Token | `_mm_abs_epi64` (AVX-512VL) | **TODO** |
+| u64x2::min | X64V3Token | compare + blend | X64V4Token | `_mm_min_epu64` (AVX-512VL) | **TODO** |
+| u64x2::max | X64V3Token | compare + blend | X64V4Token | `_mm_max_epu64` (AVX-512VL) | **TODO** |
+| f32 cbrt initial guess | all tokens | scalar extract + bit hack | — | No SIMD cbrt exists; consider SIMD bit hack via integer ops | Low priority |
+
+**Rules for this section:**
+- Only add entries when you've verified the faster intrinsic exists and is correct.
+- The overload should take the higher token as a parameter (e.g., `fn min_fast(self, other: Self, _: X64V4Token) -> Self`).
+- Or use trait bounds: `fn min<T: HasX64V4>(self, other: Self, _: T) -> Self` for the fast path.
+- Remove entries when the fast-path overload is implemented.
 
 ## License
 
