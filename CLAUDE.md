@@ -24,7 +24,7 @@
 | `NeonSha3Token` | + sha3 | `HasNeonSha3` |
 | `NeonCrcToken` | + crc | Use token directly |
 
-**PROHIBITED:** NO SVE/SVE2 - hasn't shipped in consumer hardware.
+**PROHIBITED:** NO SVE/SVE2 - Rust stable doesn't support SVE intrinsics yet.
 
 ### Rules
 
@@ -32,7 +32,7 @@
 2. **Use tier tokens** - `X64V2Token`, `Avx2FmaToken`, `X64V4Token`, `Avx512ModernToken`
 3. **Single trait per tier** - `HasX64V2`, `HasX64V4` only
 4. **NEON includes fp16** - They always appear together on AArch64
-5. **NO SVE** - `SveToken`, `Sve2Token`, `HasSve`, `HasSve2` are PROHIBITED
+5. **NO SVE** - `SveToken`, `Sve2Token`, `HasSve`, `HasSve2` are PROHIBITED (Rust stable lacks SVE support)
 
 ---
 
@@ -88,6 +88,8 @@ just validate-tokens          # Validate magetypes safety + try_new() checks
 just parity                   # Check API parity across x86/ARM/WASM
 just soundness                # Static intrinsic soundness verification
 just miri                     # Run magetypes under Miri (detects UB)
+just audit                    # Scan for safety-critical code
+just intrinsics-refresh       # Re-extract intrinsics from current Rust
 just ci                       # Run ALL checks (must pass before push/publish)
 ```
 

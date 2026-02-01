@@ -35,6 +35,14 @@ miri:
 soundness:
     cargo run -p xtask -- soundness
 
+# Safety audit (scan for critical code, check intrinsics freshness)
+audit:
+    cargo run -p xtask -- audit
+
+# Refresh intrinsics database from current Rust toolchain
+intrinsics-refresh:
+    cargo run -p xtask -- intrinsics-refresh
+
 # Regenerate all generated code (SIMD types, macro registry, docs)
 generate:
     cargo run -p xtask -- generate
