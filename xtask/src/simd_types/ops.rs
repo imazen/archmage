@@ -421,6 +421,22 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
             self.max(lo).min(hi)
             }}
 
+            /// Element-wise minimum using AVX-512VL native intrinsic.
+            ///
+            /// Single instruction, faster than the polyfill used by `min()`.
+            #[inline(always)]
+            pub fn min_fast(self, other: Self, _: archmage::X64V4Token) -> Self {{
+            Self(unsafe {{ {prefix}_min_epi64(self.0, other.0) }})
+            }}
+
+            /// Element-wise maximum using AVX-512VL native intrinsic.
+            ///
+            /// Single instruction, faster than the polyfill used by `max()`.
+            #[inline(always)]
+            pub fn max_fast(self, other: Self, _: archmage::X64V4Token) -> Self {{
+            Self(unsafe {{ {prefix}_max_epi64(self.0, other.0) }})
+            }}
+
         "});
     } else if ty.elem == ElementType::U64 {
         // u64 polyfill: bias to signed domain, then compare + blend
@@ -454,6 +470,22 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
             self.max(lo).min(hi)
+            }}
+
+            /// Element-wise minimum using AVX-512VL native intrinsic.
+            ///
+            /// Single instruction, faster than the polyfill used by `min()`.
+            #[inline(always)]
+            pub fn min_fast(self, other: Self, _: archmage::X64V4Token) -> Self {{
+            Self(unsafe {{ {prefix}_min_epu64(self.0, other.0) }})
+            }}
+
+            /// Element-wise maximum using AVX-512VL native intrinsic.
+            ///
+            /// Single instruction, faster than the polyfill used by `max()`.
+            #[inline(always)]
+            pub fn max_fast(self, other: Self, _: archmage::X64V4Token) -> Self {{
+            Self(unsafe {{ {prefix}_max_epu64(self.0, other.0) }})
             }}
 
         "});
@@ -562,6 +594,14 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
                 let sign = {prefix}_cmpgt_epi64(zero, self.0);
                 Self({prefix}_sub_epi64({prefix}_xor_{si_suffix}(self.0, sign), sign))
                 }}
+                }}
+
+                /// Absolute value using AVX-512VL native intrinsic.
+                ///
+                /// Single instruction, faster than the polyfill used by `abs()`.
+                #[inline(always)]
+                pub fn abs_fast(self, _: archmage::X64V4Token) -> Self {{
+                Self(unsafe {{ {prefix}_abs_epi64(self.0) }})
                 }}
 
             "});

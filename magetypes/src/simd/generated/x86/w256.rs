@@ -4953,6 +4953,22 @@ impl i64x4 {
         self.max(lo).min(hi)
     }
 
+    /// Element-wise minimum using AVX-512VL native intrinsic.
+    ///
+    /// Single instruction, faster than the polyfill used by `min()`.
+    #[inline(always)]
+    pub fn min_fast(self, other: Self, _: archmage::X64V4Token) -> Self {
+        Self(unsafe { _mm256_min_epi64(self.0, other.0) })
+    }
+
+    /// Element-wise maximum using AVX-512VL native intrinsic.
+    ///
+    /// Single instruction, faster than the polyfill used by `max()`.
+    #[inline(always)]
+    pub fn max_fast(self, other: Self, _: archmage::X64V4Token) -> Self {
+        Self(unsafe { _mm256_max_epi64(self.0, other.0) })
+    }
+
     /// Absolute value (polyfill via conditional negate)
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -4961,6 +4977,14 @@ impl i64x4 {
             let sign = _mm256_cmpgt_epi64(zero, self.0);
             Self(_mm256_sub_epi64(_mm256_xor_si256(self.0, sign), sign))
         }
+    }
+
+    /// Absolute value using AVX-512VL native intrinsic.
+    ///
+    /// Single instruction, faster than the polyfill used by `abs()`.
+    #[inline(always)]
+    pub fn abs_fast(self, _: archmage::X64V4Token) -> Self {
+        Self(unsafe { _mm256_abs_epi64(self.0) })
     }
 
     // ========== Comparisons ==========
@@ -5393,6 +5417,22 @@ impl u64x4 {
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
+    }
+
+    /// Element-wise minimum using AVX-512VL native intrinsic.
+    ///
+    /// Single instruction, faster than the polyfill used by `min()`.
+    #[inline(always)]
+    pub fn min_fast(self, other: Self, _: archmage::X64V4Token) -> Self {
+        Self(unsafe { _mm256_min_epu64(self.0, other.0) })
+    }
+
+    /// Element-wise maximum using AVX-512VL native intrinsic.
+    ///
+    /// Single instruction, faster than the polyfill used by `max()`.
+    #[inline(always)]
+    pub fn max_fast(self, other: Self, _: archmage::X64V4Token) -> Self {
+        Self(unsafe { _mm256_max_epu64(self.0, other.0) })
     }
 
     // ========== Comparisons ==========

@@ -133,6 +133,12 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
     )
     .expect("invalid wasm regex");
 
+    // Regex to detect function signatures with token parameters
+    let fn_sig_re = Regex::new(
+        r"pub fn \w+[^{]*\b(X64V4Token|Avx512Token|Avx512ModernToken|Avx512Fp16Token)\b",
+    )
+    .expect("invalid fn sig regex");
+
     let simd_dir = PathBuf::from("magetypes/src/simd");
     let mut errors: Vec<String> = Vec::new();
     let mut validated = 0usize;
@@ -147,9 +153,9 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
         let content = fs::read_to_string(&file_path)
             .with_context(|| format!("Failed to read {}", file_path.display()))?;
 
-        let token = &mapping.token;
-        let features = reg.features_for(token).unwrap_or_default();
-        let provided_features: HashSet<&str> = features.into_iter().collect();
+        let file_token = &mapping.token;
+        let file_features = reg.features_for(file_token).unwrap_or_default();
+        let file_provided: HashSet<&str> = file_features.into_iter().collect();
 
         // Select regex based on architecture
         let re = match mapping.arch.as_str() {
@@ -159,20 +165,63 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
             _ => continue,
         };
 
-        // Extract all unique intrinsic calls
-        let mut intrinsics_found: BTreeSet<String> = BTreeSet::new();
-        for cap in re.captures_iter(&content) {
-            intrinsics_found.insert(cap[1].to_string());
+        // Extract intrinsics with context-aware token detection
+        // For each intrinsic, find which token gates it (file-level or method-level)
+        let mut intrinsics_with_tokens: BTreeMap<String, String> = BTreeMap::new();
+
+        // Split content into lines for context tracking
+        let lines: Vec<&str> = content.lines().collect();
+        let mut current_fn_token: Option<&str> = None;
+        let mut brace_depth = 0i32;
+
+        for line in &lines {
+            // Track brace depth to know when we exit a function
+            for ch in line.chars() {
+                match ch {
+                    '{' => brace_depth += 1,
+                    '}' => {
+                        brace_depth -= 1;
+                        if brace_depth <= 1 {
+                            // Exited a function, reset to file-level token
+                            current_fn_token = None;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            // Check if this line starts a function with a higher-level token
+            if let Some(cap) = fn_sig_re.captures(line) {
+                current_fn_token = Some(cap.get(1).unwrap().as_str());
+            }
+
+            // Extract intrinsics from this line
+            for cap in re.captures_iter(line) {
+                let intrinsic = cap[1].to_string();
+                let effective_token = current_fn_token.unwrap_or(file_token.as_str());
+                intrinsics_with_tokens
+                    .entry(intrinsic)
+                    .or_insert_with(|| effective_token.to_string());
+            }
         }
 
         println!(
             "{}: {} unique intrinsics, token: {}",
             mapping.rel_path,
-            intrinsics_found.len(),
-            token
+            intrinsics_with_tokens.len(),
+            file_token
         );
 
-        for intrinsic in &intrinsics_found {
+        for (intrinsic, effective_token) in &intrinsics_with_tokens {
+            // Get features for the effective token (could be method-level or file-level)
+            let provided_features: HashSet<&str> = if effective_token == file_token {
+                file_provided.clone()
+            } else {
+                reg.features_for(effective_token)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .collect()
+            };
             // 1. Width-prefix validation (x86 only — catches wrong-width intrinsics)
             if mapping.arch == "x86" {
                 let intrinsic_width = if intrinsic.starts_with("_mm512_") {
@@ -236,7 +285,7 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
                             intrinsic,
                             mapping.rel_path,
                             entry.features,
-                            token,
+                            effective_token,
                             provided_features.iter().copied().collect::<BTreeSet<_>>().iter().copied().collect::<Vec<_>>().join(", "),
                             missing
                         ));
