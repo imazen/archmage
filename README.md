@@ -77,17 +77,7 @@ Start with `Desktop64` for most applications:
 | **`Desktop64`** | AVX2 + FMA + BMI2 | Intel Haswell 2013+, AMD Zen 1 2017+ |
 | `X64V2Token` | SSE4.2 + POPCNT | Intel Nehalem 2008+, AMD Bulldozer 2011+ |
 | `X64V3Token` | AVX2 + FMA + BMI2 | Same as Desktop64 (alias) |
-
-Individual feature tokens for fine-grained control:
-
-| Token | Features |
-|-------|----------|
-| `Avx2FmaToken` | AVX2 + FMA |
-| `Avx2Token` | AVX2 only |
-| `FmaToken` | FMA only |
-| `AvxToken` | AVX |
-| `Sse42Token` | SSE4.2 |
-| `Sse41Token` | SSE4.1 |
+| `Avx2FmaToken` | AVX2 + FMA + BMI2 | Same as Desktop64 (alias) |
 
 ### x86-64 AVX-512 Tokens (requires `avx512` feature)
 
@@ -112,8 +102,7 @@ Note: Intel 12th-14th gen consumer CPUs do NOT have AVX-512.
 | `NeonToken` | NEON | Same as Arm64 (alias) |
 | `NeonAesToken` | NEON + AES | ARM with crypto extensions |
 | `NeonSha3Token` | NEON + SHA3 | ARMv8.2+ |
-| `ArmCryptoToken` | AES + SHA2 + CRC | Most ARMv8 CPUs |
-| `ArmCrypto3Token` | + SHA3 | ARMv8.4+ (M1/M2/M3, Graviton 2+) |
+| `NeonCrcToken` | NEON + CRC | Most ARMv8 CPUs |
 
 ### WASM Tokens
 
@@ -127,11 +116,12 @@ Tokens form a hierarchy. Higher-level tokens can extract lower-level ones:
 
 ```rust
 if let Some(v3) = X64V3Token::summon() {
-    let v2: X64V2Token = v3.v2();           // v3 implies v2
-    let avx2_fma: Avx2FmaToken = v3.avx2_fma();
-    let avx2: Avx2Token = v3.avx2();
-    let fma: FmaToken = v3.fma();
-    let sse42: Sse42Token = v3.sse42();
+    let v2: X64V2Token = v3.v2();  // v3 implies v2
+}
+
+if let Some(v4) = X64V4Token::summon() {
+    let v3: X64V3Token = v4.v3();  // v4 implies v3
+    let v2: X64V2Token = v4.v2();  // v4 implies v2
 }
 ```
 
@@ -183,10 +173,16 @@ fn process(data: &mut [f32]) {
 
 ## SIMD Types
 
-archmage provides token-gated SIMD types with ergonomic operators:
+The companion crate `magetypes` provides token-gated SIMD types with ergonomic operators:
+
+```toml
+[dependencies]
+magetypes = "0.1"
+```
 
 ```rust
-use archmage::{Desktop64, SimdToken, simd::f32x8};
+use archmage::{Desktop64, SimdToken};
+use magetypes::simd::f32x8;
 
 if let Some(token) = Desktop64::summon() {
     let a = f32x8::splat(token, 2.0);
