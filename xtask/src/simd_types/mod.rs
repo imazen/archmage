@@ -129,11 +129,15 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
 
     // Re-exports for ARM
     code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str("pub use arm::w128::*;\n\n");
+    code.push_str("pub use arm::w128::*;\n");
+    code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
+    code.push_str("pub use polyfill::neon::*;\n\n");
 
     // Re-exports for WASM
     code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str("pub use wasm::w128::*;\n\n");
+    code.push_str("pub use wasm::w128::*;\n");
+    code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
+    code.push_str("pub use polyfill::simd128::*;\n\n");
 
     // Polyfill module (auto-generated W256 from pairs of W128)
     code.push_str("// Polyfill module for emulating wider types on narrower hardware\n");

@@ -283,7 +283,11 @@ pub use x86::w512::*;
 
 #[cfg(target_arch = "aarch64")]
 pub use arm::w128::*;
+#[cfg(target_arch = "aarch64")]
+pub use polyfill::neon::*;
 
+#[cfg(target_arch = "wasm32")]
+pub use polyfill::simd128::*;
 #[cfg(target_arch = "wasm32")]
 pub use wasm::w128::*;
 
