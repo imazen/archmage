@@ -70,14 +70,13 @@ For memory operations (#2), use the `safe_unaligned_simd` crate which provides r
 
 ### x86-64 Tokens
 
-Start with `Desktop64` for most applications:
+Use `X64V3Token` (or its alias `Desktop64`) for most applications:
 
 | Token | Features | CPU Support |
 |-------|----------|-------------|
-| **`Desktop64`** | AVX2 + FMA + BMI2 | Intel Haswell 2013+, AMD Zen 1 2017+ |
-| `X64V2Token` | SSE4.2 + POPCNT | Intel Nehalem 2008+, AMD Bulldozer 2011+ |
-| `X64V3Token` | AVX2 + FMA + BMI2 | Same as Desktop64 (alias) |
-| `Avx2FmaToken` | AVX2 + FMA + BMI2 | Same as Desktop64 (alias) |
+| `X64V2Token` | SSE4.2 + POPCNT | Windows 11 minimum, Nehalem 2008+ |
+| **`X64V3Token`** | AVX2 + FMA + BMI2 | 95%+ of CPUs, Haswell 2013+, Zen 1+ |
+| `Desktop64` | AVX2 + FMA + BMI2 | Alias for X64V3Token |
 
 ### x86-64 AVX-512 Tokens (requires `avx512` feature)
 
@@ -109,6 +108,48 @@ Note: Intel 12th-14th gen consumer CPUs do NOT have AVX-512.
 | Token | Features |
 |-------|----------|
 | `Simd128Token` | WASM SIMD |
+
+## Target Selection
+
+### Choosing Your Baseline
+
+**x86-64-v2** is the minimum requirement for Windows 11, making it a safe baseline for distributed binaries. However, **95%+ of desktop/laptop CPUs** from the last decade support x86-64-v3 (AVX2+FMA), so optimizing for v3 covers nearly all users.
+
+| Target | Use Case | Coverage |
+|--------|----------|----------|
+| x86-64-v2 | Maximum compatibility (Windows 11 minimum) | ~100% |
+| **x86-64-v3** | Recommended for most apps | ~95%+ |
+| x86-64-v4 | Server/HPC workloads | Xeon, Zen 4+ |
+
+For most applications, compile a v2 baseline and add v3-optimized paths:
+
+```rust
+if let Some(token) = X64V3Token::summon() {
+    fast_path(token, data);  // 95%+ of users
+} else {
+    baseline_path(data);      // Fallback
+}
+```
+
+### Compile-Time Optimization
+
+When you compile with `-C target-cpu=native` or specify target features that match or exceed a token's requirements, **runtime detection is eliminated**:
+
+```rust
+// Compiled with RUSTFLAGS="-C target-cpu=haswell"
+if let Some(token) = X64V3Token::summon() {  // Always succeeds, check optimized away
+    process(token, data);
+} else {
+    fallback(data);  // Dead code, optimized away entirely
+}
+```
+
+This means:
+- `summon()` becomes a no-op returning `Some`
+- The `else` branch is eliminated by the optimizer
+- Zero runtime overhead for feature detection
+
+Build for your deployment target and let the compiler eliminate unused paths.
 
 ## Token Hierarchy
 
