@@ -197,7 +197,6 @@ pub mod sse {
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -484,7 +483,6 @@ pub mod sse {
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -1380,7 +1378,6 @@ pub mod sse {
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -1572,7 +1569,6 @@ pub mod sse {
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -1740,7 +1736,6 @@ pub mod sse {
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -1890,7 +1885,6 @@ pub mod sse {
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -2167,7 +2161,6 @@ pub mod neon {
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -2454,7 +2447,6 @@ pub mod neon {
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -3350,7 +3342,6 @@ pub mod neon {
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -3542,7 +3533,6 @@ pub mod neon {
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -3710,7 +3700,6 @@ pub mod neon {
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -3860,7 +3849,6 @@ pub mod neon {
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -4137,7 +4125,6 @@ pub mod simd128 {
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
-
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -4424,7 +4411,6 @@ pub mod simd128 {
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
-
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -5320,7 +5306,6 @@ pub mod simd128 {
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-
         /// Reinterpret bits as `u32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x8(self) -> u32x8 {
@@ -5512,7 +5497,6 @@ pub mod simd128 {
         pub fn bitcast_mut_f32x8(&mut self) -> &mut f32x8 {
             unsafe { &mut *(self as *mut Self as *mut f32x8) }
         }
-
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -5680,7 +5664,6 @@ pub mod simd128 {
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-
         /// Reinterpret bits as `u64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x4(self) -> u64x4 {
@@ -5830,7 +5813,6 @@ pub mod simd128 {
         pub fn bitcast_mut_f64x4(&mut self) -> &mut f64x4 {
             unsafe { &mut *(self as *mut Self as *mut f64x4) }
         }
-
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -6101,7 +6083,6 @@ pub mod avx2 {
         pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
             unsafe { &mut *(self as *mut Self as *mut i32x16) }
         }
-
         /// Reinterpret bits as `u32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x16(self) -> u32x16 {
@@ -6382,7 +6363,6 @@ pub mod avx2 {
         pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
             unsafe { &mut *(self as *mut Self as *mut i64x8) }
         }
-
         /// Reinterpret bits as `u64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x8(self) -> u64x8 {
@@ -7248,7 +7228,6 @@ pub mod avx2 {
         pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
             unsafe { &mut *(self as *mut Self as *mut f32x16) }
         }
-
         /// Reinterpret bits as `u32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u32x16(self) -> u32x16 {
@@ -7434,7 +7413,6 @@ pub mod avx2 {
         pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
             unsafe { &mut *(self as *mut Self as *mut f32x16) }
         }
-
         /// Reinterpret bits as `i32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x16(self) -> i32x16 {
@@ -7596,7 +7574,6 @@ pub mod avx2 {
         pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
             unsafe { &mut *(self as *mut Self as *mut f64x8) }
         }
-
         /// Reinterpret bits as `u64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u64x8(self) -> u64x8 {
@@ -7740,7 +7717,6 @@ pub mod avx2 {
         pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
             unsafe { &mut *(self as *mut Self as *mut f64x8) }
         }
-
         /// Reinterpret bits as `i64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x8(self) -> i64x8 {

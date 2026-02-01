@@ -9,10 +9,9 @@
 //! - `bitcast_mut_<target>(&mut self) -> &mut Target` — pointer cast
 
 use crate::simd_types::types::{ElementType, SimdType, SimdWidth};
-use std::fmt::Write;
+use indoc::formatdoc;
 
 /// Bitcast pairs to generate. (source_elem, target_elem).
-/// Full NxN is the goal; we allowlist to control sprawl.
 const ALLOWED_BITCAST_PAIRS: &[(ElementType, ElementType)] = &[
     // Float ↔ same-size signed int
     (ElementType::F32, ElementType::I32),
@@ -60,6 +59,53 @@ fn inner_kind(elem: ElementType) -> InnerKind {
     }
 }
 
+// ============================================================================
+// Bitcast method generation helpers
+// ============================================================================
+
+/// Generate all three bitcast variants (owned, ref, mut) for a target type
+fn gen_bitcast_triple(target_name: &str, owned_body: &str) -> String {
+    formatdoc! {"
+        /// Reinterpret bits as `{target_name}` (zero-cost).
+        #[inline(always)]
+        pub fn bitcast_{target_name}(self) -> {target_name} {{
+            {owned_body}
+        }}
+
+        /// Reinterpret bits as `&{target_name}` (zero-cost pointer cast).
+        #[inline(always)]
+        pub fn bitcast_ref_{target_name}(&self) -> &{target_name} {{
+            unsafe {{ &*(self as *const Self as *const {target_name}) }}
+        }}
+
+        /// Reinterpret bits as `&mut {target_name}` (zero-cost pointer cast).
+        #[inline(always)]
+        pub fn bitcast_mut_{target_name}(&mut self) -> &mut {target_name} {{
+            unsafe {{ &mut *(self as *mut Self as *mut {target_name}) }}
+        }}
+
+    "}
+}
+
+/// Indent each line of text by n spaces
+fn indent(text: &str, n: usize) -> String {
+    let prefix = " ".repeat(n);
+    text.lines()
+        .map(|line| {
+            if line.is_empty() {
+                String::new()
+            } else {
+                format!("{prefix}{line}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+// ============================================================================
+// x86 bitcast generation
+// ============================================================================
+
 /// Generate bitcast methods for a single x86 SIMD type.
 pub fn generate_x86_bitcasts(ty: &SimdType) -> String {
     let targets = bitcast_targets(ty.elem);
@@ -67,12 +113,8 @@ pub fn generate_x86_bitcasts(ty: &SimdType) -> String {
         return String::new();
     }
 
-    let mut code = String::new();
-    writeln!(
-        code,
-        "\n    // ========== Bitcast (reinterpret bits, zero-cost) ==========\n"
-    )
-    .unwrap();
+    let mut code =
+        String::from("\n    // ========== Bitcast (reinterpret bits, zero-cost) ==========\n\n");
 
     let src_kind = inner_kind(ty.elem);
     let prefix = ty.width.x86_prefix();
@@ -83,59 +125,8 @@ pub fn generate_x86_bitcasts(ty: &SimdType) -> String {
         let target_name = target_ty.name();
         let target_kind = inner_kind(*target_elem);
 
-        // Owned variant
         let body = generate_x86_bitcast_body(src_kind, target_kind, prefix, bits);
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `{target_name}` (zero-cost)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_{target_name}(self) -> {target_name} {{"
-        )
-        .unwrap();
-        writeln!(code, "        {body}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // Ref variant
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `&{target_name}` (zero-cost pointer cast)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_ref_{target_name}(&self) -> &{target_name} {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        unsafe {{ &*(self as *const Self as *const {target_name}) }}"
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // Mut variant
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `&mut {target_name}` (zero-cost pointer cast)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_mut_{target_name}(&mut self) -> &mut {target_name} {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        unsafe {{ &mut *(self as *mut Self as *mut {target_name}) }}"
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&indent(&gen_bitcast_triple(&target_name, &body), 4));
     }
 
     code
@@ -149,36 +140,37 @@ fn generate_x86_bitcast_body(
     bits: usize,
 ) -> String {
     match (src_kind, dst_kind) {
-        // Same inner kind → just wrap (transmute handles newtype differences)
+        // Same inner kind → just wrap
         (InnerKind::Si, InnerKind::Si)
         | (InnerKind::Ps, InnerKind::Ps)
         | (InnerKind::Pd, InnerKind::Pd) => "unsafe { core::mem::transmute(self) }".to_string(),
-        // Ps → Si
+        // Ps ↔ Si
         (InnerKind::Ps, InnerKind::Si) => {
             format!("unsafe {{ core::mem::transmute({prefix}_castps_si{bits}(self.0)) }}")
         }
-        // Si → Ps
         (InnerKind::Si, InnerKind::Ps) => {
             format!("unsafe {{ core::mem::transmute({prefix}_castsi{bits}_ps(self.0)) }}")
         }
-        // Pd → Si
+        // Pd ↔ Si
         (InnerKind::Pd, InnerKind::Si) => {
             format!("unsafe {{ core::mem::transmute({prefix}_castpd_si{bits}(self.0)) }}")
         }
-        // Si → Pd
         (InnerKind::Si, InnerKind::Pd) => {
             format!("unsafe {{ core::mem::transmute({prefix}_castsi{bits}_pd(self.0)) }}")
         }
-        // Ps → Pd (not currently allowlisted, but infrastructure is here)
+        // Ps ↔ Pd (not currently allowlisted)
         (InnerKind::Ps, InnerKind::Pd) => {
             format!("unsafe {{ core::mem::transmute({prefix}_castps_pd(self.0)) }}")
         }
-        // Pd → Ps
         (InnerKind::Pd, InnerKind::Ps) => {
             format!("unsafe {{ core::mem::transmute({prefix}_castpd_ps(self.0)) }}")
         }
     }
 }
+
+// ============================================================================
+// ARM NEON bitcast generation
+// ============================================================================
 
 /// Generate bitcast methods for a single ARM NEON type.
 pub fn generate_arm_bitcasts(ty: &SimdType) -> String {
@@ -187,13 +179,8 @@ pub fn generate_arm_bitcasts(ty: &SimdType) -> String {
         return String::new();
     }
 
-    let mut code = String::new();
-    writeln!(
-        code,
-        "\n    // ========== Bitcast (reinterpret bits, zero-cost) ==========\n"
-    )
-    .unwrap();
-
+    let mut code =
+        String::from("\n    // ========== Bitcast (reinterpret bits, zero-cost) ==========\n\n");
     let src_suffix = arm_type_suffix(ty.elem);
 
     for target_elem in &targets {
@@ -201,242 +188,14 @@ pub fn generate_arm_bitcasts(ty: &SimdType) -> String {
         let target_name = target_ty.name();
         let dst_suffix = arm_type_suffix(*target_elem);
 
-        // Owned variant — use vreinterpretq intrinsic
-        let needs_intrinsic = ty.elem != *target_elem;
-        let body = if needs_intrinsic && inner_kind(ty.elem) != InnerKind::Si
-            || inner_kind(*target_elem) != InnerKind::Si
-            || ty.elem.size_bytes() != target_elem.size_bytes()
-        {
-            // Different NEON inner types → use vreinterpretq
-            format!("{target_name}(unsafe {{ vreinterpretq_{dst_suffix}_{src_suffix}(self.0) }})")
-        } else if needs_intrinsic {
-            // Both are integer types with same element size — inner type might still differ
-            // (e.g., int32x4_t vs uint32x4_t)
+        // Use vreinterpretq intrinsic for type conversion
+        let body = if ty.elem != *target_elem {
             format!("{target_name}(unsafe {{ vreinterpretq_{dst_suffix}_{src_suffix}(self.0) }})")
         } else {
-            // Same element type (shouldn't happen with allowlist, but handle it)
             "self".to_string()
         };
 
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `{target_name}` (zero-cost)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_{target_name}(self) -> {target_name} {{"
-        )
-        .unwrap();
-        writeln!(code, "        {body}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // Ref variant
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `&{target_name}` (zero-cost pointer cast)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_ref_{target_name}(&self) -> &{target_name} {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        unsafe {{ &*(self as *const Self as *const {target_name}) }}"
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // Mut variant
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `&mut {target_name}` (zero-cost pointer cast)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_mut_{target_name}(&mut self) -> &mut {target_name} {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        unsafe {{ &mut *(self as *mut Self as *mut {target_name}) }}"
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-    }
-
-    code
-}
-
-/// Generate bitcast methods for a single WASM SIMD type.
-pub fn generate_wasm_bitcasts(ty: &SimdType) -> String {
-    let targets = bitcast_targets(ty.elem);
-    if targets.is_empty() {
-        return String::new();
-    }
-
-    let mut code = String::new();
-    writeln!(
-        code,
-        "\n    // ========== Bitcast (reinterpret bits, zero-cost) ==========\n"
-    )
-    .unwrap();
-
-    for target_elem in &targets {
-        let target_ty = SimdType::new(*target_elem, ty.width);
-        let target_name = target_ty.name();
-
-        // All WASM types wrap v128 — just rewrap
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `{target_name}` (zero-cost)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_{target_name}(self) -> {target_name} {{"
-        )
-        .unwrap();
-        writeln!(code, "        {target_name}(self.0)").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // Ref variant
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `&{target_name}` (zero-cost pointer cast)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_ref_{target_name}(&self) -> &{target_name} {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        unsafe {{ &*(self as *const Self as *const {target_name}) }}"
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // Mut variant
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `&mut {target_name}` (zero-cost pointer cast)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_mut_{target_name}(&mut self) -> &mut {target_name} {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        unsafe {{ &mut *(self as *mut Self as *mut {target_name}) }}"
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-    }
-
-    code
-}
-
-/// Generate bitcast methods for polyfill types (delegates to lo/hi).
-pub fn generate_polyfill_bitcasts(
-    src_elem: ElementType,
-    width: SimdWidth,
-    half_width: SimdWidth,
-) -> String {
-    let targets = bitcast_targets(src_elem);
-    if targets.is_empty() {
-        return String::new();
-    }
-
-    let mut code = String::new();
-    writeln!(
-        code,
-        "\n    // ========== Bitcast (reinterpret bits, zero-cost) ==========\n"
-    )
-    .unwrap();
-
-    for target_elem in &targets {
-        let target_ty = SimdType::new(*target_elem, width);
-        let target_name = target_ty.name();
-
-        let half_target = SimdType::new(*target_elem, half_width);
-        let half_target_name = half_target.name();
-
-        // Owned variant — delegate to lo/hi bitcasts
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `{target_name}` (zero-cost)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_{target_name}(self) -> {target_name} {{"
-        )
-        .unwrap();
-        writeln!(code, "        {target_name} {{").unwrap();
-        writeln!(
-            code,
-            "            lo: self.lo.bitcast_{half_target_name}(),"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            hi: self.hi.bitcast_{half_target_name}(),"
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // Ref variant
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `&{target_name}` (zero-cost pointer cast)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_ref_{target_name}(&self) -> &{target_name} {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        unsafe {{ &*(self as *const Self as *const {target_name}) }}"
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // Mut variant
-        writeln!(
-            code,
-            "    /// Reinterpret bits as `&mut {target_name}` (zero-cost pointer cast)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn bitcast_mut_{target_name}(&mut self) -> &mut {target_name} {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        unsafe {{ &mut *(self as *mut Self as *mut {target_name}) }}"
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&indent(&gen_bitcast_triple(&target_name, &body), 4));
     }
 
     code
@@ -456,4 +215,89 @@ fn arm_type_suffix(elem: ElementType) -> &'static str {
         ElementType::I64 => "s64",
         ElementType::U64 => "u64",
     }
+}
+
+// ============================================================================
+// WASM SIMD bitcast generation
+// ============================================================================
+
+/// Generate bitcast methods for a single WASM SIMD type.
+pub fn generate_wasm_bitcasts(ty: &SimdType) -> String {
+    let targets = bitcast_targets(ty.elem);
+    if targets.is_empty() {
+        return String::new();
+    }
+
+    let mut code =
+        String::from("\n    // ========== Bitcast (reinterpret bits, zero-cost) ==========\n\n");
+
+    for target_elem in &targets {
+        let target_ty = SimdType::new(*target_elem, ty.width);
+        let target_name = target_ty.name();
+
+        // All WASM types wrap v128 — just rewrap
+        let body = format!("{target_name}(self.0)");
+        code.push_str(&indent(&gen_bitcast_triple(&target_name, &body), 4));
+    }
+
+    code
+}
+
+// ============================================================================
+// Polyfill bitcast generation
+// ============================================================================
+
+/// Generate bitcast methods for polyfill types (delegates to lo/hi).
+pub fn generate_polyfill_bitcasts(
+    src_elem: ElementType,
+    width: SimdWidth,
+    half_width: SimdWidth,
+) -> String {
+    let targets = bitcast_targets(src_elem);
+    if targets.is_empty() {
+        return String::new();
+    }
+
+    let mut code =
+        String::from("\n    // ========== Bitcast (reinterpret bits, zero-cost) ==========\n\n");
+
+    for target_elem in &targets {
+        let target_ty = SimdType::new(*target_elem, width);
+        let target_name = target_ty.name();
+        let half_target = SimdType::new(*target_elem, half_width);
+        let half_target_name = half_target.name();
+
+        // Owned: delegate to lo/hi bitcasts
+        let owned_body = formatdoc! {"
+            {target_name} {{
+                lo: self.lo.bitcast_{half_target_name}(),
+                hi: self.hi.bitcast_{half_target_name}(),
+            }}"};
+
+        // For polyfill, we generate slightly different code (struct with lo/hi)
+        let methods = formatdoc! {"
+            /// Reinterpret bits as `{target_name}` (zero-cost).
+            #[inline(always)]
+            pub fn bitcast_{target_name}(self) -> {target_name} {{
+                {owned_body}
+            }}
+
+            /// Reinterpret bits as `&{target_name}` (zero-cost pointer cast).
+            #[inline(always)]
+            pub fn bitcast_ref_{target_name}(&self) -> &{target_name} {{
+                unsafe {{ &*(self as *const Self as *const {target_name}) }}
+            }}
+
+            /// Reinterpret bits as `&mut {target_name}` (zero-cost pointer cast).
+            #[inline(always)]
+            pub fn bitcast_mut_{target_name}(&mut self) -> &mut {target_name} {{
+                unsafe {{ &mut *(self as *mut Self as *mut {target_name}) }}
+            }}
+
+        "};
+
+        code.push_str(&indent(&methods, 4));
+    }
+
+    code
 }

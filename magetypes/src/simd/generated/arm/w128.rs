@@ -413,7 +413,6 @@ impl f32x4 {
     pub fn bitcast_mut_i32x4(&mut self) -> &mut i32x4 {
         unsafe { &mut *(self as *mut Self as *mut i32x4) }
     }
-
     /// Reinterpret bits as `u32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u32x4(self) -> u32x4 {
@@ -893,7 +892,6 @@ impl f64x2 {
     pub fn bitcast_mut_i64x2(&mut self) -> &mut i64x2 {
         unsafe { &mut *(self as *mut Self as *mut i64x2) }
     }
-
     /// Reinterpret bits as `u64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u64x2(self) -> u64x2 {
@@ -3024,7 +3022,6 @@ impl i32x4 {
     pub fn bitcast_mut_f32x4(&mut self) -> &mut f32x4 {
         unsafe { &mut *(self as *mut Self as *mut f32x4) }
     }
-
     /// Reinterpret bits as `u32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u32x4(self) -> u32x4 {
@@ -3453,7 +3450,6 @@ impl u32x4 {
     pub fn bitcast_mut_f32x4(&mut self) -> &mut f32x4 {
         unsafe { &mut *(self as *mut Self as *mut f32x4) }
     }
-
     /// Reinterpret bits as `i32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i32x4(self) -> i32x4 {
@@ -3891,7 +3887,6 @@ impl i64x2 {
     pub fn bitcast_mut_f64x2(&mut self) -> &mut f64x2 {
         unsafe { &mut *(self as *mut Self as *mut f64x2) }
     }
-
     /// Reinterpret bits as `u64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u64x2(self) -> u64x2 {
@@ -4310,7 +4305,6 @@ impl u64x2 {
     pub fn bitcast_mut_f64x2(&mut self) -> &mut f64x2 {
         unsafe { &mut *(self as *mut Self as *mut f64x2) }
     }
-
     /// Reinterpret bits as `i64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i64x2(self) -> i64x2 {
