@@ -1511,7 +1511,7 @@ fn run_ci() -> Result<()> {
         .args([
             "clippy",
             "--features",
-            "std macros bytemuck wide __composite avx512",
+            "std macros bytemuck __composite avx512",
             "--",
             "-D",
             "warnings",
@@ -1531,7 +1531,7 @@ fn run_ci() -> Result<()> {
         .args([
             "test",
             "--features",
-            "std macros bytemuck wide __composite avx512",
+            "std macros bytemuck __composite avx512",
         ])
         .status()
         .context("Failed to run tests")?;

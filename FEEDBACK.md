@@ -17,3 +17,9 @@
   - Tokens, traits, stubs all generated; hand-written mod.rs retains only SimdToken trait
   - User OK with API changes ("you can change the api in intuitive or smart ways")
   - User asked about special casing — all special cases are data-driven from registry
+
+- User requested deleting `experiments` and `integrate` folders, updating CLAUDE.md
+  - Removed `src/experiments/`, `src/integrate/`, `benches/wide_comparison.rs`
+  - Removed `__experiments`, `__wide`, `wide` features and `wide` dependency from Cargo.toml
+  - Updated CLAUDE.md: directory structure, CI feature lists, codegen style rules
+  - Added rule: ban `writeln!` chains in codegen, use `r#` raw strings + `formatdoc!`
