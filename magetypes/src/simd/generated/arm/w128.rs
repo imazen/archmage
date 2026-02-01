@@ -1298,6 +1298,15 @@ impl i8x16 {
         Self(unsafe { vshrq_n_s8::<N>(self.0) })
     }
 
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    /// On ARM NEON, this is the same as `shr()` for signed types.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_s8::<N>(self.0) })
+    }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -2100,6 +2109,15 @@ impl i16x8 {
     /// For signed types, this is an arithmetic shift (sign-extending).
     #[inline(always)]
     pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_s16::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    /// On ARM NEON, this is the same as `shr()` for signed types.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_s16::<N>(self.0) })
     }
 
@@ -2933,6 +2951,15 @@ impl i32x4 {
     /// For signed types, this is an arithmetic shift (sign-extending).
     #[inline(always)]
     pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_s32::<N>(self.0) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    /// On ARM NEON, this is the same as `shr()` for signed types.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_s32::<N>(self.0) })
     }
 

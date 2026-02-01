@@ -956,6 +956,18 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
         writeln!(code, "    pub fn shr<const N: u32>(self) -> Self {{").unwrap();
         writeln!(code, "        Self({}(self.0, N))", shr_fn).unwrap();
         writeln!(code, "    }}\n").unwrap();
+
+        // shr_arithmetic for signed types (same as shr on WASM since WASM shr is arithmetic for signed)
+        if ty.elem.is_signed() && !matches!(ty.elem, ElementType::I64) {
+            writeln!(code, "    /// Arithmetic shift right by `N` bits (sign-extending).").unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(code, "    /// The sign bit is replicated into the vacated positions.").unwrap();
+            writeln!(code, "    /// On WASM, this is the same as `shr()` for signed types.").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn shr_arithmetic<const N: u32>(self) -> Self {{").unwrap();
+            writeln!(code, "        Self({}(self.0, N))", shr_fn).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
     }
 
     // all_true and any_true - only for integer types (WASM doesn't have float versions)

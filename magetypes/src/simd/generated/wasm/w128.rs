@@ -1859,6 +1859,15 @@ impl i8x16 {
         Self(i8x16_shr(self.0, N))
     }
 
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    /// On WASM, this is the same as `shr()` for signed types.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: u32>(self) -> Self {
+        Self(i8x16_shr(self.0, N))
+    }
+
     /// Check if all lanes are non-zero (all true)
     #[inline(always)]
     pub fn all_true(self) -> bool {
@@ -2676,6 +2685,15 @@ impl i16x8 {
     /// For signed types, this is an arithmetic shift (sign-extending).
     #[inline(always)]
     pub fn shr<const N: u32>(self) -> Self {
+        Self(i16x8_shr(self.0, N))
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    /// On WASM, this is the same as `shr()` for signed types.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(i16x8_shr(self.0, N))
     }
 
@@ -3528,6 +3546,15 @@ impl i32x4 {
     /// For signed types, this is an arithmetic shift (sign-extending).
     #[inline(always)]
     pub fn shr<const N: u32>(self) -> Self {
+        Self(i32x4_shr(self.0, N))
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    /// On WASM, this is the same as `shr()` for signed types.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(i32x4_shr(self.0, N))
     }
 
