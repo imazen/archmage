@@ -8,7 +8,7 @@
 #![cfg(target_arch = "x86_64")]
 
 use archmage::SimdToken;
-use archmage::tokens::x86::*;
+use archmage::*;
 
 /// SSE2 is baseline on x86_64 and always works.
 #[test]

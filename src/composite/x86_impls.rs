@@ -9,7 +9,7 @@
 
 use super::scalar_ops::{DotProductOrScalar, HorizontalOpsOrScalar, Transpose8x8OrScalar};
 use super::simd_ops::{DotProduct, HorizontalOps, Transpose8x8};
-use crate::tokens::x86::*;
+use crate::tokens::*;
 
 // ============================================================================
 // SIMD Operation Trait Implementations (simd_ops)

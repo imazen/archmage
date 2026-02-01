@@ -40,6 +40,21 @@ pub struct TokenDef {
     pub cargo_feature: Option<String>,
     #[serde(default)]
     pub always_available: bool,
+    /// SimdToken::NAME const value (human-readable).
+    #[serde(default)]
+    pub display_name: Option<String>,
+    /// Extraction method name (e.g., "v2", "v3", "neon").
+    #[serde(default)]
+    pub short_name: Option<String>,
+    /// Parent token in the hierarchy (for extraction method chain).
+    #[serde(default)]
+    pub parent: Option<String>,
+    /// Extra extraction method names (e.g., ["avx512"] for X64V4Token).
+    #[serde(default)]
+    pub extraction_aliases: Vec<String>,
+    /// Doc comment for the struct.
+    #[serde(default)]
+    pub doc: Option<String>,
 }
 
 /// A trait definition.
@@ -54,6 +69,9 @@ pub struct TraitDef {
     pub features: Vec<String>,
     #[serde(default)]
     pub parents: Vec<String>,
+    /// Doc comment for the trait.
+    #[serde(default)]
+    pub doc: Option<String>,
 }
 
 /// A width namespace for multiwidth codegen.
@@ -166,6 +184,7 @@ impl Registry {
         self.validate_width_namespace_tokens()?;
         self.validate_magetypes_file_tokens()?;
         self.validate_polyfill_tokens()?;
+        self.validate_token_parents()?;
         Ok(())
     }
 
@@ -298,6 +317,31 @@ impl Registry {
                     p.mod_name,
                     p.token
                 );
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_token_parents(&self) -> Result<()> {
+        let token_names: HashSet<&str> = self.token.iter().map(|t| t.name.as_str()).collect();
+
+        for token in &self.token {
+            if let Some(parent) = &token.parent {
+                if !token_names.contains(parent.as_str()) {
+                    bail!("Token {} references unknown parent: {}", token.name, parent);
+                }
+                // Parent must be same arch
+                if let Some(parent_def) = self.token.iter().find(|t| t.name == *parent) {
+                    if parent_def.arch != token.arch {
+                        bail!(
+                            "Token {} (arch={}) has parent {} (arch={}) — must be same arch",
+                            token.name,
+                            token.arch,
+                            parent,
+                            parent_def.arch
+                        );
+                    }
+                }
             }
         }
         Ok(())

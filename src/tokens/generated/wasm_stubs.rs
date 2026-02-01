@@ -1,10 +1,9 @@
-//! WASM token stubs for non-WASM architectures.
+//! Generated from token-registry.toml — DO NOT EDIT.
 //!
-//! These types exist so cross-platform code can reference them without cfg guards.
-//! `summon()` always returns `None` on non-WASM.
+//! Stub tokens: `summon()` always returns `None`.
 
-use super::Has128BitSimd;
-use super::SimdToken;
+use crate::tokens::Has128BitSimd;
+use crate::tokens::SimdToken;
 
 /// Stub for SIMD128 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]

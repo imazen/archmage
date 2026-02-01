@@ -6,7 +6,7 @@
 use core::arch::x86_64::*;
 
 use crate::simd_fn;
-use crate::tokens::x86::X64V3Token;
+use crate::tokens::X64V3Token;
 
 /// Horizontal sum of 8 f32s using AVX2.
 ///

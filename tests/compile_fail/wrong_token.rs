@@ -1,7 +1,7 @@
 //! Test that using the wrong token type fails to compile.
 
 use archmage::SimdToken;
-use archmage::tokens::x86::{X64V2Token, X64V3Token};
+use archmage::{X64V2Token, X64V3Token};
 
 fn requires_x64v3(_token: X64V3Token) {}
 

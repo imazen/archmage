@@ -1,16 +1,11 @@
-//! AVX-512 capability tokens for x86/x86_64.
+//! Generated from token-registry.toml — DO NOT EDIT.
 //!
-//! This module provides:
-//! - `Avx512Token` / `X64V4Token` - AVX-512 F+CD+VL+DQ+BW (x86-64-v4 level)
-//! - `Avx512ModernToken` - Full modern AVX-512 (Ice Lake / Zen 4)
-//! - `Avx512Fp16Token` - AVX-512 FP16 (Sapphire Rapids+)
+//! Regenerate with: cargo xtask generate
 
-use super::SimdToken;
-use super::X64V3Token;
-
-// ============================================================================
-// AVX-512 Token (F + CD + VL + DQ + BW = x86-64-v4)
-// ============================================================================
+use super::x86::X64V2Token;
+use super::x86::X64V3Token;
+use crate::tokens::SimdToken;
+use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasX64V2, HasX64V4};
 
 /// Proof that AVX-512 (F + CD + VL + DQ + BW) is available.
 ///
@@ -20,23 +15,16 @@ use super::X64V3Token;
 ///
 /// Note: Intel 12th-14th gen consumer CPUs do NOT have AVX-512.
 #[derive(Clone, Copy, Debug)]
-pub struct Avx512Token {
+pub struct X64V4Token {
     _private: (),
 }
 
-impl SimdToken for Avx512Token {
+impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // Explicit cumulative check: all v4 AVX-512 features + v3 baseline
-        if crate::is_x86_feature_available!("avx512f")
-            && crate::is_x86_feature_available!("avx512cd")
-            && crate::is_x86_feature_available!("avx512vl")
-            && crate::is_x86_feature_available!("avx512dq")
-            && crate::is_x86_feature_available!("avx512bw")
-            // v3 baseline
-            && crate::is_x86_feature_available!("sse3")
+        if crate::is_x86_feature_available!("sse3")
             && crate::is_x86_feature_available!("ssse3")
             && crate::is_x86_feature_available!("sse4.1")
             && crate::is_x86_feature_available!("sse4.2")
@@ -48,6 +36,11 @@ impl SimdToken for Avx512Token {
             && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("f16c")
             && crate::is_x86_feature_available!("lzcnt")
+            && crate::is_x86_feature_available!("avx512f")
+            && crate::is_x86_feature_available!("avx512bw")
+            && crate::is_x86_feature_available!("avx512cd")
+            && crate::is_x86_feature_available!("avx512dq")
+            && crate::is_x86_feature_available!("avx512vl")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -61,32 +54,22 @@ impl SimdToken for Avx512Token {
     }
 }
 
-impl Avx512Token {
-    /// Get a v3 token (AVX-512 implies v3)
+impl X64V4Token {
+    /// Get a X64V3Token (AVX-512 implies x86-64-v3)
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
+    /// Get a X64V2Token (AVX-512 implies x86-64-v2)
+    #[inline(always)]
+    pub fn v2(self) -> X64V2Token {
+        unsafe { X64V2Token::forge_token_dangerously() }
+    }
 }
-
-/// Type alias for [`Avx512Token`] using the x86-64-v4 microarchitecture level name.
-///
-/// x86-64-v4 = v3 + AVX-512F + AVX-512CD + AVX-512VL + AVX-512DQ + AVX-512BW.
-/// This is the Xeon Skylake-SP (2017) / Zen 4 (2022) baseline.
-pub type X64V4Token = Avx512Token;
-
-/// Friendly alias for [`Avx512Token`] / [`X64V4Token`].
-///
-/// Pairs with [`Desktop64`](super::Desktop64) (x86-64-v3).
-pub type Server64 = Avx512Token;
-
-// ============================================================================
-// AVX-512 Modern Token (Ice Lake / Zen 4)
-// ============================================================================
 
 /// Proof that modern AVX-512 features are available (Ice Lake / Zen 4 level).
 ///
-/// This includes all of [`Avx512Token`] (F+CD+VL+DQ+BW) plus:
+/// This includes all of `X64V4Token` (F+CD+VL+DQ+BW) plus:
 /// - VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI, BF16
 /// - VPCLMULQDQ, GFNI, VAES
 ///
@@ -102,24 +85,7 @@ impl SimdToken for Avx512ModernToken {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // All modern AVX-512 features
-        if crate::is_x86_feature_available!("avx512f")
-            && crate::is_x86_feature_available!("avx512cd")
-            && crate::is_x86_feature_available!("avx512vl")
-            && crate::is_x86_feature_available!("avx512dq")
-            && crate::is_x86_feature_available!("avx512bw")
-            && crate::is_x86_feature_available!("avx512vpopcntdq")
-            && crate::is_x86_feature_available!("avx512ifma")
-            && crate::is_x86_feature_available!("avx512vbmi")
-            && crate::is_x86_feature_available!("avx512vbmi2")
-            && crate::is_x86_feature_available!("avx512bitalg")
-            && crate::is_x86_feature_available!("avx512vnni")
-            && crate::is_x86_feature_available!("avx512bf16")
-            && crate::is_x86_feature_available!("vpclmulqdq")
-            && crate::is_x86_feature_available!("gfni")
-            && crate::is_x86_feature_available!("vaes")
-            // v3 baseline
-            && crate::is_x86_feature_available!("sse3")
+        if crate::is_x86_feature_available!("sse3")
             && crate::is_x86_feature_available!("ssse3")
             && crate::is_x86_feature_available!("sse4.1")
             && crate::is_x86_feature_available!("sse4.2")
@@ -131,6 +97,21 @@ impl SimdToken for Avx512ModernToken {
             && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("f16c")
             && crate::is_x86_feature_available!("lzcnt")
+            && crate::is_x86_feature_available!("avx512f")
+            && crate::is_x86_feature_available!("avx512bw")
+            && crate::is_x86_feature_available!("avx512cd")
+            && crate::is_x86_feature_available!("avx512dq")
+            && crate::is_x86_feature_available!("avx512vl")
+            && crate::is_x86_feature_available!("avx512vpopcntdq")
+            && crate::is_x86_feature_available!("avx512ifma")
+            && crate::is_x86_feature_available!("avx512vbmi")
+            && crate::is_x86_feature_available!("avx512vbmi2")
+            && crate::is_x86_feature_available!("avx512bitalg")
+            && crate::is_x86_feature_available!("avx512vnni")
+            && crate::is_x86_feature_available!("avx512bf16")
+            && crate::is_x86_feature_available!("vpclmulqdq")
+            && crate::is_x86_feature_available!("gfni")
+            && crate::is_x86_feature_available!("vaes")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -145,28 +126,28 @@ impl SimdToken for Avx512ModernToken {
 }
 
 impl Avx512ModernToken {
-    /// Get an Avx512Token (base AVX-512)
-    #[inline(always)]
-    pub fn avx512(self) -> Avx512Token {
-        unsafe { Avx512Token::forge_token_dangerously() }
-    }
-
-    /// Get a v4 token
+    /// Get a X64V4Token (AVX-512Modern implies AVX-512)
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 
-    /// Get a v3 token
+    /// Get a X64V4Token (alias for `.v4()`)
+    #[inline(always)]
+    pub fn avx512(self) -> X64V4Token {
+        unsafe { X64V4Token::forge_token_dangerously() }
+    }
+    /// Get a X64V3Token (AVX-512Modern implies x86-64-v3)
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
+    /// Get a X64V2Token (AVX-512Modern implies x86-64-v2)
+    #[inline(always)]
+    pub fn v2(self) -> X64V2Token {
+        unsafe { X64V2Token::forge_token_dangerously() }
+    }
 }
-
-// ============================================================================
-// AVX-512 FP16 Token (Sapphire Rapids+)
-// ============================================================================
 
 /// Proof that AVX-512 FP16 (half-precision) is available.
 ///
@@ -185,14 +166,7 @@ impl SimdToken for Avx512Fp16Token {
 
     #[inline(always)]
     fn try_new() -> Option<Self> {
-        // FP16 requires the full v4 feature set + fp16
-        if crate::is_x86_feature_available!("avx512fp16")
-            && crate::is_x86_feature_available!("avx512f")
-            && crate::is_x86_feature_available!("avx512cd")
-            && crate::is_x86_feature_available!("avx512vl")
-            && crate::is_x86_feature_available!("avx512dq")
-            && crate::is_x86_feature_available!("avx512bw")
-            && crate::is_x86_feature_available!("sse3")
+        if crate::is_x86_feature_available!("sse3")
             && crate::is_x86_feature_available!("ssse3")
             && crate::is_x86_feature_available!("sse4.1")
             && crate::is_x86_feature_available!("sse4.2")
@@ -204,6 +178,12 @@ impl SimdToken for Avx512Fp16Token {
             && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("f16c")
             && crate::is_x86_feature_available!("lzcnt")
+            && crate::is_x86_feature_available!("avx512f")
+            && crate::is_x86_feature_available!("avx512bw")
+            && crate::is_x86_feature_available!("avx512cd")
+            && crate::is_x86_feature_available!("avx512dq")
+            && crate::is_x86_feature_available!("avx512vl")
+            && crate::is_x86_feature_available!("avx512fp16")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -218,21 +198,47 @@ impl SimdToken for Avx512Fp16Token {
 }
 
 impl Avx512Fp16Token {
-    /// Get an Avx512Token
-    #[inline(always)]
-    pub fn avx512(self) -> Avx512Token {
-        unsafe { Avx512Token::forge_token_dangerously() }
-    }
-
-    /// Get a v4 token
+    /// Get a X64V4Token (AVX-512FP16 implies AVX-512)
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 
-    /// Get a v3 token
+    /// Get a X64V4Token (alias for `.v4()`)
+    #[inline(always)]
+    pub fn avx512(self) -> X64V4Token {
+        unsafe { X64V4Token::forge_token_dangerously() }
+    }
+    /// Get a X64V3Token (AVX-512FP16 implies x86-64-v3)
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
+    /// Get a X64V2Token (AVX-512FP16 implies x86-64-v2)
+    #[inline(always)]
+    pub fn v2(self) -> X64V2Token {
+        unsafe { X64V2Token::forge_token_dangerously() }
+    }
 }
+
+/// Type alias for [`X64V4Token`].
+pub type Avx512Token = X64V4Token;
+
+/// Type alias for [`X64V4Token`].
+pub type Server64 = X64V4Token;
+
+impl Has128BitSimd for X64V4Token {}
+impl Has128BitSimd for Avx512ModernToken {}
+impl Has128BitSimd for Avx512Fp16Token {}
+impl Has256BitSimd for X64V4Token {}
+impl Has256BitSimd for Avx512ModernToken {}
+impl Has256BitSimd for Avx512Fp16Token {}
+impl Has512BitSimd for X64V4Token {}
+impl Has512BitSimd for Avx512ModernToken {}
+impl Has512BitSimd for Avx512Fp16Token {}
+impl HasX64V2 for X64V4Token {}
+impl HasX64V2 for Avx512ModernToken {}
+impl HasX64V2 for Avx512Fp16Token {}
+impl HasX64V4 for X64V4Token {}
+impl HasX64V4 for Avx512ModernToken {}
+impl HasX64V4 for Avx512Fp16Token {}

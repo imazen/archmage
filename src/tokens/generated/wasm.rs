@@ -1,6 +1,9 @@
-//! WebAssembly SIMD capability tokens
+//! Generated from token-registry.toml — DO NOT EDIT.
+//!
+//! Regenerate with: cargo xtask generate
 
-use super::SimdToken;
+use crate::tokens::Has128BitSimd;
+use crate::tokens::SimdToken;
 
 /// Proof that WASM SIMD128 is available.
 #[derive(Clone, Copy, Debug)]
@@ -29,21 +32,4 @@ impl SimdToken for Simd128Token {
     }
 }
 
-// ============================================================================
-// Capability Marker Trait Implementations
-// ============================================================================
-
-use super::Has128BitSimd;
-
-// WASM SIMD128 provides 128-bit SIMD
 impl Has128BitSimd for Simd128Token {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_token_is_zst() {
-        assert_eq!(core::mem::size_of::<Simd128Token>(), 0);
-    }
-}

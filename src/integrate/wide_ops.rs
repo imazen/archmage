@@ -3,7 +3,7 @@
 //! Provides token-gated operations on `wide` types like `f32x8`.
 
 #[cfg(target_arch = "x86_64")]
-use crate::tokens::x86::*;
+use crate::tokens::*;
 
 #[cfg(all(feature = "__wide", target_arch = "x86_64"))]
 use wide::f32x8;

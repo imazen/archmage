@@ -11,7 +11,7 @@
 #![allow(clippy::needless_return, clippy::identity_op, clippy::unnecessary_cast)]
 #![allow(clippy::eq_op)]
 
-use archmage::tokens::x86::Avx512ModernToken;
+use archmage::Avx512ModernToken;
 use archmage::{SimdToken, arcane};
 use core::arch::x86_64::*;
 use core::hint::black_box;

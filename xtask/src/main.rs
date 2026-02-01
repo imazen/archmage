@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 
 mod registry;
 mod simd_types;
+mod token_gen;
 
 /// Version of safe_unaligned_simd we're generating from
 const SAFE_SIMD_VERSION: &str = "0.2.3";
@@ -294,10 +295,10 @@ fn validate_try_new(reg: &registry::Registry) -> Result<()> {
     println!("=== try_new() Feature Verification ===\n");
 
     let token_files = [
-        ("src/tokens/x86.rs", "x86"),
-        ("src/tokens/x86_avx512.rs", "x86"),
-        ("src/tokens/arm.rs", "aarch64"),
-        ("src/tokens/wasm.rs", "wasm"),
+        ("src/tokens/generated/x86.rs", "x86"),
+        ("src/tokens/generated/x86_avx512.rs", "x86"),
+        ("src/tokens/generated/arm.rs", "aarch64"),
+        ("src/tokens/generated/wasm.rs", "wasm"),
     ];
 
     // Regex to extract is_x86_feature_available!("feature") calls
@@ -1006,6 +1007,35 @@ pub(crate) use registry::*;
             Err(e) => println!("  Warning: could not run rustfmt: {}", e),
         }
     }
+
+    // Generate token implementations from registry
+    println!("\n=== Generating Token Implementations ===");
+    let token_dir = PathBuf::from("src/tokens/generated");
+    fs::create_dir_all(&token_dir)?;
+    let token_files = token_gen::generate_token_files(&reg);
+    let mut token_total_bytes = 0;
+    for (rel_path, content) in &token_files {
+        let full_path = token_dir.join(rel_path);
+        fs::write(&full_path, content)?;
+        token_total_bytes += content.len();
+        println!("  Wrote {} ({} bytes)", full_path.display(), content.len());
+    }
+    println!(
+        "Total token files: {} files, {} bytes",
+        token_files.len(),
+        token_total_bytes
+    );
+
+    // Run rustfmt on generated token files
+    for (rel_path, _) in &token_files {
+        let full_path = token_dir.join(rel_path);
+        let _ = std::process::Command::new("rustfmt")
+            .arg("--edition")
+            .arg("2024")
+            .arg(&full_path)
+            .status();
+    }
+    println!("  Formatted {} token files", token_files.len());
 
     // Generate SIMD types (wide-like ergonomic types) into magetypes crate
     println!("\n=== Generating SIMD Types (magetypes) ===");

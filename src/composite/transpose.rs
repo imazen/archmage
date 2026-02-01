@@ -7,7 +7,7 @@
 use core::arch::x86_64::*;
 
 use crate::simd_fn;
-use crate::tokens::x86::X64V3Token;
+use crate::tokens::X64V3Token;
 
 /// Transpose an 8x8 f32 matrix in-place using AVX2.
 ///
