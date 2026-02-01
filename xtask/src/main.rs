@@ -998,7 +998,8 @@ fn verify_intrinsic_soundness() -> Result<()> {
     ).expect("invalid arm regex");
     let wasm_re = Regex::new(
         r"\b((?:f32x4|f64x2|i8x16|i16x8|i32x4|i64x2|u8x16|u16x8|u32x4|u64x2|v128)_\w+)\s*[\(<]",
-    ).expect("invalid wasm regex");
+    )
+    .expect("invalid wasm regex");
 
     // Regex to detect method-level token parameters (higher-level tokens used as function args)
     // Handles both `X64V4Token` and `archmage::X64V4Token` patterns
@@ -1093,8 +1094,7 @@ fn verify_intrinsic_soundness() -> Result<()> {
                     if !missing.is_empty() {
                         errors.push(format!(
                             "  {} in {} ({}): requires {:?}, MISSING: {:?}",
-                            intrinsic, mapping.rel_path, effective_token,
-                            required, missing
+                            intrinsic, mapping.rel_path, effective_token, required, missing
                         ));
                     } else {
                         verified_count += 1;
@@ -1114,15 +1114,24 @@ fn verify_intrinsic_soundness() -> Result<()> {
 
     if errors.is_empty() {
         println!("\n✓ Soundness verification PASSED");
-        println!("  All {} verified intrinsics are valid for their gating tokens.", verified_count);
+        println!(
+            "  All {} verified intrinsics are valid for their gating tokens.",
+            verified_count
+        );
         Ok(())
     } else {
         println!("\n✗ Soundness verification FAILED");
-        println!("  {} intrinsic(s) use features not provided by their gating token:\n", errors.len());
+        println!(
+            "  {} intrinsic(s) use features not provided by their gating token:\n",
+            errors.len()
+        );
         for err in &errors {
             eprintln!("{}", err);
         }
-        bail!("Soundness verification FAILED - {} intrinsics use features beyond their gating token", errors.len())
+        bail!(
+            "Soundness verification FAILED - {} intrinsics use features beyond their gating token",
+            errors.len()
+        )
     }
 }
 
