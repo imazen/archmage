@@ -77,21 +77,21 @@ const PLATFORMS: &[PlatformConfig] = &[
         doc: "Polyfilled 256-bit types using SSE (128-bit) operations.",
         cfg: "target_arch = \"x86_64\"",
         token: "X64V3Token",
-        w128_import: "crate::simd::x86::w128",
+        w128_import: "crate::simd::generated::x86::w128",
     },
     PlatformConfig {
         mod_name: "neon",
         doc: "Polyfilled 256-bit types using NEON (128-bit) operations.",
         cfg: "target_arch = \"aarch64\"",
         token: "NeonToken",
-        w128_import: "crate::simd::arm::w128",
+        w128_import: "crate::simd::generated::arm::w128",
     },
     PlatformConfig {
         mod_name: "simd128",
         doc: "Polyfilled 256-bit types using WASM SIMD128 (128-bit) operations.",
         cfg: "target_arch = \"wasm32\"",
         token: "Simd128Token",
-        w128_import: "crate::simd::wasm::w128",
+        w128_import: "crate::simd::generated::wasm::w128",
     },
 ];
 
@@ -114,7 +114,7 @@ const W512_PLATFORMS: &[W512PlatformConfig] = &[W512PlatformConfig {
     doc: "Polyfilled 512-bit types using AVX2 (256-bit) operations.",
     cfg: "target_arch = \"x86_64\"",
     token: "X64V3Token",
-    w256_import: "crate::simd::x86::w256",
+    w256_import: "crate::simd::generated::x86::w256",
 }];
 
 /// Generate the entire polyfill.rs file.

@@ -75,8 +75,8 @@ impl Parse for ArcaneArgs {
 
 // Token-to-features and trait-to-features mappings are generated from
 // token-registry.toml by xtask. Regenerate with: cargo run -p xtask -- generate
-mod generated_registry;
-use generated_registry::{token_to_features, trait_to_features};
+mod generated;
+use generated::{token_to_features, trait_to_features};
 
 /// Result of extracting token info from a type.
 enum TokenTypeInfo {
@@ -658,7 +658,7 @@ impl Parse for MultiwidthArgs {
     }
 }
 
-use generated_registry::{WidthConfig, ARM_WIDTH_CONFIGS, WASM_WIDTH_CONFIGS, X86_WIDTH_CONFIGS};
+use generated::{WidthConfig, ARM_WIDTH_CONFIGS, WASM_WIDTH_CONFIGS, X86_WIDTH_CONFIGS};
 
 /// Generate width-specialized SIMD code.
 ///
@@ -1174,7 +1174,7 @@ fn generate_dispatchers(
 mod tests {
     use super::*;
 
-    use super::generated_registry::{ALL_CONCRETE_TOKENS, ALL_TRAIT_NAMES};
+    use super::generated::{ALL_CONCRETE_TOKENS, ALL_TRAIT_NAMES};
 
     #[test]
     fn every_concrete_token_is_in_token_to_features() {

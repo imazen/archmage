@@ -875,15 +875,19 @@ fn generate_reference_docs_new() -> Result<()> {
     let db = load_intrinsic_database()?;
     println!("Loaded {} intrinsics for reference docs", db.len());
 
+    // Create docs/generated directory
+    let docs_gen_dir = PathBuf::from("docs/generated");
+    fs::create_dir_all(&docs_gen_dir)?;
+
     // Generate x86 reference
     let x86_ref = generate_x86_reference(&db);
-    let x86_path = PathBuf::from("docs/x86-intrinsics-by-token.md");
+    let x86_path = docs_gen_dir.join("x86-intrinsics-by-token.md");
     fs::write(&x86_path, &x86_ref)?;
     println!("  Wrote {} ({} bytes)", x86_path.display(), x86_ref.len());
 
     // Generate aarch64 reference
     let aarch64_ref = generate_aarch64_reference(&db);
-    let aarch64_path = PathBuf::from("docs/aarch64-intrinsics-by-token.md");
+    let aarch64_path = docs_gen_dir.join("aarch64-intrinsics-by-token.md");
     fs::write(&aarch64_path, &aarch64_ref)?;
     println!(
         "  Wrote {} ({} bytes)",
@@ -903,7 +907,7 @@ fn generate_reference_docs_new() -> Result<()> {
     println!("  Extracted {} safe memory operations", safe_ops.len());
 
     let mem_ref = generate_memory_ops_reference(&safe_ops);
-    let mem_path = PathBuf::from("docs/memory-ops-reference.md");
+    let mem_path = docs_gen_dir.join("memory-ops-reference.md");
     fs::write(&mem_path, &mem_ref)?;
     println!("  Wrote {} ({} bytes)", mem_path.display(), mem_ref.len());
 
@@ -921,6 +925,9 @@ fn main() -> Result<()> {
         eprintln!(
             "       cargo xtask validate-registry   - Parse and validate token-registry.toml"
         );
+        eprintln!(
+            "       cargo xtask parity              - Check API parity across architectures"
+        );
         std::process::exit(1);
     }
 
@@ -932,6 +939,7 @@ fn main() -> Result<()> {
             validate_try_new(&reg)?;
         }
         "validate-registry" => validate_registry()?,
+        "parity" => check_api_parity()?,
         _ => {
             eprintln!("Unknown command: {}", args[1]);
             std::process::exit(1);
@@ -960,21 +968,37 @@ fn generate_all() -> Result<()> {
     let registry_path = PathBuf::from("token-registry.toml");
     let reg = registry::Registry::load(&registry_path)?;
     let generated = reg.generate_macro_registry();
-    let gen_path = PathBuf::from("archmage-macros/src/generated_registry.rs");
+    let gen_dir = PathBuf::from("archmage-macros/src/generated");
+    fs::create_dir_all(&gen_dir)?;
+    let gen_path = gen_dir.join("registry.rs");
     fs::write(&gen_path, &generated)?;
     println!("  Wrote {} ({} bytes)", gen_path.display(), generated.len());
 
-    // Run rustfmt on the generated file so it stays fmt-clean
+    // Write generated/mod.rs for the macro crate
+    let gen_mod = r#"//! Generated code from token-registry.toml.
+//!
+//! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+
+mod registry;
+pub(crate) use registry::*;
+"#;
+    let gen_mod_path = gen_dir.join("mod.rs");
+    fs::write(&gen_mod_path, gen_mod)?;
+    println!("  Wrote {} ({} bytes)", gen_mod_path.display(), gen_mod.len());
+
+    // Run rustfmt on the generated files so they stay fmt-clean
     // archmage-macros uses edition 2021
-    let fmt_status = std::process::Command::new("rustfmt")
-        .arg("--edition")
-        .arg("2021")
-        .arg(&gen_path)
-        .status();
-    match fmt_status {
-        Ok(s) if s.success() => println!("  Formatted {}", gen_path.display()),
-        Ok(s) => println!("  Warning: rustfmt exited with {}", s),
-        Err(e) => println!("  Warning: could not run rustfmt: {}", e),
+    for path in [&gen_path, &gen_mod_path] {
+        let fmt_status = std::process::Command::new("rustfmt")
+            .arg("--edition")
+            .arg("2021")
+            .arg(path)
+            .status();
+        match fmt_status {
+            Ok(s) if s.success() => println!("  Formatted {}", path.display()),
+            Ok(s) => println!("  Warning: rustfmt exited with {}", s),
+            Err(e) => println!("  Warning: could not run rustfmt: {}", e),
+        }
     }
 
     // Generate SIMD types (wide-like ergonomic types) into magetypes crate
@@ -982,7 +1006,10 @@ fn generate_all() -> Result<()> {
 
     let simd_dir = PathBuf::from("magetypes/src/simd");
     fs::create_dir_all(&simd_dir)?;
-    fs::create_dir_all(simd_dir.join("x86"))?;
+    fs::create_dir_all(simd_dir.join("generated"))?;
+    fs::create_dir_all(simd_dir.join("generated/x86"))?;
+    fs::create_dir_all(simd_dir.join("generated/arm"))?;
+    fs::create_dir_all(simd_dir.join("generated/wasm"))?;
 
     // Generate split files
     let simd_files = simd_types::generate_simd_types_split();
@@ -1040,6 +1067,271 @@ fn generate_all() -> Result<()> {
     println!("\n=== Generation Complete ===");
     println!("  - SIMD types: magetypes/src/simd/");
     println!("  - Reference docs: docs/*.md");
+
+    Ok(())
+}
+
+// ============================================================================
+// API Parity Detection
+// ============================================================================
+
+/// A parsed method from generated SIMD types.
+#[derive(Debug, Clone)]
+struct ParsedMethod {
+    name: String,
+    signature: String,
+    has_doc: bool,
+}
+
+/// A parsed SIMD type with its methods.
+#[derive(Debug, Clone)]
+struct ParsedType {
+    name: String,
+    methods: Vec<ParsedMethod>,
+}
+
+/// Parse methods from a generated file.
+fn parse_simd_methods(content: &str) -> Vec<ParsedType> {
+    let mut types = Vec::new();
+    let mut current_type: Option<String> = None;
+    let mut current_methods = Vec::new();
+    let mut in_impl_block = false;
+    let mut brace_depth = 0;
+    let mut last_line_was_doc = false;
+
+    // Regex to match impl blocks: impl TypeName { or impl TypeName for SomeTrait {
+    let impl_re = Regex::new(r"^impl\s+(\w+x\d+)\s*\{").expect("invalid impl regex");
+    // Regex to match pub fn declarations
+    let fn_re = Regex::new(r"^\s*pub\s+fn\s+(\w+)\s*(<[^>]*>)?\s*\(([^)]*)\)(\s*->\s*.+)?")
+        .expect("invalid fn regex");
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        // Track doc comments
+        if trimmed.starts_with("///") || trimmed.starts_with("#[doc") {
+            last_line_was_doc = true;
+            continue;
+        }
+
+        // Track impl blocks
+        if let Some(cap) = impl_re.captures(trimmed) {
+            // Save previous type if any
+            if let Some(type_name) = current_type.take() {
+                if !current_methods.is_empty() {
+                    types.push(ParsedType {
+                        name: type_name,
+                        methods: std::mem::take(&mut current_methods),
+                    });
+                }
+            }
+            current_type = Some(cap[1].to_string());
+            in_impl_block = true;
+            brace_depth = 1;
+            last_line_was_doc = false;
+            continue;
+        }
+
+        // Track brace depth
+        if in_impl_block {
+            for c in trimmed.chars() {
+                match c {
+                    '{' => brace_depth += 1,
+                    '}' => {
+                        brace_depth -= 1;
+                        if brace_depth == 0 {
+                            in_impl_block = false;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            // Parse method signatures
+            if let Some(cap) = fn_re.captures(trimmed) {
+                let name = cap[1].to_string();
+                let generics = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+                let params = &cap[3];
+                let ret = cap.get(4).map(|m| m.as_str()).unwrap_or("");
+                let signature = format!("fn {}{}({}){}", name, generics, params, ret);
+
+                current_methods.push(ParsedMethod {
+                    name,
+                    signature,
+                    has_doc: last_line_was_doc,
+                });
+            }
+        }
+
+        last_line_was_doc = false;
+    }
+
+    // Save last type
+    if let Some(type_name) = current_type {
+        if !current_methods.is_empty() {
+            types.push(ParsedType {
+                name: type_name,
+                methods: current_methods,
+            });
+        }
+    }
+
+    types
+}
+
+/// Check API parity across architectures.
+fn check_api_parity() -> Result<()> {
+    println!("=== API Parity Detection ===\n");
+
+    let simd_dir = PathBuf::from("magetypes/src/simd/generated");
+
+    // Parse all architecture files
+    let mut x86_types: BTreeMap<String, Vec<ParsedMethod>> = BTreeMap::new();
+    let mut arm_types: BTreeMap<String, Vec<ParsedMethod>> = BTreeMap::new();
+    let mut wasm_types: BTreeMap<String, Vec<ParsedMethod>> = BTreeMap::new();
+
+    // x86 files
+    for width in ["w128", "w256", "w512"] {
+        let path = simd_dir.join(format!("x86/{}.rs", width));
+        if path.exists() {
+            let content = fs::read_to_string(&path)?;
+            for parsed_type in parse_simd_methods(&content) {
+                x86_types
+                    .entry(parsed_type.name.clone())
+                    .or_default()
+                    .extend(parsed_type.methods);
+            }
+        }
+    }
+
+    // ARM file
+    let arm_path = simd_dir.join("arm/w128.rs");
+    if arm_path.exists() {
+        let content = fs::read_to_string(&arm_path)?;
+        for parsed_type in parse_simd_methods(&content) {
+            arm_types
+                .entry(parsed_type.name.clone())
+                .or_default()
+                .extend(parsed_type.methods);
+        }
+    }
+
+    // WASM file
+    let wasm_path = simd_dir.join("wasm/w128.rs");
+    if wasm_path.exists() {
+        let content = fs::read_to_string(&wasm_path)?;
+        for parsed_type in parse_simd_methods(&content) {
+            wasm_types
+                .entry(parsed_type.name.clone())
+                .or_default()
+                .extend(parsed_type.methods);
+        }
+    }
+
+    println!("Parsed types:");
+    println!("  x86:  {} types", x86_types.len());
+    println!("  ARM:  {} types", arm_types.len());
+    println!("  WASM: {} types\n", wasm_types.len());
+
+    // Compare W128 types across all three architectures
+    let w128_types = ["f32x4", "f64x2", "i8x16", "u8x16", "i16x8", "u16x8", "i32x4", "u32x4", "i64x2", "u64x2"];
+
+    let mut parity_issues = Vec::new();
+    let mut doc_issues = Vec::new();
+
+    for type_name in w128_types {
+        let x86_methods: BTreeSet<String> = x86_types
+            .get(type_name)
+            .map(|m| m.iter().map(|p| p.name.clone()).collect())
+            .unwrap_or_default();
+        let arm_methods: BTreeSet<String> = arm_types
+            .get(type_name)
+            .map(|m| m.iter().map(|p| p.name.clone()).collect())
+            .unwrap_or_default();
+        let wasm_methods: BTreeSet<String> = wasm_types
+            .get(type_name)
+            .map(|m| m.iter().map(|p| p.name.clone()).collect())
+            .unwrap_or_default();
+
+        // Find methods missing from each architecture
+        let all_methods: BTreeSet<String> = x86_methods
+            .union(&arm_methods)
+            .cloned()
+            .collect::<BTreeSet<_>>()
+            .union(&wasm_methods)
+            .cloned()
+            .collect();
+
+        for method in &all_methods {
+            let in_x86 = x86_methods.contains(method);
+            let in_arm = arm_methods.contains(method);
+            let in_wasm = wasm_methods.contains(method);
+
+            if !in_x86 || !in_arm || !in_wasm {
+                let mut missing = Vec::new();
+                if !in_x86 {
+                    missing.push("x86");
+                }
+                if !in_arm {
+                    missing.push("ARM");
+                }
+                if !in_wasm {
+                    missing.push("WASM");
+                }
+                parity_issues.push(format!(
+                    "  {}::{} — missing from: {}",
+                    type_name,
+                    method,
+                    missing.join(", ")
+                ));
+            }
+        }
+
+        // Check doc coverage
+        for methods in [&x86_types, &arm_types, &wasm_types] {
+            if let Some(type_methods) = methods.get(type_name) {
+                for m in type_methods {
+                    if !m.has_doc && !["splat", "load", "store", "to_array", "from_array", "zero", "new"].contains(&m.name.as_str()) {
+                        doc_issues.push(format!("  {}::{} — no doc comment", type_name, m.name));
+                    }
+                }
+            }
+        }
+    }
+
+    // Report results
+    println!("=== Parity Report ===\n");
+
+    if parity_issues.is_empty() {
+        println!("All W128 types have identical APIs across x86/ARM/WASM!");
+    } else {
+        println!("Methods with architecture-specific availability:");
+        parity_issues.sort();
+        parity_issues.dedup();
+        for issue in &parity_issues {
+            println!("{}", issue);
+        }
+    }
+
+    println!("\n=== Doc Coverage ===\n");
+
+    if doc_issues.is_empty() {
+        println!("All methods have doc comments!");
+    } else {
+        println!("Methods missing doc comments ({} total):", doc_issues.len());
+        doc_issues.sort();
+        doc_issues.dedup();
+        for issue in doc_issues.iter().take(20) {
+            println!("{}", issue);
+        }
+        if doc_issues.len() > 20 {
+            println!("  ... and {} more", doc_issues.len() - 20);
+        }
+    }
+
+    println!("\n=== Summary ===");
+    println!("  Parity issues: {}", parity_issues.len());
+    println!("  Doc gaps:      {}", doc_issues.len());
 
     Ok(())
 }

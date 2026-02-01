@@ -10,7 +10,7 @@
 pub mod sse {
     //! Polyfilled 256-bit types using SSE (128-bit) operations.
 
-    use crate::simd::x86::w128::{
+    use crate::simd::generated::x86::w128::{
         f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
     };
     use archmage::X64V3Token;
@@ -1980,7 +1980,7 @@ pub mod sse {
 pub mod neon {
     //! Polyfilled 256-bit types using NEON (128-bit) operations.
 
-    use crate::simd::arm::w128::{
+    use crate::simd::generated::arm::w128::{
         f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
     };
     use archmage::NeonToken;
@@ -3950,7 +3950,7 @@ pub mod neon {
 pub mod simd128 {
     //! Polyfilled 256-bit types using WASM SIMD128 (128-bit) operations.
 
-    use crate::simd::wasm::w128::{
+    use crate::simd::generated::wasm::w128::{
         f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
     };
     use archmage::Simd128Token;
@@ -5920,7 +5920,7 @@ pub mod simd128 {
 pub mod avx2 {
     //! Polyfilled 512-bit types using AVX2 (256-bit) operations.
 
-    use crate::simd::x86::w256::{
+    use crate::simd::generated::x86::w256::{
         f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
     };
     use archmage::X64V3Token;

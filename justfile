@@ -39,6 +39,10 @@ validate-registry:
 validate-tokens:
     cargo run -p xtask -- validate
 
+# Check API parity across x86/ARM/WASM architectures
+parity:
+    cargo run -p xtask -- parity
+
 # ============================================================================
 # Intel SDE testing (requires Intel SDE to be installed)
 # Download from: https://www.intel.com/content/www/us/en/download/684897/intel-software-development-emulator.html
