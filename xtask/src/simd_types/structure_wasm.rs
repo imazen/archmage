@@ -62,6 +62,9 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Bitwise operations (not, shift, blend)
     code.push_str(&generate_bitwise_ops(ty));
 
+    // Type conversion operations (f32 <-> i32)
+    code.push_str(&generate_conversion_ops(ty));
+
     // Transcendental operations (log, exp, pow) for float types
     code.push_str(&super::transcendental_wasm::generate_wasm_transcendental_ops(ty));
 
@@ -583,6 +586,111 @@ fn generate_math_ops(ty: &SimdType) -> String {
         )
         .unwrap();
         writeln!(code, "    }}\n").unwrap();
+
+        // mul_sub: self * a - b (emulated with separate mul and sub)
+        let sub_fn = Wasm::arith_intrinsic("sub", ty.elem);
+        writeln!(code, "    /// Fused multiply-subtract: self * a - b").unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Note: WASM doesn't have native FMA in stable SIMD,"
+        )
+        .unwrap();
+        writeln!(code, "    /// this is emulated with separate mul and sub.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(
+            code,
+            "    pub fn mul_sub(self, a: Self, b: Self) -> Self {{"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        Self({}({}(self.0, a.0), b.0))",
+            sub_fn, mul_fn
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // Approximation operations (f32 only)
+        if ty.elem == ElementType::F32 {
+            writeln!(
+                code,
+                "    // ========== Approximation Operations ==========\n"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    // WASM has no native reciprocal estimate intrinsics."
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    // These use division for correct results.\n"
+            )
+            .unwrap();
+
+            // rcp_approx - use division (no fast path in WASM)
+            writeln!(
+                code,
+                "    /// Reciprocal approximation (1/x) - uses division."
+            )
+            .unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(
+                code,
+                "    /// Note: WASM has no native reciprocal estimate intrinsic,"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    /// so this is equivalent to `recip()` (full precision division)."
+            )
+            .unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
+            writeln!(code, "        let one = Self(f32x4_splat(1.0));").unwrap();
+            writeln!(code, "        Self(f32x4_div(one.0, self.0))").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            // recip - precise reciprocal
+            writeln!(code, "    /// Precise reciprocal (1/x).").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn recip(self) -> Self {{").unwrap();
+            writeln!(code, "        let one = Self(f32x4_splat(1.0));").unwrap();
+            writeln!(code, "        Self(f32x4_div(one.0, self.0))").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            // rsqrt_approx - use sqrt then division (no fast path in WASM)
+            writeln!(
+                code,
+                "    /// Reciprocal square root approximation (1/sqrt(x)) - uses sqrt+division."
+            )
+            .unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(
+                code,
+                "    /// Note: WASM has no native rsqrt estimate intrinsic,"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    /// so this is equivalent to `rsqrt()` (full precision)."
+            )
+            .unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
+            writeln!(code, "        let one = Self(f32x4_splat(1.0));").unwrap();
+            writeln!(code, "        Self(f32x4_div(one.0, f32x4_sqrt(self.0)))").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            // rsqrt - precise
+            writeln!(code, "    /// Precise reciprocal square root (1/sqrt(x)).").unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rsqrt(self) -> Self {{").unwrap();
+            writeln!(code, "        let one = Self(f32x4_splat(1.0));").unwrap();
+            writeln!(code, "        Self(f32x4_div(one.0, f32x4_sqrt(self.0)))").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
     }
 
     // Signed integer abs (not available for i64 in WASM)
@@ -875,6 +983,140 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn bitmask(self) -> u32 {{").unwrap();
         writeln!(code, "        {}(self.0) as u32", bitmask_fn).unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    code
+}
+
+/// Generate type conversion operations (f32 <-> i32, etc.)
+fn generate_conversion_ops(ty: &SimdType) -> String {
+    use super::types::ElementType;
+
+    let mut code = String::new();
+    let lanes = ty.lanes();
+
+    // f32 <-> i32 conversions
+    if ty.elem == ElementType::F32 && lanes == 4 {
+        let int_name = "i32x4";
+
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        // to_i32x4 (truncate toward zero, saturating) - i32x4_trunc_sat_f32x4
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers, rounding toward zero (truncation)."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Values outside the representable range are saturated to `i32::MIN`/`i32::MAX`."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x4(self) -> {} {{", int_name).unwrap();
+        writeln!(
+            code,
+            "        {}(i32x4_trunc_sat_f32x4(self.0))",
+            int_name
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // to_i32x4_round (round to nearest) - use floor(x + 0.5) approximation
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers, rounding to nearest."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Values outside the representable range are saturated to `i32::MIN`/`i32::MAX`."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Note: Uses `nearest()` intrinsic for proper round-to-nearest-even."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x4_round(self) -> {} {{", int_name).unwrap();
+        writeln!(
+            code,
+            "        {}(i32x4_trunc_sat_f32x4(f32x4_nearest(self.0)))",
+            int_name
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // from_i32x4 - f32x4_convert_i32x4
+        writeln!(code, "    /// Create from signed 32-bit integers.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn from_i32x4(v: {}) -> Self {{", int_name).unwrap();
+        writeln!(
+            code,
+            "        Self(f32x4_convert_i32x4(v.0))"
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    // i32 -> f32 conversion
+    if ty.elem == ElementType::I32 && lanes == 4 {
+        let float_name = "f32x4";
+
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        // to_f32x4 - f32x4_convert_i32x4
+        writeln!(code, "    /// Convert to single-precision floats.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_f32x4(self) -> {} {{", float_name).unwrap();
+        writeln!(
+            code,
+            "        {}(f32x4_convert_i32x4(self.0))",
+            float_name
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // to_f32 (alias for to_f32x4)
+        writeln!(code, "    /// Convert to single-precision floats (alias for `to_f32x4`).").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_f32(self) -> {} {{", float_name).unwrap();
+        writeln!(code, "        self.to_f32x4()").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    // f64 -> i32 conversion (2 lanes -> lower 2 lanes of i32x4)
+    if ty.elem == ElementType::F64 && lanes == 2 {
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Returns an `i32x4` where only the lower 2 lanes are valid (upper 2 are zero)."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x4_low(self) -> i32x4 {{").unwrap();
+        writeln!(
+            code,
+            "        // WASM: i32x4_trunc_sat_f64x2_zero converts f64x2 to lower 2 lanes of i32x4"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        i32x4(i32x4_trunc_sat_f64x2_zero(self.0))"
+        )
+        .unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 

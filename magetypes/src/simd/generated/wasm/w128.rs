@@ -218,6 +218,54 @@ impl f32x4 {
         Self(f32x4_add(f32x4_mul(self.0, a.0), b.0))
     }
 
+    /// Fused multiply-subtract: self * a - b
+    ///
+    /// Note: WASM doesn't have native FMA in stable SIMD,
+    /// this is emulated with separate mul and sub.
+    #[inline(always)]
+    pub fn mul_sub(self, a: Self, b: Self) -> Self {
+        Self(f32x4_sub(f32x4_mul(self.0, a.0), b.0))
+    }
+
+    // ========== Approximation Operations ==========
+
+    // WASM has no native reciprocal estimate intrinsics.
+    // These use division for correct results.
+
+    /// Reciprocal approximation (1/x) - uses division.
+    ///
+    /// Note: WASM has no native reciprocal estimate intrinsic,
+    /// so this is equivalent to `recip()` (full precision division).
+    #[inline(always)]
+    pub fn rcp_approx(self) -> Self {
+        let one = Self(f32x4_splat(1.0));
+        Self(f32x4_div(one.0, self.0))
+    }
+
+    /// Precise reciprocal (1/x).
+    #[inline(always)]
+    pub fn recip(self) -> Self {
+        let one = Self(f32x4_splat(1.0));
+        Self(f32x4_div(one.0, self.0))
+    }
+
+    /// Reciprocal square root approximation (1/sqrt(x)) - uses sqrt+division.
+    ///
+    /// Note: WASM has no native rsqrt estimate intrinsic,
+    /// so this is equivalent to `rsqrt()` (full precision).
+    #[inline(always)]
+    pub fn rsqrt_approx(self) -> Self {
+        let one = Self(f32x4_splat(1.0));
+        Self(f32x4_div(one.0, f32x4_sqrt(self.0)))
+    }
+
+    /// Precise reciprocal square root (1/sqrt(x)).
+    #[inline(always)]
+    pub fn rsqrt(self) -> Self {
+        let one = Self(f32x4_splat(1.0));
+        Self(f32x4_div(one.0, f32x4_sqrt(self.0)))
+    }
+
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> f32 {
@@ -300,6 +348,32 @@ impl f32x4 {
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(v128_not(self.0))
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to signed 32-bit integers, rounding toward zero (truncation).
+    ///
+    /// Values outside the representable range are saturated to `i32::MIN`/`i32::MAX`.
+    #[inline(always)]
+    pub fn to_i32x4(self) -> i32x4 {
+        i32x4(i32x4_trunc_sat_f32x4(self.0))
+    }
+
+    /// Convert to signed 32-bit integers, rounding to nearest.
+    ///
+    /// Values outside the representable range are saturated to `i32::MIN`/`i32::MAX`.
+    ///
+    /// Note: Uses `nearest()` intrinsic for proper round-to-nearest-even.
+    #[inline(always)]
+    pub fn to_i32x4_round(self) -> i32x4 {
+        i32x4(i32x4_trunc_sat_f32x4(f32x4_nearest(self.0)))
+    }
+
+    /// Create from signed 32-bit integers.
+    #[inline(always)]
+    pub fn from_i32x4(v: i32x4) -> Self {
+        Self(f32x4_convert_i32x4(v.0))
     }
 
     // ========== Transcendental Operations (Polynomial Approximations) ==========
@@ -1180,6 +1254,15 @@ impl f64x2 {
         Self(f64x2_add(f64x2_mul(self.0, a.0), b.0))
     }
 
+    /// Fused multiply-subtract: self * a - b
+    ///
+    /// Note: WASM doesn't have native FMA in stable SIMD,
+    /// this is emulated with separate mul and sub.
+    #[inline(always)]
+    pub fn mul_sub(self, a: Self, b: Self) -> Self {
+        Self(f64x2_sub(f64x2_mul(self.0, a.0), b.0))
+    }
+
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> f64 {
@@ -1259,6 +1342,17 @@ impl f64x2 {
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(v128_not(self.0))
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero.
+    ///
+    /// Returns an `i32x4` where only the lower 2 lanes are valid (upper 2 are zero).
+    #[inline(always)]
+    pub fn to_i32x4_low(self) -> i32x4 {
+        // WASM: i32x4_trunc_sat_f64x2_zero converts f64x2 to lower 2 lanes of i32x4
+        i32x4(i32x4_trunc_sat_f64x2_zero(self.0))
     }
 
     // ========== Transcendental Operations (Polynomial Approximations) ==========
@@ -3453,6 +3547,20 @@ impl i32x4 {
     #[inline(always)]
     pub fn bitmask(self) -> u32 {
         i32x4_bitmask(self.0) as u32
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to single-precision floats.
+    #[inline(always)]
+    pub fn to_f32x4(self) -> f32x4 {
+        f32x4(f32x4_convert_i32x4(self.0))
+    }
+
+    /// Convert to single-precision floats (alias for `to_f32x4`).
+    #[inline(always)]
+    pub fn to_f32(self) -> f32x4 {
+        self.to_f32x4()
     }
 
     // ========== Bitcast (reinterpret bits, zero-cost) ==========

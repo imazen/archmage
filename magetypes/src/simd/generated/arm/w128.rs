@@ -215,6 +215,54 @@ impl f32x4 {
         Self(unsafe { vfmaq_f32(b.0, self.0, a.0) })
     }
 
+    /// Fused multiply-subtract: self * a - b
+    #[inline(always)]
+    pub fn mul_sub(self, a: Self, b: Self) -> Self {
+        let neg_b = unsafe { vnegq_f32(b.0) };
+        Self(unsafe { vfmaq_f32(neg_b, self.0, a.0) })
+    }
+
+    // ========== Approximation Operations ==========
+
+    /// Fast reciprocal approximation (1/x) with ~8-12 bit precision.
+    ///
+    /// For full precision, use `recip()` which applies Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rcp_approx(self) -> Self {
+        Self(unsafe { vrecpeq_f32(self.0) })
+    }
+
+    /// Precise reciprocal (1/x) using Newton-Raphson refinement.
+    ///
+    /// More accurate than `rcp_approx()` but slower. For maximum speed
+    /// with acceptable precision loss, use `rcp_approx()`.
+    #[inline(always)]
+    pub fn recip(self) -> Self {
+        // Newton-Raphson: x' = x * (2 - a*x)
+        let approx = self.rcp_approx();
+        let two = Self(unsafe { vdupq_n_f32(2.0) });
+        // One iteration gives ~24-bit precision from ~12-bit
+        approx * (two - self * approx)
+    }
+
+    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~8-12 bit precision.
+    ///
+    /// For full precision, use `rsqrt()` which applies Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rsqrt_approx(self) -> Self {
+        Self(unsafe { vrsqrteq_f32(self.0) })
+    }
+
+    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.
+    #[inline(always)]
+    pub fn rsqrt(self) -> Self {
+        // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - x * y * y)
+        let approx = self.rsqrt_approx();
+        let half = Self(unsafe { vdupq_n_f32(0.5) });
+        let three = Self(unsafe { vdupq_n_f32(3.0) });
+        half * approx * (three - self * approx * approx)
+    }
+
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> f32 {
@@ -320,6 +368,30 @@ impl f32x4 {
     #[inline(always)]
     pub fn not(self) -> Self {
         Self(unsafe { vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(self.0))) })
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to signed 32-bit integers, rounding toward zero (truncation).
+    ///
+    /// Values outside the representable range become `i32::MIN` (0x80000000).
+    #[inline(always)]
+    pub fn to_i32x4(self) -> i32x4 {
+        i32x4(unsafe { vcvtq_s32_f32(self.0) })
+    }
+
+    /// Convert to signed 32-bit integers, rounding to nearest even.
+    ///
+    /// Values outside the representable range become `i32::MIN` (0x80000000).
+    #[inline(always)]
+    pub fn to_i32x4_round(self) -> i32x4 {
+        i32x4(unsafe { vcvtnq_s32_f32(self.0) })
+    }
+
+    /// Create from signed 32-bit integers.
+    #[inline(always)]
+    pub fn from_i32x4(v: i32x4) -> Self {
+        Self(unsafe { vcvtq_f32_s32(v.0) })
     }
 
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
@@ -673,6 +745,13 @@ impl f64x2 {
         Self(unsafe { vfmaq_f64(b.0, self.0, a.0) })
     }
 
+    /// Fused multiply-subtract: self * a - b
+    #[inline(always)]
+    pub fn mul_sub(self, a: Self, b: Self) -> Self {
+        let neg_b = unsafe { vnegq_f64(b.0) };
+        Self(unsafe { vfmaq_f64(neg_b, self.0, a.0) })
+    }
+
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> f64 {
@@ -780,6 +859,19 @@ impl f64x2 {
             let ones = vdupq_n_u64(u64::MAX);
             Self(vreinterpretq_f64_u64(veorq_u64(bits, ones)))
         }
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero.
+    ///
+    /// Returns an `i32x4` where only the lower 2 lanes are valid.
+    #[inline(always)]
+    pub fn to_i32x4_low(self) -> i32x4 {
+        // NEON: f64->s64->s32 via vcvtq_s64_f64 + vmovn_s64
+        let s64 = unsafe { vcvtq_s64_f64(self.0) };
+        let s32_low = unsafe { vmovn_s64(s64) };
+        i32x4(unsafe { vcombine_s32(s32_low, vdup_n_s32(0)) })
     }
 
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
@@ -2870,6 +2962,20 @@ impl i32x4 {
             let arr: [u32; 4] = core::mem::transmute(signs);
             (arr[0] & 1) | ((arr[1] & 1) << 1) | ((arr[2] & 1) << 2) | ((arr[3] & 1) << 3)
         }
+    }
+
+    // ========== Type Conversions ==========
+
+    /// Convert to single-precision floats.
+    #[inline(always)]
+    pub fn to_f32x4(self) -> f32x4 {
+        f32x4(unsafe { vcvtq_f32_s32(self.0) })
+    }
+
+    /// Convert to single-precision floats (alias for `to_f32x4`).
+    #[inline(always)]
+    pub fn to_f32(self) -> f32x4 {
+        self.to_f32x4()
     }
 
     // ========== Bitcast (reinterpret bits, zero-cost) ==========

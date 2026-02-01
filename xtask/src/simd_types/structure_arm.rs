@@ -57,6 +57,9 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Bitwise operations (not, shift)
     code.push_str(&generate_bitwise_ops(ty));
 
+    // Type conversion operations (f32 <-> i32)
+    code.push_str(&generate_conversion_ops(ty));
+
     // Bitcast operations (reinterpret bits between same-width types)
     code.push_str(&ops_bitcast::generate_arm_bitcasts(ty));
 
@@ -637,6 +640,145 @@ fn generate_math_ops(ty: &SimdType) -> String {
         )
         .unwrap();
         writeln!(code, "    }}\n").unwrap();
+
+        // mul_sub: self * a - b
+        // NEON vfmaq(a, b, c) = a + b*c, so we use vfmaq(-b, self, a) = -b + self*a = self*a - b
+        let neg_fn = Arm::neg_intrinsic(ty.elem);
+        writeln!(code, "    /// Fused multiply-subtract: self * a - b").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(
+            code,
+            "    pub fn mul_sub(self, a: Self, b: Self) -> Self {{"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        let neg_b = unsafe {{ {}(b.0) }};",
+            neg_fn
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(neg_b, self.0, a.0) }})",
+            fma_fn
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // Approximation operations (f32 only has native intrinsics)
+        if ty.elem == ElementType::F32 {
+            let recpe_fn = Arm::recpe_intrinsic(ty.elem);
+            let rsqrte_fn = Arm::rsqrte_intrinsic(ty.elem);
+            let splat_fn = Arm::splat_intrinsic(ty.elem);
+
+            writeln!(
+                code,
+                "    // ========== Approximation Operations ==========\n"
+            )
+            .unwrap();
+
+            // rcp_approx
+            writeln!(
+                code,
+                "    /// Fast reciprocal approximation (1/x) with ~8-12 bit precision."
+            )
+            .unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(
+                code,
+                "    /// For full precision, use `recip()` which applies Newton-Raphson refinement."
+            )
+            .unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}(self.0) }})", recpe_fn).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            // recip - precise reciprocal via Newton-Raphson
+            writeln!(
+                code,
+                "    /// Precise reciprocal (1/x) using Newton-Raphson refinement."
+            )
+            .unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(
+                code,
+                "    /// More accurate than `rcp_approx()` but slower. For maximum speed"
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    /// with acceptable precision loss, use `rcp_approx()`."
+            )
+            .unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn recip(self) -> Self {{").unwrap();
+            writeln!(code, "        // Newton-Raphson: x' = x * (2 - a*x)").unwrap();
+            writeln!(code, "        let approx = self.rcp_approx();").unwrap();
+            writeln!(
+                code,
+                "        let two = Self(unsafe {{ {}(2.0) }});",
+                splat_fn
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "        // One iteration gives ~24-bit precision from ~12-bit"
+            )
+            .unwrap();
+            writeln!(code, "        approx * (two - self * approx)").unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            // rsqrt_approx
+            writeln!(
+                code,
+                "    /// Fast reciprocal square root approximation (1/sqrt(x)) with ~8-12 bit precision."
+            )
+            .unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(
+                code,
+                "    /// For full precision, use `rsqrt()` which applies Newton-Raphson refinement."
+            )
+            .unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
+            writeln!(code, "        Self(unsafe {{ {}(self.0) }})", rsqrte_fn).unwrap();
+            writeln!(code, "    }}\n").unwrap();
+
+            // rsqrt - precise via Newton-Raphson
+            writeln!(
+                code,
+                "    /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement."
+            )
+            .unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(code, "    pub fn rsqrt(self) -> Self {{").unwrap();
+            writeln!(
+                code,
+                "        // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - x * y * y)"
+            )
+            .unwrap();
+            writeln!(code, "        let approx = self.rsqrt_approx();").unwrap();
+            writeln!(
+                code,
+                "        let half = Self(unsafe {{ {}(0.5) }});",
+                splat_fn
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "        let three = Self(unsafe {{ {}(3.0) }});",
+                splat_fn
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "        half * approx * (three - self * approx * approx)"
+            )
+            .unwrap();
+            writeln!(code, "    }}\n").unwrap();
+        }
     }
 
     // Signed integer abs
@@ -1398,6 +1540,144 @@ fn generate_boolean_reductions(ty: &SimdType) -> String {
         _ => unreachable!(),
     }
     writeln!(code, "    }}\n").unwrap();
+
+    code
+}
+
+/// Generate type conversion operations (f32 <-> i32, etc.)
+fn generate_conversion_ops(ty: &SimdType) -> String {
+    use super::types::ElementType;
+
+    let mut code = String::new();
+    let lanes = ty.lanes();
+
+    // f32 <-> i32 conversions
+    if ty.elem == ElementType::F32 && lanes == 4 {
+        let int_name = "i32x4";
+
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        // to_i32x4 (truncate toward zero) - vcvtq_s32_f32
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers, rounding toward zero (truncation)."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Values outside the representable range become `i32::MIN` (0x80000000)."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x4(self) -> {} {{", int_name).unwrap();
+        writeln!(
+            code,
+            "        {}(unsafe {{ vcvtq_s32_f32(self.0) }})",
+            int_name
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // to_i32x4_round (round to nearest) - vcvtnq_s32_f32
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers, rounding to nearest even."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Values outside the representable range become `i32::MIN` (0x80000000)."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x4_round(self) -> {} {{", int_name).unwrap();
+        writeln!(
+            code,
+            "        {}(unsafe {{ vcvtnq_s32_f32(self.0) }})",
+            int_name
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // from_i32x4 - vcvtq_f32_s32
+        writeln!(code, "    /// Create from signed 32-bit integers.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn from_i32x4(v: {}) -> Self {{", int_name).unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ vcvtq_f32_s32(v.0) }})"
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    // i32 -> f32 conversion
+    if ty.elem == ElementType::I32 && lanes == 4 {
+        let float_name = "f32x4";
+
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        // to_f32x4 - vcvtq_f32_s32
+        writeln!(code, "    /// Convert to single-precision floats.").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_f32x4(self) -> {} {{", float_name).unwrap();
+        writeln!(
+            code,
+            "        {}(unsafe {{ vcvtq_f32_s32(self.0) }})",
+            float_name
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // to_f32 (alias for to_f32x4)
+        writeln!(code, "    /// Convert to single-precision floats (alias for `to_f32x4`).").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_f32(self) -> {} {{", float_name).unwrap();
+        writeln!(code, "        self.to_f32x4()").unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
+
+    // f64 -> i32 conversion (2 lanes -> lower 2 lanes of i32x4)
+    if ty.elem == ElementType::F64 && lanes == 2 {
+        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+
+        writeln!(
+            code,
+            "    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero."
+        )
+        .unwrap();
+        writeln!(code, "    ///").unwrap();
+        writeln!(
+            code,
+            "    /// Returns an `i32x4` where only the lower 2 lanes are valid."
+        )
+        .unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn to_i32x4_low(self) -> i32x4 {{").unwrap();
+        writeln!(
+            code,
+            "        // NEON: f64->s64->s32 via vcvtq_s64_f64 + vmovn_s64"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        let s64 = unsafe {{ vcvtq_s64_f64(self.0) }};"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        let s32_low = unsafe {{ vmovn_s64(s64) }};"
+        )
+        .unwrap();
+        writeln!(
+            code,
+            "        i32x4(unsafe {{ vcombine_s32(s32_low, vdup_n_s32(0)) }})"
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+    }
 
     code
 }
