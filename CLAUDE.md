@@ -403,16 +403,6 @@ Track places where we use polyfills or slower instruction sequences because the 
 
 | Method | Token (slow) | Polyfill | Token (fast) | Native Intrinsic | Status |
 |--------|-------------|----------|-------------|------------------|--------|
-| i64x2::min | X64V3Token | cmpgt + blendv | X64V4Token | `_mm_min_epi64` (AVX-512VL) | **TODO** |
-| i64x2::max | X64V3Token | cmpgt + blendv | X64V4Token | `_mm_max_epi64` (AVX-512VL) | **TODO** |
-| i64x2::abs | X64V3Token | cmpgt + xor + sub | X64V4Token | `_mm_abs_epi64` (AVX-512VL) | **TODO** |
-| u64x2::min | X64V3Token | bias + cmpgt + blendv | X64V4Token | `_mm_min_epu64` (AVX-512VL) | **TODO** |
-| u64x2::max | X64V3Token | bias + cmpgt + blendv | X64V4Token | `_mm_max_epu64` (AVX-512VL) | **TODO** |
-| i64x4::min | X64V3Token | cmpgt + blendv | X64V4Token | `_mm256_min_epi64` (AVX-512VL) | **TODO** |
-| i64x4::max | X64V3Token | cmpgt + blendv | X64V4Token | `_mm256_max_epi64` (AVX-512VL) | **TODO** |
-| i64x4::abs | X64V3Token | cmpgt + xor + sub | X64V4Token | `_mm256_abs_epi64` (AVX-512VL) | **TODO** |
-| u64x4::min | X64V3Token | bias + cmpgt + blendv | X64V4Token | `_mm256_min_epu64` (AVX-512VL) | **TODO** |
-| u64x4::max | X64V3Token | bias + cmpgt + blendv | X64V4Token | `_mm256_max_epu64` (AVX-512VL) | **TODO** |
 | f32 cbrt initial guess | all tokens | scalar extract + bit hack | — | No SIMD cbrt exists; consider SIMD bit hack via integer ops | Low priority |
 
 **Rules for this section:**
@@ -420,6 +410,14 @@ Track places where we use polyfills or slower instruction sequences because the 
 - The overload should take the higher token as a parameter (e.g., `fn min_fast(self, other: Self, _: X64V4Token) -> Self`).
 - Or use trait bounds: `fn min<T: HasX64V4>(self, other: Self, _: T) -> Self` for the fast path.
 - Remove entries when the fast-path overload is implemented.
+
+### Completed fast-path overloads
+
+All i64/u64 min/max/abs now have `_fast` variants that take `X64V4Token`:
+- `i64x2::min_fast`, `max_fast`, `abs_fast`
+- `u64x2::min_fast`, `max_fast`
+- `i64x4::min_fast`, `max_fast`, `abs_fast`
+- `u64x4::min_fast`, `max_fast`
 
 ## License
 

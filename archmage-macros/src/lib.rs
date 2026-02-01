@@ -532,13 +532,9 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// # Supported Tokens
 ///
-/// - **x86_64**: `Sse41Token`, `Sse42Token`, `AvxToken`, `Avx2Token`, `FmaToken`,
-///   `Avx2FmaToken`, `Avx512fToken`, `Avx512bwToken`, `Avx512fVlToken`,
-///   `Avx512bwVlToken`, `Avx512Vbmi2Token`, `Avx512Vbmi2VlToken`
-/// - **x86_64 tiers**: `X64V2Token`, `X64V3Token` / `Desktop64`, `X64V4Token` / `Avx512Token`,
-///   `Avx512ModernToken`, `Avx512Fp16Token`
-/// - **ARM**: `NeonToken` / `Arm64`, `NeonAesToken`, `NeonSha3Token`,
-///   `ArmCryptoToken`, `ArmCrypto3Token`
+/// - **x86_64 tiers**: `X64V2Token`, `X64V3Token` / `Desktop64` / `Avx2FmaToken`,
+///   `X64V4Token` / `Avx512Token` / `Server64`, `Avx512ModernToken`, `Avx512Fp16Token`
+/// - **ARM**: `NeonToken` / `Arm64`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
 /// - **WASM**: `Simd128Token`
 ///
 /// # Supported Trait Bounds
