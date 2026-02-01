@@ -538,20 +538,21 @@ fn extract_safe_simd_functions(safe_simd_path: &Path) -> Result<Vec<SafeMemOp>> 
         .expect("invalid fn regex");
     let doc_re = Regex::new(r"///\s*(.*)").expect("invalid doc regex");
 
-    // Walk x86 directory
+    // Walk x86 directory (sorted for deterministic output)
     let x86_dir = safe_simd_path.join("src/x86");
     if x86_dir.exists() {
-        for entry in fs::read_dir(&x86_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.extension().is_some_and(|e| e == "rs") {
-                let name = path.file_name().unwrap().to_string_lossy().to_string();
-                // Skip cell variants and mod.rs
-                if name == "mod.rs" || name == "cell.rs" || name.starts_with("cell") {
-                    continue;
-                }
-                extract_ops_from_file(&path, "x86_64", &tf_re, &fn_re, &doc_re, &mut ops)?;
-            }
+        let mut paths: Vec<_> = fs::read_dir(&x86_dir)?
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|e| e == "rs"))
+            .filter(|p| {
+                let name = p.file_name().unwrap().to_string_lossy();
+                name != "mod.rs" && name != "cell.rs" && !name.starts_with("cell")
+            })
+            .collect();
+        paths.sort();
+        for path in paths {
+            extract_ops_from_file(&path, "x86_64", &tf_re, &fn_re, &doc_re, &mut ops)?;
         }
     }
 
@@ -905,7 +906,10 @@ fn generate_memory_ops_reference(safe_simd_ops: &[SafeMemOp]) -> String {
     for (token, ops) in &by_token {
         writeln!(doc, "## {} ({} functions)\n", token, ops.len()).unwrap();
 
-        for op in ops {
+        // Sort ops by name for deterministic output across filesystems
+        let mut sorted_ops = ops.clone();
+        sorted_ops.sort_by_key(|op| &op.name);
+        for op in sorted_ops {
             writeln!(doc, "### `{}`\n", op.name).unwrap();
             if !op.doc.is_empty() {
                 writeln!(doc, "{}\n", op.doc).unwrap();
