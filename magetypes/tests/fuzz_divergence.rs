@@ -369,9 +369,13 @@ mod reduce_operations {
                 let v = f32x8::from_array(token, a);
                 let native = v.reduce_add();
                 let scalar: f32 = a.iter().sum();
-                // Reduce operations may have different associativity, allow some tolerance
-                prop_assert!((native - scalar).abs() < 1e-3 * scalar.abs().max(1.0),
-                    "native={}, scalar={}", native, scalar);
+                // SIMD reduce uses tree reduction (different associativity than sequential sum).
+                // When large values nearly cancel, the result is tiny but the error from
+                // reordering is proportional to the sum of absolute values, not the result.
+                let abs_sum: f32 = a.iter().map(|x| x.abs()).sum();
+                let tol = 1e-6 * abs_sum.max(1.0);
+                prop_assert!((native - scalar).abs() < tol,
+                    "native={}, scalar={}, abs_sum={}, tol={}", native, scalar, abs_sum, tol);
             }
         }
 

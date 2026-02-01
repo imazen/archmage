@@ -10,6 +10,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CI: true
+  # All stable features (excludes 'sleef' which requires nightly)
+  FEATURES: "std macros bytemuck avx512"
 
 jobs:
   # ==========================================================================
@@ -21,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-15-intel]
+        os: [ubuntu-latest, windows-latest, macos-13]
 
     steps:
       - uses: actions/checkout@v6
@@ -33,17 +35,24 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --all-features
+        run: cargo build --features "${{ env.FEATURES }}"
 
       - name: Run tests
-        run: cargo test --all-features
+        run: cargo test --features "${{ env.FEATURES }}"
 
   # ==========================================================================
   # Primary: Native ARM64 testing
   # ==========================================================================
-  test-aarch64-linux:
-    name: Test aarch64 (Linux)
-    runs-on: ubuntu-24.04-arm
+  test-aarch64:
+    name: Test aarch64 (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04-arm, name: Linux }
+          - { os: macos-14, name: macOS }
+          - { os: windows-11-arm, name: Windows }
 
     steps:
       - uses: actions/checkout@v6
@@ -55,48 +64,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --all-features
+        run: cargo build --features "${{ env.FEATURES }}"
 
       - name: Run tests
-        run: cargo test --all-features
-
-  test-aarch64-macos:
-    name: Test aarch64 (macOS)
-    runs-on: macos-14
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build
-        run: cargo build --all-features
-
-      - name: Run tests
-        run: cargo test --all-features
-
-  test-aarch64-windows:
-    name: Test aarch64 (Windows)
-    runs-on: windows-11-arm
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build
-        run: cargo build --all-features
-
-      - name: Run tests
-        run: cargo test --all-features
+        run: cargo test --features "${{ env.FEATURES }}"
 
   # ==========================================================================
   # Cross-compiled testing with QEMU emulation
@@ -127,10 +98,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build (cross)
-        run: cross build --all-features --target ${{ matrix.target }}
+        run: cross build --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
       - name: Test (cross/QEMU)
-        run: cross test --all-features --target ${{ matrix.target }}
+        run: cross test --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
   # ==========================================================================
   # WASM SIMD128 testing
@@ -154,21 +125,29 @@ jobs:
           curl https://wasmtime.dev/install.sh -sSf | bash
           echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
 
-      - name: Build magetypes for WASM
-        env:
-          RUSTFLAGS: "-C target-feature=+simd128"
-        run: cargo build -p magetypes --target wasm32-wasip1
-
       - name: Build archmage for WASM
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
         run: cargo build -p archmage --target wasm32-wasip1
 
+      - name: Build magetypes for WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+        run: cargo build -p magetypes --target wasm32-wasip1
+
+      # Only run lib tests — integration tests pull proptest which depends on
+      # wait-timeout, and that crate doesn't compile on WASM.
+      - name: Test archmage on WASM (wasmtime)
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --wasm-features=simd"
+        run: cargo test -p archmage --lib --target wasm32-wasip1
+
       - name: Test magetypes on WASM (wasmtime)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --wasm-features=simd"
-        run: cargo test -p magetypes --target wasm32-wasip1
+        run: cargo test -p magetypes --lib --target wasm32-wasip1
 
   # ==========================================================================
   # Generation check - ensure generated code matches committed code
@@ -190,30 +169,11 @@ jobs:
 
       - name: Check for differences
         run: |
-          # Check all generated directories
-          if ! git diff --exit-code magetypes/src/simd/generated/; then
-            echo "::error::Generated magetypes SIMD types differ from committed code!"
-            echo "Run 'cargo xtask generate' locally and commit the changes."
-            exit 1
-          fi
-          if ! git diff --exit-code magetypes/tests/; then
-            echo "::error::Generated magetypes tests differ from committed code!"
-            echo "Run 'cargo xtask generate' locally and commit the changes."
-            exit 1
-          fi
-          if ! git diff --exit-code src/tokens/generated/; then
-            echo "::error::Generated token files differ from committed code!"
-            echo "Run 'cargo xtask generate' locally and commit the changes."
-            exit 1
-          fi
-          if ! git diff --exit-code archmage-macros/src/generated/; then
-            echo "::error::Generated macro registry differs from committed code!"
-            echo "Run 'cargo xtask generate' locally and commit the changes."
-            exit 1
-          fi
-          if ! git diff --exit-code docs/generated/; then
-            echo "::error::Generated reference docs differ from committed code!"
-            echo "Run 'cargo xtask generate' locally and commit the changes."
+          if ! git diff --exit-code; then
+            echo ""
+            echo "::error::Generated code differs from committed code!"
+            echo "Run 'just generate' locally and commit the changes."
+            git diff --stat
             exit 1
           fi
           echo "All generated code matches committed code"
@@ -314,7 +274,7 @@ jobs:
         run: cargo test -p magetypes --test fuzz_divergence --features avx512
 
   # ==========================================================================
-  # Clippy - primary targets only
+  # Clippy
   # ==========================================================================
   clippy:
     name: Clippy
@@ -332,7 +292,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Clippy
-        run: cargo clippy --all-features -- -D warnings
+        run: cargo clippy --features "${{ env.FEATURES }}" -- -D warnings
 
   # ==========================================================================
   # Format check
@@ -367,7 +327,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build docs
-        run: cargo doc --all-features --no-deps
+        run: cargo doc --features "${{ env.FEATURES }}" --no-deps
         env:
           RUSTDOCFLAGS: -Dwarnings
 
@@ -389,7 +349,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Check MSRV
-        run: cargo check --all-features
+        run: cargo check --features "${{ env.FEATURES }}"
 
   # ==========================================================================
   # Code Coverage
@@ -413,7 +373,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Generate coverage
-        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+        run: cargo llvm-cov --features "${{ env.FEATURES }}" --lcov --output-path lcov.info
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5

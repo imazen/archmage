@@ -15,6 +15,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  FEATURES: "std macros bytemuck avx512"
 
 jobs:
   sde-test:
@@ -32,7 +33,7 @@ jobs:
     name: Test on ${{ matrix.cpu.name }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -47,7 +48,7 @@ jobs:
           echo "$PWD/sde-external-9.44.0-2024-08-22-lin" >> $GITHUB_PATH
 
       - name: Build tests
-        run: cargo test --all-features --no-run
+        run: cargo test --features "${{ env.FEATURES }}" --no-run
 
       - name: Run tests under SDE (${{ matrix.cpu.name }})
         run: |
@@ -70,7 +71,7 @@ jobs:
     name: Miri (undefined behavior detection)
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust nightly + Miri
         uses: dtolnay/rust-toolchain@nightly
@@ -81,4 +82,4 @@ jobs:
         run: cargo miri setup
 
       - name: Run Miri tests
-        run: cargo miri test --test miri_safe --all-features
+        run: cargo miri test --test miri_safe --features "${{ env.FEATURES }}"

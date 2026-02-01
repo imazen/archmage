@@ -1,8 +1,10 @@
 # archmage
 
-[![Crates.io](https://img.shields.io/crates/v/archmage.svg)](https://crates.io/crates/archmage)
-[![Documentation](https://docs.rs/archmage/badge.svg)](https://docs.rs/archmage)
 [![CI](https://github.com/imazen/archmage/actions/workflows/ci.yml/badge.svg)](https://github.com/imazen/archmage/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/archmage.svg)](https://crates.io/crates/archmage)
+[![docs.rs](https://docs.rs/archmage/badge.svg)](https://docs.rs/archmage)
+[![codecov](https://codecov.io/gh/imazen/archmage/graph/badge.svg)](https://codecov.io/gh/imazen/archmage)
+[![MSRV](https://img.shields.io/crates/msrv/archmage.svg)](https://crates.io/crates/archmage)
 [![License](https://img.shields.io/crates/l/archmage.svg)](https://github.com/imazen/archmage#license)
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
