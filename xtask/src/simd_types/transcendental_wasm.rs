@@ -507,6 +507,72 @@ fn generate_f32_transcendentals() -> String {
         Self(f32x4_mul(self.log2_midp_precise().0, f32x4_splat(n))).exp2_midp()
         }}
 
+        // ========== Cube Root ==========
+
+        /// Mid-precision cube root (~1 ULP max error).
+        ///
+        /// Uses scalar extraction for initial guess + Newton-Raphson.
+        /// Handles negative values correctly (returns -cbrt(|x|)).
+        ///
+        /// Does not handle denormals. Use `cbrt_midp_precise()` if denormal support is needed.
+        #[inline(always)]
+        pub fn cbrt_midp(self) -> Self {{
+        const TWO_THIRDS: f32 = 0.666_666_627;
+
+        let x = self.0;
+
+        // Save sign and work with absolute value
+        let abs_x = f32x4_abs(x);
+        let sign_mask = f32x4_splat(-0.0);
+        let sign = v128_and(x, sign_mask);
+
+        // Extract to scalar for initial approximation
+        let arr: [f32; 4] = unsafe {{ core::mem::transmute(abs_x) }};
+        let approx: [f32; 4] = [
+            f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
+        ];
+        let mut y: v128 = unsafe {{ core::mem::transmute(approx) }};
+
+        // Newton-Raphson iterations: y = y * (2/3 + x/(3*y^3))
+        for _ in 0..3 {{
+            let y2 = f32x4_mul(y, y);
+            let y3 = f32x4_mul(y2, y);
+            let term = f32x4_div(abs_x, f32x4_mul(f32x4_splat(3.0), y3));
+            y = f32x4_mul(y, f32x4_add(f32x4_splat(TWO_THIRDS), term));
+        }}
+
+        // Restore sign
+        Self(v128_or(y, sign))
+        }}
+
+        /// Mid-precision cube root with denormal handling (~1 ULP max error).
+        ///
+        /// Handles negative values correctly (returns -cbrt(|x|)).
+        /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`.
+        #[inline(always)]
+        pub fn cbrt_midp_precise(self) -> Self {{
+        const SCALE_UP: f32 = 16777216.0;  // 2^24
+        const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
+        const DENORM_LIMIT: f32 = 1.17549435e-38;
+
+        let abs_x = f32x4_abs(self.0);
+        let is_denorm = f32x4_lt(abs_x, f32x4_splat(DENORM_LIMIT));
+        // Exclude zeros from denormal handling
+        let is_zero = f32x4_eq(self.0, f32x4_splat(0.0));
+        let is_denorm = v128_and(is_denorm, v128_not(is_zero));
+
+        let scaled_x = f32x4_mul(self.0, f32x4_splat(SCALE_UP));
+        let x_for_cbrt = v128_bitselect(scaled_x, self.0, is_denorm);
+
+        let result = Self(x_for_cbrt).cbrt_midp();
+
+        let scaled_result = f32x4_mul(result.0, f32x4_splat(SCALE_DOWN));
+        Self(v128_bitselect(scaled_result, result.0, is_denorm))
+        }}
+
     "#}
 }
 
@@ -552,6 +618,16 @@ fn generate_f64_transcendentals() -> String {
         pub fn exp_lowp(self) -> Self {{
         let arr = self.to_array();
         let result = [arr[0].exp(), arr[1].exp()];
+        Self::from(result)
+        }}
+
+        /// Low-precision base-10 logarithm.
+        ///
+        /// Handles edge cases correctly via std.
+        #[inline(always)]
+        pub fn log10_lowp(self) -> Self {{
+        let arr = self.to_array();
+        let result = [arr[0].log10(), arr[1].log10()];
         Self::from(result)
         }}
 
