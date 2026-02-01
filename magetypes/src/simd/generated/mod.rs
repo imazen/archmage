@@ -254,7 +254,7 @@ macro_rules! impl_index {
 
 // x86-64 types (SSE, AVX, AVX-512)
 #[cfg(target_arch = "x86_64")]
-mod x86 {
+pub mod x86 {
     pub mod w128;
     pub mod w256;
     #[cfg(feature = "avx512")]
@@ -263,13 +263,13 @@ mod x86 {
 
 // AArch64 types (NEON)
 #[cfg(target_arch = "aarch64")]
-mod arm {
+pub mod arm {
     pub mod w128;
 }
 
 // WebAssembly types (SIMD128)
 #[cfg(target_arch = "wasm32")]
-mod wasm {
+pub mod wasm {
     pub mod w128;
 }
 

@@ -1,0 +1,6 @@
+# Cargo configuration for archmage
+#
+# This file configures runners for cross-platform testing.
+
+[target.wasm32-wasip1]
+runner = "wasmtime -W simd=y"

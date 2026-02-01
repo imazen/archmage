@@ -23,6 +23,7 @@ pub mod extend_ops_wasm;
 mod ops;
 pub mod ops_bitcast;
 mod ops_comparison;
+pub mod parity_tests;
 mod structure;
 mod structure_arm;
 pub mod structure_polyfill;
@@ -93,27 +94,27 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
         }
     }
 
-    // x86 module (SSE, AVX, AVX-512)
+    // x86 module (SSE, AVX, AVX-512) - public for parity tests
     code.push_str("// x86-64 types (SSE, AVX, AVX-512)\n");
     code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("mod x86 {\n");
+    code.push_str("pub mod x86 {\n");
     code.push_str("    pub mod w128;\n");
     code.push_str("    pub mod w256;\n");
     code.push_str("    #[cfg(feature = \"avx512\")]\n");
     code.push_str("    pub mod w512;\n");
     code.push_str("}\n\n");
 
-    // ARM module (NEON)
+    // ARM module (NEON) - public for parity tests
     code.push_str("// AArch64 types (NEON)\n");
     code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str("mod arm {\n");
+    code.push_str("pub mod arm {\n");
     code.push_str("    pub mod w128;\n");
     code.push_str("}\n\n");
 
-    // WASM module (SIMD128)
+    // WASM module (SIMD128) - public for parity tests
     code.push_str("// WebAssembly types (SIMD128)\n");
     code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str("mod wasm {\n");
+    code.push_str("pub mod wasm {\n");
     code.push_str("    pub mod w128;\n");
     code.push_str("}\n\n");
 

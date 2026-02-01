@@ -51,6 +51,30 @@ ci:
 all: ci
 
 # ============================================================================
+# Parity tests (cross-architecture + polyfill vs native)
+# ============================================================================
+
+# Run parity tests on x86_64 (native)
+test-parity-x86:
+    cargo test -p magetypes --test cross_arch_parity --test polyfill_parity --features "std avx512"
+
+# Run parity tests on aarch64 (via QEMU/cross)
+test-parity-arm:
+    cross test -p magetypes --test cross_arch_parity --target aarch64-unknown-linux-gnu
+
+# Run parity tests on WASM (via wasmtime)
+test-parity-wasm:
+    RUSTFLAGS="-C target-feature=+simd128" cargo test -p magetypes --test cross_arch_parity --target wasm32-wasip1
+
+# Run polyfill parity tests (x86 only, compares polyfill vs native)
+test-parity-polyfill:
+    cargo test -p magetypes --test polyfill_parity --features "std avx512"
+
+# Run all parity tests (x86 + ARM + WASM + polyfill)
+test-parity: test-parity-x86 test-parity-arm test-parity-wasm
+    @echo "All parity tests passed!"
+
+# ============================================================================
 # Intel SDE testing (requires Intel SDE to be installed)
 # Download from: https://www.intel.com/content/www/us/en/download/684897/intel-software-development-emulator.html
 # ============================================================================

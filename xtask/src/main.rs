@@ -1073,6 +1073,15 @@ pub(crate) use registry::*;
         simd_tests.len()
     );
 
+    // Generate parity tests (cross-architecture + polyfill vs native)
+    println!("\n=== Generating Parity Tests ===");
+    let parity_tests = simd_types::parity_tests::generate_parity_tests();
+    for (filename, content) in &parity_tests {
+        let path = PathBuf::from("magetypes/tests").join(filename);
+        fs::write(&path, content)?;
+        println!("  Wrote {} ({} bytes)", path.display(), content.len());
+    }
+
     // Generate width dispatch (WidthDispatch trait + impls)
     println!("\n=== Generating Width Dispatch ===");
     let width_code = simd_types::width_dispatch::generate_width_dispatch(&reg);
@@ -1090,6 +1099,9 @@ pub(crate) use registry::*;
         .map(|(rel, _)| simd_dir.join(rel))
         .collect();
     fmt_paths.push(simd_test_path.clone());
+    for (filename, _) in &parity_tests {
+        fmt_paths.push(PathBuf::from("magetypes/tests").join(filename));
+    }
     fmt_paths.push(width_path);
     for path in &fmt_paths {
         let _ = std::process::Command::new("rustfmt")
