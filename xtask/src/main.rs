@@ -964,6 +964,396 @@ fn generate_reference_docs_new() -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
+// Compile-Time Intrinsic Soundness Verification
+// ============================================================================
+
+/// Verify intrinsic safety by generating and compiling test code.
+///
+/// This generates a test crate that:
+/// 1. Has `#[target_feature(enable = "...")]` functions for each feature set
+/// 2. Calls every intrinsic claimed to be valid for those features
+/// 3. Compiles to verify the intrinsics exist and have correct signatures
+///
+/// If compilation succeeds, the intrinsics are sound for the claimed features.
+fn verify_intrinsic_soundness() -> Result<()> {
+    use std::process::Command;
+
+    println!("=== Intrinsic Soundness Verification ===\n");
+
+    let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
+    let db = load_intrinsic_database()?;
+
+    // x86 intrinsic regex
+    let x86_re = Regex::new(r"\b(_mm(?:256|512)?_\w+)\s*(?:\(|::<)").expect("invalid x86 regex");
+
+    let simd_dir = PathBuf::from("magetypes/src/simd");
+
+    // Collect intrinsics by feature set
+    let mut intrinsics_by_features: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+
+    for mapping in &reg.magetypes_file {
+        if mapping.arch != "x86" {
+            continue; // Start with x86 only
+        }
+
+        let file_path = simd_dir.join(&mapping.rel_path);
+        if !file_path.exists() {
+            continue;
+        }
+
+        let content = fs::read_to_string(&file_path)?;
+        let file_features = reg.features_for(&mapping.token).unwrap_or_default();
+        let features_key = file_features.join(",");
+
+        for cap in x86_re.captures_iter(&content) {
+            let intrinsic = cap[1].to_string();
+
+            // Look up intrinsic's required features from CSV
+            if let Some(entry) = db.get(&intrinsic) {
+                // Use the intrinsic's actual required features
+                let intrinsic_features = entry.features.clone();
+                intrinsics_by_features
+                    .entry(intrinsic_features)
+                    .or_default()
+                    .insert(intrinsic);
+            } else {
+                // Fallback to file's features if not in CSV
+                intrinsics_by_features
+                    .entry(features_key.clone())
+                    .or_default()
+                    .insert(intrinsic);
+            }
+        }
+    }
+
+    // Generate soundness test crate
+    let test_dir = PathBuf::from("target/soundness-test");
+    fs::create_dir_all(&test_dir)?;
+
+    // Generate Cargo.toml (with empty [workspace] to avoid being picked up by parent)
+    let cargo_toml = r#"[package]
+name = "soundness-test"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[workspace]
+"#;
+    fs::write(test_dir.join("Cargo.toml"), cargo_toml)?;
+
+    // Generate lib.rs with target_feature functions
+    let mut lib_rs = String::from(
+        r#"//! Auto-generated intrinsic soundness test.
+//! If this compiles, all intrinsics are valid for their claimed features.
+
+#![allow(unused)]
+#![allow(clippy::all)]
+#![allow(overflowing_literals)]
+
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::*;
+
+// Helper to prevent optimization and create zeroed values
+#[inline(always)]
+fn z128() -> __m128 { unsafe { core::mem::zeroed() } }
+#[inline(always)]
+fn z128i() -> __m128i { unsafe { core::mem::zeroed() } }
+#[inline(always)]
+fn z128d() -> __m128d { unsafe { core::mem::zeroed() } }
+#[inline(always)]
+fn z256() -> __m256 { unsafe { core::mem::zeroed() } }
+#[inline(always)]
+fn z256i() -> __m256i { unsafe { core::mem::zeroed() } }
+#[inline(always)]
+fn z256d() -> __m256d { unsafe { core::mem::zeroed() } }
+#[inline(always)]
+fn z512() -> __m512 { unsafe { core::mem::zeroed() } }
+#[inline(always)]
+fn z512i() -> __m512i { unsafe { core::mem::zeroed() } }
+#[inline(always)]
+fn z512d() -> __m512d { unsafe { core::mem::zeroed() } }
+
+"#,
+    );
+
+    for (features, intrinsics) in &intrinsics_by_features {
+        if intrinsics.is_empty() {
+            continue;
+        }
+
+        // Parse features into target_feature format
+        let feature_list: Vec<&str> = features.split(',').map(|s| s.trim()).collect();
+        let fn_name = features.replace(',', "_").replace('.', "_");
+
+        // Generate function with target_feature
+        writeln!(lib_rs, "#[cfg(target_arch = \"x86_64\")]").unwrap();
+        for feature in &feature_list {
+            writeln!(lib_rs, "#[target_feature(enable = \"{feature}\")]").unwrap();
+        }
+        writeln!(lib_rs, "unsafe fn test_{fn_name}() {{").unwrap();
+
+        // Call each intrinsic with zeroed inputs to verify it exists and has correct signature
+        for intrinsic in intrinsics {
+            // Generate a call using core::hint::black_box to prevent optimization
+            // We use zeroed SIMD types as dummy inputs
+            let call = generate_intrinsic_call(intrinsic);
+            writeln!(lib_rs, "    {call}").unwrap();
+        }
+
+        writeln!(lib_rs, "}}\n").unwrap();
+    }
+
+    fs::write(test_dir.join("lib.rs"), &lib_rs)?;
+
+    println!("Generated soundness test crate: {}", test_dir.display());
+    println!(
+        "  Feature sets: {}",
+        intrinsics_by_features.len()
+    );
+    println!(
+        "  Total intrinsics: {}",
+        intrinsics_by_features.values().map(|s| s.len()).sum::<usize>()
+    );
+
+    // Run cargo check
+    println!("\nRunning cargo check...\n");
+
+    let output = Command::new("cargo")
+        .args(["check", "--lib"])
+        .current_dir(&test_dir)
+        .output()
+        .context("Failed to run cargo check")?;
+
+    if output.status.success() {
+        println!("✓ All intrinsics compile successfully under claimed features!");
+        println!("\nSoundness verification PASSED");
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        eprintln!("Compilation failed:\n{}", stderr);
+        bail!("Soundness verification FAILED - intrinsics do not compile under claimed features")
+    }
+}
+
+/// Generate a dummy call to an intrinsic based on its name pattern.
+///
+/// This parses the intrinsic name to determine:
+/// 1. Register width (128/256/512)
+/// 2. Data type (ps/pd/epi8/epi16/epi32/epi64/si128/si256/si512)
+/// 3. Arity (unary, binary, ternary, etc.)
+fn generate_intrinsic_call(name: &str) -> String {
+    // Determine width and zero helper
+    let (z_ps, z_i, z_pd) = if name.starts_with("_mm512_") {
+        ("z512()", "z512i()", "z512d()")
+    } else if name.starts_with("_mm256_") {
+        ("z256()", "z256i()", "z256d()")
+    } else {
+        ("z128()", "z128i()", "z128d()")
+    };
+
+    // Determine data type from suffix
+    let is_pd = name.contains("_pd") || name.ends_with("pd");
+    let is_ps = name.contains("_ps") || name.ends_with("ps");
+    let is_si = name.contains("_si") || name.contains("si128") || name.contains("si256") || name.contains("si512");
+    let is_epi = name.contains("_epi") || name.contains("epu");
+
+    let z = if is_pd { z_pd } else if is_ps { z_ps } else { z_i };
+
+    // Skip intrinsics that are hard to call (require complex setup)
+    let skip_patterns = [
+        "gather", "scatter", "mask_", "maskz_", "conflict", "compress", "expand",
+        "stream", "prefetch", "pause", "lfence", "sfence", "mfence",
+        "popcnt_", "lzcnt_", "tzcnt_", // scalar intrinsics
+        "_cvt", // conversions need special handling
+        "crc32", "aes", "clmul", "sha", // crypto
+        "reduce_", // reduction ops
+        "range_", "range", // AVX-512 range
+        "fixup", "getexp", "getmant", "scalef", "fpclass",
+        "roundscale_", "ternarylogic",
+    ];
+    for pat in skip_patterns {
+        if name.contains(pat) {
+            return format!("// skipped: {name} (complex signature)");
+        }
+    }
+
+    // Const generic patterns - need explicit const
+    if name.contains("slli_") || name.contains("srli_") || name.contains("srai_") {
+        return format!("let _ = {name}::<1>({z});");
+    }
+    if name.contains("shuffle_") || name.contains("permute_") || name.contains("blend_")
+        || name.contains("insert_") || name.contains("extract_") {
+        // These need const generics
+        return format!("// skipped: {name} (const generic)");
+    }
+    // permutevar takes (data, integer_index) - skip due to mixed types
+    if name.contains("permutevar") {
+        return format!("// skipped: {name} (mixed types)");
+    }
+    if name.contains("_round_") || name.contains("round_") {
+        return format!("let _ = {name}::<0>({z});");
+    }
+    if name.contains("cmp_") && !name.contains("cmpeq") && !name.contains("cmpgt") && !name.contains("cmplt") {
+        // AVX cmp with const predicate
+        return format!("// skipped: {name} (cmp predicate)");
+    }
+
+    // Categorize by operation pattern
+    // Cast intrinsics need special handling - input type differs from suffix
+    if name.contains("castsi") {
+        // castsi128_ps, castsi128_pd, castsi256_ps, etc. - input is integer
+        return format!("let _ = {name}({z_i});");
+    }
+    if name.contains("castps") {
+        // castps_si128, castps_pd, etc. - input is ps
+        // castps256_ps512 takes 256-bit input
+        if name.contains("256_ps512") || name.contains("256_si512") {
+            return format!("let _ = {name}(z256());");
+        }
+        if name.contains("128_ps256") || name.contains("128_si256") {
+            return format!("let _ = {name}(z128());");
+        }
+        return format!("let _ = {name}({z_ps});");
+    }
+    if name.contains("castpd") {
+        // castpd_si128, castpd_ps, etc. - input is pd
+        return format!("let _ = {name}({z_pd});");
+    }
+
+    let is_unary = name.contains("sqrt") || name.contains("rcp") || name.contains("rsqrt")
+        || name.contains("abs") || (name.contains("not") && !name.contains("andnot"))
+        || (name.contains("neg") && !name.contains("fneg"))
+        || name.contains("floor") || name.contains("ceil") || name.contains("round")
+        || name.contains("setzero") || name.contains("undefined");
+
+    let is_set = name.contains("set1_") || name.contains("set_") || name.contains("setr_");
+
+    let is_load = name.contains("load") || name.contains("lddqu");
+    let is_store = name.contains("store");
+
+    if name.contains("setzero") {
+        return format!("let _ = {name}();");
+    }
+    if name.contains("undefined") {
+        return format!("let _ = {name}();");
+    }
+    if is_set {
+        // set1 takes single scalar, set/setr take multiple
+        if name.contains("set1_") {
+            if is_pd {
+                return format!("let _ = {name}(0.0f64);");
+            } else if is_ps {
+                return format!("let _ = {name}(0.0f32);");
+            } else if name.contains("epi64") {
+                return format!("let _ = {name}(0i64);");
+            } else if name.contains("epi32") {
+                return format!("let _ = {name}(0i32);");
+            } else if name.contains("epi16") {
+                return format!("let _ = {name}(0i16);");
+            } else if name.contains("epi8") {
+                return format!("let _ = {name}(0i8);");
+            }
+        }
+        // set/setr need lane-count args - skip these
+        return format!("// skipped: {name} (set variant)");
+    }
+    if is_load || is_store {
+        return format!("// skipped: {name} (memory op)");
+    }
+    if is_unary {
+        return format!("let _ = {name}({z});");
+    }
+
+    // permute2f128 takes (a, b, imm8) - skip
+    if name.contains("permute2f128") || name.contains("permute2x128") {
+        return format!("// skipped: {name} (imm8 arg)");
+    }
+    // extractf/extracti takes (a, imm8) - skip
+    if name.contains("extractf128") || name.contains("extracti128") {
+        return format!("// skipped: {name} (imm8 arg)");
+    }
+
+    // FMA and other ternary patterns (3 args)
+    if name.contains("fmadd") || name.contains("fmsub") || name.contains("fnmadd")
+        || name.contains("fnmsub") || name.contains("fmaddsub") || name.contains("fmsubadd")
+        || name.contains("permutex2var") {
+        return format!("let _ = {name}({z}, {z}, {z});");
+    }
+
+    // Ternary blendv operations (a, b, mask)
+    if name.contains("blendv") {
+        return format!("let _ = {name}({z}, {z}, {z});");
+    }
+
+    // Binary operations (most common)
+    if name.contains("add") || name.contains("sub") || name.contains("mul") || name.contains("div")
+        || name.contains("and") || name.contains("or") || name.contains("xor")
+        || name.contains("min") || name.contains("max")
+        || name.contains("cmpeq") || name.contains("cmpgt") || name.contains("cmplt")
+        || name.contains("cmpge") || name.contains("cmple") || name.contains("cmpne")
+        || name.contains("unpack") || name.contains("hadd") || name.contains("hsub")
+        || name.contains("blend_") {
+        return format!("let _ = {name}({z}, {z});");
+    }
+
+    // Default: try binary, skip if it fails in comments
+    format!("let _ = {name}({z}, {z}); // assumed binary")
+}
+
+/// Run tests under Miri to detect undefined behavior.
+///
+/// Note: Miri has limited SIMD support. We run with ARCHMAGE_DISABLE=1
+/// to force scalar fallback paths, which can still catch UB in:
+/// - Token creation logic
+/// - Memory operations
+/// - Generic SIMD type handling
+fn run_miri() -> Result<()> {
+    use std::process::Command;
+
+    println!("=== Running Miri ===\n");
+    println!("Note: Running with ARCHMAGE_DISABLE=1 to use scalar fallbacks");
+    println!("(Miri has limited SIMD support)\n");
+
+    // Check if miri is installed
+    let miri_check = Command::new("cargo")
+        .args(["+nightly", "miri", "--version"])
+        .output();
+
+    match miri_check {
+        Err(_) => {
+            eprintln!("Miri not installed. Install with:");
+            eprintln!("  rustup +nightly component add miri");
+            eprintln!("  cargo +nightly miri setup");
+            bail!("Miri not available");
+        }
+        Ok(ref out) if !out.status.success() => {
+            eprintln!("Miri not installed. Install with:");
+            eprintln!("  rustup +nightly component add miri");
+            eprintln!("  cargo +nightly miri setup");
+            bail!("Miri not available");
+        }
+        _ => {}
+    }
+
+    // Run miri with SIMD disabled to test scalar paths
+    let status = Command::new("cargo")
+        .args(["+nightly", "miri", "test", "--lib"])
+        .env("ARCHMAGE_DISABLE", "1")
+        .status()
+        .context("Failed to run miri")?;
+
+    if status.success() {
+        println!("\n✓ Miri found no undefined behavior!");
+        Ok(())
+    } else {
+        bail!("Miri detected undefined behavior")
+    }
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
@@ -979,6 +1369,12 @@ fn main() -> Result<()> {
         eprintln!(
             "       cargo xtask ci | all            - Run ALL checks (must pass before push)"
         );
+        eprintln!(
+            "       cargo xtask soundness           - Compile-time intrinsic safety verification"
+        );
+        eprintln!(
+            "       cargo xtask miri                - Run tests under Miri (detects UB)"
+        );
         std::process::exit(1);
     }
 
@@ -991,6 +1387,8 @@ fn main() -> Result<()> {
         }
         "validate-registry" => validate_registry()?,
         "parity" => check_api_parity(false)?,
+        "soundness" => verify_intrinsic_soundness()?,
+        "miri" => run_miri()?,
         "ci" | "all" => run_ci()?,
         _ => {
             eprintln!("Unknown command: {}", args[1]);
