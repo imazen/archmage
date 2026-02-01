@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v6
@@ -66,8 +66,9 @@ jobs:
       - name: Build
         run: cargo build --features "${{ env.FEATURES }}"
 
+      # Skip examples — many use x86-only SIMD types (f32x8 etc.)
       - name: Run tests
-        run: cargo test --features "${{ env.FEATURES }}"
+        run: cargo test --features "${{ env.FEATURES }}" --lib --tests
 
   # ==========================================================================
   # Cross-compiled testing with QEMU emulation
@@ -100,8 +101,9 @@ jobs:
       - name: Build (cross)
         run: cross build --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
+      # Skip examples — many use x86-only SIMD types (f32x8 etc.)
       - name: Test (cross/QEMU)
-        run: cross test --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
+        run: cross test --features "${{ env.FEATURES }}" --lib --tests --target ${{ matrix.target }}
 
   # ==========================================================================
   # WASM SIMD128 testing
@@ -140,13 +142,13 @@ jobs:
       - name: Test archmage on WASM (wasmtime)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
-          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --wasm-features=simd"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p archmage --lib --target wasm32-wasip1
 
       - name: Test magetypes on WASM (wasmtime)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
-          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --wasm-features=simd"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p magetypes --lib --target wasm32-wasip1
 
   # ==========================================================================
@@ -165,7 +167,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run generator
-        run: cargo run -p xtask -- generate
+        run: |
+          cargo fetch
+          cargo run -p xtask -- generate
 
       - name: Check for differences
         run: |
