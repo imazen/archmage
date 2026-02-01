@@ -197,6 +197,39 @@ xtask/                       # Code generator and validation
     └── registry.rs         # token-registry.toml parser and codegen
 ```
 
+## Codegen Helpers (xtask/src/simd_types/types.rs)
+
+When adding new generated methods, use these helpers for clean code:
+
+```rust
+use super::types::{gen_unary_method, gen_binary_method, gen_scalar_method};
+
+// Unary method: pub fn name(self) -> Self { body }
+code.push_str(&gen_unary_method(
+    "Compute absolute value",  // doc
+    "abs",                      // method name
+    "Self(_mm256_abs_epi32(self.0))"  // body
+));
+
+// Binary method: pub fn name(self, other: Self) -> Self { body }
+code.push_str(&gen_binary_method(
+    "Add two vectors",
+    "add",
+    "Self(_mm256_add_epi32(self.0, other.0))"
+));
+
+// Scalar return: pub fn name(self) -> return_type { body }
+code.push_str(&gen_scalar_method(
+    "Extract first element",
+    "first",
+    "i32",  // return type
+    "_mm_cvtsi128_si32(self.0)"
+));
+```
+
+**Note:** `transcendental_wasm.rs` uses verbose `writeln!` patterns for historical reasons.
+Future refactors should migrate to these helpers.
+
 ## Token Hierarchy
 
 **x86:**

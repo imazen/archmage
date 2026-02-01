@@ -306,6 +306,28 @@ fn generate_f32_transcendentals(code: &mut String) {
     writeln!(code, "        Self(r)").unwrap();
     writeln!(code, "    }}\n").unwrap();
 
+    // ===== F32 ln_lowp_unchecked =====
+    writeln!(
+        code,
+        "    /// Low-precision natural logarithm - unchecked variant."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN)."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn ln_lowp_unchecked(self) -> Self {{").unwrap();
+    writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_lowp_unchecked().0, f32x4_splat(LN2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
     // ===== F32 ln_lowp =====
     writeln!(code, "    /// Low-precision natural logarithm.").unwrap();
     writeln!(code, "    ///").unwrap();
@@ -317,6 +339,32 @@ fn generate_f32_transcendentals(code: &mut String) {
     writeln!(
         code,
         "        Self(f32x4_mul(self.log2_lowp().0, f32x4_splat(LN2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // ===== F32 exp_lowp_unchecked =====
+    writeln!(
+        code,
+        "    /// Low-precision natural exponential - unchecked variant."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// **Warning**: Clamps to finite range. Does not return inf for overflow."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn exp_lowp_unchecked(self) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "        const LOG2_E: f32 = core::f32::consts::LOG2_E;"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.0, f32x4_splat(LOG2_E))).exp2_lowp_unchecked()"
     )
     .unwrap();
     writeln!(code, "    }}\n").unwrap();
@@ -340,10 +388,37 @@ fn generate_f32_transcendentals(code: &mut String) {
     .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
+    // ===== F32 log10_lowp_unchecked =====
+    writeln!(
+        code,
+        "    /// Low-precision base-10 logarithm - unchecked variant."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN)."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn log10_lowp_unchecked(self) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "        const LOG10_2: f32 = core::f32::consts::LOG10_2;"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_lowp_unchecked().0, f32x4_splat(LOG10_2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
     // ===== F32 log10_lowp =====
     writeln!(code, "    /// Low-precision base-10 logarithm.").unwrap();
     writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// Computed as `log2_lowp(x) / log2(10)`.").unwrap();
+    writeln!(code, "    /// Computed as `log2_lowp(x) * log10(2)`.").unwrap();
+    writeln!(code, "    /// Handles edge cases correctly.").unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn log10_lowp(self) -> Self {{").unwrap();
     writeln!(
@@ -354,6 +429,31 @@ fn generate_f32_transcendentals(code: &mut String) {
     writeln!(
         code,
         "        Self(f32x4_mul(self.log2_lowp().0, f32x4_splat(LOG10_2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // ===== F32 pow_lowp_unchecked =====
+    writeln!(
+        code,
+        "    /// Low-precision power function - unchecked variant."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// **Warning**: Does not handle edge cases. Only valid for positive self values."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(
+        code,
+        "    pub fn pow_lowp_unchecked(self, n: f32) -> Self {{"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_lowp_unchecked().0, f32x4_splat(n))).exp2_lowp_unchecked()"
     )
     .unwrap();
     writeln!(code, "    }}\n").unwrap();
@@ -731,17 +831,94 @@ fn generate_f32_transcendentals(code: &mut String) {
     writeln!(code, "        Self(r)").unwrap();
     writeln!(code, "    }}\n").unwrap();
 
+    // ===== F32 ln_midp_unchecked =====
+    writeln!(
+        code,
+        "    /// Mid-precision natural logarithm - unchecked variant."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN, denormals)."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn ln_midp_unchecked(self) -> Self {{").unwrap();
+    writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_midp_unchecked().0, f32x4_splat(LN2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
     // ===== F32 ln_midp =====
     writeln!(code, "    /// Mid-precision natural logarithm.").unwrap();
     writeln!(code, "    ///").unwrap();
     writeln!(code, "    /// Computed as `log2_midp(x) * ln(2)`.").unwrap();
     writeln!(code, "    /// Handles edge cases correctly.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Note: Does not handle denormals. Use `ln_midp_precise()` for full IEEE."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn ln_midp(self) -> Self {{").unwrap();
     writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
     writeln!(
         code,
         "        Self(f32x4_mul(self.log2_midp().0, f32x4_splat(LN2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // ===== F32 ln_midp_precise (handles denormals) =====
+    writeln!(
+        code,
+        "    /// Mid-precision natural logarithm with full IEEE compliance."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// Handles all edge cases including denormals.").unwrap();
+    writeln!(
+        code,
+        "    /// About 50% slower than `ln_midp()` due to denormal scaling."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn ln_midp_precise(self) -> Self {{").unwrap();
+    writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_midp_precise().0, f32x4_splat(LN2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // ===== F32 exp_midp_unchecked =====
+    writeln!(
+        code,
+        "    /// Mid-precision natural exponential - unchecked variant."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// **Warning**: Clamps to finite range. Does not return inf for overflow."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn exp_midp_unchecked(self) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "        const LOG2_E: f32 = core::f32::consts::LOG2_E;"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.0, f32x4_splat(LOG2_E))).exp2_midp_unchecked()"
     )
     .unwrap();
     writeln!(code, "    }}\n").unwrap();
@@ -765,6 +942,109 @@ fn generate_f32_transcendentals(code: &mut String) {
     .unwrap();
     writeln!(code, "    }}\n").unwrap();
 
+    // ===== F32 log10_midp_unchecked =====
+    writeln!(
+        code,
+        "    /// Mid-precision base-10 logarithm - unchecked variant."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN, denormals)."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn log10_midp_unchecked(self) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "        const LOG10_2: f32 = core::f32::consts::LOG10_2;"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_midp_unchecked().0, f32x4_splat(LOG10_2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // ===== F32 log10_midp =====
+    writeln!(code, "    /// Mid-precision base-10 logarithm.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// Computed as `log2_midp(x) * log10(2)`.").unwrap();
+    writeln!(code, "    /// Handles edge cases correctly.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Note: Does not handle denormals. Use `log10_midp_precise()` for full IEEE."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn log10_midp(self) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "        const LOG10_2: f32 = core::f32::consts::LOG10_2;"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_midp().0, f32x4_splat(LOG10_2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // ===== F32 log10_midp_precise (handles denormals) =====
+    writeln!(
+        code,
+        "    /// Mid-precision base-10 logarithm with full IEEE compliance."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// Handles all edge cases including denormals.").unwrap();
+    writeln!(
+        code,
+        "    /// About 50% slower than `log10_midp()` due to denormal scaling."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn log10_midp_precise(self) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "        const LOG10_2: f32 = core::f32::consts::LOG10_2;"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_midp_precise().0, f32x4_splat(LOG10_2)))"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // ===== F32 pow_midp_unchecked =====
+    writeln!(
+        code,
+        "    /// Mid-precision power function - unchecked variant."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// **Warning**: Does not handle edge cases. Only valid for positive self values."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(
+        code,
+        "    pub fn pow_midp_unchecked(self, n: f32) -> Self {{"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_midp_unchecked().0, f32x4_splat(n))).exp2_midp_unchecked()"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
     // ===== F32 pow_midp =====
     writeln!(code, "    /// Mid-precision power function (self^n).").unwrap();
     writeln!(code, "    ///").unwrap();
@@ -784,6 +1064,28 @@ fn generate_f32_transcendentals(code: &mut String) {
     writeln!(
         code,
         "        Self(f32x4_mul(self.log2_midp().0, f32x4_splat(n))).exp2_midp()"
+    )
+    .unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // ===== F32 pow_midp_precise =====
+    writeln!(
+        code,
+        "    /// Mid-precision power function with denormal handling."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Uses `log2_midp_precise()` to handle denormal inputs correctly."
+    )
+    .unwrap();
+    writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn pow_midp_precise(self, n: f32) -> Self {{").unwrap();
+    writeln!(
+        code,
+        "        Self(f32x4_mul(self.log2_midp_precise().0, f32x4_splat(n))).exp2_midp()"
     )
     .unwrap();
     writeln!(code, "    }}\n").unwrap();
