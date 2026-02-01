@@ -1447,10 +1447,12 @@ fn run_ci() -> Result<()> {
 
     // Step 6: Clippy
     println!("┌─ Step 6/8: Running clippy ─────────────────────────────────────────┐");
+    // Use specific features instead of --all-features to avoid sleef (requires nightly)
     let clippy = std::process::Command::new("cargo")
         .args([
             "clippy",
-            "--all-features",
+            "--features",
+            "std macros bytemuck wide __composite avx512",
             "--",
             "-D",
             "warnings",
@@ -1465,8 +1467,9 @@ fn run_ci() -> Result<()> {
 
     // Step 7: Tests
     println!("┌─ Step 7/8: Running tests ──────────────────────────────────────────┐");
+    // Use specific features instead of --all-features to avoid sleef (requires nightly)
     let tests = std::process::Command::new("cargo")
-        .args(["test", "--all-features"])
+        .args(["test", "--features", "std macros bytemuck wide __composite avx512"])
         .status()
         .context("Failed to run tests")?;
     if !tests.success() {
