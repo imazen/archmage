@@ -421,6 +421,9 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
             self.max(lo).min(hi)
             }}
 
+        "});
+        code.push_str(&formatdoc! {"
+            #[cfg(feature = \"avx512\")]
             /// Element-wise minimum using AVX-512VL native intrinsic.
             ///
             /// Single instruction, faster than the polyfill used by `min()`.
@@ -429,6 +432,7 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
             Self(unsafe {{ {prefix}_min_epi64(self.0, other.0) }})
             }}
 
+            #[cfg(feature = \"avx512\")]
             /// Element-wise maximum using AVX-512VL native intrinsic.
             ///
             /// Single instruction, faster than the polyfill used by `max()`.
@@ -472,6 +476,9 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
             self.max(lo).min(hi)
             }}
 
+        "});
+        code.push_str(&formatdoc! {"
+            #[cfg(feature = \"avx512\")]
             /// Element-wise minimum using AVX-512VL native intrinsic.
             ///
             /// Single instruction, faster than the polyfill used by `min()`.
@@ -480,6 +487,7 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
             Self(unsafe {{ {prefix}_min_epu64(self.0, other.0) }})
             }}
 
+            #[cfg(feature = \"avx512\")]
             /// Element-wise maximum using AVX-512VL native intrinsic.
             ///
             /// Single instruction, faster than the polyfill used by `max()`.
@@ -596,6 +604,9 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
                 }}
                 }}
 
+            "});
+            code.push_str(&formatdoc! {"
+                #[cfg(feature = \"avx512\")]
                 /// Absolute value using AVX-512VL native intrinsic.
                 ///
                 /// Single instruction, faster than the polyfill used by `abs()`.

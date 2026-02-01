@@ -4953,6 +4953,7 @@ impl i64x4 {
         self.max(lo).min(hi)
     }
 
+    #[cfg(feature = "avx512")]
     /// Element-wise minimum using AVX-512VL native intrinsic.
     ///
     /// Single instruction, faster than the polyfill used by `min()`.
@@ -4961,6 +4962,7 @@ impl i64x4 {
         Self(unsafe { _mm256_min_epi64(self.0, other.0) })
     }
 
+    #[cfg(feature = "avx512")]
     /// Element-wise maximum using AVX-512VL native intrinsic.
     ///
     /// Single instruction, faster than the polyfill used by `max()`.
@@ -4979,6 +4981,7 @@ impl i64x4 {
         }
     }
 
+    #[cfg(feature = "avx512")]
     /// Absolute value using AVX-512VL native intrinsic.
     ///
     /// Single instruction, faster than the polyfill used by `abs()`.
@@ -5419,6 +5422,7 @@ impl u64x4 {
         self.max(lo).min(hi)
     }
 
+    #[cfg(feature = "avx512")]
     /// Element-wise minimum using AVX-512VL native intrinsic.
     ///
     /// Single instruction, faster than the polyfill used by `min()`.
@@ -5427,6 +5431,7 @@ impl u64x4 {
         Self(unsafe { _mm256_min_epu64(self.0, other.0) })
     }
 
+    #[cfg(feature = "avx512")]
     /// Element-wise maximum using AVX-512VL native intrinsic.
     ///
     /// Single instruction, faster than the polyfill used by `max()`.
