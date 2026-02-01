@@ -66,9 +66,8 @@ jobs:
       - name: Build
         run: cargo build --features "${{ env.FEATURES }}"
 
-      # Skip examples — many use x86-only SIMD types (f32x8 etc.)
       - name: Run tests
-        run: cargo test --features "${{ env.FEATURES }}" --lib --tests
+        run: cargo test --features "${{ env.FEATURES }}"
 
   # ==========================================================================
   # Cross-compiled testing with QEMU emulation
@@ -101,9 +100,8 @@ jobs:
       - name: Build (cross)
         run: cross build --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
-      # Skip examples — many use x86-only SIMD types (f32x8 etc.)
       - name: Test (cross/QEMU)
-        run: cross test --features "${{ env.FEATURES }}" --lib --tests --target ${{ matrix.target }}
+        run: cross test --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
   # ==========================================================================
   # WASM SIMD128 testing
