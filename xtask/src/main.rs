@@ -1244,6 +1244,23 @@ fn validate_registry() -> Result<()> {
 
 /// Generate all artifacts: SIMD types, macro registry, and documentation
 fn generate_all() -> Result<()> {
+    // Purge all generated directories first to handle renamed/removed files
+    println!("=== Purging Generated Directories ===");
+    let generated_dirs = [
+        "archmage-macros/src/generated",
+        "src/tokens/generated",
+        "magetypes/src/simd/generated",
+        "docs/generated",
+    ];
+    for dir in &generated_dirs {
+        let path = PathBuf::from(dir);
+        if path.exists() {
+            fs::remove_dir_all(&path)?;
+            println!("  Purged {}", dir);
+        }
+    }
+    println!();
+
     // Generate macro registry from token-registry.toml
     println!("=== Generating Macro Registry ===");
     let registry_path = PathBuf::from("token-registry.toml");
@@ -1749,7 +1766,7 @@ fn run_ci() -> Result<()> {
     println!("╚══════════════════════════════════════════════════════════════════╝\n");
 
     // Step 1: Generate all code
-    println!("┌─ Step 1/8: Regenerating code ─────────────────────────────────────┐");
+    println!("┌─ Step 1/10: Regenerating code ─────────────────────────────────────┐");
     generate_all()?;
     println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
 
@@ -1767,7 +1784,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Formatting complete ──────────────────────────────────────────────┘\n");
 
     // Step 2: Check for clean worktree
-    println!("┌─ Step 2/8: Checking for uncommitted changes ──────────────────────┐");
+    println!("┌─ Step 2/10: Checking for uncommitted changes ──────────────────────┐");
     let status = std::process::Command::new("git")
         .args(["status", "--porcelain"])
         .output()
@@ -1786,22 +1803,27 @@ fn run_ci() -> Result<()> {
     println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
 
     // Step 3-4: Validation (already done in generate_all, but let's be explicit)
-    println!("┌─ Step 3/8: Validating magetypes safety ────────────────────────────┐");
+    println!("┌─ Step 3/10: Validating magetypes safety ────────────────────────────┐");
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
     validate_magetypes_with_registry(&reg)?;
     println!("└─ Magetypes validation passed ──────────────────────────────────────┘\n");
 
-    println!("┌─ Step 4/8: Validating try_new() features ──────────────────────────┐");
+    println!("┌─ Step 4/10: Validating try_new() features ──────────────────────────┐");
     validate_try_new(&reg)?;
     println!("└─ try_new() validation passed ──────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
-    println!("┌─ Step 5/8: Checking API parity (strict) ───────────────────────────┐");
+    println!("┌─ Step 5/10: Checking API parity (strict) ──────────────────────────┐");
     check_api_parity(true)?;
     println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
 
-    // Step 6: Clippy
-    println!("┌─ Step 6/8: Running clippy ─────────────────────────────────────────┐");
+    // Step 6: Soundness verification
+    println!("┌─ Step 6/10: Verifying intrinsic soundness ─────────────────────────┐");
+    verify_intrinsic_soundness()?;
+    println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
+
+    // Step 7: Clippy
+    println!("┌─ Step 7/10: Running clippy ────────────────────────────────────────┐");
     // Use specific features instead of --all-features to avoid sleef (requires nightly)
     let clippy = std::process::Command::new("cargo")
         .args([
@@ -1820,8 +1842,8 @@ fn run_ci() -> Result<()> {
     println!("  ✓ Clippy passed");
     println!("└─ Clippy check passed ──────────────────────────────────────────────┘\n");
 
-    // Step 7: Tests
-    println!("┌─ Step 7/8: Running tests ──────────────────────────────────────────┐");
+    // Step 8: Tests
+    println!("┌─ Step 8/10: Running tests ─────────────────────────────────────────┐");
     // Use specific features instead of --all-features to avoid sleef (requires nightly)
     let tests = std::process::Command::new("cargo")
         .args(["test", "--features", "std macros bytemuck avx512"])
@@ -1832,8 +1854,8 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ All tests passed ─────────────────────────────────────────────────┘\n");
 
-    // Step 8: Format check
-    println!("┌─ Step 8/8: Checking code formatting ───────────────────────────────┐");
+    // Step 9: Format check
+    println!("┌─ Step 9/10: Checking code formatting ──────────────────────────────┐");
     let fmt = std::process::Command::new("cargo")
         .args(["fmt", "--", "--check"])
         .status()
@@ -1843,6 +1865,38 @@ fn run_ci() -> Result<()> {
     }
     println!("  ✓ Code is properly formatted");
     println!("└─ Format check passed ──────────────────────────────────────────────┘\n");
+
+    // Step 10: Miri testing (UB detection)
+    println!("┌─ Step 10/10: Running Miri (UB detection) ──────────────────────────┐");
+    // Check if Miri is available
+    let miri_available = std::process::Command::new("cargo")
+        .args(["+nightly", "miri", "--version"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !miri_available {
+        println!("  ⚠ Miri not available, skipping UB checks");
+        println!("  Install with: rustup +nightly component add miri");
+    } else {
+        let miri = std::process::Command::new("cargo")
+            .args([
+                "+nightly",
+                "miri",
+                "test",
+                "-p",
+                "magetypes",
+                "--features",
+                "magetypes/avx512",
+            ])
+            .status()
+            .context("Failed to run Miri")?;
+        if !miri.success() {
+            bail!("Miri detected undefined behavior!");
+        }
+        println!("  ✓ Miri found no undefined behavior");
+    }
+    println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
 
     println!("╔══════════════════════════════════════════════════════════════════╗");
     println!("║  ✓ ALL CI CHECKS PASSED - Safe to push/publish                   ║");
