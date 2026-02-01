@@ -103,12 +103,12 @@ CI checks (all must pass):
 1. `cargo xtask generate` — regenerate all code
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
 3. `cargo xtask validate` — intrinsic safety + try_new() feature verification
-4. `cargo xtask parity` — parity warnings (currently 81 issues, 72 actionable)
+4. `cargo xtask parity` — parity warnings (currently 80 issues, 71 actionable)
 5. `cargo clippy --features "std macros bytemuck avx512"` — zero warnings
 6. `cargo test --features "std macros bytemuck avx512"` — all tests pass
 7. `cargo fmt --check` — code is formatted
 
-**Note:** Parity check reports 81 issues (9 known gaps with no efficient intrinsic, 72 actionable). CI warns but doesn't fail on parity issues. Full parity required before 1.0 release. See "Pending Work" section for details.
+**Note:** Parity check reports 80 issues (9 known gaps with no efficient intrinsic, 71 actionable). CI warns but doesn't fail on parity issues. Full parity required before 1.0 release. See "Pending Work" section for details.
 
 If ANY check fails:
 - Do NOT push
@@ -354,9 +354,9 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 ## Pending Work
 
-### API Parity Status (81 issues remaining, 72 actionable)
+### API Parity Status (80 issues remaining, 71 actionable)
 
-**Current state:** Reduced from 270 → 81 parity issues (70% reduction). Of these, 9 are "known gaps" with no efficient native intrinsic, leaving 72 actionable issues.
+**Current state:** Reduced from 270 → 80 parity issues (70% reduction). Of these, 9 are "known gaps" with no efficient native intrinsic, leaving 71 actionable issues.
 
 Run `cargo xtask parity` to see full list.
 
