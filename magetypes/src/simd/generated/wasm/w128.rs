@@ -228,7 +228,6 @@ impl f32x4 {
     }
 
     // ========== Approximation Operations ==========
-
     // WASM has no native reciprocal estimate intrinsics.
     // These use division for correct results.
 

@@ -6,7 +6,7 @@ use super::arch::Arch;
 use super::arch::wasm::Wasm;
 use super::ops_bitcast;
 use super::types::{ElementType, SimdType, SimdWidth};
-use std::fmt::Write;
+use indoc::formatdoc;
 
 /// Generate a complete WASM SIMD type
 pub fn generate_type(ty: &SimdType) -> String {
@@ -15,37 +15,25 @@ pub fn generate_type(ty: &SimdType) -> String {
         "WASM only supports 128-bit types"
     );
 
-    let mut code = String::new();
     let name = ty.name();
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = Wasm::intrinsic_type(ty.elem, ty.width);
 
-    // Type definition
-    writeln!(
-        code,
-        "\n// ============================================================================"
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "// {} - {} x {} (128-bit WASM SIMD)",
-        name, lanes, elem
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "// ============================================================================\n"
-    )
-    .unwrap();
+    let mut code = formatdoc! {"
 
-    writeln!(code, "#[derive(Clone, Copy, Debug)]").unwrap();
-    writeln!(code, "#[repr(transparent)]").unwrap();
-    writeln!(code, "pub struct {}({});\n", name, inner).unwrap();
+        // ============================================================================
+        // {name} - {lanes} x {elem} (128-bit WASM SIMD)
+        // ============================================================================
 
-    // Impl block
-    writeln!(code, "impl {} {{", name).unwrap();
-    writeln!(code, "    pub const LANES: usize = {};\n", lanes).unwrap();
+        #[derive(Clone, Copy, Debug)]
+        #[repr(transparent)]
+        pub struct {name}({inner});
+
+        impl {name} {{
+        pub const LANES: usize = {lanes};
+
+    "};
 
     // Construction methods
     code.push_str(&generate_construction_methods(ty));
@@ -71,7 +59,7 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Bitcast operations (reinterpret bits between same-width types)
     code.push_str(&ops_bitcast::generate_wasm_bitcasts(ty));
 
-    writeln!(code, "}}\n").unwrap();
+    code.push_str("}\n\n");
 
     // Operator implementations
     code.push_str(&generate_operator_impls(ty));
@@ -81,402 +69,161 @@ pub fn generate_type(ty: &SimdType) -> String {
 
 /// Generate construction and extraction methods
 fn generate_construction_methods(ty: &SimdType) -> String {
-    let mut code = String::new();
-    let _name = ty.name();
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = Wasm::intrinsic_type(ty.elem, ty.width);
-
     let splat_fn = Wasm::splat_intrinsic(ty.elem);
-
-    // Load (WASM uses v128_load which is untyped)
-    writeln!(code, "    /// Load from array (token-gated)").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn load(_: archmage::Simd128Token, data: &[{}; {}]) -> Self {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ v128_load(data.as_ptr() as *const v128) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // Splat
-    writeln!(code, "    /// Broadcast scalar to all lanes (token-gated)").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn splat(_: archmage::Simd128Token, v: {}) -> Self {{",
-        elem
-    )
-    .unwrap();
-    writeln!(code, "        Self({}(v))", splat_fn).unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // Zero
-    writeln!(code, "    /// Zero vector (token-gated)").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn zero(_: archmage::Simd128Token) -> Self {{"
-    )
-    .unwrap();
     let zero_val = ty.elem.zero_literal();
-    writeln!(code, "        Self({}({}))", splat_fn, zero_val).unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // From array (zero-cost transmute)
-    writeln!(code, "    /// Create from array (token-gated, zero-cost)").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a zero-cost transmute, not a memory load."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn from_array(_: archmage::Simd128Token, arr: [{}; {}]) -> Self {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: [{}; {}] and {} have identical size and layout",
-        elem, lanes, inner
-    )
-    .unwrap();
-    writeln!(code, "        Self(unsafe {{ core::mem::transmute(arr) }})").unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // Store
-    writeln!(code, "    /// Store to array").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn store(self, out: &mut [{}; {}]) {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ v128_store(out.as_mut_ptr() as *mut v128, self.0) }};"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // To array
-    writeln!(code, "    /// Convert to array").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn to_array(self) -> [{}; {}] {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        let mut out = [{}; {}];",
-        ty.elem.zero_literal(),
-        lanes
-    )
-    .unwrap();
-    writeln!(code, "        self.store(&mut out);").unwrap();
-    writeln!(code, "        out").unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // As array
-    writeln!(code, "    /// Get reference to underlying array").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn as_array(&self) -> &[{}; {}] {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &*(self as *const Self as *const [{}; {}]) }}",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // As array mut
-    writeln!(code, "    /// Get mutable reference to underlying array").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn as_array_mut(&mut self) -> &mut [{}; {}] {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &mut *(self as *mut Self as *mut [{}; {}]) }}",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // Raw
-    writeln!(code, "    /// Get raw intrinsic type").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn raw(self) -> {} {{", inner).unwrap();
-    writeln!(code, "        self.0").unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // From raw
-    writeln!(
-        code,
-        "    /// Create from raw intrinsic (unsafe - no token check)"
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// # Safety").unwrap();
-    writeln!(
-        code,
-        "    /// Caller must ensure the CPU supports WASM SIMD128."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub unsafe fn from_raw(v: {}) -> Self {{", inner).unwrap();
-    writeln!(code, "        Self(v)").unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // Token-gated bytemuck replacements
     let byte_size = 16; // WASM v128 is always 16 bytes
 
-    writeln!(
-        code,
-        "    // ========== Token-gated bytemuck replacements ==========\n"
-    )
-    .unwrap();
+    formatdoc! {r#"
+        /// Load from array (token-gated)
+        #[inline(always)]
+        pub fn load(_: archmage::Simd128Token, data: &[{elem}; {lanes}]) -> Self {{
+        Self(unsafe {{ v128_load(data.as_ptr() as *const v128) }})
+        }}
 
-    // cast_slice: &[T] -> &[Self]
-    writeln!(
-        code,
-        "    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// Returns `None` if the slice length is not a multiple of {}, or",
-        lanes
-    )
-    .unwrap();
-    writeln!(code, "    /// if the slice is not properly aligned.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn cast_slice(_: archmage::Simd128Token, slice: &[{}]) -> Option<&[Self]> {{",
-        elem
-    )
-    .unwrap();
-    writeln!(code, "        if slice.len() % {} != 0 {{", lanes).unwrap();
-    writeln!(code, "            return None;").unwrap();
-    writeln!(code, "        }}").unwrap();
-    writeln!(code, "        let ptr = slice.as_ptr();").unwrap();
-    writeln!(
-        code,
-        "        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{"
-    )
-    .unwrap();
-    writeln!(code, "            return None;").unwrap();
-    writeln!(code, "        }}").unwrap();
-    writeln!(code, "        let len = slice.len() / {};", lanes).unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: alignment and length checked, layout is compatible"
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Some(unsafe {{ core::slice::from_raw_parts(ptr as *const Self, len) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Broadcast scalar to all lanes (token-gated)
+        #[inline(always)]
+        pub fn splat(_: archmage::Simd128Token, v: {elem}) -> Self {{
+        Self({splat_fn}(v))
+        }}
 
-    // cast_slice_mut: &mut [T] -> &mut [Self]
-    writeln!(
-        code,
-        "    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// Returns `None` if the slice length is not a multiple of {}, or",
-        lanes
-    )
-    .unwrap();
-    writeln!(code, "    /// if the slice is not properly aligned.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [{}]) -> Option<&mut [Self]> {{", elem).unwrap();
-    writeln!(code, "        if slice.len() % {} != 0 {{", lanes).unwrap();
-    writeln!(code, "            return None;").unwrap();
-    writeln!(code, "        }}").unwrap();
-    writeln!(code, "        let ptr = slice.as_mut_ptr();").unwrap();
-    writeln!(
-        code,
-        "        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{"
-    )
-    .unwrap();
-    writeln!(code, "            return None;").unwrap();
-    writeln!(code, "        }}").unwrap();
-    writeln!(code, "        let len = slice.len() / {};", lanes).unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: alignment and length checked, layout is compatible"
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Some(unsafe {{ core::slice::from_raw_parts_mut(ptr as *mut Self, len) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Zero vector (token-gated)
+        #[inline(always)]
+        pub fn zero(_: archmage::Simd128Token) -> Self {{
+        Self({splat_fn}({zero_val}))
+        }}
 
-    // as_bytes: &self -> &[u8; N]
-    writeln!(code, "    /// View this vector as a byte array.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe replacement for `bytemuck::bytes_of`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn as_bytes(&self) -> &[u8; {}] {{",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: Self is repr(transparent) over v128 which is {} bytes",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &*(self as *const Self as *const [u8; {}]) }}",
-        byte_size
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Create from array (token-gated, zero-cost)
+        ///
+        /// This is a zero-cost transmute, not a memory load.
+        #[inline(always)]
+        pub fn from_array(_: archmage::Simd128Token, arr: [{elem}; {lanes}]) -> Self {{
+        // SAFETY: [{elem}; {lanes}] and {inner} have identical size and layout
+        Self(unsafe {{ core::mem::transmute(arr) }})
+        }}
 
-    // as_bytes_mut: &mut self -> &mut [u8; N]
-    writeln!(code, "    /// View this vector as a mutable byte array.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe replacement for `bytemuck::bytes_of_mut`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn as_bytes_mut(&mut self) -> &mut [u8; {}] {{",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: Self is repr(transparent) over v128 which is {} bytes",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &mut *(self as *mut Self as *mut [u8; {}]) }}",
-        byte_size
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Store to array
+        #[inline(always)]
+        pub fn store(self, out: &mut [{elem}; {lanes}]) {{
+        unsafe {{ v128_store(out.as_mut_ptr() as *mut v128, self.0) }};
+        }}
 
-    // from_bytes: &[u8; N] -> Self (token-gated)
-    writeln!(
-        code,
-        "    /// Create from a byte array reference (token-gated)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; {}]) -> Self {{",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: [u8; {}] and Self have identical size",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ core::mem::transmute(*bytes) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Convert to array
+        #[inline(always)]
+        pub fn to_array(self) -> [{elem}; {lanes}] {{
+        let mut out = [{zero_val}; {lanes}];
+        self.store(&mut out);
+        out
+        }}
 
-    // from_bytes_owned: [u8; N] -> Self (token-gated, zero-cost)
-    writeln!(
-        code,
-        "    /// Create from an owned byte array (token-gated, zero-cost)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a zero-cost transmute from an owned byte array."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; {}]) -> Self {{",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: [u8; {}] and Self have identical size",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ core::mem::transmute(bytes) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Get reference to underlying array
+        #[inline(always)]
+        pub fn as_array(&self) -> &[{elem}; {lanes}] {{
+        unsafe {{ &*(self as *const Self as *const [{elem}; {lanes}]) }}
+        }}
 
-    code
+        /// Get mutable reference to underlying array
+        #[inline(always)]
+        pub fn as_array_mut(&mut self) -> &mut [{elem}; {lanes}] {{
+        unsafe {{ &mut *(self as *mut Self as *mut [{elem}; {lanes}]) }}
+        }}
+
+        /// Get raw intrinsic type
+        #[inline(always)]
+        pub fn raw(self) -> {inner} {{
+        self.0
+        }}
+
+        /// Create from raw intrinsic (unsafe - no token check)
+        ///
+        /// # Safety
+        /// Caller must ensure the CPU supports WASM SIMD128.
+        #[inline(always)]
+        pub unsafe fn from_raw(v: {inner}) -> Self {{
+        Self(v)
+        }}
+
+        // ========== Token-gated bytemuck replacements ==========
+
+        /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+        ///
+        /// Returns `None` if the slice length is not a multiple of {lanes}, or
+        /// if the slice is not properly aligned.
+        ///
+        /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+        #[inline(always)]
+        pub fn cast_slice(_: archmage::Simd128Token, slice: &[{elem}]) -> Option<&[Self]> {{
+        if slice.len() % {lanes} != 0 {{
+            return None;
+        }}
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{
+            return None;
+        }}
+        let len = slice.len() / {lanes};
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe {{ core::slice::from_raw_parts(ptr as *const Self, len) }})
+        }}
+
+        /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+        ///
+        /// Returns `None` if the slice length is not a multiple of {lanes}, or
+        /// if the slice is not properly aligned.
+        ///
+        /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+        #[inline(always)]
+        pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [{elem}]) -> Option<&mut [Self]> {{
+        if slice.len() % {lanes} != 0 {{
+            return None;
+        }}
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{
+            return None;
+        }}
+        let len = slice.len() / {lanes};
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe {{ core::slice::from_raw_parts_mut(ptr as *mut Self, len) }})
+        }}
+
+        /// View this vector as a byte array.
+        ///
+        /// This is a safe replacement for `bytemuck::bytes_of`.
+        #[inline(always)]
+        pub fn as_bytes(&self) -> &[u8; {byte_size}] {{
+        // SAFETY: Self is repr(transparent) over v128 which is {byte_size} bytes
+        unsafe {{ &*(self as *const Self as *const [u8; {byte_size}]) }}
+        }}
+
+        /// View this vector as a mutable byte array.
+        ///
+        /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+        #[inline(always)]
+        pub fn as_bytes_mut(&mut self) -> &mut [u8; {byte_size}] {{
+        // SAFETY: Self is repr(transparent) over v128 which is {byte_size} bytes
+        unsafe {{ &mut *(self as *mut Self as *mut [u8; {byte_size}]) }}
+        }}
+
+        /// Create from a byte array reference (token-gated).
+        ///
+        /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+        #[inline(always)]
+        pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; {byte_size}]) -> Self {{
+        // SAFETY: [u8; {byte_size}] and Self have identical size
+        Self(unsafe {{ core::mem::transmute(*bytes) }})
+        }}
+
+        /// Create from an owned byte array (token-gated, zero-cost).
+        ///
+        /// This is a zero-cost transmute from an owned byte array.
+        #[inline(always)]
+        pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; {byte_size}]) -> Self {{
+        // SAFETY: [u8; {byte_size}] and Self have identical size
+        Self(unsafe {{ core::mem::transmute(bytes) }})
+        }}
+
+    "#}
 }
 
 /// Generate math operations for WASM
@@ -499,204 +246,146 @@ fn generate_math_ops(ty: &SimdType) -> String {
         let min_fn = Wasm::min_intrinsic(ty.elem);
         let max_fn = Wasm::max_intrinsic(ty.elem);
 
-        writeln!(code, "    /// Element-wise minimum").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn min(self, other: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, other.0))", min_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            /// Element-wise minimum
+            #[inline(always)]
+            pub fn min(self, other: Self) -> Self {{
+            Self({min_fn}(self.0, other.0))
+            }}
 
-        writeln!(code, "    /// Element-wise maximum").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn max(self, other: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, other.0))", max_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
+            /// Element-wise maximum
+            #[inline(always)]
+            pub fn max(self, other: Self) -> Self {{
+            Self({max_fn}(self.0, other.0))
+            }}
 
-        writeln!(code, "    /// Clamp values between lo and hi").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn clamp(self, lo: Self, hi: Self) -> Self {{"
-        )
-        .unwrap();
-        writeln!(code, "        self.max(lo).min(hi)").unwrap();
-        writeln!(code, "    }}\n").unwrap();
+            /// Clamp values between lo and hi
+            #[inline(always)]
+            pub fn clamp(self, lo: Self, hi: Self) -> Self {{
+            self.max(lo).min(hi)
+            }}
+
+        "#});
     }
 
     // Float-only operations
     if ty.elem.is_float() {
         let sqrt_fn = Wasm::sqrt_intrinsic(ty.elem);
         let abs_fn = Wasm::abs_intrinsic(ty.elem);
-        let _neg_fn = Wasm::neg_intrinsic(ty.elem);
         let floor_fn = Wasm::floor_intrinsic(ty.elem);
         let ceil_fn = Wasm::ceil_intrinsic(ty.elem);
         let nearest_fn = Wasm::nearest_intrinsic(ty.elem);
-
-        writeln!(code, "    /// Square root").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn sqrt(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0))", sqrt_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        writeln!(code, "    /// Absolute value").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn abs(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0))", abs_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        writeln!(code, "    /// Floor").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn floor(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0))", floor_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        writeln!(code, "    /// Ceil").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn ceil(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0))", ceil_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        writeln!(code, "    /// Round to nearest").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn round(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0))", nearest_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // FMA: WASM relaxed-simd has f32x4_relaxed_madd, but it's not stable
-        // For now, emulate with mul + add
         let mul_fn = Wasm::arith_intrinsic("mul", ty.elem);
         let add_fn = Wasm::arith_intrinsic("add", ty.elem);
-        writeln!(code, "    /// Fused multiply-add: self * a + b").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Note: WASM doesn't have native FMA in stable SIMD,"
-        )
-        .unwrap();
-        writeln!(code, "    /// this is emulated with separate mul and add.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn mul_add(self, a: Self, b: Self) -> Self {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        Self({}({}(self.0, a.0), b.0))",
-            add_fn, mul_fn
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // mul_sub: self * a - b (emulated with separate mul and sub)
         let sub_fn = Wasm::arith_intrinsic("sub", ty.elem);
-        writeln!(code, "    /// Fused multiply-subtract: self * a - b").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Note: WASM doesn't have native FMA in stable SIMD,"
-        )
-        .unwrap();
-        writeln!(code, "    /// this is emulated with separate mul and sub.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn mul_sub(self, a: Self, b: Self) -> Self {{"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        Self({}({}(self.0, a.0), b.0))",
-            sub_fn, mul_fn
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+
+        code.push_str(&formatdoc! {r#"
+            /// Square root
+            #[inline(always)]
+            pub fn sqrt(self) -> Self {{
+            Self({sqrt_fn}(self.0))
+            }}
+
+            /// Absolute value
+            #[inline(always)]
+            pub fn abs(self) -> Self {{
+            Self({abs_fn}(self.0))
+            }}
+
+            /// Floor
+            #[inline(always)]
+            pub fn floor(self) -> Self {{
+            Self({floor_fn}(self.0))
+            }}
+
+            /// Ceil
+            #[inline(always)]
+            pub fn ceil(self) -> Self {{
+            Self({ceil_fn}(self.0))
+            }}
+
+            /// Round to nearest
+            #[inline(always)]
+            pub fn round(self) -> Self {{
+            Self({nearest_fn}(self.0))
+            }}
+
+            /// Fused multiply-add: self * a + b
+            ///
+            /// Note: WASM doesn't have native FMA in stable SIMD,
+            /// this is emulated with separate mul and add.
+            #[inline(always)]
+            pub fn mul_add(self, a: Self, b: Self) -> Self {{
+            Self({add_fn}({mul_fn}(self.0, a.0), b.0))
+            }}
+
+            /// Fused multiply-subtract: self * a - b
+            ///
+            /// Note: WASM doesn't have native FMA in stable SIMD,
+            /// this is emulated with separate mul and sub.
+            #[inline(always)]
+            pub fn mul_sub(self, a: Self, b: Self) -> Self {{
+            Self({sub_fn}({mul_fn}(self.0, a.0), b.0))
+            }}
+
+        "#});
 
         // Approximation operations (f32 only)
         if ty.elem == ElementType::F32 {
-            writeln!(
-                code,
-                "    // ========== Approximation Operations ==========\n"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "    // WASM has no native reciprocal estimate intrinsics."
-            )
-            .unwrap();
-            writeln!(code, "    // These use division for correct results.\n").unwrap();
+            code.push_str(&formatdoc! {r#"
+                // ========== Approximation Operations ==========
+                // WASM has no native reciprocal estimate intrinsics.
+                // These use division for correct results.
 
-            // rcp_approx - use division (no fast path in WASM)
-            writeln!(
-                code,
-                "    /// Reciprocal approximation (1/x) - uses division."
-            )
-            .unwrap();
-            writeln!(code, "    ///").unwrap();
-            writeln!(
-                code,
-                "    /// Note: WASM has no native reciprocal estimate intrinsic,"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "    /// so this is equivalent to `recip()` (full precision division)."
-            )
-            .unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn rcp_approx(self) -> Self {{").unwrap();
-            writeln!(code, "        let one = Self(f32x4_splat(1.0));").unwrap();
-            writeln!(code, "        Self(f32x4_div(one.0, self.0))").unwrap();
-            writeln!(code, "    }}\n").unwrap();
+                /// Reciprocal approximation (1/x) - uses division.
+                ///
+                /// Note: WASM has no native reciprocal estimate intrinsic,
+                /// so this is equivalent to `recip()` (full precision division).
+                #[inline(always)]
+                pub fn rcp_approx(self) -> Self {{
+                let one = Self(f32x4_splat(1.0));
+                Self(f32x4_div(one.0, self.0))
+                }}
 
-            // recip - precise reciprocal
-            writeln!(code, "    /// Precise reciprocal (1/x).").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn recip(self) -> Self {{").unwrap();
-            writeln!(code, "        let one = Self(f32x4_splat(1.0));").unwrap();
-            writeln!(code, "        Self(f32x4_div(one.0, self.0))").unwrap();
-            writeln!(code, "    }}\n").unwrap();
+                /// Precise reciprocal (1/x).
+                #[inline(always)]
+                pub fn recip(self) -> Self {{
+                let one = Self(f32x4_splat(1.0));
+                Self(f32x4_div(one.0, self.0))
+                }}
 
-            // rsqrt_approx - use sqrt then division (no fast path in WASM)
-            writeln!(
-                code,
-                "    /// Reciprocal square root approximation (1/sqrt(x)) - uses sqrt+division."
-            )
-            .unwrap();
-            writeln!(code, "    ///").unwrap();
-            writeln!(
-                code,
-                "    /// Note: WASM has no native rsqrt estimate intrinsic,"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "    /// so this is equivalent to `rsqrt()` (full precision)."
-            )
-            .unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn rsqrt_approx(self) -> Self {{").unwrap();
-            writeln!(code, "        let one = Self(f32x4_splat(1.0));").unwrap();
-            writeln!(code, "        Self(f32x4_div(one.0, f32x4_sqrt(self.0)))").unwrap();
-            writeln!(code, "    }}\n").unwrap();
+                /// Reciprocal square root approximation (1/sqrt(x)) - uses sqrt+division.
+                ///
+                /// Note: WASM has no native rsqrt estimate intrinsic,
+                /// so this is equivalent to `rsqrt()` (full precision).
+                #[inline(always)]
+                pub fn rsqrt_approx(self) -> Self {{
+                let one = Self(f32x4_splat(1.0));
+                Self(f32x4_div(one.0, f32x4_sqrt(self.0)))
+                }}
 
-            // rsqrt - precise
-            writeln!(code, "    /// Precise reciprocal square root (1/sqrt(x)).").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn rsqrt(self) -> Self {{").unwrap();
-            writeln!(code, "        let one = Self(f32x4_splat(1.0));").unwrap();
-            writeln!(code, "        Self(f32x4_div(one.0, f32x4_sqrt(self.0)))").unwrap();
-            writeln!(code, "    }}\n").unwrap();
+                /// Precise reciprocal square root (1/sqrt(x)).
+                #[inline(always)]
+                pub fn rsqrt(self) -> Self {{
+                let one = Self(f32x4_splat(1.0));
+                Self(f32x4_div(one.0, f32x4_sqrt(self.0)))
+                }}
+
+            "#});
         }
     }
 
     // Signed integer abs (not available for i64 in WASM)
     if !ty.elem.is_float() && ty.elem.is_signed() && ty.elem != ElementType::I64 {
         let abs_fn = Wasm::abs_intrinsic(ty.elem);
-        writeln!(code, "    /// Absolute value").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn abs(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0))", abs_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            /// Absolute value
+            #[inline(always)]
+            pub fn abs(self) -> Self {{
+            Self({abs_fn}(self.0))
+            }}
+
+        "#});
     }
 
     code
@@ -704,87 +393,53 @@ fn generate_math_ops(ty: &SimdType) -> String {
 
 /// Generate horizontal operations for WASM
 fn generate_horizontal_ops(ty: &SimdType) -> String {
-    let mut code = String::new();
     let elem = ty.elem.name();
     let lanes = ty.lanes();
-
-    // reduce_add - WASM doesn't have native horizontal add, use extract lanes
     let extract_fn = Wasm::extract_lane_intrinsic(ty.elem);
 
-    if ty.elem.is_float() || ty.elem.is_signed() || !ty.elem.is_float() {
-        writeln!(code, "    /// Reduce: sum all lanes").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn reduce_add(self) -> {} {{", elem).unwrap();
+    let reduce_body = match lanes {
+        2 => format!("{extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0)"),
+        4 => format!(
+            "{extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0) + {extract_fn}::<2>(self.0) + {extract_fn}::<3>(self.0)"
+        ),
+        8 => formatdoc! {r#"
+            let arr = self.to_array();
+            arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7]"#},
+        16 => formatdoc! {r#"
+            let arr = self.to_array();
+            arr.iter().copied().fold(0{elem}, |a, b| a.wrapping_add(b))"#},
+        _ => formatdoc! {r#"
+            let arr = self.to_array();
+            arr.iter().copied().sum()"#},
+    };
 
-        // Generate lane extractions and sum
-        match lanes {
-            2 => {
-                writeln!(
-                    code,
-                    "        {}::<0>(self.0) + {}::<1>(self.0)",
-                    extract_fn, extract_fn
-                )
-                .unwrap();
-            }
-            4 => {
-                writeln!(
-                    code,
-                    "        {}::<0>(self.0) + {}::<1>(self.0) + {}::<2>(self.0) + {}::<3>(self.0)",
-                    extract_fn, extract_fn, extract_fn, extract_fn
-                )
-                .unwrap();
-            }
-            8 => {
-                writeln!(code, "        let arr = self.to_array();").unwrap();
-                writeln!(
-                    code,
-                    "        arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7]"
-                )
-                .unwrap();
-            }
-            16 => {
-                writeln!(code, "        let arr = self.to_array();").unwrap();
-                writeln!(
-                    code,
-                    "        arr.iter().copied().fold(0{}, |a, b| a.wrapping_add(b))",
-                    elem
-                )
-                .unwrap();
-            }
-            _ => {
-                writeln!(code, "        let arr = self.to_array();").unwrap();
-                writeln!(code, "        arr.iter().copied().sum()").unwrap();
-            }
-        }
+    let mut code = formatdoc! {r#"
+        /// Reduce: sum all lanes
+        #[inline(always)]
+        pub fn reduce_add(self) -> {elem} {{
+        {reduce_body}
+        }}
 
-        writeln!(code, "    }}\n").unwrap();
-    }
+    "#};
 
     // reduce_max/reduce_min for floats
     if ty.elem.is_float() {
-        writeln!(code, "    /// Reduce: max of all lanes").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn reduce_max(self) -> {} {{", elem).unwrap();
-        writeln!(code, "        let arr = self.to_array();").unwrap();
-        writeln!(
-            code,
-            "        arr.iter().copied().fold({}::NEG_INFINITY, {}::max)",
-            elem, elem
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            /// Reduce: max of all lanes
+            #[inline(always)]
+            pub fn reduce_max(self) -> {elem} {{
+            let arr = self.to_array();
+            arr.iter().copied().fold({elem}::NEG_INFINITY, {elem}::max)
+            }}
 
-        writeln!(code, "    /// Reduce: min of all lanes").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn reduce_min(self) -> {} {{", elem).unwrap();
-        writeln!(code, "        let arr = self.to_array();").unwrap();
-        writeln!(
-            code,
-            "        arr.iter().copied().fold({}::INFINITY, {}::min)",
-            elem, elem
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+            /// Reduce: min of all lanes
+            #[inline(always)]
+            pub fn reduce_min(self) -> {elem} {{
+            let arr = self.to_array();
+            arr.iter().copied().fold({elem}::INFINITY, {elem}::min)
+            }}
+
+        "#});
     }
 
     code
@@ -792,222 +447,175 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
 
 /// Generate comparison operations for WASM
 fn generate_comparison_ops(ty: &SimdType) -> String {
-    let mut code = String::new();
     let name = ty.name();
-
     let eq_fn = Wasm::cmp_intrinsic("eq", ty.elem);
 
-    // simd_eq - available for all types
-    writeln!(
-        code,
-        "    /// Element-wise equality comparison (returns mask)"
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self({}(self.0, other.0))", eq_fn).unwrap();
-    writeln!(code, "    }}\n").unwrap();
+    let mut code = formatdoc! {r#"
+        /// Element-wise equality comparison (returns mask)
+        #[inline(always)]
+        pub fn simd_eq(self, other: Self) -> Self {{
+        Self({eq_fn}(self.0, other.0))
+        }}
 
-    // simd_ne - available for all types (use not(eq))
-    writeln!(
-        code,
-        "    /// Element-wise inequality comparison (returns mask)"
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self(v128_not({}(self.0, other.0)))", eq_fn).unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Element-wise inequality comparison (returns mask)
+        #[inline(always)]
+        pub fn simd_ne(self, other: Self) -> Self {{
+        Self(v128_not({eq_fn}(self.0, other.0)))
+        }}
+
+    "#};
 
     // WASM doesn't have lt/le/gt/ge for u64x2 - skip ordering comparisons for u64
     let has_ordering = ty.elem != ElementType::U64;
 
     if has_ordering {
         let lt_fn = Wasm::cmp_intrinsic("lt", ty.elem);
-        // simd_lt
-        writeln!(
-            code,
-            "    /// Element-wise less-than comparison (returns mask)"
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, other.0))", lt_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // simd_le
         let le_fn = Wasm::cmp_intrinsic("le", ty.elem);
-        writeln!(
-            code,
-            "    /// Element-wise less-than-or-equal comparison (returns mask)"
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, other.0))", le_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // simd_gt
         let gt_fn = Wasm::cmp_intrinsic("gt", ty.elem);
-        writeln!(
-            code,
-            "    /// Element-wise greater-than comparison (returns mask)"
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, other.0))", gt_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // simd_ge
         let ge_fn = Wasm::cmp_intrinsic("ge", ty.elem);
-        writeln!(
-            code,
-            "    /// Element-wise greater-than-or-equal comparison (returns mask)"
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, other.0))", ge_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
+
+        code.push_str(&formatdoc! {r#"
+            /// Element-wise less-than comparison (returns mask)
+            #[inline(always)]
+            pub fn simd_lt(self, other: Self) -> Self {{
+            Self({lt_fn}(self.0, other.0))
+            }}
+
+            /// Element-wise less-than-or-equal comparison (returns mask)
+            #[inline(always)]
+            pub fn simd_le(self, other: Self) -> Self {{
+            Self({le_fn}(self.0, other.0))
+            }}
+
+            /// Element-wise greater-than comparison (returns mask)
+            #[inline(always)]
+            pub fn simd_gt(self, other: Self) -> Self {{
+            Self({gt_fn}(self.0, other.0))
+            }}
+
+            /// Element-wise greater-than-or-equal comparison (returns mask)
+            #[inline(always)]
+            pub fn simd_ge(self, other: Self) -> Self {{
+            Self({ge_fn}(self.0, other.0))
+            }}
+
+        "#});
     }
 
     // blend (conditional select using mask)
-    writeln!(code, "    /// Blend two vectors based on a mask").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,"
-    )
-    .unwrap();
-    writeln!(code, "    /// otherwise selects from `other`.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// The mask should come from a comparison operation like `simd_lt()`."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// # Example").unwrap();
-    writeln!(code, "    /// ```ignore").unwrap();
-    writeln!(code, "    /// let a = {}::splat(token, 1.0);", name).unwrap();
-    writeln!(code, "    /// let b = {}::splat(token, 2.0);", name).unwrap();
-    writeln!(code, "    /// let mask = a.simd_lt(b);  // all true").unwrap();
-    writeln!(
-        code,
-        "    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)"
-    )
-    .unwrap();
-    writeln!(code, "    /// ```").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn blend(self, other: Self, mask: Self) -> Self {{"
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Self(v128_bitselect(self.0, other.0, mask.0))"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+    code.push_str(&formatdoc! {r#"
+        /// Blend two vectors based on a mask
+        ///
+        /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
+        /// otherwise selects from `other`.
+        ///
+        /// The mask should come from a comparison operation like `simd_lt()`.
+        ///
+        /// # Example
+        /// ```ignore
+        /// let a = {name}::splat(token, 1.0);
+        /// let b = {name}::splat(token, 2.0);
+        /// let mask = a.simd_lt(b);  // all true
+        /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+        /// ```
+        #[inline(always)]
+        pub fn blend(self, other: Self, mask: Self) -> Self {{
+        Self(v128_bitselect(self.0, other.0, mask.0))
+        }}
+
+    "#});
 
     code
 }
 
 /// Generate bitwise operations (not, shift) for WASM
 fn generate_bitwise_ops(ty: &SimdType) -> String {
-    let mut code = String::new();
+    let mut code = formatdoc! {r#"
+        /// Bitwise NOT
+        #[inline(always)]
+        pub fn not(self) -> Self {{
+        Self(v128_not(self.0))
+        }}
 
-    // not() - available for all types
-    writeln!(code, "    /// Bitwise NOT").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn not(self) -> Self {{").unwrap();
-    writeln!(code, "        Self(v128_not(self.0))").unwrap();
-    writeln!(code, "    }}\n").unwrap();
+    "#};
 
     // Shift operations for integer types
     if !ty.elem.is_float() {
         let shl_fn = Wasm::shl_intrinsic(ty.elem);
         let shr_fn = Wasm::shr_intrinsic(ty.elem);
 
-        // shl<const N>
-        writeln!(code, "    /// Shift left by constant").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn shl<const N: u32>(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, N))", shl_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            /// Shift left by constant
+            #[inline(always)]
+            pub fn shl<const N: u32>(self) -> Self {{
+            Self({shl_fn}(self.0, N))
+            }}
 
-        // shr<const N>
-        writeln!(code, "    /// Shift right by constant").unwrap();
+        "#});
+
         if ty.elem.is_signed() {
-            writeln!(code, "    ///").unwrap();
-            writeln!(
-                code,
-                "    /// For signed types, this is an arithmetic shift (sign-extending)."
-            )
-            .unwrap();
+            code.push_str(&formatdoc! {r#"
+                /// Shift right by constant
+                ///
+                /// For signed types, this is an arithmetic shift (sign-extending).
+                #[inline(always)]
+                pub fn shr<const N: u32>(self) -> Self {{
+                Self({shr_fn}(self.0, N))
+                }}
+
+            "#});
+        } else {
+            code.push_str(&formatdoc! {r#"
+                /// Shift right by constant
+                #[inline(always)]
+                pub fn shr<const N: u32>(self) -> Self {{
+                Self({shr_fn}(self.0, N))
+                }}
+
+            "#});
         }
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn shr<const N: u32>(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, N))", shr_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
 
         // shr_arithmetic for signed types (same as shr on WASM since WASM shr is arithmetic for signed)
         if ty.elem.is_signed() && !matches!(ty.elem, ElementType::I64) {
-            writeln!(
-                code,
-                "    /// Arithmetic shift right by `N` bits (sign-extending)."
-            )
-            .unwrap();
-            writeln!(code, "    ///").unwrap();
-            writeln!(
-                code,
-                "    /// The sign bit is replicated into the vacated positions."
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "    /// On WASM, this is the same as `shr()` for signed types."
-            )
-            .unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(
-                code,
-                "    pub fn shr_arithmetic<const N: u32>(self) -> Self {{"
-            )
-            .unwrap();
-            writeln!(code, "        Self({}(self.0, N))", shr_fn).unwrap();
-            writeln!(code, "    }}\n").unwrap();
+            code.push_str(&formatdoc! {r#"
+                /// Arithmetic shift right by `N` bits (sign-extending).
+                ///
+                /// The sign bit is replicated into the vacated positions.
+                /// On WASM, this is the same as `shr()` for signed types.
+                #[inline(always)]
+                pub fn shr_arithmetic<const N: u32>(self) -> Self {{
+                Self({shr_fn}(self.0, N))
+                }}
+
+            "#});
         }
     }
 
     // all_true and any_true - only for integer types (WASM doesn't have float versions)
     if !ty.elem.is_float() {
         let all_true_fn = Wasm::all_true_intrinsic(ty.elem);
-        writeln!(code, "    /// Check if all lanes are non-zero (all true)").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn all_true(self) -> bool {{").unwrap();
-        writeln!(code, "        {}(self.0)", all_true_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        writeln!(code, "    /// Check if any lane is non-zero (any true)").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn any_true(self) -> bool {{").unwrap();
-        writeln!(code, "        v128_any_true(self.0)").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // bitmask for extracting lane results - only integers
         let bitmask_fn = Wasm::bitmask_intrinsic(ty.elem);
-        writeln!(
-            code,
-            "    /// Extract the high bit of each lane as a bitmask"
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn bitmask(self) -> u32 {{").unwrap();
-        writeln!(code, "        {}(self.0) as u32", bitmask_fn).unwrap();
-        writeln!(code, "    }}\n").unwrap();
+
+        code.push_str(&formatdoc! {r#"
+            /// Check if all lanes are non-zero (all true)
+            #[inline(always)]
+            pub fn all_true(self) -> bool {{
+            {all_true_fn}(self.0)
+            }}
+
+            /// Check if any lane is non-zero (any true)
+            #[inline(always)]
+            pub fn any_true(self) -> bool {{
+            v128_any_true(self.0)
+            }}
+
+            /// Extract the high bit of each lane as a bitmask
+            #[inline(always)]
+            pub fn bitmask(self) -> u32 {{
+            {bitmask_fn}(self.0) as u32
+            }}
+
+        "#});
     }
 
     code
@@ -1015,119 +623,76 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
 
 /// Generate type conversion operations (f32 <-> i32, etc.)
 fn generate_conversion_ops(ty: &SimdType) -> String {
-    use super::types::ElementType;
-
-    let mut code = String::new();
     let lanes = ty.lanes();
+    let mut code = String::new();
 
     // f32 <-> i32 conversions
     if ty.elem == ElementType::F32 && lanes == 4 {
-        let int_name = "i32x4";
+        code.push_str(&formatdoc! {r#"
+            // ========== Type Conversions ==========
 
-        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+            /// Convert to signed 32-bit integers, rounding toward zero (truncation).
+            ///
+            /// Values outside the representable range are saturated to `i32::MIN`/`i32::MAX`.
+            #[inline(always)]
+            pub fn to_i32x4(self) -> i32x4 {{
+            i32x4(i32x4_trunc_sat_f32x4(self.0))
+            }}
 
-        // to_i32x4 (truncate toward zero, saturating) - i32x4_trunc_sat_f32x4
-        writeln!(
-            code,
-            "    /// Convert to signed 32-bit integers, rounding toward zero (truncation)."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Values outside the representable range are saturated to `i32::MIN`/`i32::MAX`."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn to_i32x4(self) -> {} {{", int_name).unwrap();
-        writeln!(code, "        {}(i32x4_trunc_sat_f32x4(self.0))", int_name).unwrap();
-        writeln!(code, "    }}\n").unwrap();
+            /// Convert to signed 32-bit integers, rounding to nearest.
+            ///
+            /// Values outside the representable range are saturated to `i32::MIN`/`i32::MAX`.
+            ///
+            /// Note: Uses `nearest()` intrinsic for proper round-to-nearest-even.
+            #[inline(always)]
+            pub fn to_i32x4_round(self) -> i32x4 {{
+            i32x4(i32x4_trunc_sat_f32x4(f32x4_nearest(self.0)))
+            }}
 
-        // to_i32x4_round (round to nearest) - use floor(x + 0.5) approximation
-        writeln!(
-            code,
-            "    /// Convert to signed 32-bit integers, rounding to nearest."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Values outside the representable range are saturated to `i32::MIN`/`i32::MAX`."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Note: Uses `nearest()` intrinsic for proper round-to-nearest-even."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn to_i32x4_round(self) -> {} {{", int_name).unwrap();
-        writeln!(
-            code,
-            "        {}(i32x4_trunc_sat_f32x4(f32x4_nearest(self.0)))",
-            int_name
-        )
-        .unwrap();
-        writeln!(code, "    }}\n").unwrap();
+            /// Create from signed 32-bit integers.
+            #[inline(always)]
+            pub fn from_i32x4(v: i32x4) -> Self {{
+            Self(f32x4_convert_i32x4(v.0))
+            }}
 
-        // from_i32x4 - f32x4_convert_i32x4
-        writeln!(code, "    /// Create from signed 32-bit integers.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn from_i32x4(v: {}) -> Self {{", int_name).unwrap();
-        writeln!(code, "        Self(f32x4_convert_i32x4(v.0))").unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        "#});
     }
 
     // i32 -> f32 conversion
     if ty.elem == ElementType::I32 && lanes == 4 {
-        let float_name = "f32x4";
+        code.push_str(&formatdoc! {r#"
+            // ========== Type Conversions ==========
 
-        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+            /// Convert to single-precision floats.
+            #[inline(always)]
+            pub fn to_f32x4(self) -> f32x4 {{
+            f32x4(f32x4_convert_i32x4(self.0))
+            }}
 
-        // to_f32x4 - f32x4_convert_i32x4
-        writeln!(code, "    /// Convert to single-precision floats.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn to_f32x4(self) -> {} {{", float_name).unwrap();
-        writeln!(code, "        {}(f32x4_convert_i32x4(self.0))", float_name).unwrap();
-        writeln!(code, "    }}\n").unwrap();
+            /// Convert to single-precision floats (alias for `to_f32x4`).
+            #[inline(always)]
+            pub fn to_f32(self) -> f32x4 {{
+            self.to_f32x4()
+            }}
 
-        // to_f32 (alias for to_f32x4)
-        writeln!(
-            code,
-            "    /// Convert to single-precision floats (alias for `to_f32x4`)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn to_f32(self) -> {} {{", float_name).unwrap();
-        writeln!(code, "        self.to_f32x4()").unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        "#});
     }
 
     // f64 -> i32 conversion (2 lanes -> lower 2 lanes of i32x4)
     if ty.elem == ElementType::F64 && lanes == 2 {
-        writeln!(code, "    // ========== Type Conversions ==========\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            // ========== Type Conversions ==========
 
-        writeln!(
-            code,
-            "    /// Convert to signed 32-bit integers (2 lanes), rounding toward zero."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Returns an `i32x4` where only the lower 2 lanes are valid (upper 2 are zero)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn to_i32x4_low(self) -> i32x4 {{").unwrap();
-        writeln!(
-            code,
-            "        // WASM: i32x4_trunc_sat_f64x2_zero converts f64x2 to lower 2 lanes of i32x4"
-        )
-        .unwrap();
-        writeln!(code, "        i32x4(i32x4_trunc_sat_f64x2_zero(self.0))").unwrap();
-        writeln!(code, "    }}\n").unwrap();
+            /// Convert to signed 32-bit integers (2 lanes), rounding toward zero.
+            ///
+            /// Returns an `i32x4` where only the lower 2 lanes are valid (upper 2 are zero).
+            #[inline(always)]
+            pub fn to_i32x4_low(self) -> i32x4 {{
+            // WASM: i32x4_trunc_sat_f64x2_zero converts f64x2 to lower 2 lanes of i32x4
+            i32x4(i32x4_trunc_sat_f64x2_zero(self.0))
+            }}
+
+        "#});
     }
 
     code
@@ -1135,232 +700,211 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
 
 /// Generate operator trait implementations for WASM
 fn generate_operator_impls(ty: &SimdType) -> String {
-    let mut code = String::new();
     let name = ty.name();
+    let elem = ty.elem.name();
+    let lanes = ty.lanes();
+    let inner = Wasm::intrinsic_type(ty.elem, ty.width);
 
     let add_fn = Wasm::arith_intrinsic("add", ty.elem);
     let sub_fn = Wasm::arith_intrinsic("sub", ty.elem);
 
-    // Add
-    writeln!(code, "impl core::ops::Add for {} {{", name).unwrap();
-    writeln!(code, "    type Output = Self;").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn add(self, rhs: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self({}(self.0, rhs.0))", add_fn).unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+    let mut code = formatdoc! {r#"
+        impl core::ops::Add for {name} {{
+        type Output = Self;
+        #[inline(always)]
+        fn add(self, rhs: Self) -> Self {{
+            Self({add_fn}(self.0, rhs.0))
+        }}
+        }}
 
-    // Sub
-    writeln!(code, "impl core::ops::Sub for {} {{", name).unwrap();
-    writeln!(code, "    type Output = Self;").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn sub(self, rhs: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self({}(self.0, rhs.0))", sub_fn).unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::Sub for {name} {{
+        type Output = Self;
+        #[inline(always)]
+        fn sub(self, rhs: Self) -> Self {{
+            Self({sub_fn}(self.0, rhs.0))
+        }}
+        }}
+
+    "#};
 
     // Mul (NOT available for i8/u8 in WASM - no i8x16_mul or u8x16_mul intrinsics)
     let has_mul = !matches!(ty.elem, ElementType::I8 | ElementType::U8);
     if has_mul {
         let mul_fn = Wasm::arith_intrinsic("mul", ty.elem);
-        writeln!(code, "impl core::ops::Mul for {} {{", name).unwrap();
-        writeln!(code, "    type Output = Self;").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    fn mul(self, rhs: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, rhs.0))", mul_fn).unwrap();
-        writeln!(code, "    }}").unwrap();
-        writeln!(code, "}}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            impl core::ops::Mul for {name} {{
+            type Output = Self;
+            #[inline(always)]
+            fn mul(self, rhs: Self) -> Self {{
+                Self({mul_fn}(self.0, rhs.0))
+            }}
+            }}
+
+        "#});
     }
 
     // Div (floats only)
     if ty.elem.is_float() {
         let div_fn = Wasm::arith_intrinsic("div", ty.elem);
-        writeln!(code, "impl core::ops::Div for {} {{", name).unwrap();
-        writeln!(code, "    type Output = Self;").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    fn div(self, rhs: Self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0, rhs.0))", div_fn).unwrap();
-        writeln!(code, "    }}").unwrap();
-        writeln!(code, "}}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            impl core::ops::Div for {name} {{
+            type Output = Self;
+            #[inline(always)]
+            fn div(self, rhs: Self) -> Self {{
+                Self({div_fn}(self.0, rhs.0))
+            }}
+            }}
+
+        "#});
     }
 
     // Neg (floats and signed integers)
     if ty.elem.is_float() || ty.elem.is_signed() {
         let neg_fn = Wasm::neg_intrinsic(ty.elem);
-        writeln!(code, "impl core::ops::Neg for {} {{", name).unwrap();
-        writeln!(code, "    type Output = Self;").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    fn neg(self) -> Self {{").unwrap();
-        writeln!(code, "        Self({}(self.0))", neg_fn).unwrap();
-        writeln!(code, "    }}").unwrap();
-        writeln!(code, "}}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            impl core::ops::Neg for {name} {{
+            type Output = Self;
+            #[inline(always)]
+            fn neg(self) -> Self {{
+                Self({neg_fn}(self.0))
+            }}
+            }}
+
+        "#});
     }
 
     // Bitwise ops (use v128_and/or/xor)
-    writeln!(code, "impl core::ops::BitAnd for {} {{", name).unwrap();
-    writeln!(code, "    type Output = Self;").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn bitand(self, rhs: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self(v128_and(self.0, rhs.0))").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+    code.push_str(&formatdoc! {r#"
+        impl core::ops::BitAnd for {name} {{
+        type Output = Self;
+        #[inline(always)]
+        fn bitand(self, rhs: Self) -> Self {{
+            Self(v128_and(self.0, rhs.0))
+        }}
+        }}
 
-    writeln!(code, "impl core::ops::BitOr for {} {{", name).unwrap();
-    writeln!(code, "    type Output = Self;").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn bitor(self, rhs: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self(v128_or(self.0, rhs.0))").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::BitOr for {name} {{
+        type Output = Self;
+        #[inline(always)]
+        fn bitor(self, rhs: Self) -> Self {{
+            Self(v128_or(self.0, rhs.0))
+        }}
+        }}
 
-    writeln!(code, "impl core::ops::BitXor for {} {{", name).unwrap();
-    writeln!(code, "    type Output = Self;").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn bitxor(self, rhs: Self) -> Self {{").unwrap();
-    writeln!(code, "        Self(v128_xor(self.0, rhs.0))").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::BitXor for {name} {{
+        type Output = Self;
+        #[inline(always)]
+        fn bitxor(self, rhs: Self) -> Self {{
+            Self(v128_xor(self.0, rhs.0))
+        }}
+        }}
 
-    // Assign ops
-    writeln!(code, "impl core::ops::AddAssign for {} {{", name).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn add_assign(&mut self, rhs: Self) {{").unwrap();
-    writeln!(code, "        *self = *self + rhs;").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::AddAssign for {name} {{
+        #[inline(always)]
+        fn add_assign(&mut self, rhs: Self) {{
+            *self = *self + rhs;
+        }}
+        }}
 
-    writeln!(code, "impl core::ops::SubAssign for {} {{", name).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn sub_assign(&mut self, rhs: Self) {{").unwrap();
-    writeln!(code, "        *self = *self - rhs;").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::SubAssign for {name} {{
+        #[inline(always)]
+        fn sub_assign(&mut self, rhs: Self) {{
+            *self = *self - rhs;
+        }}
+        }}
+
+    "#});
 
     // MulAssign (only when Mul is available)
     if has_mul {
-        writeln!(code, "impl core::ops::MulAssign for {} {{", name).unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    fn mul_assign(&mut self, rhs: Self) {{").unwrap();
-        writeln!(code, "        *self = *self * rhs;").unwrap();
-        writeln!(code, "    }}").unwrap();
-        writeln!(code, "}}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            impl core::ops::MulAssign for {name} {{
+            #[inline(always)]
+            fn mul_assign(&mut self, rhs: Self) {{
+                *self = *self * rhs;
+            }}
+            }}
+
+        "#});
     }
 
     if ty.elem.is_float() {
-        writeln!(code, "impl core::ops::DivAssign for {} {{", name).unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    fn div_assign(&mut self, rhs: Self) {{").unwrap();
-        writeln!(code, "        *self = *self / rhs;").unwrap();
-        writeln!(code, "    }}").unwrap();
-        writeln!(code, "}}\n").unwrap();
+        code.push_str(&formatdoc! {r#"
+            impl core::ops::DivAssign for {name} {{
+            #[inline(always)]
+            fn div_assign(&mut self, rhs: Self) {{
+                *self = *self / rhs;
+            }}
+            }}
+
+        "#});
     }
 
-    writeln!(code, "impl core::ops::BitAndAssign for {} {{", name).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn bitand_assign(&mut self, rhs: Self) {{").unwrap();
-    writeln!(code, "        *self = *self & rhs;").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+    code.push_str(&formatdoc! {r#"
+        impl core::ops::BitAndAssign for {name} {{
+        #[inline(always)]
+        fn bitand_assign(&mut self, rhs: Self) {{
+            *self = *self & rhs;
+        }}
+        }}
 
-    writeln!(code, "impl core::ops::BitOrAssign for {} {{", name).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn bitor_assign(&mut self, rhs: Self) {{").unwrap();
-    writeln!(code, "        *self = *self | rhs;").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::BitOrAssign for {name} {{
+        #[inline(always)]
+        fn bitor_assign(&mut self, rhs: Self) {{
+            *self = *self | rhs;
+        }}
+        }}
 
-    writeln!(code, "impl core::ops::BitXorAssign for {} {{", name).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn bitxor_assign(&mut self, rhs: Self) {{").unwrap();
-    writeln!(code, "        *self = *self ^ rhs;").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::BitXorAssign for {name} {{
+        #[inline(always)]
+        fn bitxor_assign(&mut self, rhs: Self) {{
+            *self = *self ^ rhs;
+        }}
+        }}
 
-    // Index
-    let elem = ty.elem.name();
-    let lanes = ty.lanes();
-    writeln!(code, "impl core::ops::Index<usize> for {} {{", name).unwrap();
-    writeln!(code, "    type Output = {};", elem).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn index(&self, i: usize) -> &Self::Output {{").unwrap();
-    writeln!(
-        code,
-        "        assert!(i < {}, \"index out of bounds\");",
-        lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &*(self as *const Self as *const {}).add(i) }}",
-        elem
-    )
-    .unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::Index<usize> for {name} {{
+        type Output = {elem};
+        #[inline(always)]
+        fn index(&self, i: usize) -> &Self::Output {{
+            assert!(i < {lanes}, "index out of bounds");
+            unsafe {{ &*(self as *const Self as *const {elem}).add(i) }}
+        }}
+        }}
 
-    writeln!(code, "impl core::ops::IndexMut<usize> for {} {{", name).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    fn index_mut(&mut self, i: usize) -> &mut Self::Output {{"
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        assert!(i < {}, \"index out of bounds\");",
-        lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &mut *(self as *mut Self as *mut {}).add(i) }}",
-        elem
-    )
-    .unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl core::ops::IndexMut<usize> for {name} {{
+        #[inline(always)]
+        fn index_mut(&mut self, i: usize) -> &mut Self::Output {{
+            assert!(i < {lanes}, "index out of bounds");
+            unsafe {{ &mut *(self as *mut Self as *mut {elem}).add(i) }}
+        }}
+        }}
 
-    // From<[T; N]> for zero-cost conversion
-    let inner = Wasm::intrinsic_type(ty.elem, ty.width);
-    writeln!(code, "impl From<[{}; {}]> for {} {{", elem, lanes, name).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn from(arr: [{}; {}]) -> Self {{", elem, lanes).unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: [{}; {}] and {} have identical size and layout",
-        elem, lanes, inner
-    )
-    .unwrap();
-    writeln!(code, "        Self(unsafe {{ core::mem::transmute(arr) }})").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl From<[{elem}; {lanes}]> for {name} {{
+        #[inline(always)]
+        fn from(arr: [{elem}; {lanes}]) -> Self {{
+            // SAFETY: [{elem}; {lanes}] and {inner} have identical size and layout
+            Self(unsafe {{ core::mem::transmute(arr) }})
+        }}
+        }}
 
-    // Into<[T; N]> for zero-cost conversion back
-    writeln!(code, "impl From<{}> for [{}; {}] {{", name, elem, lanes).unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn from(v: {}) -> Self {{", name).unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: {} and [{}; {}] have identical size and layout",
-        inner, elem, lanes
-    )
-    .unwrap();
-    writeln!(code, "        unsafe {{ core::mem::transmute(v.0) }}").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}\n").unwrap();
+        impl From<{name}> for [{elem}; {lanes}] {{
+        #[inline(always)]
+        fn from(v: {name}) -> Self {{
+            // SAFETY: {inner} and [{elem}; {lanes}] have identical size and layout
+            unsafe {{ core::mem::transmute(v.0) }}
+        }}
+        }}
+
+    "#});
 
     code
 }
 
 /// Generate the WASM w128.rs file
 pub fn generate_wasm_w128(types: &[SimdType]) -> String {
-    let mut code = String::new();
-
-    code.push_str("//! 128-bit (WASM SIMD) types.\n");
-    code.push_str("//!\n");
-    code.push_str("//! **Auto-generated** by `cargo xtask generate` - do not edit manually.\n\n");
-
-    code.push_str("use core::arch::wasm32::*;\n\n");
+    let mut code = String::from(
+        "//! 128-bit (WASM SIMD) types.\n//!\n//! **Auto-generated** by `cargo xtask generate` - do not edit manually.\n\nuse core::arch::wasm32::*;\n\n",
+    );
 
     // Generate 128-bit types only
     let w128_types: Vec<_> = types
