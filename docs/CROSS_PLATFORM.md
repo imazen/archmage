@@ -25,7 +25,7 @@ pub fn process(data: &[f32]) -> f32 {
     #[cfg(target_arch = "x86_64")]
     {
         use archmage::SimdToken;
-        if let Some(token) = archmage::Avx2FmaToken::try_new() {
+        if let Some(token) = archmage::X64V3Token::try_new() {
             return process_avx2(token, data);
         }
         if let Some(token) = archmage::Sse41Token::try_new() {
@@ -52,11 +52,11 @@ The `#[arcane]` macro generates `#[target_feature]` wrappers automatically, ensu
 intrinsics inline into proper SIMD instructions:
 
 ```rust
-use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::{arcane, X64V3Token, SimdToken};
 use archmage::simd::f32x8;
 
 #[arcane]
-fn process_simd(token: Avx2FmaToken, data: &[f32]) -> f32 {
+fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
     let mut acc = f32x8::zero(token);
 
     for chunk in data.chunks_exact(8) {
@@ -69,13 +69,13 @@ fn process_simd(token: Avx2FmaToken, data: &[f32]) -> f32 {
 }
 
 // Usage - token proves CPU support at call site
-if let Some(token) = Avx2FmaToken::try_new() {
+if let Some(token) = X64V3Token::try_new() {
     let result = process_simd(token, &data);
 }
 ```
 
 **How `#[arcane]` works:**
-1. Reads the token type to determine required target features (e.g., `Avx2FmaToken` → `avx2,fma`)
+1. Reads the token type to determine required target features (e.g., `X64V3Token` → `avx2,fma`)
 2. Generates an inner function with `#[target_feature(enable = "...")]`
 3. Calls that inner function safely (token proves CPU support)
 
@@ -109,7 +109,7 @@ mod kernels {
 
 // The macro generates:
 // - kernels::sse::sum(Sse41Token, &[f32])     - 4-wide
-// - kernels::avx2::sum(Avx2FmaToken, &[f32])  - 8-wide
+// - kernels::avx2::sum(X64V3Token, &[f32])  - 8-wide
 // - kernels::avx512::sum(X64V4Token, &[f32])  - 16-wide (with feature)
 // - kernels::sum(&[f32])                       - auto-dispatch
 ```
@@ -121,7 +121,7 @@ mod kernels {
 | Token | Width | SIMD Types |
 |-------|-------|------------|
 | `Sse41Token` | 128-bit | `f32x4`, `f64x2`, `i32x4`, ... |
-| `Avx2FmaToken` | 256-bit | `f32x8`, `f64x4`, `i32x8`, ... |
+| `X64V3Token` | 256-bit | `f32x8`, `f64x4`, `i32x8`, ... |
 | `X64V4Token` | 512-bit | `f32x16`, `f64x8`, `i32x16`, ... |
 
 ### aarch64

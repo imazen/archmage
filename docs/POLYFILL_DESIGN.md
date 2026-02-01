@@ -8,7 +8,7 @@ This document outlines the architecture for cross-platform SIMD polyfills in arc
 | Platform | Token | SIMD Types |
 |----------|-------|------------|
 | x86_64 SSE4.1 | `Sse41Token` | ✅ f32x4, i32x4, etc. |
-| x86_64 AVX2+FMA | `Avx2FmaToken` | ✅ f32x8, i32x8, etc. |
+| x86_64 AVX2+FMA | `X64V3Token` | ✅ f32x8, i32x8, etc. |
 | x86_64 AVX-512 | `X64V4Token` | ✅ f32x16, i32x16, etc. |
 | AArch64 NEON | `NeonToken` | ❌ Not yet |
 | WebAssembly SIMD128 | `Simd128Token` | ❌ Not yet |
@@ -174,7 +174,7 @@ pub fn wasm_intrinsic(op: &str, ty: &SimdType) -> String {
 ```rust
 #[test]
 fn polyfill_matches_native_add() {
-    if let Some(avx_token) = Avx2FmaToken::try_new() {
+    if let Some(avx_token) = X64V3Token::try_new() {
         if let Some(sse_token) = Sse41Token::try_new() {
             let data_a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let data_b = [8.0f32, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];

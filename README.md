@@ -270,14 +270,6 @@ if let Some(token) = Desktop64::summon() {
 | `macros` (default) | `#[arcane]` macro |
 | `avx512` | AVX-512 tokens |
 
-## Testing Fallback Paths
-
-Set `ARCHMAGE_DISABLE=1` to force `summon()` to return `None`:
-
-```bash
-ARCHMAGE_DISABLE=1 cargo test
-```
-
 ## License
 
 MIT OR Apache-2.0

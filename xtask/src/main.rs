@@ -642,7 +642,7 @@ fn map_features_to_token(features: &str, arch: &str) -> String {
     match arch {
         "x86_64" | "x86" => match features {
             "sse" | "sse2" => "Baseline (always available)".to_string(),
-            "avx" => "Has256BitSimd / Avx2FmaToken".to_string(),
+            "avx" => "Has256BitSimd / X64V3Token".to_string(),
             "avx512f" => "X64V4Token".to_string(),
             "avx512f,avx512vl" => "X64V4Token".to_string(),
             "avx512bw" => "X64V4Token".to_string(),
@@ -697,8 +697,8 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             intrinsics: BTreeMap::new(),
         },
         TierInfo {
-            name: "Desktop64 / Avx2FmaToken (AVX, AVX2, FMA)",
-            token: "Desktop64 / Avx2FmaToken / X64V3Token",
+            name: "X64V3Token / Desktop64 (AVX2, FMA)",
+            token: "X64V3Token / Desktop64",
             features: &["avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt"],
             intrinsics: BTreeMap::new(),
         },

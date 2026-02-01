@@ -203,12 +203,12 @@ When you use operators like `a + b` INSIDE an `#[arcane]` function, the intrinsi
 inline properly into AVX/NEON instructions.
 
 ```rust
-use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::{arcane, X64V3Token, SimdToken};
 use archmage::simd::f32x8;
 
 // CORRECT - operators inline properly inside #[arcane]
 #[arcane]
-fn process_vectors(token: Avx2FmaToken, input: &[[f32; 8]]) -> f32 {
+fn process_vectors(token: X64V3Token, input: &[[f32; 8]]) -> f32 {
     let mut sum = f32x8::zero(token);
     for arr in input {
         let v: f32x8 = (*arr).into();

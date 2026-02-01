@@ -60,7 +60,7 @@ pub mod my_kernels {
         if let Some(token) = archmage::X64V4Token::try_new() {
             return avx512::normalize(token, data);
         }
-        if let Some(token) = archmage::Avx2FmaToken::try_new() {
+        if let Some(token) = archmage::X64V3Token::try_new() {
             return avx2::normalize(token, data);
         }
         if let Some(token) = archmage::Sse41Token::try_new() {
@@ -87,7 +87,7 @@ Using `#[multiwidth] mod name { ... }` instead of per-function because:
 
 Functions use `token: Token` where `Token` is aliased per-width:
 - `sse::Token = Sse41Token`
-- `avx2::Token = Avx2FmaToken`
+- `avx2::Token = X64V3Token`
 - `avx512::Token = X64V4Token`
 
 ### 3. Generic type aliases

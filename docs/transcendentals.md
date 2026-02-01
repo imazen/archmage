@@ -383,24 +383,24 @@ Benchmarked using `examples/sleef_comparison.rs` (requires nightly for `portable
 archmage SIMD types **must** be used within functions annotated with the `#[arcane]` macro. Without this, intrinsics are called as functions instead of inlined, causing 50-100x slowdowns.
 
 ```rust
-use archmage::{arcane, Avx2FmaToken, SimdToken};
+use archmage::{arcane, X64V3Token, SimdToken};
 use archmage::simd::f32x8;
 
 // WRONG - intrinsics won't inline
-fn slow_version(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
+fn slow_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::load(token, data);  // Function call overhead!
     v.exp2_lowp().to_array()
 }
 
 // CORRECT - use #[arcane] macro
 #[arcane]
-fn fast_version(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
+fn fast_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::load(token, data);  // Inline SIMD instructions!
     v.exp2_lowp().to_array()
 }
 
 // Usage
-if let Some(token) = Avx2FmaToken::try_new() {
+if let Some(token) = X64V3Token::try_new() {
     let result = fast_version(token, &input);
 }
 ```

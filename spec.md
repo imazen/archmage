@@ -22,7 +22,7 @@ Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the ty
 | Token | Aliases | Features | Hardware |
 |-------|---------|----------|----------|
 | `X64V2Token` | — | sse3, ssse3, sse4.1, sse4.2, popcnt | Nehalem 2008+, Bulldozer 2011+ |
-| `X64V3Token` | `Desktop64`, `Avx2FmaToken` | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt | Haswell 2013+, Zen 1 2017+ |
+| `X64V3Token` | `Desktop64` | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt | Haswell 2013+, Zen 1 2017+ |
 | `X64V4Token` | `Avx512Token`, `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl | Skylake-X 2017+, Zen 4 2022+ |
 | `Avx512ModernToken` | — | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, avx512bf16, vpclmulqdq, gfni, vaes | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | v4 + avx512fp16 | Sapphire Rapids 2023+ |
@@ -262,7 +262,7 @@ The goal is to replace 10+ independent copies of token-to-feature mappings (in m
 - Granular x86 tokens removed (Sse41Token, Avx2Token, FmaToken, etc.)
 - ARM composite tokens removed (ArmCryptoToken, ArmCrypto3Token)
 - NeonCrcToken added
-- Avx2FmaToken is now `pub type Avx2FmaToken = X64V3Token`
+- Avx2FmaToken deprecated (use X64V3Token or Desktop64 instead)
 - CompositeToken trait removed
 - Feature lists in `token_to_features()` are complete and correct
 - X64V3Token features fixed (was missing sse3, ssse3, sse4.1, sse4.2, popcnt, f16c, lzcnt)

@@ -10,7 +10,7 @@
 |-------|----------|-------|-------|
 | **v1** | SSE, SSE2 (baseline) | None | None (always available) |
 | **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | `X64V2Token` | `HasX64V2` |
-| **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` / `Desktop64` / `Avx2FmaToken` | Use token directly |
+| **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` / `Desktop64` | Use token directly |
 | **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` | `HasX64V4` |
 | **Modern** | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | `Avx512ModernToken` | Use token directly |
 | **FP16** | AVX512FP16 (independent) | `Avx512Fp16Token` | Use token directly |
@@ -29,7 +29,7 @@
 ### Rules
 
 1. **NO granular x86 traits** - No `HasSse`, `HasSse2`, `HasAvx`, `HasAvx2`, `HasFma`, `HasAvx512f`, `HasAvx512bw`, etc.
-2. **Use tier tokens** - `X64V2Token`, `Avx2FmaToken`, `X64V4Token`, `Avx512ModernToken`
+2. **Use tier tokens** - `X64V2Token`, `X64V3Token`, `X64V4Token`, `Avx512ModernToken`
 3. **Single trait per tier** - `HasX64V2`, `HasX64V4` only
 4. **NEON includes fp16** - They always appear together on AArch64
 5. **NO SVE** - `SveToken`, `Sve2Token`, `HasSve`, `HasSve2` are PROHIBITED (Rust stable lacks SVE support)
@@ -50,14 +50,14 @@
 unsafe fn process_inner(data: &[f32]) -> f32 { ... }
 
 #[cfg(target_arch = "x86_64")]
-fn process(token: Avx2FmaToken, data: &[f32]) -> f32 {
+fn process(token: X64V3Token, data: &[f32]) -> f32 {
     unsafe { process_inner(data) }
 }
 
 // CORRECT - use #[arcane] (it generates the above automatically)
 #[cfg(target_arch = "x86_64")]
 #[arcane]
-fn process(token: Avx2FmaToken, data: &[f32]) -> f32 {
+fn process(token: X64V3Token, data: &[f32]) -> f32 {
     // This function body is compiled with #[target_feature(enable = "avx2,fma")]
     // Intrinsics and operators inline properly into single SIMD instructions
     ...
@@ -163,13 +163,13 @@ The macro generates an inner function with `#[target_feature]`:
 ```rust
 // You write:
 #[arcane]
-fn my_kernel(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
+fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = _mm256_setzero_ps();  // Safe!
     // ...
 }
 
 // Macro generates:
-fn my_kernel(token: Avx2FmaToken, data: &[f32; 8]) -> [f32; 8] {
+fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     #[target_feature(enable = "avx2,fma")]
     unsafe fn inner(data: &[f32; 8]) -> [f32; 8] {
         let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
@@ -284,7 +284,7 @@ code.push_str(&gen_scalar_method("Extract first element", "first", "i32", "_mm_c
 
 **x86:**
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
-- `X64V3Token` / `Desktop64` / `Avx2FmaToken` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
+- `X64V3Token` / `Desktop64` / `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
 - `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
 - `Avx512ModernToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
 - `Avx512Fp16Token` - + FP16 (Sapphire Rapids 2023+)
@@ -305,17 +305,17 @@ fn requires_v4(token: impl HasX64V4) { ... }
 fn requires_neon(token: impl HasNeon) { ... }
 ```
 
-For v3 (AVX2+FMA), use `Avx2FmaToken` directly - it's the recommended baseline.
+For v3 (AVX2+FMA), use `X64V3Token` directly - it's the recommended baseline.
 
 ## SIMD Types (magetypes crate)
 
 Token-gated SIMD types live in the **magetypes** crate:
 
 ```rust
-use archmage::{Avx2FmaToken, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 use magetypes::simd::f32x8;
 
-if let Some(token) = Avx2FmaToken::summon() {
+if let Some(token) = X64V3Token::summon() {
     let a = f32x8::splat(token, 1.0);
     let b = f32x8::splat(token, 2.0);
     let c = a + b;  // Natural operators!
