@@ -61,13 +61,25 @@ Testing all quantization levels for sRGB gamma round-trip:
 | pow_midp(x, 2.4) | (0, 1] | 145 | 19.7 | 8.65e-6 |
 | pow_midp(x, 1/2.4) | (0, 1] | 141 | 30.0 | 8.40e-6 |
 
-### Two Implementation Tiers
+### Implementation Tiers and Suffixes
 
-archmage provides two accuracy tiers for transcendental functions:
+archmage provides two accuracy tiers with three suffix variants each:
 
-#### Low-Precision Tier (`_lowp` suffix)
+| Suffix | Edge Cases | Denormals | Use Case |
+|--------|------------|-----------|----------|
+| `_unchecked` | No | No | Hot loops with known-valid inputs |
+| (none) | Yes | No | General use |
+| `_precise` | Yes | Yes | Full IEEE compliance |
 
-Functions: `pow_lowp()`, `exp2_lowp()`, `log2_lowp()`, `ln_lowp()`, `exp_lowp()`
+**Edge cases**: 0 → -inf, negative → NaN, +inf → +inf, NaN → NaN (for log functions)
+
+**Denormals**: Very small numbers (< 1.17e-38 for f32) handled via 2^24 scale-up trick
+
+#### Low-Precision Tier (`_lowp`)
+
+Functions: `log2_lowp`, `exp2_lowp`, `ln_lowp`, `exp_lowp`, `log10_lowp`, `pow_lowp`
+
+Unchecked: `log2_lowp_unchecked`, `exp2_lowp_unchecked`, `ln_lowp_unchecked`, `exp_lowp_unchecked`, `log10_lowp_unchecked`, `pow_lowp_unchecked`
 
 **NOT SUITABLE for color-accurate work:**
 - ~90,000 ULP max error, ~0.5% relative error
@@ -79,9 +91,13 @@ Functions: `pow_lowp()`, `exp2_lowp()`, `log2_lowp()`, `ln_lowp()`, `exp_lowp()`
 - Real-time effects where artifacts are acceptable
 - Non-color-critical computations
 
-#### Mid-Precision Tier (`_midp` suffix) - RECOMMENDED
+#### Mid-Precision Tier (`_midp`) - RECOMMENDED
 
-Functions: `pow_midp()`, `exp2_midp()`, `log2_midp()`, `ln_midp()`, `exp_midp()`, `cbrt_midp()`
+Functions: `log2_midp`, `exp2_midp`, `ln_midp`, `exp_midp`, `log10_midp`, `pow_midp`, `cbrt_midp`
+
+Unchecked: `log2_midp_unchecked`, `exp2_midp_unchecked`, `ln_midp_unchecked`, `exp_midp_unchecked`, `log10_midp_unchecked`, `pow_midp_unchecked`, `cbrt_midp_unchecked`
+
+Precise (denormal-safe): `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise`, `cbrt_midp_precise`
 
 **SUITABLE for production color processing:**
 - ~145 ULP max error, ~8e-6 relative error
@@ -90,18 +106,34 @@ Functions: `pow_midp()`, `exp2_midp()`, `log2_midp()`, `ln_midp()`, `exp_midp()`
 - 12-bit round-trip: **100% exact**
 - 16-bit round-trip: 97% exact, 3% off-by-1
 
+#### Platform Availability
+
+| Platform | lowp/midp | _unchecked | _precise |
+|----------|-----------|------------|----------|
+| x86-64 (AVX2+) | ✓ | ✓ | cbrt only |
+| AArch64 (NEON) | ✓ | ✓ | cbrt only |
+| WASM SIMD128 | ✓ | ✓ | ✓ (full) |
+
+WASM has complete `_precise` variants because polynomial approximations are used (no hardware transcendentals).
+x86/ARM use different algorithms where denormal handling is only implemented for cbrt.
+
 ### Algorithm Implementation Status
 
 | Use Case | Algorithm | Target | Status |
 |----------|-----------|--------|--------|
-| Preview/speed | lowp | <1% rel error | `pow_lowp()`, `exp2_lowp()`, `log2_lowp()` |
-| 8-bit sRGB | midp | 100% exact round-trip | `pow_midp()`, `exp2_midp()`, `log2_midp()` |
-| 10-bit HDR | midp | 100% exact round-trip | `pow_midp()`, `exp2_midp()`, `log2_midp()` |
-| 12-bit | midp | 100% exact round-trip | `pow_midp()`, `exp2_midp()`, `log2_midp()` |
-| 16-bit | midp | 97% exact, 3% off-by-1 | `pow_midp()`, `exp2_midp()`, `log2_midp()` |
+| Preview/speed | lowp | <1% rel error | `pow_lowp`, `exp2_lowp`, `log2_lowp`, `ln_lowp`, `exp_lowp`, `log10_lowp` |
+| Hot loops (valid inputs) | _unchecked | same as tier | `*_lowp_unchecked`, `*_midp_unchecked` |
+| 8-bit sRGB | midp | 100% exact round-trip | `pow_midp`, `exp2_midp`, `log2_midp` |
+| 10-bit HDR | midp | 100% exact round-trip | `pow_midp`, `exp2_midp`, `log2_midp` |
+| 12-bit | midp | 100% exact round-trip | `pow_midp`, `exp2_midp`, `log2_midp` |
+| 16-bit | midp | 97% exact, 3% off-by-1 | `pow_midp`, `exp2_midp`, `log2_midp` |
+| Denormal inputs | _precise | Full IEEE | `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise` |
 
-**Recommendation**: Use midp functions (`pow_midp`, `exp2_midp`, `log2_midp`) for all color processing work.
-For perfect precision, use std::f32 (scalar) at ~7-15x slower throughput.
+**Recommendations:**
+- Use midp functions for all color processing work
+- Use `_unchecked` variants in hot loops when inputs are guaranteed valid (e.g., already clamped to [0, 1])
+- Use `_precise` variants only when processing may include denormal values (~50% slower)
+- For perfect precision, use std::f32 (scalar) at ~7-15x slower throughput
 
 ## Algorithms
 
