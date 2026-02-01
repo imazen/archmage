@@ -2059,6 +2059,36 @@ impl i8x64 {
             _mm512_mask_blend_epi8(m, if_false.0, if_true.0)
         })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi8_mask(self.0, _mm512_setzero_si512());
+            mask == 0xFFFF_FFFF_FFFF_FFFFu64
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi8_mask(self.0, _mm512_setzero_si512());
+            mask != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm512_cmpneq_epi8_mask(self.0, _mm512_setzero_si512()) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -2430,6 +2460,36 @@ impl u8x64 {
             _mm512_mask_blend_epi8(m, if_false.0, if_true.0)
         })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi8_mask(self.0, _mm512_setzero_si512());
+            mask == 0xFFFF_FFFF_FFFF_FFFFu64
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi8_mask(self.0, _mm512_setzero_si512());
+            mask != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm512_cmpneq_epi8_mask(self.0, _mm512_setzero_si512()) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -2806,6 +2866,36 @@ impl i16x32 {
             _mm512_mask_blend_epi16(m, if_false.0, if_true.0)
         })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi16_mask(self.0, _mm512_setzero_si512());
+            mask == 0xFFFF_FFFFu32
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi16_mask(self.0, _mm512_setzero_si512());
+            mask != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm512_cmpneq_epi16_mask(self.0, _mm512_setzero_si512()) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -3204,6 +3294,36 @@ impl u16x32 {
             _mm512_mask_blend_epi16(m, if_false.0, if_true.0)
         })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi16_mask(self.0, _mm512_setzero_si512());
+            mask == 0xFFFF_FFFFu32
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi16_mask(self.0, _mm512_setzero_si512());
+            mask != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm512_cmpneq_epi16_mask(self.0, _mm512_setzero_si512()) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -3600,6 +3720,36 @@ impl i32x16 {
             _mm512_mask_blend_epi32(m, if_false.0, if_true.0)
         })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi32_mask(self.0, _mm512_setzero_si512());
+            mask == 0xFFFFu16
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi32_mask(self.0, _mm512_setzero_si512());
+            mask != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm512_cmpneq_epi32_mask(self.0, _mm512_setzero_si512()) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -4024,6 +4174,36 @@ impl u32x16 {
             _mm512_mask_blend_epi32(m, if_false.0, if_true.0)
         })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi32_mask(self.0, _mm512_setzero_si512());
+            mask == 0xFFFFu16
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi32_mask(self.0, _mm512_setzero_si512());
+            mask != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm512_cmpneq_epi32_mask(self.0, _mm512_setzero_si512()) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -4438,6 +4618,36 @@ impl i64x8 {
             _mm512_mask_blend_epi64(m, if_false.0, if_true.0)
         })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi64_mask(self.0, _mm512_setzero_si512());
+            mask == 0xFFu8
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi64_mask(self.0, _mm512_setzero_si512());
+            mask != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm512_cmpneq_epi64_mask(self.0, _mm512_setzero_si512()) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -4852,6 +5062,36 @@ impl u64x8 {
             _mm512_mask_blend_epi64(m, if_false.0, if_true.0)
         })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi64_mask(self.0, _mm512_setzero_si512());
+            mask == 0xFFu8
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let mask = _mm512_cmpneq_epi64_mask(self.0, _mm512_setzero_si512());
+            mask != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm512_cmpneq_epi64_mask(self.0, _mm512_setzero_si512()) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.

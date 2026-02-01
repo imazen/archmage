@@ -51,6 +51,12 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Horizontal operations
     code.push_str(&generate_horizontal_ops(ty));
 
+    // Comparison operations
+    code.push_str(&generate_comparison_ops(ty));
+
+    // Bitwise operations (not, shift)
+    code.push_str(&generate_bitwise_ops(ty));
+
     // Bitcast operations (reinterpret bits between same-width types)
     code.push_str(&ops_bitcast::generate_arm_bitcasts(ty));
 
@@ -654,7 +660,8 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
 
     // reduce_add using pairwise addition
     // For f32x4: vpaddq_f32 twice, then extract
-    if ty.elem.is_float() || ty.elem.is_signed() {
+    // Generate for all types (floats, signed, and unsigned)
+    {
         let padd_fn = Arm::padd_intrinsic(ty.elem);
         let get_lane_fn = Arm::get_lane_intrinsic(ty.elem);
 
@@ -765,6 +772,632 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
         writeln!(code, "        }}").unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
+
+    code
+}
+
+/// Generate comparison operations for NEON
+fn generate_comparison_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+    let name = ty.name();
+
+    writeln!(code, "    // ========== Comparisons ==========").unwrap();
+    writeln!(
+        code,
+        "    // These return a mask where each lane is all-1s (true) or all-0s (false)."
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "    // Use with `blend()` to select values based on the comparison result.\n"
+    )
+    .unwrap();
+
+    // NEON comparison intrinsics ALWAYS return unsigned integer vectors
+    // vceqq_s8 -> uint8x16_t, vceqq_f32 -> uint32x4_t, etc.
+    // We need to reinterpret back to the original type for all types
+
+    let eq_fn = Arm::cmp_intrinsic("eq", ty.elem);
+
+    // Get reinterpret function to cast from unsigned result back to our type
+    let reinterpret_from = match ty.elem {
+        ElementType::F32 => "vreinterpretq_f32_u32",
+        ElementType::F64 => "vreinterpretq_f64_u64",
+        ElementType::I8 => "vreinterpretq_s8_u8",
+        ElementType::U8 => "", // already u8
+        ElementType::I16 => "vreinterpretq_s16_u16",
+        ElementType::U16 => "", // already u16
+        ElementType::I32 => "vreinterpretq_s32_u32",
+        ElementType::U32 => "", // already u32
+        ElementType::I64 => "vreinterpretq_s64_u64",
+        ElementType::U64 => "", // already u64
+    };
+    let needs_reinterpret = !reinterpret_from.is_empty();
+
+    // simd_eq
+    writeln!(code, "    /// Lane-wise equality comparison.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise."
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "    /// Use with `blend(mask, if_true, if_false)` to select values."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn simd_eq(self, other: Self) -> Self {{").unwrap();
+    if needs_reinterpret {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}({}(self.0, other.0)) }})",
+            reinterpret_from, eq_fn
+        )
+        .unwrap();
+    } else {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(self.0, other.0) }})",
+            eq_fn
+        )
+        .unwrap();
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // simd_ne (use eq + not)
+    writeln!(code, "    /// Lane-wise inequality comparison.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn simd_ne(self, other: Self) -> Self {{").unwrap();
+    writeln!(code, "        self.simd_eq(other).not()").unwrap();
+    writeln!(code, "    }}\n").unwrap();
+
+    // simd_lt, simd_le, simd_gt, simd_ge
+    let lt_fn = Arm::cmp_intrinsic("lt", ty.elem);
+    let le_fn = Arm::cmp_intrinsic("le", ty.elem);
+    let gt_fn = Arm::cmp_intrinsic("gt", ty.elem);
+    let ge_fn = Arm::cmp_intrinsic("ge", ty.elem);
+
+    // simd_lt
+    writeln!(code, "    /// Lane-wise less-than comparison.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn simd_lt(self, other: Self) -> Self {{").unwrap();
+    if needs_reinterpret {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}({}(self.0, other.0)) }})",
+            reinterpret_from, lt_fn
+        )
+        .unwrap();
+    } else {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(self.0, other.0) }})",
+            lt_fn
+        )
+        .unwrap();
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // simd_le
+    writeln!(code, "    /// Lane-wise less-than-or-equal comparison.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn simd_le(self, other: Self) -> Self {{").unwrap();
+    if needs_reinterpret {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}({}(self.0, other.0)) }})",
+            reinterpret_from, le_fn
+        )
+        .unwrap();
+    } else {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(self.0, other.0) }})",
+            le_fn
+        )
+        .unwrap();
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // simd_gt
+    writeln!(code, "    /// Lane-wise greater-than comparison.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn simd_gt(self, other: Self) -> Self {{").unwrap();
+    if needs_reinterpret {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}({}(self.0, other.0)) }})",
+            reinterpret_from, gt_fn
+        )
+        .unwrap();
+    } else {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(self.0, other.0) }})",
+            gt_fn
+        )
+        .unwrap();
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // simd_ge
+    writeln!(code, "    /// Lane-wise greater-than-or-equal comparison.").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn simd_ge(self, other: Self) -> Self {{").unwrap();
+    if needs_reinterpret {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}({}(self.0, other.0)) }})",
+            reinterpret_from, ge_fn
+        )
+        .unwrap();
+    } else {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(self.0, other.0) }})",
+            ge_fn
+        )
+        .unwrap();
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // blend - conditional select using mask
+    // NEON vbslq: vbslq_*(mask_as_uint, if_true, if_false)
+    writeln!(code, "    // ========== Blending/Selection ==========\n").unwrap();
+
+    writeln!(
+        code,
+        "    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// The mask should come from a comparison operation like `simd_lt()`."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(code, "    /// # Example").unwrap();
+    writeln!(code, "    /// ```ignore").unwrap();
+    writeln!(code, "    /// let a = {}::splat(token, 1.0);", name).unwrap();
+    writeln!(code, "    /// let b = {}::splat(token, 2.0);", name).unwrap();
+    writeln!(code, "    /// let mask = a.simd_lt(b);  // all true").unwrap();
+    writeln!(
+        code,
+        "    /// let result = {}::blend(mask, a, b);  // selects a",
+        name
+    )
+    .unwrap();
+    writeln!(code, "    /// ```").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(
+        code,
+        "    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{"
+    )
+    .unwrap();
+
+    // For NEON vbslq, the mask must be the unsigned type
+    // vbslq_f32(uint32x4_t mask, float32x4_t a, float32x4_t b)
+    // vbslq_s8(uint8x16_t mask, int8x16_t a, int8x16_t b)
+    let (mask_cast, bsl_fn) = match ty.elem {
+        ElementType::F32 => ("vreinterpretq_u32_f32", "vbslq_f32"),
+        ElementType::F64 => ("vreinterpretq_u64_f64", "vbslq_f64"),
+        ElementType::I8 => ("vreinterpretq_u8_s8", "vbslq_s8"),
+        ElementType::U8 => ("", "vbslq_u8"), // already unsigned
+        ElementType::I16 => ("vreinterpretq_u16_s16", "vbslq_s16"),
+        ElementType::U16 => ("", "vbslq_u16"),
+        ElementType::I32 => ("vreinterpretq_u32_s32", "vbslq_s32"),
+        ElementType::U32 => ("", "vbslq_u32"),
+        ElementType::I64 => ("vreinterpretq_u64_s64", "vbslq_s64"),
+        ElementType::U64 => ("", "vbslq_u64"),
+    };
+
+    if mask_cast.is_empty() {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}(mask.0, if_true.0, if_false.0) }})",
+            bsl_fn
+        )
+        .unwrap();
+    } else {
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}({}(mask.0), if_true.0, if_false.0) }})",
+            bsl_fn, mask_cast
+        )
+        .unwrap();
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    code
+}
+
+/// Generate bitwise operations (not, shift) for NEON
+fn generate_bitwise_ops(ty: &SimdType) -> String {
+    let mut code = String::new();
+
+    // not() - bitwise complement
+    // For integers: vmvnq_*
+    // For floats: reinterpret to uint, vmvnq, reinterpret back
+    writeln!(code, "    /// Bitwise NOT (complement)").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn not(self) -> Self {{").unwrap();
+
+    if ty.elem.is_float() {
+        let (to_uint, mvn_fn, from_uint) = match ty.elem {
+            ElementType::F32 => (
+                "vreinterpretq_u32_f32",
+                "vmvnq_u32",
+                "vreinterpretq_f32_u32",
+            ),
+            ElementType::F64 => {
+                // NEON doesn't have vmvnq_u64, need to use EOR with all-ones
+                // Use veorq with all-ones vector
+                writeln!(
+                    code,
+                    "        // NEON lacks vmvnq_u64, use XOR with all-ones"
+                )
+                .unwrap();
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(
+                    code,
+                    "            let bits = vreinterpretq_u64_f64(self.0);"
+                )
+                .unwrap();
+                writeln!(
+                    code,
+                    "            let ones = vdupq_n_u64(u64::MAX);"
+                )
+                .unwrap();
+                writeln!(
+                    code,
+                    "            Self(vreinterpretq_f64_u64(veorq_u64(bits, ones)))"
+                )
+                .unwrap();
+                writeln!(code, "        }}").unwrap();
+                writeln!(code, "    }}\n").unwrap();
+                return code;
+            }
+            _ => unreachable!(),
+        };
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}({}({}(self.0))) }})",
+            from_uint, mvn_fn, to_uint
+        )
+        .unwrap();
+    } else {
+        // For integers, use vmvnq directly
+        // Note: vmvnq only exists for 8/16/32-bit, not 64-bit
+        let mvn_exists = matches!(
+            ty.elem,
+            ElementType::I8
+                | ElementType::U8
+                | ElementType::I16
+                | ElementType::U16
+                | ElementType::I32
+                | ElementType::U32
+        );
+
+        if mvn_exists {
+            let mvn_fn = match ty.elem {
+                ElementType::I8 => "vmvnq_s8",
+                ElementType::U8 => "vmvnq_u8",
+                ElementType::I16 => "vmvnq_s16",
+                ElementType::U16 => "vmvnq_u16",
+                ElementType::I32 => "vmvnq_s32",
+                ElementType::U32 => "vmvnq_u32",
+                _ => unreachable!(),
+            };
+            writeln!(code, "        Self(unsafe {{ {}(self.0) }})", mvn_fn).unwrap();
+        } else {
+            // i64/u64: use EOR with all-ones
+            let (eor_fn, dup_fn, max_val) = match ty.elem {
+                ElementType::I64 => ("veorq_s64", "vdupq_n_s64", "-1i64"),
+                ElementType::U64 => ("veorq_u64", "vdupq_n_u64", "u64::MAX"),
+                _ => unreachable!(),
+            };
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let ones = {}({});", dup_fn, max_val).unwrap();
+            writeln!(code, "            Self({}(self.0, ones))", eor_fn).unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // Shifts - only for integer types
+    if !ty.elem.is_float() {
+        // shl - shift left by immediate
+        // NEON: vshlq_n_* for immediate shifts
+        let shl_fn = match ty.elem {
+            ElementType::I8 => "vshlq_n_s8",
+            ElementType::U8 => "vshlq_n_u8",
+            ElementType::I16 => "vshlq_n_s16",
+            ElementType::U16 => "vshlq_n_u16",
+            ElementType::I32 => "vshlq_n_s32",
+            ElementType::U32 => "vshlq_n_u32",
+            ElementType::I64 => "vshlq_n_s64",
+            ElementType::U64 => "vshlq_n_u64",
+            _ => unreachable!(),
+        };
+
+        writeln!(code, "    /// Shift left by immediate (const generic)").unwrap();
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn shl<const N: i32>(self) -> Self {{").unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}::<N>(self.0) }})",
+            shl_fn
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // shr - shift right (logical for unsigned, arithmetic for signed)
+        let shr_fn = match ty.elem {
+            // Unsigned: logical right shift
+            ElementType::U8 => "vshrq_n_u8",
+            ElementType::U16 => "vshrq_n_u16",
+            ElementType::U32 => "vshrq_n_u32",
+            ElementType::U64 => "vshrq_n_u64",
+            // Signed: arithmetic right shift
+            ElementType::I8 => "vshrq_n_s8",
+            ElementType::I16 => "vshrq_n_s16",
+            ElementType::I32 => "vshrq_n_s32",
+            ElementType::I64 => "vshrq_n_s64",
+            _ => unreachable!(),
+        };
+
+        writeln!(code, "    /// Shift right by immediate (const generic)").unwrap();
+        writeln!(code, "    ///").unwrap();
+        if ty.elem.is_signed() {
+            writeln!(code, "    /// For signed types, this is an arithmetic shift (sign-extending).").unwrap();
+        } else {
+            writeln!(code, "    /// For unsigned types, this is a logical shift (zero-extending).").unwrap();
+        }
+        writeln!(code, "    #[inline(always)]").unwrap();
+        writeln!(code, "    pub fn shr<const N: i32>(self) -> Self {{").unwrap();
+        writeln!(
+            code,
+            "        Self(unsafe {{ {}::<N>(self.0) }})",
+            shr_fn
+        )
+        .unwrap();
+        writeln!(code, "    }}\n").unwrap();
+
+        // Boolean reductions - only for integer types
+        code.push_str(&generate_boolean_reductions(ty));
+    }
+
+    code
+}
+
+/// Generate boolean reduction operations for NEON integer types
+fn generate_boolean_reductions(ty: &SimdType) -> String {
+    let mut code = String::new();
+
+    writeln!(code, "    // ========== Boolean Reductions ==========\n").unwrap();
+
+    // Helper to get reinterpret function (empty string for types that don't need it)
+    let (u8_cast, u16_cast, u32_cast, u64_cast) = match ty.elem {
+        // Unsigned types don't need casting
+        ElementType::U8 => ("", "", "", ""),
+        ElementType::U16 => ("", "", "", ""),
+        ElementType::U32 => ("", "", "", ""),
+        ElementType::U64 => ("", "", "", ""),
+        // Signed types need reinterpret to unsigned
+        ElementType::I8 => ("vreinterpretq_u8_s8", "", "", ""),
+        ElementType::I16 => ("", "vreinterpretq_u16_s16", "", ""),
+        ElementType::I32 => ("", "", "vreinterpretq_u32_s32", ""),
+        ElementType::I64 => ("", "", "", "vreinterpretq_u64_s64"),
+        _ => unreachable!(),
+    };
+
+    // all_true - check if all lanes are non-zero
+    writeln!(code, "    /// Returns true if all lanes are non-zero (truthy).").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Typically used with comparison results where true lanes are all-1s."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn all_true(self) -> bool {{").unwrap();
+
+    // Strategy: use horizontal min - if min is non-zero, all lanes are non-zero
+    match ty.elem {
+        ElementType::I8 => {
+            writeln!(code, "        unsafe {{ vminvq_u8({}(self.0)) != 0 }}", u8_cast).unwrap();
+        }
+        ElementType::U8 => {
+            writeln!(code, "        unsafe {{ vminvq_u8(self.0) != 0 }}").unwrap();
+        }
+        ElementType::I16 => {
+            writeln!(code, "        unsafe {{ vminvq_u16({}(self.0)) != 0 }}", u16_cast).unwrap();
+        }
+        ElementType::U16 => {
+            writeln!(code, "        unsafe {{ vminvq_u16(self.0) != 0 }}").unwrap();
+        }
+        ElementType::I32 => {
+            writeln!(code, "        unsafe {{ vminvq_u32({}(self.0)) != 0 }}", u32_cast).unwrap();
+        }
+        ElementType::U32 => {
+            writeln!(code, "        unsafe {{ vminvq_u32(self.0) != 0 }}").unwrap();
+        }
+        ElementType::I64 => {
+            // No vminvq_u64, check both lanes manually
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let as_u64 = {}(self.0);", u64_cast).unwrap();
+            writeln!(code, "            vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::U64 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            vgetq_lane_u64::<0>(self.0) != 0 && vgetq_lane_u64::<1>(self.0) != 0").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        _ => unreachable!(),
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // any_true - check if any lane is non-zero
+    writeln!(code, "    /// Returns true if any lane is non-zero (truthy).").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn any_true(self) -> bool {{").unwrap();
+
+    // Strategy: use horizontal max - if max is non-zero, at least one lane is non-zero
+    match ty.elem {
+        ElementType::I8 => {
+            writeln!(code, "        unsafe {{ vmaxvq_u8({}(self.0)) != 0 }}", u8_cast).unwrap();
+        }
+        ElementType::U8 => {
+            writeln!(code, "        unsafe {{ vmaxvq_u8(self.0) != 0 }}").unwrap();
+        }
+        ElementType::I16 => {
+            writeln!(code, "        unsafe {{ vmaxvq_u16({}(self.0)) != 0 }}", u16_cast).unwrap();
+        }
+        ElementType::U16 => {
+            writeln!(code, "        unsafe {{ vmaxvq_u16(self.0) != 0 }}").unwrap();
+        }
+        ElementType::I32 => {
+            writeln!(code, "        unsafe {{ vmaxvq_u32({}(self.0)) != 0 }}", u32_cast).unwrap();
+        }
+        ElementType::U32 => {
+            writeln!(code, "        unsafe {{ vmaxvq_u32(self.0) != 0 }}").unwrap();
+        }
+        ElementType::I64 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let as_u64 = {}(self.0);", u64_cast).unwrap();
+            writeln!(code, "            (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::U64 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            (vgetq_lane_u64::<0>(self.0) | vgetq_lane_u64::<1>(self.0)) != 0").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        _ => unreachable!(),
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // bitmask - extract high bit of each lane
+    writeln!(
+        code,
+        "    /// Extract the high bit of each lane as a bitmask."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Returns a u32 where bit N corresponds to the sign bit of lane N."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn bitmask(self) -> u32 {{").unwrap();
+
+    // NEON doesn't have a direct movemask, need to emulate
+    // Strategy: shift right to get sign bit in LSB, then collect via transmute
+    match ty.elem {
+        ElementType::I8 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let signs = vshrq_n_u8::<7>({}(self.0));", u8_cast).unwrap();
+            writeln!(code, "            let arr: [u8; 16] = core::mem::transmute(signs);").unwrap();
+            writeln!(code, "            let mut r = 0u32;").unwrap();
+            writeln!(code, "            let mut i = 0;").unwrap();
+            writeln!(code, "            while i < 16 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}").unwrap();
+            writeln!(code, "            r").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::U8 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let signs = vshrq_n_u8::<7>(self.0);").unwrap();
+            writeln!(code, "            let arr: [u8; 16] = core::mem::transmute(signs);").unwrap();
+            writeln!(code, "            let mut r = 0u32;").unwrap();
+            writeln!(code, "            let mut i = 0;").unwrap();
+            writeln!(code, "            while i < 16 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}").unwrap();
+            writeln!(code, "            r").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::I16 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let signs = vshrq_n_u16::<15>({}(self.0));", u16_cast).unwrap();
+            writeln!(code, "            let arr: [u16; 8] = core::mem::transmute(signs);").unwrap();
+            writeln!(code, "            let mut r = 0u32;").unwrap();
+            writeln!(code, "            let mut i = 0;").unwrap();
+            writeln!(code, "            while i < 8 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}").unwrap();
+            writeln!(code, "            r").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::U16 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let signs = vshrq_n_u16::<15>(self.0);").unwrap();
+            writeln!(code, "            let arr: [u16; 8] = core::mem::transmute(signs);").unwrap();
+            writeln!(code, "            let mut r = 0u32;").unwrap();
+            writeln!(code, "            let mut i = 0;").unwrap();
+            writeln!(code, "            while i < 8 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}").unwrap();
+            writeln!(code, "            r").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::I32 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let signs = vshrq_n_u32::<31>({}(self.0));", u32_cast).unwrap();
+            writeln!(code, "            let arr: [u32; 4] = core::mem::transmute(signs);").unwrap();
+            writeln!(code, "            (arr[0] & 1) | ((arr[1] & 1) << 1) | ((arr[2] & 1) << 2) | ((arr[3] & 1) << 3)").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::U32 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let signs = vshrq_n_u32::<31>(self.0);").unwrap();
+            writeln!(code, "            let arr: [u32; 4] = core::mem::transmute(signs);").unwrap();
+            writeln!(code, "            (arr[0] & 1) | ((arr[1] & 1) << 1) | ((arr[2] & 1) << 2) | ((arr[3] & 1) << 3)").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::I64 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let signs = vshrq_n_u64::<63>({}(self.0));", u64_cast).unwrap();
+            writeln!(code, "            ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        ElementType::U64 => {
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(code, "            let signs = vshrq_n_u64::<63>(self.0);").unwrap();
+            writeln!(code, "            ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+        _ => unreachable!(),
+    }
+    writeln!(code, "    }}\n").unwrap();
 
     code
 }

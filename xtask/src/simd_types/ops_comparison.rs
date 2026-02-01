@@ -726,3 +726,259 @@ pub fn generate_blend_ops(ty: &SimdType) -> String {
 
     indent(&code, 4) + "\n"
 }
+
+/// Generate boolean reduction operations (all_true, any_true, bitmask) for x86 integer types
+pub fn generate_boolean_reductions(ty: &SimdType) -> String {
+    // Only for integer types (not floats)
+    if ty.elem.is_float() {
+        return String::new();
+    }
+
+    let mut code = String::new();
+    let prefix = ty.width.x86_prefix();
+    let lanes = ty.lanes();
+
+    writeln!(code, "    // ========== Boolean Reductions ==========\n").unwrap();
+
+    // all_true - check if all lanes are non-zero (have their sign bit set for masks)
+    // For masks from comparisons, lanes are all-1s or all-0s
+    writeln!(code, "    /// Returns true if all lanes are non-zero (truthy).").unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Typically used with comparison results where true lanes are all-1s."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn all_true(self) -> bool {{").unwrap();
+
+    match ty.width {
+        SimdWidth::W128 => {
+            // Use movemask_epi8 and check all bits
+            // All lanes being truthy means all 16 bytes have high bit set (for masks)
+            writeln!(
+                code,
+                "        unsafe {{ {}_movemask_epi8(self.0) == 0xFFFF_u32 as i32 }}",
+                prefix
+            )
+            .unwrap();
+        }
+        SimdWidth::W256 => {
+            // For 256-bit, movemask returns 32 bits
+            writeln!(
+                code,
+                "        unsafe {{ {}_movemask_epi8(self.0) == -1_i32 }}",
+                prefix
+            )
+            .unwrap();
+        }
+        SimdWidth::W512 => {
+            // AVX-512 uses kmov to extract mask - mask type depends on lane count
+            let cmp_suffix = ty.elem.x86_suffix();
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(
+                code,
+                "            let mask = {}_cmpneq_{}_mask(self.0, {}_setzero_si512());",
+                prefix, cmp_suffix, prefix
+            )
+            .unwrap();
+            // The mask type matches the lane count: 64 lanes -> u64, 8 lanes -> u8, etc.
+            let full_mask = match lanes {
+                64 => "0xFFFF_FFFF_FFFF_FFFFu64",
+                32 => "0xFFFF_FFFFu32",
+                16 => "0xFFFFu16",
+                8 => "0xFFu8",
+                _ => "0u64",
+            };
+            writeln!(code, "            mask == {}", full_mask).unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // any_true - check if any lane is non-zero
+    writeln!(code, "    /// Returns true if any lane is non-zero (truthy).").unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn any_true(self) -> bool {{").unwrap();
+
+    match ty.width {
+        SimdWidth::W128 | SimdWidth::W256 => {
+            writeln!(
+                code,
+                "        unsafe {{ {}_movemask_epi8(self.0) != 0 }}",
+                prefix
+            )
+            .unwrap();
+        }
+        SimdWidth::W512 => {
+            let cmp_suffix = ty.elem.x86_suffix();
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(
+                code,
+                "            let mask = {}_cmpneq_{}_mask(self.0, {}_setzero_si512());",
+                prefix, cmp_suffix, prefix
+            )
+            .unwrap();
+            writeln!(code, "            mask != 0").unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    // bitmask - extract high bit of each lane as a bitmask
+    writeln!(
+        code,
+        "    /// Extract the high bit of each lane as a bitmask."
+    )
+    .unwrap();
+    writeln!(code, "    ///").unwrap();
+    writeln!(
+        code,
+        "    /// Returns a u32 where bit N corresponds to the sign bit of lane N."
+    )
+    .unwrap();
+    writeln!(code, "    #[inline(always)]").unwrap();
+    writeln!(code, "    pub fn bitmask(self) -> u32 {{").unwrap();
+
+    match ty.width {
+        SimdWidth::W128 => {
+            // movemask_epi8 extracts bit 7 of each byte
+            // For larger types, we need to handle differently
+            match ty.elem {
+                ElementType::I8 | ElementType::U8 => {
+                    // 16 lanes -> 16 bits
+                    writeln!(
+                        code,
+                        "        unsafe {{ {}_movemask_epi8(self.0) as u32 }}",
+                        prefix
+                    )
+                    .unwrap();
+                }
+                ElementType::I16 | ElementType::U16 => {
+                    // 8 lanes, need to pack to bytes first or use arithmetic shift
+                    // Actually simpler: shift right by 15, pack to bytes, movemask
+                    // But packing would lose info. Use: shift each lane right by 15, pack i16->i8
+                    writeln!(code, "        unsafe {{").unwrap();
+                    writeln!(
+                        code,
+                        "            // Shift right to get sign bit in LSB, pack to bytes"
+                    )
+                    .unwrap();
+                    writeln!(
+                        code,
+                        "            let shifted = _mm_srai_epi16::<15>(self.0);"
+                    )
+                    .unwrap();
+                    writeln!(
+                        code,
+                        "            let packed = _mm_packs_epi16(shifted, shifted);"
+                    )
+                    .unwrap();
+                    writeln!(
+                        code,
+                        "            (_mm_movemask_epi8(packed) & 0xFF) as u32"
+                    )
+                    .unwrap();
+                    writeln!(code, "        }}").unwrap();
+                }
+                ElementType::I32 | ElementType::U32 => {
+                    // 4 lanes - use movemask_ps after reinterpret
+                    writeln!(code, "        unsafe {{").unwrap();
+                    writeln!(
+                        code,
+                        "            _mm_movemask_ps(_mm_castsi128_ps(self.0)) as u32"
+                    )
+                    .unwrap();
+                    writeln!(code, "        }}").unwrap();
+                }
+                ElementType::I64 | ElementType::U64 => {
+                    // 2 lanes - use movemask_pd after reinterpret
+                    writeln!(code, "        unsafe {{").unwrap();
+                    writeln!(
+                        code,
+                        "            _mm_movemask_pd(_mm_castsi128_pd(self.0)) as u32"
+                    )
+                    .unwrap();
+                    writeln!(code, "        }}").unwrap();
+                }
+                _ => unreachable!(),
+            }
+        }
+        SimdWidth::W256 => {
+            match ty.elem {
+                ElementType::I8 | ElementType::U8 => {
+                    writeln!(
+                        code,
+                        "        unsafe {{ {}_movemask_epi8(self.0) as u32 }}",
+                        prefix
+                    )
+                    .unwrap();
+                }
+                ElementType::I16 | ElementType::U16 => {
+                    writeln!(code, "        unsafe {{").unwrap();
+                    writeln!(
+                        code,
+                        "            let shifted = _mm256_srai_epi16::<15>(self.0);"
+                    )
+                    .unwrap();
+                    writeln!(
+                        code,
+                        "            let packed = _mm256_packs_epi16(shifted, shifted);"
+                    )
+                    .unwrap();
+                    writeln!(code, "            // packs interleaves, need to extract").unwrap();
+                    writeln!(
+                        code,
+                        "            let lo = _mm256_castsi256_si128(packed);"
+                    )
+                    .unwrap();
+                    writeln!(
+                        code,
+                        "            let hi = _mm256_extracti128_si256::<1>(packed);"
+                    )
+                    .unwrap();
+                    writeln!(
+                        code,
+                        "            ((_mm_movemask_epi8(lo) & 0xFF) | ((_mm_movemask_epi8(hi) & 0xFF) << 8)) as u32"
+                    )
+                    .unwrap();
+                    writeln!(code, "        }}").unwrap();
+                }
+                ElementType::I32 | ElementType::U32 => {
+                    writeln!(code, "        unsafe {{").unwrap();
+                    writeln!(
+                        code,
+                        "            _mm256_movemask_ps(_mm256_castsi256_ps(self.0)) as u32"
+                    )
+                    .unwrap();
+                    writeln!(code, "        }}").unwrap();
+                }
+                ElementType::I64 | ElementType::U64 => {
+                    writeln!(code, "        unsafe {{").unwrap();
+                    writeln!(
+                        code,
+                        "            _mm256_movemask_pd(_mm256_castsi256_pd(self.0)) as u32"
+                    )
+                    .unwrap();
+                    writeln!(code, "        }}").unwrap();
+                }
+                _ => unreachable!(),
+            }
+        }
+        SimdWidth::W512 => {
+            // AVX-512 has direct mask extraction
+            let cmp_suffix = ty.elem.x86_suffix();
+            writeln!(code, "        unsafe {{").unwrap();
+            writeln!(
+                code,
+                "            {}_cmpneq_{}_mask(self.0, {}_setzero_si512()) as u32",
+                prefix, cmp_suffix, prefix
+            )
+            .unwrap();
+            writeln!(code, "        }}").unwrap();
+        }
+    }
+    writeln!(code, "    }}\n").unwrap();
+
+    code
+}

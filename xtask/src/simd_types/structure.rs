@@ -317,6 +317,9 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Blend/select operations
     code.push_str(&ops::generate_blend_ops(ty));
 
+    // Boolean reductions (all_true, any_true, bitmask)
+    code.push_str(&ops::generate_boolean_reductions(ty));
+
     // Horizontal operations
     code.push_str(&ops::generate_horizontal_ops(ty));
 

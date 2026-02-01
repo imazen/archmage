@@ -2161,6 +2161,30 @@ impl i8x32 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) == -1_i32 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm256_movemask_epi8(self.0) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -2522,6 +2546,30 @@ impl u8x32 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) == -1_i32 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm256_movemask_epi8(self.0) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -2966,6 +3014,37 @@ impl i16x16 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) == -1_i32 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let shifted = _mm256_srai_epi16::<15>(self.0);
+            let packed = _mm256_packs_epi16(shifted, shifted);
+            // packs interleaves, need to extract
+            let lo = _mm256_castsi256_si128(packed);
+            let hi = _mm256_extracti128_si256::<1>(packed);
+            ((_mm_movemask_epi8(lo) & 0xFF) | ((_mm_movemask_epi8(hi) & 0xFF) << 8)) as u32
+        }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -3426,6 +3505,37 @@ impl u16x16 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) == -1_i32 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let shifted = _mm256_srai_epi16::<15>(self.0);
+            let packed = _mm256_packs_epi16(shifted, shifted);
+            // packs interleaves, need to extract
+            let lo = _mm256_castsi256_si128(packed);
+            let hi = _mm256_extracti128_si256::<1>(packed);
+            ((_mm_movemask_epi8(lo) & 0xFF) | ((_mm_movemask_epi8(hi) & 0xFF) << 8)) as u32
+        }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -3858,6 +3968,30 @@ impl i32x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) == -1_i32 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(self.0)) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -4295,6 +4429,30 @@ impl u32x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) == -1_i32 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(self.0)) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -4673,6 +4831,30 @@ impl i64x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) == -1_i32 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(self.0)) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -5055,6 +5237,30 @@ impl u64x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm256_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) == -1_i32 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { _mm256_movemask_epi8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(self.0)) as u32 }
+    }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.

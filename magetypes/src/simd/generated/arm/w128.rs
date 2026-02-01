@@ -245,6 +245,83 @@ impl f32x4 {
         }
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vceqq_f32(self.0, other.0)) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vcltq_f32(self.0, other.0)) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vcleq_f32(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vcgtq_f32(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vcgeq_f32(self.0, other.0)) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f32x4::splat(token, 1.0);
+    /// let b = f32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = f32x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_f32(vreinterpretq_u32_f32(mask.0), if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe { vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(self.0))) })
+    }
+
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `i32x4` (zero-cost).
@@ -623,6 +700,88 @@ impl f64x2 {
         }
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f64_u64(vceqq_f64(self.0, other.0)) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f64_u64(vcltq_f64(self.0, other.0)) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f64_u64(vcleq_f64(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f64_u64(vcgtq_f64(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_f64_u64(vcgeq_f64(self.0, other.0)) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = f64x2::splat(token, 1.0);
+    /// let b = f64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = f64x2::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_f64(vreinterpretq_u64_f64(mask.0), if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        // NEON lacks vmvnq_u64, use XOR with all-ones
+        unsafe {
+            let bits = vreinterpretq_u64_f64(self.0);
+            let ones = vdupq_n_u64(u64::MAX);
+            Self(vreinterpretq_f64_u64(veorq_u64(bits, ones)))
+        }
+    }
+
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `i64x2` (zero-cost).
@@ -956,6 +1115,131 @@ impl i8x16 {
         }
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s8_u8(vceqq_s8(self.0, other.0)) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s8_u8(vcltq_s8(self.0, other.0)) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s8_u8(vcleq_s8(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s8_u8(vcgtq_s8(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s8_u8(vcgeq_s8(self.0, other.0)) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i8x16::splat(token, 1.0);
+    /// let b = i8x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i8x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_s8(vreinterpretq_u8_s8(mask.0), if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe { vmvnq_s8(self.0) })
+    }
+
+    /// Shift left by immediate (const generic)
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { vshlq_n_s8::<N>(self.0) })
+    }
+
+    /// Shift right by immediate (const generic)
+    ///
+    /// For signed types, this is an arithmetic shift (sign-extending).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_s8::<N>(self.0) })
+    }
+
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { vminvq_u8(vreinterpretq_u8_s8(self.0)) != 0 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { vmaxvq_u8(vreinterpretq_u8_s8(self.0)) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u8::<7>(vreinterpretq_u8_s8(self.0));
+            let arr: [u8; 16] = core::mem::transmute(signs);
+            let mut r = 0u32;
+            let mut i = 0;
+            while i < 16 {
+                r |= ((arr[i] & 1) as u32) << i;
+                i += 1;
+            }
+            r
+        }
+    }
+
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `u8x16` (zero-cost).
@@ -1221,6 +1505,143 @@ impl u8x16 {
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
+    }
+
+    /// Reduce: sum all lanes
+    #[inline(always)]
+    pub fn reduce_add(self) -> u8 {
+        unsafe {
+            let sum = vpaddq_u8(self.0, self.0);
+            let sum = vpaddq_u8(sum, sum);
+            let sum = vpaddq_u8(sum, sum);
+            let sum = vpaddq_u8(sum, sum);
+            vgetq_lane_u8::<0>(sum)
+        }
+    }
+
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vceqq_u8(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vcltq_u8(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vcleq_u8(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vcgtq_u8(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vcgeq_u8(self.0, other.0) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u8x16::splat(token, 1.0);
+    /// let b = u8x16::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u8x16::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_u8(mask.0, if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe { vmvnq_u8(self.0) })
+    }
+
+    /// Shift left by immediate (const generic)
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { vshlq_n_u8::<N>(self.0) })
+    }
+
+    /// Shift right by immediate (const generic)
+    ///
+    /// For unsigned types, this is a logical shift (zero-extending).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_u8::<N>(self.0) })
+    }
+
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { vminvq_u8(self.0) != 0 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { vmaxvq_u8(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u8::<7>(self.0);
+            let arr: [u8; 16] = core::mem::transmute(signs);
+            let mut r = 0u32;
+            let mut i = 0;
+            while i < 16 {
+                r |= ((arr[i] & 1) as u32) << i;
+                i += 1;
+            }
+            r
+        }
     }
 
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
@@ -1496,6 +1917,131 @@ impl i16x8 {
             let sum = vpaddq_s16(sum, sum);
             let sum = vpaddq_s16(sum, sum);
             vgetq_lane_s16::<0>(sum)
+        }
+    }
+
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s16_u16(vceqq_s16(self.0, other.0)) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s16_u16(vcltq_s16(self.0, other.0)) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s16_u16(vcleq_s16(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s16_u16(vcgtq_s16(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s16_u16(vcgeq_s16(self.0, other.0)) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i16x8::splat(token, 1.0);
+    /// let b = i16x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i16x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_s16(vreinterpretq_u16_s16(mask.0), if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe { vmvnq_s16(self.0) })
+    }
+
+    /// Shift left by immediate (const generic)
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { vshlq_n_s16::<N>(self.0) })
+    }
+
+    /// Shift right by immediate (const generic)
+    ///
+    /// For signed types, this is an arithmetic shift (sign-extending).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_s16::<N>(self.0) })
+    }
+
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { vminvq_u16(vreinterpretq_u16_s16(self.0)) != 0 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { vmaxvq_u16(vreinterpretq_u16_s16(self.0)) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u16::<15>(vreinterpretq_u16_s16(self.0));
+            let arr: [u16; 8] = core::mem::transmute(signs);
+            let mut r = 0u32;
+            let mut i = 0;
+            while i < 8 {
+                r |= ((arr[i] & 1) as u32) << i;
+                i += 1;
+            }
+            r
         }
     }
 
@@ -1779,6 +2325,142 @@ impl u16x8 {
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
+    }
+
+    /// Reduce: sum all lanes
+    #[inline(always)]
+    pub fn reduce_add(self) -> u16 {
+        unsafe {
+            let sum = vpaddq_u16(self.0, self.0);
+            let sum = vpaddq_u16(sum, sum);
+            let sum = vpaddq_u16(sum, sum);
+            vgetq_lane_u16::<0>(sum)
+        }
+    }
+
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vceqq_u16(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vcltq_u16(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vcleq_u16(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vcgtq_u16(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vcgeq_u16(self.0, other.0) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u16x8::splat(token, 1.0);
+    /// let b = u16x8::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u16x8::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_u16(mask.0, if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe { vmvnq_u16(self.0) })
+    }
+
+    /// Shift left by immediate (const generic)
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { vshlq_n_u16::<N>(self.0) })
+    }
+
+    /// Shift right by immediate (const generic)
+    ///
+    /// For unsigned types, this is a logical shift (zero-extending).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_u16::<N>(self.0) })
+    }
+
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { vminvq_u16(self.0) != 0 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { vmaxvq_u16(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u16::<15>(self.0);
+            let arr: [u16; 8] = core::mem::transmute(signs);
+            let mut r = 0u32;
+            let mut i = 0;
+            while i < 8 {
+                r |= ((arr[i] & 1) as u32) << i;
+                i += 1;
+            }
+            r
+        }
     }
 
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
@@ -2068,6 +2750,125 @@ impl i32x4 {
             let sum = vpaddq_s32(self.0, self.0);
             let sum = vpaddq_s32(sum, sum);
             vgetq_lane_s32::<0>(sum)
+        }
+    }
+
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s32_u32(vceqq_s32(self.0, other.0)) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s32_u32(vcltq_s32(self.0, other.0)) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s32_u32(vcleq_s32(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s32_u32(vcgtq_s32(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s32_u32(vcgeq_s32(self.0, other.0)) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i32x4::splat(token, 1.0);
+    /// let b = i32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i32x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_s32(vreinterpretq_u32_s32(mask.0), if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe { vmvnq_s32(self.0) })
+    }
+
+    /// Shift left by immediate (const generic)
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { vshlq_n_s32::<N>(self.0) })
+    }
+
+    /// Shift right by immediate (const generic)
+    ///
+    /// For signed types, this is an arithmetic shift (sign-extending).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_s32::<N>(self.0) })
+    }
+
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { vminvq_u32(vreinterpretq_u32_s32(self.0)) != 0 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { vmaxvq_u32(vreinterpretq_u32_s32(self.0)) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u32::<31>(vreinterpretq_u32_s32(self.0));
+            let arr: [u32; 4] = core::mem::transmute(signs);
+            (arr[0] & 1) | ((arr[1] & 1) << 1) | ((arr[2] & 1) << 2) | ((arr[3] & 1) << 3)
         }
     }
 
@@ -2369,6 +3170,135 @@ impl u32x4 {
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
+    }
+
+    /// Reduce: sum all lanes
+    #[inline(always)]
+    pub fn reduce_add(self) -> u32 {
+        unsafe {
+            let sum = vpaddq_u32(self.0, self.0);
+            let sum = vpaddq_u32(sum, sum);
+            vgetq_lane_u32::<0>(sum)
+        }
+    }
+
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vceqq_u32(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vcltq_u32(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vcleq_u32(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vcgtq_u32(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vcgeq_u32(self.0, other.0) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u32x4::splat(token, 1.0);
+    /// let b = u32x4::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u32x4::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_u32(mask.0, if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        Self(unsafe { vmvnq_u32(self.0) })
+    }
+
+    /// Shift left by immediate (const generic)
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { vshlq_n_u32::<N>(self.0) })
+    }
+
+    /// Shift right by immediate (const generic)
+    ///
+    /// For unsigned types, this is a logical shift (zero-extending).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_u32::<N>(self.0) })
+    }
+
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { vminvq_u32(self.0) != 0 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { vmaxvq_u32(self.0) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u32::<31>(self.0);
+            let arr: [u32; 4] = core::mem::transmute(signs);
+            (arr[0] & 1) | ((arr[1] & 1) << 1) | ((arr[2] & 1) << 2) | ((arr[3] & 1) << 3)
+        }
     }
 
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
@@ -2682,6 +3612,133 @@ impl i64x2 {
         }
     }
 
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s64_u64(vceqq_s64(self.0, other.0)) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s64_u64(vcltq_s64(self.0, other.0)) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s64_u64(vcleq_s64(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s64_u64(vcgtq_s64(self.0, other.0)) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vreinterpretq_s64_u64(vcgeq_s64(self.0, other.0)) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = i64x2::splat(token, 1.0);
+    /// let b = i64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = i64x2::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_s64(vreinterpretq_u64_s64(mask.0), if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        unsafe {
+            let ones = vdupq_n_s64(-1i64);
+            Self(veorq_s64(self.0, ones))
+        }
+    }
+
+    /// Shift left by immediate (const generic)
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { vshlq_n_s64::<N>(self.0) })
+    }
+
+    /// Shift right by immediate (const generic)
+    ///
+    /// For signed types, this is an arithmetic shift (sign-extending).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_s64::<N>(self.0) })
+    }
+
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe {
+            let as_u64 = vreinterpretq_u64_s64(self.0);
+            vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0
+        }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe {
+            let as_u64 = vreinterpretq_u64_s64(self.0);
+            (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0
+        }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u64::<63>(vreinterpretq_u64_s64(self.0));
+            ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
+        }
+    }
+
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
 
     /// Reinterpret bits as `f64x2` (zero-cost).
@@ -2969,6 +4026,136 @@ impl u64x2 {
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
+    }
+
+    /// Reduce: sum all lanes
+    #[inline(always)]
+    pub fn reduce_add(self) -> u64 {
+        unsafe {
+            let sum = vpaddq_u64(self.0, self.0);
+            vgetq_lane_u64::<0>(sum)
+        }
+    }
+
+    // ========== Comparisons ==========
+    // These return a mask where each lane is all-1s (true) or all-0s (false).
+    // Use with `blend()` to select values based on the comparison result.
+
+    /// Lane-wise equality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Use with `blend(mask, if_true, if_false)` to select values.
+    #[inline(always)]
+    pub fn simd_eq(self, other: Self) -> Self {
+        Self(unsafe { vceqq_u64(self.0, other.0) })
+    }
+
+    /// Lane-wise inequality comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ne(self, other: Self) -> Self {
+        self.simd_eq(other).not()
+    }
+
+    /// Lane-wise less-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        Self(unsafe { vcltq_u64(self.0, other.0) })
+    }
+
+    /// Lane-wise less-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        Self(unsafe { vcleq_u64(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        Self(unsafe { vcgtq_u64(self.0, other.0) })
+    }
+
+    /// Lane-wise greater-than-or-equal comparison.
+    ///
+    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        Self(unsafe { vcgeq_u64(self.0, other.0) })
+    }
+
+    // ========== Blending/Selection ==========
+
+    /// Select lanes from `if_true` where mask is all-1s, `if_false` where mask is all-0s.
+    ///
+    /// The mask should come from a comparison operation like `simd_lt()`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let a = u64x2::splat(token, 1.0);
+    /// let b = u64x2::splat(token, 2.0);
+    /// let mask = a.simd_lt(b);  // all true
+    /// let result = u64x2::blend(mask, a, b);  // selects a
+    /// ```
+    #[inline(always)]
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(unsafe { vbslq_u64(mask.0, if_true.0, if_false.0) })
+    }
+
+    /// Bitwise NOT (complement)
+    #[inline(always)]
+    pub fn not(self) -> Self {
+        unsafe {
+            let ones = vdupq_n_u64(u64::MAX);
+            Self(veorq_u64(self.0, ones))
+        }
+    }
+
+    /// Shift left by immediate (const generic)
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        Self(unsafe { vshlq_n_u64::<N>(self.0) })
+    }
+
+    /// Shift right by immediate (const generic)
+    ///
+    /// For unsigned types, this is a logical shift (zero-extending).
+    #[inline(always)]
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { vshrq_n_u64::<N>(self.0) })
+    }
+
+    // ========== Boolean Reductions ==========
+
+    /// Returns true if all lanes are non-zero (truthy).
+    ///
+    /// Typically used with comparison results where true lanes are all-1s.
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        unsafe { vgetq_lane_u64::<0>(self.0) != 0 && vgetq_lane_u64::<1>(self.0) != 0 }
+    }
+
+    /// Returns true if any lane is non-zero (truthy).
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        unsafe { (vgetq_lane_u64::<0>(self.0) | vgetq_lane_u64::<1>(self.0)) != 0 }
+    }
+
+    /// Extract the high bit of each lane as a bitmask.
+    ///
+    /// Returns a u32 where bit N corresponds to the sign bit of lane N.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u64::<63>(self.0);
+            ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
+        }
     }
 
     // ========== Bitcast (reinterpret bits, zero-cost) ==========
