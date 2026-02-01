@@ -15,7 +15,7 @@
 
 ```toml
 [dependencies]
-archmage = "0.3"
+archmage = "0.4"
 safe_unaligned_simd = "0.2"  # For safe memory operations
 ```
 
@@ -84,7 +84,7 @@ Use `X64V3Token` (or its alias `Desktop64`) for most applications:
 
 ```toml
 [dependencies]
-archmage = { version = "0.3", features = ["avx512"] }
+archmage = { version = "0.4", features = ["avx512"] }
 ```
 
 | Token | Features | CPU Support |
@@ -220,7 +220,7 @@ The companion crate `magetypes` provides token-gated SIMD types with ergonomic o
 
 ```toml
 [dependencies]
-magetypes = "0.1"
+magetypes = "0.4"
 ```
 
 ```rust
