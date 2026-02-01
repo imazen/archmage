@@ -539,10 +539,48 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
 
     "#};
 
-    // WASM doesn't have lt/le/gt/ge for u64x2 - skip ordering comparisons for u64
-    let has_ordering = ty.elem != ElementType::U64;
+    if ty.elem == ElementType::U64 {
+        // WASM has no native u64 ordering comparisons.
+        // Polyfill: XOR with i64::MIN to bias into signed domain, then use i64x2 comparisons.
+        code.push_str(&formatdoc! {r#"
+            /// Element-wise less-than comparison (returns mask)
+            ///
+            /// Polyfill: biases to signed domain via XOR with `i64::MIN`, then uses `i64x2_lt`.
+            #[inline(always)]
+            pub fn simd_lt(self, other: Self) -> Self {{
+            let bias = i64x2_splat(i64::MIN);
+            Self(i64x2_lt(v128_xor(self.0, bias), v128_xor(other.0, bias)))
+            }}
 
-    if has_ordering {
+            /// Element-wise less-than-or-equal comparison (returns mask)
+            ///
+            /// Polyfill: `a <= b` is `!(a > b)`.
+            #[inline(always)]
+            pub fn simd_le(self, other: Self) -> Self {{
+            let bias = i64x2_splat(i64::MIN);
+            Self(v128_not(i64x2_gt(v128_xor(self.0, bias), v128_xor(other.0, bias))))
+            }}
+
+            /// Element-wise greater-than comparison (returns mask)
+            ///
+            /// Polyfill: biases to signed domain via XOR with `i64::MIN`, then uses `i64x2_gt`.
+            #[inline(always)]
+            pub fn simd_gt(self, other: Self) -> Self {{
+            let bias = i64x2_splat(i64::MIN);
+            Self(i64x2_gt(v128_xor(self.0, bias), v128_xor(other.0, bias)))
+            }}
+
+            /// Element-wise greater-than-or-equal comparison (returns mask)
+            ///
+            /// Polyfill: `a >= b` is `!(a < b)`.
+            #[inline(always)]
+            pub fn simd_ge(self, other: Self) -> Self {{
+            let bias = i64x2_splat(i64::MIN);
+            Self(v128_not(i64x2_lt(v128_xor(self.0, bias), v128_xor(other.0, bias))))
+            }}
+
+        "#});
+    } else {
         let lt_fn = Wasm::cmp_intrinsic("lt", ty.elem);
         let le_fn = Wasm::cmp_intrinsic("le", ty.elem);
         let gt_fn = Wasm::cmp_intrinsic("gt", ty.elem);

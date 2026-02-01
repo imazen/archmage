@@ -1403,12 +1403,6 @@ fn check_api_parity(strict: bool) -> Result<()> {
         "  i8x16::shr_arithmetic — missing from: x86",
         "  u8x16::shl — missing from: x86",
         "  u8x16::shr — missing from: x86",
-        // WASM SIMD lacks u64 ordering comparisons
-        // (would require scalar fallback or complex emulation)
-        "  u64x2::simd_ge — missing from: WASM",
-        "  u64x2::simd_gt — missing from: WASM",
-        "  u64x2::simd_le — missing from: WASM",
-        "  u64x2::simd_lt — missing from: WASM",
     ];
 
     let actionable_issues: Vec<_> = parity_issues

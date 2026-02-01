@@ -5230,6 +5230,48 @@ impl u64x2 {
         Self(v128_not(u64x2_eq(self.0, other.0)))
     }
 
+    /// Element-wise less-than comparison (returns mask)
+    ///
+    /// Polyfill: biases to signed domain via XOR with `i64::MIN`, then uses `i64x2_lt`.
+    #[inline(always)]
+    pub fn simd_lt(self, other: Self) -> Self {
+        let bias = i64x2_splat(i64::MIN);
+        Self(i64x2_lt(v128_xor(self.0, bias), v128_xor(other.0, bias)))
+    }
+
+    /// Element-wise less-than-or-equal comparison (returns mask)
+    ///
+    /// Polyfill: `a <= b` is `!(a > b)`.
+    #[inline(always)]
+    pub fn simd_le(self, other: Self) -> Self {
+        let bias = i64x2_splat(i64::MIN);
+        Self(v128_not(i64x2_gt(
+            v128_xor(self.0, bias),
+            v128_xor(other.0, bias),
+        )))
+    }
+
+    /// Element-wise greater-than comparison (returns mask)
+    ///
+    /// Polyfill: biases to signed domain via XOR with `i64::MIN`, then uses `i64x2_gt`.
+    #[inline(always)]
+    pub fn simd_gt(self, other: Self) -> Self {
+        let bias = i64x2_splat(i64::MIN);
+        Self(i64x2_gt(v128_xor(self.0, bias), v128_xor(other.0, bias)))
+    }
+
+    /// Element-wise greater-than-or-equal comparison (returns mask)
+    ///
+    /// Polyfill: `a >= b` is `!(a < b)`.
+    #[inline(always)]
+    pub fn simd_ge(self, other: Self) -> Self {
+        let bias = i64x2_splat(i64::MIN);
+        Self(v128_not(i64x2_lt(
+            v128_xor(self.0, bias),
+            v128_xor(other.0, bias),
+        )))
+    }
+
     /// Blend two vectors based on a mask
     ///
     /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
