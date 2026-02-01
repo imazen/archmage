@@ -103,12 +103,12 @@ CI checks (all must pass):
 1. `cargo xtask generate` — regenerate all code
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
 3. `cargo xtask validate` — intrinsic safety + try_new() feature verification
-4. `cargo xtask parity` — parity warnings (currently 4 issues, 0 actionable)
+4. `cargo xtask parity` — parity check (0 issues remaining)
 5. `cargo clippy --features "std macros bytemuck avx512"` — zero warnings
 6. `cargo test --features "std macros bytemuck avx512"` — all tests pass
 7. `cargo fmt --check` — code is formatted
 
-**Note:** Parity check reports 4 issues (all known gaps with no native intrinsic, 0 actionable). CI warns but doesn't fail on parity issues. See "Pending Work" section for details.
+**Note:** Parity check reports 0 issues. All W128 types have identical APIs across x86/ARM/WASM.
 
 If ANY check fails:
 - Do NOT push
@@ -354,16 +354,11 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 ## Pending Work
 
-### API Parity Status (4 issues remaining, 0 actionable)
+### API Parity Status (0 issues — complete!)
 
-**Current state:** Reduced from 270 → 4 parity issues (98.5% reduction). All 4 are known gaps with no native WASM intrinsic — zero actionable issues remain.
+**Current state:** All W128 types have identical APIs across x86/ARM/WASM. Reduced from 270 → 0 parity issues (100%).
 
-Run `cargo xtask parity` to see full list.
-
-**Known gaps (intentionally not implemented):**
-| Method | Missing From | Reason |
-|--------|--------------|--------|
-| u64x2::simd_lt/le/gt/ge | WASM | No u64 ordering comparison intrinsics |
+Run `cargo xtask parity` to verify.
 
 ### Long-Term
 
@@ -371,6 +366,7 @@ Run `cargo xtask parity` to see full list.
 
 ### Completed
 
+- ~~**WASM u64x2 ordering comparisons**~~: Done. Added simd_lt/le/gt/ge via bias-to-signed polyfill (XOR with i64::MIN, then i64x2_lt/gt). Parity: 4 → 0.
 - ~~**x86 byte shift polyfills**~~: Done. Added i8x16/u8x16 shl, shr, shr_arithmetic for all x86 widths. Uses 16-bit shift + byte mask (~2 instructions). AVX-512 shr_arithmetic uses mask registers. Parity: 9 → 4.
 - ~~**All actionable parity issues**~~: Done. Closed 28 remaining issues: extend/pack ops (17), RGBA pixel ops (4), i64/u64 polyfill math (7). Parity: 37 → 9 (0 actionable).
 - ~~**ARM/WASM block ops**~~: Done. ARM uses native vzip1q/vzip2q, WASM uses i32x4_shuffle. Both gained interleave_lo/hi, interleave, deinterleave_4ch, interleave_4ch, transpose_4x4, transpose_4x4_copy. Parity: 47 → 37.
