@@ -110,9 +110,9 @@ impl Registry {
 
     /// Look up a token by name (including aliases).
     pub fn find_token(&self, name: &str) -> Option<&TokenDef> {
-        self.token.iter().find(|t| {
-            t.name == name || t.aliases.iter().any(|a| a == name)
-        })
+        self.token
+            .iter()
+            .find(|t| t.name == name || t.aliases.iter().any(|a| a == name))
     }
 
     /// Get the feature set for a token or trait by name.
@@ -230,15 +230,14 @@ impl Registry {
             for trait_name in &token.traits {
                 if let Some(trait_def) = self.traits.iter().find(|t| t.name == *trait_name) {
                     // Determine which features the trait requires
-                    let trait_features: Vec<&str> = if token.arch == "x86"
-                        && !trait_def.x86_features.is_empty()
-                    {
-                        trait_def.x86_features.iter().map(|s| s.as_str()).collect()
-                    } else if !trait_def.features.is_empty() {
-                        trait_def.features.iter().map(|s| s.as_str()).collect()
-                    } else {
-                        continue; // No features to check
-                    };
+                    let trait_features: Vec<&str> =
+                        if token.arch == "x86" && !trait_def.x86_features.is_empty() {
+                            trait_def.x86_features.iter().map(|s| s.as_str()).collect()
+                        } else if !trait_def.features.is_empty() {
+                            trait_def.features.iter().map(|s| s.as_str()).collect()
+                        } else {
+                            continue; // No features to check
+                        };
 
                     for f in &trait_features {
                         if !token_features.contains(f) {
@@ -345,6 +344,324 @@ impl std::fmt::Display for Registry {
     }
 }
 
+// ============================================================================
+// Code Generation
+// ============================================================================
+
+impl Registry {
+    /// Generate `generated_registry.rs` content for `archmage-macros`.
+    ///
+    /// This produces:
+    /// - `token_to_features()` — maps token names (including aliases) to feature lists
+    /// - `trait_to_features()` — maps trait and token names to feature lists (for bounds)
+    /// - `ALL_CONCRETE_TOKENS` — all token names including aliases
+    /// - `ALL_TRAIT_NAMES` — all trait names
+    /// - `X86_WIDTH_CONFIGS` / `WASM_WIDTH_CONFIGS` / `ARM_WIDTH_CONFIGS` — width configs
+    pub fn generate_macro_registry(&self) -> String {
+        use std::fmt::Write;
+        let mut out = String::with_capacity(8192);
+
+        writeln!(out, "//! Generated from token-registry.toml — DO NOT EDIT.").unwrap();
+        writeln!(out, "//!").unwrap();
+        writeln!(out, "//! Regenerate with: cargo run -p xtask -- generate").unwrap();
+        writeln!(out).unwrap();
+
+        // token_to_features()
+        self.gen_token_to_features(&mut out);
+        writeln!(out).unwrap();
+
+        // trait_to_features()
+        self.gen_trait_to_features(&mut out);
+        writeln!(out).unwrap();
+
+        // ALL_CONCRETE_TOKENS
+        self.gen_all_concrete_tokens(&mut out);
+        writeln!(out).unwrap();
+
+        // ALL_TRAIT_NAMES
+        self.gen_all_trait_names(&mut out);
+        writeln!(out).unwrap();
+
+        // Width configs
+        self.gen_width_configs(&mut out);
+
+        out
+    }
+
+    fn gen_token_to_features(&self, out: &mut String) {
+        use std::fmt::Write;
+        writeln!(
+            out,
+            "/// Maps a token type name to its required target features."
+        )
+        .unwrap();
+        writeln!(out, "///").unwrap();
+        writeln!(
+            out,
+            "/// Generated from token-registry.toml. One complete feature list per token."
+        )
+        .unwrap();
+        writeln!(out, "pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {{").unwrap();
+        writeln!(out, "    match token_name {{").unwrap();
+
+        for token in &self.token {
+            // Build match pattern: "Name" | "Alias1" | "Alias2"
+            let mut names: Vec<&str> = vec![&token.name];
+            for a in &token.aliases {
+                names.push(a);
+            }
+            let pattern: String = names
+                .iter()
+                .map(|n| format!("\"{}\"", n))
+                .collect::<Vec<_>>()
+                .join(" | ");
+
+            // Features for macro crate: exclude sse/sse2 (x86_64 baseline, not in #[target_feature])
+            let macro_features: Vec<&str> = token
+                .features
+                .iter()
+                .filter(|f| *f != "sse" && *f != "sse2")
+                .map(|s| s.as_str())
+                .collect();
+
+            if macro_features.len() <= 5 {
+                let features_str: String = macro_features
+                    .iter()
+                    .map(|f| format!("\"{}\"", f))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                writeln!(out, "        {} => Some(&[{}]),", pattern, features_str).unwrap();
+            } else {
+                writeln!(out, "        {} => Some(&[", pattern).unwrap();
+                for (i, f) in macro_features.iter().enumerate() {
+                    let comma = if i < macro_features.len() - 1 {
+                        ","
+                    } else {
+                        ","
+                    };
+                    writeln!(out, "            \"{}\"{}", f, comma).unwrap();
+                }
+                writeln!(out, "        ]),").unwrap();
+            }
+        }
+
+        writeln!(out, "        _ => None,").unwrap();
+        writeln!(out, "    }}").unwrap();
+        writeln!(out, "}}").unwrap();
+    }
+
+    fn gen_trait_to_features(&self, out: &mut String) {
+        use std::fmt::Write;
+        writeln!(
+            out,
+            "/// Maps a trait bound name to its required target features."
+        )
+        .unwrap();
+        writeln!(out, "///").unwrap();
+        writeln!(
+            out,
+            "/// Generated from token-registry.toml. Includes token type names"
+        )
+        .unwrap();
+        writeln!(out, "/// so `impl TokenType` patterns work in the macro.").unwrap();
+        writeln!(out, "pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {{").unwrap();
+        writeln!(out, "    match trait_name {{").unwrap();
+
+        // Traits first — do NOT strip sse/sse2, these are used for #[target_feature]
+        // in multiwidth codegen where the baseline is needed for generic bounds
+        for trait_def in &self.traits {
+            let features: Vec<&str> = if !trait_def.x86_features.is_empty() {
+                trait_def.x86_features.iter().map(|s| s.as_str()).collect()
+            } else {
+                trait_def.features.iter().map(|s| s.as_str()).collect()
+            };
+
+            if features.len() <= 5 {
+                let features_str: String = features
+                    .iter()
+                    .map(|f| format!("\"{}\"", f))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                writeln!(
+                    out,
+                    "        \"{}\" => Some(&[{}]),",
+                    trait_def.name, features_str
+                )
+                .unwrap();
+            } else {
+                writeln!(out, "        \"{}\" => Some(&[", trait_def.name).unwrap();
+                for (i, f) in features.iter().enumerate() {
+                    let comma = if i < features.len() - 1 { "," } else { "," };
+                    writeln!(out, "            \"{}\"{}", f, comma).unwrap();
+                }
+                writeln!(out, "        ]),").unwrap();
+            }
+        }
+
+        writeln!(out).unwrap();
+        writeln!(
+            out,
+            "        // Token types used as bounds — full feature sets WITH baselines"
+        )
+        .unwrap();
+        writeln!(
+            out,
+            "        // (unlike token_to_features which strips sse/sse2 for #[target_feature])"
+        )
+        .unwrap();
+
+        // Token types as bounds — include sse/sse2 baselines for x86 tokens
+        // so that X64V3Token-as-trait properly subsumes HasX64V2 features
+        for token in &self.token {
+            let mut names: Vec<&str> = vec![&token.name];
+            for a in &token.aliases {
+                names.push(a);
+            }
+            let pattern: String = names
+                .iter()
+                .map(|n| format!("\"{}\"", n))
+                .collect::<Vec<_>>()
+                .join(" | ");
+
+            // For x86 tokens, prepend sse/sse2 baselines that token_to_features strips
+            let features: Vec<&str> = if token.arch == "x86" {
+                let mut f = vec!["sse", "sse2"];
+                for feat in &token.features {
+                    if feat != "sse" && feat != "sse2" {
+                        f.push(feat);
+                    }
+                }
+                f
+            } else {
+                token.features.iter().map(|s| s.as_str()).collect()
+            };
+
+            if features.len() <= 5 {
+                let features_str: String = features
+                    .iter()
+                    .map(|f| format!("\"{}\"", f))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                writeln!(out, "        {} => Some(&[{}]),", pattern, features_str).unwrap();
+            } else {
+                writeln!(out, "        {} => Some(&[", pattern).unwrap();
+                for (i, f) in features.iter().enumerate() {
+                    let comma = if i < features.len() - 1 { "," } else { "," };
+                    writeln!(out, "            \"{}\"{}", f, comma).unwrap();
+                }
+                writeln!(out, "        ]),").unwrap();
+            }
+        }
+
+        writeln!(out).unwrap();
+        writeln!(out, "        _ => None,").unwrap();
+        writeln!(out, "    }}").unwrap();
+        writeln!(out, "}}").unwrap();
+    }
+
+    fn gen_all_concrete_tokens(&self, out: &mut String) {
+        use std::fmt::Write;
+        writeln!(
+            out,
+            "/// All concrete token names that exist in the runtime crate."
+        )
+        .unwrap();
+        writeln!(out, "#[cfg(test)]").unwrap();
+        writeln!(out, "pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[").unwrap();
+        for token in &self.token {
+            writeln!(out, "    \"{}\",", token.name).unwrap();
+            for a in &token.aliases {
+                writeln!(out, "    \"{}\",", a).unwrap();
+            }
+        }
+        writeln!(out, "];").unwrap();
+    }
+
+    fn gen_all_trait_names(&self, out: &mut String) {
+        use std::fmt::Write;
+        writeln!(out, "/// All trait names that exist in the runtime crate.").unwrap();
+        writeln!(out, "#[cfg(test)]").unwrap();
+        writeln!(out, "pub(crate) const ALL_TRAIT_NAMES: &[&str] = &[").unwrap();
+        for trait_def in &self.traits {
+            writeln!(out, "    \"{}\",", trait_def.name).unwrap();
+        }
+        writeln!(out, "];").unwrap();
+    }
+
+    fn gen_width_configs(&self, out: &mut String) {
+        use std::fmt::Write;
+
+        // Group namespaces by arch
+        let x86: Vec<&WidthNamespace> = self
+            .width_namespace
+            .iter()
+            .filter(|n| n.arch == "x86")
+            .collect();
+        let arm: Vec<&WidthNamespace> = self
+            .width_namespace
+            .iter()
+            .filter(|n| n.arch == "aarch64")
+            .collect();
+        let wasm: Vec<&WidthNamespace> = self
+            .width_namespace
+            .iter()
+            .filter(|n| n.arch == "wasm")
+            .collect();
+
+        // Emit WidthConfig struct
+        writeln!(out, "/// Width configuration for multiwidth codegen.").unwrap();
+        writeln!(out, "#[allow(dead_code)]").unwrap();
+        writeln!(out, "pub(crate) struct WidthConfig {{").unwrap();
+        writeln!(out, "    pub name: &'static str,").unwrap();
+        writeln!(out, "    pub namespace: &'static str,").unwrap();
+        writeln!(out, "    pub token: &'static str,").unwrap();
+        writeln!(out, "    pub feature: Option<&'static str>,").unwrap();
+        writeln!(out, "    pub target_features: &'static [&'static str],").unwrap();
+        writeln!(out, "}}").unwrap();
+        writeln!(out).unwrap();
+
+        // Helper to emit one array
+        let emit_configs =
+            |out: &mut String, label: &str, name: &str, configs: &[&WidthNamespace]| {
+                writeln!(out, "/// Width configuration for {} targets.", label).unwrap();
+                writeln!(out, "#[allow(dead_code)]").unwrap();
+                writeln!(out, "pub(crate) const {}: &[WidthConfig] = &[", name).unwrap();
+                for ns in configs {
+                    let token_def = self.find_token(&ns.token).expect("validated");
+                    let macro_features: Vec<&str> = token_def
+                        .features
+                        .iter()
+                        .filter(|f| *f != "sse" && *f != "sse2")
+                        .map(|s| s.as_str())
+                        .collect();
+
+                    writeln!(out, "    WidthConfig {{").unwrap();
+                    writeln!(out, "        name: \"{}\",", ns.name).unwrap();
+                    writeln!(out, "        namespace: \"magetypes::simd::{}\",", ns.name).unwrap();
+                    writeln!(out, "        token: \"archmage::{}\",", ns.token).unwrap();
+                    match &ns.cargo_feature {
+                        Some(f) => writeln!(out, "        feature: Some(\"{}\"),", f).unwrap(),
+                        None => writeln!(out, "        feature: None,").unwrap(),
+                    }
+                    let features_str: String = macro_features
+                        .iter()
+                        .map(|f| format!("\"{}\"", f))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    writeln!(out, "        target_features: &[{}],", features_str).unwrap();
+                    writeln!(out, "    }},").unwrap();
+                }
+                writeln!(out, "];").unwrap();
+            };
+
+        emit_configs(out, "x86_64", "X86_WIDTH_CONFIGS", &x86);
+        writeln!(out).unwrap();
+        emit_configs(out, "aarch64", "ARM_WIDTH_CONFIGS", &arm);
+        writeln!(out).unwrap();
+        emit_configs(out, "wasm32", "WASM_WIDTH_CONFIGS", &wasm);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -372,7 +689,9 @@ mod tests {
         );
 
         // Spot-check X64V3Token
-        let v3 = registry.find_token("X64V3Token").expect("X64V3Token not found");
+        let v3 = registry
+            .find_token("X64V3Token")
+            .expect("X64V3Token not found");
         assert!(v3.features.contains(&"avx2".to_string()));
         assert!(v3.features.contains(&"fma".to_string()));
         assert!(v3.features.contains(&"f16c".to_string()));
@@ -386,7 +705,9 @@ mod tests {
         assert!(registry.find_token("Server64").is_some());
 
         // Spot-check NeonCrcToken
-        let crc = registry.find_token("NeonCrcToken").expect("NeonCrcToken not found");
+        let crc = registry
+            .find_token("NeonCrcToken")
+            .expect("NeonCrcToken not found");
         assert_eq!(crc.features, vec!["neon", "crc"]);
     }
 }

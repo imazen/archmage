@@ -900,9 +900,13 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("Usage: cargo xtask generate            - Generate SIMD types and reference docs");
+        eprintln!(
+            "Usage: cargo xtask generate            - Generate SIMD types and reference docs"
+        );
         eprintln!("       cargo xtask validate            - Validate magetypes safety");
-        eprintln!("       cargo xtask validate-registry   - Parse and validate token-registry.toml");
+        eprintln!(
+            "       cargo xtask validate-registry   - Parse and validate token-registry.toml"
+        );
         std::process::exit(1);
     }
 
@@ -931,10 +935,29 @@ fn validate_registry() -> Result<()> {
     Ok(())
 }
 
-/// Generate all artifacts: SIMD types and documentation
+/// Generate all artifacts: SIMD types, macro registry, and documentation
 fn generate_all() -> Result<()> {
+    // Generate macro registry from token-registry.toml
+    println!("=== Generating Macro Registry ===");
+    let registry_path = PathBuf::from("token-registry.toml");
+    let reg = registry::Registry::load(&registry_path)?;
+    let generated = reg.generate_macro_registry();
+    let gen_path = PathBuf::from("archmage-macros/src/generated_registry.rs");
+    fs::write(&gen_path, &generated)?;
+    println!("  Wrote {} ({} bytes)", gen_path.display(), generated.len());
+
+    // Run rustfmt on the generated file so it stays fmt-clean
+    let fmt_status = std::process::Command::new("rustfmt")
+        .arg(&gen_path)
+        .status();
+    match fmt_status {
+        Ok(s) if s.success() => println!("  Formatted {}", gen_path.display()),
+        Ok(s) => println!("  Warning: rustfmt exited with {}", s),
+        Err(e) => println!("  Warning: could not run rustfmt: {}", e),
+    }
+
     // Generate SIMD types (wide-like ergonomic types) into magetypes crate
-    println!("=== Generating SIMD Types (magetypes) ===");
+    println!("\n=== Generating SIMD Types (magetypes) ===");
 
     let simd_dir = PathBuf::from("magetypes/src/simd");
     fs::create_dir_all(&simd_dir)?;

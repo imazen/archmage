@@ -737,6 +737,8 @@ dependencies = [
  "anyhow",
  "indoc",
  "regex",
+ "serde",
+ "toml",
 ]
 
 [[package]]
