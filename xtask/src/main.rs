@@ -11,6 +11,7 @@ use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod registry;
 mod simd_types;
 
 /// Version of safe_unaligned_simd we're generating from
@@ -40,16 +41,8 @@ fn token_provides_features(token_or_trait: &str) -> Option<&'static [&'static st
         ]),
 
         // x86 concrete tokens
-        "Sse41Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1"]),
-        "Sse42Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2"]),
-        "AvxToken" => Some(&["sse", "sse2", "avx"]),
-        "Avx2Token" => Some(&["sse", "sse2", "avx", "avx2"]),
-        "Avx2FmaToken" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", // ISA-implied by sse4.1 check
-            "avx", "avx2", "fma", // explicitly checked
-        ]),
         "X64V2Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
-        "X64V3Token" | "Desktop64" => Some(&[
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(&[
             "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
             "bmi1", "bmi2", "f16c", "lzcnt",
         ]),
@@ -121,6 +114,10 @@ fn token_provides_features(token_or_trait: &str) -> Option<&'static [&'static st
         "NeonToken" | "Arm64" => Some(&["neon"]),
         "NeonAesToken" => Some(&["neon", "aes"]),
         "NeonSha3Token" => Some(&["neon", "sha3"]),
+        "NeonCrcToken" => Some(&["neon", "crc"]),
+
+        // WASM tokens
+        "Simd128Token" => Some(&["simd128"]),
 
         _ => None,
     }
@@ -903,20 +900,34 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("Usage: cargo xtask generate   - Generate SIMD types and reference docs");
-        eprintln!("       cargo xtask validate   - Validate magetypes safety");
+        eprintln!("Usage: cargo xtask generate            - Generate SIMD types and reference docs");
+        eprintln!("       cargo xtask validate            - Validate magetypes safety");
+        eprintln!("       cargo xtask validate-registry   - Parse and validate token-registry.toml");
         std::process::exit(1);
     }
 
     match args[1].as_str() {
         "generate" => generate_all()?,
         "validate" => validate_magetypes()?,
+        "validate-registry" => validate_registry()?,
         _ => {
             eprintln!("Unknown command: {}", args[1]);
             std::process::exit(1);
         }
     }
 
+    Ok(())
+}
+
+/// Parse and validate token-registry.toml
+fn validate_registry() -> Result<()> {
+    let registry_path = PathBuf::from("token-registry.toml");
+    println!("=== Validating Token Registry ===");
+    println!("Loading: {}", registry_path.display());
+
+    let reg = registry::Registry::load(&registry_path)?;
+    println!("{}", reg);
+    println!("All validation checks passed.");
     Ok(())
 }
 

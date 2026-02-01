@@ -1,0 +1,246 @@
+# token-registry.toml — THE source of truth for archmage tokens.
+#
+# One complete feature list per token. Used by:
+# - archmage-macros (token_to_features, trait_to_features)
+# - xtask validation (token_provides_features)
+# - xtask codegen (width namespaces, magetypes mappings, polyfills)
+# - spec.md documentation
+#
+# LLVM deduplicates redundant features in #[target_feature] — listing
+# the full set is harmless and eliminates the class of bugs where
+# "minimal" lists diverge from "cumulative" lists.
+#
+# NOTE: x86 feature lists include sse/sse2 (the x86_64 baseline). This
+# is intentional — xtask validation compares intrinsic required features
+# against token feature sets, and many intrinsics require "sse"/"sse2".
+
+# ──── x86_64 ────
+
+[[token]]
+name = "X64V2Token"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+]
+traits = ["HasX64V2", "Has128BitSimd"]
+
+[[token]]
+name = "X64V3Token"
+arch = "x86"
+aliases = ["Desktop64", "Avx2FmaToken"]
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+]
+traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
+
+[[token]]
+name = "X64V4Token"
+arch = "x86"
+aliases = ["Avx512Token", "Server64"]
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+]
+traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
+cargo_feature = "avx512"
+
+[[token]]
+name = "Avx512ModernToken"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+    "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
+    "avx512bitalg", "avx512vnni", "avx512bf16",
+    "vpclmulqdq", "gfni", "vaes",
+]
+traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
+cargo_feature = "avx512"
+
+[[token]]
+name = "Avx512Fp16Token"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+    "avx512fp16",
+]
+traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
+cargo_feature = "avx512"
+
+# ──── AArch64 ────
+
+[[token]]
+name = "NeonToken"
+arch = "aarch64"
+aliases = ["Arm64"]
+features = ["neon"]
+traits = ["HasNeon", "Has128BitSimd"]
+always_available = true
+
+[[token]]
+name = "NeonAesToken"
+arch = "aarch64"
+features = ["neon", "aes"]
+traits = ["HasNeon", "HasNeonAes", "Has128BitSimd"]
+
+[[token]]
+name = "NeonSha3Token"
+arch = "aarch64"
+features = ["neon", "sha3"]
+traits = ["HasNeon", "HasNeonSha3", "Has128BitSimd"]
+
+[[token]]
+name = "NeonCrcToken"
+arch = "aarch64"
+features = ["neon", "crc"]
+traits = ["HasNeon", "Has128BitSimd"]
+
+# ──── WASM ────
+
+[[token]]
+name = "Simd128Token"
+arch = "wasm"
+features = ["simd128"]
+traits = ["Has128BitSimd"]
+
+# ──── Traits ────
+#
+# Each trait lists its required features. Used by trait_to_features() in
+# the macro crate. "parents" declares the trait hierarchy.
+
+[[trait]]
+name = "Has128BitSimd"
+x86_features = ["sse", "sse2"]
+
+[[trait]]
+name = "Has256BitSimd"
+x86_features = ["sse", "sse2", "avx"]
+parents = ["Has128BitSimd"]
+
+[[trait]]
+name = "Has512BitSimd"
+x86_features = ["sse", "sse2", "avx", "avx2", "avx512f"]
+parents = ["Has256BitSimd"]
+
+[[trait]]
+name = "HasX64V2"
+features = ["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]
+
+[[trait]]
+name = "HasX64V4"
+features = [
+    "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+]
+parents = ["HasX64V2"]
+
+[[trait]]
+name = "HasNeon"
+features = ["neon"]
+
+[[trait]]
+name = "HasNeonAes"
+features = ["neon", "aes"]
+parents = ["HasNeon"]
+
+[[trait]]
+name = "HasNeonSha3"
+features = ["neon", "sha3"]
+parents = ["HasNeon"]
+
+# ──── Width Namespaces (multiwidth + magetypes codegen) ────
+
+[[width_namespace]]
+name = "sse"
+arch = "x86"
+width = 128
+token = "X64V3Token"
+
+[[width_namespace]]
+name = "avx2"
+arch = "x86"
+width = 256
+token = "X64V3Token"
+
+[[width_namespace]]
+name = "avx512"
+arch = "x86"
+width = 512
+token = "X64V4Token"
+cargo_feature = "avx512"
+
+[[width_namespace]]
+name = "neon"
+arch = "aarch64"
+width = 128
+token = "NeonToken"
+
+[[width_namespace]]
+name = "simd128"
+arch = "wasm"
+width = 128
+token = "Simd128Token"
+
+# ──── Magetypes File-to-Token Validation Mappings ────
+
+[[magetypes_file]]
+rel_path = "x86/w128.rs"
+token = "X64V3Token"
+arch = "x86"
+
+[[magetypes_file]]
+rel_path = "x86/w256.rs"
+token = "X64V3Token"
+arch = "x86"
+
+[[magetypes_file]]
+rel_path = "x86/w512.rs"
+token = "X64V4Token"
+arch = "x86"
+
+[[magetypes_file]]
+rel_path = "arm/w128.rs"
+token = "NeonToken"
+arch = "arm"
+
+[[magetypes_file]]
+rel_path = "wasm/w128.rs"
+token = "Simd128Token"
+arch = "wasm"
+
+# ──── Polyfill Platforms ────
+
+[[polyfill_w256]]
+mod_name = "sse"
+cfg = 'target_arch = "x86_64"'
+token = "X64V3Token"
+w128_import = "crate::simd::x86::w128"
+
+[[polyfill_w256]]
+mod_name = "neon"
+cfg = 'target_arch = "aarch64"'
+token = "NeonToken"
+w128_import = "crate::simd::arm::w128"
+
+[[polyfill_w256]]
+mod_name = "simd128"
+cfg = 'target_arch = "wasm32"'
+token = "Simd128Token"
+w128_import = "crate::simd::wasm::w128"
+
+[[polyfill_w512]]
+mod_name = "avx2"
+cfg = 'target_arch = "x86_64"'
+token = "X64V3Token"
+w256_import = "crate::simd::x86::w256"
