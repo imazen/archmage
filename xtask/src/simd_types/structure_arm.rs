@@ -61,6 +61,9 @@ pub fn generate_type(ty: &SimdType) -> String {
         ty,
     ));
 
+    // Block operations (interleave, transpose)
+    code.push_str(&super::block_ops_arm::generate_arm_block_ops(ty));
+
     code.push_str("}\n\n");
 
     // Operator implementations

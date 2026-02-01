@@ -16,6 +16,8 @@
 
 pub mod arch;
 mod block_ops;
+pub mod block_ops_arm;
+pub mod block_ops_wasm;
 mod ops;
 pub mod ops_bitcast;
 mod ops_comparison;

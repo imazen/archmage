@@ -59,6 +59,9 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Bitcast operations (reinterpret bits between same-width types)
     code.push_str(&ops_bitcast::generate_wasm_bitcasts(ty));
 
+    // Block operations (interleave, transpose)
+    code.push_str(&super::block_ops_wasm::generate_wasm_block_ops(ty));
+
     code.push_str("}\n\n");
 
     // Operator implementations
