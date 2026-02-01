@@ -6,8 +6,11 @@
 //! 3. Various edge cases are handled consistently
 //!
 //! Run with: cargo test -p magetypes --test fuzz_divergence --features avx512
+//!
+//! Note: This test is excluded from Miri because proptest uses source_file!() which Miri doesn't support.
 
 #![cfg(target_arch = "x86_64")]
+#![cfg(not(miri))]
 
 use proptest::prelude::*;
 
