@@ -27,9 +27,17 @@ fmt-check:
 miri:
     rustup run nightly cargo miri test --test miri_safe --all-features
 
-# Regenerate safe_unaligned_simd wrappers
+# Regenerate all generated code (SIMD types, macro registry, docs)
 generate:
     cargo run -p xtask -- generate
+
+# Validate token-registry.toml (parse + structural checks)
+validate-registry:
+    cargo run -p xtask -- validate-registry
+
+# Validate magetypes safety + try_new() feature checks against registry
+validate-tokens:
+    cargo run -p xtask -- validate
 
 # ============================================================================
 # Intel SDE testing (requires Intel SDE to be installed)
