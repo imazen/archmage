@@ -273,6 +273,10 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
+## Pending Work
+
+- **Merge WASM transcendentals from `feat/wasm128`**: The branch at `/home/lilith/work/archmage-wasm128` (8 unmerged commits) has WASM SIMD transcendental functions (ln, exp, pow) with boundary checks and denormal handling. Core WASM SIMD128 type support is already in main via a different path, but the transcendentals diverged. These need to be cherry-picked or rebased into the xtask codegen pipeline so they're generated from the registry like everything else. Key commits: `b5e41e2` (transcendentals), `2ce11eb` (boundary/denormal handling).
+
 ## License
 
 MIT OR Apache-2.0
