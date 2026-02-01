@@ -308,7 +308,17 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 ## Pending Work
 
-- **Merge WASM transcendentals from `feat/wasm128`**: The branch at `/home/lilith/work/archmage-wasm128` (8 unmerged commits) has WASM SIMD transcendental functions (ln, exp, pow) with boundary checks and denormal handling. Core WASM SIMD128 type support is already in main via a different path, but the transcendentals diverged. These need to be cherry-picked or rebased into the xtask codegen pipeline so they're generated from the registry like everything else. Key commits: `b5e41e2` (transcendentals), `2ce11eb` (boundary/denormal handling).
+### Medium-Term
+
+- **API surface parity detection tool**: Create automated tooling (xtask subcommand or CI check) to detect API variances between architectures (x86/ARM/WASM), token levels, and polyfills. Should report missing methods, signature mismatches, and doc coverage gaps. Could parse generated code or use `cargo doc --output-format json`.
+
+### Long-Term
+
+- **Transcendental parity for x86/ARM**: WASM has complete `_precise` variants (denormal handling) for log2, ln, log10, pow. x86/ARM only have `_precise` for cbrt. Port the denormal scaling approach to x86/ARM transcendentals for full IEEE compliance when needed.
+
+### Completed
+
+- ~~**Merge WASM transcendentals from `feat/wasm128`**~~: Done (354dc2b). All `_unchecked` and `_precise` variants now generated.
 
 ## License
 
