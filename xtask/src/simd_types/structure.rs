@@ -4,8 +4,8 @@ use super::block_ops;
 use super::ops;
 use super::ops_bitcast;
 use super::transcendental;
-use super::types::SimdType;
-use std::fmt::Write;
+use super::types::{ElementType, SimdType, SimdWidth};
+use indoc::formatdoc;
 
 /// Generate comparison trait definitions
 pub fn generate_comparison_traits() -> String {
@@ -258,52 +258,33 @@ macro_rules! impl_index {
 
 /// Generate a complete SIMD type
 pub fn generate_type(ty: &SimdType) -> String {
-    let mut code = String::new();
     let name = ty.name();
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = ty.x86_inner_type();
-    let _token = ty.token();
-    let _prefix = ty.width.x86_prefix();
-    let _suffix = ty.elem.x86_suffix();
+    let bits = ty.width.bits();
 
-    // Feature gate for AVX-512
     let cfg_attr = match ty.width.required_feature() {
-        Some(feat) => format!(
-            "#[cfg(all(target_arch = \"x86_64\", feature = \"{}\"))]\n",
-            feat
-        ),
+        Some(feat) => {
+            format!("#[cfg(all(target_arch = \"x86_64\", feature = \"{feat}\"))]\n")
+        }
         None => "#[cfg(target_arch = \"x86_64\")]\n".to_string(),
     };
 
-    // Type definition
-    writeln!(
-        code,
-        "\n// ============================================================================"
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "// {} - {} x {} ({}-bit)",
-        name,
-        lanes,
-        elem,
-        ty.width.bits()
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "// ============================================================================\n"
-    )
-    .unwrap();
+    let mut code = formatdoc! {"
 
-    writeln!(code, "{}#[derive(Clone, Copy, Debug)]", cfg_attr).unwrap();
-    writeln!(code, "#[repr(transparent)]").unwrap();
-    writeln!(code, "pub struct {}({});\n", name, inner).unwrap();
+        // ============================================================================
+        // {name} - {lanes} x {elem} ({bits}-bit)
+        // ============================================================================
 
-    // Impl block
-    writeln!(code, "{}impl {} {{", cfg_attr, name).unwrap();
-    writeln!(code, "    pub const LANES: usize = {};\n", lanes).unwrap();
+        {cfg_attr}#[derive(Clone, Copy, Debug)]
+        #[repr(transparent)]
+        pub struct {name}({inner});
+
+        {cfg_attr}impl {name} {{
+        pub const LANES: usize = {lanes};
+
+    "};
 
     // Construction methods
     code.push_str(&generate_construction_methods(ty));
@@ -344,7 +325,7 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Bitcast operations (reinterpret bits between same-width types)
     code.push_str(&ops_bitcast::generate_x86_bitcasts(ty));
 
-    writeln!(code, "}}\n").unwrap();
+    code.push_str("}\n\n");
 
     // Operator implementations
     code.push_str(&generate_operator_impls(ty, &cfg_attr));
@@ -357,56 +338,26 @@ pub fn generate_type(ty: &SimdType) -> String {
 
 /// Generate construction and extraction methods
 fn generate_construction_methods(ty: &SimdType) -> String {
-    use super::types::ElementType;
-
-    let mut code = String::new();
-    let _name = ty.name();
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = ty.x86_inner_type();
     let token = ty.token();
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
+    let bits = ty.width.bits();
+    let byte_size = ty.lanes() * ty.elem.size_bytes();
+    let zero_lit = ty.elem.zero_literal();
 
-    // Load
-    writeln!(code, "    /// Load from array (token-gated)").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn load(_: archmage::{}, data: &[{}; {}]) -> Self {{",
-        token, elem, lanes
-    )
-    .unwrap();
-    if ty.elem.is_float() {
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_loadu_{}(data.as_ptr()) }})",
-            prefix, suffix
-        )
-        .unwrap();
+    // Load intrinsic body
+    let load_body = if ty.elem.is_float() {
+        format!("Self(unsafe {{ {prefix}_loadu_{suffix}(data.as_ptr()) }})")
     } else {
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_loadu_si{}(data.as_ptr() as *const {}) }})",
-            prefix,
-            ty.width.bits(),
-            inner
-        )
-        .unwrap();
-    }
-    writeln!(code, "    }}\n").unwrap();
+        format!("Self(unsafe {{ {prefix}_loadu_si{bits}(data.as_ptr() as *const {inner}) }})")
+    };
 
-    // Splat
-    writeln!(code, "    /// Broadcast scalar to all lanes (token-gated)").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn splat(_: archmage::{}, v: {}) -> Self {{",
-        token, elem
-    )
-    .unwrap();
+    // Splat intrinsic
     let (set1_suffix, cast) = match (ty.elem, ty.width) {
-        (ElementType::I64 | ElementType::U64, super::types::SimdWidth::W512) => {
+        (ElementType::I64 | ElementType::U64, SimdWidth::W512) => {
             ("epi64", ty.elem != ElementType::I64)
         }
         (ElementType::I64 | ElementType::U64, _) => ("epi64x", ty.elem != ElementType::I64),
@@ -415,7 +366,8 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         (ElementType::U32, _) => ("epi32", true),
         _ => (suffix, false),
     };
-    if cast && !ty.elem.is_float() {
+
+    let splat_body = if cast && !ty.elem.is_float() {
         let signed_ty = match ty.elem {
             ElementType::U8 => "i8",
             ElementType::U16 => "i16",
@@ -423,446 +375,198 @@ fn generate_construction_methods(ty: &SimdType) -> String {
             ElementType::U64 => "i64",
             _ => elem,
         };
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_set1_{}(v as {}) }})",
-            prefix, set1_suffix, signed_ty
-        )
-        .unwrap();
+        format!("Self(unsafe {{ {prefix}_set1_{set1_suffix}(v as {signed_ty}) }})")
     } else {
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_set1_{}(v) }})",
-            prefix, set1_suffix
-        )
-        .unwrap();
-    }
-    writeln!(code, "    }}\n").unwrap();
+        format!("Self(unsafe {{ {prefix}_set1_{set1_suffix}(v) }})")
+    };
 
-    // Zero
-    writeln!(code, "    /// Zero vector (token-gated)").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn zero(_: archmage::{}) -> Self {{", token).unwrap();
-    if ty.elem.is_float() {
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_setzero_{}() }})",
-            prefix, suffix
-        )
-        .unwrap();
+    // Zero intrinsic
+    let zero_body = if ty.elem.is_float() {
+        format!("Self(unsafe {{ {prefix}_setzero_{suffix}() }})")
     } else {
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}_setzero_si{}() }})",
-            prefix,
-            ty.width.bits()
-        )
-        .unwrap();
-    }
-    writeln!(code, "    }}\n").unwrap();
+        format!("Self(unsafe {{ {prefix}_setzero_si{bits}() }})")
+    };
 
-    // From array (zero-cost transmute, no load instruction)
-    writeln!(code, "    /// Create from array (token-gated, zero-cost)").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a zero-cost transmute, not a memory load."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn from_array(_: archmage::{}, arr: [{}; {}]) -> Self {{",
-        token, elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: [{}; {}] and {} have identical size and layout",
-        elem, lanes, inner
-    )
-    .unwrap();
-    writeln!(code, "        Self(unsafe {{ core::mem::transmute(arr) }})").unwrap();
-    writeln!(code, "    }}\n").unwrap();
-
-    // Store
-    writeln!(code, "    /// Store to array").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn store(self, out: &mut [{}; {}]) {{",
-        elem, lanes
-    )
-    .unwrap();
-    if ty.elem.is_float() {
-        writeln!(
-            code,
-            "        unsafe {{ {}_storeu_{}(out.as_mut_ptr(), self.0) }};",
-            prefix, suffix
-        )
-        .unwrap();
+    // Store intrinsic
+    let store_body = if ty.elem.is_float() {
+        format!("unsafe {{ {prefix}_storeu_{suffix}(out.as_mut_ptr(), self.0) }};")
     } else {
-        writeln!(
-            code,
-            "        unsafe {{ {}_storeu_si{}(out.as_mut_ptr() as *mut {}, self.0) }};",
-            prefix,
-            ty.width.bits(),
-            inner
-        )
-        .unwrap();
-    }
-    writeln!(code, "    }}\n").unwrap();
+        format!("unsafe {{ {prefix}_storeu_si{bits}(out.as_mut_ptr() as *mut {inner}, self.0) }};")
+    };
 
-    // To array
-    writeln!(code, "    /// Convert to array").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn to_array(self) -> [{}; {}] {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        let mut out = [{}; {}];",
-        ty.elem.zero_literal(),
-        lanes
-    )
-    .unwrap();
-    writeln!(code, "        self.store(&mut out);").unwrap();
-    writeln!(code, "        out").unwrap();
-    writeln!(code, "    }}\n").unwrap();
+    formatdoc! {"
+        /// Load from array (token-gated)
+        #[inline(always)]
+        pub fn load(_: archmage::{token}, data: &[{elem}; {lanes}]) -> Self {{
+        {load_body}
+        }}
 
-    // As array
-    writeln!(code, "    /// Get reference to underlying array").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn as_array(&self) -> &[{}; {}] {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &*(self as *const Self as *const [{}; {}]) }}",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Broadcast scalar to all lanes (token-gated)
+        #[inline(always)]
+        pub fn splat(_: archmage::{token}, v: {elem}) -> Self {{
+        {splat_body}
+        }}
 
-    // As array mut
-    writeln!(code, "    /// Get mutable reference to underlying array").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn as_array_mut(&mut self) -> &mut [{}; {}] {{",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &mut *(self as *mut Self as *mut [{}; {}]) }}",
-        elem, lanes
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Zero vector (token-gated)
+        #[inline(always)]
+        pub fn zero(_: archmage::{token}) -> Self {{
+        {zero_body}
+        }}
 
-    // Raw
-    writeln!(code, "    /// Get raw intrinsic type").unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub fn raw(self) -> {} {{", inner).unwrap();
-    writeln!(code, "        self.0").unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Create from array (token-gated, zero-cost)
+        ///
+        /// This is a zero-cost transmute, not a memory load.
+        #[inline(always)]
+        pub fn from_array(_: archmage::{token}, arr: [{elem}; {lanes}]) -> Self {{
+        // SAFETY: [{elem}; {lanes}] and {inner} have identical size and layout
+        Self(unsafe {{ core::mem::transmute(arr) }})
+        }}
 
-    // From raw
-    writeln!(
-        code,
-        "    /// Create from raw intrinsic (unsafe - no token check)"
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(code, "    /// # Safety").unwrap();
-    writeln!(
-        code,
-        "    /// Caller must ensure the CPU supports the required SIMD features."
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "    /// Use token-gated constructors (`load`, `splat`, `zero`) for safe construction."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    pub unsafe fn from_raw(v: {}) -> Self {{", inner).unwrap();
-    writeln!(code, "        Self(v)").unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Store to array
+        #[inline(always)]
+        pub fn store(self, out: &mut [{elem}; {lanes}]) {{
+        {store_body}
+        }}
 
-    // Token-gated bytemuck replacements
-    let byte_size = ty.lanes() * ty.elem.size_bytes();
+        /// Convert to array
+        #[inline(always)]
+        pub fn to_array(self) -> [{elem}; {lanes}] {{
+        let mut out = [{zero_lit}; {lanes}];
+        self.store(&mut out);
+        out
+        }}
 
-    writeln!(
-        code,
-        "    // ========== Token-gated bytemuck replacements ==========\n"
-    )
-    .unwrap();
+        /// Get reference to underlying array
+        #[inline(always)]
+        pub fn as_array(&self) -> &[{elem}; {lanes}] {{
+        unsafe {{ &*(self as *const Self as *const [{elem}; {lanes}]) }}
+        }}
 
-    // cast_slice: &[T] -> &[Self]
-    writeln!(
-        code,
-        "    /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// Returns `None` if the slice length is not a multiple of {}, or",
-        lanes
-    )
-    .unwrap();
-    writeln!(code, "    /// if the slice is not properly aligned.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe, token-gated replacement for `bytemuck::cast_slice`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn cast_slice(_: archmage::{}, slice: &[{}]) -> Option<&[Self]> {{",
-        token, elem
-    )
-    .unwrap();
-    writeln!(code, "        if slice.len() % {} != 0 {{", lanes).unwrap();
-    writeln!(code, "            return None;").unwrap();
-    writeln!(code, "        }}").unwrap();
-    writeln!(code, "        let ptr = slice.as_ptr();").unwrap();
-    writeln!(
-        code,
-        "        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{"
-    )
-    .unwrap();
-    writeln!(code, "            return None;").unwrap();
-    writeln!(code, "        }}").unwrap();
-    writeln!(code, "        let len = slice.len() / {};", lanes).unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: alignment and length checked, layout is compatible"
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Some(unsafe {{ core::slice::from_raw_parts(ptr as *const Self, len) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Get mutable reference to underlying array
+        #[inline(always)]
+        pub fn as_array_mut(&mut self) -> &mut [{elem}; {lanes}] {{
+        unsafe {{ &mut *(self as *mut Self as *mut [{elem}; {lanes}]) }}
+        }}
 
-    // cast_slice_mut: &mut [T] -> &mut [Self]
-    writeln!(
-        code,
-        "    /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// Returns `None` if the slice length is not a multiple of {}, or",
-        lanes
-    )
-    .unwrap();
-    writeln!(code, "    /// if the slice is not properly aligned.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn cast_slice_mut(_: archmage::{}, slice: &mut [{}]) -> Option<&mut [Self]> {{",
-        token, elem
-    )
-    .unwrap();
-    writeln!(code, "        if slice.len() % {} != 0 {{", lanes).unwrap();
-    writeln!(code, "            return None;").unwrap();
-    writeln!(code, "        }}").unwrap();
-    writeln!(code, "        let ptr = slice.as_mut_ptr();").unwrap();
-    writeln!(
-        code,
-        "        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{"
-    )
-    .unwrap();
-    writeln!(code, "            return None;").unwrap();
-    writeln!(code, "        }}").unwrap();
-    writeln!(code, "        let len = slice.len() / {};", lanes).unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: alignment and length checked, layout is compatible"
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Some(unsafe {{ core::slice::from_raw_parts_mut(ptr as *mut Self, len) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Get raw intrinsic type
+        #[inline(always)]
+        pub fn raw(self) -> {inner} {{
+        self.0
+        }}
 
-    // as_bytes: &self -> &[u8; N]
-    writeln!(code, "    /// View this vector as a byte array.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe replacement for `bytemuck::bytes_of`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn as_bytes(&self) -> &[u8; {}] {{",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: Self is repr(transparent) over {} which is {} bytes",
-        inner, byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &*(self as *const Self as *const [u8; {}]) }}",
-        byte_size
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Create from raw intrinsic (unsafe - no token check)
+        ///
+        /// # Safety
+        /// Caller must ensure the CPU supports the required SIMD features.
+        /// Use token-gated constructors (`load`, `splat`, `zero`) for safe construction.
+        #[inline(always)]
+        pub unsafe fn from_raw(v: {inner}) -> Self {{
+        Self(v)
+        }}
 
-    // as_bytes_mut: &mut self -> &mut [u8; N]
-    writeln!(code, "    /// View this vector as a mutable byte array.").unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe replacement for `bytemuck::bytes_of_mut`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn as_bytes_mut(&mut self) -> &mut [u8; {}] {{",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: Self is repr(transparent) over {} which is {} bytes",
-        inner, byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        unsafe {{ &mut *(self as *mut Self as *mut [u8; {}]) }}",
-        byte_size
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        // ========== Token-gated bytemuck replacements ==========
 
-    // from_bytes: &[u8; N] -> Self (token-gated)
-    writeln!(
-        code,
-        "    /// Create from a byte array reference (token-gated)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a safe, token-gated replacement for `bytemuck::from_bytes`."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn from_bytes(_: archmage::{}, bytes: &[u8; {}]) -> Self {{",
-        token, byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: [u8; {}] and Self have identical size",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ core::mem::transmute(*bytes) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
+        ///
+        /// Returns `None` if the slice length is not a multiple of {lanes}, or
+        /// if the slice is not properly aligned.
+        ///
+        /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
+        #[inline(always)]
+        pub fn cast_slice(_: archmage::{token}, slice: &[{elem}]) -> Option<&[Self]> {{
+        if slice.len() % {lanes} != 0 {{
+        return None;
+        }}
+        let ptr = slice.as_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{
+        return None;
+        }}
+        let len = slice.len() / {lanes};
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe {{ core::slice::from_raw_parts(ptr as *const Self, len) }})
+        }}
 
-    // from_bytes_owned: [u8; N] -> Self (token-gated, zero-cost)
-    writeln!(
-        code,
-        "    /// Create from an owned byte array (token-gated, zero-cost)."
-    )
-    .unwrap();
-    writeln!(code, "    ///").unwrap();
-    writeln!(
-        code,
-        "    /// This is a zero-cost transmute from an owned byte array."
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    pub fn from_bytes_owned(_: archmage::{}, bytes: [u8; {}]) -> Self {{",
-        token, byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: [u8; {}] and Self have identical size",
-        byte_size
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        Self(unsafe {{ core::mem::transmute(bytes) }})"
-    )
-    .unwrap();
-    writeln!(code, "    }}\n").unwrap();
+        /// Reinterpret a mutable slice of scalars as a slice of SIMD vectors (token-gated).
+        ///
+        /// Returns `None` if the slice length is not a multiple of {lanes}, or
+        /// if the slice is not properly aligned.
+        ///
+        /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
+        #[inline(always)]
+        pub fn cast_slice_mut(_: archmage::{token}, slice: &mut [{elem}]) -> Option<&mut [Self]> {{
+        if slice.len() % {lanes} != 0 {{
+        return None;
+        }}
+        let ptr = slice.as_mut_ptr();
+        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{
+        return None;
+        }}
+        let len = slice.len() / {lanes};
+        // SAFETY: alignment and length checked, layout is compatible
+        Some(unsafe {{ core::slice::from_raw_parts_mut(ptr as *mut Self, len) }})
+        }}
 
-    code
+        /// View this vector as a byte array.
+        ///
+        /// This is a safe replacement for `bytemuck::bytes_of`.
+        #[inline(always)]
+        pub fn as_bytes(&self) -> &[u8; {byte_size}] {{
+        // SAFETY: Self is repr(transparent) over {inner} which is {byte_size} bytes
+        unsafe {{ &*(self as *const Self as *const [u8; {byte_size}]) }}
+        }}
+
+        /// View this vector as a mutable byte array.
+        ///
+        /// This is a safe replacement for `bytemuck::bytes_of_mut`.
+        #[inline(always)]
+        pub fn as_bytes_mut(&mut self) -> &mut [u8; {byte_size}] {{
+        // SAFETY: Self is repr(transparent) over {inner} which is {byte_size} bytes
+        unsafe {{ &mut *(self as *mut Self as *mut [u8; {byte_size}]) }}
+        }}
+
+        /// Create from a byte array reference (token-gated).
+        ///
+        /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
+        #[inline(always)]
+        pub fn from_bytes(_: archmage::{token}, bytes: &[u8; {byte_size}]) -> Self {{
+        // SAFETY: [u8; {byte_size}] and Self have identical size
+        Self(unsafe {{ core::mem::transmute(*bytes) }})
+        }}
+
+        /// Create from an owned byte array (token-gated, zero-cost).
+        ///
+        /// This is a zero-cost transmute from an owned byte array.
+        #[inline(always)]
+        pub fn from_bytes_owned(_: archmage::{token}, bytes: [u8; {byte_size}]) -> Self {{
+        // SAFETY: [u8; {byte_size}] and Self have identical size
+        Self(unsafe {{ core::mem::transmute(bytes) }})
+        }}
+
+    "}
 }
 
 /// Generate operator trait implementations
 fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
-    use super::types::ElementType;
-
-    let mut code = String::new();
     let name = ty.name();
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
+    let inner = ty.x86_inner_type();
+    let elem = ty.elem.name();
+    let lanes = ty.lanes();
+    let width = ty.width.bits();
+
+    let mut code = String::new();
 
     if ty.elem.is_float() {
-        writeln!(
-            code,
-            "{}crate::impl_arithmetic_ops!({}, {}_add_{}, {}_sub_{}, {}_mul_{}, {}_div_{});",
-            cfg_attr, name, prefix, suffix, prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "{}crate::impl_float_assign_ops!({});", cfg_attr, name).unwrap();
-        writeln!(
-            code,
-            "{}crate::impl_neg!({}, {}_sub_{}, {}_setzero_{});",
-            cfg_attr, name, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
+        code.push_str(&formatdoc! {"
+            {cfg_attr}crate::impl_arithmetic_ops!({name}, {prefix}_add_{suffix}, {prefix}_sub_{suffix}, {prefix}_mul_{suffix}, {prefix}_div_{suffix});
+            {cfg_attr}crate::impl_float_assign_ops!({name});
+            {cfg_attr}crate::impl_neg!({name}, {prefix}_sub_{suffix}, {prefix}_setzero_{suffix});
+        "});
     } else {
-        writeln!(
-            code,
-            "{}crate::impl_int_arithmetic_ops!({}, {}_add_{}, {}_sub_{});",
-            cfg_attr, name, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
+        code.push_str(&formatdoc! {"
+            {cfg_attr}crate::impl_int_arithmetic_ops!({name}, {prefix}_add_{suffix}, {prefix}_sub_{suffix});
+        "});
 
         if matches!(
             ty.elem,
@@ -873,117 +577,49 @@ fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
             } else {
                 "epi32"
             };
-            writeln!(
-                code,
-                "{}crate::impl_int_mul_op!({}, {}_mullo_{});",
-                cfg_attr, name, prefix, mul_suffix
-            )
-            .unwrap();
+            code.push_str(&format!(
+                "{cfg_attr}crate::impl_int_mul_op!({name}, {prefix}_mullo_{mul_suffix});\n"
+            ));
         }
 
-        writeln!(code, "{}crate::impl_assign_ops!({});", cfg_attr, name).unwrap();
+        code.push_str(&format!("{cfg_attr}crate::impl_assign_ops!({name});\n"));
     }
 
     // Bitwise
     if ty.elem.is_float() {
-        let and_fn = format!("{}_and_{}", prefix, suffix);
-        let or_fn = format!("{}_or_{}", prefix, suffix);
-        let xor_fn = format!("{}_xor_{}", prefix, suffix);
-        writeln!(
-            code,
-            "{}crate::impl_bitwise_ops!({}, {}, {}, {}, {});",
-            cfg_attr,
-            name,
-            ty.x86_inner_type(),
-            and_fn,
-            or_fn,
-            xor_fn
-        )
-        .unwrap();
+        code.push_str(&formatdoc! {"
+            {cfg_attr}crate::impl_bitwise_ops!({name}, {inner}, {prefix}_and_{suffix}, {prefix}_or_{suffix}, {prefix}_xor_{suffix});
+        "});
     } else {
-        let width = ty.width.bits();
-        writeln!(
-            code,
-            "{}crate::impl_bitwise_ops!({}, {}, {}_and_si{}, {}_or_si{}, {}_xor_si{});",
-            cfg_attr,
-            name,
-            ty.x86_inner_type(),
-            prefix,
-            width,
-            prefix,
-            width,
-            prefix,
-            width
-        )
-        .unwrap();
+        code.push_str(&formatdoc! {"
+            {cfg_attr}crate::impl_bitwise_ops!({name}, {inner}, {prefix}_and_si{width}, {prefix}_or_si{width}, {prefix}_xor_si{width});
+        "});
     }
 
     // Index
-    writeln!(
-        code,
-        "{}crate::impl_index!({}, {}, {});",
-        cfg_attr,
-        name,
-        ty.elem.name(),
-        ty.lanes()
-    )
-    .unwrap();
+    code.push_str(&format!(
+        "{cfg_attr}crate::impl_index!({name}, {elem}, {lanes});\n"
+    ));
 
-    // From<[T; N]> for zero-cost conversion
-    writeln!(code).unwrap();
-    writeln!(
-        code,
-        "{}impl From<[{}; {}]> for {} {{",
-        cfg_attr,
-        ty.elem.name(),
-        ty.lanes(),
-        name
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(
-        code,
-        "    fn from(arr: [{}; {}]) -> Self {{",
-        ty.elem.name(),
-        ty.lanes()
-    )
-    .unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: [{}; {}] and {} have identical size and layout",
-        ty.elem.name(),
-        ty.lanes(),
-        ty.x86_inner_type()
-    )
-    .unwrap();
-    writeln!(code, "        Self(unsafe {{ core::mem::transmute(arr) }})").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}").unwrap();
+    // From<[T; N]> and Into<[T; N]> implementations
+    code.push_str(&formatdoc! {"
 
-    // Into<[T; N]> for zero-cost conversion back
-    writeln!(
-        code,
-        "{}impl From<{}> for [{}; {}] {{",
-        cfg_attr,
-        name,
-        ty.elem.name(),
-        ty.lanes()
-    )
-    .unwrap();
-    writeln!(code, "    #[inline(always)]").unwrap();
-    writeln!(code, "    fn from(v: {}) -> Self {{", name).unwrap();
-    writeln!(
-        code,
-        "        // SAFETY: {} and [{}; {}] have identical size and layout",
-        ty.x86_inner_type(),
-        ty.elem.name(),
-        ty.lanes()
-    )
-    .unwrap();
-    writeln!(code, "        unsafe {{ core::mem::transmute(v.0) }}").unwrap();
-    writeln!(code, "    }}").unwrap();
-    writeln!(code, "}}").unwrap();
+        {cfg_attr}impl From<[{elem}; {lanes}]> for {name} {{
+        #[inline(always)]
+        fn from(arr: [{elem}; {lanes}]) -> Self {{
+        // SAFETY: [{elem}; {lanes}] and {inner} have identical size and layout
+        Self(unsafe {{ core::mem::transmute(arr) }})
+        }}
+        }}
+        {cfg_attr}impl From<{name}> for [{elem}; {lanes}] {{
+        #[inline(always)]
+        fn from(v: {name}) -> Self {{
+        // SAFETY: {inner} and [{elem}; {lanes}] have identical size and layout
+        unsafe {{ core::mem::transmute(v.0) }}
+        }}
+        }}
 
-    code.push('\n');
+    "});
+
     code
 }
