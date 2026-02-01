@@ -103,12 +103,12 @@ CI checks (all must pass):
 1. `cargo xtask generate` — regenerate all code
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
 3. `cargo xtask validate` — intrinsic safety + try_new() feature verification
-4. `cargo xtask parity` — parity warnings (currently 80 issues, 71 actionable)
+4. `cargo xtask parity` — parity warnings (currently 47 issues, 38 actionable)
 5. `cargo clippy --features "std macros bytemuck avx512"` — zero warnings
 6. `cargo test --features "std macros bytemuck avx512"` — all tests pass
 7. `cargo fmt --check` — code is formatted
 
-**Note:** Parity check reports 80 issues (9 known gaps with no efficient intrinsic, 71 actionable). CI warns but doesn't fail on parity issues. Full parity required before 1.0 release. See "Pending Work" section for details.
+**Note:** Parity check reports 47 issues (9 known gaps with no efficient intrinsic, 38 actionable). CI warns but doesn't fail on parity issues. Full parity required before 1.0 release. See "Pending Work" section for details.
 
 If ANY check fails:
 - Do NOT push
@@ -354,9 +354,9 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 ## Pending Work
 
-### API Parity Status (80 issues remaining, 71 actionable)
+### API Parity Status (47 issues remaining, 38 actionable)
 
-**Current state:** Reduced from 270 → 80 parity issues (70% reduction). Of these, 9 are "known gaps" with no efficient native intrinsic, leaving 71 actionable issues.
+**Current state:** Reduced from 270 → 47 parity issues (83% reduction). Of these, 9 are "known gaps" with no efficient native intrinsic, leaving 38 actionable issues.
 
 Run `cargo xtask parity` to see full list.
 
@@ -371,22 +371,21 @@ Run `cargo xtask parity` to see full list.
 
 | Category | Count | Missing From | Notes |
 |----------|-------|--------------|-------|
-| Transcendentals (exp, ln, log2, log10, pow, cbrt) | 37 | ARM | Need polynomial implementations |
 | Extension/pack ops | 17 | ARM, WASM | Integer widening/narrowing |
-| RGBA ops (load/store u8, from_u8, to_u8) | 10 | ARM, WASM | Pixel format conversion |
+| RGBA ops (load/store u8, from_u8, to_u8) | 3 | ARM, WASM | Pixel format conversion |
 | Block ops (transpose, interleave, deinterleave) | 7 | ARM, WASM | Matrix operations |
 | i64x2/u64x2 abs/min/max/clamp | 6 | x86, WASM | Need compare+select polyfill |
-| log10_midp variants | 5 | x86 | Missing midp-precision log10 |
+| cbrt for WASM | 2 | WASM | cbrt_midp, cbrt_midp_precise |
+| f64x2 log10_lowp | 1 | WASM | Scalar fallback needed |
 
 ### Long-Term
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
-- **Transcendental parity for ARM**: Port x86/WASM polynomial approximations to NEON.
-- **Transcendental `_precise` variants**: WASM has complete `_precise` variants. x86/ARM only have `_precise` for cbrt.
 - **Extension ops**: Add integer widening (extend_lo, extend_hi) for ARM/WASM.
 
 ### Completed
 
+- ~~**ARM transcendentals + x86 missing variants**~~: Done. ARM f32x4 has full lowp+midp transcendentals (log2, exp2, ln, exp, log10, pow, cbrt) with all variant coverage. ARM f64x2 has lowp transcendentals via scalar fallback. x86 gained lowp _unchecked aliases, midp _precise variants, and log10_midp family. Parity: 80 → 47.
 - ~~**API surface parity detection tool**~~: Done. Use `cargo xtask parity` to detect API variances between x86/ARM/WASM.
 - ~~**Move generated files to subfolder**~~: Done. All generated code now lives in `generated/` subfolders.
 - ~~**Merge WASM transcendentals from `feat/wasm128`**~~: Done (354dc2b). All `_unchecked` and `_precise` variants now generated.
