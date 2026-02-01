@@ -293,6 +293,88 @@ pub fn gen_scalar_method(doc: &str, name: &str, return_type: &str, body: &str) -
     ) + "\n"
 }
 
+/// Generate a method with custom signature and body
+///
+/// # Example
+/// ```ignore
+/// gen_method(
+///     "Fused multiply-subtract: self * a - b",
+///     "mul_sub(self, a: Self, b: Self) -> Self",
+///     "let neg_b = unsafe { vnegq_f32(b.0) };\nSelf(unsafe { vfmaq_f32(neg_b, self.0, a.0) })"
+/// )
+/// ```
+pub fn gen_method(doc: &str, signature: &str, body: &str) -> String {
+    let body = indent_continuation(body, 8);
+    indent(
+        &formatdoc! {"
+            /// {doc}
+            #[inline(always)]
+            pub fn {signature} {{
+                {body}
+            }}
+        "},
+        4,
+    ) + "\n"
+}
+
+/// Generate a method with multi-line doc comment
+pub fn gen_method_docs(docs: &[&str], signature: &str, body: &str) -> String {
+    let mut result = String::new();
+    for doc in docs {
+        result.push_str(&format!("    /// {}\n", doc));
+    }
+    let body = indent_continuation(body, 8);
+    result.push_str(&formatdoc! {"
+        #[inline(always)]
+        pub fn {signature} {{
+            {body}
+        }}
+    "});
+    indent(&result, 0) + "\n"
+}
+
+/// Generate a ternary method (self + 2 args) returning Self
+pub fn gen_ternary_method(doc: &str, name: &str, arg1: &str, arg2: &str, body: &str) -> String {
+    let body = indent_continuation(body, 8);
+    indent(
+        &formatdoc! {"
+            /// {doc}
+            #[inline(always)]
+            pub fn {name}(self, {arg1}: Self, {arg2}: Self) -> Self {{
+                {body}
+            }}
+        "},
+        4,
+    ) + "\n"
+}
+
+/// Generate a const generic method
+pub fn gen_const_generic_method(
+    doc: &str,
+    name: &str,
+    const_param: &str,
+    const_type: &str,
+    ret: &str,
+    body: &str,
+) -> String {
+    let body = indent_continuation(body, 8);
+    indent(
+        &formatdoc! {"
+            /// {doc}
+            #[inline(always)]
+            pub fn {name}<const {const_param}: {const_type}>(self) -> {ret} {{
+                {body}
+            }}
+        "},
+        4,
+    ) + "\n"
+}
+
+/// Section header comment
+pub fn section_header(title: &str) -> String {
+    format!("    // ========== {} ==========\n\n", title)
+}
+
 /// List of all SIMD types to generate
 pub fn all_simd_types() -> Vec<SimdType> {
     vec![

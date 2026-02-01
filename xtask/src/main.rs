@@ -1427,6 +1427,19 @@ fn run_ci() -> Result<()> {
     generate_all()?;
     println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
 
+    // Run cargo fmt on entire workspace to ensure consistent formatting
+    println!("┌─ Formatting workspace ──────────────────────────────────────────────┐");
+    let fmt = std::process::Command::new("cargo")
+        .args(["fmt"])
+        .status()
+        .context("Failed to run cargo fmt")?;
+    if !fmt.success() {
+        println!("  Warning: cargo fmt returned non-zero");
+    } else {
+        println!("  ✓ Workspace formatted");
+    }
+    println!("└─ Formatting complete ──────────────────────────────────────────────┘\n");
+
     // Step 2: Check for clean worktree
     println!("┌─ Step 2/8: Checking for uncommitted changes ──────────────────────┐");
     let status = std::process::Command::new("git")
