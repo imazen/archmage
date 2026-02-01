@@ -360,6 +360,17 @@ fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 Run `cargo xtask parity` to verify.
 
+### Known Cross-Architecture Behavioral Differences
+
+These are documented semantic differences between architectures. Tests must account for them; they are not bugs to fix.
+
+| Issue | x86 | ARM | WASM | Workaround |
+|-------|-----|-----|------|------------|
+| Bitwise operators (`&`, `\|`, `^`) on integers | Trait impls (operators work) | Methods only | Methods only | Use `.and()`, `.or()`, `.xor()` methods |
+| `shr` for signed integers | Logical (zero-fill) | Arithmetic (sign-extend) | Arithmetic (sign-extend) | Use `shr_arithmetic` for portable sign-extending shift |
+| `blend` signature | `(mask, true, false)` | `(mask, true, false)` | `(self, other, mask)` | Avoid in portable code; use bitcast + comparison verification |
+| `interleave_lo/hi` | f32x4 only | f32x4 only | f32x4 only | Only use on f32x4, not integer types |
+
 ### Long-Term
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
