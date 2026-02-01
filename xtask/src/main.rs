@@ -17,111 +17,7 @@ mod simd_types;
 /// Version of safe_unaligned_simd we're generating from
 const SAFE_SIMD_VERSION: &str = "0.2.3";
 
-// ============================================================================
-// Feature Registry - Authoritative source of what features each token provides
-// ============================================================================
-
-/// Returns the set of features that a token or trait provides.
-///
-/// This is the authoritative mapping used for validation. When we assign a token
-/// bound to a wrapper, we must verify the token provides ALL required features.
-fn token_provides_features(token_or_trait: &str) -> Option<&'static [&'static str]> {
-    match token_or_trait {
-        // Width traits
-        "Has128BitSimd" => Some(&["sse", "sse2"]),
-        "Has256BitSimd" => Some(&["sse", "sse2", "avx"]),
-        "Has512BitSimd" => Some(&["sse", "sse2", "avx", "avx2", "avx512f"]),
-
-        // x86 tier traits
-        "HasX64V2" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
-        "HasX64V4" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
-            "bmi1", "bmi2", "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq",
-            "avx512vl",
-        ]),
-
-        // x86 concrete tokens
-        "X64V2Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
-        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
-            "bmi1", "bmi2", "f16c", "lzcnt",
-        ]),
-        "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
-            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
-            "bmi1", "bmi2", "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq",
-            "avx512vl",
-        ]),
-        "Avx512ModernToken" => Some(&[
-            "sse",
-            "sse2",
-            "sse3",
-            "ssse3",
-            "sse4.1",
-            "sse4.2",
-            "popcnt",
-            "avx",
-            "avx2",
-            "fma",
-            "bmi1",
-            "bmi2",
-            "f16c",
-            "lzcnt",
-            "avx512f",
-            "avx512bw",
-            "avx512cd",
-            "avx512dq",
-            "avx512vl",
-            "avx512vpopcntdq",
-            "avx512ifma",
-            "avx512vbmi",
-            "avx512vbmi2",
-            "avx512bitalg",
-            "avx512vnni",
-            "avx512bf16",
-            "vpclmulqdq",
-            "gfni",
-            "vaes",
-        ]),
-        "Avx512Fp16Token" => Some(&[
-            "sse",
-            "sse2",
-            "sse3",
-            "ssse3",
-            "sse4.1",
-            "sse4.2",
-            "popcnt",
-            "avx",
-            "avx2",
-            "fma",
-            "bmi1",
-            "bmi2",
-            "f16c",
-            "lzcnt",
-            "avx512f",
-            "avx512bw",
-            "avx512cd",
-            "avx512dq",
-            "avx512vl",
-            "avx512fp16",
-        ]),
-
-        // AArch64 traits
-        "HasNeon" => Some(&["neon"]),
-        "HasNeonAes" => Some(&["neon", "aes"]),
-        "HasNeonSha3" => Some(&["neon", "sha3"]),
-
-        // AArch64 concrete tokens
-        "NeonToken" | "Arm64" => Some(&["neon"]),
-        "NeonAesToken" => Some(&["neon", "aes"]),
-        "NeonSha3Token" => Some(&["neon", "sha3"]),
-        "NeonCrcToken" => Some(&["neon", "crc"]),
-
-        // WASM tokens
-        "Simd128Token" => Some(&["simd128"]),
-
-        _ => None,
-    }
-}
+// Feature lookups now come from token-registry.toml via Registry::features_for().
 
 /// Categorize an intrinsic by its operation type
 fn categorize_intrinsic(name: &str) -> &'static str {
@@ -204,43 +100,7 @@ fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
 // Magetypes Validation
 // ============================================================================
 
-/// File-to-token mapping for magetypes generated code.
-struct MagetypesFileMapping {
-    /// Relative path within magetypes/src/simd/
-    rel_path: &'static str,
-    /// Gating token name
-    token: &'static str,
-    /// Architecture
-    arch: &'static str,
-}
-
-const MAGETYPES_FILE_MAPPINGS: &[MagetypesFileMapping] = &[
-    MagetypesFileMapping {
-        rel_path: "x86/w128.rs",
-        token: "X64V3Token",
-        arch: "x86",
-    },
-    MagetypesFileMapping {
-        rel_path: "x86/w256.rs",
-        token: "X64V3Token",
-        arch: "x86",
-    },
-    MagetypesFileMapping {
-        rel_path: "x86/w512.rs",
-        token: "X64V4Token",
-        arch: "x86",
-    },
-    MagetypesFileMapping {
-        rel_path: "arm/w128.rs",
-        token: "NeonToken",
-        arch: "arm",
-    },
-    MagetypesFileMapping {
-        rel_path: "wasm/w128.rs",
-        token: "Simd128Token",
-        arch: "wasm",
-    },
-];
+// File-to-token mappings now come from token-registry.toml [[magetypes_file]] entries.
 
 /// Validate that all intrinsic calls in magetypes generated code are safe
 /// under their gating token.
@@ -249,6 +109,11 @@ const MAGETYPES_FILE_MAPPINGS: &[MagetypesFileMapping] = &[
 /// If an intrinsic is missing from the CSV, that's an error — the CSV must be
 /// regenerated with `python3 xtask/extract_intrinsics.py`.
 fn validate_magetypes() -> Result<()> {
+    let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
+    validate_magetypes_with_registry(&reg)
+}
+
+fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
     println!("=== Magetypes Safety Validation ===\n");
 
     let db = load_intrinsic_database()?;
@@ -271,8 +136,8 @@ fn validate_magetypes() -> Result<()> {
     let mut errors: Vec<String> = Vec::new();
     let mut validated = 0usize;
 
-    for mapping in MAGETYPES_FILE_MAPPINGS {
-        let file_path = simd_dir.join(mapping.rel_path);
+    for mapping in &reg.magetypes_file {
+        let file_path = simd_dir.join(&mapping.rel_path);
         if !file_path.exists() {
             errors.push(format!("File not found: {}", file_path.display()));
             continue;
@@ -281,27 +146,12 @@ fn validate_magetypes() -> Result<()> {
         let content = fs::read_to_string(&file_path)
             .with_context(|| format!("Failed to read {}", file_path.display()))?;
 
-        let token = mapping.token;
-        let provided_features: HashSet<&str> = match token_provides_features(token) {
-            Some(f) => f.iter().copied().collect(),
-            None => {
-                // Simd128Token isn't in token_provides_features — handle WASM specially
-                if token == "Simd128Token" {
-                    let mut s = HashSet::new();
-                    s.insert("simd128");
-                    s
-                } else {
-                    errors.push(format!(
-                        "Unknown token '{}' for {}",
-                        token, mapping.rel_path
-                    ));
-                    continue;
-                }
-            }
-        };
+        let token = &mapping.token;
+        let features = reg.features_for(token).unwrap_or_default();
+        let provided_features: HashSet<&str> = features.into_iter().collect();
 
         // Select regex based on architecture
-        let re = match mapping.arch {
+        let re = match mapping.arch.as_str() {
             "x86" => &x86_re,
             "arm" => &arm_re,
             "wasm" => &wasm_re,
@@ -995,7 +845,7 @@ fn generate_all() -> Result<()> {
 
     // Run safety validation on generated code (hard failure)
     println!("\n=== Validating Magetypes Safety ===");
-    validate_magetypes()?;
+    validate_magetypes_with_registry(&reg)?;
 
     println!("\n=== Generation Complete ===");
     println!("  - SIMD types: magetypes/src/simd/");
