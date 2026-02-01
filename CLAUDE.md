@@ -86,7 +86,33 @@ just generate                 # Regenerate all generated code
 just validate-registry        # Validate token-registry.toml
 just validate-tokens          # Validate magetypes safety + try_new() checks
 just parity                   # Check API parity across x86/ARM/WASM
+just ci                       # Run ALL checks (must pass before push/publish)
 ```
+
+## CI and Publishing Rules
+
+**ABSOLUTE REQUIREMENT: Run `just ci` (or `just all` or `cargo xtask all`) before ANY push or publish.**
+
+```bash
+just ci    # or: just all, cargo xtask ci, cargo xtask all
+```
+
+**NEVER run `git push` or `cargo publish` until this passes. No exceptions.**
+
+CI checks (all must pass):
+1. `cargo xtask generate` — regenerate all code
+2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
+3. `cargo xtask validate` — intrinsic safety + try_new() feature verification
+4. `cargo xtask parity` — **zero parity warnings** (HARD FAIL - all W128 methods must exist on x86/ARM/WASM)
+5. `cargo clippy --all-features` — zero warnings
+6. `cargo test --all-features` — all tests pass
+7. `cargo fmt --check` — code is formatted
+
+If ANY check fails:
+- Do NOT push
+- Do NOT publish
+- Fix the issue first
+- Re-run `just ci` until it passes
 
 ## Source of Truth: token-registry.toml
 

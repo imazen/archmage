@@ -928,6 +928,9 @@ fn main() -> Result<()> {
         eprintln!(
             "       cargo xtask parity              - Check API parity across architectures"
         );
+        eprintln!(
+            "       cargo xtask ci | all            - Run ALL checks (must pass before push)"
+        );
         std::process::exit(1);
     }
 
@@ -939,7 +942,8 @@ fn main() -> Result<()> {
             validate_try_new(&reg)?;
         }
         "validate-registry" => validate_registry()?,
-        "parity" => check_api_parity()?,
+        "parity" => check_api_parity(false)?,
+        "ci" | "all" => run_ci()?,
         _ => {
             eprintln!("Unknown command: {}", args[1]);
             std::process::exit(1);
@@ -1180,7 +1184,10 @@ fn parse_simd_methods(content: &str) -> Vec<ParsedType> {
 }
 
 /// Check API parity across architectures.
-fn check_api_parity() -> Result<()> {
+///
+/// When `strict` is true, fails if there are ANY parity issues.
+/// This is used in CI to enforce full cross-platform parity.
+fn check_api_parity(strict: bool) -> Result<()> {
     println!("=== API Parity Detection ===\n");
 
     let simd_dir = PathBuf::from("magetypes/src/simd/generated");
@@ -1332,6 +1339,122 @@ fn check_api_parity() -> Result<()> {
     println!("\n=== Summary ===");
     println!("  Parity issues: {}", parity_issues.len());
     println!("  Doc gaps:      {}", doc_issues.len());
+
+    if strict && !parity_issues.is_empty() {
+        bail!(
+            "Parity check failed: {} methods are missing from some architectures. \
+             All W128 methods must be implemented on all platforms before push/publish.",
+            parity_issues.len()
+        );
+    }
+
+    Ok(())
+}
+
+// ============================================================================
+// CI - Comprehensive Check (must pass before push/publish)
+// ============================================================================
+
+/// Run all CI checks. Must pass before any push or publish.
+///
+/// Checks:
+/// 1. Regenerate all code
+/// 2. Verify clean worktree (no uncommitted changes from generation)
+/// 3. Validate magetypes safety
+/// 4. Validate try_new() feature checks
+/// 5. Check API parity (strict - fails on any issues)
+/// 6. Run clippy
+/// 7. Run tests
+/// 8. Check formatting
+fn run_ci() -> Result<()> {
+    println!("╔══════════════════════════════════════════════════════════════════╗");
+    println!("║                    ARCHMAGE CI CHECK                             ║");
+    println!("║  All checks must pass before push or publish!                    ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    // Step 1: Generate all code
+    println!("┌─ Step 1/8: Regenerating code ─────────────────────────────────────┐");
+    generate_all()?;
+    println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
+
+    // Step 2: Check for clean worktree
+    println!("┌─ Step 2/8: Checking for uncommitted changes ──────────────────────┐");
+    let status = std::process::Command::new("git")
+        .args(["status", "--porcelain"])
+        .output()
+        .context("Failed to run git status")?;
+    let changes = String::from_utf8_lossy(&status.stdout);
+    if !changes.trim().is_empty() {
+        println!("Uncommitted changes detected:");
+        println!("{}", changes);
+        bail!(
+            "Working tree is dirty after code generation. \
+             Commit these changes before pushing:\n{}",
+            changes
+        );
+    }
+    println!("  ✓ Working tree is clean");
+    println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
+
+    // Step 3-4: Validation (already done in generate_all, but let's be explicit)
+    println!("┌─ Step 3/8: Validating magetypes safety ────────────────────────────┐");
+    let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
+    validate_magetypes_with_registry(&reg)?;
+    println!("└─ Magetypes validation passed ──────────────────────────────────────┘\n");
+
+    println!("┌─ Step 4/8: Validating try_new() features ──────────────────────────┐");
+    validate_try_new(&reg)?;
+    println!("└─ try_new() validation passed ──────────────────────────────────────┘\n");
+
+    // Step 5: Parity check (strict mode - fails on any issues)
+    println!("┌─ Step 5/8: Checking API parity (strict) ───────────────────────────┐");
+    check_api_parity(true)?;
+    println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
+
+    // Step 6: Clippy
+    println!("┌─ Step 6/8: Running clippy ─────────────────────────────────────────┐");
+    let clippy = std::process::Command::new("cargo")
+        .args([
+            "clippy",
+            "--all-features",
+            "--",
+            "-D",
+            "warnings",
+        ])
+        .status()
+        .context("Failed to run clippy")?;
+    if !clippy.success() {
+        bail!("Clippy failed with warnings/errors");
+    }
+    println!("  ✓ Clippy passed");
+    println!("└─ Clippy check passed ──────────────────────────────────────────────┘\n");
+
+    // Step 7: Tests
+    println!("┌─ Step 7/8: Running tests ──────────────────────────────────────────┐");
+    let tests = std::process::Command::new("cargo")
+        .args(["test", "--all-features"])
+        .status()
+        .context("Failed to run tests")?;
+    if !tests.success() {
+        bail!("Tests failed");
+    }
+    println!("└─ All tests passed ─────────────────────────────────────────────────┘\n");
+
+    // Step 8: Format check
+    println!("┌─ Step 8/8: Checking code formatting ───────────────────────────────┐");
+    let fmt = std::process::Command::new("cargo")
+        .args(["fmt", "--", "--check"])
+        .status()
+        .context("Failed to run cargo fmt")?;
+    if !fmt.success() {
+        bail!("Code is not formatted. Run 'cargo fmt' first.");
+    }
+    println!("  ✓ Code is properly formatted");
+    println!("└─ Format check passed ──────────────────────────────────────────────┘\n");
+
+    println!("╔══════════════════════════════════════════════════════════════════╗");
+    println!("║  ✓ ALL CI CHECKS PASSED - Safe to push/publish                   ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝");
 
     Ok(())
 }

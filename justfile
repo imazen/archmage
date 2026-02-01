@@ -43,6 +43,13 @@ validate-tokens:
 parity:
     cargo run -p xtask -- parity
 
+# Run ALL CI checks (MUST pass before push or publish)
+ci:
+    cargo run -p xtask -- ci
+
+# Alias for ci (all-inclusive check)
+all: ci
+
 # ============================================================================
 # Intel SDE testing (requires Intel SDE to be installed)
 # Download from: https://www.intel.com/content/www/us/en/download/684897/intel-software-development-emulator.html
@@ -120,16 +127,15 @@ clippy-all: clippy-x86_64 clippy-aarch64 clippy-i686
 # CI-style comprehensive test
 # ============================================================================
 
-# Full CI check (no SDE)
-ci: fmt-check lint test miri
-    @echo "All CI checks passed!"
+# Note: Main CI target is defined above (uses cargo xtask ci)
+# These are extended validation targets for more thorough testing
 
 # Full validation with SDE (for local development)
-validate: ci test-all-cpus
-    @echo "Full validation complete!"
+validate-sde: ci test-all-cpus
+    @echo "Full SDE validation complete!"
 
 # Full validation including cross-compilation
-validate-all: ci test-cross clippy-all
+validate-cross: ci test-cross clippy-all
     @echo "Full cross-platform validation complete!"
 
 # ============================================================================
