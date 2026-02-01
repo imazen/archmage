@@ -1840,7 +1840,6 @@ fn run_ci() -> Result<()> {
 
     // Step 7: Clippy
     println!("┌─ Step 7/10: Running clippy ────────────────────────────────────────┐");
-    // Use specific features instead of --all-features to avoid sleef (requires nightly)
     let clippy = std::process::Command::new("cargo")
         .args([
             "clippy",
@@ -1860,7 +1859,6 @@ fn run_ci() -> Result<()> {
 
     // Step 8: Tests
     println!("┌─ Step 8/10: Running tests ─────────────────────────────────────────┐");
-    // Use specific features instead of --all-features to avoid sleef (requires nightly)
     let tests = std::process::Command::new("cargo")
         .args(["test", "--features", "std macros bytemuck avx512"])
         .status()
