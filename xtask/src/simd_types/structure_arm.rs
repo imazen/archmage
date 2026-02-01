@@ -64,6 +64,9 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Block operations (interleave, transpose)
     code.push_str(&super::block_ops_arm::generate_arm_block_ops(ty));
 
+    // Extend/pack operations (integer widening/narrowing)
+    code.push_str(&super::extend_ops_arm::generate_arm_extend_ops(ty));
+
     code.push_str("}\n\n");
 
     // Operator implementations

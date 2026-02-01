@@ -1041,6 +1041,99 @@ impl f32x4 {
         Self::transpose_4x4(&mut result);
         result
     }
+
+    // ========== Load and Convert ==========
+
+    /// Load 4 u8 values and convert to f32x4.
+    ///
+    /// Useful for image processing: load pixel values directly to float.
+    #[inline(always)]
+    pub fn from_u8(bytes: &[u8; 4]) -> Self {
+        // Load 4 bytes into lane 0 as u32, then extend through u8->u16->u32->f32
+        let val = u32::from_ne_bytes(*bytes);
+        let v = i32x4_replace_lane::<0>(i32x4_splat(0), val as i32);
+        let v16 = u16x8_extend_low_u8x16(v);
+        let v32 = u32x4_extend_low_u16x8(v16);
+        Self(f32x4_convert_u32x4(v32))
+    }
+
+    /// Convert to 4 u8 values with saturation.
+    ///
+    /// Values are clamped to [0, 255] and rounded.
+    #[inline(always)]
+    pub fn to_u8(self) -> [u8; 4] {
+        // Round to nearest, truncate with saturation, narrow through i16->u8
+        let i32s = i32x4_trunc_sat_f32x4(f32x4_nearest(self.0));
+        let i16s = i16x8_narrow_i32x4(i32s, i32s);
+        let u8s = u8x16_narrow_i16x8(i16s, i16s);
+        let val = u32x4_extract_lane::<0>(u8s);
+        (val as u32).to_ne_bytes()
+    }
+
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
+    ///
+    /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
+    /// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
+    #[inline]
+    pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+        unsafe {
+            // Load 16 bytes and interpret as 4 u32 pixels
+            let v = v128_load(rgba.as_ptr() as *const v128);
+            let mask = u32x4_splat(0xFF);
+
+            // Extract channels via mask and shift
+            let r = v128_and(v, mask);
+            let g = v128_and(u32x4_shr(v, 8), mask);
+            let b = v128_and(u32x4_shr(v, 16), mask);
+            let a = u32x4_shr(v, 24);
+
+            (
+                Self(f32x4_convert_u32x4(r)),
+                Self(f32x4_convert_u32x4(g)),
+                Self(f32x4_convert_u32x4(b)),
+                Self(f32x4_convert_u32x4(a)),
+            )
+        }
+    }
+
+    /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
+    ///
+    /// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
+    /// Output: 16 bytes = 4 RGBA pixels in interleaved format.
+    #[inline]
+    pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
+        unsafe {
+            // Round to nearest, truncate with saturation, clamp to [0, 255]
+            let zero = i32x4_splat(0);
+            let max_val = i32x4_splat(255);
+            let ri = i32x4_min(
+                i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(r.0)), zero),
+                max_val,
+            );
+            let gi = i32x4_min(
+                i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(g.0)), zero),
+                max_val,
+            );
+            let bi = i32x4_min(
+                i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(b.0)), zero),
+                max_val,
+            );
+            let ai = i32x4_min(
+                i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(a.0)), zero),
+                max_val,
+            );
+
+            // Combine channels: R | (G << 8) | (B << 16) | (A << 24)
+            let pixels = v128_or(
+                v128_or(ri, i32x4_shl(gi, 8)),
+                v128_or(i32x4_shl(bi, 16), i32x4_shl(ai, 24)),
+            );
+
+            let mut out = [0u8; 16];
+            v128_store(out.as_mut_ptr() as *mut v128, pixels);
+            out
+        }
+    }
 }
 
 impl core::ops::Add for f32x4 {
@@ -2470,6 +2563,47 @@ impl u8x16 {
     pub fn bitcast_mut_i8x16(&mut self) -> &mut i8x16 {
         unsafe { &mut *(self as *mut Self as *mut i8x16) }
     }
+    // ========== Extend/Widen Operations ==========
+
+    /// Zero-extend low 8 u8 values to i16x8.
+    ///
+    /// Takes the lower 8 bytes and zero-extends each to 16 bits.
+    #[inline(always)]
+    pub fn extend_lo_i16(self) -> i16x8 {
+        i16x8(u16x8_extend_low_u8x16(self.0))
+    }
+
+    /// Zero-extend high 8 u8 values to i16x8.
+    ///
+    /// Takes the upper 8 bytes and zero-extends each to 16 bits.
+    #[inline(always)]
+    pub fn extend_hi_i16(self) -> i16x8 {
+        i16x8(u16x8_extend_high_u8x16(self.0))
+    }
+
+    /// Zero-extend all 16 u8 values to two i16x8 vectors.
+    ///
+    /// Returns (low 8 as i16x8, high 8 as i16x8).
+    #[inline(always)]
+    pub fn extend_i16(self) -> (i16x8, i16x8) {
+        (self.extend_lo_i16(), self.extend_hi_i16())
+    }
+
+    /// Zero-extend low 4 u8 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        // First extend u8→u16, then u16→u32
+        let u16s = u16x8_extend_low_u8x16(self.0);
+        i32x4(u32x4_extend_low_u16x8(u16s))
+    }
+
+    /// Zero-extend low 4 u8 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        let u16s = u16x8_extend_low_u8x16(self.0);
+        let u32s = u32x4_extend_low_u16x8(u16s);
+        f32x4(f32x4_convert_u32x4(u32s))
+    }
 }
 
 impl core::ops::Add for u8x16 {
@@ -2887,6 +3021,54 @@ impl i16x8 {
     #[inline(always)]
     pub fn bitcast_mut_u16x8(&mut self) -> &mut u16x8 {
         unsafe { &mut *(self as *mut Self as *mut u16x8) }
+    }
+    // ========== Extend/Widen Operations ==========
+
+    /// Sign-extend low 4 i16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        i32x4(i32x4_extend_low_i16x8(self.0))
+    }
+
+    /// Sign-extend high 4 i16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_hi_i32(self) -> i32x4 {
+        i32x4(i32x4_extend_high_i16x8(self.0))
+    }
+
+    /// Sign-extend all 8 i16 values to two i32x4 vectors.
+    ///
+    /// Returns (low 4 as i32x4, high 4 as i32x4).
+    #[inline(always)]
+    pub fn extend_i32(self) -> (i32x4, i32x4) {
+        (self.extend_lo_i32(), self.extend_hi_i32())
+    }
+
+    /// Sign-extend low 4 i16 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        let i32s = i32x4_extend_low_i16x8(self.0);
+        f32x4(f32x4_convert_i32x4(i32s))
+    }
+
+    // ========== Pack/Narrow Operations ==========
+
+    /// Pack two i16x8 to u8x16 with unsigned saturation.
+    ///
+    /// `self` provides the low 8 bytes, `other` provides the high 8 bytes.
+    /// Values are clamped to [0, 255].
+    #[inline(always)]
+    pub fn pack_u8(self, other: Self) -> u8x16 {
+        u8x16(u8x16_narrow_i16x8(self.0, other.0))
+    }
+
+    /// Pack two i16x8 to i8x16 with signed saturation.
+    ///
+    /// `self` provides the low 8 bytes, `other` provides the high 8 bytes.
+    /// Values are clamped to [-128, 127].
+    #[inline(always)]
+    pub fn pack_i8(self, other: Self) -> i8x16 {
+        i8x16(i8x16_narrow_i16x8(self.0, other.0))
     }
 }
 
@@ -3311,6 +3493,34 @@ impl u16x8 {
     #[inline(always)]
     pub fn bitcast_mut_i16x8(&mut self) -> &mut i16x8 {
         unsafe { &mut *(self as *mut Self as *mut i16x8) }
+    }
+    // ========== Extend/Widen Operations ==========
+
+    /// Zero-extend low 4 u16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        i32x4(u32x4_extend_low_u16x8(self.0))
+    }
+
+    /// Zero-extend high 4 u16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_hi_i32(self) -> i32x4 {
+        i32x4(u32x4_extend_high_u16x8(self.0))
+    }
+
+    /// Zero-extend all 8 u16 values to two i32x4 vectors.
+    ///
+    /// Returns (low 4 as i32x4, high 4 as i32x4).
+    #[inline(always)]
+    pub fn extend_i32(self) -> (i32x4, i32x4) {
+        (self.extend_lo_i32(), self.extend_hi_i32())
+    }
+
+    /// Zero-extend low 4 u16 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        let u32s = u32x4_extend_low_u16x8(self.0);
+        f32x4(f32x4_convert_u32x4(u32s))
     }
 }
 
@@ -3777,6 +3987,25 @@ impl i32x4 {
     #[inline(always)]
     pub fn bitcast_mut_u32x4(&mut self) -> &mut u32x4 {
         unsafe { &mut *(self as *mut Self as *mut u32x4) }
+    }
+    // ========== Pack/Narrow Operations ==========
+
+    /// Pack two i32x4 to i16x8 with signed saturation.
+    ///
+    /// `self` provides the low 4 values, `other` provides the high 4 values.
+    /// Values are clamped to [-32768, 32767].
+    #[inline(always)]
+    pub fn pack_i16(self, other: Self) -> i16x8 {
+        i16x8(i16x8_narrow_i32x4(self.0, other.0))
+    }
+
+    /// Pack two i32x4 to u16x8 with unsigned saturation.
+    ///
+    /// `self` provides the low 4 values, `other` provides the high 4 values.
+    /// Values are clamped to [0, 65535].
+    #[inline(always)]
+    pub fn pack_u16(self, other: Self) -> u16x8 {
+        u16x8(u16x8_narrow_i32x4(self.0, other.0))
     }
 }
 
@@ -4503,6 +4732,35 @@ impl i64x2 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    /// Absolute value (polyfill via conditional negate)
+    #[inline(always)]
+    pub fn abs(self) -> Self {
+        let negated = i64x2_neg(self.0);
+        let zero = i64x2_splat(0);
+        let mask = i64x2_lt(self.0, zero);
+        Self(v128_bitselect(negated, self.0, mask))
+    }
+
+    /// Element-wise minimum (polyfill via compare+select)
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self {
+        let mask = i64x2_gt(self.0, other.0);
+        Self(v128_bitselect(other.0, self.0, mask))
+    }
+
+    /// Element-wise maximum (polyfill via compare+select)
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self {
+        let mask = i64x2_gt(self.0, other.0);
+        Self(v128_bitselect(self.0, other.0, mask))
+    }
+
+    /// Clamp values between lo and hi
+    #[inline(always)]
+    pub fn clamp(self, lo: Self, hi: Self) -> Self {
+        self.max(lo).min(hi)
+    }
+
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
@@ -4925,6 +5183,33 @@ impl u64x2 {
     pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    /// Element-wise minimum (polyfill via unsigned compare+select)
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self {
+        // Bias to signed domain for comparison
+        let bias = i64x2_splat(i64::MIN);
+        let a_biased = v128_xor(self.0, bias);
+        let b_biased = v128_xor(other.0, bias);
+        let mask = i64x2_gt(a_biased, b_biased);
+        Self(v128_bitselect(other.0, self.0, mask))
+    }
+
+    /// Element-wise maximum (polyfill via unsigned compare+select)
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self {
+        let bias = i64x2_splat(i64::MIN);
+        let a_biased = v128_xor(self.0, bias);
+        let b_biased = v128_xor(other.0, bias);
+        let mask = i64x2_gt(a_biased, b_biased);
+        Self(v128_bitselect(self.0, other.0, mask))
+    }
+
+    /// Clamp values between lo and hi
+    #[inline(always)]
+    pub fn clamp(self, lo: Self, hi: Self) -> Self {
+        self.max(lo).min(hi)
     }
 
     /// Reduce: sum all lanes

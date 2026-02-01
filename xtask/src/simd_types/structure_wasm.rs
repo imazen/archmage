@@ -62,6 +62,9 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Block operations (interleave, transpose)
     code.push_str(&super::block_ops_wasm::generate_wasm_block_ops(ty));
 
+    // Extend/pack operations (integer widening/narrowing)
+    code.push_str(&super::extend_ops_wasm::generate_wasm_extend_ops(ty));
+
     code.push_str("}\n\n");
 
     // Operator implementations
@@ -378,7 +381,7 @@ fn generate_math_ops(ty: &SimdType) -> String {
         }
     }
 
-    // Signed integer abs (not available for i64 in WASM)
+    // Signed integer abs
     if !ty.elem.is_float() && ty.elem.is_signed() && ty.elem != ElementType::I64 {
         let abs_fn = Wasm::abs_intrinsic(ty.elem);
         code.push_str(&formatdoc! {r#"
@@ -386,6 +389,74 @@ fn generate_math_ops(ty: &SimdType) -> String {
             #[inline(always)]
             pub fn abs(self) -> Self {{
             Self({abs_fn}(self.0))
+            }}
+
+        "#});
+    }
+
+    // i64 polyfill: abs, min, max, clamp via compare+select
+    if ty.elem == ElementType::I64 {
+        code.push_str(&formatdoc! {r#"
+            /// Absolute value (polyfill via conditional negate)
+            #[inline(always)]
+            pub fn abs(self) -> Self {{
+            let negated = i64x2_neg(self.0);
+            let zero = i64x2_splat(0);
+            let mask = i64x2_lt(self.0, zero);
+            Self(v128_bitselect(negated, self.0, mask))
+            }}
+
+            /// Element-wise minimum (polyfill via compare+select)
+            #[inline(always)]
+            pub fn min(self, other: Self) -> Self {{
+            let mask = i64x2_gt(self.0, other.0);
+            Self(v128_bitselect(other.0, self.0, mask))
+            }}
+
+            /// Element-wise maximum (polyfill via compare+select)
+            #[inline(always)]
+            pub fn max(self, other: Self) -> Self {{
+            let mask = i64x2_gt(self.0, other.0);
+            Self(v128_bitselect(self.0, other.0, mask))
+            }}
+
+            /// Clamp values between lo and hi
+            #[inline(always)]
+            pub fn clamp(self, lo: Self, hi: Self) -> Self {{
+            self.max(lo).min(hi)
+            }}
+
+        "#});
+    }
+
+    // u64 polyfill: min, max, clamp via bias-to-signed compare+select
+    if ty.elem == ElementType::U64 {
+        code.push_str(&formatdoc! {r#"
+            /// Element-wise minimum (polyfill via unsigned compare+select)
+            #[inline(always)]
+            pub fn min(self, other: Self) -> Self {{
+            // Bias to signed domain for comparison
+            let bias = i64x2_splat(i64::MIN);
+            let a_biased = v128_xor(self.0, bias);
+            let b_biased = v128_xor(other.0, bias);
+            let mask = i64x2_gt(a_biased, b_biased);
+            Self(v128_bitselect(other.0, self.0, mask))
+            }}
+
+            /// Element-wise maximum (polyfill via unsigned compare+select)
+            #[inline(always)]
+            pub fn max(self, other: Self) -> Self {{
+            let bias = i64x2_splat(i64::MIN);
+            let a_biased = v128_xor(self.0, bias);
+            let b_biased = v128_xor(other.0, bias);
+            let mask = i64x2_gt(a_biased, b_biased);
+            Self(v128_bitselect(self.0, other.0, mask))
+            }}
+
+            /// Clamp values between lo and hi
+            #[inline(always)]
+            pub fn clamp(self, lo: Self, hi: Self) -> Self {{
+            self.max(lo).min(hi)
             }}
 
         "#});

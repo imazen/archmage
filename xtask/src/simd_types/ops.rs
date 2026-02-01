@@ -370,12 +370,12 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
     let minmax_suffix = ty.elem.x86_minmax_suffix();
     let bits = ty.width.bits();
 
-    // Min/Max - i64/u64 only available in AVX-512
-    let has_minmax = ty.elem.is_float()
+    // Min/Max - i64/u64 only native in AVX-512, polyfill on SSE/AVX2
+    let has_native_minmax = ty.elem.is_float()
         || ty.width == SimdWidth::W512
         || !matches!(ty.elem, ElementType::I64 | ElementType::U64);
 
-    if has_minmax {
+    if has_native_minmax {
         code.push_str(&gen_binary_method(
             "Element-wise minimum",
             "min",
@@ -387,6 +387,69 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
             &format!("Self(unsafe {{ {prefix}_max_{minmax_suffix}(self.0, other.0) }})"),
         ));
         code.push_str(&formatdoc! {"
+            /// Clamp values between lo and hi
+            #[inline(always)]
+            pub fn clamp(self, lo: Self, hi: Self) -> Self {{
+            self.max(lo).min(hi)
+            }}
+
+        "});
+    } else if ty.elem == ElementType::I64 {
+        // i64 polyfill: compare + blend (SSE4.2 has _cmpgt_epi64)
+        code.push_str(&formatdoc! {"
+            /// Element-wise minimum (polyfill via compare+select)
+            #[inline(always)]
+            pub fn min(self, other: Self) -> Self {{
+            unsafe {{
+            let mask = {prefix}_cmpgt_epi64(self.0, other.0);
+            Self({prefix}_blendv_epi8(self.0, other.0, mask))
+            }}
+            }}
+
+            /// Element-wise maximum (polyfill via compare+select)
+            #[inline(always)]
+            pub fn max(self, other: Self) -> Self {{
+            unsafe {{
+            let mask = {prefix}_cmpgt_epi64(self.0, other.0);
+            Self({prefix}_blendv_epi8(other.0, self.0, mask))
+            }}
+            }}
+
+            /// Clamp values between lo and hi
+            #[inline(always)]
+            pub fn clamp(self, lo: Self, hi: Self) -> Self {{
+            self.max(lo).min(hi)
+            }}
+
+        "});
+    } else if ty.elem == ElementType::U64 {
+        // u64 polyfill: bias to signed domain, then compare + blend
+        let si_suffix = format!("si{bits}");
+        code.push_str(&formatdoc! {"
+            /// Element-wise minimum (polyfill via unsigned compare+select)
+            #[inline(always)]
+            pub fn min(self, other: Self) -> Self {{
+            unsafe {{
+            let bias = {prefix}_set1_epi64x(i64::MIN);
+            let a_biased = {prefix}_xor_{si_suffix}(self.0, bias);
+            let b_biased = {prefix}_xor_{si_suffix}(other.0, bias);
+            let mask = {prefix}_cmpgt_epi64(a_biased, b_biased);
+            Self({prefix}_blendv_epi8(self.0, other.0, mask))
+            }}
+            }}
+
+            /// Element-wise maximum (polyfill via unsigned compare+select)
+            #[inline(always)]
+            pub fn max(self, other: Self) -> Self {{
+            unsafe {{
+            let bias = {prefix}_set1_epi64x(i64::MIN);
+            let a_biased = {prefix}_xor_{si_suffix}(self.0, bias);
+            let b_biased = {prefix}_xor_{si_suffix}(other.0, bias);
+            let mask = {prefix}_cmpgt_epi64(a_biased, b_biased);
+            Self({prefix}_blendv_epi8(other.0, self.0, mask))
+            }}
+            }}
+
             /// Clamp values between lo and hi
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
@@ -479,14 +542,29 @@ pub fn generate_math_ops(ty: &SimdType) -> String {
 
         "});
     } else if ty.elem.is_signed() {
-        // Abs for signed integers - i64 only available in AVX-512
-        let has_abs = ty.width == SimdWidth::W512 || !matches!(ty.elem, ElementType::I64);
-        if has_abs {
+        // Abs for signed integers - i64 only native in AVX-512
+        let has_native_abs = ty.width == SimdWidth::W512 || !matches!(ty.elem, ElementType::I64);
+        if has_native_abs {
             code.push_str(&gen_unary_method(
                 "Absolute value",
                 "abs",
                 &format!("Self(unsafe {{ {prefix}_abs_{suffix}(self.0) }})"),
             ));
+        } else if ty.elem == ElementType::I64 {
+            // i64 abs polyfill: conditional negate using sign mask
+            let si_suffix = format!("si{bits}");
+            code.push_str(&formatdoc! {"
+                /// Absolute value (polyfill via conditional negate)
+                #[inline(always)]
+                pub fn abs(self) -> Self {{
+                unsafe {{
+                let zero = {prefix}_setzero_{si_suffix}();
+                let sign = {prefix}_cmpgt_epi64(zero, self.0);
+                Self({prefix}_sub_epi64({prefix}_xor_{si_suffix}(self.0, sign), sign))
+                }}
+                }}
+
+            "});
         }
     }
 

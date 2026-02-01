@@ -1079,6 +1079,101 @@ impl f32x4 {
         Self::transpose_4x4(&mut result);
         result
     }
+
+    // ========== Load and Convert ==========
+
+    /// Load 4 u8 values and convert to f32x4.
+    ///
+    /// Useful for image processing: load pixel values directly to float.
+    #[inline(always)]
+    pub fn from_u8(bytes: &[u8; 4]) -> Self {
+        unsafe {
+            // Load 4 bytes as a u32 into lane 0 of a u8x16 vector
+            let val = u32::from_ne_bytes(*bytes);
+            let v = vsetq_lane_u32::<0>(val, vdupq_n_u32(0));
+            let v8 = vreinterpretq_u8_u32(v);
+            // Extend u8 -> u16 -> u32 -> f32
+            let v16 = vmovl_u8(vget_low_u8(v8));
+            let v32 = vmovl_u16(vget_low_u16(v16));
+            Self(vcvtq_f32_u32(v32))
+        }
+    }
+
+    /// Convert to 4 u8 values with saturation.
+    ///
+    /// Values are clamped to [0, 255] and rounded.
+    #[inline(always)]
+    pub fn to_u8(self) -> [u8; 4] {
+        unsafe {
+            // Round to nearest i32
+            let i32s = vcvtnq_s32_f32(self.0);
+            // Narrow i32 -> i16 (signed saturation)
+            let i16s = vqmovn_s32(i32s);
+            // Narrow i16 -> u8 (unsigned saturation, clamps to [0, 255])
+            let u8s = vqmovun_s16(vcombine_s16(i16s, vdup_n_s16(0)));
+            let val = vget_lane_u32::<0>(vreinterpret_u32_u8(u8s));
+            val.to_ne_bytes()
+        }
+    }
+
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
+    ///
+    /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
+    /// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
+    #[inline]
+    pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+        unsafe {
+            // Load 16 bytes and reinterpret as 4 u32 pixels
+            let v = vld1q_u8(rgba.as_ptr());
+            let v32 = vreinterpretq_u32_u8(v);
+            let mask = vdupq_n_u32(0xFF);
+
+            // Extract channels via mask and shift
+            let r_u32 = vandq_u32(v32, mask);
+            let g_u32 = vandq_u32(vshrq_n_u32::<8>(v32), mask);
+            let b_u32 = vandq_u32(vshrq_n_u32::<16>(v32), mask);
+            let a_u32 = vshrq_n_u32::<24>(v32);
+
+            (
+                Self(vcvtq_f32_u32(r_u32)),
+                Self(vcvtq_f32_u32(g_u32)),
+                Self(vcvtq_f32_u32(b_u32)),
+                Self(vcvtq_f32_u32(a_u32)),
+            )
+        }
+    }
+
+    /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
+    ///
+    /// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
+    /// Output: 16 bytes = 4 RGBA pixels in interleaved format.
+    #[inline]
+    pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
+        unsafe {
+            // Round to nearest i32 and clamp to [0, 255]
+            let zero = vdupq_n_s32(0);
+            let max_val = vdupq_n_s32(255);
+            let ri = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r.0), zero), max_val);
+            let gi = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g.0), zero), max_val);
+            let bi = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b.0), zero), max_val);
+            let ai = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a.0), zero), max_val);
+
+            // Combine channels: R | (G << 8) | (B << 16) | (A << 24)
+            let ri = vreinterpretq_u32_s32(ri);
+            let gi = vreinterpretq_u32_s32(gi);
+            let bi = vreinterpretq_u32_s32(bi);
+            let ai = vreinterpretq_u32_s32(ai);
+
+            let pixels = vorrq_u32(
+                vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
+                vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
+            );
+
+            let mut out = [0u8; 16];
+            vst1q_u8(out.as_mut_ptr(), vreinterpretq_u8_u32(pixels));
+            out
+        }
+    }
 }
 
 impl core::ops::Add for f32x4 {
@@ -2470,6 +2565,50 @@ impl u8x16 {
     pub fn bitcast_mut_i8x16(&mut self) -> &mut i8x16 {
         unsafe { &mut *(self as *mut Self as *mut i8x16) }
     }
+    // ========== Extend/Widen Operations ==========
+
+    /// Zero-extend low 8 u8 values to i16x8.
+    ///
+    /// Takes the lower 8 bytes and zero-extends each to 16 bits.
+    #[inline(always)]
+    pub fn extend_lo_i16(self) -> i16x8 {
+        unsafe { i16x8(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(self.0)))) }
+    }
+
+    /// Zero-extend high 8 u8 values to i16x8.
+    ///
+    /// Takes the upper 8 bytes and zero-extends each to 16 bits.
+    #[inline(always)]
+    pub fn extend_hi_i16(self) -> i16x8 {
+        unsafe { i16x8(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(self.0)))) }
+    }
+
+    /// Zero-extend all 16 u8 values to two i16x8 vectors.
+    ///
+    /// Returns (low 8 as i16x8, high 8 as i16x8).
+    #[inline(always)]
+    pub fn extend_i16(self) -> (i16x8, i16x8) {
+        (self.extend_lo_i16(), self.extend_hi_i16())
+    }
+
+    /// Zero-extend low 4 u8 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        unsafe {
+            let u16s = vmovl_u8(vget_low_u8(self.0));
+            i32x4(vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(u16s))))
+        }
+    }
+
+    /// Zero-extend low 4 u8 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        unsafe {
+            let u16s = vmovl_u8(vget_low_u8(self.0));
+            let u32s = vmovl_u16(vget_low_u16(u16s));
+            f32x4(vcvtq_f32_u32(u32s))
+        }
+    }
 }
 
 impl core::ops::Add for u8x16 {
@@ -2878,6 +3017,56 @@ impl i16x8 {
     #[inline(always)]
     pub fn bitcast_mut_u16x8(&mut self) -> &mut u16x8 {
         unsafe { &mut *(self as *mut Self as *mut u16x8) }
+    }
+    // ========== Extend/Widen Operations ==========
+
+    /// Sign-extend low 4 i16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        unsafe { i32x4(vmovl_s16(vget_low_s16(self.0))) }
+    }
+
+    /// Sign-extend high 4 i16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_hi_i32(self) -> i32x4 {
+        unsafe { i32x4(vmovl_s16(vget_high_s16(self.0))) }
+    }
+
+    /// Sign-extend all 8 i16 values to two i32x4 vectors.
+    ///
+    /// Returns (low 4 as i32x4, high 4 as i32x4).
+    #[inline(always)]
+    pub fn extend_i32(self) -> (i32x4, i32x4) {
+        (self.extend_lo_i32(), self.extend_hi_i32())
+    }
+
+    /// Sign-extend low 4 i16 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        unsafe {
+            let i32s = vmovl_s16(vget_low_s16(self.0));
+            f32x4(vcvtq_f32_s32(i32s))
+        }
+    }
+
+    // ========== Pack/Narrow Operations ==========
+
+    /// Pack two i16x8 to u8x16 with unsigned saturation.
+    ///
+    /// `self` provides the low 8 bytes, `other` provides the high 8 bytes.
+    /// Values are clamped to [0, 255].
+    #[inline(always)]
+    pub fn pack_u8(self, other: Self) -> u8x16 {
+        unsafe { u8x16(vcombine_u8(vqmovun_s16(self.0), vqmovun_s16(other.0))) }
+    }
+
+    /// Pack two i16x8 to i8x16 with signed saturation.
+    ///
+    /// `self` provides the low 8 bytes, `other` provides the high 8 bytes.
+    /// Values are clamped to [-128, 127].
+    #[inline(always)]
+    pub fn pack_i8(self, other: Self) -> i8x16 {
+        unsafe { i8x16(vcombine_s8(vqmovn_s16(self.0), vqmovn_s16(other.0))) }
     }
 }
 
@@ -3295,6 +3484,36 @@ impl u16x8 {
     #[inline(always)]
     pub fn bitcast_mut_i16x8(&mut self) -> &mut i16x8 {
         unsafe { &mut *(self as *mut Self as *mut i16x8) }
+    }
+    // ========== Extend/Widen Operations ==========
+
+    /// Zero-extend low 4 u16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_lo_i32(self) -> i32x4 {
+        unsafe { i32x4(vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(self.0)))) }
+    }
+
+    /// Zero-extend high 4 u16 values to i32x4.
+    #[inline(always)]
+    pub fn extend_hi_i32(self) -> i32x4 {
+        unsafe { i32x4(vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(self.0)))) }
+    }
+
+    /// Zero-extend all 8 u16 values to two i32x4 vectors.
+    ///
+    /// Returns (low 4 as i32x4, high 4 as i32x4).
+    #[inline(always)]
+    pub fn extend_i32(self) -> (i32x4, i32x4) {
+        (self.extend_lo_i32(), self.extend_hi_i32())
+    }
+
+    /// Zero-extend low 4 u16 values to f32x4.
+    #[inline(always)]
+    pub fn extend_lo_f32(self) -> f32x4 {
+        unsafe {
+            let u32s = vmovl_u16(vget_low_u16(self.0));
+            f32x4(vcvtq_f32_u32(u32s))
+        }
     }
 }
 
@@ -3743,6 +3962,25 @@ impl i32x4 {
     #[inline(always)]
     pub fn bitcast_mut_u32x4(&mut self) -> &mut u32x4 {
         unsafe { &mut *(self as *mut Self as *mut u32x4) }
+    }
+    // ========== Pack/Narrow Operations ==========
+
+    /// Pack two i32x4 to i16x8 with signed saturation.
+    ///
+    /// `self` provides the low 4 values, `other` provides the high 4 values.
+    /// Values are clamped to [-32768, 32767].
+    #[inline(always)]
+    pub fn pack_i16(self, other: Self) -> i16x8 {
+        unsafe { i16x8(vcombine_s16(vqmovn_s32(self.0), vqmovn_s32(other.0))) }
+    }
+
+    /// Pack two i32x4 to u16x8 with unsigned saturation.
+    ///
+    /// `self` provides the low 4 values, `other` provides the high 4 values.
+    /// Values are clamped to [0, 65535].
+    #[inline(always)]
+    pub fn pack_u16(self, other: Self) -> u16x8 {
+        unsafe { u16x8(vcombine_u16(vqmovun_s32(self.0), vqmovun_s32(other.0))) }
     }
 }
 

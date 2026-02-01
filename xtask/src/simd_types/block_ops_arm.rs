@@ -7,12 +7,18 @@ use indoc::formatdoc;
 
 /// Generate ARM block operations for f32x4.
 pub fn generate_arm_block_ops(ty: &SimdType) -> String {
-    // Only for f32x4
-    if ty.elem != ElementType::F32 || ty.width != SimdWidth::W128 {
+    if ty.width != SimdWidth::W128 {
         return String::new();
     }
 
-    formatdoc! {r#"
+    match ty.elem {
+        ElementType::F32 => generate_f32x4_block_ops(),
+        _ => String::new(),
+    }
+}
+
+fn generate_f32x4_block_ops() -> String {
+    let mut code = formatdoc! {r#"
         // ========== Interleave Operations ==========
 
         /// Interleave low elements: [a0,a1,a2,a3] + [b0,b1,b2,b3] → [a0,b0,a1,b1]
@@ -99,5 +105,106 @@ pub fn generate_arm_block_ops(ty: &SimdType) -> String {
             result
         }}
 
-    "#}
+    "#};
+
+    // RGBA pixel operations
+    code.push_str(&formatdoc! {r#"
+        // ========== Load and Convert ==========
+
+        /// Load 4 u8 values and convert to f32x4.
+        ///
+        /// Useful for image processing: load pixel values directly to float.
+        #[inline(always)]
+        pub fn from_u8(bytes: &[u8; 4]) -> Self {{
+            unsafe {{
+                // Load 4 bytes as a u32 into lane 0 of a u8x16 vector
+                let val = u32::from_ne_bytes(*bytes);
+                let v = vsetq_lane_u32::<0>(val, vdupq_n_u32(0));
+                let v8 = vreinterpretq_u8_u32(v);
+                // Extend u8 -> u16 -> u32 -> f32
+                let v16 = vmovl_u8(vget_low_u8(v8));
+                let v32 = vmovl_u16(vget_low_u16(v16));
+                Self(vcvtq_f32_u32(v32))
+            }}
+        }}
+
+        /// Convert to 4 u8 values with saturation.
+        ///
+        /// Values are clamped to [0, 255] and rounded.
+        #[inline(always)]
+        pub fn to_u8(self) -> [u8; 4] {{
+            unsafe {{
+                // Round to nearest i32
+                let i32s = vcvtnq_s32_f32(self.0);
+                // Narrow i32 -> i16 (signed saturation)
+                let i16s = vqmovn_s32(i32s);
+                // Narrow i16 -> u8 (unsigned saturation, clamps to [0, 255])
+                let u8s = vqmovun_s16(vcombine_s16(i16s, vdup_n_s16(0)));
+                let val = vget_lane_u32::<0>(vreinterpret_u32_u8(u8s));
+                val.to_ne_bytes()
+            }}
+        }}
+
+        /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
+        ///
+        /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
+        /// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
+        #[inline]
+        pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {{
+            unsafe {{
+                // Load 16 bytes and reinterpret as 4 u32 pixels
+                let v = vld1q_u8(rgba.as_ptr());
+                let v32 = vreinterpretq_u32_u8(v);
+                let mask = vdupq_n_u32(0xFF);
+
+                // Extract channels via mask and shift
+                let r_u32 = vandq_u32(v32, mask);
+                let g_u32 = vandq_u32(vshrq_n_u32::<8>(v32), mask);
+                let b_u32 = vandq_u32(vshrq_n_u32::<16>(v32), mask);
+                let a_u32 = vshrq_n_u32::<24>(v32);
+
+                (
+                    Self(vcvtq_f32_u32(r_u32)),
+                    Self(vcvtq_f32_u32(g_u32)),
+                    Self(vcvtq_f32_u32(b_u32)),
+                    Self(vcvtq_f32_u32(a_u32)),
+                )
+            }}
+        }}
+
+        /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
+        ///
+        /// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
+        /// Output: 16 bytes = 4 RGBA pixels in interleaved format.
+        #[inline]
+        pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {{
+            unsafe {{
+                // Round to nearest i32 and clamp to [0, 255]
+                let zero = vdupq_n_s32(0);
+                let max_val = vdupq_n_s32(255);
+                let ri = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r.0), zero), max_val);
+                let gi = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g.0), zero), max_val);
+                let bi = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b.0), zero), max_val);
+                let ai = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a.0), zero), max_val);
+
+                // Combine channels: R | (G << 8) | (B << 16) | (A << 24)
+                let ri = vreinterpretq_u32_s32(ri);
+                let gi = vreinterpretq_u32_s32(gi);
+                let bi = vreinterpretq_u32_s32(bi);
+                let ai = vreinterpretq_u32_s32(ai);
+
+                let pixels = vorrq_u32(
+                    vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
+                    vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
+                );
+
+                let mut out = [0u8; 16];
+                vst1q_u8(out.as_mut_ptr(), vreinterpretq_u8_u32(pixels));
+                out
+            }}
+        }}
+
+    "#});
+
+    code
 }

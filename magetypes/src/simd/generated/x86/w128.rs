@@ -4529,6 +4529,40 @@ impl i64x2 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    /// Element-wise minimum (polyfill via compare+select)
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self {
+        unsafe {
+            let mask = _mm_cmpgt_epi64(self.0, other.0);
+            Self(_mm_blendv_epi8(self.0, other.0, mask))
+        }
+    }
+
+    /// Element-wise maximum (polyfill via compare+select)
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self {
+        unsafe {
+            let mask = _mm_cmpgt_epi64(self.0, other.0);
+            Self(_mm_blendv_epi8(other.0, self.0, mask))
+        }
+    }
+
+    /// Clamp values between lo and hi
+    #[inline(always)]
+    pub fn clamp(self, lo: Self, hi: Self) -> Self {
+        self.max(lo).min(hi)
+    }
+
+    /// Absolute value (polyfill via conditional negate)
+    #[inline(always)]
+    pub fn abs(self) -> Self {
+        unsafe {
+            let zero = _mm_setzero_si128();
+            let sign = _mm_cmpgt_epi64(zero, self.0);
+            Self(_mm_sub_epi64(_mm_xor_si128(self.0, sign), sign))
+        }
+    }
+
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -4923,6 +4957,36 @@ impl u64x2 {
     pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    /// Element-wise minimum (polyfill via unsigned compare+select)
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self {
+        unsafe {
+            let bias = _mm_set1_epi64x(i64::MIN);
+            let a_biased = _mm_xor_si128(self.0, bias);
+            let b_biased = _mm_xor_si128(other.0, bias);
+            let mask = _mm_cmpgt_epi64(a_biased, b_biased);
+            Self(_mm_blendv_epi8(self.0, other.0, mask))
+        }
+    }
+
+    /// Element-wise maximum (polyfill via unsigned compare+select)
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self {
+        unsafe {
+            let bias = _mm_set1_epi64x(i64::MIN);
+            let a_biased = _mm_xor_si128(self.0, bias);
+            let b_biased = _mm_xor_si128(other.0, bias);
+            let mask = _mm_cmpgt_epi64(a_biased, b_biased);
+            Self(_mm_blendv_epi8(other.0, self.0, mask))
+        }
+    }
+
+    /// Clamp values between lo and hi
+    #[inline(always)]
+    pub fn clamp(self, lo: Self, hi: Self) -> Self {
+        self.max(lo).min(hi)
     }
 
     // ========== Comparisons ==========
