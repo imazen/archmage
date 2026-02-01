@@ -183,6 +183,7 @@ impl f32x4 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
     /// Square root
     #[inline(always)]
     pub fn sqrt(self) -> Self {
@@ -216,11 +217,13 @@ impl f32x4 {
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm_fmadd_ps(self.0, a.0, b.0) })
     }
+
     /// Fused multiply-sub: self * a - b
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm_fmsub_ps(self.0, a.0, b.0) })
     }
+
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -396,6 +399,7 @@ impl f32x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -1326,6 +1330,7 @@ impl f64x2 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
     /// Square root
     #[inline(always)]
     pub fn sqrt(self) -> Self {
@@ -1359,11 +1364,13 @@ impl f64x2 {
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm_fmadd_pd(self.0, a.0, b.0) })
     }
+
     /// Fused multiply-sub: self * a - b
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm_fmsub_pd(self.0, a.0, b.0) })
     }
+
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -1479,6 +1486,7 @@ impl f64x2 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -1882,6 +1890,7 @@ impl i8x16 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -2007,6 +2016,7 @@ impl i8x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -2259,6 +2269,7 @@ impl u8x16 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -2385,6 +2396,7 @@ impl u8x16 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -2682,6 +2694,7 @@ impl i16x8 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -2815,6 +2828,7 @@ impl i16x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -2824,6 +2838,7 @@ impl i16x8 {
         })
     }
     // ========== Shift Operations ==========
+
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -2831,6 +2846,7 @@ impl i16x8 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi16::<N>(self.0) })
     }
+
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -2838,6 +2854,7 @@ impl i16x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
+
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -2845,6 +2862,7 @@ impl i16x8 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi16::<N>(self.0) })
     }
+
     // ========== Extend/Widen Operations ==========
 
     /// Sign-extend low 4 i16 values to i32x4.
@@ -3142,6 +3160,7 @@ impl u16x8 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -3276,6 +3295,7 @@ impl u16x8 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -3285,6 +3305,7 @@ impl u16x8 {
         })
     }
     // ========== Shift Operations ==========
+
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3292,6 +3313,7 @@ impl u16x8 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi16::<N>(self.0) })
     }
+
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3299,6 +3321,7 @@ impl u16x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
+
     // ========== Extend/Widen Operations ==========
 
     /// Zero-extend low 4 u16 values to i32x4.
@@ -3577,6 +3600,7 @@ impl i32x4 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
     /// Absolute value
     #[inline(always)]
     pub fn abs(self) -> Self {
@@ -3713,6 +3737,7 @@ impl i32x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -3722,6 +3747,7 @@ impl i32x4 {
         })
     }
     // ========== Shift Operations ==========
+
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3729,6 +3755,7 @@ impl i32x4 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi32::<N>(self.0) })
     }
+
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -3736,6 +3763,7 @@ impl i32x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi32::<N>(self.0) })
     }
+
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
@@ -3743,6 +3771,7 @@ impl i32x4 {
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srai_epi32::<N>(self.0) })
     }
+
     // ========== Extend/Widen Operations ==========
 
     /// Convert to f32x4.
@@ -4032,6 +4061,7 @@ impl u32x4 {
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         self.max(lo).min(hi)
     }
+
     // ========== Comparisons ==========
     // These return a mask where each lane is all-1s (true) or all-0s (false).
     // Use with `blend()` to select values based on the comparison result.
@@ -4161,6 +4191,7 @@ impl u32x4 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -4170,6 +4201,7 @@ impl u32x4 {
         })
     }
     // ========== Shift Operations ==========
+
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -4177,6 +4209,7 @@ impl u32x4 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi32::<N>(self.0) })
     }
+
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -4184,6 +4217,7 @@ impl u32x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi32::<N>(self.0) })
     }
+
     // ========== Bitcast ==========
     /// Reinterpret bits as `f32x4` (zero-cost).
     #[inline(always)]
@@ -4555,6 +4589,7 @@ impl i64x2 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -4564,6 +4599,7 @@ impl i64x2 {
         })
     }
     // ========== Shift Operations ==========
+
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -4571,6 +4607,7 @@ impl i64x2 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi64::<N>(self.0) })
     }
+
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -4578,6 +4615,7 @@ impl i64x2 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
+
     // ========== Bitcast ==========
     /// Reinterpret bits as `f64x2` (zero-cost).
     #[inline(always)]
@@ -4953,6 +4991,7 @@ impl u64x2 {
     }
 
     // ========== Bitwise Unary Operations ==========
+
     /// Bitwise NOT (complement): flips all bits.
     #[inline(always)]
     pub fn not(self) -> Self {
@@ -4962,6 +5001,7 @@ impl u64x2 {
         })
     }
     // ========== Shift Operations ==========
+
     /// Shift each lane left by `N` bits.
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -4969,6 +5009,7 @@ impl u64x2 {
     pub fn shl<const N: i32>(self) -> Self {
         Self(unsafe { _mm_slli_epi64::<N>(self.0) })
     }
+
     /// Shift each lane right by `N` bits (logical/unsigned shift).
     ///
     /// Bits shifted out are lost; zeros are shifted in.
@@ -4976,6 +5017,7 @@ impl u64x2 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
+
     // ========== Bitcast ==========
     /// Reinterpret bits as `f64x2` (zero-cost).
     #[inline(always)]
