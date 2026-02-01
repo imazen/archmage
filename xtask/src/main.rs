@@ -968,418 +968,172 @@ fn generate_reference_docs_new() -> Result<()> {
 // Compile-Time Intrinsic Soundness Verification
 // ============================================================================
 
-/// Verify intrinsic safety by generating and compiling test code.
+/// Verify magetypes intrinsic soundness via static analysis.
 ///
-/// This generates a test crate that:
-/// 1. Has `#[target_feature(enable = "...")]` functions for each feature set
-/// 2. Calls every intrinsic claimed to be valid for those features
-/// 3. Compiles to verify the intrinsics exist and have correct signatures
+/// This performs rigorous verification by:
+/// 1. Extracting all intrinsic calls from magetypes generated code
+/// 2. Looking up each intrinsic's required features in complete_intrinsics.csv
+/// 3. Comparing against the features provided by the gating token
 ///
-/// If compilation succeeds, the intrinsics are sound for the claimed features.
+/// Token gating can be at file-level OR method-level:
+/// - File-level: the token specified in token-registry.toml for that file
+/// - Method-level: if a method takes a higher-level token as parameter (e.g., X64V4Token),
+///   intrinsics inside that method are checked against that token's features
+///
+/// If any intrinsic requires features not provided by its gating token, that's a soundness error.
+/// This is deterministic static analysis - no approximation or guessing.
 fn verify_intrinsic_soundness() -> Result<()> {
-    use std::process::Command;
-
-    println!("=== Intrinsic Soundness Verification ===\n");
+    println!("=== Magetypes Intrinsic Soundness Verification ===\n");
+    println!("Method: Static analysis against stdarch intrinsics database\n");
 
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
     let db = load_intrinsic_database()?;
 
-    // x86 intrinsic regex
+    println!("Loaded {} intrinsics from stdarch database", db.len());
+
+    // Intrinsic extraction regexes
     let x86_re = Regex::new(r"\b(_mm(?:256|512)?_\w+)\s*(?:\(|::<)").expect("invalid x86 regex");
+    let arm_re = Regex::new(
+        r"\b(v(?:abs|add|and|bic|bsl|ceq|cge|cgt|cle|clt|cnt|cvt|div|dup|eor|ext|fma|fms|get|hadd|ld[1234]|max|min|ml[as]|mov|mul|mvn|neg|not|orn|orr|padd|pmax|pmin|qadd|qsub|reinterpret|rev|rnd|rsqrte|set|shl|shr|sqrt|st[1234]|sub|tbl|tbx|trn|uzp|zip)\w*)\s*\("
+    ).expect("invalid arm regex");
+    let wasm_re = Regex::new(
+        r"\b((?:f32x4|f64x2|i8x16|i16x8|i32x4|i64x2|u8x16|u16x8|u32x4|u64x2|v128)_\w+)\s*[\(<]",
+    ).expect("invalid wasm regex");
+
+    // Regex to detect method-level token parameters (higher-level tokens used as function args)
+    // Handles both `X64V4Token` and `archmage::X64V4Token` patterns
+    let method_token_re = Regex::new(
+        r"pub fn \w+[^{]*(?:archmage::)?(X64V4Token|Avx512Token|Avx512ModernToken|Avx512Fp16Token|Server64)\b"
+    ).expect("invalid method token regex");
 
     let simd_dir = PathBuf::from("magetypes/src/simd");
-
-    // Collect intrinsics by feature set
-    let mut intrinsics_by_features: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut errors: Vec<String> = Vec::new();
+    let mut verified_count = 0usize;
+    let mut unknown_count = 0usize;
 
     for mapping in &reg.magetypes_file {
-        if mapping.arch != "x86" {
-            continue; // Start with x86 only
-        }
-
         let file_path = simd_dir.join(&mapping.rel_path);
         if !file_path.exists() {
             continue;
         }
 
         let content = fs::read_to_string(&file_path)?;
-        let file_features = reg.features_for(&mapping.token).unwrap_or_default();
-        let features_key = file_features.join(",");
+        let file_token_features = reg.features_for(&mapping.token).unwrap_or_default();
 
-        for cap in x86_re.captures_iter(&content) {
-            let intrinsic = cap[1].to_string();
+        // Select regex based on architecture
+        let re = match mapping.arch.as_str() {
+            "x86" => &x86_re,
+            "arm" => &arm_re,
+            "wasm" => &wasm_re,
+            _ => continue,
+        };
 
-            // Look up intrinsic's required features from CSV
-            if let Some(entry) = db.get(&intrinsic) {
-                // Use the intrinsic's actual required features
-                let intrinsic_features = entry.features.clone();
-                intrinsics_by_features
-                    .entry(intrinsic_features)
-                    .or_default()
-                    .insert(intrinsic);
-            } else {
-                // Fallback to file's features if not in CSV
-                intrinsics_by_features
-                    .entry(features_key.clone())
-                    .or_default()
-                    .insert(intrinsic);
+        // Process line by line to track method-level token context
+        let lines: Vec<&str> = content.lines().collect();
+        let mut current_method_token: Option<&str> = None;
+        let mut brace_depth = 0i32;
+        let mut method_start_depth = 0i32;
+
+        for line in &lines {
+            // Check if this line starts a method with a higher-level token parameter
+            // Do this BEFORE processing braces so we capture the depth correctly
+            if let Some(cap) = method_token_re.captures(line) {
+                current_method_token = Some(cap.get(1).unwrap().as_str());
+                // The method body starts after this line's opening brace
+                // Count braces on this line to get the starting depth
+                let line_opens: i32 = line.chars().filter(|&c| c == '{').count() as i32;
+                let line_closes: i32 = line.chars().filter(|&c| c == '}').count() as i32;
+                method_start_depth = brace_depth + line_opens - line_closes;
+            }
+
+            // Track brace depth for this line
+            for ch in line.chars() {
+                match ch {
+                    '{' => brace_depth += 1,
+                    '}' => {
+                        brace_depth -= 1;
+                        // Reset when we exit the method (depth goes below start depth)
+                        if brace_depth < method_start_depth && current_method_token.is_some() {
+                            current_method_token = None;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            // Extract intrinsics from this line
+            for cap in re.captures_iter(line) {
+                let intrinsic = &cap[1];
+
+                // Determine which token's features to use
+                let effective_token = current_method_token.unwrap_or(&mapping.token);
+                let effective_features = if current_method_token.is_some() {
+                    reg.features_for(effective_token).unwrap_or_default()
+                } else {
+                    file_token_features.clone()
+                };
+                let features_set: HashSet<&str> = effective_features.iter().copied().collect();
+
+                // Look up intrinsic in database
+                if let Some(entry) = db.get(intrinsic) {
+                    // Parse the intrinsic's required features
+                    let required: HashSet<&str> = entry
+                        .features
+                        .split(',')
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+
+                    // Check if token provides all required features
+                    let missing: Vec<&&str> = required
+                        .iter()
+                        .filter(|f| !features_set.contains(*f))
+                        .collect();
+
+                    if !missing.is_empty() {
+                        errors.push(format!(
+                            "  {} in {} ({}): requires {:?}, MISSING: {:?}",
+                            intrinsic, mapping.rel_path, effective_token,
+                            required, missing
+                        ));
+                    } else {
+                        verified_count += 1;
+                    }
+                } else {
+                    unknown_count += 1;
+                }
             }
         }
     }
 
-    // Generate soundness test crate
-    let test_dir = PathBuf::from("target/soundness-test");
-    fs::create_dir_all(&test_dir)?;
-
-    // Generate Cargo.toml (with empty [workspace] to avoid being picked up by parent)
-    let cargo_toml = r#"[package]
-name = "soundness-test"
-version = "0.0.0"
-edition = "2021"
-publish = false
-
-[lib]
-path = "lib.rs"
-
-[workspace]
-"#;
-    fs::write(test_dir.join("Cargo.toml"), cargo_toml)?;
-
-    // Generate lib.rs with target_feature functions
-    let mut lib_rs = String::from(
-        r#"//! Auto-generated intrinsic soundness test.
-//! If this compiles, all intrinsics are valid for their claimed features.
-
-#![allow(unused)]
-#![allow(clippy::all)]
-#![allow(overflowing_literals)]
-
-#[cfg(target_arch = "x86_64")]
-use core::arch::x86_64::*;
-
-// Helper to prevent optimization and create zeroed values
-#[inline(always)]
-fn z128() -> __m128 { unsafe { core::mem::zeroed() } }
-#[inline(always)]
-fn z128i() -> __m128i { unsafe { core::mem::zeroed() } }
-#[inline(always)]
-fn z128d() -> __m128d { unsafe { core::mem::zeroed() } }
-#[inline(always)]
-fn z256() -> __m256 { unsafe { core::mem::zeroed() } }
-#[inline(always)]
-fn z256i() -> __m256i { unsafe { core::mem::zeroed() } }
-#[inline(always)]
-fn z256d() -> __m256d { unsafe { core::mem::zeroed() } }
-#[inline(always)]
-fn z512() -> __m512 { unsafe { core::mem::zeroed() } }
-#[inline(always)]
-fn z512i() -> __m512i { unsafe { core::mem::zeroed() } }
-#[inline(always)]
-fn z512d() -> __m512d { unsafe { core::mem::zeroed() } }
-
-"#,
-    );
-
-    for (features, intrinsics) in &intrinsics_by_features {
-        if intrinsics.is_empty() {
-            continue;
-        }
-
-        // Parse features into target_feature format
-        let feature_list: Vec<&str> = features.split(',').map(|s| s.trim()).collect();
-        let fn_name = features.replace(',', "_").replace('.', "_");
-
-        // Generate function with target_feature
-        writeln!(lib_rs, "#[cfg(target_arch = \"x86_64\")]").unwrap();
-        for feature in &feature_list {
-            writeln!(lib_rs, "#[target_feature(enable = \"{feature}\")]").unwrap();
-        }
-        writeln!(lib_rs, "unsafe fn test_{fn_name}() {{").unwrap();
-
-        // Call each intrinsic with zeroed inputs to verify it exists and has correct signature
-        for intrinsic in intrinsics {
-            // Generate a call using core::hint::black_box to prevent optimization
-            // We use zeroed SIMD types as dummy inputs
-            let call = generate_intrinsic_call(intrinsic);
-            writeln!(lib_rs, "    {call}").unwrap();
-        }
-
-        writeln!(lib_rs, "}}\n").unwrap();
+    println!("\nResults:");
+    println!("  ✓ Verified: {} intrinsic calls", verified_count);
+    if unknown_count > 0 {
+        println!("  ? Unknown: {} (not in stdarch database)", unknown_count);
     }
 
-    fs::write(test_dir.join("lib.rs"), &lib_rs)?;
-
-    println!("Generated soundness test crate: {}", test_dir.display());
-    println!("  Feature sets: {}", intrinsics_by_features.len());
-    println!(
-        "  Total intrinsics: {}",
-        intrinsics_by_features
-            .values()
-            .map(|s| s.len())
-            .sum::<usize>()
-    );
-
-    // Run cargo check
-    println!("\nRunning cargo check...\n");
-
-    let output = Command::new("cargo")
-        .args(["check", "--lib"])
-        .current_dir(&test_dir)
-        .output()
-        .context("Failed to run cargo check")?;
-
-    if output.status.success() {
-        println!("✓ All intrinsics compile successfully under claimed features!");
-        println!("\nSoundness verification PASSED");
+    if errors.is_empty() {
+        println!("\n✓ Soundness verification PASSED");
+        println!("  All {} verified intrinsics are valid for their gating tokens.", verified_count);
         Ok(())
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        eprintln!("Compilation failed:\n{}", stderr);
-        bail!("Soundness verification FAILED - intrinsics do not compile under claimed features")
-    }
-}
-
-/// Generate a dummy call to an intrinsic based on its name pattern.
-///
-/// This parses the intrinsic name to determine:
-/// 1. Register width (128/256/512)
-/// 2. Data type (ps/pd/epi8/epi16/epi32/epi64/si128/si256/si512)
-/// 3. Arity (unary, binary, ternary, etc.)
-fn generate_intrinsic_call(name: &str) -> String {
-    // Determine width and zero helper
-    let (z_ps, z_i, z_pd) = if name.starts_with("_mm512_") {
-        ("z512()", "z512i()", "z512d()")
-    } else if name.starts_with("_mm256_") {
-        ("z256()", "z256i()", "z256d()")
-    } else {
-        ("z128()", "z128i()", "z128d()")
-    };
-
-    // Determine data type from suffix
-    let is_pd = name.contains("_pd") || name.ends_with("pd");
-    let is_ps = name.contains("_ps") || name.ends_with("ps");
-    let is_si = name.contains("_si")
-        || name.contains("si128")
-        || name.contains("si256")
-        || name.contains("si512");
-    let is_epi = name.contains("_epi") || name.contains("epu");
-
-    let z = if is_pd {
-        z_pd
-    } else if is_ps {
-        z_ps
-    } else {
-        z_i
-    };
-
-    // Skip intrinsics that are hard to call (require complex setup)
-    let skip_patterns = [
-        "gather",
-        "scatter",
-        "mask_",
-        "maskz_",
-        "conflict",
-        "compress",
-        "expand",
-        "stream",
-        "prefetch",
-        "pause",
-        "lfence",
-        "sfence",
-        "mfence",
-        "popcnt_",
-        "lzcnt_",
-        "tzcnt_", // scalar intrinsics
-        "_cvt",   // conversions need special handling
-        "crc32",
-        "aes",
-        "clmul",
-        "sha",     // crypto
-        "reduce_", // reduction ops
-        "range_",
-        "range", // AVX-512 range
-        "fixup",
-        "getexp",
-        "getmant",
-        "scalef",
-        "fpclass",
-        "roundscale_",
-        "ternarylogic",
-    ];
-    for pat in skip_patterns {
-        if name.contains(pat) {
-            return format!("// skipped: {name} (complex signature)");
+        println!("\n✗ Soundness verification FAILED");
+        println!("  {} intrinsic(s) use features not provided by their gating token:\n", errors.len());
+        for err in &errors {
+            eprintln!("{}", err);
         }
+        bail!("Soundness verification FAILED - {} intrinsics use features beyond their gating token", errors.len())
     }
-
-    // Const generic patterns - need explicit const
-    if name.contains("slli_") || name.contains("srli_") || name.contains("srai_") {
-        return format!("let _ = {name}::<1>({z});");
-    }
-    if name.contains("shuffle_")
-        || name.contains("permute_")
-        || name.contains("blend_")
-        || name.contains("insert_")
-        || name.contains("extract_")
-    {
-        // These need const generics
-        return format!("// skipped: {name} (const generic)");
-    }
-    // permutevar takes (data, integer_index) - skip due to mixed types
-    if name.contains("permutevar") {
-        return format!("// skipped: {name} (mixed types)");
-    }
-    if name.contains("_round_") || name.contains("round_") {
-        return format!("let _ = {name}::<0>({z});");
-    }
-    if name.contains("cmp_")
-        && !name.contains("cmpeq")
-        && !name.contains("cmpgt")
-        && !name.contains("cmplt")
-    {
-        // AVX cmp with const predicate
-        return format!("// skipped: {name} (cmp predicate)");
-    }
-
-    // Categorize by operation pattern
-    // Cast intrinsics need special handling - input type differs from suffix
-    if name.contains("castsi") {
-        // castsi128_ps, castsi128_pd, castsi256_ps, etc. - input is integer
-        return format!("let _ = {name}({z_i});");
-    }
-    if name.contains("castps") {
-        // castps_si128, castps_pd, etc. - input is ps
-        // castps256_ps512 takes 256-bit input
-        if name.contains("256_ps512") || name.contains("256_si512") {
-            return format!("let _ = {name}(z256());");
-        }
-        if name.contains("128_ps256") || name.contains("128_si256") {
-            return format!("let _ = {name}(z128());");
-        }
-        return format!("let _ = {name}({z_ps});");
-    }
-    if name.contains("castpd") {
-        // castpd_si128, castpd_ps, etc. - input is pd
-        return format!("let _ = {name}({z_pd});");
-    }
-
-    let is_unary = name.contains("sqrt")
-        || name.contains("rcp")
-        || name.contains("rsqrt")
-        || name.contains("abs")
-        || (name.contains("not") && !name.contains("andnot"))
-        || (name.contains("neg") && !name.contains("fneg"))
-        || name.contains("floor")
-        || name.contains("ceil")
-        || name.contains("round")
-        || name.contains("setzero")
-        || name.contains("undefined");
-
-    let is_set = name.contains("set1_") || name.contains("set_") || name.contains("setr_");
-
-    let is_load = name.contains("load") || name.contains("lddqu");
-    let is_store = name.contains("store");
-
-    if name.contains("setzero") {
-        return format!("let _ = {name}();");
-    }
-    if name.contains("undefined") {
-        return format!("let _ = {name}();");
-    }
-    if is_set {
-        // set1 takes single scalar, set/setr take multiple
-        if name.contains("set1_") {
-            if is_pd {
-                return format!("let _ = {name}(0.0f64);");
-            } else if is_ps {
-                return format!("let _ = {name}(0.0f32);");
-            } else if name.contains("epi64") {
-                return format!("let _ = {name}(0i64);");
-            } else if name.contains("epi32") {
-                return format!("let _ = {name}(0i32);");
-            } else if name.contains("epi16") {
-                return format!("let _ = {name}(0i16);");
-            } else if name.contains("epi8") {
-                return format!("let _ = {name}(0i8);");
-            }
-        }
-        // set/setr need lane-count args - skip these
-        return format!("// skipped: {name} (set variant)");
-    }
-    if is_load || is_store {
-        return format!("// skipped: {name} (memory op)");
-    }
-    if is_unary {
-        return format!("let _ = {name}({z});");
-    }
-
-    // permute2f128 takes (a, b, imm8) - skip
-    if name.contains("permute2f128") || name.contains("permute2x128") {
-        return format!("// skipped: {name} (imm8 arg)");
-    }
-    // extractf/extracti takes (a, imm8) - skip
-    if name.contains("extractf128") || name.contains("extracti128") {
-        return format!("// skipped: {name} (imm8 arg)");
-    }
-
-    // FMA and other ternary patterns (3 args)
-    if name.contains("fmadd")
-        || name.contains("fmsub")
-        || name.contains("fnmadd")
-        || name.contains("fnmsub")
-        || name.contains("fmaddsub")
-        || name.contains("fmsubadd")
-        || name.contains("permutex2var")
-    {
-        return format!("let _ = {name}({z}, {z}, {z});");
-    }
-
-    // Ternary blendv operations (a, b, mask)
-    if name.contains("blendv") {
-        return format!("let _ = {name}({z}, {z}, {z});");
-    }
-
-    // Binary operations (most common)
-    if name.contains("add")
-        || name.contains("sub")
-        || name.contains("mul")
-        || name.contains("div")
-        || name.contains("and")
-        || name.contains("or")
-        || name.contains("xor")
-        || name.contains("min")
-        || name.contains("max")
-        || name.contains("cmpeq")
-        || name.contains("cmpgt")
-        || name.contains("cmplt")
-        || name.contains("cmpge")
-        || name.contains("cmple")
-        || name.contains("cmpne")
-        || name.contains("unpack")
-        || name.contains("hadd")
-        || name.contains("hsub")
-        || name.contains("blend_")
-    {
-        return format!("let _ = {name}({z}, {z});");
-    }
-
-    // Default: try binary, skip if it fails in comments
-    format!("let _ = {name}({z}, {z}); // assumed binary")
 }
 
 /// Run tests under Miri to detect undefined behavior.
 ///
-/// Note: Miri has limited SIMD support. We run with ARCHMAGE_DISABLE=1
-/// to force scalar fallback paths, which can still catch UB in:
-/// - Token creation logic
-/// - Memory operations
-/// - Generic SIMD type handling
+/// Runs magetypes tests under Miri with full SIMD support enabled.
+/// This catches UB in SIMD operations, memory handling, and type conversions.
 fn run_miri() -> Result<()> {
     use std::process::Command;
 
-    println!("=== Running Miri ===\n");
-    println!("Note: Running with ARCHMAGE_DISABLE=1 to use scalar fallbacks");
-    println!("(Miri has limited SIMD support)\n");
+    println!("=== Running Miri on magetypes ===\n");
 
     // Check if miri is installed
     let miri_check = Command::new("cargo")
@@ -1402,15 +1156,22 @@ fn run_miri() -> Result<()> {
         _ => {}
     }
 
-    // Run miri with SIMD disabled to test scalar paths
+    // Run miri on magetypes with full SIMD support
     let status = Command::new("cargo")
-        .args(["+nightly", "miri", "test", "--lib"])
-        .env("ARCHMAGE_DISABLE", "1")
+        .args([
+            "+nightly",
+            "miri",
+            "test",
+            "-p",
+            "magetypes",
+            "--features",
+            "magetypes/avx512",
+        ])
         .status()
         .context("Failed to run miri")?;
 
     if status.success() {
-        println!("\n✓ Miri found no undefined behavior!");
+        println!("\n✓ Miri found no undefined behavior in magetypes!");
         Ok(())
     } else {
         bail!("Miri detected undefined behavior")
@@ -1435,7 +1196,7 @@ fn main() -> Result<()> {
         eprintln!(
             "       cargo xtask soundness           - Compile-time intrinsic safety verification"
         );
-        eprintln!("       cargo xtask miri                - Run tests under Miri (detects UB)");
+        eprintln!("       cargo xtask miri                - Run magetypes under Miri (detects UB)");
         std::process::exit(1);
     }
 
