@@ -190,20 +190,28 @@ jobs:
 
       - name: Check for differences
         run: |
-          # Check magetypes SIMD types
-          if ! git diff --exit-code magetypes/src/simd/; then
+          # Check all generated directories
+          if ! git diff --exit-code magetypes/src/simd/generated/; then
             echo "::error::Generated magetypes SIMD types differ from committed code!"
             echo "Run 'cargo xtask generate' locally and commit the changes."
             exit 1
           fi
-          # Check magetypes tests
           if ! git diff --exit-code magetypes/tests/; then
             echo "::error::Generated magetypes tests differ from committed code!"
             echo "Run 'cargo xtask generate' locally and commit the changes."
             exit 1
           fi
-          # Check reference docs
-          if ! git diff --exit-code docs/x86-intrinsics-by-token.md docs/aarch64-intrinsics-by-token.md docs/memory-ops-reference.md; then
+          if ! git diff --exit-code src/tokens/generated/; then
+            echo "::error::Generated token files differ from committed code!"
+            echo "Run 'cargo xtask generate' locally and commit the changes."
+            exit 1
+          fi
+          if ! git diff --exit-code archmage-macros/src/generated/; then
+            echo "::error::Generated macro registry differs from committed code!"
+            echo "Run 'cargo xtask generate' locally and commit the changes."
+            exit 1
+          fi
+          if ! git diff --exit-code docs/generated/; then
             echo "::error::Generated reference docs differ from committed code!"
             echo "Run 'cargo xtask generate' locally and commit the changes."
             exit 1
@@ -227,6 +235,83 @@ jobs:
 
       - name: Validate magetypes safety
         run: cargo run -p xtask -- validate
+
+  # ==========================================================================
+  # Soundness verification - ensure intrinsics match token features
+  # ==========================================================================
+  soundness:
+    name: Soundness Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Verify intrinsic soundness
+        run: cargo run -p xtask -- soundness
+
+  # ==========================================================================
+  # API parity check - ensure consistent APIs across architectures
+  # ==========================================================================
+  parity:
+    name: API Parity Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check API parity
+        run: cargo run -p xtask -- parity
+
+  # ==========================================================================
+  # Miri - undefined behavior detection
+  # ==========================================================================
+  miri:
+    name: Miri (UB Detection)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup Miri
+        run: cargo miri setup
+
+      - name: Run Miri on magetypes
+        run: cargo miri test -p magetypes --features avx512
+
+  # ==========================================================================
+  # Fuzz testing - property-based divergence detection
+  # ==========================================================================
+  fuzz:
+    name: Fuzz (Divergence Detection)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run fuzz tests
+        run: cargo test -p magetypes --test fuzz_divergence --features avx512
 
   # ==========================================================================
   # Clippy - primary targets only
