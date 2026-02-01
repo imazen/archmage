@@ -1,2069 +1,772 @@
-//! Transcendental operations (log, exp, pow, cbrt).
+//! Transcendental operations (log, exp, pow, cbrt) for x86.
 
 use super::types::{ElementType, SimdType, SimdWidth};
-use std::fmt::Write;
+use indoc::formatdoc;
 
 pub fn generate_transcendental_ops(ty: &SimdType) -> String {
-    let mut code = String::new();
-
     // Only for float types
     if !ty.elem.is_float() {
-        return code;
+        return String::new();
     }
 
     let prefix = ty.width.x86_prefix();
     let suffix = ty.elem.x86_suffix();
-    let _bits = ty.width.bits();
 
-    // Determine integer suffix for cast operations
-    let int_suffix = if ty.elem == ElementType::F32 {
-        "si256"
-    } else {
-        "si256"
-    };
-    let int_suffix_512 = if ty.elem == ElementType::F32 {
-        "si512"
-    } else {
-        "si512"
-    };
-    let int_suffix_128 = if ty.elem == ElementType::F32 {
-        "si128"
-    } else {
-        "si128"
+    // Integer suffix for cast operations
+    let int_suffix = match ty.width {
+        SimdWidth::W128 => "si128",
+        SimdWidth::W256 => "si256",
+        SimdWidth::W512 => "si512",
     };
 
-    let actual_int_suffix = match ty.width {
-        SimdWidth::W128 => int_suffix_128,
-        SimdWidth::W256 => int_suffix,
-        SimdWidth::W512 => int_suffix_512,
-    };
-
-    writeln!(
-        code,
-        "    // ========== Transcendental Operations ==========\n"
-    )
-    .unwrap();
+    let mut code = String::from("    // ========== Transcendental Operations ==========\n\n");
 
     if ty.elem == ElementType::F32 {
-        // ===== F32 log2_lowp =====
-        writeln!(
-            code,
-            "    /// Low-precision base-2 logarithm (~7.7e-5 max relative error)."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses rational polynomial approximation. Fast but not suitable for color-accurate work.").unwrap();
-        writeln!(code, "    /// For higher precision, use `log2_midp()`.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log2_lowp(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        // Rational polynomial coefficients from butteraugli/jpegli"
-        )
-        .unwrap();
-        writeln!(code, "        const P0: f32 = -1.850_383_34e-6;").unwrap();
-        writeln!(code, "        const P1: f32 = 1.428_716_05;").unwrap();
-        writeln!(code, "        const P2: f32 = 0.742_458_73;").unwrap();
-        writeln!(code, "        const Q0: f32 = 0.990_328_14;").unwrap();
-        writeln!(code, "        const Q1: f32 = 1.009_671_86;").unwrap();
-        writeln!(code, "        const Q2: f32 = 0.174_093_43;").unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            let x_bits = {}_cast{}_{}(self.0);",
-            prefix, suffix, actual_int_suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let offset = {}_set1_epi32(0x3f2aaaab_u32 as i32);",
-            prefix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let exp_bits = {}_sub_epi32(x_bits, offset);",
-            prefix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let exp_shifted = {}_srai_epi32::<23>(exp_bits);",
-            prefix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            let mantissa_bits = {}_sub_epi32(x_bits, {}_slli_epi32::<23>(exp_shifted));", prefix, prefix).unwrap();
-        writeln!(
-            code,
-            "            let mantissa = {}_cast{}_{}(mantissa_bits);",
-            prefix, actual_int_suffix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let exp_val = {}_cvtepi32_{}(exp_shifted);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            let one = {}_set1_{}(1.0);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let m = {}_sub_{}(mantissa, one);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            // Horner's for numerator: P2*m^2 + P1*m + P0"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let yp = {}_fmadd_{}({}_set1_{}(P2), m, {}_set1_{}(P1));",
-            prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let yp = {}_fmadd_{}(yp, m, {}_set1_{}(P0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            // Horner's for denominator: Q2*m^2 + Q1*m + Q0"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let yq = {}_fmadd_{}({}_set1_{}(Q2), m, {}_set1_{}(Q1));",
-            prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let yq = {}_fmadd_{}(yq, m, {}_set1_{}(Q0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            Self({}_add_{}({}_div_{}(yp, yq), exp_val))",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 exp2_lowp =====
-        writeln!(
-            code,
-            "    /// Low-precision base-2 exponential (~5.5e-3 max relative error)."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses degree-3 polynomial approximation. Fast but not suitable for color-accurate work.").unwrap();
-        writeln!(code, "    /// For higher precision, use `exp2_midp()`.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp2_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        // Polynomial coefficients").unwrap();
-        writeln!(code, "        const C0: f32 = 1.0;").unwrap();
-        writeln!(code, "        const C1: f32 = core::f32::consts::LN_2;").unwrap();
-        writeln!(code, "        const C2: f32 = 0.240_226_5;").unwrap();
-        writeln!(code, "        const C3: f32 = 0.055_504_11;").unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            // Clamp to safe range").unwrap();
-        writeln!(
-            code,
-            "            let x = {}_max_{}(self.0, {}_set1_{}(-126.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let x = {}_min_{}(x, {}_set1_{}(126.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            // Split into integer and fractional parts"
-        )
-        .unwrap();
-
-        // Use appropriate floor/round intrinsic based on width
-        if ty.width == SimdWidth::W512 {
-            writeln!(
-                code,
-                "            let xi = {}_roundscale_{}::<0x01>(x); // floor",
-                prefix, suffix
-            )
-            .unwrap();
-        } else {
-            writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
-        }
-
-        writeln!(
-            code,
-            "            let xf = {}_sub_{}(x, xi);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Polynomial for 2^frac").unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}({}_set1_{}(C3), xf, {}_set1_{}(C2));",
-            prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            // Scale by 2^integer using bit manipulation"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let xi_i32 = {}_cvt{}_epi32(xi);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "            let bias = {}_set1_epi32(127);", prefix).unwrap();
-        writeln!(
-            code,
-            "            let scale_bits = {}_slli_epi32::<23>({}_add_epi32(xi_i32, bias));",
-            prefix, prefix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let scale = {}_cast{}_{}(scale_bits);",
-            prefix, actual_int_suffix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(poly, scale))",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 ln_lowp (natural log) =====
-        writeln!(code, "    /// Low-precision natural logarithm.").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Computed as `log2_lowp(x) * ln(2)`. For higher precision, use `ln_midp()`."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn ln_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LN2)))",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 exp_lowp (natural exp) =====
-        writeln!(code, "    /// Low-precision natural exponential (e^x).").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Computed as `exp2_lowp(x * log2(e))`. For higher precision, use `exp_midp()`."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp_lowp(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        const LOG2_E: f32 = core::f32::consts::LOG2_E;"
-        )
-        .unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_lowp()",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 log10_lowp =====
-        writeln!(code, "    /// Low-precision base-10 logarithm.").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `log2_lowp(x) / log2(10)`.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log10_lowp(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)"
-        )
-        .unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LOG10_2)))",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 pow_lowp =====
-        writeln!(code, "    /// Low-precision power function (self^n).").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2_lowp(n * log2_lowp(self))`. For higher precision, use `pow_midp()`.").unwrap();
-        writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn pow_lowp(self, n: f32) -> Self {{").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(n))).exp2_lowp()",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ========== Mid-Precision Transcendental Operations ==========
-        writeln!(
-            code,
-            "    // ========== Mid-Precision Transcendental Operations ==========\n"
-        )
-        .unwrap();
-
-        // ===== F32 log2_midp_unchecked =====
-        writeln!(
-            code,
-            "    /// Mid-precision base-2 logarithm (~3 ULP max error) - unchecked variant."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN)."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Use `log2_midp()` for correct IEEE behavior on edge cases."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log2_midp_unchecked(self) -> Self {{").unwrap();
-        writeln!(code, "        // Constants for range reduction").unwrap();
-        writeln!(
-            code,
-            "        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;"
-        )
-        .unwrap();
-        writeln!(code, "        const EXPONENT_BIAS: i32 = 127;").unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "        // Coefficients for odd polynomial on y = (a-1)/(a+1)"
-        )
-        .unwrap();
-        writeln!(code, "        const C0: f32 = 2.885_390_08;  // 2/ln(2)").unwrap();
-        writeln!(
-            code,
-            "        const C1: f32 = 0.961_800_76;  // y^2 coefficient"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        const C2: f32 = 0.576_974_45;  // y^4 coefficient"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        const C3: f32 = 0.434_411_97;  // y^6 coefficient"
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            let x_bits = {}_cast{}_{}(self.0);",
-            prefix, suffix, actual_int_suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            // Normalize mantissa to [sqrt(2)/2, sqrt(2)]"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let offset = {}_set1_epi32((ONE - SQRT2_OVER_2) as i32);",
-            prefix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let adjusted = {}_add_epi32(x_bits, offset);",
-            prefix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Extract exponent").unwrap();
-        writeln!(
-            code,
-            "            let exp_raw = {}_srai_epi32::<23>(adjusted);",
-            prefix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let exp_biased = {}_sub_epi32(exp_raw, {}_set1_epi32(EXPONENT_BIAS));",
-            prefix, prefix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let n = {}_cvtepi32_{}(exp_biased);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Reconstruct normalized mantissa").unwrap();
-        writeln!(
-            code,
-            "            let mantissa_bits = {}_and_{}(adjusted, {}_set1_epi32(MANTISSA_MASK));",
-            prefix, actual_int_suffix, prefix
-        )
-        .unwrap();
-        writeln!(code, "            let a_bits = {}_add_epi32(mantissa_bits, {}_set1_epi32(SQRT2_OVER_2 as i32));", prefix, prefix).unwrap();
-        writeln!(
-            code,
-            "            let a = {}_cast{}_{}(a_bits);",
-            prefix, actual_int_suffix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // y = (a - 1) / (a + 1)").unwrap();
-        writeln!(
-            code,
-            "            let one = {}_set1_{}(1.0);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let a_minus_1 = {}_sub_{}(a, one);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let a_plus_1 = {}_add_{}(a, one);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let y = {}_div_{}(a_minus_1, a_plus_1);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // y^2").unwrap();
-        writeln!(
-            code,
-            "            let y2 = {}_mul_{}(y, y);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            // Polynomial: c0 + y^2*(c1 + y^2*(c2 + y^2*c3))"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}({}_set1_{}(C3), y2, {}_set1_{}(C2));",
-            prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, y2, {}_set1_{}(C1));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, y2, {}_set1_{}(C0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Result: y * poly + n").unwrap();
-        writeln!(
-            code,
-            "            Self({}_fmadd_{}(y, poly, n))",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 log2_midp (checked, default) =====
-        writeln!(
-            code,
-            "    /// Mid-precision base-2 logarithm (~3 ULP max error)."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Handles edge cases correctly: log2(0) = -inf, log2(negative) = NaN,"
-        )
-        .unwrap();
-        writeln!(code, "    /// log2(+inf) = +inf, log2(NaN) = NaN.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log2_midp(self) -> Self {{").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            let result = self.log2_midp_unchecked();").unwrap();
-        writeln!(code, "").unwrap();
-
-        if ty.width == SimdWidth::W512 {
-            // AVX-512 uses mask registers
-            writeln!(
-                code,
-                "            // Edge case masks (AVX-512 uses mask registers)"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let zero = {}_setzero_{}();",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_zero = {}_cmp_{}_mask::<_CMP_EQ_OQ>(self.0, zero);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_neg = {}_cmp_{}_mask::<_CMP_LT_OQ>(self.0, zero);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_inf = {}_cmp_{}_mask::<_CMP_EQ_OQ>(self.0, {}_set1_{}(f32::INFINITY));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(
-                code,
-                "            let is_nan = {}_cmp_{}_mask::<_CMP_UNORD_Q>(self.0, self.0);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Apply corrections using mask blend").unwrap();
-            writeln!(
-                code,
-                "            let neg_inf = {}_set1_{}(f32::NEG_INFINITY);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let pos_inf = {}_set1_{}(f32::INFINITY);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let nan = {}_set1_{}(f32::NAN);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_zero, result.0, neg_inf);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_neg, r, nan);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_inf, r, pos_inf);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_nan, r, nan);",
-                prefix, suffix
-            )
-            .unwrap();
-        } else {
-            // SSE/AVX use vector masks
-            writeln!(code, "            // Edge case masks").unwrap();
-            writeln!(
-                code,
-                "            let zero = {}_setzero_{}();",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_zero = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, zero);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_neg = {}_cmp_{}::<_CMP_LT_OQ>(self.0, zero);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_inf = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, {}_set1_{}(f32::INFINITY));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(
-                code,
-                "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Apply corrections").unwrap();
-            writeln!(
-                code,
-                "            let neg_inf = {}_set1_{}(f32::NEG_INFINITY);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let pos_inf = {}_set1_{}(f32::INFINITY);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let nan = {}_set1_{}(f32::NAN);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(result.0, neg_inf, is_zero);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(r, nan, is_neg);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(r, pos_inf, is_inf);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(r, nan, is_nan);",
-                prefix, suffix
-            )
-            .unwrap();
-        }
-        writeln!(code, "            Self(r)").unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 exp2_midp_unchecked =====
-        writeln!(
-            code,
-            "    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error) - unchecked variant."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses degree-6 minimax polynomial.").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Use `exp2_midp()` for correct IEEE behavior on edge cases."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp2_midp_unchecked(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        // Degree-6 minimax polynomial for 2^x on [0, 1]"
-        )
-        .unwrap();
-        writeln!(code, "        const C0: f32 = 1.0;").unwrap();
-        writeln!(code, "        const C1: f32 = 0.693_147_180_559_945;").unwrap();
-        writeln!(code, "        const C2: f32 = 0.240_226_506_959_101;").unwrap();
-        writeln!(code, "        const C3: f32 = 0.055_504_108_664_822;").unwrap();
-        writeln!(code, "        const C4: f32 = 0.009_618_129_107_629;").unwrap();
-        writeln!(code, "        const C5: f32 = 0.001_333_355_814_497;").unwrap();
-        writeln!(code, "        const C6: f32 = 0.000_154_035_303_933;").unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            // Clamp to safe range").unwrap();
-        writeln!(
-            code,
-            "            let x = {}_max_{}(self.0, {}_set1_{}(-126.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let x = {}_min_{}(x, {}_set1_{}(126.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-
-        // Use appropriate floor intrinsic based on width
-        if ty.width == SimdWidth::W512 {
-            writeln!(
-                code,
-                "            let xi = {}_roundscale_{}::<0x01>(x); // floor",
-                prefix, suffix
-            )
-            .unwrap();
-        } else {
-            writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
-        }
-
-        writeln!(
-            code,
-            "            let xf = {}_sub_{}(x, xi);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Horner's method with 6 coefficients").unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}({}_set1_{}(C6), xf, {}_set1_{}(C5));",
-            prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C4));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C3));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C2));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Scale by 2^integer").unwrap();
-        writeln!(
-            code,
-            "            let xi_i32 = {}_cvt{}_epi32(xi);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "            let bias = {}_set1_epi32(127);", prefix).unwrap();
-        writeln!(
-            code,
-            "            let scale_bits = {}_slli_epi32::<23>({}_add_epi32(xi_i32, bias));",
-            prefix, prefix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let scale = {}_cast{}_{}(scale_bits);",
-            prefix, actual_int_suffix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(poly, scale))",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 exp2_midp (checked, default) =====
-        writeln!(
-            code,
-            "    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error)."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Uses degree-6 minimax polynomial.").unwrap();
-        writeln!(
-            code,
-            "    /// Suitable for 8-bit, 10-bit, and 12-bit color processing."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Handles edge cases correctly: exp2(x > 128) = +inf, exp2(x < -150) = 0,"
-        )
-        .unwrap();
-        writeln!(code, "    /// exp2(NaN) = NaN.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp2_midp(self) -> Self {{").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            let result = self.exp2_midp_unchecked();").unwrap();
-        writeln!(code, "").unwrap();
-
-        if ty.width == SimdWidth::W512 {
-            // AVX-512 uses mask registers
-            writeln!(
-                code,
-                "            // Edge case masks (AVX-512 uses mask registers)"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_overflow = {}_cmp_{}_mask::<_CMP_GE_OQ>(self.0, {}_set1_{}(128.0));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(
-                code,
-                "            let is_underflow = {}_cmp_{}_mask::<_CMP_LT_OQ>(self.0, {}_set1_{}(-150.0));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(
-                code,
-                "            let is_nan = {}_cmp_{}_mask::<_CMP_UNORD_Q>(self.0, self.0);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Apply corrections using mask blend").unwrap();
-            writeln!(
-                code,
-                "            let pos_inf = {}_set1_{}(f32::INFINITY);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let zero = {}_setzero_{}();",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let nan = {}_set1_{}(f32::NAN);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_overflow, result.0, pos_inf);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_underflow, r, zero);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_nan, r, nan);",
-                prefix, suffix
-            )
-            .unwrap();
-        } else {
-            // SSE/AVX use vector masks
-            writeln!(code, "            // Edge case masks").unwrap();
-            writeln!(
-                code,
-                "            let is_overflow = {}_cmp_{}::<_CMP_GE_OQ>(self.0, {}_set1_{}(128.0));",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_underflow = {}_cmp_{}::<_CMP_LT_OQ>(self.0, {}_set1_{}(-150.0));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(
-                code,
-                "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Apply corrections").unwrap();
-            writeln!(
-                code,
-                "            let pos_inf = {}_set1_{}(f32::INFINITY);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let zero = {}_setzero_{}();",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let nan = {}_set1_{}(f32::NAN);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(result.0, pos_inf, is_overflow);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(r, zero, is_underflow);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(r, nan, is_nan);",
-                prefix, suffix
-            )
-            .unwrap();
-        }
-        writeln!(code, "            Self(r)").unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 pow_midp_unchecked =====
-        writeln!(
-            code,
-            "    /// Mid-precision power function (self^n) - unchecked variant."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Computed as `exp2_midp_unchecked(n * log2_midp_unchecked(self))`."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN)."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Use `pow_midp()` for correct IEEE behavior on edge cases."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(
-            code,
-            "    pub fn pow_midp_unchecked(self, n: f32) -> Self {{"
-        )
-        .unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_midp_unchecked().0, {}_set1_{}(n))).exp2_midp_unchecked()",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 pow_midp =====
-        writeln!(code, "    /// Mid-precision power function (self^n).").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Computed as `exp2_midp(n * log2_midp(self))`."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Handles edge cases: pow(0, n) = 0 (n>0), pow(inf, n) = inf (n>0)."
-        )
-        .unwrap();
-        writeln!(code, "    /// Note: Only valid for positive self values.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn pow_midp(self, n: f32) -> Self {{").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_midp().0, {}_set1_{}(n))).exp2_midp()",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 ln_midp_unchecked =====
-        writeln!(
-            code,
-            "    /// Mid-precision natural logarithm - unchecked variant."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Computed as `log2_midp_unchecked(x) * ln(2)`."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN)."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Use `ln_midp()` for correct IEEE behavior on edge cases."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn ln_midp_unchecked(self) -> Self {{").unwrap();
-        writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_midp_unchecked().0, {}_set1_{}(LN2)))",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 ln_midp =====
-        writeln!(code, "    /// Mid-precision natural logarithm.").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `log2_midp(x) * ln(2)`.").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Handles edge cases: ln(0) = -inf, ln(negative) = NaN, ln(inf) = inf."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn ln_midp(self) -> Self {{").unwrap();
-        writeln!(code, "        const LN2: f32 = core::f32::consts::LN_2;").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_midp().0, {}_set1_{}(LN2)))",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 exp_midp_unchecked =====
-        writeln!(
-            code,
-            "    /// Mid-precision natural exponential (e^x) - unchecked variant."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Computed as `exp2_midp_unchecked(x * log2(e))`."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Use `exp_midp()` for correct IEEE behavior on edge cases."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp_midp_unchecked(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        const LOG2_E: f32 = core::f32::consts::LOG2_E;"
-        )
-        .unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_midp_unchecked()",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 exp_midp =====
-        writeln!(code, "    /// Mid-precision natural exponential (e^x).").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(code, "    /// Computed as `exp2_midp(x * log2(e))`.").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Handles edge cases: exp(x>88) = inf, exp(x<-103) = 0, exp(NaN) = NaN."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp_midp(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        const LOG2_E: f32 = core::f32::consts::LOG2_E;"
-        )
-        .unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_midp()",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ========== Cube Root ==========
-        writeln!(code, "    // ========== Cube Root ==========\n").unwrap();
-
-        // ===== F32 cbrt_midp_unchecked =====
-        writeln!(
-            code,
-            "    /// Mid-precision cube root (x^(1/3)) - unchecked variant."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Uses scalar extraction for initial guess + Newton-Raphson."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Handles negative values correctly (returns -cbrt(|x|))."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// **Warning**: Does not handle edge cases (0, inf, NaN, denormals)."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Use `cbrt_midp()` for correct IEEE behavior on edge cases."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn cbrt_midp_unchecked(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        // B1 magic constant for cube root initial approximation"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "        // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130"
-        )
-        .unwrap();
-        writeln!(code, "        const B1: u32 = 709_958_130;").unwrap();
-        writeln!(code, "        const ONE_THIRD: f32 = 1.0 / 3.0;").unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            // Extract to array for initial approximation (scalar division by 3)"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let x_arr: [f32; {}] = core::mem::transmute(self.0);",
-            ty.lanes()
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let mut y_arr = [0.0f32; {}];",
-            ty.lanes()
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            for i in 0..{} {{", ty.lanes()).unwrap();
-        writeln!(code, "                let xi = x_arr[i];").unwrap();
-        writeln!(code, "                let ui = xi.to_bits();").unwrap();
-        writeln!(
-            code,
-            "                let hx = ui & 0x7FFF_FFFF; // abs bits"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "                // Initial approximation: bits/3 + B1 (always positive)"
-        )
-        .unwrap();
-        writeln!(code, "                let approx = hx / 3 + B1;").unwrap();
-        writeln!(code, "                y_arr[i] = f32::from_bits(approx);").unwrap();
-        writeln!(code, "            }}").unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let sign_bits = {}_and_{}(self.0, {}_set1_{}(-0.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let mut y = core::mem::transmute::<_, _>(y_arr);"
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            // Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)"
-        )
-        .unwrap();
-        writeln!(code, "            // Two iterations for full f32 precision").unwrap();
-        writeln!(
-            code,
-            "            let two = {}_set1_{}(2.0);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Iteration 1").unwrap();
-        writeln!(
-            code,
-            "            let y3 = {}_mul_{}({}_mul_{}(y, y), y);",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let num = {}_fmadd_{}(two, abs_x, y3);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let den = {}_fmadd_{}(two, y3, abs_x);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            y = {}_mul_{}(y, {}_div_{}(num, den));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Iteration 2").unwrap();
-        writeln!(
-            code,
-            "            let y3 = {}_mul_{}({}_mul_{}(y, y), y);",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let num = {}_fmadd_{}(two, abs_x, y3);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let den = {}_fmadd_{}(two, y3, abs_x);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            y = {}_mul_{}(y, {}_div_{}(num, den));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Restore sign").unwrap();
-        writeln!(
-            code,
-            "            Self({}_or_{}(y, sign_bits))",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 cbrt_midp (checked, default) =====
-        writeln!(code, "    /// Mid-precision cube root (x^(1/3)).").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Uses scalar extraction for initial guess + Newton-Raphson."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Handles negative values correctly (returns -cbrt(|x|))."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Handles edge cases: cbrt(0) = 0, cbrt(±inf) = ±inf, cbrt(NaN) = NaN."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Does not handle denormals (use `cbrt_midp_precise()` for full IEEE compliance)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn cbrt_midp(self) -> Self {{").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            let result = self.cbrt_midp_unchecked();").unwrap();
-        writeln!(code, "").unwrap();
-
-        if ty.width == SimdWidth::W512 {
-            // AVX-512 uses mask registers
-            writeln!(
-                code,
-                "            // Edge case masks (AVX-512 uses mask registers)"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let zero = {}_setzero_{}();",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_zero = {}_cmp_{}_mask::<_CMP_EQ_OQ>(self.0, zero);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_inf = {}_cmp_{}_mask::<_CMP_EQ_OQ>(abs_x, {}_set1_{}(f32::INFINITY));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(
-                code,
-                "            let is_nan = {}_cmp_{}_mask::<_CMP_UNORD_Q>(self.0, self.0);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Apply corrections using mask blend (use self.0 for zero to preserve sign)").unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_zero, result.0, self.0);  // ±0 -> ±0",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_inf, r, self.0);  // ±inf -> ±inf",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_mask_blend_{}(is_nan, r, {}_set1_{}(f32::NAN));",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-        } else {
-            // SSE/AVX use vector masks
-            writeln!(code, "            // Edge case masks").unwrap();
-            writeln!(
-                code,
-                "            let zero = {}_setzero_{}();",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_zero = {}_cmp_{}::<_CMP_EQ_OQ>(self.0, zero);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let is_inf = {}_cmp_{}::<_CMP_EQ_OQ>(abs_x, {}_set1_{}(f32::INFINITY));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(
-                code,
-                "            let is_nan = {}_cmp_{}::<_CMP_UNORD_Q>(self.0, self.0);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(
-                code,
-                "            // Apply corrections (use self.0 for zero to preserve sign)"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(result.0, self.0, is_zero);  // ±0 -> ±0",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(r, self.0, is_inf);  // ±inf -> ±inf",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let r = {}_blendv_{}(r, {}_set1_{}(f32::NAN), is_nan);",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-        }
-        writeln!(code, "            Self(r)").unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F32 cbrt_midp_precise =====
-        writeln!(
-            code,
-            "    /// Precise cube root (x^(1/3)) with full IEEE compliance."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Uses scalar extraction for initial guess + Newton-Raphson."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Handles negative values correctly (returns -cbrt(|x|))."
-        )
-        .unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`."
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "    /// Use `cbrt_midp()` if denormal support is not needed (most image processing)."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn cbrt_midp_precise(self) -> Self {{").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            // Scale factor for denormals: 2^24").unwrap();
-        writeln!(
-            code,
-            "            const SCALE_UP: f32 = 16777216.0;  // 2^24"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32"
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            let abs_x = {}_andnot_{}({}_set1_{}(-0.0), self.0);",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-
-        if ty.width == SimdWidth::W512 {
-            // AVX-512 uses mask registers
-            writeln!(
-                code,
-                "            let is_denorm = {}_cmp_{}_mask::<_CMP_LT_OQ>(abs_x, {}_set1_{}(DENORM_LIMIT));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Scale up denormals").unwrap();
-            writeln!(
-                code,
-                "            let scaled_x = {}_mul_{}(self.0, {}_set1_{}(SCALE_UP));",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let x_for_cbrt = {}_mask_blend_{}(is_denorm, self.0, scaled_x);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Compute cbrt with edge case handling").unwrap();
-            writeln!(
-                code,
-                "            let result = Self(x_for_cbrt).cbrt_midp();"
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(
-                code,
-                "            // Scale down results from denormal inputs"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let scaled_result = {}_mul_{}(result.0, {}_set1_{}(SCALE_DOWN));",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            Self({}_mask_blend_{}(is_denorm, result.0, scaled_result))",
-                prefix, suffix
-            )
-            .unwrap();
-        } else {
-            // SSE/AVX use vector masks
-            writeln!(
-                code,
-                "            let is_denorm = {}_cmp_{}::<_CMP_LT_OQ>(abs_x, {}_set1_{}(DENORM_LIMIT));",
-                prefix, suffix, prefix, suffix
-            ).unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Scale up denormals").unwrap();
-            writeln!(
-                code,
-                "            let scaled_x = {}_mul_{}(self.0, {}_set1_{}(SCALE_UP));",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let x_for_cbrt = {}_blendv_{}(self.0, scaled_x, is_denorm);",
-                prefix, suffix
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(code, "            // Compute cbrt with edge case handling").unwrap();
-            writeln!(
-                code,
-                "            let result = Self(x_for_cbrt).cbrt_midp();"
-            )
-            .unwrap();
-            writeln!(code, "").unwrap();
-            writeln!(
-                code,
-                "            // Scale down results from denormal inputs"
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            let scaled_result = {}_mul_{}(result.0, {}_set1_{}(SCALE_DOWN));",
-                prefix, suffix, prefix, suffix
-            )
-            .unwrap();
-            writeln!(
-                code,
-                "            Self({}_blendv_{}(result.0, scaled_result, is_denorm))",
-                prefix, suffix
-            )
-            .unwrap();
-        }
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&generate_f32_lowp_ops(ty, prefix, suffix, int_suffix));
+        code.push_str(&generate_f32_midp_ops(ty, prefix, suffix, int_suffix));
     } else if ty.elem == ElementType::F64 {
-        // ===== F64 log2_lowp =====
-        // For f64, we use a similar algorithm but with f64 constants
-        writeln!(code, "    /// Low-precision base-2 logarithm.").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Uses polynomial approximation. For natural log, use `ln_lowp()`."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log2_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        // Polynomial coefficients for f64").unwrap();
-        writeln!(code, "        const P0: f64 = -1.850_383_340_051_831e-6;").unwrap();
-        writeln!(code, "        const P1: f64 = 1.428_716_047_008_376;").unwrap();
-        writeln!(code, "        const P2: f64 = 0.742_458_733_278_206;").unwrap();
-        writeln!(code, "        const Q0: f64 = 0.990_328_142_775_907;").unwrap();
-        writeln!(code, "        const Q1: f64 = 1.009_671_857_224_115;").unwrap();
-        writeln!(code, "        const Q2: f64 = 0.174_093_430_036_669;").unwrap();
-        writeln!(
-            code,
-            "        const OFFSET: i64 = 0x3fe6a09e667f3bcd_u64 as i64; // 2/3 in f64 bits"
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            let x_bits = {}_cast{}_{}(self.0);",
-            prefix, suffix, actual_int_suffix
-        )
-        .unwrap();
-
-        // For 64-bit integers, we need different intrinsics
-        // For set1 with i64, SSE/AVX use epi64x, AVX-512 uses epi64
-        let epi64_suffix = if ty.width == SimdWidth::W512 {
-            "epi64"
-        } else {
-            "epi64x"
-        };
-
-        writeln!(
-            code,
-            "            let offset = {}_set1_{}(OFFSET);",
-            prefix, epi64_suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let exp_bits = {}_sub_epi64(x_bits, offset);",
-            prefix
-        )
-        .unwrap();
-        // _mm_srai_epi64 / _mm256_srai_epi64 require AVX-512F.
-        // For W128/W256, polyfill via scalar extraction.
-        if ty.width == SimdWidth::W512 {
-            writeln!(
-                code,
-                "            let exp_shifted = {}_srai_epi64::<52>(exp_bits);",
-                prefix
-            )
-            .unwrap();
-        } else {
-            let lanes = ty.lanes();
-            writeln!(
-                code,
-                "            let exp_arr_raw: [i64; {lanes}] = core::mem::transmute(exp_bits);"
-            )
-            .unwrap();
-            match ty.width {
-                SimdWidth::W128 => {
-                    writeln!(
-                        code,
-                        "            let exp_shifted = _mm_set_epi64x(exp_arr_raw[1] >> 52, exp_arr_raw[0] >> 52);"
-                    )
-                    .unwrap();
-                }
-                SimdWidth::W256 => {
-                    writeln!(
-                        code,
-                        "            let exp_shifted = _mm256_set_epi64x(exp_arr_raw[3] >> 52, exp_arr_raw[2] >> 52, exp_arr_raw[1] >> 52, exp_arr_raw[0] >> 52);"
-                    )
-                    .unwrap();
-                }
-                _ => unreachable!(),
-            }
-        }
-        writeln!(code, "").unwrap();
-        writeln!(code, "            let mantissa_bits = {}_sub_epi64(x_bits, {}_slli_epi64::<52>(exp_shifted));", prefix, prefix).unwrap();
-        writeln!(
-            code,
-            "            let mantissa = {}_cast{}_{}(mantissa_bits);",
-            prefix, actual_int_suffix, suffix
-        )
-        .unwrap();
-
-        // Convert i64 to f64 - extract and convert via scalar
-        writeln!(code, "            // Convert exponent to f64").unwrap();
-        writeln!(
-            code,
-            "            let exp_arr: [i64; {}] = core::mem::transmute(exp_shifted);",
-            ty.lanes()
-        )
-        .unwrap();
-        writeln!(code, "            let exp_f64: [f64; {}] = [", ty.lanes()).unwrap();
-        for i in 0..ty.lanes() {
-            if i > 0 {
-                write!(code, ", ").unwrap();
-            }
-            write!(code, "exp_arr[{}] as f64", i).unwrap();
-        }
-        writeln!(code, "];").unwrap();
-        writeln!(
-            code,
-            "            let exp_val = {}_loadu_{}(exp_f64.as_ptr());",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            let one = {}_set1_{}(1.0);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let m = {}_sub_{}(mantissa, one);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Horner's for numerator").unwrap();
-        writeln!(
-            code,
-            "            let yp = {}_fmadd_{}({}_set1_{}(P2), m, {}_set1_{}(P1));",
-            prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let yp = {}_fmadd_{}(yp, m, {}_set1_{}(P0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Horner's for denominator").unwrap();
-        writeln!(
-            code,
-            "            let yq = {}_fmadd_{}({}_set1_{}(Q2), m, {}_set1_{}(Q1));",
-            prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let yq = {}_fmadd_{}(yq, m, {}_set1_{}(Q0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            Self({}_add_{}({}_div_{}(yp, yq), exp_val))",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F64 exp2_lowp =====
-        writeln!(code, "    /// Low-precision base-2 exponential (2^x).").unwrap();
-        writeln!(code, "    ///").unwrap();
-        writeln!(
-            code,
-            "    /// Uses polynomial approximation. For natural exp, use `exp_lowp()`."
-        )
-        .unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp2_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        const C0: f64 = 1.0;").unwrap();
-        writeln!(code, "        const C1: f64 = core::f64::consts::LN_2;").unwrap();
-        writeln!(code, "        const C2: f64 = 0.240_226_506_959_101;").unwrap();
-        writeln!(code, "        const C3: f64 = 0.055_504_108_664_822;").unwrap();
-        writeln!(code, "        const C4: f64 = 0.009_618_129_107_629;").unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(code, "            // Clamp to safe range").unwrap();
-        writeln!(
-            code,
-            "            let x = {}_max_{}(self.0, {}_set1_{}(-1022.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let x = {}_min_{}(x, {}_set1_{}(1022.0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-
-        if ty.width == SimdWidth::W512 {
-            writeln!(
-                code,
-                "            let xi = {}_roundscale_{}::<0x01>(x); // floor",
-                prefix, suffix
-            )
-            .unwrap();
-        } else {
-            writeln!(code, "            let xi = {}_floor_{}(x);", prefix, suffix).unwrap();
-        }
-
-        writeln!(
-            code,
-            "            let xf = {}_sub_{}(x, xi);",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(code, "            // Polynomial for 2^frac").unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}({}_set1_{}(C4), xf, {}_set1_{}(C3));",
-            prefix, suffix, prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C2));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C1));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let poly = {}_fmadd_{}(poly, xf, {}_set1_{}(C0));",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            // Scale by 2^integer - extract, convert, scale"
-        )
-        .unwrap();
-        writeln!(
-            code,
-            "            let xi_arr: [f64; {}] = core::mem::transmute(xi);",
-            ty.lanes()
-        )
-        .unwrap();
-        writeln!(code, "            let scale_arr: [f64; {}] = [", ty.lanes()).unwrap();
-        for i in 0..ty.lanes() {
-            if i > 0 {
-                write!(code, ", ").unwrap();
-            }
-            write!(
-                code,
-                "f64::from_bits(((xi_arr[{}] as i64 + 1023) << 52) as u64)",
-                i
-            )
-            .unwrap();
-        }
-        writeln!(code, "];").unwrap();
-        writeln!(
-            code,
-            "            let scale = {}_loadu_{}(scale_arr.as_ptr());",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(poly, scale))",
-            prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F64 ln_lowp =====
-        writeln!(code, "    /// Low-precision natural logarithm.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn ln_lowp(self) -> Self {{").unwrap();
-        writeln!(code, "        const LN2: f64 = core::f64::consts::LN_2;").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LN2)))",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F64 exp_lowp =====
-        writeln!(code, "    /// Low-precision natural exponential (e^x).").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn exp_lowp(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        const LOG2_E: f64 = core::f64::consts::LOG2_E;"
-        )
-        .unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.0, {}_set1_{}(LOG2_E))).exp2_lowp()",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F64 log10_lowp =====
-        writeln!(code, "    /// Low-precision base-10 logarithm.").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn log10_lowp(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        const LOG10_2: f64 = core::f64::consts::LOG10_2;"
-        )
-        .unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(LOG10_2)))",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
-
-        // ===== F64 pow_lowp =====
-        writeln!(code, "    /// Low-precision power function (self^n).").unwrap();
-        writeln!(code, "    #[inline(always)]").unwrap();
-        writeln!(code, "    pub fn pow_lowp(self, n: f64) -> Self {{").unwrap();
-        writeln!(code, "        unsafe {{").unwrap();
-        writeln!(
-            code,
-            "            Self({}_mul_{}(self.log2_lowp().0, {}_set1_{}(n))).exp2_lowp()",
-            prefix, suffix, prefix, suffix
-        )
-        .unwrap();
-        writeln!(code, "        }}").unwrap();
-        writeln!(code, "    }}\n").unwrap();
+        code.push_str(&generate_f64_lowp_ops(ty, prefix, suffix, int_suffix));
     }
 
     code
+}
+
+fn generate_f32_lowp_ops(ty: &SimdType, prefix: &str, suffix: &str, int_suffix: &str) -> String {
+    let floor_op = if ty.width == SimdWidth::W512 {
+        format!("{prefix}_roundscale_{suffix}::<0x01>(x)")
+    } else {
+        format!("{prefix}_floor_{suffix}(x)")
+    };
+
+    formatdoc! {r#"
+    /// Low-precision base-2 logarithm (~7.7e-5 max relative error).
+    ///
+    /// Uses rational polynomial approximation. Fast but not suitable for color-accurate work.
+    /// For higher precision, use `log2_midp()`.
+    #[inline(always)]
+    pub fn log2_lowp(self) -> Self {{
+        // Rational polynomial coefficients from butteraugli/jpegli
+        const P0: f32 = -1.850_383_34e-6;
+        const P1: f32 = 1.428_716_05;
+        const P2: f32 = 0.742_458_73;
+        const Q0: f32 = 0.990_328_14;
+        const Q1: f32 = 1.009_671_86;
+        const Q2: f32 = 0.174_093_43;
+
+        unsafe {{
+            let x_bits = {prefix}_cast{suffix}_{int_suffix}(self.0);
+            let offset = {prefix}_set1_epi32(0x3f2aaaab_u32 as i32);
+            let exp_bits = {prefix}_sub_epi32(x_bits, offset);
+            let exp_shifted = {prefix}_srai_epi32::<23>(exp_bits);
+
+            let mantissa_bits = {prefix}_sub_epi32(x_bits, {prefix}_slli_epi32::<23>(exp_shifted));
+            let mantissa = {prefix}_cast{int_suffix}_{suffix}(mantissa_bits);
+            let exp_val = {prefix}_cvtepi32_{suffix}(exp_shifted);
+
+            let one = {prefix}_set1_{suffix}(1.0);
+            let m = {prefix}_sub_{suffix}(mantissa, one);
+
+            // Horner's for numerator: P2*m^2 + P1*m + P0
+            let yp = {prefix}_fmadd_{suffix}({prefix}_set1_{suffix}(P2), m, {prefix}_set1_{suffix}(P1));
+            let yp = {prefix}_fmadd_{suffix}(yp, m, {prefix}_set1_{suffix}(P0));
+
+            // Horner's for denominator: Q2*m^2 + Q1*m + Q0
+            let yq = {prefix}_fmadd_{suffix}({prefix}_set1_{suffix}(Q2), m, {prefix}_set1_{suffix}(Q1));
+            let yq = {prefix}_fmadd_{suffix}(yq, m, {prefix}_set1_{suffix}(Q0));
+
+            Self({prefix}_add_{suffix}({prefix}_div_{suffix}(yp, yq), exp_val))
+        }}
+    }}
+
+    /// Low-precision base-2 exponential (~5.5e-3 max relative error).
+    ///
+    /// Uses degree-3 polynomial approximation. Fast but not suitable for color-accurate work.
+    /// For higher precision, use `exp2_midp()`.
+    #[inline(always)]
+    pub fn exp2_lowp(self) -> Self {{
+        // Polynomial coefficients
+        const C0: f32 = 1.0;
+        const C1: f32 = core::f32::consts::LN_2;
+        const C2: f32 = 0.240_226_5;
+        const C3: f32 = 0.055_504_11;
+
+        unsafe {{
+            // Clamp to safe range
+            let x = {prefix}_max_{suffix}(self.0, {prefix}_set1_{suffix}(-126.0));
+            let x = {prefix}_min_{suffix}(x, {prefix}_set1_{suffix}(126.0));
+
+            // Split into integer and fractional parts
+            let xi = {floor_op};
+            let xf = {prefix}_sub_{suffix}(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = {prefix}_fmadd_{suffix}({prefix}_set1_{suffix}(C3), xf, {prefix}_set1_{suffix}(C2));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C1));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C0));
+
+            // Scale by 2^integer using bit manipulation
+            let xi_i32 = {prefix}_cvt{suffix}_epi32(xi);
+            let bias = {prefix}_set1_epi32(127);
+            let scale_bits = {prefix}_slli_epi32::<23>({prefix}_add_epi32(xi_i32, bias));
+            let scale = {prefix}_cast{int_suffix}_{suffix}(scale_bits);
+
+            Self({prefix}_mul_{suffix}(poly, scale))
+        }}
+    }}
+
+    /// Low-precision natural logarithm.
+    ///
+    /// Computed as `log2_lowp(x) * ln(2)`. For higher precision, use `ln_midp()`.
+    #[inline(always)]
+    pub fn ln_lowp(self) -> Self {{
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_lowp().0, {prefix}_set1_{suffix}(LN2)))
+        }}
+    }}
+
+    /// Low-precision natural exponential (e^x).
+    ///
+    /// Computed as `exp2_lowp(x * log2(e))`. For higher precision, use `exp_midp()`.
+    #[inline(always)]
+    pub fn exp_lowp(self) -> Self {{
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.0, {prefix}_set1_{suffix}(LOG2_E))).exp2_lowp()
+        }}
+    }}
+
+    /// Low-precision base-10 logarithm.
+    ///
+    /// Computed as `log2_lowp(x) / log2(10)`.
+    #[inline(always)]
+    pub fn log10_lowp(self) -> Self {{
+        const LOG10_2: f32 = core::f32::consts::LOG10_2; // 1/log2(10)
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_lowp().0, {prefix}_set1_{suffix}(LOG10_2)))
+        }}
+    }}
+
+    /// Low-precision power function (self^n).
+    ///
+    /// Computed as `exp2_lowp(n * log2_lowp(self))`. For higher precision, use `pow_midp()`.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow_lowp(self, n: f32) -> Self {{
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_lowp().0, {prefix}_set1_{suffix}(n))).exp2_lowp()
+        }}
+    }}
+
+"#}
+}
+
+fn generate_f32_midp_ops(ty: &SimdType, prefix: &str, suffix: &str, int_suffix: &str) -> String {
+    let floor_op = if ty.width == SimdWidth::W512 {
+        format!("{prefix}_roundscale_{suffix}::<0x01>(x)")
+    } else {
+        format!("{prefix}_floor_{suffix}(x)")
+    };
+
+    let mut code = formatdoc! {r#"
+    // ========== Mid-Precision Transcendental Operations ==========
+
+    /// Mid-precision base-2 logarithm (~3 ULP max error) - unchecked variant.
+    ///
+    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
+    /// Use `log2_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn log2_midp_unchecked(self) -> Self {{
+        // Constants for range reduction
+        const SQRT2_OVER_2: u32 = 0x3f3504f3; // sqrt(2)/2 in f32 bits
+        const ONE: u32 = 0x3f800000;          // 1.0 in f32 bits
+        const MANTISSA_MASK: i32 = 0x007fffff_u32 as i32;
+        const EXPONENT_BIAS: i32 = 127;
+
+        // Coefficients for odd polynomial on y = (a-1)/(a+1)
+        const C0: f32 = 2.885_390_08;  // 2/ln(2)
+        const C1: f32 = 0.961_800_76;  // y^2 coefficient
+        const C2: f32 = 0.576_974_45;  // y^4 coefficient
+        const C3: f32 = 0.434_411_97;  // y^6 coefficient
+
+        unsafe {{
+            let x_bits = {prefix}_cast{suffix}_{int_suffix}(self.0);
+
+            // Normalize mantissa to [sqrt(2)/2, sqrt(2)]
+            let offset = {prefix}_set1_epi32((ONE - SQRT2_OVER_2) as i32);
+            let adjusted = {prefix}_add_epi32(x_bits, offset);
+
+            // Extract exponent
+            let exp_raw = {prefix}_srai_epi32::<23>(adjusted);
+            let exp_biased = {prefix}_sub_epi32(exp_raw, {prefix}_set1_epi32(EXPONENT_BIAS));
+            let n = {prefix}_cvtepi32_{suffix}(exp_biased);
+
+            // Reconstruct normalized mantissa
+            let mantissa_bits = {prefix}_and_{int_suffix}(adjusted, {prefix}_set1_epi32(MANTISSA_MASK));
+            let a_bits = {prefix}_add_epi32(mantissa_bits, {prefix}_set1_epi32(SQRT2_OVER_2 as i32));
+            let a = {prefix}_cast{int_suffix}_{suffix}(a_bits);
+
+            // y = (a - 1) / (a + 1)
+            let one = {prefix}_set1_{suffix}(1.0);
+            let y = {prefix}_div_{suffix}({prefix}_sub_{suffix}(a, one), {prefix}_add_{suffix}(a, one));
+            let y2 = {prefix}_mul_{suffix}(y, y);
+
+            // Polynomial: C0*y + C1*y^3 + C2*y^5 + C3*y^7 = y*(C0 + y^2*(C1 + y^2*(C2 + C3*y^2)))
+            let poly = {prefix}_fmadd_{suffix}({prefix}_set1_{suffix}(C3), y2, {prefix}_set1_{suffix}(C2));
+            let poly = {prefix}_fmadd_{suffix}(poly, y2, {prefix}_set1_{suffix}(C1));
+            let poly = {prefix}_fmadd_{suffix}(poly, y2, {prefix}_set1_{suffix}(C0));
+
+            Self({prefix}_fmadd_{suffix}(poly, y, n))
+        }}
+    }}
+
+"#};
+
+    // log2_midp with edge case handling
+    code.push_str(&generate_f32_log2_midp(ty, prefix, suffix, int_suffix));
+
+    // exp2_midp_unchecked
+    code.push_str(&formatdoc! {r#"
+    /// Mid-precision base-2 exponential (~2 ULP max error) - unchecked variant.
+    ///
+    /// Uses degree-6 polynomial approximation.
+    /// **Warning**: Does not handle edge cases (underflow, overflow).
+    /// Use `exp2_midp()` for correct IEEE behavior on edge cases.
+    #[inline(always)]
+    pub fn exp2_midp_unchecked(self) -> Self {{
+        // Polynomial coefficients (degree 6 Remez)
+        const C0: f32 = 1.0;
+        const C1: f32 = 0.693_147_182;
+        const C2: f32 = 0.240_226_463;
+        const C3: f32 = 0.055_504_545;
+        const C4: f32 = 0.009_618_055;
+        const C5: f32 = 0.001_333_37;
+        const C6: f32 = 0.000_154_47;
+
+        unsafe {{
+            let x = self.0;
+
+            // Split into integer and fractional parts
+            let xi = {floor_op};
+            let xf = {prefix}_sub_{suffix}(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = {prefix}_fmadd_{suffix}({prefix}_set1_{suffix}(C6), xf, {prefix}_set1_{suffix}(C5));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C4));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C3));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C2));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C1));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C0));
+
+            // Scale by 2^integer using bit manipulation
+            let xi_i32 = {prefix}_cvt{suffix}_epi32(xi);
+            let bias = {prefix}_set1_epi32(127);
+            let scale_bits = {prefix}_slli_epi32::<23>({prefix}_add_epi32(xi_i32, bias));
+            let scale = {prefix}_cast{int_suffix}_{suffix}(scale_bits);
+
+            Self({prefix}_mul_{suffix}(poly, scale))
+        }}
+    }}
+
+"#});
+
+    // exp2_midp with edge case handling
+    code.push_str(&generate_f32_exp2_midp(ty, prefix, suffix));
+
+    // Simple derived functions
+    code.push_str(&formatdoc! {r#"
+    /// Mid-precision natural logarithm - unchecked variant.
+    ///
+    /// Computed as `log2_midp_unchecked(x) * ln(2)`.
+    #[inline(always)]
+    pub fn ln_midp_unchecked(self) -> Self {{
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_midp_unchecked().0, {prefix}_set1_{suffix}(LN2)))
+        }}
+    }}
+
+    /// Mid-precision natural logarithm with edge case handling.
+    ///
+    /// Returns -inf for 0, NaN for negative, correct results for inf/NaN.
+    #[inline(always)]
+    pub fn ln_midp(self) -> Self {{
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_midp().0, {prefix}_set1_{suffix}(LN2)))
+        }}
+    }}
+
+    /// Mid-precision natural exponential (e^x) - unchecked variant.
+    ///
+    /// Computed as `exp2_midp_unchecked(x * log2(e))`.
+    #[inline(always)]
+    pub fn exp_midp_unchecked(self) -> Self {{
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.0, {prefix}_set1_{suffix}(LOG2_E))).exp2_midp_unchecked()
+        }}
+    }}
+
+    /// Mid-precision natural exponential (e^x) with edge case handling.
+    ///
+    /// Returns 0 for large negative, inf for large positive, correct results for inf/NaN.
+    #[inline(always)]
+    pub fn exp_midp(self) -> Self {{
+        const LOG2_E: f32 = core::f32::consts::LOG2_E;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.0, {prefix}_set1_{suffix}(LOG2_E))).exp2_midp()
+        }}
+    }}
+
+    /// Mid-precision power function (self^n) - unchecked variant.
+    ///
+    /// Computed as `exp2_midp_unchecked(n * log2_midp_unchecked(self))`.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow_midp_unchecked(self, n: f32) -> Self {{
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_midp_unchecked().0, {prefix}_set1_{suffix}(n))).exp2_midp_unchecked()
+        }}
+    }}
+
+    /// Mid-precision power function (self^n) with edge case handling.
+    ///
+    /// Handles 0, negative, inf, and NaN in base. Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow_midp(self, n: f32) -> Self {{
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_midp().0, {prefix}_set1_{suffix}(n))).exp2_midp()
+        }}
+    }}
+
+"#});
+
+    // cbrt operations
+    code.push_str(&generate_f32_cbrt_ops(ty, prefix, suffix, int_suffix));
+
+    code
+}
+
+fn generate_f32_log2_midp(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix: &str) -> String {
+    if ty.width == SimdWidth::W512 {
+        formatdoc! {r#"
+    /// Mid-precision base-2 logarithm (~3 ULP max error) with edge case handling.
+    ///
+    /// Returns -inf for 0, NaN for negative, correct results for inf/NaN.
+    #[inline(always)]
+    pub fn log2_midp(self) -> Self {{
+        unsafe {{
+            let x = self.0;
+            let zero = {prefix}_setzero_{suffix}();
+            let neg_inf = {prefix}_set1_{suffix}(f32::NEG_INFINITY);
+            let nan = {prefix}_set1_{suffix}(f32::NAN);
+            let inf = {prefix}_set1_{suffix}(f32::INFINITY);
+
+            // Handle special cases with AVX-512 mask operations
+            let is_zero = {prefix}_cmp_{suffix}_mask::<_CMP_EQ_OQ>(x, zero);
+            let is_negative = {prefix}_cmp_{suffix}_mask::<_CMP_LT_OQ>(x, zero);
+            let is_inf = {prefix}_cmp_{suffix}_mask::<_CMP_EQ_OQ>(x, inf);
+
+            // Compute log2 for normal values
+            let log_result = self.log2_midp_unchecked().0;
+
+            // Apply special case results
+            let result = {prefix}_mask_blend_{suffix}(is_zero, log_result, neg_inf);
+            let result = {prefix}_mask_blend_{suffix}(is_negative, result, nan);
+            let result = {prefix}_mask_blend_{suffix}(is_inf, result, inf);
+
+            Self(result)
+        }}
+    }}
+
+"#}
+    } else {
+        formatdoc! {r#"
+    /// Mid-precision base-2 logarithm (~3 ULP max error) with edge case handling.
+    ///
+    /// Returns -inf for 0, NaN for negative, correct results for inf/NaN.
+    #[inline(always)]
+    pub fn log2_midp(self) -> Self {{
+        unsafe {{
+            let x = self.0;
+            let zero = {prefix}_setzero_{suffix}();
+            let neg_inf = {prefix}_set1_{suffix}(f32::NEG_INFINITY);
+            let nan = {prefix}_set1_{suffix}(f32::NAN);
+            let inf = {prefix}_set1_{suffix}(f32::INFINITY);
+
+            // Handle special cases
+            let is_zero = {prefix}_cmp_{suffix}::<_CMP_EQ_OQ>(x, zero);
+            let is_negative = {prefix}_cmp_{suffix}::<_CMP_LT_OQ>(x, zero);
+            let is_inf = {prefix}_cmp_{suffix}::<_CMP_EQ_OQ>(x, inf);
+
+            // Compute log2 for normal values
+            let log_result = self.log2_midp_unchecked().0;
+
+            // Apply special case results
+            let result = {prefix}_blendv_{suffix}(log_result, neg_inf, is_zero);
+            let result = {prefix}_blendv_{suffix}(result, nan, is_negative);
+            let result = {prefix}_blendv_{suffix}(result, inf, is_inf);
+
+            Self(result)
+        }}
+    }}
+
+"#}
+    }
+}
+
+fn generate_f32_exp2_midp(ty: &SimdType, prefix: &str, suffix: &str) -> String {
+    if ty.width == SimdWidth::W512 {
+        formatdoc! {r#"
+    /// Mid-precision base-2 exponential (~2 ULP max error) with edge case handling.
+    ///
+    /// Returns 0 for large negative, inf for large positive, correct results for inf/NaN.
+    #[inline(always)]
+    pub fn exp2_midp(self) -> Self {{
+        unsafe {{
+            let x = self.0;
+            let zero = {prefix}_setzero_{suffix}();
+            let inf = {prefix}_set1_{suffix}(f32::INFINITY);
+
+            // Clamp to prevent overflow in intermediate calculations
+            let x_clamped = {prefix}_max_{suffix}(x, {prefix}_set1_{suffix}(-150.0));
+            let x_clamped = {prefix}_min_{suffix}(x_clamped, {prefix}_set1_{suffix}(128.0));
+
+            // Compute exp2 for clamped values
+            let exp_result = Self(x_clamped).exp2_midp_unchecked().0;
+
+            // Handle edge cases with AVX-512 mask operations
+            let underflow = {prefix}_cmp_{suffix}_mask::<_CMP_LT_OQ>(x, {prefix}_set1_{suffix}(-150.0));
+            let overflow = {prefix}_cmp_{suffix}_mask::<_CMP_GT_OQ>(x, {prefix}_set1_{suffix}(128.0));
+
+            let result = {prefix}_mask_blend_{suffix}(underflow, exp_result, zero);
+            let result = {prefix}_mask_blend_{suffix}(overflow, result, inf);
+
+            Self(result)
+        }}
+    }}
+
+"#}
+    } else {
+        formatdoc! {r#"
+    /// Mid-precision base-2 exponential (~2 ULP max error) with edge case handling.
+    ///
+    /// Returns 0 for large negative, inf for large positive, correct results for inf/NaN.
+    #[inline(always)]
+    pub fn exp2_midp(self) -> Self {{
+        unsafe {{
+            let x = self.0;
+            let zero = {prefix}_setzero_{suffix}();
+            let inf = {prefix}_set1_{suffix}(f32::INFINITY);
+
+            // Clamp to prevent overflow in intermediate calculations
+            let x_clamped = {prefix}_max_{suffix}(x, {prefix}_set1_{suffix}(-150.0));
+            let x_clamped = {prefix}_min_{suffix}(x_clamped, {prefix}_set1_{suffix}(128.0));
+
+            // Compute exp2 for clamped values
+            let exp_result = Self(x_clamped).exp2_midp_unchecked().0;
+
+            // Handle edge cases
+            let underflow = {prefix}_cmp_{suffix}::<_CMP_LT_OQ>(x, {prefix}_set1_{suffix}(-150.0));
+            let overflow = {prefix}_cmp_{suffix}::<_CMP_GT_OQ>(x, {prefix}_set1_{suffix}(128.0));
+
+            let result = {prefix}_blendv_{suffix}(exp_result, zero, underflow);
+            let result = {prefix}_blendv_{suffix}(result, inf, overflow);
+
+            Self(result)
+        }}
+    }}
+
+"#}
+    }
+}
+
+fn generate_f32_cbrt_ops(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix: &str) -> String {
+    let lanes = ty.lanes();
+    let lane_indices = (0..lanes).collect::<Vec<_>>();
+
+    let mut code = formatdoc! {r#"
+    /// Mid-precision cube root (~1 ULP max error).
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Does not handle denormals. Use `cbrt_midp_precise()` if denormal support is needed.
+    #[inline(always)]
+    pub fn cbrt_midp(self) -> Self {{
+        // Kahan's magic constant for initial approximation
+        const KAHAN_CBRT: f32 = 0.333_333_313;
+        const TWO_THIRDS: f32 = 0.666_666_627;
+
+        unsafe {{
+            let x = self.0;
+
+            // Save sign and work with absolute value
+            let sign_mask = {prefix}_set1_{suffix}(-0.0);
+            let sign = {prefix}_and_{suffix}(x, sign_mask);
+            let abs_x = {prefix}_andnot_{suffix}(sign_mask, x);
+
+            // Extract to scalar for initial approximation
+            let arr: [f32; {lanes}] = core::mem::transmute(abs_x);
+            let approx: [f32; {lanes}] = [
+"#};
+
+    // Generate scalar cbrt approximations for each lane
+    for i in &lane_indices {
+        code.push_str(&format!(
+            "                f32::from_bits((arr[{i}].to_bits() / 3) + 0x2a508c2d),\n"
+        ));
+    }
+
+    code.push_str(&formatdoc! {r#"
+            ];
+            let mut y = {prefix}_loadu_{suffix}(approx.as_ptr());
+
+            // Newton-Raphson iterations: y = y * (2/3 + x/(3*y^3))
+            for _ in 0..3 {{
+                let y2 = {prefix}_mul_{suffix}(y, y);
+                let y3 = {prefix}_mul_{suffix}(y2, y);
+                let term = {prefix}_div_{suffix}(abs_x, {prefix}_mul_{suffix}({prefix}_set1_{suffix}(3.0), y3));
+                y = {prefix}_mul_{suffix}(y, {prefix}_add_{suffix}({prefix}_set1_{suffix}(TWO_THIRDS), term));
+            }}
+
+            // Restore sign
+            Self({prefix}_or_{suffix}(y, sign))
+        }}
+    }}
+
+"#});
+
+    // cbrt_midp_precise with denormal handling
+    if ty.width == SimdWidth::W512 {
+        code.push_str(&formatdoc! {r#"
+    /// Mid-precision cube root with denormal handling (~1 ULP max error).
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`.
+    /// Use `cbrt_midp()` if denormal support is not needed (most image processing).
+    #[inline(always)]
+    pub fn cbrt_midp_precise(self) -> Self {{
+        unsafe {{
+            // Scale factor for denormals: 2^24
+            const SCALE_UP: f32 = 16777216.0;  // 2^24
+            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
+            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+
+            let abs_x = {prefix}_andnot_{suffix}({prefix}_set1_{suffix}(-0.0), self.0);
+            let is_denorm = {prefix}_cmp_{suffix}_mask::<_CMP_LT_OQ>(abs_x, {prefix}_set1_{suffix}(DENORM_LIMIT));
+
+            // Scale up denormals
+            let scaled_x = {prefix}_mul_{suffix}(self.0, {prefix}_set1_{suffix}(SCALE_UP));
+            let x_for_cbrt = {prefix}_mask_blend_{suffix}(is_denorm, self.0, scaled_x);
+
+            // Compute cbrt with edge case handling
+            let result = Self(x_for_cbrt).cbrt_midp();
+
+            // Scale down results from denormal inputs
+            let scaled_result = {prefix}_mul_{suffix}(result.0, {prefix}_set1_{suffix}(SCALE_DOWN));
+            Self({prefix}_mask_blend_{suffix}(is_denorm, result.0, scaled_result))
+        }}
+    }}
+
+"#});
+    } else {
+        code.push_str(&formatdoc! {r#"
+    /// Mid-precision cube root with denormal handling (~1 ULP max error).
+    ///
+    /// Uses scalar extraction for initial guess + Newton-Raphson.
+    /// Handles negative values correctly (returns -cbrt(|x|)).
+    ///
+    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`.
+    /// Use `cbrt_midp()` if denormal support is not needed (most image processing).
+    #[inline(always)]
+    pub fn cbrt_midp_precise(self) -> Self {{
+        unsafe {{
+            // Scale factor for denormals: 2^24
+            const SCALE_UP: f32 = 16777216.0;  // 2^24
+            const SCALE_DOWN: f32 = 0.00390625;  // 2^(-8) = cbrt(2^(-24))
+            const DENORM_LIMIT: f32 = 1.17549435e-38;  // Smallest normal f32
+
+            let abs_x = {prefix}_andnot_{suffix}({prefix}_set1_{suffix}(-0.0), self.0);
+            let is_denorm = {prefix}_cmp_{suffix}::<_CMP_LT_OQ>(abs_x, {prefix}_set1_{suffix}(DENORM_LIMIT));
+
+            // Scale up denormals
+            let scaled_x = {prefix}_mul_{suffix}(self.0, {prefix}_set1_{suffix}(SCALE_UP));
+            let x_for_cbrt = {prefix}_blendv_{suffix}(self.0, scaled_x, is_denorm);
+
+            // Compute cbrt with edge case handling
+            let result = Self(x_for_cbrt).cbrt_midp();
+
+            // Scale down results from denormal inputs
+            let scaled_result = {prefix}_mul_{suffix}(result.0, {prefix}_set1_{suffix}(SCALE_DOWN));
+            Self({prefix}_blendv_{suffix}(result.0, scaled_result, is_denorm))
+        }}
+    }}
+
+"#});
+    }
+
+    code
+}
+
+fn generate_f64_lowp_ops(ty: &SimdType, prefix: &str, suffix: &str, int_suffix: &str) -> String {
+    let lanes = ty.lanes();
+    let floor_op = if ty.width == SimdWidth::W512 {
+        format!("{prefix}_roundscale_{suffix}::<0x01>(x)")
+    } else {
+        format!("{prefix}_floor_{suffix}(x)")
+    };
+
+    // For i64 set1, AVX-512 uses epi64, others use epi64x
+    let epi64_suffix = if ty.width == SimdWidth::W512 {
+        "epi64"
+    } else {
+        "epi64x"
+    };
+
+    // Exponent shift for f64 - AVX-512 has native srai_epi64, others need polyfill
+    let exp_shift = if ty.width == SimdWidth::W512 {
+        format!("let exp_shifted = {prefix}_srai_epi64::<52>(exp_bits);")
+    } else {
+        let set_fn = match ty.width {
+            SimdWidth::W128 => "_mm_set_epi64x",
+            SimdWidth::W256 => "_mm256_set_epi64x",
+            _ => unreachable!(),
+        };
+        let indices: Vec<String> = (0..lanes)
+            .rev()
+            .map(|i| format!("exp_arr_raw[{i}] >> 52"))
+            .collect();
+        format!(
+            "let exp_arr_raw: [i64; {lanes}] = core::mem::transmute(exp_bits);\n            let exp_shifted = {set_fn}({});",
+            indices.join(", ")
+        )
+    };
+
+    // Convert i64 exponent to f64
+    let exp_to_f64_indices: Vec<String> =
+        (0..lanes).map(|i| format!("exp_arr[{i}] as f64")).collect();
+
+    // Scale array generation for exp2
+    let scale_arr_indices: Vec<String> = (0..lanes)
+        .map(|i| format!("f64::from_bits(((xi_arr[{i}] as i64 + 1023) << 52) as u64)"))
+        .collect();
+
+    formatdoc! {r#"
+    /// Low-precision base-2 logarithm.
+    ///
+    /// Uses polynomial approximation. For natural log, use `ln_lowp()`.
+    #[inline(always)]
+    pub fn log2_lowp(self) -> Self {{
+        // Polynomial coefficients for f64
+        const P0: f64 = -1.850_383_340_051_831e-6;
+        const P1: f64 = 1.428_716_047_008_376;
+        const P2: f64 = 0.742_458_733_278_206;
+        const Q0: f64 = 0.990_328_142_775_907;
+        const Q1: f64 = 1.009_671_857_224_115;
+        const Q2: f64 = 0.174_093_430_036_669;
+        const OFFSET: i64 = 0x3fe6a09e667f3bcd_u64 as i64; // 2/3 in f64 bits
+
+        unsafe {{
+            let x_bits = {prefix}_cast{suffix}_{int_suffix}(self.0);
+            let offset = {prefix}_set1_{epi64_suffix}(OFFSET);
+            let exp_bits = {prefix}_sub_epi64(x_bits, offset);
+            {exp_shift}
+
+            let mantissa_bits = {prefix}_sub_epi64(x_bits, {prefix}_slli_epi64::<52>(exp_shifted));
+            let mantissa = {prefix}_cast{int_suffix}_{suffix}(mantissa_bits);
+            // Convert exponent to f64
+            let exp_arr: [i64; {lanes}] = core::mem::transmute(exp_shifted);
+            let exp_f64: [f64; {lanes}] = [{exp_to_f64_list}];
+            let exp_val = {prefix}_loadu_{suffix}(exp_f64.as_ptr());
+
+            let one = {prefix}_set1_{suffix}(1.0);
+            let m = {prefix}_sub_{suffix}(mantissa, one);
+
+            // Horner's for numerator
+            let yp = {prefix}_fmadd_{suffix}({prefix}_set1_{suffix}(P2), m, {prefix}_set1_{suffix}(P1));
+            let yp = {prefix}_fmadd_{suffix}(yp, m, {prefix}_set1_{suffix}(P0));
+
+            // Horner's for denominator
+            let yq = {prefix}_fmadd_{suffix}({prefix}_set1_{suffix}(Q2), m, {prefix}_set1_{suffix}(Q1));
+            let yq = {prefix}_fmadd_{suffix}(yq, m, {prefix}_set1_{suffix}(Q0));
+
+            Self({prefix}_add_{suffix}({prefix}_div_{suffix}(yp, yq), exp_val))
+        }}
+    }}
+
+    /// Low-precision base-2 exponential (2^x).
+    ///
+    /// Uses polynomial approximation. For natural exp, use `exp_lowp()`.
+    #[inline(always)]
+    pub fn exp2_lowp(self) -> Self {{
+        const C0: f64 = 1.0;
+        const C1: f64 = core::f64::consts::LN_2;
+        const C2: f64 = 0.240_226_506_959_101;
+        const C3: f64 = 0.055_504_108_664_822;
+        const C4: f64 = 0.009_618_129_107_629;
+
+        unsafe {{
+            // Clamp to safe range
+            let x = {prefix}_max_{suffix}(self.0, {prefix}_set1_{suffix}(-1022.0));
+            let x = {prefix}_min_{suffix}(x, {prefix}_set1_{suffix}(1022.0));
+
+            let xi = {floor_op};
+            let xf = {prefix}_sub_{suffix}(x, xi);
+
+            // Polynomial for 2^frac
+            let poly = {prefix}_fmadd_{suffix}({prefix}_set1_{suffix}(C4), xf, {prefix}_set1_{suffix}(C3));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C2));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C1));
+            let poly = {prefix}_fmadd_{suffix}(poly, xf, {prefix}_set1_{suffix}(C0));
+
+            // Scale by 2^integer - extract, convert, scale
+            let xi_arr: [f64; {lanes}] = core::mem::transmute(xi);
+            let scale_arr: [f64; {lanes}] = [{scale_arr_list}];
+            let scale = {prefix}_loadu_{suffix}(scale_arr.as_ptr());
+
+            Self({prefix}_mul_{suffix}(poly, scale))
+        }}
+    }}
+
+    /// Low-precision natural logarithm.
+    #[inline(always)]
+    pub fn ln_lowp(self) -> Self {{
+        const LN2: f64 = core::f64::consts::LN_2;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_lowp().0, {prefix}_set1_{suffix}(LN2)))
+        }}
+    }}
+
+    /// Low-precision natural exponential (e^x).
+    #[inline(always)]
+    pub fn exp_lowp(self) -> Self {{
+        const LOG2_E: f64 = core::f64::consts::LOG2_E;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.0, {prefix}_set1_{suffix}(LOG2_E))).exp2_lowp()
+        }}
+    }}
+
+    /// Low-precision base-10 logarithm.
+    #[inline(always)]
+    pub fn log10_lowp(self) -> Self {{
+        const LOG10_2: f64 = core::f64::consts::LOG10_2;
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_lowp().0, {prefix}_set1_{suffix}(LOG10_2)))
+        }}
+    }}
+
+    /// Low-precision power function (self^n).
+    #[inline(always)]
+    pub fn pow_lowp(self, n: f64) -> Self {{
+        unsafe {{
+            Self({prefix}_mul_{suffix}(self.log2_lowp().0, {prefix}_set1_{suffix}(n))).exp2_lowp()
+        }}
+    }}
+
+"#, exp_to_f64_list = exp_to_f64_indices.join(", "), scale_arr_list = scale_arr_indices.join(", ")}
 }

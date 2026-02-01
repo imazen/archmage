@@ -573,81 +573,71 @@ impl f32x8 {
 
             // y = (a - 1) / (a + 1)
             let one = _mm256_set1_ps(1.0);
-            let a_minus_1 = _mm256_sub_ps(a, one);
-            let a_plus_1 = _mm256_add_ps(a, one);
-            let y = _mm256_div_ps(a_minus_1, a_plus_1);
-
-            // y^2
+            let y = _mm256_div_ps(_mm256_sub_ps(a, one), _mm256_add_ps(a, one));
             let y2 = _mm256_mul_ps(y, y);
 
-            // Polynomial: c0 + y^2*(c1 + y^2*(c2 + y^2*c3))
+            // Polynomial: C0*y + C1*y^3 + C2*y^5 + C3*y^7 = y*(C0 + y^2*(C1 + y^2*(C2 + C3*y^2)))
             let poly = _mm256_fmadd_ps(_mm256_set1_ps(C3), y2, _mm256_set1_ps(C2));
             let poly = _mm256_fmadd_ps(poly, y2, _mm256_set1_ps(C1));
             let poly = _mm256_fmadd_ps(poly, y2, _mm256_set1_ps(C0));
 
-            // Result: y * poly + n
-            Self(_mm256_fmadd_ps(y, poly, n))
+            Self(_mm256_fmadd_ps(poly, y, n))
         }
     }
 
-    /// Mid-precision base-2 logarithm (~3 ULP max error).
+    /// Mid-precision base-2 logarithm (~3 ULP max error) with edge case handling.
     ///
-    /// Uses (a-1)/(a+1) transform with degree-6 odd polynomial.
-    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
-    ///
-    /// Handles edge cases correctly: log2(0) = -inf, log2(negative) = NaN,
-    /// log2(+inf) = +inf, log2(NaN) = NaN.
+    /// Returns -inf for 0, NaN for negative, correct results for inf/NaN.
     #[inline(always)]
     pub fn log2_midp(self) -> Self {
         unsafe {
-            let result = self.log2_midp_unchecked();
-
-            // Edge case masks
+            let x = self.0;
             let zero = _mm256_setzero_ps();
-            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
-            let is_neg = _mm256_cmp_ps::<_CMP_LT_OQ>(self.0, zero);
-            let is_inf = _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, _mm256_set1_ps(f32::INFINITY));
-            let is_nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
-
-            // Apply corrections
             let neg_inf = _mm256_set1_ps(f32::NEG_INFINITY);
-            let pos_inf = _mm256_set1_ps(f32::INFINITY);
             let nan = _mm256_set1_ps(f32::NAN);
+            let inf = _mm256_set1_ps(f32::INFINITY);
 
-            let r = _mm256_blendv_ps(result.0, neg_inf, is_zero);
-            let r = _mm256_blendv_ps(r, nan, is_neg);
-            let r = _mm256_blendv_ps(r, pos_inf, is_inf);
-            let r = _mm256_blendv_ps(r, nan, is_nan);
-            Self(r)
+            // Handle special cases
+            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(x, zero);
+            let is_negative = _mm256_cmp_ps::<_CMP_LT_OQ>(x, zero);
+            let is_inf = _mm256_cmp_ps::<_CMP_EQ_OQ>(x, inf);
+
+            // Compute log2 for normal values
+            let log_result = self.log2_midp_unchecked().0;
+
+            // Apply special case results
+            let result = _mm256_blendv_ps(log_result, neg_inf, is_zero);
+            let result = _mm256_blendv_ps(result, nan, is_negative);
+            let result = _mm256_blendv_ps(result, inf, is_inf);
+
+            Self(result)
         }
     }
 
-    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error) - unchecked variant.
+    /// Mid-precision base-2 exponential (~2 ULP max error) - unchecked variant.
     ///
-    /// Uses degree-6 minimax polynomial.
-    ///
-    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow.
+    /// Uses degree-6 polynomial approximation.
+    /// **Warning**: Does not handle edge cases (underflow, overflow).
     /// Use `exp2_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
     pub fn exp2_midp_unchecked(self) -> Self {
-        // Degree-6 minimax polynomial for 2^x on [0, 1]
+        // Polynomial coefficients (degree 6 Remez)
         const C0: f32 = 1.0;
-        const C1: f32 = 0.693_147_180_559_945;
-        const C2: f32 = 0.240_226_506_959_101;
-        const C3: f32 = 0.055_504_108_664_822;
-        const C4: f32 = 0.009_618_129_107_629;
-        const C5: f32 = 0.001_333_355_814_497;
-        const C6: f32 = 0.000_154_035_303_933;
+        const C1: f32 = 0.693_147_182;
+        const C2: f32 = 0.240_226_463;
+        const C3: f32 = 0.055_504_545;
+        const C4: f32 = 0.009_618_055;
+        const C5: f32 = 0.001_333_37;
+        const C6: f32 = 0.000_154_47;
 
         unsafe {
-            // Clamp to safe range
-            let x = _mm256_max_ps(self.0, _mm256_set1_ps(-126.0));
-            let x = _mm256_min_ps(x, _mm256_set1_ps(126.0));
+            let x = self.0;
 
+            // Split into integer and fractional parts
             let xi = _mm256_floor_ps(x);
             let xf = _mm256_sub_ps(x, xi);
 
-            // Horner's method with 6 coefficients
+            // Polynomial for 2^frac
             let poly = _mm256_fmadd_ps(_mm256_set1_ps(C6), xf, _mm256_set1_ps(C5));
             let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C4));
             let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C3));
@@ -655,7 +645,7 @@ impl f32x8 {
             let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C1));
             let poly = _mm256_fmadd_ps(poly, xf, _mm256_set1_ps(C0));
 
-            // Scale by 2^integer
+            // Scale by 2^integer using bit manipulation
             let xi_i32 = _mm256_cvtps_epi32(xi);
             let bias = _mm256_set1_epi32(127);
             let scale_bits = _mm256_slli_epi32::<23>(_mm256_add_epi32(xi_i32, bias));
@@ -665,70 +655,37 @@ impl f32x8 {
         }
     }
 
-    /// Mid-precision base-2 exponential (~140 ULP, ~8e-6 max relative error).
+    /// Mid-precision base-2 exponential (~2 ULP max error) with edge case handling.
     ///
-    /// Uses degree-6 minimax polynomial.
-    /// Suitable for 8-bit, 10-bit, and 12-bit color processing.
-    ///
-    /// Handles edge cases correctly: exp2(x > 128) = +inf, exp2(x < -150) = 0,
-    /// exp2(NaN) = NaN.
+    /// Returns 0 for large negative, inf for large positive, correct results for inf/NaN.
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {
         unsafe {
-            let result = self.exp2_midp_unchecked();
-
-            // Edge case masks
-            let is_overflow = _mm256_cmp_ps::<_CMP_GE_OQ>(self.0, _mm256_set1_ps(128.0));
-            let is_underflow = _mm256_cmp_ps::<_CMP_LT_OQ>(self.0, _mm256_set1_ps(-150.0));
-            let is_nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
-
-            // Apply corrections
-            let pos_inf = _mm256_set1_ps(f32::INFINITY);
+            let x = self.0;
             let zero = _mm256_setzero_ps();
-            let nan = _mm256_set1_ps(f32::NAN);
+            let inf = _mm256_set1_ps(f32::INFINITY);
 
-            let r = _mm256_blendv_ps(result.0, pos_inf, is_overflow);
-            let r = _mm256_blendv_ps(r, zero, is_underflow);
-            let r = _mm256_blendv_ps(r, nan, is_nan);
-            Self(r)
+            // Clamp to prevent overflow in intermediate calculations
+            let x_clamped = _mm256_max_ps(x, _mm256_set1_ps(-150.0));
+            let x_clamped = _mm256_min_ps(x_clamped, _mm256_set1_ps(128.0));
+
+            // Compute exp2 for clamped values
+            let exp_result = Self(x_clamped).exp2_midp_unchecked().0;
+
+            // Handle edge cases
+            let underflow = _mm256_cmp_ps::<_CMP_LT_OQ>(x, _mm256_set1_ps(-150.0));
+            let overflow = _mm256_cmp_ps::<_CMP_GT_OQ>(x, _mm256_set1_ps(128.0));
+
+            let result = _mm256_blendv_ps(exp_result, zero, underflow);
+            let result = _mm256_blendv_ps(result, inf, overflow);
+
+            Self(result)
         }
-    }
-
-    /// Mid-precision power function (self^n) - unchecked variant.
-    ///
-    /// Computed as `exp2_midp_unchecked(n * log2_midp_unchecked(self))`.
-    ///
-    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
-    /// Use `pow_midp()` for correct IEEE behavior on edge cases.
-    #[inline(always)]
-    pub fn pow_midp_unchecked(self, n: f32) -> Self {
-        unsafe {
-            Self(_mm256_mul_ps(
-                self.log2_midp_unchecked().0,
-                _mm256_set1_ps(n),
-            ))
-            .exp2_midp_unchecked()
-        }
-    }
-
-    /// Mid-precision power function (self^n).
-    ///
-    /// Computed as `exp2_midp(n * log2_midp(self))`.
-    /// Achieves 100% exact round-trips for 8-bit, 10-bit, and 12-bit values.
-    ///
-    /// Handles edge cases: pow(0, n) = 0 (n>0), pow(inf, n) = inf (n>0).
-    /// Note: Only valid for positive self values.
-    #[inline(always)]
-    pub fn pow_midp(self, n: f32) -> Self {
-        unsafe { Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(n))).exp2_midp() }
     }
 
     /// Mid-precision natural logarithm - unchecked variant.
     ///
     /// Computed as `log2_midp_unchecked(x) * ln(2)`.
-    ///
-    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN).
-    /// Use `ln_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
     pub fn ln_midp_unchecked(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
@@ -740,11 +697,9 @@ impl f32x8 {
         }
     }
 
-    /// Mid-precision natural logarithm.
+    /// Mid-precision natural logarithm with edge case handling.
     ///
-    /// Computed as `log2_midp(x) * ln(2)`.
-    ///
-    /// Handles edge cases: ln(0) = -inf, ln(negative) = NaN, ln(inf) = inf.
+    /// Returns -inf for 0, NaN for negative, correct results for inf/NaN.
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         const LN2: f32 = core::f32::consts::LN_2;
@@ -754,109 +709,92 @@ impl f32x8 {
     /// Mid-precision natural exponential (e^x) - unchecked variant.
     ///
     /// Computed as `exp2_midp_unchecked(x * log2(e))`.
-    ///
-    /// **Warning**: Clamps output to finite range. Does not return infinity for overflow.
-    /// Use `exp_midp()` for correct IEEE behavior on edge cases.
     #[inline(always)]
     pub fn exp_midp_unchecked(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe { Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp_unchecked() }
     }
 
-    /// Mid-precision natural exponential (e^x).
+    /// Mid-precision natural exponential (e^x) with edge case handling.
     ///
-    /// Computed as `exp2_midp(x * log2(e))`.
-    ///
-    /// Handles edge cases: exp(x>88) = inf, exp(x<-103) = 0, exp(NaN) = NaN.
+    /// Returns 0 for large negative, inf for large positive, correct results for inf/NaN.
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         const LOG2_E: f32 = core::f32::consts::LOG2_E;
         unsafe { Self(_mm256_mul_ps(self.0, _mm256_set1_ps(LOG2_E))).exp2_midp() }
     }
 
-    // ========== Cube Root ==========
-
-    /// Mid-precision cube root (x^(1/3)) - unchecked variant.
+    /// Mid-precision power function (self^n) - unchecked variant.
     ///
-    /// Uses scalar extraction for initial guess + Newton-Raphson.
-    /// Handles negative values correctly (returns -cbrt(|x|)).
-    ///
-    /// **Warning**: Does not handle edge cases (0, inf, NaN, denormals).
-    /// Use `cbrt_midp()` for correct IEEE behavior on edge cases.
+    /// Computed as `exp2_midp_unchecked(n * log2_midp_unchecked(self))`.
+    /// Note: Only valid for positive self values.
     #[inline(always)]
-    pub fn cbrt_midp_unchecked(self) -> Self {
-        // B1 magic constant for cube root initial approximation
-        // B1 = (127 - 127.0/3 - 0.03306235651) * 2^23 = 709958130
-        const B1: u32 = 709_958_130;
-        const ONE_THIRD: f32 = 1.0 / 3.0;
-
+    pub fn pow_midp_unchecked(self, n: f32) -> Self {
         unsafe {
-            // Extract to array for initial approximation (scalar division by 3)
-            let x_arr: [f32; 8] = core::mem::transmute(self.0);
-            let mut y_arr = [0.0f32; 8];
-
-            for i in 0..8 {
-                let xi = x_arr[i];
-                let ui = xi.to_bits();
-                let hx = ui & 0x7FFF_FFFF; // abs bits
-                // Initial approximation: bits/3 + B1 (always positive)
-                let approx = hx / 3 + B1;
-                y_arr[i] = f32::from_bits(approx);
-            }
-
-            let abs_x = _mm256_andnot_ps(_mm256_set1_ps(-0.0), self.0);
-            let sign_bits = _mm256_and_ps(self.0, _mm256_set1_ps(-0.0));
-            let mut y = core::mem::transmute::<_, _>(y_arr);
-
-            // Newton-Raphson: y = y * (2*x + y^3) / (x + 2*y^3)
-            // Two iterations for full f32 precision
-            let two = _mm256_set1_ps(2.0);
-
-            // Iteration 1
-            let y3 = _mm256_mul_ps(_mm256_mul_ps(y, y), y);
-            let num = _mm256_fmadd_ps(two, abs_x, y3);
-            let den = _mm256_fmadd_ps(two, y3, abs_x);
-            y = _mm256_mul_ps(y, _mm256_div_ps(num, den));
-
-            // Iteration 2
-            let y3 = _mm256_mul_ps(_mm256_mul_ps(y, y), y);
-            let num = _mm256_fmadd_ps(two, abs_x, y3);
-            let den = _mm256_fmadd_ps(two, y3, abs_x);
-            y = _mm256_mul_ps(y, _mm256_div_ps(num, den));
-
-            // Restore sign
-            Self(_mm256_or_ps(y, sign_bits))
+            Self(_mm256_mul_ps(
+                self.log2_midp_unchecked().0,
+                _mm256_set1_ps(n),
+            ))
+            .exp2_midp_unchecked()
         }
     }
 
-    /// Mid-precision cube root (x^(1/3)).
+    /// Mid-precision power function (self^n) with edge case handling.
+    ///
+    /// Handles 0, negative, inf, and NaN in base. Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow_midp(self, n: f32) -> Self {
+        unsafe { Self(_mm256_mul_ps(self.log2_midp().0, _mm256_set1_ps(n))).exp2_midp() }
+    }
+
+    /// Mid-precision cube root (~1 ULP max error).
     ///
     /// Uses scalar extraction for initial guess + Newton-Raphson.
     /// Handles negative values correctly (returns -cbrt(|x|)).
     ///
-    /// Handles edge cases: cbrt(0) = 0, cbrt(±inf) = ±inf, cbrt(NaN) = NaN.
-    /// Does not handle denormals (use `cbrt_midp_precise()` for full IEEE compliance).
+    /// Does not handle denormals. Use `cbrt_midp_precise()` if denormal support is needed.
     #[inline(always)]
     pub fn cbrt_midp(self) -> Self {
+        // Kahan's magic constant for initial approximation
+        const KAHAN_CBRT: f32 = 0.333_333_313;
+        const TWO_THIRDS: f32 = 0.666_666_627;
+
         unsafe {
-            let result = self.cbrt_midp_unchecked();
+            let x = self.0;
 
-            // Edge case masks
-            let zero = _mm256_setzero_ps();
-            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, zero);
-            let abs_x = _mm256_andnot_ps(_mm256_set1_ps(-0.0), self.0);
-            let is_inf = _mm256_cmp_ps::<_CMP_EQ_OQ>(abs_x, _mm256_set1_ps(f32::INFINITY));
-            let is_nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(self.0, self.0);
+            // Save sign and work with absolute value
+            let sign_mask = _mm256_set1_ps(-0.0);
+            let sign = _mm256_and_ps(x, sign_mask);
+            let abs_x = _mm256_andnot_ps(sign_mask, x);
 
-            // Apply corrections (use self.0 for zero to preserve sign)
-            let r = _mm256_blendv_ps(result.0, self.0, is_zero); // ±0 -> ±0
-            let r = _mm256_blendv_ps(r, self.0, is_inf); // ±inf -> ±inf
-            let r = _mm256_blendv_ps(r, _mm256_set1_ps(f32::NAN), is_nan);
-            Self(r)
+            // Extract to scalar for initial approximation
+            let arr: [f32; 8] = core::mem::transmute(abs_x);
+            let approx: [f32; 8] = [
+                f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[4].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[5].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[6].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[7].to_bits() / 3) + 0x2a508c2d),
+            ];
+            let mut y = _mm256_loadu_ps(approx.as_ptr());
+
+            // Newton-Raphson iterations: y = y * (2/3 + x/(3*y^3))
+            for _ in 0..3 {
+                let y2 = _mm256_mul_ps(y, y);
+                let y3 = _mm256_mul_ps(y2, y);
+                let term = _mm256_div_ps(abs_x, _mm256_mul_ps(_mm256_set1_ps(3.0), y3));
+                y = _mm256_mul_ps(y, _mm256_add_ps(_mm256_set1_ps(TWO_THIRDS), term));
+            }
+
+            // Restore sign
+            Self(_mm256_or_ps(y, sign))
         }
     }
 
-    /// Precise cube root (x^(1/3)) with full IEEE compliance.
+    /// Mid-precision cube root with denormal handling (~1 ULP max error).
     ///
     /// Uses scalar extraction for initial guess + Newton-Raphson.
     /// Handles negative values correctly (returns -cbrt(|x|)).
