@@ -522,6 +522,54 @@ impl f32x4 {
         unsafe { Self(_mm_mul_ps(self.log2_lowp().0, _mm_set1_ps(n))).exp2_lowp() }
     }
 
+    /// Low-precision base-2 logarithm - unchecked variant.
+    ///
+    /// Identical to `log2_lowp()` (lowp already skips edge case handling).
+    #[inline(always)]
+    pub fn log2_lowp_unchecked(self) -> Self {
+        self.log2_lowp()
+    }
+
+    /// Low-precision base-2 exponential - unchecked variant.
+    ///
+    /// Identical to `exp2_lowp()` (lowp already clamps to safe range).
+    #[inline(always)]
+    pub fn exp2_lowp_unchecked(self) -> Self {
+        self.exp2_lowp()
+    }
+
+    /// Low-precision natural logarithm - unchecked variant.
+    ///
+    /// Identical to `ln_lowp()` (lowp already skips edge case handling).
+    #[inline(always)]
+    pub fn ln_lowp_unchecked(self) -> Self {
+        self.ln_lowp()
+    }
+
+    /// Low-precision natural exponential - unchecked variant.
+    ///
+    /// Identical to `exp_lowp()` (lowp already clamps to safe range).
+    #[inline(always)]
+    pub fn exp_lowp_unchecked(self) -> Self {
+        self.exp_lowp()
+    }
+
+    /// Low-precision base-10 logarithm - unchecked variant.
+    ///
+    /// Identical to `log10_lowp()` (lowp already skips edge case handling).
+    #[inline(always)]
+    pub fn log10_lowp_unchecked(self) -> Self {
+        self.log10_lowp()
+    }
+
+    /// Low-precision power function - unchecked variant.
+    ///
+    /// Identical to `pow_lowp()` (lowp already skips edge case handling).
+    #[inline(always)]
+    pub fn pow_lowp_unchecked(self, n: f32) -> Self {
+        self.pow_lowp(n)
+    }
+
     // ========== Mid-Precision Transcendental Operations ==========
 
     /// Mid-precision base-2 logarithm (~3 ULP max error) - unchecked variant.
@@ -725,6 +773,87 @@ impl f32x4 {
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
         unsafe { Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(n))).exp2_midp() }
+    }
+
+    /// Mid-precision base-2 logarithm with full IEEE compliance.
+    ///
+    /// Handles all edge cases including denormals.
+    /// About 50% slower than `log2_midp()` due to denormal scaling.
+    #[inline(always)]
+    pub fn log2_midp_precise(self) -> Self {
+        unsafe {
+            const SCALE_UP: f32 = 16777216.0; // 2^24
+            const SCALE_ADJUST: f32 = 24.0; // log2(2^24)
+            const DENORM_LIMIT: f32 = 1.17549435e-38;
+
+            let zero = _mm_setzero_ps();
+            let is_positive = _mm_cmp_ps::<_CMP_GT_OQ>(self.0, zero);
+            let abs_x = _mm_andnot_ps(_mm_set1_ps(-0.0), self.0);
+            let is_small = _mm_cmp_ps::<_CMP_LT_OQ>(abs_x, _mm_set1_ps(DENORM_LIMIT));
+            let is_denorm = _mm_and_ps(is_positive, is_small);
+
+            let scaled_x = _mm_mul_ps(self.0, _mm_set1_ps(SCALE_UP));
+            let x_for_log = _mm_blendv_ps(self.0, scaled_x, is_denorm);
+
+            let result = Self(x_for_log).log2_midp();
+
+            let adjusted = _mm_sub_ps(result.0, _mm_set1_ps(SCALE_ADJUST));
+            Self(_mm_blendv_ps(result.0, adjusted, is_denorm))
+        }
+    }
+
+    /// Mid-precision natural logarithm with full IEEE compliance.
+    ///
+    /// Handles all edge cases including denormals.
+    /// About 50% slower than `ln_midp()` due to denormal scaling.
+    #[inline(always)]
+    pub fn ln_midp_precise(self) -> Self {
+        const LN2: f32 = core::f32::consts::LN_2;
+        unsafe { Self(_mm_mul_ps(self.log2_midp_precise().0, _mm_set1_ps(LN2))) }
+    }
+
+    /// Mid-precision power function with denormal handling.
+    ///
+    /// Uses `log2_midp_precise()` to handle denormal inputs correctly.
+    /// Note: Only valid for positive self values.
+    #[inline(always)]
+    pub fn pow_midp_precise(self, n: f32) -> Self {
+        unsafe { Self(_mm_mul_ps(self.log2_midp_precise().0, _mm_set1_ps(n))).exp2_midp() }
+    }
+
+    /// Mid-precision base-10 logarithm - unchecked variant.
+    ///
+    /// Computed as `log2_midp_unchecked(x) * log10(2)`.
+    /// **Warning**: Does not handle edge cases (0, negative, inf, NaN, denormals).
+    #[inline(always)]
+    pub fn log10_midp_unchecked(self) -> Self {
+        const LOG10_2: f32 = core::f32::consts::LOG10_2;
+        unsafe {
+            Self(_mm_mul_ps(
+                self.log2_midp_unchecked().0,
+                _mm_set1_ps(LOG10_2),
+            ))
+        }
+    }
+
+    /// Mid-precision base-10 logarithm with edge case handling.
+    ///
+    /// Computed as `log2_midp(x) * log10(2)`.
+    /// Returns -inf for 0, NaN for negative, correct results for inf/NaN.
+    #[inline(always)]
+    pub fn log10_midp(self) -> Self {
+        const LOG10_2: f32 = core::f32::consts::LOG10_2;
+        unsafe { Self(_mm_mul_ps(self.log2_midp().0, _mm_set1_ps(LOG10_2))) }
+    }
+
+    /// Mid-precision base-10 logarithm with full IEEE compliance.
+    ///
+    /// Handles all edge cases including denormals.
+    /// About 50% slower than `log10_midp()` due to denormal scaling.
+    #[inline(always)]
+    pub fn log10_midp_precise(self) -> Self {
+        const LOG10_2: f32 = core::f32::consts::LOG10_2;
+        unsafe { Self(_mm_mul_ps(self.log2_midp_precise().0, _mm_set1_ps(LOG10_2))) }
     }
 
     /// Mid-precision cube root (~1 ULP max error).

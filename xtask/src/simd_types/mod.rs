@@ -24,6 +24,7 @@ mod structure_arm;
 pub mod structure_polyfill;
 mod structure_wasm;
 mod transcendental;
+pub mod transcendental_arm;
 pub mod transcendental_wasm;
 pub mod types;
 pub mod width_dispatch;

@@ -56,6 +56,11 @@ pub fn generate_type(ty: &SimdType) -> String {
     // Bitcast operations (reinterpret bits between same-width types)
     code.push_str(&ops_bitcast::generate_arm_bitcasts(ty));
 
+    // Transcendental operations (log, exp, pow, cbrt)
+    code.push_str(&super::transcendental_arm::generate_arm_transcendental_ops(
+        ty,
+    ));
+
     code.push_str("}\n\n");
 
     // Operator implementations
