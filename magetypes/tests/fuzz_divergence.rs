@@ -369,13 +369,16 @@ mod reduce_operations {
                 let v = f32x8::from_array(token, a);
                 let native = v.reduce_add();
                 let scalar: f32 = a.iter().sum();
-                // SIMD reduce uses tree reduction (different associativity than sequential sum).
-                // When large values nearly cancel, the result is tiny but the error from
-                // reordering is proportional to the sum of absolute values, not the result.
+                // SIMD uses tree reduction: ((a+e)+(b+f)) + ((c+g)+(d+h))
+                // Scalar uses left fold:    ((((((a+b)+c)+d)+e)+f)+g)+h
+                // Higham's bound: the difference between two summation orderings
+                // of N values is at most N * eps * sum(|x_i|). This catches real
+                // bugs (wrong lane = ~1e5 error) while allowing FP reordering.
                 let abs_sum: f32 = a.iter().map(|x| x.abs()).sum();
-                let tol = 1e-6 * abs_sum.max(1.0);
+                let tol = 8.0 * f32::EPSILON * abs_sum.max(1.0);
                 prop_assert!((native - scalar).abs() < tol,
-                    "native={}, scalar={}, abs_sum={}, tol={}", native, scalar, abs_sum, tol);
+                    "native={}, scalar={}, diff={}, tol={}",
+                    native, scalar, (native - scalar).abs(), tol);
             }
         }
 
