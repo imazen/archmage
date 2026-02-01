@@ -26,6 +26,7 @@ mod structure_wasm;
 mod transcendental;
 pub mod transcendental_wasm;
 pub mod types;
+pub mod width_dispatch;
 
 pub use types::{SimdType, SimdWidth, all_simd_types};
 
