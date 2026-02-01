@@ -1110,13 +1110,13 @@ fn z512d() -> __m512d { unsafe { core::mem::zeroed() } }
     fs::write(test_dir.join("lib.rs"), &lib_rs)?;
 
     println!("Generated soundness test crate: {}", test_dir.display());
-    println!(
-        "  Feature sets: {}",
-        intrinsics_by_features.len()
-    );
+    println!("  Feature sets: {}", intrinsics_by_features.len());
     println!(
         "  Total intrinsics: {}",
-        intrinsics_by_features.values().map(|s| s.len()).sum::<usize>()
+        intrinsics_by_features
+            .values()
+            .map(|s| s.len())
+            .sum::<usize>()
     );
 
     // Run cargo check
@@ -1158,22 +1158,53 @@ fn generate_intrinsic_call(name: &str) -> String {
     // Determine data type from suffix
     let is_pd = name.contains("_pd") || name.ends_with("pd");
     let is_ps = name.contains("_ps") || name.ends_with("ps");
-    let is_si = name.contains("_si") || name.contains("si128") || name.contains("si256") || name.contains("si512");
+    let is_si = name.contains("_si")
+        || name.contains("si128")
+        || name.contains("si256")
+        || name.contains("si512");
     let is_epi = name.contains("_epi") || name.contains("epu");
 
-    let z = if is_pd { z_pd } else if is_ps { z_ps } else { z_i };
+    let z = if is_pd {
+        z_pd
+    } else if is_ps {
+        z_ps
+    } else {
+        z_i
+    };
 
     // Skip intrinsics that are hard to call (require complex setup)
     let skip_patterns = [
-        "gather", "scatter", "mask_", "maskz_", "conflict", "compress", "expand",
-        "stream", "prefetch", "pause", "lfence", "sfence", "mfence",
-        "popcnt_", "lzcnt_", "tzcnt_", // scalar intrinsics
-        "_cvt", // conversions need special handling
-        "crc32", "aes", "clmul", "sha", // crypto
+        "gather",
+        "scatter",
+        "mask_",
+        "maskz_",
+        "conflict",
+        "compress",
+        "expand",
+        "stream",
+        "prefetch",
+        "pause",
+        "lfence",
+        "sfence",
+        "mfence",
+        "popcnt_",
+        "lzcnt_",
+        "tzcnt_", // scalar intrinsics
+        "_cvt",   // conversions need special handling
+        "crc32",
+        "aes",
+        "clmul",
+        "sha",     // crypto
         "reduce_", // reduction ops
-        "range_", "range", // AVX-512 range
-        "fixup", "getexp", "getmant", "scalef", "fpclass",
-        "roundscale_", "ternarylogic",
+        "range_",
+        "range", // AVX-512 range
+        "fixup",
+        "getexp",
+        "getmant",
+        "scalef",
+        "fpclass",
+        "roundscale_",
+        "ternarylogic",
     ];
     for pat in skip_patterns {
         if name.contains(pat) {
@@ -1185,8 +1216,12 @@ fn generate_intrinsic_call(name: &str) -> String {
     if name.contains("slli_") || name.contains("srli_") || name.contains("srai_") {
         return format!("let _ = {name}::<1>({z});");
     }
-    if name.contains("shuffle_") || name.contains("permute_") || name.contains("blend_")
-        || name.contains("insert_") || name.contains("extract_") {
+    if name.contains("shuffle_")
+        || name.contains("permute_")
+        || name.contains("blend_")
+        || name.contains("insert_")
+        || name.contains("extract_")
+    {
         // These need const generics
         return format!("// skipped: {name} (const generic)");
     }
@@ -1197,7 +1232,11 @@ fn generate_intrinsic_call(name: &str) -> String {
     if name.contains("_round_") || name.contains("round_") {
         return format!("let _ = {name}::<0>({z});");
     }
-    if name.contains("cmp_") && !name.contains("cmpeq") && !name.contains("cmpgt") && !name.contains("cmplt") {
+    if name.contains("cmp_")
+        && !name.contains("cmpeq")
+        && !name.contains("cmpgt")
+        && !name.contains("cmplt")
+    {
         // AVX cmp with const predicate
         return format!("// skipped: {name} (cmp predicate)");
     }
@@ -1224,11 +1263,17 @@ fn generate_intrinsic_call(name: &str) -> String {
         return format!("let _ = {name}({z_pd});");
     }
 
-    let is_unary = name.contains("sqrt") || name.contains("rcp") || name.contains("rsqrt")
-        || name.contains("abs") || (name.contains("not") && !name.contains("andnot"))
+    let is_unary = name.contains("sqrt")
+        || name.contains("rcp")
+        || name.contains("rsqrt")
+        || name.contains("abs")
+        || (name.contains("not") && !name.contains("andnot"))
         || (name.contains("neg") && !name.contains("fneg"))
-        || name.contains("floor") || name.contains("ceil") || name.contains("round")
-        || name.contains("setzero") || name.contains("undefined");
+        || name.contains("floor")
+        || name.contains("ceil")
+        || name.contains("round")
+        || name.contains("setzero")
+        || name.contains("undefined");
 
     let is_set = name.contains("set1_") || name.contains("set_") || name.contains("setr_");
 
@@ -1278,9 +1323,14 @@ fn generate_intrinsic_call(name: &str) -> String {
     }
 
     // FMA and other ternary patterns (3 args)
-    if name.contains("fmadd") || name.contains("fmsub") || name.contains("fnmadd")
-        || name.contains("fnmsub") || name.contains("fmaddsub") || name.contains("fmsubadd")
-        || name.contains("permutex2var") {
+    if name.contains("fmadd")
+        || name.contains("fmsub")
+        || name.contains("fnmadd")
+        || name.contains("fnmsub")
+        || name.contains("fmaddsub")
+        || name.contains("fmsubadd")
+        || name.contains("permutex2var")
+    {
         return format!("let _ = {name}({z}, {z}, {z});");
     }
 
@@ -1290,13 +1340,26 @@ fn generate_intrinsic_call(name: &str) -> String {
     }
 
     // Binary operations (most common)
-    if name.contains("add") || name.contains("sub") || name.contains("mul") || name.contains("div")
-        || name.contains("and") || name.contains("or") || name.contains("xor")
-        || name.contains("min") || name.contains("max")
-        || name.contains("cmpeq") || name.contains("cmpgt") || name.contains("cmplt")
-        || name.contains("cmpge") || name.contains("cmple") || name.contains("cmpne")
-        || name.contains("unpack") || name.contains("hadd") || name.contains("hsub")
-        || name.contains("blend_") {
+    if name.contains("add")
+        || name.contains("sub")
+        || name.contains("mul")
+        || name.contains("div")
+        || name.contains("and")
+        || name.contains("or")
+        || name.contains("xor")
+        || name.contains("min")
+        || name.contains("max")
+        || name.contains("cmpeq")
+        || name.contains("cmpgt")
+        || name.contains("cmplt")
+        || name.contains("cmpge")
+        || name.contains("cmple")
+        || name.contains("cmpne")
+        || name.contains("unpack")
+        || name.contains("hadd")
+        || name.contains("hsub")
+        || name.contains("blend_")
+    {
         return format!("let _ = {name}({z}, {z});");
     }
 
@@ -1372,9 +1435,7 @@ fn main() -> Result<()> {
         eprintln!(
             "       cargo xtask soundness           - Compile-time intrinsic safety verification"
         );
-        eprintln!(
-            "       cargo xtask miri                - Run tests under Miri (detects UB)"
-        );
+        eprintln!("       cargo xtask miri                - Run tests under Miri (detects UB)");
         std::process::exit(1);
     }
 
