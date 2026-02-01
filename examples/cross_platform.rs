@@ -203,9 +203,9 @@ fn print_platform_info() {
     {
         use archmage::SimdToken;
         println!("  Architecture: x86_64");
-        print!("  SSE4.1:    ");
-        if archmage::Sse41Token::try_new().is_some() {
-            println!("Available (4 x f32)");
+        print!("  x86-64-v2: ");
+        if archmage::X64V2Token::try_new().is_some() {
+            println!("Available (SSE4.2+POPCNT)");
         } else {
             println!("Not available");
         }

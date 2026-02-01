@@ -22,55 +22,6 @@ mod x86_concrete_tokens {
     use archmage::{SimdToken, arcane};
     use std::arch::x86_64::*;
 
-    // --- SSE-level tokens ---
-
-    #[arcane]
-    fn with_sse41(token: archmage::Sse41Token) -> i32 {
-        let v = _mm_set1_epi32(42);
-        unsafe { _mm_extract_epi32::<0>(v) }
-    }
-
-    #[arcane]
-    fn with_sse42(token: archmage::Sse42Token) -> u32 {
-        let v = _mm_set1_epi32(0);
-        _mm_crc32_u8(0, 0)
-    }
-
-    // --- AVX-level tokens ---
-
-    #[arcane]
-    fn with_avx(token: archmage::AvxToken) -> f32 {
-        let v = _mm256_set1_ps(1.0);
-        let lo = _mm256_castps256_ps128(v);
-        unsafe { _mm_cvtss_f32(lo) }
-    }
-
-    #[arcane]
-    fn with_avx2(token: archmage::Avx2Token) -> i32 {
-        let v = _mm256_set1_epi32(7);
-        let lo = _mm256_castsi256_si128(v);
-        unsafe { _mm_extract_epi32::<0>(lo) }
-    }
-
-    #[arcane]
-    fn with_fma(token: archmage::FmaToken) -> f32 {
-        let a = _mm_set1_ps(2.0);
-        let b = _mm_set1_ps(3.0);
-        let c = _mm_set1_ps(1.0);
-        let r = _mm_fmadd_ps(a, b, c);
-        unsafe { _mm_cvtss_f32(r) }
-    }
-
-    #[arcane]
-    fn with_avx2fma(token: archmage::Avx2FmaToken) -> f32 {
-        let a = _mm256_set1_ps(2.0);
-        let b = _mm256_set1_ps(3.0);
-        let c = _mm256_set1_ps(1.0);
-        let r = _mm256_fmadd_ps(a, b, c);
-        let lo = _mm256_castps256_ps128(r);
-        unsafe { _mm_cvtss_f32(lo) }
-    }
-
     // --- Tier tokens ---
 
     #[arcane]
@@ -94,52 +45,17 @@ mod x86_concrete_tokens {
         unsafe { _mm_cvtss_f32(lo) }
     }
 
+    #[arcane]
+    fn with_avx2fma(token: archmage::Avx2FmaToken) -> f32 {
+        let a = _mm256_set1_ps(2.0);
+        let b = _mm256_set1_ps(3.0);
+        let c = _mm256_set1_ps(1.0);
+        let r = _mm256_fmadd_ps(a, b, c);
+        let lo = _mm256_castps256_ps128(r);
+        unsafe { _mm_cvtss_f32(lo) }
+    }
+
     // --- AVX-512 tokens ---
-
-    #[cfg(feature = "avx512")]
-    #[arcane]
-    fn with_avx512f(token: archmage::Avx512fToken) -> f32 {
-        let v = _mm512_set1_ps(1.0);
-        unsafe { _mm_cvtss_f32(_mm512_castps512_ps128(v)) }
-    }
-
-    #[cfg(feature = "avx512")]
-    #[arcane]
-    fn with_avx512bw(token: archmage::Avx512bwToken) -> f32 {
-        let v = _mm512_set1_ps(2.0);
-        unsafe { _mm_cvtss_f32(_mm512_castps512_ps128(v)) }
-    }
-
-    #[cfg(feature = "avx512")]
-    #[arcane]
-    fn with_avx512f_vl(token: archmage::Avx512fVlToken) -> f32 {
-        let v = _mm256_set1_ps(1.0);
-        let lo = _mm256_castps256_ps128(v);
-        unsafe { _mm_cvtss_f32(lo) }
-    }
-
-    #[cfg(feature = "avx512")]
-    #[arcane]
-    fn with_avx512bw_vl(token: archmage::Avx512bwVlToken) -> f32 {
-        let v = _mm256_set1_ps(2.0);
-        let lo = _mm256_castps256_ps128(v);
-        unsafe { _mm_cvtss_f32(lo) }
-    }
-
-    #[cfg(feature = "avx512")]
-    #[arcane]
-    fn with_avx512vbmi2(token: archmage::Avx512Vbmi2Token) -> f32 {
-        let v = _mm512_set1_ps(3.0);
-        unsafe { _mm_cvtss_f32(_mm512_castps512_ps128(v)) }
-    }
-
-    #[cfg(feature = "avx512")]
-    #[arcane]
-    fn with_avx512vbmi2_vl(token: archmage::Avx512Vbmi2VlToken) -> f32 {
-        let v = _mm256_set1_ps(3.0);
-        let lo = _mm256_castps256_ps128(v);
-        unsafe { _mm_cvtss_f32(lo) }
-    }
 
     #[cfg(feature = "avx512")]
     #[arcane]
@@ -179,48 +95,6 @@ mod x86_concrete_tokens {
     // --- Runtime tests for concrete tokens ---
 
     #[test]
-    fn test_concrete_sse41() {
-        if let Some(t) = archmage::Sse41Token::try_new() {
-            assert_eq!(with_sse41(t), 42);
-        }
-    }
-
-    #[test]
-    fn test_concrete_sse42() {
-        if let Some(t) = archmage::Sse42Token::try_new() {
-            let _ = with_sse42(t);
-        }
-    }
-
-    #[test]
-    fn test_concrete_avx() {
-        if let Some(t) = archmage::AvxToken::try_new() {
-            assert_eq!(with_avx(t), 1.0);
-        }
-    }
-
-    #[test]
-    fn test_concrete_avx2() {
-        if let Some(t) = archmage::Avx2Token::try_new() {
-            assert_eq!(with_avx2(t), 7);
-        }
-    }
-
-    #[test]
-    fn test_concrete_fma() {
-        if let Some(t) = archmage::FmaToken::try_new() {
-            assert_eq!(with_fma(t), 7.0); // 2*3+1
-        }
-    }
-
-    #[test]
-    fn test_concrete_avx2fma() {
-        if let Some(t) = archmage::Avx2FmaToken::try_new() {
-            assert_eq!(with_avx2fma(t), 7.0);
-        }
-    }
-
-    #[test]
     fn test_concrete_x64v2() {
         if let Some(t) = archmage::X64V2Token::try_new() {
             let _ = with_x64v2(t);
@@ -238,6 +112,13 @@ mod x86_concrete_tokens {
     fn test_concrete_desktop64() {
         if let Some(t) = archmage::Desktop64::try_new() {
             assert_eq!(with_desktop64(t), 12.0); // 3*3+3
+        }
+    }
+
+    #[test]
+    fn test_concrete_avx2fma() {
+        if let Some(t) = archmage::Avx2FmaToken::try_new() {
+            assert_eq!(with_avx2fma(t), 7.0); // 2*3+1
         }
     }
 
@@ -295,18 +176,20 @@ mod x86_impl_trait {
 
     #[test]
     fn test_impl_trait_has128() {
-        if let Some(t) = archmage::Sse41Token::try_new() {
+        // X64V2Token implements Has128BitSimd
+        if let Some(t) = archmage::X64V2Token::try_new() {
             assert_eq!(with_has128(t), 1.0);
         }
     }
 
     #[test]
     fn test_impl_trait_has256() {
-        if let Some(t) = archmage::Avx2Token::try_new() {
+        // X64V3Token implements Has256BitSimd
+        if let Some(t) = archmage::X64V3Token::try_new() {
             assert_eq!(with_has256(t), 2.0);
         }
-        // X64V3Token also has Has256BitSimd
-        if let Some(t) = archmage::X64V3Token::try_new() {
+        // Avx2FmaToken (alias for X64V3Token) also has Has256BitSimd
+        if let Some(t) = archmage::Avx2FmaToken::try_new() {
             assert_eq!(with_has256(t), 2.0);
         }
     }
@@ -371,7 +254,7 @@ mod x86_generic_inline {
 
     #[test]
     fn test_generic_inline_has128() {
-        if let Some(t) = archmage::Sse41Token::try_new() {
+        if let Some(t) = archmage::X64V2Token::try_new() {
             assert_eq!(generic_has128(t), 10.0);
         }
     }
@@ -443,7 +326,7 @@ mod x86_generic_where {
 
     #[test]
     fn test_where_has128() {
-        if let Some(t) = archmage::Sse42Token::try_new() {
+        if let Some(t) = archmage::X64V2Token::try_new() {
             assert_eq!(where_has128(t), 100.0);
         }
     }
@@ -519,7 +402,7 @@ mod x86_cross_compat {
         }
     }
 
-    /// Avx2FmaToken implements Has128BitSimd, Has256BitSimd, and HasX64V2
+    /// Avx2FmaToken (alias for X64V3Token) implements Has128BitSimd, Has256BitSimd, and HasX64V2
     #[test]
     fn test_avx2fma_satisfies_lower_bounds() {
         if let Some(t) = archmage::Avx2FmaToken::try_new() {
@@ -568,6 +451,13 @@ mod x86_alias_identity {
         let _: Option<archmage::X64V3Token> = archmage::Desktop64::try_new();
     }
 
+    #[test]
+    fn avx2fma_is_x64v3() {
+        // Avx2FmaToken is a type alias for X64V3Token
+        let _: Option<archmage::Avx2FmaToken> = archmage::X64V3Token::try_new();
+        let _: Option<archmage::X64V3Token> = archmage::Avx2FmaToken::try_new();
+    }
+
     #[cfg(feature = "avx512")]
     #[test]
     fn server64_is_x64v4_is_avx512() {
@@ -612,14 +502,8 @@ mod arm_concrete_tokens {
     }
 
     #[arcane]
-    fn with_arm_crypto(token: archmage::ArmCryptoToken) -> f32 {
+    fn with_neon_crc(token: archmage::NeonCrcToken) -> f32 {
         let v = vdupq_n_f32(5.0);
-        vgetq_lane_f32::<0>(v)
-    }
-
-    #[arcane]
-    fn with_arm_crypto3(token: archmage::ArmCrypto3Token) -> f32 {
-        let v = vdupq_n_f32(6.0);
         vgetq_lane_f32::<0>(v)
     }
 
@@ -667,6 +551,9 @@ mod arm_concrete_tokens {
         }
         if let Some(t) = archmage::Arm64::try_new() {
             assert_eq!(with_arm64(t), 2.0);
+        }
+        if let Some(t) = archmage::NeonCrcToken::try_new() {
+            assert_eq!(with_neon_crc(t), 5.0);
         }
     }
 

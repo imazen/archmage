@@ -42,8 +42,8 @@
 ///
 /// // GOOD: Check once, pass token
 /// fn process(data: &[f32]) {
-///     if let Some(token) = Avx2Token::try_new() {
-///         inner(token, data);  // inner KNOWS avx2 is available
+///     if let Some(token) = X64V3Token::try_new() {
+///         inner(token, data);  // inner KNOWS v3 features are available
 ///     }
 /// }
 /// ```

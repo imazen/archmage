@@ -14,34 +14,29 @@ use archmage::SimdToken;
 /// On non-native architectures, summon() returns None.
 #[test]
 fn test_cross_platform_token_types_exist() {
-    // x86 tokens - should compile on ARM/WASM, summon returns None there
-    use archmage::{
-        Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, Sse41Token, Sse42Token, X64V2Token,
-        X64V3Token,
-    };
+    // x86 tier tokens - should compile on ARM/WASM, summon returns None there
+    use archmage::{Avx2FmaToken, Desktop64, X64V2Token, X64V3Token};
     #[cfg(feature = "avx512")]
     use archmage::{Avx512Token, X64V4Token};
 
     // Verify tokens are zero-sized
-    assert_eq!(core::mem::size_of::<Sse41Token>(), 0);
-    assert_eq!(core::mem::size_of::<Sse42Token>(), 0);
-    assert_eq!(core::mem::size_of::<AvxToken>(), 0);
-    assert_eq!(core::mem::size_of::<Avx2Token>(), 0);
-    assert_eq!(core::mem::size_of::<FmaToken>(), 0);
-    assert_eq!(core::mem::size_of::<Avx2FmaToken>(), 0);
     assert_eq!(core::mem::size_of::<X64V2Token>(), 0);
     assert_eq!(core::mem::size_of::<X64V3Token>(), 0);
+    assert_eq!(core::mem::size_of::<Avx2FmaToken>(), 0);
+    assert_eq!(core::mem::size_of::<Desktop64>(), 0);
     #[cfg(feature = "avx512")]
     assert_eq!(core::mem::size_of::<X64V4Token>(), 0);
-    assert_eq!(core::mem::size_of::<Desktop64>(), 0);
     #[cfg(feature = "avx512")]
     assert_eq!(core::mem::size_of::<Avx512Token>(), 0);
 
     // ARM tokens - should compile on x86/WASM, summon returns None there
-    use archmage::{Arm64, NeonToken};
+    use archmage::{Arm64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken};
 
     assert_eq!(core::mem::size_of::<NeonToken>(), 0);
     assert_eq!(core::mem::size_of::<Arm64>(), 0);
+    assert_eq!(core::mem::size_of::<NeonAesToken>(), 0);
+    assert_eq!(core::mem::size_of::<NeonSha3Token>(), 0);
+    assert_eq!(core::mem::size_of::<NeonCrcToken>(), 0);
 
     // WASM token - should compile everywhere
     use archmage::Simd128Token;
@@ -73,6 +68,7 @@ fn test_summon_behavior() {
     // On aarch64, NEON is always available
     #[cfg(target_arch = "aarch64")]
     {
+        use archmage::Desktop64;
         assert!(NeonToken::summon().is_some(), "NEON is baseline on AArch64");
         assert!(Arm64::summon().is_some(), "Arm64 is baseline on AArch64");
 
@@ -95,6 +91,7 @@ fn test_summon_behavior() {
     // On WASM, SIMD128 may be available
     #[cfg(target_arch = "wasm32")]
     {
+        use archmage::Desktop64;
         // x86 and ARM tokens should return None on WASM
         assert!(
             Desktop64::summon().is_none(),
@@ -108,7 +105,7 @@ fn test_summon_behavior() {
 /// Run with: ARCHMAGE_DISABLE=1 cargo test test_disable_archmage_env
 #[test]
 fn test_disable_archmage_env() {
-    use archmage::{SimdToken, Sse41Token};
+    use archmage::{SimdToken, X64V2Token};
 
     // This test verifies the mechanism works - actual disable testing
     // should be done by running: ARCHMAGE_DISABLE=1 cargo test
@@ -116,12 +113,12 @@ fn test_disable_archmage_env() {
         #[cfg(target_arch = "x86_64")]
         {
             assert!(
-                Sse41Token::summon().is_none(),
+                X64V2Token::summon().is_none(),
                 "ARCHMAGE_DISABLE should make summon() return None"
             );
             // try_new() should still work
             assert!(
-                Sse41Token::try_new().is_some(),
+                X64V2Token::try_new().is_some(),
                 "try_new() should still detect CPU features"
             );
         }
@@ -176,36 +173,65 @@ fn test_cross_platform_dispatch_pattern() {
 #[test]
 fn test_token_names() {
     use archmage::{
-        Arm64, Avx2FmaToken, Avx2Token, AvxToken, Desktop64, FmaToken, NeonToken, Simd128Token,
-        Sse41Token, Sse42Token, X64V2Token, X64V3Token,
+        Arm64, Avx2FmaToken, Desktop64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken,
+        Simd128Token, X64V2Token, X64V3Token,
     };
 
-    // x86 tokens
-    assert_eq!(Sse41Token::NAME, "SSE4.1");
-    assert_eq!(Sse42Token::NAME, "SSE4.2");
-    assert_eq!(AvxToken::NAME, "AVX");
-    assert_eq!(Avx2Token::NAME, "AVX2");
-    assert_eq!(FmaToken::NAME, "FMA");
-    assert_eq!(Avx2FmaToken::NAME, "AVX2+FMA");
+    // x86 tier tokens
     assert_eq!(X64V2Token::NAME, "x86-64-v2");
     assert_eq!(X64V3Token::NAME, "x86-64-v3");
+    assert_eq!(Avx2FmaToken::NAME, "x86-64-v3"); // alias for X64V3Token
 
     // AVX-512 tokens (requires avx512 feature)
     #[cfg(feature = "avx512")]
     {
-        use archmage::{Avx512Token, X64V4Token};
-        // X64V4Token is an alias for Avx512Token
+        use archmage::{Avx512Token, Server64, X64V4Token};
         assert_eq!(X64V4Token::NAME, "AVX-512");
         assert_eq!(Avx512Token::NAME, "AVX-512");
+        assert_eq!(Server64::NAME, "AVX-512");
     }
 
-    // Verify aliases
+    // Verify aliases share the same NAME
     assert_eq!(Desktop64::NAME, X64V3Token::NAME);
+    assert_eq!(Avx2FmaToken::NAME, X64V3Token::NAME);
 
     // ARM tokens
     assert_eq!(NeonToken::NAME, "NEON");
     assert_eq!(Arm64::NAME, NeonToken::NAME);
+    assert_eq!(NeonAesToken::NAME, "NEON+AES");
+    assert_eq!(NeonSha3Token::NAME, "NEON+SHA3");
+    assert_eq!(NeonCrcToken::NAME, "NEON+CRC");
 
     // WASM tokens
     assert_eq!(Simd128Token::NAME, "SIMD128");
+}
+
+/// Print all token names for debugging.
+#[test]
+fn print_all_token_names() {
+    println!("All archmage tokens:");
+    println!("  x86 tier tokens:");
+    println!("    X64V2Token:        {}", archmage::X64V2Token::NAME);
+    println!("    X64V3Token:        {}", archmage::X64V3Token::NAME);
+    println!("    Desktop64:         {}", archmage::Desktop64::NAME);
+    println!("    Avx2FmaToken:      {}", archmage::Avx2FmaToken::NAME);
+    #[cfg(feature = "avx512")]
+    {
+        println!("    X64V4Token:        {}", archmage::X64V4Token::NAME);
+        println!("    Avx512Token:       {}", archmage::Avx512Token::NAME);
+        println!("    Server64:          {}", archmage::Server64::NAME);
+        println!(
+            "    Avx512ModernToken: {}",
+            archmage::Avx512ModernToken::NAME
+        );
+        println!("    Avx512Fp16Token:   {}", archmage::Avx512Fp16Token::NAME);
+    }
+    println!("  ARM tokens:");
+    println!("    NeonToken:         {}", archmage::NeonToken::NAME);
+    println!("    Arm64:             {}", archmage::Arm64::NAME);
+    println!("    NeonAesToken:      {}", archmage::NeonAesToken::NAME);
+    println!("    NeonSha3Token:     {}", archmage::NeonSha3Token::NAME);
+    println!("    NeonCrcToken:      {}", archmage::NeonCrcToken::NAME);
+    println!("  WASM tokens:");
+    println!("    Simd128Token:      {}", archmage::Simd128Token::NAME);
 }

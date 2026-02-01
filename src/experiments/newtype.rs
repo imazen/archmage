@@ -3981,7 +3981,7 @@ impl IndexMut<usize> for i32x16 {
 mod tests {
     use super::*;
     use crate::tokens::SimdToken;
-    use crate::{Avx2FmaToken, Sse41Token};
+    use crate::{Avx2FmaToken, X64V2Token};
 
     #[test]
     fn test_f32x8_basic() {
@@ -4089,7 +4089,7 @@ mod tests {
     #[test]
     fn test_f32x4_basic() {
         // f32x4 uses SSE/SSE2 which is baseline on x86_64
-        if let Some(t) = Sse41Token::summon() {
+        if let Some(t) = X64V2Token::summon() {
             let a = f32x4::splat(t, 2.0);
             let b = f32x4::splat(t, 3.0);
             assert_eq!((a + b).to_array(), [5.0f32; 4]);

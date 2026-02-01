@@ -6,14 +6,14 @@
 use core::arch::x86_64::*;
 
 use crate::simd_fn;
-use crate::tokens::x86::Avx2Token;
+use crate::tokens::x86::X64V3Token;
 
 /// Horizontal sum of 8 f32s using AVX2.
 ///
 /// Reduces a 256-bit vector to a single f32 sum.
 #[simd_fn]
 #[inline]
-pub fn hsum_f32x8(_token: Avx2Token, v: __m256) -> f32 {
+pub fn hsum_f32x8(_token: X64V3Token, v: __m256) -> f32 {
     // Extract high and low 128-bit lanes
     let lo = _mm256_extractf128_ps::<0>(v);
     let hi = _mm256_extractf128_ps::<1>(v);
@@ -32,7 +32,7 @@ pub fn hsum_f32x8(_token: Avx2Token, v: __m256) -> f32 {
 /// Horizontal maximum of 8 f32s using AVX2.
 #[simd_fn]
 #[inline]
-pub fn hmax_f32x8(_token: Avx2Token, v: __m256) -> f32 {
+pub fn hmax_f32x8(_token: X64V3Token, v: __m256) -> f32 {
     let lo = _mm256_extractf128_ps::<0>(v);
     let hi = _mm256_extractf128_ps::<1>(v);
 
@@ -50,7 +50,7 @@ pub fn hmax_f32x8(_token: Avx2Token, v: __m256) -> f32 {
 /// Horizontal minimum of 8 f32s using AVX2.
 #[simd_fn]
 #[inline]
-pub fn hmin_f32x8(_token: Avx2Token, v: __m256) -> f32 {
+pub fn hmin_f32x8(_token: X64V3Token, v: __m256) -> f32 {
     let lo = _mm256_extractf128_ps::<0>(v);
     let hi = _mm256_extractf128_ps::<1>(v);
 
@@ -67,7 +67,7 @@ pub fn hmin_f32x8(_token: Avx2Token, v: __m256) -> f32 {
 /// Sum all elements of an f32 slice using AVX2.
 #[simd_fn]
 #[inline]
-pub fn sum_f32_slice(_token: Avx2Token, data: &[f32]) -> f32 {
+pub fn sum_f32_slice(_token: X64V3Token, data: &[f32]) -> f32 {
     let mut sum = _mm256_setzero_ps();
 
     let chunks = data.len() / 8;
@@ -95,7 +95,7 @@ pub fn sum_f32_slice(_token: Avx2Token, data: &[f32]) -> f32 {
 /// Find maximum element in an f32 slice using AVX2.
 #[simd_fn]
 #[inline]
-pub fn max_f32_slice(_token: Avx2Token, data: &[f32]) -> f32 {
+pub fn max_f32_slice(_token: X64V3Token, data: &[f32]) -> f32 {
     if data.is_empty() {
         return f32::NEG_INFINITY;
     }
@@ -131,7 +131,7 @@ pub fn max_f32_slice(_token: Avx2Token, data: &[f32]) -> f32 {
 /// Find minimum element in an f32 slice using AVX2.
 #[simd_fn]
 #[inline]
-pub fn min_f32_slice(_token: Avx2Token, data: &[f32]) -> f32 {
+pub fn min_f32_slice(_token: X64V3Token, data: &[f32]) -> f32 {
     if data.is_empty() {
         return f32::INFINITY;
     }
@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn test_hsum() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             // Outside #[arcane], safe_unaligned_simd needs unsafe
             let v = unsafe { safe_unaligned_simd::x86_64::_mm256_loadu_ps(&data) };
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_hmax() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let data = [1.0f32, 8.0, 3.0, 4.0, 5.0, 2.0, 7.0, 6.0];
             let v = unsafe { safe_unaligned_simd::x86_64::_mm256_loadu_ps(&data) };
             let max = hmax_f32x8(token, v);
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_hmin() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let data = [3.0f32, 8.0, 1.0, 4.0, 5.0, 2.0, 7.0, 6.0];
             let v = unsafe { safe_unaligned_simd::x86_64::_mm256_loadu_ps(&data) };
             let min = hmin_f32x8(token, v);
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_sum_slice() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let data: Vec<f32> = (1..=100).map(|i| i as f32).collect();
             let sum = sum_f32_slice(token, &data);
             let expected = 5050.0; // n*(n+1)/2 for n=100
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_max_slice() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let data = vec![1.0f32, 5.0, 3.0, 9.0, 2.0, 8.0, 4.0, 7.0, 6.0, 10.0];
             let max = max_f32_slice(token, &data);
             assert!((max - 10.0).abs() < 0.001);
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_min_slice() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let data = vec![5.0f32, 3.0, 9.0, 1.0, 8.0, 4.0, 7.0, 6.0, 2.0, 10.0];
             let min = min_f32_slice(token, &data);
             assert!((min - 1.0).abs() < 0.001);

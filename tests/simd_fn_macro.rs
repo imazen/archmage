@@ -6,14 +6,12 @@
 mod x86_tests {
     #[cfg(feature = "avx512")]
     use archmage::Avx512Token;
-    use archmage::{
-        Avx2FmaToken, Avx2Token, Desktop64, Has256BitSimd, SimdToken, X64V3Token, simd_fn,
-    };
+    use archmage::{Avx2FmaToken, Desktop64, Has256BitSimd, SimdToken, X64V3Token, simd_fn};
     use std::arch::x86_64::*;
 
-    /// Basic test: simd_fn with Avx2Token
+    /// Basic test: simd_fn with X64V3Token
     #[simd_fn]
-    fn double_values(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+    fn double_values(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
         let mut out = [0.0f32; 8];
@@ -23,14 +21,14 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_basic() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = double_values(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
         }
     }
 
-    /// Test with FMA token
+    /// Test with FMA token (Avx2FmaToken is now alias for X64V3Token)
     #[simd_fn]
     fn fma_operation(token: Avx2FmaToken, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
         let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
@@ -80,7 +78,7 @@ mod x86_tests {
 
     /// Test with multiple parameters
     #[simd_fn]
-    fn multi_param(token: Avx2Token, a: &[f32; 8], b: &[f32; 8], scale: f32) -> [f32; 8] {
+    fn multi_param(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], scale: f32) -> [f32; 8] {
         let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
         let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
         let vs = _mm256_set1_ps(scale);
@@ -93,7 +91,7 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_multi_param() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let a = [1.0f32; 8];
             let b = [2.0f32; 8];
             let output = multi_param(token, &a, &b, 3.0);
@@ -104,7 +102,7 @@ mod x86_tests {
 
     /// Test with return type that's not an array
     #[simd_fn]
-    fn horizontal_sum(token: Avx2Token, data: &[f32; 8]) -> f32 {
+    fn horizontal_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         // Horizontal add within 128-bit lanes
         let sum1 = _mm256_hadd_ps(v, v);
@@ -118,7 +116,7 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_scalar_return() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let sum = horizontal_sum(token, &input);
             assert_eq!(sum, 36.0); // 1+2+3+4+5+6+7+8 = 36
@@ -127,7 +125,7 @@ mod x86_tests {
 
     /// Test that value-based intrinsics are safe (no unsafe block needed in body)
     #[simd_fn]
-    fn safe_value_ops(token: Avx2Token, a: __m256, b: __m256) -> __m256 {
+    fn safe_value_ops(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
         // All these are safe in target_feature context (Rust 1.92+)
         let sum = _mm256_add_ps(a, b);
         let product = _mm256_mul_ps(a, b);
@@ -137,7 +135,7 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_value_ops() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let a = unsafe { _mm256_set1_ps(1.0) };
             let b = unsafe { _mm256_set1_ps(2.0) };
             let _result = safe_value_ops(token, a, b);
@@ -161,7 +159,7 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_impl_trait() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = impl_trait_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -191,7 +189,7 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_generic_inline_bounds() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = generic_inline_bounds(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -213,14 +211,14 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_generic_where_clause() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = generic_where_clause(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
         }
     }
 
-    /// Test with multiple trait bounds using impl Trait
+    /// Test with multiple trait bounds using Avx2FmaToken
     #[simd_fn]
     fn impl_trait_multi_bounds(
         token: Avx2FmaToken,
@@ -279,7 +277,7 @@ mod x86_tests {
         }
     }
 
-    /// Test using Has256BitSimd (lower bound) with AVX2 token
+    /// Test using Has256BitSimd (lower bound) with X64V3Token
     #[simd_fn]
     fn lower_bound_test(token: impl Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
@@ -292,8 +290,8 @@ mod x86_tests {
 
     #[test]
     fn test_simd_fn_lower_bound_accepts_higher_token() {
-        // Avx2Token should work with Has256BitSimd bound
-        if let Some(token) = Avx2Token::try_new() {
+        // X64V3Token should work with Has256BitSimd bound
+        if let Some(token) = X64V3Token::try_new() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = lower_bound_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);

@@ -4,21 +4,17 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 #[cfg(target_arch = "x86_64")]
 fn bench_token_overhead(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, Avx2Token, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
 
     let mut group = c.benchmark_group("token_overhead");
 
     // Benchmark token creation
-    group.bench_function("avx2_try_new", |b| {
-        b.iter(|| black_box(Avx2Token::try_new()))
-    });
-
-    group.bench_function("avx2_fma_try_new", |b| {
-        b.iter(|| black_box(Avx2FmaToken::try_new()))
+    group.bench_function("x64v3_try_new", |b| {
+        b.iter(|| black_box(X64V3Token::try_new()))
     });
 
     // Benchmark operations with token vs raw intrinsics
-    if let Some(_token) = Avx2Token::try_new() {
+    if let Some(_token) = X64V3Token::try_new() {
         let data = [1.0f32; 8];
 
         group.bench_function("load_with_safe_unaligned_simd", |b| {
@@ -36,11 +32,11 @@ fn bench_token_overhead(c: &mut Criterion) {
 
 #[cfg(all(target_arch = "x86_64", feature = "__composite"))]
 fn bench_composite_ops(c: &mut Criterion) {
-    use archmage::{Avx2FmaToken, Avx2Token, SimdToken, composite};
+    use archmage::{SimdToken, X64V3Token, composite};
 
     let mut group = c.benchmark_group("composite");
 
-    if let Some(token) = Avx2Token::try_new() {
+    if let Some(token) = X64V3Token::try_new() {
         let mut block: [f32; 64] = core::array::from_fn(|i| i as f32);
 
         group.bench_function("transpose_8x8", |b| {
@@ -48,9 +44,7 @@ fn bench_composite_ops(c: &mut Criterion) {
                 composite::transpose_8x8(token, black_box(&mut block));
             })
         });
-    }
 
-    if let Some(token) = Avx2FmaToken::try_new() {
         let a: Vec<f32> = (0..1024).map(|i| i as f32).collect();
         let b: Vec<f32> = vec![1.0; 1024];
 

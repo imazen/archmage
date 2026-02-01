@@ -6,7 +6,7 @@
 use core::arch::x86_64::*;
 
 use crate::simd_fn;
-use crate::tokens::x86::{Avx2FmaToken, Avx2Token};
+use crate::tokens::x86::X64V3Token;
 
 /// Compute dot product of two f32 slices using AVX2+FMA.
 ///
@@ -15,9 +15,9 @@ use crate::tokens::x86::{Avx2FmaToken, Avx2Token};
 /// # Example
 ///
 /// ```rust,ignore
-/// use archmage::{Avx2FmaToken, SimdToken, composite::dot_product_f32};
+/// use archmage::{X64V3Token, SimdToken, composite::dot_product_f32};
 ///
-/// if let Some(token) = Avx2FmaToken::try_new() {
+/// if let Some(token) = X64V3Token::try_new() {
 ///     let a = vec![1.0f32; 1024];
 ///     let b = vec![2.0f32; 1024];
 ///     let result = dot_product_f32(token, &a, &b);
@@ -26,7 +26,7 @@ use crate::tokens::x86::{Avx2FmaToken, Avx2Token};
 /// ```
 #[simd_fn]
 #[inline]
-pub fn dot_product_f32(_token: Avx2FmaToken, a: &[f32], b: &[f32]) -> f32 {
+pub fn dot_product_f32(_token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
     assert_eq!(a.len(), b.len(), "Slice lengths must match");
 
     // Accumulate in 4 vectors to hide FMA latency
@@ -84,37 +84,9 @@ pub fn dot_product_f32(_token: Avx2FmaToken, a: &[f32], b: &[f32]) -> f32 {
     result
 }
 
-/// Compute dot product without FMA (AVX2 only).
-///
-/// Slightly less accurate than FMA version due to separate multiply and add.
-#[simd_fn]
-#[inline]
-pub fn dot_product_f32_no_fma(_token: Avx2Token, a: &[f32], b: &[f32]) -> f32 {
-    assert_eq!(a.len(), b.len());
-
-    let mut sum = _mm256_setzero_ps();
-
-    let chunks = a.len() / 8;
-    for i in 0..chunks {
-        let av = unsafe { _mm256_loadu_ps(a.as_ptr().add(i * 8)) };
-        let bv = unsafe { _mm256_loadu_ps(b.as_ptr().add(i * 8)) };
-        let prod = _mm256_mul_ps(av, bv);
-        sum = _mm256_add_ps(sum, prod);
-    }
-
-    let arr: [f32; 8] = unsafe { core::mem::transmute(sum) };
-    let mut result: f32 = arr.iter().sum();
-
-    for i in (chunks * 8)..a.len() {
-        result += a[i] * b[i];
-    }
-
-    result
-}
-
 /// Compute squared L2 norm (sum of squares) using AVX2+FMA.
 #[inline]
-pub fn norm_squared_f32(token: Avx2FmaToken, a: &[f32]) -> f32 {
+pub fn norm_squared_f32(token: X64V3Token, a: &[f32]) -> f32 {
     dot_product_f32(token, a, a)
 }
 
@@ -123,7 +95,7 @@ pub fn norm_squared_f32(token: Avx2FmaToken, a: &[f32]) -> f32 {
 /// Requires `std` feature (uses `f32::sqrt`).
 #[cfg(feature = "std")]
 #[inline]
-pub fn norm_f32(token: Avx2FmaToken, a: &[f32]) -> f32 {
+pub fn norm_f32(token: X64V3Token, a: &[f32]) -> f32 {
     norm_squared_f32(token, a).sqrt()
 }
 
@@ -134,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_dot_product() {
-        if let Some(token) = Avx2FmaToken::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let a: Vec<f32> = (0..64).map(|i| i as f32).collect();
             let b: Vec<f32> = vec![1.0; 64];
 
@@ -152,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_dot_product_small() {
-        if let Some(token) = Avx2FmaToken::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             // Test with non-multiple of 8
             let a = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
             let b = vec![2.0f32, 2.0, 2.0, 2.0, 2.0];
@@ -170,27 +142,9 @@ mod tests {
     }
 
     #[test]
-    fn test_dot_product_no_fma() {
-        if let Some(token) = Avx2Token::try_new() {
-            let a: Vec<f32> = (0..64).map(|i| i as f32).collect();
-            let b: Vec<f32> = vec![1.0; 64];
-
-            let result = dot_product_f32_no_fma(token, &a, &b);
-            let expected: f32 = (0..64).map(|i| i as f32).sum();
-
-            assert!(
-                (result - expected).abs() < 0.001,
-                "Expected {}, got {}",
-                expected,
-                result
-            );
-        }
-    }
-
-    #[test]
     #[cfg(feature = "std")]
     fn test_norm() {
-        if let Some(token) = Avx2FmaToken::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let a = vec![3.0f32, 4.0];
             let norm = norm_f32(token, &a);
             assert!((norm - 5.0).abs() < 0.001); // 3-4-5 triangle

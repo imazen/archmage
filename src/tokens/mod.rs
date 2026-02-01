@@ -64,8 +64,8 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// # Example
     ///
     /// ```rust,ignore
-    /// if let Some(token) = Avx2Token::try_new() {
-    ///     // Use AVX2 operations
+    /// if let Some(token) = X64V3Token::try_new() {
+    ///     // Use AVX2+FMA operations
     /// } else {
     ///     // Fallback path
     /// }
@@ -117,18 +117,6 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     unsafe fn forge_token_dangerously() -> Self;
 }
 
-/// Trait for tokens that can be decomposed into sub-tokens.
-///
-/// Combined tokens like `Avx2FmaToken` implement this to provide
-/// access to their component tokens.
-pub trait CompositeToken: SimdToken {
-    /// The component token types
-    type Components;
-
-    /// Decompose into component tokens
-    fn components(&self) -> Self::Components;
-}
-
 // ============================================================================
 // Width Marker Traits
 // ============================================================================
@@ -150,7 +138,7 @@ pub trait Has512BitSimd: Has256BitSimd {}
 //
 // Based on LLVM x86-64 microarchitecture levels (psABI).
 // v1 (baseline): No trait needed - SSE2 always available on x86_64
-// v3: No trait - use Avx2FmaToken directly
+// v3: No trait - use X64V3Token / Avx2FmaToken / Desktop64 directly
 //
 // Available on all architectures for cross-platform code.
 

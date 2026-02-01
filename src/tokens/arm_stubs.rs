@@ -35,8 +35,7 @@ macro_rules! define_arm_stub {
 define_arm_stub!(NeonToken, "NEON");
 define_arm_stub!(NeonAesToken, "NEON+AES");
 define_arm_stub!(NeonSha3Token, "NEON+SHA3");
-define_arm_stub!(ArmCryptoToken, "ARM Crypto");
-define_arm_stub!(ArmCrypto3Token, "ARM Crypto3");
+define_arm_stub!(NeonCrcToken, "NEON+CRC");
 
 /// The baseline for AArch64 (NEON) - stub on non-ARM architectures.
 pub type Arm64 = NeonToken;
@@ -45,19 +44,14 @@ pub type Arm64 = NeonToken;
 impl Has128BitSimd for NeonToken {}
 impl Has128BitSimd for NeonAesToken {}
 impl Has128BitSimd for NeonSha3Token {}
-impl Has128BitSimd for ArmCryptoToken {}
-impl Has128BitSimd for ArmCrypto3Token {}
+impl Has128BitSimd for NeonCrcToken {}
 
 // Tier traits
 impl HasNeon for NeonToken {}
 impl HasNeon for NeonAesToken {}
 impl HasNeon for NeonSha3Token {}
-impl HasNeon for ArmCryptoToken {}
-impl HasNeon for ArmCrypto3Token {}
+impl HasNeon for NeonCrcToken {}
 
 impl HasNeonAes for NeonAesToken {}
-impl HasNeonAes for ArmCryptoToken {}
-impl HasNeonAes for ArmCrypto3Token {}
 
 impl HasNeonSha3 for NeonSha3Token {}
-impl HasNeonSha3 for ArmCrypto3Token {}

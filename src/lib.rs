@@ -45,7 +45,7 @@
 //! making intrinsics safe inside. The token parameter proves CPU support was verified.
 //!
 //! **Generic bounds** like `impl Has256BitSimd` let functions accept any token that
-//! provides 256-bit SIMD (e.g., `Avx2Token`, `Desktop64`, `X64V4Token`).
+//! provides 256-bit SIMD (e.g., `X64V3Token`, `Desktop64`, `X64V4Token`).
 //!
 //! ## Feature Flags
 //!
@@ -101,9 +101,6 @@ pub mod experiments;
 // Core trait
 pub use tokens::SimdToken;
 
-// Composite token trait
-pub use tokens::CompositeToken;
-
 // Width marker traits
 pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 
@@ -119,26 +116,19 @@ pub use tokens::{HasNeon, HasNeonAes, HasNeonSha3};
 pub use tokens::{
     // ARM tokens
     Arm64,
-    // x86 tokens
+    // x86 tier tokens
     Avx2FmaToken,
-    Avx2Token,
-    AvxToken,
     Desktop64,
-    FmaToken,
     NeonAesToken,
+    NeonCrcToken,
     NeonSha3Token,
     NeonToken,
     // WASM tokens
     Simd128Token,
-    Sse41Token,
-    Sse42Token,
     X64V2Token,
     X64V3Token,
 };
 
 // AVX-512 tokens (requires "avx512" feature)
 #[cfg(feature = "avx512")]
-pub use tokens::{
-    Avx512Fp16Token, Avx512ModernToken, Avx512Token, Avx512Vbmi2Token, Avx512Vbmi2VlToken,
-    Avx512bwToken, Avx512bwVlToken, Avx512fToken, Avx512fVlToken, Server64, X64V4Token,
-};
+pub use tokens::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};

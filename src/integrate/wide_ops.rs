@@ -13,7 +13,7 @@ use wide::f32x8;
 // ============================================================================
 
 #[cfg(all(feature = "__wide", target_arch = "x86_64"))]
-impl Avx2Token {
+impl X64V3Token {
     /// Load wide::f32x8 from slice - token proves AVX2 generates SIMD
     #[inline(always)]
     pub fn load_f32x8_wide(self, data: &[f32; 8]) -> f32x8 {
@@ -103,14 +103,10 @@ impl Avx2Token {
     pub fn ceil_f32x8_wide(self, a: f32x8) -> f32x8 {
         a.ceil()
     }
-}
 
-#[cfg(all(feature = "__wide", target_arch = "x86_64"))]
-impl Avx2FmaToken {
     /// Fused multiply-add on wide types: a * b + c
     ///
-    /// When AVX2+FMA is available (proven by this token), generates
-    /// a single `vfmadd` instruction instead of separate mul and add.
+    /// X64V3 includes FMA, so this generates a single `vfmadd` instruction.
     #[inline(always)]
     pub fn fma_f32x8_wide(self, a: f32x8, b: f32x8, c: f32x8) -> f32x8 {
         a.mul_add(b, c)
@@ -146,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_wide_arithmetic() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let a = token.splat_f32x8_wide(2.0);
             let b = token.splat_f32x8_wide(3.0);
 
@@ -160,10 +156,10 @@ mod tests {
 
     #[test]
     fn test_wide_fma() {
-        if let Some(token) = Avx2FmaToken::try_new() {
-            let a = token.avx2().splat_f32x8_wide(2.0);
-            let b = token.avx2().splat_f32x8_wide(3.0);
-            let c = token.avx2().splat_f32x8_wide(1.0);
+        if let Some(token) = X64V3Token::try_new() {
+            let a = token.splat_f32x8_wide(2.0);
+            let b = token.splat_f32x8_wide(3.0);
+            let c = token.splat_f32x8_wide(1.0);
 
             // 2 * 3 + 1 = 7
             let result = token.fma_f32x8_wide(a, b, c);
@@ -173,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_wide_load_store() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let v = token.load_f32x8_wide(&data);
 

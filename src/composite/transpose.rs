@@ -7,7 +7,7 @@
 use core::arch::x86_64::*;
 
 use crate::simd_fn;
-use crate::tokens::x86::Avx2Token;
+use crate::tokens::x86::X64V3Token;
 
 /// Transpose an 8x8 f32 matrix in-place using AVX2.
 ///
@@ -19,9 +19,9 @@ use crate::tokens::x86::Avx2Token;
 /// # Example
 ///
 /// ```rust,ignore
-/// use archmage::{Avx2Token, SimdToken, composite::transpose_8x8};
+/// use archmage::{X64V3Token, SimdToken, composite::transpose_8x8};
 ///
-/// if let Some(token) = Avx2Token::try_new() {
+/// if let Some(token) = X64V3Token::try_new() {
 ///     let mut block: [f32; 64] = core::array::from_fn(|i| i as f32);
 ///     transpose_8x8(token, &mut block);
 ///     // block[col * 8 + row] now equals original block[row * 8 + col]
@@ -29,7 +29,7 @@ use crate::tokens::x86::Avx2Token;
 /// ```
 #[simd_fn]
 #[inline]
-pub fn transpose_8x8(_token: Avx2Token, block: &mut [f32; 64]) {
+pub fn transpose_8x8(_token: X64V3Token, block: &mut [f32; 64]) {
     // Load 8 rows - safe_unaligned_simd calls are safe inside #[simd_fn]
     let mut r0 = safe_unaligned_simd::x86_64::_mm256_loadu_ps(block[0..8].try_into().unwrap());
     let mut r1 = safe_unaligned_simd::x86_64::_mm256_loadu_ps(block[8..16].try_into().unwrap());
@@ -86,7 +86,7 @@ pub fn transpose_8x8(_token: Avx2Token, block: &mut [f32; 64]) {
 /// Non-destructive version that reads from one buffer and writes to another.
 #[simd_fn]
 #[inline]
-pub fn transpose_8x8_copy(_token: Avx2Token, input: &[f32; 64], output: &mut [f32; 64]) {
+pub fn transpose_8x8_copy(_token: X64V3Token, input: &[f32; 64], output: &mut [f32; 64]) {
     // Load 8 rows from input
     let mut r0 = safe_unaligned_simd::x86_64::_mm256_loadu_ps(input[0..8].try_into().unwrap());
     let mut r1 = safe_unaligned_simd::x86_64::_mm256_loadu_ps(input[8..16].try_into().unwrap());
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_transpose_8x8() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let original: [f32; 64] = core::array::from_fn(|i| i as f32);
             let mut block = original;
 
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_transpose_8x8_copy() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let input: [f32; 64] = core::array::from_fn(|i| i as f32);
             let mut output = [0.0f32; 64];
 
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_double_transpose() {
-        if let Some(token) = Avx2Token::try_new() {
+        if let Some(token) = X64V3Token::try_new() {
             let original: [f32; 64] = core::array::from_fn(|i| i as f32);
             let mut block = original;
 

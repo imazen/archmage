@@ -12,7 +12,7 @@ use crate::tokens::SimdToken;
 
 /// 8x8 matrix transpose with scalar fallback.
 ///
-/// Tokens with SIMD support (e.g., `Avx2Token`) can override with optimized code.
+/// Tokens with SIMD support (e.g., `X64V3Token`) can override with optimized code.
 /// Other tokens use the default scalar implementation.
 pub trait Transpose8x8OrScalar: SimdToken {
     /// Transpose an 8x8 f32 matrix in-place.

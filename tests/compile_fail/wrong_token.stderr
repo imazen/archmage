@@ -1,13 +1,13 @@
 error[E0308]: mismatched types
-  --> tests/compile_fail/wrong_token.rs:11:23
+  --> tests/compile_fail/wrong_token.rs:11:24
    |
-11 |         requires_avx2(sse41);
-   |         ------------- ^^^^^ expected `Avx2Token`, found `Sse41Token`
+11 |         requires_x64v3(v2);
+   |         -------------- ^^ expected `X64V3Token`, found `X64V2Token`
    |         |
    |         arguments to this function are incorrect
    |
 note: function defined here
   --> tests/compile_fail/wrong_token.rs:6:4
    |
- 6 | fn requires_avx2(_token: Avx2Token) {}
-   |    ^^^^^^^^^^^^^ -----------------
+ 6 | fn requires_x64v3(_token: X64V3Token) {}
+   |    ^^^^^^^^^^^^^^ ------------------

@@ -6,7 +6,7 @@
 //! - `Avx512Fp16Token` - AVX-512 FP16 (Sapphire Rapids+)
 
 use super::SimdToken;
-use super::{Avx2FmaToken, Avx2Token, AvxToken, Sse42Token, X64V3Token};
+use super::X64V3Token;
 
 // ============================================================================
 // AVX-512 Token (F + CD + VL + DQ + BW = x86-64-v4)
@@ -36,16 +36,18 @@ impl SimdToken for Avx512Token {
             && crate::is_x86_feature_available!("avx512dq")
             && crate::is_x86_feature_available!("avx512bw")
             // v3 baseline
-            && crate::is_x86_feature_available!("fma")
+            && crate::is_x86_feature_available!("sse3")
+            && crate::is_x86_feature_available!("ssse3")
+            && crate::is_x86_feature_available!("sse4.1")
+            && crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("popcnt")
+            && crate::is_x86_feature_available!("avx")
             && crate::is_x86_feature_available!("avx2")
+            && crate::is_x86_feature_available!("fma")
             && crate::is_x86_feature_available!("bmi1")
             && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("f16c")
             && crate::is_x86_feature_available!("lzcnt")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("sse4.1")
-            && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -64,30 +66,6 @@ impl Avx512Token {
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2+FMA token
-    #[inline(always)]
-    pub fn avx2_fma(self) -> Avx2FmaToken {
-        unsafe { Avx2FmaToken::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2 token
-    #[inline(always)]
-    pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::forge_token_dangerously() }
-    }
-
-    /// Get an AVX token
-    #[inline(always)]
-    pub fn avx(self) -> AvxToken {
-        unsafe { AvxToken::forge_token_dangerously() }
-    }
-
-    /// Get an SSE4.2 token
-    #[inline(always)]
-    pub fn sse42(self) -> Sse42Token {
-        unsafe { Sse42Token::forge_token_dangerously() }
     }
 }
 
@@ -141,16 +119,18 @@ impl SimdToken for Avx512ModernToken {
             && crate::is_x86_feature_available!("gfni")
             && crate::is_x86_feature_available!("vaes")
             // v3 baseline
-            && crate::is_x86_feature_available!("fma")
+            && crate::is_x86_feature_available!("sse3")
+            && crate::is_x86_feature_available!("ssse3")
+            && crate::is_x86_feature_available!("sse4.1")
+            && crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("popcnt")
+            && crate::is_x86_feature_available!("avx")
             && crate::is_x86_feature_available!("avx2")
+            && crate::is_x86_feature_available!("fma")
             && crate::is_x86_feature_available!("bmi1")
             && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("f16c")
             && crate::is_x86_feature_available!("lzcnt")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("sse4.1")
-            && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -182,18 +162,6 @@ impl Avx512ModernToken {
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
-
-    /// Get an AVX2+FMA token
-    #[inline(always)]
-    pub fn avx2_fma(self) -> Avx2FmaToken {
-        unsafe { Avx2FmaToken::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2 token
-    #[inline(always)]
-    pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::forge_token_dangerously() }
-    }
 }
 
 // ============================================================================
@@ -224,16 +192,18 @@ impl SimdToken for Avx512Fp16Token {
             && crate::is_x86_feature_available!("avx512vl")
             && crate::is_x86_feature_available!("avx512dq")
             && crate::is_x86_feature_available!("avx512bw")
-            && crate::is_x86_feature_available!("fma")
+            && crate::is_x86_feature_available!("sse3")
+            && crate::is_x86_feature_available!("ssse3")
+            && crate::is_x86_feature_available!("sse4.1")
+            && crate::is_x86_feature_available!("sse4.2")
+            && crate::is_x86_feature_available!("popcnt")
+            && crate::is_x86_feature_available!("avx")
             && crate::is_x86_feature_available!("avx2")
+            && crate::is_x86_feature_available!("fma")
             && crate::is_x86_feature_available!("bmi1")
             && crate::is_x86_feature_available!("bmi2")
             && crate::is_x86_feature_available!("f16c")
             && crate::is_x86_feature_available!("lzcnt")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("sse4.1")
-            && crate::is_x86_feature_available!("popcnt")
         {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -260,15 +230,9 @@ impl Avx512Fp16Token {
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 
-    /// Get an AVX2+FMA token
+    /// Get a v3 token
     #[inline(always)]
-    pub fn avx2_fma(self) -> Avx2FmaToken {
-        unsafe { Avx2FmaToken::forge_token_dangerously() }
-    }
-
-    /// Get an AVX2 token
-    #[inline(always)]
-    pub fn avx2(self) -> Avx2Token {
-        unsafe { Avx2Token::forge_token_dangerously() }
+    pub fn v3(self) -> X64V3Token {
+        unsafe { X64V3Token::forge_token_dangerously() }
     }
 }
