@@ -380,6 +380,7 @@ Run `cargo xtask parity` to see full list.
 
 ### Long-Term
 
+- **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 - **Transcendental parity for ARM**: Port x86/WASM polynomial approximations to NEON.
 - **Transcendental `_precise` variants**: WASM has complete `_precise` variants. x86/ARM only have `_precise` for cbrt.
 - **Extension ops**: Add integer widening (extend_lo, extend_hi) for ARM/WASM.
