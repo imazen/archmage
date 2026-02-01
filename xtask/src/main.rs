@@ -965,7 +965,10 @@ fn generate_all() -> Result<()> {
     println!("  Wrote {} ({} bytes)", gen_path.display(), generated.len());
 
     // Run rustfmt on the generated file so it stays fmt-clean
+    // archmage-macros uses edition 2021
     let fmt_status = std::process::Command::new("rustfmt")
+        .arg("--edition")
+        .arg("2021")
         .arg(&gen_path)
         .status();
     match fmt_status {
@@ -1006,6 +1009,21 @@ fn generate_all() -> Result<()> {
         simd_test_path.display(),
         simd_tests.len()
     );
+
+    // Run rustfmt on all generated .rs files for idempotent output
+    let mut fmt_paths: Vec<PathBuf> = simd_files
+        .iter()
+        .map(|(rel, _)| simd_dir.join(rel))
+        .collect();
+    fmt_paths.push(simd_test_path.clone());
+    for path in &fmt_paths {
+        let _ = std::process::Command::new("rustfmt")
+            .arg("--edition")
+            .arg("2024")
+            .arg(path)
+            .status();
+    }
+    println!("  Formatted {} generated files", fmt_paths.len());
 
     // Generate reference documentation
     println!("\n=== Generating Reference Documentation ===");
