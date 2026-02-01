@@ -60,8 +60,8 @@ mod f32x8_native_vs_polyfill {
             let poly_lo = polyfill_op(v_lo).to_array();
             let poly_hi = polyfill_op(v_hi).to_array();
             let polyfill_result: [f32; 8] = [
-                poly_lo[0], poly_lo[1], poly_lo[2], poly_lo[3],
-                poly_hi[0], poly_hi[1], poly_hi[2], poly_hi[3],
+                poly_lo[0], poly_lo[1], poly_lo[2], poly_lo[3], poly_hi[0], poly_hi[1], poly_hi[2],
+                poly_hi[3],
             ];
 
             f32_arrays_eq(&native_result, &polyfill_result)
@@ -93,8 +93,8 @@ mod f32x8_native_vs_polyfill {
             let poly_lo = polyfill_op(va_lo, vb_lo).to_array();
             let poly_hi = polyfill_op(va_hi, vb_hi).to_array();
             let polyfill_result: [f32; 8] = [
-                poly_lo[0], poly_lo[1], poly_lo[2], poly_lo[3],
-                poly_hi[0], poly_hi[1], poly_hi[2], poly_hi[3],
+                poly_lo[0], poly_lo[1], poly_lo[2], poly_lo[3], poly_hi[0], poly_hi[1], poly_hi[2],
+                poly_hi[3],
             ];
 
             f32_arrays_eq(&native_result, &polyfill_result)
@@ -178,11 +178,29 @@ mod f32x8_native_vs_polyfill {
     fn test_edge_cases() {
         if let Some(token) = X64V3Token::try_new() {
             let edge_cases: [[f32; 8]; 8] = [
-                [0.0, -0.0, 1.0, -1.0, f32::INFINITY, f32::NEG_INFINITY, f32::NAN, f32::NAN],
-                [f32::MIN, f32::MAX, f32::MIN_POSITIVE, -f32::MIN_POSITIVE, 0.0, 0.0, 0.0, 0.0],
+                [
+                    0.0,
+                    -0.0,
+                    1.0,
+                    -1.0,
+                    f32::INFINITY,
+                    f32::NEG_INFINITY,
+                    f32::NAN,
+                    f32::NAN,
+                ],
+                [
+                    f32::MIN,
+                    f32::MAX,
+                    f32::MIN_POSITIVE,
+                    -f32::MIN_POSITIVE,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                ],
                 [1e-38, -1e-38, 1e38, -1e38, 0.5, -0.5, 1.5, -1.5],
                 [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8], // fractions
-                [1.0 / 3.0; 8], // repeating decimal
+                [1.0 / 3.0; 8],                           // repeating decimal
                 [core::f32::consts::PI; 8],
                 [core::f32::consts::E; 8],
                 [f32::from_bits(0x7F800001); 8], // signaling NaN
@@ -224,8 +242,8 @@ mod i32x8_native_vs_polyfill {
             let poly_lo = polyfill_op(v_lo).to_array();
             let poly_hi = polyfill_op(v_hi).to_array();
             let polyfill_result: [i32; 8] = [
-                poly_lo[0], poly_lo[1], poly_lo[2], poly_lo[3],
-                poly_hi[0], poly_hi[1], poly_hi[2], poly_hi[3],
+                poly_lo[0], poly_lo[1], poly_lo[2], poly_lo[3], poly_hi[0], poly_hi[1], poly_hi[2],
+                poly_hi[3],
             ];
 
             i32_arrays_eq(&native_result, &polyfill_result)
@@ -257,8 +275,8 @@ mod i32x8_native_vs_polyfill {
             let poly_lo = polyfill_op(va_lo, vb_lo).to_array();
             let poly_hi = polyfill_op(va_hi, vb_hi).to_array();
             let polyfill_result: [i32; 8] = [
-                poly_lo[0], poly_lo[1], poly_lo[2], poly_lo[3],
-                poly_hi[0], poly_hi[1], poly_hi[2], poly_hi[3],
+                poly_lo[0], poly_lo[1], poly_lo[2], poly_lo[3], poly_hi[0], poly_hi[1], poly_hi[2],
+                poly_hi[3],
             ];
 
             i32_arrays_eq(&native_result, &polyfill_result)
@@ -306,7 +324,16 @@ mod i32x8_native_vs_polyfill {
             let edge_cases: [[i32; 8]; 5] = [
                 [0, -1, 1, i32::MAX, i32::MIN + 1, 0, 0, 0], // MIN + 1 for abs safety
                 [i32::MAX, i32::MAX, i32::MIN + 1, i32::MIN + 1, 0, 0, 1, -1],
-                [0x7FFFFFFF, 0x80000001_u32 as i32, 0x00000001, 0xFFFFFFFF_u32 as i32, 0, 0, 0, 0],
+                [
+                    0x7FFFFFFF,
+                    0x80000001_u32 as i32,
+                    0x00000001,
+                    0xFFFFFFFF_u32 as i32,
+                    0,
+                    0,
+                    0,
+                    0,
+                ],
                 [-1, -1, -1, -1, -1, -1, -1, -1],
                 [1, 2, 3, 4, 5, 6, 7, 8],
             ];
