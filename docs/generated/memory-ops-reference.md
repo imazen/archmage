@@ -249,7 +249,7 @@ fn _mm_storeu_ps(mem_addr: &mut [f32; 4], a: __m128) -> ()
 
 Features: `sse`
 
-## Has256BitSimd / Avx2FmaToken (17 functions)
+## Has256BitSimd / X64V3Token (17 functions)
 
 ### `_mm256_broadcast_pd`
 
