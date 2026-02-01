@@ -394,8 +394,7 @@ impl f32x4 {
         Self(unsafe { vcvtq_f32_s32(v.0) })
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i32x4(self) -> i32x4 {
@@ -873,8 +872,7 @@ impl f64x2 {
         i32x4(unsafe { vcombine_s32(s32_low, vdup_n_s32(0)) })
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i64x2(self) -> i64x2 {
@@ -1339,8 +1337,7 @@ impl i8x16 {
         }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `u8x16` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u8x16(self) -> u8x16 {
@@ -1743,8 +1740,7 @@ impl u8x16 {
         }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i8x16` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i8x16(self) -> i8x16 {
@@ -2153,8 +2149,7 @@ impl i16x8 {
         }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `u16x8` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u16x8(self) -> u16x8 {
@@ -2571,8 +2566,7 @@ impl u16x8 {
         }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i16x8` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i16x8(self) -> i16x8 {
@@ -3003,8 +2997,7 @@ impl i32x4 {
         self.to_f32x4()
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f32x4(self) -> f32x4 {
@@ -3431,8 +3424,7 @@ impl u32x4 {
         }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f32x4(self) -> f32x4 {
@@ -3868,8 +3860,7 @@ impl i64x2 {
         }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f64x2(self) -> f64x2 {
@@ -4286,8 +4277,7 @@ impl u64x2 {
         }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f64x2(self) -> f64x2 {

@@ -227,7 +227,7 @@ impl f32x4 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -236,7 +236,7 @@ impl f32x4 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpneq_ps(self.0, other.0) })
@@ -244,7 +244,7 @@ impl f32x4 {
 
     /// Lane-wise less-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmplt_ps(self.0, other.0) })
@@ -252,7 +252,7 @@ impl f32x4 {
 
     /// Lane-wise less-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe { _mm_cmple_ps(self.0, other.0) })
@@ -260,7 +260,7 @@ impl f32x4 {
 
     /// Lane-wise greater-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_ps(self.0, other.0) })
@@ -268,7 +268,7 @@ impl f32x4 {
 
     /// Lane-wise greater-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpge_ps(self.0, other.0) })
@@ -291,6 +291,7 @@ impl f32x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_ps(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -1040,8 +1041,7 @@ impl f32x4 {
         result
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i32x4(self) -> i32x4 {
@@ -1370,7 +1370,7 @@ impl f64x2 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -1379,7 +1379,7 @@ impl f64x2 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpneq_pd(self.0, other.0) })
@@ -1387,7 +1387,7 @@ impl f64x2 {
 
     /// Lane-wise less-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmplt_pd(self.0, other.0) })
@@ -1395,7 +1395,7 @@ impl f64x2 {
 
     /// Lane-wise less-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe { _mm_cmple_pd(self.0, other.0) })
@@ -1403,7 +1403,7 @@ impl f64x2 {
 
     /// Lane-wise greater-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_pd(self.0, other.0) })
@@ -1411,7 +1411,7 @@ impl f64x2 {
 
     /// Lane-wise greater-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpge_pd(self.0, other.0) })
@@ -1434,6 +1434,7 @@ impl f64x2 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_pd(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -1596,8 +1597,7 @@ impl f64x2 {
         unsafe { Self(_mm_mul_pd(self.log2_lowp().0, _mm_set1_pd(n))).exp2_lowp() }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i64x2(self) -> i64x2 {
@@ -1893,7 +1893,7 @@ impl i8x16 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -1902,7 +1902,7 @@ impl i8x16 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe {
@@ -1914,7 +1914,7 @@ impl i8x16 {
 
     /// Lane-wise greater-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_epi8(self.0, other.0) })
@@ -1922,7 +1922,7 @@ impl i8x16 {
 
     /// Lane-wise less-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_epi8(other.0, self.0) })
@@ -1930,7 +1930,7 @@ impl i8x16 {
 
     /// Lane-wise greater-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe {
@@ -1942,7 +1942,7 @@ impl i8x16 {
 
     /// Lane-wise less-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe {
@@ -1969,6 +1969,7 @@ impl i8x16 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -2014,9 +2015,7 @@ impl i8x16 {
             _mm_xor_si128(self.0, ones)
         })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `u8x16` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u8x16(self) -> u8x16 {
@@ -2266,7 +2265,7 @@ impl u8x16 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -2275,7 +2274,7 @@ impl u8x16 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe {
@@ -2285,9 +2284,9 @@ impl u8x16 {
         })
     }
 
-    /// Lane-wise greater-than comparison (unsigned).
+    /// Lane-wise greater-than (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe {
@@ -2299,17 +2298,17 @@ impl u8x16 {
         })
     }
 
-    /// Lane-wise less-than comparison (unsigned).
+    /// Lane-wise less-than (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         other.simd_gt(self)
     }
 
-    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    /// Lane-wise greater-than-or-equal (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe {
@@ -2319,9 +2318,9 @@ impl u8x16 {
         })
     }
 
-    /// Lane-wise less-than-or-equal comparison (unsigned).
+    /// Lane-wise less-than-or-equal (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe {
@@ -2348,6 +2347,7 @@ impl u8x16 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -2438,8 +2438,7 @@ impl u8x16 {
         })
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i8x16` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i8x16(self) -> i8x16 {
@@ -2694,7 +2693,7 @@ impl i16x8 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -2703,7 +2702,7 @@ impl i16x8 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe {
@@ -2715,7 +2714,7 @@ impl i16x8 {
 
     /// Lane-wise greater-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_epi16(self.0, other.0) })
@@ -2723,7 +2722,7 @@ impl i16x8 {
 
     /// Lane-wise less-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_epi16(other.0, self.0) })
@@ -2731,7 +2730,7 @@ impl i16x8 {
 
     /// Lane-wise greater-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe {
@@ -2743,7 +2742,7 @@ impl i16x8 {
 
     /// Lane-wise less-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe {
@@ -2770,6 +2769,7 @@ impl i16x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -2896,8 +2896,7 @@ impl i16x8 {
         i8x16(unsafe { _mm_packs_epi16(self.0, other.0) })
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `u16x8` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u16x8(self) -> u16x8 {
@@ -3149,7 +3148,7 @@ impl u16x8 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -3158,7 +3157,7 @@ impl u16x8 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe {
@@ -3168,9 +3167,9 @@ impl u16x8 {
         })
     }
 
-    /// Lane-wise greater-than comparison (unsigned).
+    /// Lane-wise greater-than (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe {
@@ -3182,17 +3181,17 @@ impl u16x8 {
         })
     }
 
-    /// Lane-wise less-than comparison (unsigned).
+    /// Lane-wise less-than (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         other.simd_gt(self)
     }
 
-    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    /// Lane-wise greater-than-or-equal (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe {
@@ -3202,9 +3201,9 @@ impl u16x8 {
         })
     }
 
-    /// Lane-wise less-than-or-equal comparison (unsigned).
+    /// Lane-wise less-than-or-equal (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe {
@@ -3231,6 +3230,7 @@ impl u16x8 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -3331,8 +3331,7 @@ impl u16x8 {
         })
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i16x8` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i16x8(self) -> i16x8 {
@@ -3589,7 +3588,7 @@ impl i32x4 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -3598,7 +3597,7 @@ impl i32x4 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe {
@@ -3610,7 +3609,7 @@ impl i32x4 {
 
     /// Lane-wise greater-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_epi32(self.0, other.0) })
@@ -3618,7 +3617,7 @@ impl i32x4 {
 
     /// Lane-wise less-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_epi32(other.0, self.0) })
@@ -3626,7 +3625,7 @@ impl i32x4 {
 
     /// Lane-wise greater-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe {
@@ -3638,7 +3637,7 @@ impl i32x4 {
 
     /// Lane-wise less-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe {
@@ -3665,6 +3664,7 @@ impl i32x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -3769,8 +3769,7 @@ impl i32x4 {
         u16x8(unsafe { _mm_packus_epi32(self.0, other.0) })
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f32x4(self) -> f32x4 {
@@ -4039,7 +4038,7 @@ impl u32x4 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -4048,7 +4047,7 @@ impl u32x4 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe {
@@ -4058,9 +4057,9 @@ impl u32x4 {
         })
     }
 
-    /// Lane-wise greater-than comparison (unsigned).
+    /// Lane-wise greater-than (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe {
@@ -4072,17 +4071,17 @@ impl u32x4 {
         })
     }
 
-    /// Lane-wise less-than comparison (unsigned).
+    /// Lane-wise less-than (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         other.simd_gt(self)
     }
 
-    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    /// Lane-wise greater-than-or-equal (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe {
@@ -4092,9 +4091,9 @@ impl u32x4 {
         })
     }
 
-    /// Lane-wise less-than-or-equal comparison (unsigned).
+    /// Lane-wise less-than-or-equal (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe {
@@ -4121,6 +4120,7 @@ impl u32x4 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -4184,9 +4184,7 @@ impl u32x4 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi32::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f32x4` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f32x4(self) -> f32x4 {
@@ -4440,7 +4438,7 @@ impl i64x2 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -4449,7 +4447,7 @@ impl i64x2 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe {
@@ -4461,7 +4459,7 @@ impl i64x2 {
 
     /// Lane-wise greater-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_epi64(self.0, other.0) })
@@ -4469,7 +4467,7 @@ impl i64x2 {
 
     /// Lane-wise less-than comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than, all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         Self(unsafe { _mm_cmpgt_epi64(other.0, self.0) })
@@ -4477,7 +4475,7 @@ impl i64x2 {
 
     /// Lane-wise greater-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe {
@@ -4489,7 +4487,7 @@ impl i64x2 {
 
     /// Lane-wise less-than-or-equal comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal, all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe {
@@ -4516,6 +4514,7 @@ impl i64x2 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -4579,9 +4578,7 @@ impl i64x2 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f64x2(self) -> f64x2 {
@@ -4833,7 +4830,7 @@ impl u64x2 {
 
     /// Lane-wise equality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if equality, all-0s otherwise.
     /// Use with `blend(mask, if_true, if_false)` to select values.
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
@@ -4842,7 +4839,7 @@ impl u64x2 {
 
     /// Lane-wise inequality comparison.
     ///
-    /// Returns a mask where each lane is all-1s if not equal, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if inequality, all-0s otherwise.
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
         Self(unsafe {
@@ -4852,9 +4849,9 @@ impl u64x2 {
         })
     }
 
-    /// Lane-wise greater-than comparison (unsigned).
+    /// Lane-wise greater-than (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self > other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
         Self(unsafe {
@@ -4866,17 +4863,17 @@ impl u64x2 {
         })
     }
 
-    /// Lane-wise less-than comparison (unsigned).
+    /// Lane-wise less-than (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self < other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
         other.simd_gt(self)
     }
 
-    /// Lane-wise greater-than-or-equal comparison (unsigned).
+    /// Lane-wise greater-than-or-equal (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self >= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if greater-than-or-equal (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
         Self(unsafe {
@@ -4886,9 +4883,9 @@ impl u64x2 {
         })
     }
 
-    /// Lane-wise less-than-or-equal comparison (unsigned).
+    /// Lane-wise less-than-or-equal (unsigned) comparison.
     ///
-    /// Returns a mask where each lane is all-1s if self <= other, all-0s otherwise.
+    /// Returns a mask where each lane is all-1s if less-than-or-equal (unsigned), all-0s otherwise.
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
         Self(unsafe {
@@ -4915,6 +4912,7 @@ impl u64x2 {
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
         Self(unsafe { _mm_blendv_epi8(if_false.0, if_true.0, mask.0) })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -4978,9 +4976,7 @@ impl u64x2 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f64x2` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f64x2(self) -> f64x2 {

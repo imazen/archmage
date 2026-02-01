@@ -319,6 +319,7 @@ impl f32x16 {
             _mm512_mask_blend_ps(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -1048,8 +1049,7 @@ impl f32x16 {
         }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i32x16` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i32x16(self) -> i32x16 {
@@ -1476,6 +1476,7 @@ impl f64x8 {
             _mm512_mask_blend_pd(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Horizontal Operations ==========
 
     /// Sum all lanes horizontally.
@@ -1662,8 +1663,7 @@ impl f64x8 {
         unsafe { Self(_mm512_mul_pd(self.log2_lowp().0, _mm512_set1_pd(n))).exp2_lowp() }
     }
 
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i64x8` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i64x8(self) -> i64x8 {
@@ -2057,6 +2057,7 @@ impl i8x64 {
             _mm512_mask_blend_epi8(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -2108,9 +2109,7 @@ impl i8x64 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `u8x64` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u8x64(self) -> u8x64 {
@@ -2458,6 +2457,7 @@ impl u8x64 {
             _mm512_mask_blend_epi8(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -2509,9 +2509,7 @@ impl u8x64 {
             _mm512_xor_si512(self.0, ones)
         })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i8x64` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i8x64(self) -> i8x64 {
@@ -2864,6 +2862,7 @@ impl i16x32 {
             _mm512_mask_blend_epi16(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -2940,9 +2939,7 @@ impl i16x32 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi16::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `u16x32` (zero-cost).
     #[inline(always)]
     pub fn bitcast_u16x32(self) -> u16x32 {
@@ -3292,6 +3289,7 @@ impl u16x32 {
             _mm512_mask_blend_epi16(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -3361,9 +3359,7 @@ impl u16x32 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi16::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `i16x32` (zero-cost).
     #[inline(always)]
     pub fn bitcast_i16x32(self) -> i16x32 {
@@ -3718,6 +3714,7 @@ impl i32x16 {
             _mm512_mask_blend_epi32(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -3802,9 +3799,7 @@ impl i32x16 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi32::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f32x16` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f32x16(self) -> f32x16 {
@@ -4171,6 +4166,7 @@ impl u32x16 {
             _mm512_mask_blend_epi32(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -4240,9 +4236,7 @@ impl u32x16 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi32::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f32x16` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f32x16(self) -> f32x16 {
@@ -4614,6 +4608,7 @@ impl i64x8 {
             _mm512_mask_blend_epi64(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -4690,9 +4685,7 @@ impl i64x8 {
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srai_epi64::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f64x8` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f64x8(self) -> f64x8 {
@@ -5057,6 +5050,7 @@ impl u64x8 {
             _mm512_mask_blend_epi64(m, if_false.0, if_true.0)
         })
     }
+
     // ========== Boolean Reductions ==========
 
     /// Returns true if all lanes are non-zero (truthy).
@@ -5126,9 +5120,7 @@ impl u64x8 {
     pub fn shr<const N: u32>(self) -> Self {
         Self(unsafe { _mm512_srli_epi64::<N>(self.0) })
     }
-
-    // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+    // ========== Bitcast ==========
     /// Reinterpret bits as `f64x8` (zero-cost).
     #[inline(always)]
     pub fn bitcast_f64x8(self) -> f64x8 {

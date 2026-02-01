@@ -175,8 +175,7 @@ pub mod sse {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -461,8 +460,7 @@ pub mod sse {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -690,8 +688,7 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `u8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u8x32(self) -> u8x32 {
@@ -843,8 +840,7 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i8x32(self) -> i8x32 {
@@ -1005,8 +1001,7 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `u16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u16x16(self) -> u16x16 {
@@ -1176,8 +1171,7 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i16x16(self) -> i16x16 {
@@ -1356,8 +1350,7 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -1547,8 +1540,7 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -1714,8 +1706,7 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -1863,8 +1854,7 @@ pub mod sse {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -2139,8 +2129,7 @@ pub mod neon {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -2425,8 +2414,7 @@ pub mod neon {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -2654,8 +2642,7 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `u8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u8x32(self) -> u8x32 {
@@ -2807,8 +2794,7 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i8x32(self) -> i8x32 {
@@ -2969,8 +2955,7 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `u16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u16x16(self) -> u16x16 {
@@ -3140,8 +3125,7 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i16x16(self) -> i16x16 {
@@ -3320,8 +3304,7 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -3511,8 +3494,7 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -3678,8 +3660,7 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -3827,8 +3808,7 @@ pub mod neon {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -4103,8 +4083,7 @@ pub mod simd128 {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x8(self) -> i32x8 {
@@ -4389,8 +4368,7 @@ pub mod simd128 {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x4(self) -> i64x4 {
@@ -4618,8 +4596,7 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `u8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u8x32(self) -> u8x32 {
@@ -4771,8 +4748,7 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i8x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i8x32(self) -> i8x32 {
@@ -4933,8 +4909,7 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `u16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u16x16(self) -> u16x16 {
@@ -5104,8 +5079,7 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i16x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i16x16(self) -> i16x16 {
@@ -5284,8 +5258,7 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -5475,8 +5448,7 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f32x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x8(self) -> f32x8 {
@@ -5642,8 +5614,7 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -5791,8 +5762,7 @@ pub mod simd128 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f64x4` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x4(self) -> f64x4 {
@@ -6061,8 +6031,7 @@ pub mod avx2 {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i32x16(self) -> i32x16 {
@@ -6341,8 +6310,7 @@ pub mod avx2 {
             self.lo.reduce_min().min(self.hi.reduce_min())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i64x8(self) -> i64x8 {
@@ -6564,8 +6532,7 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `u8x64` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u8x64(self) -> u8x64 {
@@ -6711,8 +6678,7 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i8x64` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i8x64(self) -> i8x64 {
@@ -6867,8 +6833,7 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `u16x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_u16x32(self) -> u16x32 {
@@ -7032,8 +6997,7 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `i16x32` (zero-cost).
         #[inline(always)]
         pub fn bitcast_i16x32(self) -> i16x32 {
@@ -7206,8 +7170,7 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x16(self) -> f32x16 {
@@ -7391,8 +7354,7 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f32x16` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f32x16(self) -> f32x16 {
@@ -7552,8 +7514,7 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x8(self) -> f64x8 {
@@ -7695,8 +7656,7 @@ pub mod avx2 {
             self.lo.reduce_add().wrapping_add(self.hi.reduce_add())
         }
 
-        // ========== Bitcast (reinterpret bits, zero-cost) ==========
-
+        // ========== Bitcast ==========
         /// Reinterpret bits as `f64x8` (zero-cost).
         #[inline(always)]
         pub fn bitcast_f64x8(self) -> f64x8 {
