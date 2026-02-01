@@ -742,7 +742,11 @@ pub fn generate_boolean_reductions(ty: &SimdType) -> String {
 
     // all_true - check if all lanes are non-zero (have their sign bit set for masks)
     // For masks from comparisons, lanes are all-1s or all-0s
-    writeln!(code, "    /// Returns true if all lanes are non-zero (truthy).").unwrap();
+    writeln!(
+        code,
+        "    /// Returns true if all lanes are non-zero (truthy)."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
     writeln!(
         code,
@@ -797,7 +801,11 @@ pub fn generate_boolean_reductions(ty: &SimdType) -> String {
     writeln!(code, "    }}\n").unwrap();
 
     // any_true - check if any lane is non-zero
-    writeln!(code, "    /// Returns true if any lane is non-zero (truthy).").unwrap();
+    writeln!(
+        code,
+        "    /// Returns true if any lane is non-zero (truthy)."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn any_true(self) -> bool {{").unwrap();
 
@@ -904,67 +912,61 @@ pub fn generate_boolean_reductions(ty: &SimdType) -> String {
                 _ => unreachable!(),
             }
         }
-        SimdWidth::W256 => {
-            match ty.elem {
-                ElementType::I8 | ElementType::U8 => {
-                    writeln!(
-                        code,
-                        "        unsafe {{ {}_movemask_epi8(self.0) as u32 }}",
-                        prefix
-                    )
-                    .unwrap();
-                }
-                ElementType::I16 | ElementType::U16 => {
-                    writeln!(code, "        unsafe {{").unwrap();
-                    writeln!(
-                        code,
-                        "            let shifted = _mm256_srai_epi16::<15>(self.0);"
-                    )
-                    .unwrap();
-                    writeln!(
-                        code,
-                        "            let packed = _mm256_packs_epi16(shifted, shifted);"
-                    )
-                    .unwrap();
-                    writeln!(code, "            // packs interleaves, need to extract").unwrap();
-                    writeln!(
-                        code,
-                        "            let lo = _mm256_castsi256_si128(packed);"
-                    )
-                    .unwrap();
-                    writeln!(
-                        code,
-                        "            let hi = _mm256_extracti128_si256::<1>(packed);"
-                    )
-                    .unwrap();
-                    writeln!(
+        SimdWidth::W256 => match ty.elem {
+            ElementType::I8 | ElementType::U8 => {
+                writeln!(
+                    code,
+                    "        unsafe {{ {}_movemask_epi8(self.0) as u32 }}",
+                    prefix
+                )
+                .unwrap();
+            }
+            ElementType::I16 | ElementType::U16 => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(
+                    code,
+                    "            let shifted = _mm256_srai_epi16::<15>(self.0);"
+                )
+                .unwrap();
+                writeln!(
+                    code,
+                    "            let packed = _mm256_packs_epi16(shifted, shifted);"
+                )
+                .unwrap();
+                writeln!(code, "            // packs interleaves, need to extract").unwrap();
+                writeln!(code, "            let lo = _mm256_castsi256_si128(packed);").unwrap();
+                writeln!(
+                    code,
+                    "            let hi = _mm256_extracti128_si256::<1>(packed);"
+                )
+                .unwrap();
+                writeln!(
                         code,
                         "            ((_mm_movemask_epi8(lo) & 0xFF) | ((_mm_movemask_epi8(hi) & 0xFF) << 8)) as u32"
                     )
                     .unwrap();
-                    writeln!(code, "        }}").unwrap();
-                }
-                ElementType::I32 | ElementType::U32 => {
-                    writeln!(code, "        unsafe {{").unwrap();
-                    writeln!(
-                        code,
-                        "            _mm256_movemask_ps(_mm256_castsi256_ps(self.0)) as u32"
-                    )
-                    .unwrap();
-                    writeln!(code, "        }}").unwrap();
-                }
-                ElementType::I64 | ElementType::U64 => {
-                    writeln!(code, "        unsafe {{").unwrap();
-                    writeln!(
-                        code,
-                        "            _mm256_movemask_pd(_mm256_castsi256_pd(self.0)) as u32"
-                    )
-                    .unwrap();
-                    writeln!(code, "        }}").unwrap();
-                }
-                _ => unreachable!(),
+                writeln!(code, "        }}").unwrap();
             }
-        }
+            ElementType::I32 | ElementType::U32 => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(
+                    code,
+                    "            _mm256_movemask_ps(_mm256_castsi256_ps(self.0)) as u32"
+                )
+                .unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            ElementType::I64 | ElementType::U64 => {
+                writeln!(code, "        unsafe {{").unwrap();
+                writeln!(
+                    code,
+                    "            _mm256_movemask_pd(_mm256_castsi256_pd(self.0)) as u32"
+                )
+                .unwrap();
+                writeln!(code, "        }}").unwrap();
+            }
+            _ => unreachable!(),
+        },
         SimdWidth::W512 => {
             // AVX-512 has direct mask extraction
             let cmp_suffix = ty.elem.x86_suffix();

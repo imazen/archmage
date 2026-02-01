@@ -1,6 +1,8 @@
 //! Standard SIMD operations (horizontal, conversion, math, etc.)
 
-pub use super::ops_comparison::{generate_blend_ops, generate_boolean_reductions, generate_comparison_ops};
+pub use super::ops_comparison::{
+    generate_blend_ops, generate_boolean_reductions, generate_comparison_ops,
+};
 
 use super::types::{
     ElementType, SimdType, SimdWidth, gen_binary_method, gen_unary_method, indent,

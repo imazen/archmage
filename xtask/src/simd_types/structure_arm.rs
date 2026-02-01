@@ -651,12 +651,7 @@ fn generate_math_ops(ty: &SimdType) -> String {
             "    pub fn mul_sub(self, a: Self, b: Self) -> Self {{"
         )
         .unwrap();
-        writeln!(
-            code,
-            "        let neg_b = unsafe {{ {}(b.0) }};",
-            neg_fn
-        )
-        .unwrap();
+        writeln!(code, "        let neg_b = unsafe {{ {}(b.0) }};", neg_fn).unwrap();
         writeln!(
             code,
             "        Self(unsafe {{ {}(neg_b, self.0, a.0) }})",
@@ -1218,11 +1213,7 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
                     "            let bits = vreinterpretq_u64_f64(self.0);"
                 )
                 .unwrap();
-                writeln!(
-                    code,
-                    "            let ones = vdupq_n_u64(u64::MAX);"
-                )
-                .unwrap();
+                writeln!(code, "            let ones = vdupq_n_u64(u64::MAX);").unwrap();
                 writeln!(
                     code,
                     "            Self(vreinterpretq_f64_u64(veorq_u64(bits, ones)))"
@@ -1298,12 +1289,7 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Shift left by immediate (const generic)").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn shl<const N: i32>(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}::<N>(self.0) }})",
-            shl_fn
-        )
-        .unwrap();
+        writeln!(code, "        Self(unsafe {{ {}::<N>(self.0) }})", shl_fn).unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // shr - shift right (logical for unsigned, arithmetic for signed)
@@ -1324,34 +1310,48 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Shift right by immediate (const generic)").unwrap();
         writeln!(code, "    ///").unwrap();
         if ty.elem.is_signed() {
-            writeln!(code, "    /// For signed types, this is an arithmetic shift (sign-extending).").unwrap();
+            writeln!(
+                code,
+                "    /// For signed types, this is an arithmetic shift (sign-extending)."
+            )
+            .unwrap();
         } else {
-            writeln!(code, "    /// For unsigned types, this is a logical shift (zero-extending).").unwrap();
+            writeln!(
+                code,
+                "    /// For unsigned types, this is a logical shift (zero-extending)."
+            )
+            .unwrap();
         }
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn shr<const N: i32>(self) -> Self {{").unwrap();
-        writeln!(
-            code,
-            "        Self(unsafe {{ {}::<N>(self.0) }})",
-            shr_fn
-        )
-        .unwrap();
+        writeln!(code, "        Self(unsafe {{ {}::<N>(self.0) }})", shr_fn).unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // shr_arithmetic for signed types (alias for shr on ARM since NEON shr is arithmetic)
         if ty.elem.is_signed() && !matches!(ty.elem, ElementType::I64) {
-            writeln!(code, "    /// Arithmetic shift right by `N` bits (sign-extending).").unwrap();
-            writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// The sign bit is replicated into the vacated positions.").unwrap();
-            writeln!(code, "    /// On ARM NEON, this is the same as `shr()` for signed types.").unwrap();
-            writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn shr_arithmetic<const N: i32>(self) -> Self {{").unwrap();
             writeln!(
                 code,
-                "        Self(unsafe {{ {}::<N>(self.0) }})",
-                shr_fn
+                "    /// Arithmetic shift right by `N` bits (sign-extending)."
             )
             .unwrap();
+            writeln!(code, "    ///").unwrap();
+            writeln!(
+                code,
+                "    /// The sign bit is replicated into the vacated positions."
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    /// On ARM NEON, this is the same as `shr()` for signed types."
+            )
+            .unwrap();
+            writeln!(code, "    #[inline(always)]").unwrap();
+            writeln!(
+                code,
+                "    pub fn shr_arithmetic<const N: i32>(self) -> Self {{"
+            )
+            .unwrap();
+            writeln!(code, "        Self(unsafe {{ {}::<N>(self.0) }})", shr_fn).unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
 
@@ -1384,7 +1384,11 @@ fn generate_boolean_reductions(ty: &SimdType) -> String {
     };
 
     // all_true - check if all lanes are non-zero
-    writeln!(code, "    /// Returns true if all lanes are non-zero (truthy).").unwrap();
+    writeln!(
+        code,
+        "    /// Returns true if all lanes are non-zero (truthy)."
+    )
+    .unwrap();
     writeln!(code, "    ///").unwrap();
     writeln!(
         code,
@@ -1397,19 +1401,34 @@ fn generate_boolean_reductions(ty: &SimdType) -> String {
     // Strategy: use horizontal min - if min is non-zero, all lanes are non-zero
     match ty.elem {
         ElementType::I8 => {
-            writeln!(code, "        unsafe {{ vminvq_u8({}(self.0)) != 0 }}", u8_cast).unwrap();
+            writeln!(
+                code,
+                "        unsafe {{ vminvq_u8({}(self.0)) != 0 }}",
+                u8_cast
+            )
+            .unwrap();
         }
         ElementType::U8 => {
             writeln!(code, "        unsafe {{ vminvq_u8(self.0) != 0 }}").unwrap();
         }
         ElementType::I16 => {
-            writeln!(code, "        unsafe {{ vminvq_u16({}(self.0)) != 0 }}", u16_cast).unwrap();
+            writeln!(
+                code,
+                "        unsafe {{ vminvq_u16({}(self.0)) != 0 }}",
+                u16_cast
+            )
+            .unwrap();
         }
         ElementType::U16 => {
             writeln!(code, "        unsafe {{ vminvq_u16(self.0) != 0 }}").unwrap();
         }
         ElementType::I32 => {
-            writeln!(code, "        unsafe {{ vminvq_u32({}(self.0)) != 0 }}", u32_cast).unwrap();
+            writeln!(
+                code,
+                "        unsafe {{ vminvq_u32({}(self.0)) != 0 }}",
+                u32_cast
+            )
+            .unwrap();
         }
         ElementType::U32 => {
             writeln!(code, "        unsafe {{ vminvq_u32(self.0) != 0 }}").unwrap();
@@ -1418,12 +1437,20 @@ fn generate_boolean_reductions(ty: &SimdType) -> String {
             // No vminvq_u64, check both lanes manually
             writeln!(code, "        unsafe {{").unwrap();
             writeln!(code, "            let as_u64 = {}(self.0);", u64_cast).unwrap();
-            writeln!(code, "            vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0").unwrap();
+            writeln!(
+                code,
+                "            vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0"
+            )
+            .unwrap();
             writeln!(code, "        }}").unwrap();
         }
         ElementType::U64 => {
             writeln!(code, "        unsafe {{").unwrap();
-            writeln!(code, "            vgetq_lane_u64::<0>(self.0) != 0 && vgetq_lane_u64::<1>(self.0) != 0").unwrap();
+            writeln!(
+                code,
+                "            vgetq_lane_u64::<0>(self.0) != 0 && vgetq_lane_u64::<1>(self.0) != 0"
+            )
+            .unwrap();
             writeln!(code, "        }}").unwrap();
         }
         _ => unreachable!(),
@@ -1431,26 +1458,45 @@ fn generate_boolean_reductions(ty: &SimdType) -> String {
     writeln!(code, "    }}\n").unwrap();
 
     // any_true - check if any lane is non-zero
-    writeln!(code, "    /// Returns true if any lane is non-zero (truthy).").unwrap();
+    writeln!(
+        code,
+        "    /// Returns true if any lane is non-zero (truthy)."
+    )
+    .unwrap();
     writeln!(code, "    #[inline(always)]").unwrap();
     writeln!(code, "    pub fn any_true(self) -> bool {{").unwrap();
 
     // Strategy: use horizontal max - if max is non-zero, at least one lane is non-zero
     match ty.elem {
         ElementType::I8 => {
-            writeln!(code, "        unsafe {{ vmaxvq_u8({}(self.0)) != 0 }}", u8_cast).unwrap();
+            writeln!(
+                code,
+                "        unsafe {{ vmaxvq_u8({}(self.0)) != 0 }}",
+                u8_cast
+            )
+            .unwrap();
         }
         ElementType::U8 => {
             writeln!(code, "        unsafe {{ vmaxvq_u8(self.0) != 0 }}").unwrap();
         }
         ElementType::I16 => {
-            writeln!(code, "        unsafe {{ vmaxvq_u16({}(self.0)) != 0 }}", u16_cast).unwrap();
+            writeln!(
+                code,
+                "        unsafe {{ vmaxvq_u16({}(self.0)) != 0 }}",
+                u16_cast
+            )
+            .unwrap();
         }
         ElementType::U16 => {
             writeln!(code, "        unsafe {{ vmaxvq_u16(self.0) != 0 }}").unwrap();
         }
         ElementType::I32 => {
-            writeln!(code, "        unsafe {{ vmaxvq_u32({}(self.0)) != 0 }}", u32_cast).unwrap();
+            writeln!(
+                code,
+                "        unsafe {{ vmaxvq_u32({}(self.0)) != 0 }}",
+                u32_cast
+            )
+            .unwrap();
         }
         ElementType::U32 => {
             writeln!(code, "        unsafe {{ vmaxvq_u32(self.0) != 0 }}").unwrap();
@@ -1458,12 +1504,20 @@ fn generate_boolean_reductions(ty: &SimdType) -> String {
         ElementType::I64 => {
             writeln!(code, "        unsafe {{").unwrap();
             writeln!(code, "            let as_u64 = {}(self.0);", u64_cast).unwrap();
-            writeln!(code, "            (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0").unwrap();
+            writeln!(
+                code,
+                "            (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0"
+            )
+            .unwrap();
             writeln!(code, "        }}").unwrap();
         }
         ElementType::U64 => {
             writeln!(code, "        unsafe {{").unwrap();
-            writeln!(code, "            (vgetq_lane_u64::<0>(self.0) | vgetq_lane_u64::<1>(self.0)) != 0").unwrap();
+            writeln!(
+                code,
+                "            (vgetq_lane_u64::<0>(self.0) | vgetq_lane_u64::<1>(self.0)) != 0"
+            )
+            .unwrap();
             writeln!(code, "        }}").unwrap();
         }
         _ => unreachable!(),
@@ -1490,61 +1544,121 @@ fn generate_boolean_reductions(ty: &SimdType) -> String {
     match ty.elem {
         ElementType::I8 => {
             writeln!(code, "        unsafe {{").unwrap();
-            writeln!(code, "            let signs = vshrq_n_u8::<7>({}(self.0));", u8_cast).unwrap();
-            writeln!(code, "            let arr: [u8; 16] = core::mem::transmute(signs);").unwrap();
+            writeln!(
+                code,
+                "            let signs = vshrq_n_u8::<7>({}(self.0));",
+                u8_cast
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let arr: [u8; 16] = core::mem::transmute(signs);"
+            )
+            .unwrap();
             writeln!(code, "            let mut r = 0u32;").unwrap();
             writeln!(code, "            let mut i = 0;").unwrap();
-            writeln!(code, "            while i < 16 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}").unwrap();
+            writeln!(
+                code,
+                "            while i < 16 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}"
+            )
+            .unwrap();
             writeln!(code, "            r").unwrap();
             writeln!(code, "        }}").unwrap();
         }
         ElementType::U8 => {
             writeln!(code, "        unsafe {{").unwrap();
             writeln!(code, "            let signs = vshrq_n_u8::<7>(self.0);").unwrap();
-            writeln!(code, "            let arr: [u8; 16] = core::mem::transmute(signs);").unwrap();
+            writeln!(
+                code,
+                "            let arr: [u8; 16] = core::mem::transmute(signs);"
+            )
+            .unwrap();
             writeln!(code, "            let mut r = 0u32;").unwrap();
             writeln!(code, "            let mut i = 0;").unwrap();
-            writeln!(code, "            while i < 16 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}").unwrap();
+            writeln!(
+                code,
+                "            while i < 16 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}"
+            )
+            .unwrap();
             writeln!(code, "            r").unwrap();
             writeln!(code, "        }}").unwrap();
         }
         ElementType::I16 => {
             writeln!(code, "        unsafe {{").unwrap();
-            writeln!(code, "            let signs = vshrq_n_u16::<15>({}(self.0));", u16_cast).unwrap();
-            writeln!(code, "            let arr: [u16; 8] = core::mem::transmute(signs);").unwrap();
+            writeln!(
+                code,
+                "            let signs = vshrq_n_u16::<15>({}(self.0));",
+                u16_cast
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let arr: [u16; 8] = core::mem::transmute(signs);"
+            )
+            .unwrap();
             writeln!(code, "            let mut r = 0u32;").unwrap();
             writeln!(code, "            let mut i = 0;").unwrap();
-            writeln!(code, "            while i < 8 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}").unwrap();
+            writeln!(
+                code,
+                "            while i < 8 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}"
+            )
+            .unwrap();
             writeln!(code, "            r").unwrap();
             writeln!(code, "        }}").unwrap();
         }
         ElementType::U16 => {
             writeln!(code, "        unsafe {{").unwrap();
             writeln!(code, "            let signs = vshrq_n_u16::<15>(self.0);").unwrap();
-            writeln!(code, "            let arr: [u16; 8] = core::mem::transmute(signs);").unwrap();
+            writeln!(
+                code,
+                "            let arr: [u16; 8] = core::mem::transmute(signs);"
+            )
+            .unwrap();
             writeln!(code, "            let mut r = 0u32;").unwrap();
             writeln!(code, "            let mut i = 0;").unwrap();
-            writeln!(code, "            while i < 8 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}").unwrap();
+            writeln!(
+                code,
+                "            while i < 8 {{ r |= ((arr[i] & 1) as u32) << i; i += 1; }}"
+            )
+            .unwrap();
             writeln!(code, "            r").unwrap();
             writeln!(code, "        }}").unwrap();
         }
         ElementType::I32 => {
             writeln!(code, "        unsafe {{").unwrap();
-            writeln!(code, "            let signs = vshrq_n_u32::<31>({}(self.0));", u32_cast).unwrap();
-            writeln!(code, "            let arr: [u32; 4] = core::mem::transmute(signs);").unwrap();
+            writeln!(
+                code,
+                "            let signs = vshrq_n_u32::<31>({}(self.0));",
+                u32_cast
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "            let arr: [u32; 4] = core::mem::transmute(signs);"
+            )
+            .unwrap();
             writeln!(code, "            (arr[0] & 1) | ((arr[1] & 1) << 1) | ((arr[2] & 1) << 2) | ((arr[3] & 1) << 3)").unwrap();
             writeln!(code, "        }}").unwrap();
         }
         ElementType::U32 => {
             writeln!(code, "        unsafe {{").unwrap();
             writeln!(code, "            let signs = vshrq_n_u32::<31>(self.0);").unwrap();
-            writeln!(code, "            let arr: [u32; 4] = core::mem::transmute(signs);").unwrap();
+            writeln!(
+                code,
+                "            let arr: [u32; 4] = core::mem::transmute(signs);"
+            )
+            .unwrap();
             writeln!(code, "            (arr[0] & 1) | ((arr[1] & 1) << 1) | ((arr[2] & 1) << 2) | ((arr[3] & 1) << 3)").unwrap();
             writeln!(code, "        }}").unwrap();
         }
         ElementType::I64 => {
             writeln!(code, "        unsafe {{").unwrap();
-            writeln!(code, "            let signs = vshrq_n_u64::<63>({}(self.0));", u64_cast).unwrap();
+            writeln!(
+                code,
+                "            let signs = vshrq_n_u64::<63>({}(self.0));",
+                u64_cast
+            )
+            .unwrap();
             writeln!(code, "            ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32").unwrap();
             writeln!(code, "        }}").unwrap();
         }
@@ -1622,11 +1736,7 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Create from signed 32-bit integers.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn from_i32x4(v: {}) -> Self {{", int_name).unwrap();
-        writeln!(
-            code,
-            "        Self(unsafe {{ vcvtq_f32_s32(v.0) }})"
-        )
-        .unwrap();
+        writeln!(code, "        Self(unsafe {{ vcvtq_f32_s32(v.0) }})").unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 
@@ -1649,7 +1759,11 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
         writeln!(code, "    }}\n").unwrap();
 
         // to_f32 (alias for to_f32x4)
-        writeln!(code, "    /// Convert to single-precision floats (alias for `to_f32x4`).").unwrap();
+        writeln!(
+            code,
+            "    /// Convert to single-precision floats (alias for `to_f32x4`)."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn to_f32(self) -> {} {{", float_name).unwrap();
         writeln!(code, "        self.to_f32x4()").unwrap();
@@ -1683,11 +1797,7 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
             "        let s64 = unsafe {{ vcvtq_s64_f64(self.0) }};"
         )
         .unwrap();
-        writeln!(
-            code,
-            "        let s32_low = unsafe {{ vmovn_s64(s64) }};"
-        )
-        .unwrap();
+        writeln!(code, "        let s32_low = unsafe {{ vmovn_s64(s64) }};").unwrap();
         writeln!(
             code,
             "        i32x4(unsafe {{ vcombine_s32(s32_low, vdup_n_s32(0)) }})"

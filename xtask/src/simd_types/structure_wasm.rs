@@ -623,11 +623,7 @@ fn generate_math_ops(ty: &SimdType) -> String {
                 "    // WASM has no native reciprocal estimate intrinsics."
             )
             .unwrap();
-            writeln!(
-                code,
-                "    // These use division for correct results.\n"
-            )
-            .unwrap();
+            writeln!(code, "    // These use division for correct results.\n").unwrap();
 
             // rcp_approx - use division (no fast path in WASM)
             writeln!(
@@ -959,12 +955,28 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
 
         // shr_arithmetic for signed types (same as shr on WASM since WASM shr is arithmetic for signed)
         if ty.elem.is_signed() && !matches!(ty.elem, ElementType::I64) {
-            writeln!(code, "    /// Arithmetic shift right by `N` bits (sign-extending).").unwrap();
+            writeln!(
+                code,
+                "    /// Arithmetic shift right by `N` bits (sign-extending)."
+            )
+            .unwrap();
             writeln!(code, "    ///").unwrap();
-            writeln!(code, "    /// The sign bit is replicated into the vacated positions.").unwrap();
-            writeln!(code, "    /// On WASM, this is the same as `shr()` for signed types.").unwrap();
+            writeln!(
+                code,
+                "    /// The sign bit is replicated into the vacated positions."
+            )
+            .unwrap();
+            writeln!(
+                code,
+                "    /// On WASM, this is the same as `shr()` for signed types."
+            )
+            .unwrap();
             writeln!(code, "    #[inline(always)]").unwrap();
-            writeln!(code, "    pub fn shr_arithmetic<const N: u32>(self) -> Self {{").unwrap();
+            writeln!(
+                code,
+                "    pub fn shr_arithmetic<const N: u32>(self) -> Self {{"
+            )
+            .unwrap();
             writeln!(code, "        Self({}(self.0, N))", shr_fn).unwrap();
             writeln!(code, "    }}\n").unwrap();
         }
@@ -1028,12 +1040,7 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
         .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn to_i32x4(self) -> {} {{", int_name).unwrap();
-        writeln!(
-            code,
-            "        {}(i32x4_trunc_sat_f32x4(self.0))",
-            int_name
-        )
-        .unwrap();
+        writeln!(code, "        {}(i32x4_trunc_sat_f32x4(self.0))", int_name).unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // to_i32x4_round (round to nearest) - use floor(x + 0.5) approximation
@@ -1068,11 +1075,7 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Create from signed 32-bit integers.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn from_i32x4(v: {}) -> Self {{", int_name).unwrap();
-        writeln!(
-            code,
-            "        Self(f32x4_convert_i32x4(v.0))"
-        )
-        .unwrap();
+        writeln!(code, "        Self(f32x4_convert_i32x4(v.0))").unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 
@@ -1086,16 +1089,15 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
         writeln!(code, "    /// Convert to single-precision floats.").unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn to_f32x4(self) -> {} {{", float_name).unwrap();
-        writeln!(
-            code,
-            "        {}(f32x4_convert_i32x4(self.0))",
-            float_name
-        )
-        .unwrap();
+        writeln!(code, "        {}(f32x4_convert_i32x4(self.0))", float_name).unwrap();
         writeln!(code, "    }}\n").unwrap();
 
         // to_f32 (alias for to_f32x4)
-        writeln!(code, "    /// Convert to single-precision floats (alias for `to_f32x4`).").unwrap();
+        writeln!(
+            code,
+            "    /// Convert to single-precision floats (alias for `to_f32x4`)."
+        )
+        .unwrap();
         writeln!(code, "    #[inline(always)]").unwrap();
         writeln!(code, "    pub fn to_f32(self) -> {} {{", float_name).unwrap();
         writeln!(code, "        self.to_f32x4()").unwrap();
@@ -1124,11 +1126,7 @@ fn generate_conversion_ops(ty: &SimdType) -> String {
             "        // WASM: i32x4_trunc_sat_f64x2_zero converts f64x2 to lower 2 lanes of i32x4"
         )
         .unwrap();
-        writeln!(
-            code,
-            "        i32x4(i32x4_trunc_sat_f64x2_zero(self.0))"
-        )
-        .unwrap();
+        writeln!(code, "        i32x4(i32x4_trunc_sat_f64x2_zero(self.0))").unwrap();
         writeln!(code, "    }}\n").unwrap();
     }
 

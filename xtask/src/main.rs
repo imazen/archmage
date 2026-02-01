@@ -925,9 +925,7 @@ fn main() -> Result<()> {
         eprintln!(
             "       cargo xtask validate-registry   - Parse and validate token-registry.toml"
         );
-        eprintln!(
-            "       cargo xtask parity              - Check API parity across architectures"
-        );
+        eprintln!("       cargo xtask parity              - Check API parity across architectures");
         eprintln!(
             "       cargo xtask ci | all            - Run ALL checks (must pass before push)"
         );
@@ -988,7 +986,11 @@ pub(crate) use registry::*;
 "#;
     let gen_mod_path = gen_dir.join("mod.rs");
     fs::write(&gen_mod_path, gen_mod)?;
-    println!("  Wrote {} ({} bytes)", gen_mod_path.display(), gen_mod.len());
+    println!(
+        "  Wrote {} ({} bytes)",
+        gen_mod_path.display(),
+        gen_mod.len()
+    );
 
     // Run rustfmt on the generated files so they stay fmt-clean
     // archmage-macros uses edition 2021
@@ -1241,7 +1243,9 @@ fn check_api_parity(strict: bool) -> Result<()> {
     println!("  WASM: {} types\n", wasm_types.len());
 
     // Compare W128 types across all three architectures
-    let w128_types = ["f32x4", "f64x2", "i8x16", "u8x16", "i16x8", "u16x8", "i32x4", "u32x4", "i64x2", "u64x2"];
+    let w128_types = [
+        "f32x4", "f64x2", "i8x16", "u8x16", "i16x8", "u16x8", "i32x4", "u32x4", "i64x2", "u64x2",
+    ];
 
     let mut parity_issues = Vec::new();
     let mut doc_issues = Vec::new();
@@ -1298,7 +1302,18 @@ fn check_api_parity(strict: bool) -> Result<()> {
         for methods in [&x86_types, &arm_types, &wasm_types] {
             if let Some(type_methods) = methods.get(type_name) {
                 for m in type_methods {
-                    if !m.has_doc && !["splat", "load", "store", "to_array", "from_array", "zero", "new"].contains(&m.name.as_str()) {
+                    if !m.has_doc
+                        && ![
+                            "splat",
+                            "load",
+                            "store",
+                            "to_array",
+                            "from_array",
+                            "zero",
+                            "new",
+                        ]
+                        .contains(&m.name.as_str())
+                    {
                         doc_issues.push(format!("  {}::{} — no doc comment", type_name, m.name));
                     }
                 }
@@ -1360,7 +1375,8 @@ fn check_api_parity(strict: bool) -> Result<()> {
         .collect();
 
     println!("\n=== Summary ===");
-    println!("  Parity issues: {} ({} known gaps, {} actionable)",
+    println!(
+        "  Parity issues: {} ({} known gaps, {} actionable)",
         parity_issues.len(),
         parity_issues.len() - actionable_issues.len(),
         actionable_issues.len()
@@ -1469,7 +1485,11 @@ fn run_ci() -> Result<()> {
     println!("┌─ Step 7/8: Running tests ──────────────────────────────────────────┐");
     // Use specific features instead of --all-features to avoid sleef (requires nightly)
     let tests = std::process::Command::new("cargo")
-        .args(["test", "--features", "std macros bytemuck wide __composite avx512"])
+        .args([
+            "test",
+            "--features",
+            "std macros bytemuck wide __composite avx512",
+        ])
         .status()
         .context("Failed to run tests")?;
     if !tests.success() {
