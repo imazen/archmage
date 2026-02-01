@@ -22,6 +22,9 @@ avx512 = ["archmage/avx512"]
 # Core tokens and macros
 archmage = { version = "0.4.0", path = "..", default-features = false }
 
+[dev-dependencies]
+proptest = "1.5"
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

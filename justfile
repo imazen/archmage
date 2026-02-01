@@ -43,6 +43,10 @@ audit:
 intrinsics-refresh:
     cargo run -p xtask -- intrinsics-refresh
 
+# Fuzz test for divergences between native and polyfill implementations
+fuzz:
+    cargo test -p magetypes --test fuzz_divergence --features avx512
+
 # Regenerate all generated code (SIMD types, macro registry, docs)
 generate:
     cargo run -p xtask -- generate
