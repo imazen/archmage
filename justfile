@@ -23,9 +23,17 @@ fmt:
 fmt-check:
     cargo fmt -- --check
 
-# Run Miri tests (token logic only, no SIMD)
-miri:
+# Run Miri tests (token logic only, no SIMD) - legacy alias
+miri-tokens:
     rustup run nightly cargo miri test --test miri_safe --all-features
+
+# Run Miri on magetypes with full SIMD support (detects UB)
+miri:
+    cargo run -p xtask -- miri
+
+# Static soundness verification (validates intrinsics against stdarch database)
+soundness:
+    cargo run -p xtask -- soundness
 
 # Regenerate all generated code (SIMD types, macro registry, docs)
 generate:

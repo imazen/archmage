@@ -86,6 +86,8 @@ just generate                 # Regenerate all generated code
 just validate-registry        # Validate token-registry.toml
 just validate-tokens          # Validate magetypes safety + try_new() checks
 just parity                   # Check API parity across x86/ARM/WASM
+just soundness                # Static intrinsic soundness verification
+just miri                     # Run magetypes under Miri (detects UB)
 just ci                       # Run ALL checks (must pass before push/publish)
 ```
 
