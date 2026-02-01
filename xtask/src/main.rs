@@ -276,6 +276,170 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
 }
 
 // ============================================================================
+// try_new() / summon() Feature Verification
+// ============================================================================
+
+/// Validate that every token's try_new() checks exactly the features in the registry.
+///
+/// Parses src/tokens/*.rs to extract `is_x86_feature_available!("feat")` and
+/// `is_aarch64_feature_available!("feat")` calls within each token's try_new() block,
+/// then compares against the registry.
+///
+/// Special cases:
+/// - NeonToken: always returns Some (neon is baseline AArch64), skip check
+/// - Simd128Token: uses #[cfg(target_feature)] not runtime detection, skip check
+/// - x86 tokens: sse/sse2 are baseline, not checked at runtime
+/// - AArch64 tokens: neon is baseline, not checked at runtime
+fn validate_try_new(reg: &registry::Registry) -> Result<()> {
+    println!("=== try_new() Feature Verification ===\n");
+
+    let token_files = [
+        ("src/tokens/x86.rs", "x86"),
+        ("src/tokens/x86_avx512.rs", "x86"),
+        ("src/tokens/arm.rs", "aarch64"),
+        ("src/tokens/wasm.rs", "wasm"),
+    ];
+
+    // Regex to extract is_x86_feature_available!("feature") calls
+    let x86_feature_re =
+        Regex::new(r#"is_x86_feature_available!\("([^"]+)"\)"#).expect("invalid regex");
+    let arm_feature_re =
+        Regex::new(r#"is_aarch64_feature_available!\("([^"]+)"\)"#).expect("invalid regex");
+
+    let mut errors: Vec<String> = Vec::new();
+    let mut verified = 0usize;
+
+    for (file_path, arch) in &token_files {
+        let path = PathBuf::from(file_path);
+        if !path.exists() {
+            continue;
+        }
+        let content =
+            fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+
+        // Find each "impl SimdToken for <TokenName>" block and extract its try_new() features
+        let impl_re = Regex::new(r"impl\s+SimdToken\s+for\s+(\w+)").expect("invalid impl regex");
+
+        for cap in impl_re.captures_iter(&content) {
+            let token_name = cap[1].to_string();
+
+            // Look up registry features for this token
+            let token_def = match reg.find_token(&token_name) {
+                Some(t) => t,
+                None => {
+                    // Might be an alias type — skip if not a primary token
+                    continue;
+                }
+            };
+
+            // Handle special cases before parsing
+            if *arch == "wasm" {
+                // Simd128Token uses #[cfg(target_feature)], not runtime detection
+                println!(
+                    "  {} — compile-time cfg check (no runtime detection)",
+                    token_name
+                );
+                verified += 1;
+                continue;
+            }
+
+            if token_name == "NeonToken" && token_def.always_available {
+                println!("  {} — always available (no runtime checks)", token_name);
+                verified += 1;
+                continue;
+            }
+
+            // Find the try_new() body for this impl block
+            let impl_start = cap.get(0).unwrap().start();
+            let remaining = &content[impl_start..];
+
+            // Find fn try_new()
+            let try_new_pos = match remaining.find("fn try_new()") {
+                Some(pos) => pos,
+                None => continue,
+            };
+
+            // Extract features from the try_new body (up to the next fn or closing brace)
+            let try_new_body = &remaining[try_new_pos..];
+            // Find end: next "fn " or impl block end
+            let body_end = try_new_body
+                .find("\n    fn ")
+                .or_else(|| try_new_body.find("\n    #["))
+                .unwrap_or(try_new_body.len().min(2000));
+            let try_new_section = &try_new_body[..body_end];
+
+            let re = match *arch {
+                "x86" => &x86_feature_re,
+                "aarch64" => &arm_feature_re,
+                _ => continue,
+            };
+
+            let checked: BTreeSet<String> = re
+                .captures_iter(try_new_section)
+                .map(|c| c[1].to_string())
+                .collect();
+
+            // Determine expected features (strip baselines that aren't runtime-checked)
+            let expected: BTreeSet<String> = match *arch {
+                "x86" => token_def
+                    .features
+                    .iter()
+                    .filter(|f| *f != "sse" && *f != "sse2")
+                    .cloned()
+                    .collect(),
+                "aarch64" => {
+                    // AArch64 tokens only check the extension feature, not neon (baseline)
+                    token_def
+                        .features
+                        .iter()
+                        .filter(|f| *f != "neon")
+                        .cloned()
+                        .collect()
+                }
+                _ => continue,
+            };
+
+            // Compare
+            let missing: BTreeSet<&String> = expected.difference(&checked).collect();
+            let extra: BTreeSet<&String> = checked.difference(&expected).collect();
+
+            if missing.is_empty() && extra.is_empty() {
+                println!("  {} — {} features verified", token_name, checked.len());
+                verified += 1;
+            } else {
+                if !missing.is_empty() {
+                    errors.push(format!(
+                        "{}: try_new() MISSING checks for: {:?} (registry expects them)",
+                        token_name, missing
+                    ));
+                }
+                if !extra.is_empty() {
+                    errors.push(format!(
+                        "{}: try_new() has EXTRA checks for: {:?} (not in registry)",
+                        token_name, extra
+                    ));
+                }
+            }
+        }
+    }
+
+    println!("\n=== try_new() Verification Summary ===");
+    println!("  Verified: {} tokens", verified);
+    println!("  Errors:   {}", errors.len());
+
+    if !errors.is_empty() {
+        println!("\n=== ERRORS ===");
+        for e in &errors {
+            println!("  {}", e);
+        }
+        bail!("try_new() verification failed with {} errors", errors.len());
+    }
+
+    println!("\nAll try_new() implementations match registry!");
+    Ok(())
+}
+
+// ============================================================================
 // Reference Documentation Generation
 // ============================================================================
 
@@ -762,7 +926,11 @@ fn main() -> Result<()> {
 
     match args[1].as_str() {
         "generate" => generate_all()?,
-        "validate" => validate_magetypes()?,
+        "validate" => {
+            let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
+            validate_magetypes_with_registry(&reg)?;
+            validate_try_new(&reg)?;
+        }
         "validate-registry" => validate_registry()?,
         _ => {
             eprintln!("Unknown command: {}", args[1]);
@@ -846,6 +1014,10 @@ fn generate_all() -> Result<()> {
     // Run safety validation on generated code (hard failure)
     println!("\n=== Validating Magetypes Safety ===");
     validate_magetypes_with_registry(&reg)?;
+
+    // Verify try_new() implementations match registry
+    println!();
+    validate_try_new(&reg)?;
 
     println!("\n=== Generation Complete ===");
     println!("  - SIMD types: magetypes/src/simd/");
