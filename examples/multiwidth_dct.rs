@@ -444,7 +444,7 @@ mod x86_impl {
         // Width-specific
         use archmage::SimdToken;
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 dct::sse::dct8(token, &input, &mut output);
@@ -458,7 +458,7 @@ mod x86_impl {
             );
         }
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 dct::avx2::dct8(token, &input, &mut output);
@@ -473,7 +473,7 @@ mod x86_impl {
         }
 
         #[cfg(feature = "avx512")]
-        if let Some(token) = archmage::X64V4Token::try_new() {
+        if let Some(token) = archmage::X64V4Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 dct::avx512::dct8(token, &input, &mut output);
@@ -527,7 +527,7 @@ mod x86_impl {
         // Width-specific
         use archmage::SimdToken;
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 block = original;
@@ -542,7 +542,7 @@ mod x86_impl {
             );
         }
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 block = original;
@@ -558,7 +558,7 @@ mod x86_impl {
         }
 
         #[cfg(feature = "avx512")]
-        if let Some(token) = archmage::X64V4Token::try_new() {
+        if let Some(token) = archmage::X64V4Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 block = original;
@@ -627,7 +627,7 @@ mod x86_impl {
         // Width-specific batch
         use archmage::SimdToken;
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 blocks.copy_from_slice(&original);
@@ -654,14 +654,14 @@ mod x86_impl {
         use archmage::SimdToken;
 
         print!("  SSE4.1 (128-bit, 4 lanes):   ");
-        if archmage::X64V3Token::try_new().is_some() {
+        if archmage::X64V3Token::summon().is_some() {
             println!("AVAILABLE");
         } else {
             println!("not available");
         }
 
         print!("  AVX2+FMA (256-bit, 8 lanes): ");
-        if archmage::X64V3Token::try_new().is_some() {
+        if archmage::X64V3Token::summon().is_some() {
             println!("AVAILABLE");
         } else {
             println!("not available");
@@ -670,7 +670,7 @@ mod x86_impl {
         #[cfg(feature = "avx512")]
         {
             print!("  AVX-512 (512-bit, 16 lanes): ");
-            if archmage::X64V4Token::try_new().is_some() {
+            if archmage::X64V4Token::summon().is_some() {
                 println!("AVAILABLE");
             } else {
                 println!("not available");

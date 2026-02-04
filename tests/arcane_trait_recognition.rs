@@ -96,28 +96,28 @@ mod x86_concrete_tokens {
 
     #[test]
     fn test_concrete_x64v2() {
-        if let Some(t) = archmage::X64V2Token::try_new() {
+        if let Some(t) = archmage::X64V2Token::summon() {
             let _ = with_x64v2(t);
         }
     }
 
     #[test]
     fn test_concrete_x64v3() {
-        if let Some(t) = archmage::X64V3Token::try_new() {
+        if let Some(t) = archmage::X64V3Token::summon() {
             assert_eq!(with_x64v3(t), 6.0); // 2*2+2
         }
     }
 
     #[test]
     fn test_concrete_desktop64() {
-        if let Some(t) = archmage::Desktop64::try_new() {
+        if let Some(t) = archmage::Desktop64::summon() {
             assert_eq!(with_desktop64(t), 12.0); // 3*3+3
         }
     }
 
     #[test]
     fn test_concrete_avx2fma() {
-        if let Some(t) = archmage::Avx2FmaToken::try_new() {
+        if let Some(t) = archmage::Avx2FmaToken::summon() {
             assert_eq!(with_avx2fma(t), 7.0); // 2*3+1
         }
     }
@@ -126,13 +126,13 @@ mod x86_concrete_tokens {
     #[test]
     fn test_concrete_avx512_tokens() {
         // These may or may not be available depending on hardware
-        if let Some(t) = archmage::X64V4Token::try_new() {
+        if let Some(t) = archmage::X64V4Token::summon() {
             assert_eq!(with_x64v4(t), 4.0);
         }
-        if let Some(t) = archmage::Avx512Token::try_new() {
+        if let Some(t) = archmage::Avx512Token::summon() {
             assert_eq!(with_avx512token(t), 5.0);
         }
-        if let Some(t) = archmage::Server64::try_new() {
+        if let Some(t) = archmage::Server64::summon() {
             assert_eq!(with_server64(t), 6.0);
         }
     }
@@ -177,7 +177,7 @@ mod x86_impl_trait {
     #[test]
     fn test_impl_trait_has128() {
         // X64V2Token implements Has128BitSimd
-        if let Some(t) = archmage::X64V2Token::try_new() {
+        if let Some(t) = archmage::X64V2Token::summon() {
             assert_eq!(with_has128(t), 1.0);
         }
     }
@@ -185,11 +185,11 @@ mod x86_impl_trait {
     #[test]
     fn test_impl_trait_has256() {
         // X64V3Token implements Has256BitSimd
-        if let Some(t) = archmage::X64V3Token::try_new() {
+        if let Some(t) = archmage::X64V3Token::summon() {
             assert_eq!(with_has256(t), 2.0);
         }
         // Avx2FmaToken (alias for X64V3Token) also has Has256BitSimd
-        if let Some(t) = archmage::Avx2FmaToken::try_new() {
+        if let Some(t) = archmage::Avx2FmaToken::summon() {
             assert_eq!(with_has256(t), 2.0);
         }
     }
@@ -197,18 +197,18 @@ mod x86_impl_trait {
     #[cfg(feature = "avx512")]
     #[test]
     fn test_impl_trait_has512() {
-        if let Some(t) = archmage::X64V4Token::try_new() {
+        if let Some(t) = archmage::X64V4Token::summon() {
             assert_eq!(with_has512(t), 3.0);
         }
     }
 
     #[test]
     fn test_impl_trait_hasx64v2() {
-        if let Some(t) = archmage::X64V2Token::try_new() {
+        if let Some(t) = archmage::X64V2Token::summon() {
             let _ = with_hasx64v2(t);
         }
         // X64V3Token also has HasX64V2
-        if let Some(t) = archmage::X64V3Token::try_new() {
+        if let Some(t) = archmage::X64V3Token::summon() {
             let _ = with_hasx64v2(t);
         }
     }
@@ -216,7 +216,7 @@ mod x86_impl_trait {
     #[cfg(feature = "avx512")]
     #[test]
     fn test_impl_trait_hasx64v4() {
-        if let Some(t) = archmage::X64V4Token::try_new() {
+        if let Some(t) = archmage::X64V4Token::summon() {
             assert_eq!(with_hasx64v4(t), 4.0);
         }
     }
@@ -254,21 +254,21 @@ mod x86_generic_inline {
 
     #[test]
     fn test_generic_inline_has128() {
-        if let Some(t) = archmage::X64V2Token::try_new() {
+        if let Some(t) = archmage::X64V2Token::summon() {
             assert_eq!(generic_has128(t), 10.0);
         }
     }
 
     #[test]
     fn test_generic_inline_has256() {
-        if let Some(t) = archmage::X64V3Token::try_new() {
+        if let Some(t) = archmage::X64V3Token::summon() {
             assert_eq!(generic_has256(t), 20.0);
         }
     }
 
     #[test]
     fn test_generic_inline_hasx64v2() {
-        if let Some(t) = archmage::X64V2Token::try_new() {
+        if let Some(t) = archmage::X64V2Token::summon() {
             let _ = generic_hasx64v2(t);
         }
     }
@@ -276,7 +276,7 @@ mod x86_generic_inline {
     #[cfg(feature = "avx512")]
     #[test]
     fn test_generic_inline_hasx64v4() {
-        if let Some(t) = archmage::X64V4Token::try_new() {
+        if let Some(t) = archmage::X64V4Token::summon() {
             assert_eq!(generic_hasx64v4(t), 40.0);
         }
     }
@@ -326,21 +326,21 @@ mod x86_generic_where {
 
     #[test]
     fn test_where_has128() {
-        if let Some(t) = archmage::X64V2Token::try_new() {
+        if let Some(t) = archmage::X64V2Token::summon() {
             assert_eq!(where_has128(t), 100.0);
         }
     }
 
     #[test]
     fn test_where_has256() {
-        if let Some(t) = archmage::Avx2FmaToken::try_new() {
+        if let Some(t) = archmage::Avx2FmaToken::summon() {
             assert_eq!(where_has256(t), 200.0);
         }
     }
 
     #[test]
     fn test_where_hasx64v2() {
-        if let Some(t) = archmage::X64V3Token::try_new() {
+        if let Some(t) = archmage::X64V3Token::summon() {
             let _ = where_hasx64v2(t);
         }
     }
@@ -348,7 +348,7 @@ mod x86_generic_where {
     #[cfg(feature = "avx512")]
     #[test]
     fn test_where_hasx64v4() {
-        if let Some(t) = archmage::X64V4Token::try_new() {
+        if let Some(t) = archmage::X64V4Token::summon() {
             assert_eq!(where_hasx64v4(t), 400.0);
         }
     }
@@ -385,7 +385,7 @@ mod x86_cross_compat {
     /// X64V3Token implements Has128BitSimd, Has256BitSimd, and HasX64V2
     #[test]
     fn test_x64v3_satisfies_lower_bounds() {
-        if let Some(t) = archmage::X64V3Token::try_new() {
+        if let Some(t) = archmage::X64V3Token::summon() {
             assert_eq!(needs_has128(t), 1.0);
             assert_eq!(needs_has256(t), 2.0);
             let _ = needs_hasx64v2(t);
@@ -395,7 +395,7 @@ mod x86_cross_compat {
     /// Desktop64 is X64V3Token
     #[test]
     fn test_desktop64_satisfies_lower_bounds() {
-        if let Some(t) = archmage::Desktop64::try_new() {
+        if let Some(t) = archmage::Desktop64::summon() {
             assert_eq!(needs_has128(t), 1.0);
             assert_eq!(needs_has256(t), 2.0);
             let _ = needs_hasx64v2(t);
@@ -405,7 +405,7 @@ mod x86_cross_compat {
     /// Avx2FmaToken (alias for X64V3Token) implements Has128BitSimd, Has256BitSimd, and HasX64V2
     #[test]
     fn test_avx2fma_satisfies_lower_bounds() {
-        if let Some(t) = archmage::Avx2FmaToken::try_new() {
+        if let Some(t) = archmage::Avx2FmaToken::summon() {
             assert_eq!(needs_has128(t), 1.0);
             assert_eq!(needs_has256(t), 2.0);
             let _ = needs_hasx64v2(t);
@@ -416,7 +416,7 @@ mod x86_cross_compat {
     #[cfg(feature = "avx512")]
     #[test]
     fn test_x64v4_satisfies_all_bounds() {
-        if let Some(t) = archmage::X64V4Token::try_new() {
+        if let Some(t) = archmage::X64V4Token::summon() {
             assert_eq!(needs_has128(t), 1.0);
             assert_eq!(needs_has256(t), 2.0);
             let _ = needs_hasx64v2(t);
@@ -427,7 +427,7 @@ mod x86_cross_compat {
     #[cfg(feature = "avx512")]
     #[test]
     fn test_server64_satisfies_all_bounds() {
-        if let Some(t) = archmage::Server64::try_new() {
+        if let Some(t) = archmage::Server64::summon() {
             assert_eq!(needs_has128(t), 1.0);
             assert_eq!(needs_has256(t), 2.0);
             let _ = needs_hasx64v2(t);
@@ -447,24 +447,24 @@ mod x86_alias_identity {
     #[test]
     fn desktop64_is_x64v3() {
         // Desktop64 is a type alias for X64V3Token
-        let _: Option<archmage::Desktop64> = archmage::X64V3Token::try_new();
-        let _: Option<archmage::X64V3Token> = archmage::Desktop64::try_new();
+        let _: Option<archmage::Desktop64> = archmage::X64V3Token::summon();
+        let _: Option<archmage::X64V3Token> = archmage::Desktop64::summon();
     }
 
     #[test]
     fn avx2fma_is_x64v3() {
         // Avx2FmaToken is a type alias for X64V3Token
-        let _: Option<archmage::Avx2FmaToken> = archmage::X64V3Token::try_new();
-        let _: Option<archmage::X64V3Token> = archmage::Avx2FmaToken::try_new();
+        let _: Option<archmage::Avx2FmaToken> = archmage::X64V3Token::summon();
+        let _: Option<archmage::X64V3Token> = archmage::Avx2FmaToken::summon();
     }
 
     #[cfg(feature = "avx512")]
     #[test]
     fn server64_is_x64v4_is_avx512() {
         // All three are aliases for the same type
-        let _: Option<archmage::Server64> = archmage::X64V4Token::try_new();
-        let _: Option<archmage::X64V4Token> = archmage::Avx512Token::try_new();
-        let _: Option<archmage::Avx512Token> = archmage::Server64::try_new();
+        let _: Option<archmage::Server64> = archmage::X64V4Token::summon();
+        let _: Option<archmage::X64V4Token> = archmage::Avx512Token::summon();
+        let _: Option<archmage::Avx512Token> = archmage::Server64::summon();
     }
 }
 
@@ -546,27 +546,27 @@ mod arm_concrete_tokens {
 
     #[test]
     fn test_arm_concrete() {
-        if let Some(t) = archmage::NeonToken::try_new() {
+        if let Some(t) = archmage::NeonToken::summon() {
             assert_eq!(with_neon(t), 1.0);
         }
-        if let Some(t) = archmage::Arm64::try_new() {
+        if let Some(t) = archmage::Arm64::summon() {
             assert_eq!(with_arm64(t), 2.0);
         }
-        if let Some(t) = archmage::NeonCrcToken::try_new() {
+        if let Some(t) = archmage::NeonCrcToken::summon() {
             assert_eq!(with_neon_crc(t), 5.0);
         }
     }
 
     #[test]
     fn test_arm_impl_trait() {
-        if let Some(t) = archmage::NeonToken::try_new() {
+        if let Some(t) = archmage::NeonToken::summon() {
             assert_eq!(with_has_neon(t), 10.0);
         }
     }
 
     #[test]
     fn test_arm_generic() {
-        if let Some(t) = archmage::NeonToken::try_new() {
+        if let Some(t) = archmage::NeonToken::summon() {
             assert_eq!(generic_has_neon(t), 100.0);
             assert_eq!(where_has_neon(t), 200.0);
         }
@@ -574,8 +574,8 @@ mod arm_concrete_tokens {
 
     #[test]
     fn arm64_is_neon() {
-        let _: Option<archmage::Arm64> = archmage::NeonToken::try_new();
-        let _: Option<archmage::NeonToken> = archmage::Arm64::try_new();
+        let _: Option<archmage::Arm64> = archmage::NeonToken::summon();
+        let _: Option<archmage::NeonToken> = archmage::Arm64::summon();
     }
 }
 
@@ -596,7 +596,7 @@ mod wasm_tokens {
 
     #[test]
     fn test_wasm_concrete() {
-        if let Some(t) = archmage::Simd128Token::try_new() {
+        if let Some(t) = archmage::Simd128Token::summon() {
             assert_eq!(with_simd128(t), 1.0);
         }
     }

@@ -399,7 +399,7 @@ mod x86_impl {
         // Width-specific implementations
         use archmage::SimdToken;
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::sse::sum(token, &data);
@@ -413,7 +413,7 @@ mod x86_impl {
             );
         }
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::avx2::sum(token, &data);
@@ -428,7 +428,7 @@ mod x86_impl {
         }
 
         #[cfg(feature = "avx512")]
-        if let Some(token) = archmage::X64V4Token::try_new() {
+        if let Some(token) = archmage::X64V4Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::avx512::sum(token, &data);
@@ -485,7 +485,7 @@ mod x86_impl {
 
         use archmage::SimdToken;
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::sse::dot_product(token, &a, &b);
@@ -499,7 +499,7 @@ mod x86_impl {
             );
         }
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::avx2::dot_product(token, &a, &b);
@@ -514,7 +514,7 @@ mod x86_impl {
         }
 
         #[cfg(feature = "avx512")]
-        if let Some(token) = archmage::X64V4Token::try_new() {
+        if let Some(token) = archmage::X64V4Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::avx512::dot_product(token, &a, &b);
@@ -569,7 +569,7 @@ mod x86_impl {
 
         use archmage::SimdToken;
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 data.copy_from_slice(&original);
@@ -584,7 +584,7 @@ mod x86_impl {
             );
         }
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 data.copy_from_slice(&original);
@@ -600,7 +600,7 @@ mod x86_impl {
         }
 
         #[cfg(feature = "avx512")]
-        if let Some(token) = archmage::X64V4Token::try_new() {
+        if let Some(token) = archmage::X64V4Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 data.copy_from_slice(&original);
@@ -655,7 +655,7 @@ mod x86_impl {
 
         use archmage::SimdToken;
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::sse::l2_norm(token, &data);
@@ -669,7 +669,7 @@ mod x86_impl {
             );
         }
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::avx2::l2_norm(token, &data);
@@ -684,7 +684,7 @@ mod x86_impl {
         }
 
         #[cfg(feature = "avx512")]
-        if let Some(token) = archmage::X64V4Token::try_new() {
+        if let Some(token) = archmage::X64V4Token::summon() {
             let start = Instant::now();
             for _ in 0..BENCH_ITERATIONS {
                 result = kernels::avx512::l2_norm(token, &data);
@@ -707,14 +707,14 @@ mod x86_impl {
         use archmage::SimdToken;
 
         print!("  SSE4.1 (128-bit, 4 lanes):  ");
-        if archmage::X64V3Token::try_new().is_some() {
+        if archmage::X64V3Token::summon().is_some() {
             println!("AVAILABLE");
         } else {
             println!("not available");
         }
 
         print!("  AVX2+FMA (256-bit, 8 lanes): ");
-        if archmage::X64V3Token::try_new().is_some() {
+        if archmage::X64V3Token::summon().is_some() {
             println!("AVAILABLE");
         } else {
             println!("not available");
@@ -723,7 +723,7 @@ mod x86_impl {
         #[cfg(feature = "avx512")]
         {
             print!("  AVX-512 (512-bit, 16 lanes): ");
-            if archmage::X64V4Token::try_new().is_some() {
+            if archmage::X64V4Token::summon().is_some() {
                 println!("AVAILABLE");
             } else {
                 println!("not available");

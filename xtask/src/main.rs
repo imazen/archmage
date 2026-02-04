@@ -326,13 +326,13 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
 }
 
 // ============================================================================
-// try_new() / summon() Feature Verification
+// summon() / summon() Feature Verification
 // ============================================================================
 
-/// Validate that every token's try_new() checks exactly the features in the registry.
+/// Validate that every token's summon() checks exactly the features in the registry.
 ///
 /// Parses src/tokens/*.rs to extract `is_x86_feature_available!("feat")` and
-/// `is_aarch64_feature_available!("feat")` calls within each token's try_new() block,
+/// `is_aarch64_feature_available!("feat")` calls within each token's summon() block,
 /// then compares against the registry.
 ///
 /// Special cases:
@@ -340,8 +340,8 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
 /// - Simd128Token: uses #[cfg(target_feature)] not runtime detection, skip check
 /// - x86 tokens: sse/sse2 are baseline, not checked at runtime
 /// - AArch64 tokens: neon is baseline, not checked at runtime
-fn validate_try_new(reg: &registry::Registry) -> Result<()> {
-    println!("=== try_new() Feature Verification ===\n");
+fn validate_summon(reg: &registry::Registry) -> Result<()> {
+    println!("=== summon() Feature Verification ===\n");
 
     let token_files = [
         ("src/tokens/generated/x86.rs", "x86"),
@@ -367,7 +367,7 @@ fn validate_try_new(reg: &registry::Registry) -> Result<()> {
         let content =
             fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
 
-        // Find each "impl SimdToken for <TokenName>" block and extract its try_new() features
+        // Find each "impl SimdToken for <TokenName>" block and extract its summon() features
         let impl_re = Regex::new(r"impl\s+SimdToken\s+for\s+(\w+)").expect("invalid impl regex");
 
         for cap in impl_re.captures_iter(&content) {
@@ -399,24 +399,24 @@ fn validate_try_new(reg: &registry::Registry) -> Result<()> {
                 continue;
             }
 
-            // Find the try_new() body for this impl block
+            // Find the summon() body for this impl block
             let impl_start = cap.get(0).unwrap().start();
             let remaining = &content[impl_start..];
 
-            // Find fn try_new()
-            let try_new_pos = match remaining.find("fn try_new()") {
+            // Find fn summon()
+            let summon_pos = match remaining.find("fn summon()") {
                 Some(pos) => pos,
                 None => continue,
             };
 
-            // Extract features from the try_new body (up to the next fn or closing brace)
-            let try_new_body = &remaining[try_new_pos..];
+            // Extract features from the summon body (up to the next fn or closing brace)
+            let summon_body = &remaining[summon_pos..];
             // Find end: next "fn " or impl block end
-            let body_end = try_new_body
+            let body_end = summon_body
                 .find("\n    fn ")
-                .or_else(|| try_new_body.find("\n    #["))
-                .unwrap_or(try_new_body.len().min(2000));
-            let try_new_section = &try_new_body[..body_end];
+                .or_else(|| summon_body.find("\n    #["))
+                .unwrap_or(summon_body.len().min(2000));
+            let summon_section = &summon_body[..body_end];
 
             let re = match *arch {
                 "x86" => &x86_feature_re,
@@ -425,7 +425,7 @@ fn validate_try_new(reg: &registry::Registry) -> Result<()> {
             };
 
             let checked: BTreeSet<String> = re
-                .captures_iter(try_new_section)
+                .captures_iter(summon_section)
                 .map(|c| c[1].to_string())
                 .collect();
 
@@ -459,13 +459,13 @@ fn validate_try_new(reg: &registry::Registry) -> Result<()> {
             } else {
                 if !missing.is_empty() {
                     errors.push(format!(
-                        "{}: try_new() MISSING checks for: {:?} (registry expects them)",
+                        "{}: summon() MISSING checks for: {:?} (registry expects them)",
                         token_name, missing
                     ));
                 }
                 if !extra.is_empty() {
                     errors.push(format!(
-                        "{}: try_new() has EXTRA checks for: {:?} (not in registry)",
+                        "{}: summon() has EXTRA checks for: {:?} (not in registry)",
                         token_name, extra
                     ));
                 }
@@ -473,7 +473,7 @@ fn validate_try_new(reg: &registry::Registry) -> Result<()> {
         }
     }
 
-    println!("\n=== try_new() Verification Summary ===");
+    println!("\n=== summon() Verification Summary ===");
     println!("  Verified: {} tokens", verified);
     println!("  Errors:   {}", errors.len());
 
@@ -482,10 +482,10 @@ fn validate_try_new(reg: &registry::Registry) -> Result<()> {
         for e in &errors {
             println!("  {}", e);
         }
-        bail!("try_new() verification failed with {} errors", errors.len());
+        bail!("summon() verification failed with {} errors", errors.len());
     }
 
-    println!("\nAll try_new() implementations match registry!");
+    println!("\nAll summon() implementations match registry!");
     Ok(())
 }
 
@@ -1218,7 +1218,7 @@ fn main() -> Result<()> {
         "validate" => {
             let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
             validate_magetypes_with_registry(&reg)?;
-            validate_try_new(&reg)?;
+            validate_summon(&reg)?;
         }
         "validate-registry" => validate_registry()?,
         "parity" => check_api_parity(false)?,
@@ -1231,7 +1231,7 @@ fn main() -> Result<()> {
             eprintln!("Unknown command: {}", args[1]);
             eprintln!("\nAvailable commands:");
             eprintln!("  generate          Regenerate all code from token-registry.toml");
-            eprintln!("  validate          Validate magetypes safety + try_new() features");
+            eprintln!("  validate          Validate magetypes safety + summon() features");
             eprintln!("  validate-registry Parse and validate token-registry.toml");
             eprintln!("  parity            Check API parity across architectures");
             eprintln!("  soundness         Verify intrinsic soundness against stdarch");
@@ -1431,9 +1431,9 @@ pub(crate) use registry::*;
     println!("\n=== Validating Magetypes Safety ===");
     validate_magetypes_with_registry(&reg)?;
 
-    // Verify try_new() implementations match registry
+    // Verify summon() implementations match registry
     println!();
-    validate_try_new(&reg)?;
+    validate_summon(&reg)?;
 
     println!("\n=== Generation Complete ===");
     println!("  - SIMD types: magetypes/src/simd/");
@@ -1770,7 +1770,7 @@ fn check_api_parity(strict: bool) -> Result<()> {
 /// 1. Regenerate all code
 /// 2. Verify clean worktree (no uncommitted changes from generation)
 /// 3. Validate magetypes safety
-/// 4. Validate try_new() feature checks
+/// 4. Validate summon() feature checks
 /// 5. Check API parity (strict - fails on any issues)
 /// 6. Run clippy
 /// 7. Run tests
@@ -1824,9 +1824,9 @@ fn run_ci() -> Result<()> {
     validate_magetypes_with_registry(&reg)?;
     println!("└─ Magetypes validation passed ──────────────────────────────────────┘\n");
 
-    println!("┌─ Step 4/10: Validating try_new() features ──────────────────────────┐");
-    validate_try_new(&reg)?;
-    println!("└─ try_new() validation passed ──────────────────────────────────────┘\n");
+    println!("┌─ Step 4/10: Validating summon() features ──────────────────────────┐");
+    validate_summon(&reg)?;
+    println!("└─ summon() validation passed ──────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
     println!("┌─ Step 5/10: Checking API parity (strict) ──────────────────────────┐");

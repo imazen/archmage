@@ -320,7 +320,7 @@ mod x86_impl {
     fn test_correctness() {
         println!("=== Correctness Tests ===\n");
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             // Test vertical reduction f32
             let row0: Vec<f32> = (0..32).map(|i| i as f32).collect();
             let row1: Vec<f32> = (0..32).map(|i| (i * 2) as f32).collect();
@@ -455,7 +455,7 @@ mod x86_impl {
             scalar_mpix
         );
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS * HEIGHT {
                 reduce_vertical_f32_simd(token, &row_refs_f32, &weights_f32, &mut output_f32);
@@ -505,7 +505,7 @@ mod x86_impl {
             scalar_mpix
         );
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS * HEIGHT {
                 reduce_vertical_u8_simd(token, &row_refs_u8, &weights_i16, &mut output_u8);
@@ -547,7 +547,7 @@ mod x86_impl {
             scalar_mpix
         );
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 box_filter_3x3_f32(token, &input_2d, &mut output_2d, WIDTH, HEIGHT);

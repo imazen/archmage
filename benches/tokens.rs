@@ -9,12 +9,12 @@ fn bench_token_overhead(c: &mut Criterion) {
     let mut group = c.benchmark_group("token_overhead");
 
     // Benchmark token creation
-    group.bench_function("x64v3_try_new", |b| {
-        b.iter(|| black_box(X64V3Token::try_new()))
+    group.bench_function("x64v3_summon", |b| {
+        b.iter(|| black_box(X64V3Token::summon()))
     });
 
     // Benchmark operations with token vs raw intrinsics
-    if let Some(_token) = X64V3Token::try_new() {
+    if let Some(_token) = X64V3Token::summon() {
         let data = [1.0f32; 8];
 
         group.bench_function("load_with_safe_unaligned_simd", |b| {

@@ -19,7 +19,7 @@ use core::hint::black_box;
 /// Run all AVX-512 Modern intrinsic tests.
 #[test]
 fn test_avx512_modern_intrinsics() {
-    if let Some(token) = Avx512ModernToken::try_new() {
+    if let Some(token) = Avx512ModernToken::summon() {
         exercise_avx512f(token);
         exercise_avx512f_vl(token);
         exercise_avx512bw(token);

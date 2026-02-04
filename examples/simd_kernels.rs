@@ -490,7 +490,7 @@ mod x86_impl {
         println!("=== Correctness Tests ===\n");
 
         // Test sRGB conversion
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let srgb_vals = [0.0, 0.04, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0];
             let srgb = f32x8::from_array(token, srgb_vals);
             let linear = srgb_to_linear_8px(token, srgb);
@@ -558,7 +558,7 @@ mod x86_impl {
             PIXELS, ITERATIONS
         );
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             // sRGB→Linear benchmark
             let srgb_data: Vec<f32> = (0..PIXELS).map(|i| (i % 256) as f32 / 255.0).collect();
             let mut linear_data = vec![0.0f32; PIXELS];
@@ -709,7 +709,7 @@ mod x86_impl {
 
         println!("=== Key Patterns ===\n");
         println!("  Token-gated dispatch:");
-        println!("    if let Some(token) = X64V3Token::try_new() {{ ... }}");
+        println!("    if let Some(token) = X64V3Token::summon() {{ ... }}");
         println!();
         println!("  FMA chains for matrix ops:");
         println!("    y = r.mul_add(ky_r, g.mul_add(ky_g, b * ky_b));");

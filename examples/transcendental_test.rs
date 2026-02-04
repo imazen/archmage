@@ -47,7 +47,7 @@ mod x86_impl {
     }
 
     pub fn main() {
-        let Some(token) = X64V3Token::try_new() else {
+        let Some(token) = X64V3Token::summon() else {
             eprintln!("AVX2+FMA not available");
             return;
         };

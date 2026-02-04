@@ -25,10 +25,10 @@ pub fn process(data: &[f32]) -> f32 {
     #[cfg(target_arch = "x86_64")]
     {
         use archmage::SimdToken;
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             return process_avx2(token, data);
         }
-        if let Some(token) = archmage::Sse41Token::try_new() {
+        if let Some(token) = archmage::Sse41Token::summon() {
             return process_sse(token, data);
         }
     }
@@ -36,7 +36,7 @@ pub fn process(data: &[f32]) -> f32 {
     #[cfg(target_arch = "aarch64")]
     {
         use archmage::SimdToken;
-        if let Some(token) = archmage::NeonToken::try_new() {
+        if let Some(token) = archmage::NeonToken::summon() {
             return process_neon(token, data);
         }
     }
@@ -69,7 +69,7 @@ fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
 }
 
 // Usage - token proves CPU support at call site
-if let Some(token) = X64V3Token::try_new() {
+if let Some(token) = X64V3Token::summon() {
     let result = process_simd(token, &data);
 }
 ```

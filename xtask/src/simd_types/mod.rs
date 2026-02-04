@@ -502,7 +502,7 @@ use archmage::{SimdToken, X64V3Token};
             r#"
 #[test]
 fn test_{ty_name}_basic() {{
-    if let Some(token) = {token}::try_new() {{
+    if let Some(token) = {token}::summon() {{
         let a = {ty_name}::splat(token, {val1});
         let b = {ty_name}::splat(token, {val2});
         let c = a + b;
@@ -515,7 +515,7 @@ fn test_{ty_name}_basic() {{
 
 #[test]
 fn test_{ty_name}_load_store() {{
-    if let Some(token) = {token}::try_new() {{
+    if let Some(token) = {token}::summon() {{
         let data: [{elem}; {ty_name}::LANES] = [{val1}; {ty_name}::LANES];
         let v = {ty_name}::load(token, &data);
         let mut out = [{elem}::default(); {ty_name}::LANES];
@@ -532,7 +532,7 @@ fn test_{ty_name}_load_store() {{
         r#"
 #[test]
 fn test_f32x8_transpose_8x8() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // Create 8 row vectors: row[i] = [i*8, i*8+1, ..., i*8+7]
         let mut rows = [
             f32x8::from_array(token, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]),
@@ -570,7 +570,7 @@ fn test_f32x8_transpose_8x8() {
 
 #[test]
 fn test_f32x8_load_store_8x8() {
-    if let Some(_token) = X64V3Token::try_new() {
+    if let Some(_token) = X64V3Token::summon() {
         let input: [f32; 64] = core::array::from_fn(|i| i as f32);
         let rows = f32x8::load_8x8(&input);
 
@@ -591,7 +591,7 @@ fn test_f32x8_load_store_8x8() {
 
 #[test]
 fn test_f32x4_4ch_interleave() {
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         // Create 4 channel vectors (SoA format)
         let r = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
         let g = f32x4::from_array(token, [10.0, 20.0, 30.0, 40.0]);
@@ -616,7 +616,7 @@ fn test_f32x4_4ch_interleave() {
 
 #[test]
 fn test_f32x4_load_store_rgba_u8() {
-    if let Some(_token) = archmage::X64V3Token::try_new() {
+    if let Some(_token) = archmage::X64V3Token::summon() {
         // 4 RGBA pixels: red, green, blue, white
         let rgba: [u8; 16] = [
             255, 0, 0, 255,     // red
@@ -639,7 +639,7 @@ fn test_f32x4_load_store_rgba_u8() {
 
 #[test]
 fn test_f32x8_load_store_rgba_u8() {
-    if let Some(_token) = X64V3Token::try_new() {
+    if let Some(_token) = X64V3Token::summon() {
         // 8 RGBA pixels
         let rgba: [u8; 32] = [
             255, 0, 0, 255,     // red
@@ -680,7 +680,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_basic() {
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let a = f32x16::splat(token, 1.0);
             let b = f32x16::splat(token, 2.0);
             let c = a + b;
@@ -693,7 +693,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_load_store() {
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let data: [f32; 16] = core::array::from_fn(|i| i as f32);
             let v = f32x16::load(token, &data);
             let mut out = [0.0f32; 16];
@@ -704,7 +704,7 @@ mod avx512_tests {
 
     #[test]
     fn test_i32x16_basic() {
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let a = i32x16::splat(token, 10);
             let b = i32x16::splat(token, 20);
             let c = a + b;
@@ -717,7 +717,7 @@ mod avx512_tests {
 
     #[test]
     fn test_i32x16_load_store() {
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let data: [i32; 16] = core::array::from_fn(|i| i as i32);
             let v = i32x16::load(token, &data);
             let mut out = [0i32; 16];
@@ -728,7 +728,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f64x8_basic() {
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let a = f64x8::splat(token, 2.5);
             let b = f64x8::splat(token, 1.5);
             let sum = a + b;
@@ -738,7 +738,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_math_ops() {
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let v = f32x16::from_array(token, [
                 1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0,
                 81.0, 100.0, 121.0, 144.0, 169.0, 196.0, 225.0, 256.0
@@ -752,7 +752,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_fma() {
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let a = f32x16::splat(token, 2.0);
             let b = f32x16::splat(token, 3.0);
             let c = f32x16::splat(token, 1.0);
@@ -765,7 +765,7 @@ mod avx512_tests {
 
     #[test]
     fn test_cast_slice_512() {
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let data: [f32; 32] = core::array::from_fn(|i| i as f32);
 
             let vectors = f32x16::cast_slice(token, &data).unwrap();
@@ -792,7 +792,7 @@ mod arm_tests {
 
     #[test]
     fn test_f32x4_basic() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let a = f32x4::splat(token, 1.0);
             let b = f32x4::splat(token, 2.0);
             let c = a + b;
@@ -805,7 +805,7 @@ mod arm_tests {
 
     #[test]
     fn test_f32x4_load_store() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let data: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
             let v = f32x4::load(token, &data);
             let mut out = [0.0f32; 4];
@@ -816,7 +816,7 @@ mod arm_tests {
 
     #[test]
     fn test_i32x4_basic() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let a = i32x4::splat(token, 10);
             let b = i32x4::splat(token, 20);
             let c = a + b;
@@ -829,7 +829,7 @@ mod arm_tests {
 
     #[test]
     fn test_i32x4_load_store() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let data: [i32; 4] = [1, 2, 3, 4];
             let v = i32x4::load(token, &data);
             let mut out = [0i32; 4];
@@ -841,7 +841,7 @@ mod arm_tests {
     #[test]
     fn test_i64x2_min_max() {
         // Test the polyfilled 64-bit min/max
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let a = i64x2::from_array(token, [10, -5]);
             let b = i64x2::from_array(token, [5, -2]);
 
@@ -856,7 +856,7 @@ mod arm_tests {
     #[test]
     fn test_u64x2_min_max() {
         // Test the polyfilled 64-bit unsigned min/max
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let a = u64x2::from_array(token, [100, 200]);
             let b = u64x2::from_array(token, [150, 50]);
 
@@ -870,7 +870,7 @@ mod arm_tests {
 
     #[test]
     fn test_f64x2_operations() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let a = f64x2::splat(token, 2.5);
             let b = f64x2::splat(token, 1.5);
 
@@ -884,7 +884,7 @@ mod arm_tests {
 
     #[test]
     fn test_f32x4_math_ops() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let v = f32x4::from_array(token, [4.0, 9.0, 16.0, 25.0]);
 
             let sqrt_v = v.sqrt();
@@ -897,7 +897,7 @@ mod arm_tests {
 
     #[test]
     fn test_f32x4_fma() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let a = f32x4::splat(token, 2.0);
             let b = f32x4::splat(token, 3.0);
             let c = f32x4::splat(token, 1.0);
@@ -910,7 +910,7 @@ mod arm_tests {
 
     #[test]
     fn test_cast_slice() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let data: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
             // Cast to f32x4 slice
@@ -923,7 +923,7 @@ mod arm_tests {
 
     #[test]
     fn test_from_bytes() {
-        if let Some(token) = NeonToken::try_new() {
+        if let Some(token) = NeonToken::summon() {
             let bytes: [u8; 16] = [
                 0x00, 0x00, 0x80, 0x3f, // 1.0f32
                 0x00, 0x00, 0x00, 0x40, // 2.0f32
@@ -948,7 +948,7 @@ mod arm_tests {
 
 #[test]
 fn test_f32x8_bitcast_i32x8_roundtrip() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let f = f32x8::splat(token, 1.0f32);
         let i = f.bitcast_i32x8();
         // IEEE 754: 1.0f32 = 0x3F800000
@@ -960,7 +960,7 @@ fn test_f32x8_bitcast_i32x8_roundtrip() {
 
 #[test]
 fn test_f32x4_bitcast_i32x4_roundtrip() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let f = f32x4::splat(token, -1.0f32);
         let i = f.bitcast_i32x4();
         // IEEE 754: -1.0f32 = 0xBF800000
@@ -972,7 +972,7 @@ fn test_f32x4_bitcast_i32x4_roundtrip() {
 
 #[test]
 fn test_i32x8_bitcast_u32x8() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let i = i32x8::splat(token, -1);
         let u = i.bitcast_u32x8();
         assert_eq!(u[0], u32::MAX);
@@ -983,7 +983,7 @@ fn test_i32x8_bitcast_u32x8() {
 
 #[test]
 fn test_f32x8_bitcast_ref() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let f = f32x8::splat(token, 1.0f32);
         let i_ref: &i32x8 = f.bitcast_ref_i32x8();
         assert_eq!(i_ref[0], 0x3F80_0000_i32);
@@ -992,7 +992,7 @@ fn test_f32x8_bitcast_ref() {
 
 #[test]
 fn test_f32x8_bitcast_mut() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let mut f = f32x8::splat(token, 1.0f32);
         let i_mut: &mut i32x8 = f.bitcast_mut_i32x8();
         // Modify via the bitcast reference
@@ -1003,7 +1003,7 @@ fn test_f32x8_bitcast_mut() {
 
 #[test]
 fn test_f64x4_bitcast_i64x4_roundtrip() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let f = f64x4::splat(token, 1.0f64);
         let i = f.bitcast_i64x4();
         // IEEE 754: 1.0f64 = 0x3FF0000000000000
@@ -1015,7 +1015,7 @@ fn test_f64x4_bitcast_i64x4_roundtrip() {
 
 #[test]
 fn test_i8x32_bitcast_u8x32() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let i = i8x32::splat(token, -128);
         let u = i.bitcast_u8x32();
         assert_eq!(u[0], 128u8);
@@ -1024,7 +1024,7 @@ fn test_i8x32_bitcast_u8x32() {
 
 #[test]
 fn test_i16x16_bitcast_u16x16() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let i = i16x16::splat(token, -1);
         let u = i.bitcast_u16x16();
         assert_eq!(u[0], u16::MAX);

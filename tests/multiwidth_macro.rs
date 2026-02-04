@@ -34,7 +34,7 @@ fn test_sse_module_exists() {
     // Verify the sse module was generated
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let a = magetypes::simd::sse::f32xN::splat(token, 1.0);
         let b = magetypes::simd::sse::f32xN::splat(token, 2.0);
         let sum = basic_kernels::sse::sum_vector(token, a, b);
@@ -53,7 +53,7 @@ fn test_avx2_module_exists() {
     // Verify the avx2 module was generated
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let a = magetypes::simd::avx2::f32xN::splat(token, 1.0);
         let b = magetypes::simd::avx2::f32xN::splat(token, 2.0);
         let sum = basic_kernels::avx2::sum_vector(token, a, b);
@@ -73,7 +73,7 @@ fn test_avx512_module_exists() {
     // Verify the avx512 module was generated
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V4Token::try_new() {
+    if let Some(token) = archmage::X64V4Token::summon() {
         let a = magetypes::simd::avx512::f32xN::splat(token, 1.0);
         let b = magetypes::simd::avx512::f32xN::splat(token, 2.0);
         let sum = basic_kernels::avx512::sum_vector(token, a, b);
@@ -91,7 +91,7 @@ fn test_avx512_module_exists() {
 fn test_make_zero() {
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let zero = basic_kernels::avx2::make_zero(token);
         let sum = zero.reduce_add();
         assert!(sum.abs() < 0.001, "Expected 0.0, got {}", sum);
@@ -102,7 +102,7 @@ fn test_make_zero() {
 fn test_make_splat() {
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let splat = basic_kernels::avx2::make_splat(token, 5.0);
         let sum = splat.reduce_add();
         // 8 lanes * 5.0 = 40.0
@@ -125,7 +125,7 @@ fn test_avx2_only_module() {
     use archmage::SimdToken;
 
     // avx2 module should exist
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let a = magetypes::simd::avx2::f32xN::splat(token, 3.0);
         let b = magetypes::simd::avx2::f32xN::splat(token, 4.0);
         let result = avx2_only::avx2::mul_vectors(token, a, b);
@@ -152,7 +152,7 @@ mod two_widths {
 fn test_two_widths_sse() {
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let v = magetypes::simd::sse::f32xN::splat(token, 5.0);
         let neg = two_widths::sse::neg_vector(token, v);
         let sum = neg.reduce_add();
@@ -165,7 +165,7 @@ fn test_two_widths_sse() {
 fn test_two_widths_avx2() {
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let v = magetypes::simd::avx2::f32xN::splat(token, 5.0);
         let neg = two_widths::avx2::neg_vector(token, v);
         let sum = neg.reduce_add();
@@ -241,7 +241,7 @@ fn test_dispatcher_scale_slice() {
 fn test_direct_sse_sum_slice() {
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let sum = dispatchable_kernels::sse::sum_slice(token, &data);
         assert!((sum - 36.0).abs() < 0.001, "Expected 36.0, got {}", sum);
@@ -252,7 +252,7 @@ fn test_direct_sse_sum_slice() {
 fn test_direct_avx2_sum_slice() {
     use archmage::SimdToken;
 
-    if let Some(token) = archmage::X64V3Token::try_new() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         let data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
         let sum = dispatchable_kernels::avx2::sum_slice(token, &data);
         // 1+2+3+4+5+6+7+8+9 = 45

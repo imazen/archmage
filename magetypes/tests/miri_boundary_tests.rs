@@ -21,7 +21,7 @@ use archmage::{SimdToken, X64V3Token};
 fn test_cast_slice_length_boundaries_f32x4() {
     use magetypes::simd::f32x4;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // Aligned buffer (Vec guarantees alignment for primitives)
         let mut data: Vec<f32> = vec![0.0; 128];
 
@@ -60,7 +60,7 @@ fn test_cast_slice_length_boundaries_f32x4() {
 fn test_cast_slice_length_boundaries_f64x2() {
     use magetypes::simd::f64x2;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let mut data: Vec<f64> = vec![0.0; 64];
 
         // Length 0: empty
@@ -88,7 +88,7 @@ fn test_cast_slice_length_boundaries_f64x2() {
 fn test_cast_slice_length_boundaries_i8x16() {
     use magetypes::simd::i8x16;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let mut data: Vec<i8> = vec![0; 256];
 
         // Check all lengths 0-17
@@ -120,7 +120,7 @@ fn test_cast_slice_length_boundaries_i8x16() {
 fn test_cast_slice_alignment_rejection_f32x4() {
     use magetypes::simd::f32x4;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // Create a large aligned buffer, then take unaligned slices
         let data: Vec<f32> = vec![1.0; 128];
 
@@ -152,7 +152,7 @@ fn test_cast_slice_alignment_rejection_f32x4() {
 fn test_load_store_boundary_values_f32x4() {
     use magetypes::simd::f32x4;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // Test with special floating-point values
         let specials: [f32; 4] = [f32::MIN, f32::MAX, f32::INFINITY, f32::NEG_INFINITY];
         let v = f32x4::load(token, &specials);
@@ -194,7 +194,7 @@ fn test_load_store_boundary_values_f32x4() {
 fn test_load_store_boundary_values_i32x4() {
     use magetypes::simd::i32x4;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let boundaries: [i32; 4] = [i32::MIN, i32::MAX, 0, -1];
         let v = i32x4::load(token, &boundaries);
         let mut out = [0i32; 4];
@@ -208,7 +208,7 @@ fn test_load_store_boundary_values_i32x4() {
 fn test_load_store_boundary_values_u64x2() {
     use magetypes::simd::u64x2;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let boundaries: [u64; 2] = [u64::MIN, u64::MAX];
         let v = u64x2::load(token, &boundaries);
         let mut out = [0u64; 2];
@@ -226,7 +226,7 @@ fn test_load_store_boundary_values_u64x2() {
 fn test_bytes_roundtrip_f32x4() {
     use magetypes::simd::f32x4;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let original: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
         let v = f32x4::load(token, &original);
 
@@ -246,7 +246,7 @@ fn test_bytes_roundtrip_f32x4() {
 fn test_bytes_mut_modification_i32x4() {
     use magetypes::simd::i32x4;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let original: [i32; 4] = [0x01020304, 0x05060708, 0x090A0B0C, 0x0D0E0F10];
         let mut v = i32x4::load(token, &original);
 
@@ -267,7 +267,7 @@ fn test_bytes_mut_modification_i32x4() {
 fn test_from_bytes_patterns() {
     use magetypes::simd::{f32x4, i32x4};
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // All zeros
         let zeros: [u8; 16] = [0; 16];
         let v = f32x4::from_bytes(token, &zeros);
@@ -287,7 +287,7 @@ fn test_from_bytes_patterns() {
 fn test_from_bytes_owned() {
     use magetypes::simd::f32x4;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let bytes: [u8; 16] = [
             0x00, 0x00, 0x80, 0x3F, // 1.0f32 in little-endian
             0x00, 0x00, 0x00, 0x40, // 2.0f32
@@ -309,7 +309,7 @@ fn test_from_bytes_owned() {
 fn test_bitcast_preserves_bits() {
     use magetypes::simd::u32x4;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // Create a pattern with specific bits (use u32 to avoid literal overflow)
         let uints: [u32; 4] = [0x12345678, 0x9ABCDEF0, 0xFFFFFFFF, 0x00000000];
         let v_u32 = u32x4::load(token, &uints);
@@ -334,7 +334,7 @@ fn test_bitcast_preserves_bits() {
 fn test_bitcast_ref_mut_aliasing() {
     use magetypes::simd::{f32x4, i32x4};
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let mut v = f32x4::splat(token, 1.0);
 
         // Get immutable bitcast reference
@@ -358,7 +358,7 @@ fn test_bitcast_ref_mut_aliasing() {
 fn test_all_signed_int_types() {
     use magetypes::simd::{i8x16, i16x8, i32x4, i64x2};
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // i8x16
         let data_i8: [i8; 16] = [
             i8::MIN,
@@ -411,7 +411,7 @@ fn test_all_signed_int_types() {
 fn test_all_unsigned_int_types() {
     use magetypes::simd::{u8x16, u16x8, u32x4, u64x2};
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // u8x16
         let data_u8: [u8; 16] = [
             u8::MIN,
@@ -468,7 +468,7 @@ fn test_all_unsigned_int_types() {
 fn test_256bit_load_store() {
     use magetypes::simd::{f32x8, f64x4, i32x8};
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // f32x8
         let data_f32: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let v = f32x8::load(token, &data_f32);
@@ -499,7 +499,7 @@ fn test_256bit_load_store() {
 fn test_256bit_cast_slice_boundaries() {
     use magetypes::simd::f32x8;
 
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         // Use aligned array (repr(align) would be better, but load/to_array test alignment)
         let arr1: [f32; 8] = [1.0; 8];
 
@@ -538,7 +538,7 @@ mod avx512_tests {
     fn test_512bit_load_store() {
         use magetypes::simd::{f32x16, i32x16};
 
-        if let Some(token) = X64V4Token::try_new() {
+        if let Some(token) = X64V4Token::summon() {
             // f32x16
             let data_f32: [f32; 16] = [
                 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
@@ -581,7 +581,7 @@ mod avx512_tests {
     fn test_512bit_cast_slice_boundaries() {
         use magetypes::simd::f32x16;
 
-        if let Some(token) = X64V4Token::try_new() {
+        if let Some(token) = X64V4Token::summon() {
             // Test length boundary logic via to_array roundtrip
             let arr: [f32; 16] = [1.0; 16];
             let v = f32x16::load(token, &arr);

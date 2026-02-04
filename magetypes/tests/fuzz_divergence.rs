@@ -50,7 +50,7 @@ mod f32x8_native_vs_polyfill {
         F: Fn(f32x8) -> f32x8,
         G: Fn(f32x4) -> f32x4,
     {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             // Native path
             let v = f32x8::from_array(token, input);
             let native_result = native_op(v).to_array();
@@ -78,7 +78,7 @@ mod f32x8_native_vs_polyfill {
         F: Fn(f32x8, f32x8) -> f32x8,
         G: Fn(f32x4, f32x4) -> f32x4,
     {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let va = f32x8::from_array(token, a);
             let vb = f32x8::from_array(token, b);
             let native_result = native_op(va, vb).to_array();
@@ -179,7 +179,7 @@ mod f32x8_native_vs_polyfill {
     // Edge case tests with specific problematic values
     #[test]
     fn test_edge_cases() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let edge_cases: [[f32; 8]; 8] = [
                 [
                     0.0,
@@ -234,7 +234,7 @@ mod i32x8_native_vs_polyfill {
         F: Fn(i32x8) -> i32x8,
         G: Fn(i32x4) -> i32x4,
     {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let v = i32x8::from_array(token, input);
             let native_result = native_op(v).to_array();
 
@@ -260,7 +260,7 @@ mod i32x8_native_vs_polyfill {
         F: Fn(i32x8, i32x8) -> i32x8,
         G: Fn(i32x4, i32x4) -> i32x4,
     {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let va = i32x8::from_array(token, a);
             let vb = i32x8::from_array(token, b);
             let native_result = native_op(va, vb).to_array();
@@ -323,7 +323,7 @@ mod i32x8_native_vs_polyfill {
 
     #[test]
     fn test_edge_cases() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let edge_cases: [[i32; 8]; 5] = [
                 [0, -1, 1, i32::MAX, i32::MIN + 1, 0, 0, 0], // MIN + 1 for abs safety
                 [i32::MAX, i32::MAX, i32::MIN + 1, i32::MIN + 1, 0, 0, 1, -1],
@@ -365,7 +365,7 @@ mod reduce_operations {
 
         #[test]
         fn fuzz_reduce_add(a in prop::array::uniform8(-1e5f32..1e5f32)) {
-            if let Some(token) = X64V3Token::try_new() {
+            if let Some(token) = X64V3Token::summon() {
                 let v = f32x8::from_array(token, a);
                 let native = v.reduce_add();
                 let scalar: f32 = a.iter().sum();
@@ -384,7 +384,7 @@ mod reduce_operations {
 
         #[test]
         fn fuzz_reduce_min(a in prop::array::uniform8(-1e10f32..1e10f32)) {
-            if let Some(token) = X64V3Token::try_new() {
+            if let Some(token) = X64V3Token::summon() {
                 let v = f32x8::from_array(token, a);
                 let native = v.reduce_min();
                 let scalar = a.iter().copied().fold(f32::INFINITY, f32::min);
@@ -394,7 +394,7 @@ mod reduce_operations {
 
         #[test]
         fn fuzz_reduce_max(a in prop::array::uniform8(-1e10f32..1e10f32)) {
-            if let Some(token) = X64V3Token::try_new() {
+            if let Some(token) = X64V3Token::summon() {
                 let v = f32x8::from_array(token, a);
                 let native = v.reduce_max();
                 let scalar = a.iter().copied().fold(f32::NEG_INFINITY, f32::max);

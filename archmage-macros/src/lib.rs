@@ -1,6 +1,6 @@
 //! Proc-macros for archmage SIMD capability tokens.
 //!
-//! Provides `#[arcane]` attribute (with `#[simd_fn]` alias) to make raw intrinsics
+//! Provides `#[arcane]` attribute (with `#[arcane]` alias) to make raw intrinsics
 //! safe via token proof.
 
 use proc_macro::TokenStream;
@@ -246,7 +246,7 @@ enum SelfReceiver {
     RefMut,
 }
 
-/// Shared implementation for arcane/simd_fn macros.
+/// Shared implementation for arcane/arcane macros.
 fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStream {
     // Check for self receiver
     let has_self_receiver = input_fn
@@ -385,7 +385,7 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
             #inner_body
 
             // SAFETY: The token parameter proves the required CPU features are available.
-            // Tokens can only be constructed when features are verified (via try_new()
+            // Tokens can only be constructed when features are verified (via summon()
             // runtime check or forge_token_dangerously() in a context where features are guaranteed).
             unsafe { #inner_fn_name(#(#inner_args),*) }
         }
@@ -569,10 +569,11 @@ pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
     arcane_impl(input_fn, "arcane", args)
 }
 
-/// Alias for [`arcane`] - mark a function as an arcane SIMD function.
+/// Legacy alias for [`arcane`].
 ///
-/// See [`arcane`] for full documentation.
+/// **Deprecated:** Use `#[arcane]` instead. This alias exists only for migration.
 #[proc_macro_attribute]
+#[doc(hidden)]
 pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);
     let input_fn = parse_macro_input!(item as ItemFn);
@@ -949,7 +950,7 @@ fn transform_fn_with_target_feature(func: syn::ItemFn, config: &WidthConfig) -> 
             #body
 
             // SAFETY: The Token parameter proves the required CPU features are available.
-            // Tokens can only be constructed via try_new() which checks CPU support.
+            // Tokens can only be constructed via summon() which checks CPU support.
             unsafe { #inner_fn_name(#(#call_args),*) }
         }
     };
@@ -1086,7 +1087,7 @@ fn generate_dispatchers(
             let fn_attrs: Vec<_> = func
                 .attrs
                 .iter()
-                .filter(|a| !a.path().is_ident("arcane") && !a.path().is_ident("simd_fn"))
+                .filter(|a| !a.path().is_ident("arcane") && !a.path().is_ident("arcane"))
                 .collect();
 
             // Filter out the token parameter from the dispatcher signature
@@ -1136,7 +1137,7 @@ fn generate_dispatchers(
 
                 branches.push(quote! {
                     #feature_check
-                    if let Some(token) = #token_path::try_new() {
+                    if let Some(token) = #token_path::summon() {
                         return #mod_name::#fn_name(token, #(#param_names),*);
                     }
                 });

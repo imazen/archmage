@@ -28,7 +28,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1.5f32, 2.25, -3.75, 4.0];
                 let v = f32x4::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -37,7 +37,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_splat() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let v = f32x4::splat(token, 42.5);
                 assert_eq!(v.to_array(), [42.5, 42.5, 42.5, 42.5]);
             }
@@ -45,7 +45,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_add_sub() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
                 let b = f32x4::from_array(token, [0.5, 1.5, 2.5, 3.5]);
                 assert_eq!((a + b).to_array(), [1.5, 3.5, 5.5, 7.5]);
@@ -55,7 +55,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_mul_div() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = f32x4::from_array(token, [2.0, 4.0, 6.0, 8.0]);
                 let b = f32x4::from_array(token, [2.0, 2.0, 2.0, 2.0]);
                 assert_eq!((a * b).to_array(), [4.0, 8.0, 12.0, 16.0]);
@@ -65,7 +65,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_neg_abs() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let v = f32x4::from_array(token, [1.0, -2.0, 3.0, -4.0]);
                 assert_eq!((-v).to_array(), [-1.0, 2.0, -3.0, 4.0]);
                 assert_eq!(v.abs().to_array(), [1.0, 2.0, 3.0, 4.0]);
@@ -74,7 +74,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_min_max() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = f32x4::from_array(token, [1.0, 5.0, 3.0, 7.0]);
                 let b = f32x4::from_array(token, [2.0, 4.0, 6.0, 8.0]);
                 assert_eq!(a.min(b).to_array(), [1.0, 4.0, 3.0, 7.0]);
@@ -84,7 +84,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_floor_ceil_round() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let v = f32x4::from_array(token, [1.3, 2.7, -1.3, -2.7]);
                 assert_eq!(v.floor().to_array(), [1.0, 2.0, -2.0, -3.0]);
                 assert_eq!(v.ceil().to_array(), [2.0, 3.0, -1.0, -2.0]);
@@ -94,7 +94,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_sqrt() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let v = f32x4::from_array(token, [1.0, 4.0, 9.0, 16.0]);
                 assert_eq!(v.sqrt().to_array(), [1.0, 2.0, 3.0, 4.0]);
             }
@@ -102,7 +102,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_mul_add() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
                 let b = f32x4::from_array(token, [2.0, 3.0, 4.0, 5.0]);
                 let c = f32x4::from_array(token, [0.5, 0.5, 0.5, 0.5]);
@@ -114,7 +114,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_reduce() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let v = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
                 assert_eq!(v.reduce_add(), 10.0);
                 assert_eq!(v.reduce_min(), 1.0);
@@ -124,7 +124,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_comparison() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
                 let b = f32x4::from_array(token, [2.0, 2.0, 2.0, 2.0]);
 
@@ -164,7 +164,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f64x2_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1.5f64, -2.25];
                 let v = f64x2::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -173,7 +173,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f64x2_add_sub_mul_div() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = f64x2::from_array(token, [4.0, 8.0]);
                 let b = f64x2::from_array(token, [2.0, 2.0]);
                 assert_eq!((a + b).to_array(), [6.0, 10.0]);
@@ -185,7 +185,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f64x2_sqrt() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let v = f64x2::from_array(token, [4.0, 9.0]);
                 assert_eq!(v.sqrt().to_array(), [2.0, 3.0]);
             }
@@ -195,7 +195,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i32x4_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1i32, -2, 3, -4];
                 let v = i32x4::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -204,7 +204,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i32x4_add_sub() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i32x4::from_array(token, [10, 20, 30, 40]);
                 let b = i32x4::from_array(token, [1, 2, 3, 4]);
                 assert_eq!((a + b).to_array(), [11, 22, 33, 44]);
@@ -214,7 +214,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i32x4_min_max_abs() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i32x4::from_array(token, [1, -5, 3, -7]);
                 let b = i32x4::from_array(token, [2, -4, 2, -8]);
                 assert_eq!(a.min(b).to_array(), [1, -5, 2, -8]);
@@ -225,7 +225,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i32x4_shift() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let v = i32x4::from_array(token, [4, 8, 16, -32]);
                 assert_eq!(v.shl::<1>().to_array(), [8, 16, 32, -64]);
                 // Note: shr behavior differs by architecture
@@ -240,7 +240,7 @@ macro_rules! w128_parity_suite {
         #[cfg(target_arch = "x86_64")]
         #[test]
         fn test_i32x4_shr_logical() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let v = i32x4::from_array(token, [4, 8, 16, -32]);
                 assert_eq!(v.shr::<1>().to_array(), [2, 4, 8, 2147483632]); // logical shift on x86
             }
@@ -250,7 +250,7 @@ macro_rules! w128_parity_suite {
         #[cfg(target_arch = "x86_64")]
         #[test]
         fn test_i32x4_bitwise() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i32x4::from_array(token, [0b1010, 0b1100, 0b1111, 0b0000]);
                 let b = i32x4::from_array(token, [0b1100, 0b1010, 0b0101, 0b1111]);
                 assert_eq!((a & b).to_array(), [0b1000, 0b1000, 0b0101, 0b0000]);
@@ -262,7 +262,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i32x4_comparison() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i32x4::from_array(token, [1, 2, 3, 4]);
                 let b = i32x4::from_array(token, [2, 2, 2, 2]);
 
@@ -276,7 +276,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i32x4_bitmask() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i32x4::from_array(token, [-1, 0, -1, 0]); // MSB: 1, 0, 1, 0
                 let mask = a.bitmask();
                 assert_eq!(mask, 0b0101); // lanes 0 and 2 have MSB set
@@ -287,7 +287,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_u32x4_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1u32, 2, 3, 4];
                 let v = u32x4::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -296,7 +296,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_u32x4_min_max() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = u32x4::from_array(token, [1, 5, 3, 7]);
                 let b = u32x4::from_array(token, [2, 4, 6, 8]);
                 assert_eq!(a.min(b).to_array(), [1, 4, 3, 7]);
@@ -308,7 +308,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i64x2_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1i64, -2];
                 let v = i64x2::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -317,7 +317,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i64x2_add_sub() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i64x2::from_array(token, [100, 200]);
                 let b = i64x2::from_array(token, [10, 20]);
                 assert_eq!((a + b).to_array(), [110, 220]);
@@ -329,7 +329,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_u64x2_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1u64, 2];
                 let v = u64x2::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -340,7 +340,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i16x8_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1i16, -2, 3, -4, 5, -6, 7, -8];
                 let v = i16x8::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -349,7 +349,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i16x8_add_sub() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i16x8::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
                 let b = i16x8::from_array(token, [1, 1, 1, 1, 1, 1, 1, 1]);
                 assert_eq!((a + b).to_array(), [2, 3, 4, 5, 6, 7, 8, 9]);
@@ -359,7 +359,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i16x8_min_max_abs() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i16x8::from_array(token, [1, -5, 3, -7, 2, -4, 6, -8]);
                 let b = i16x8::from_array(token, [2, -4, 2, -8, 1, -5, 5, -9]);
                 assert_eq!(a.min(b).to_array(), [1, -5, 2, -8, 1, -5, 5, -9]);
@@ -372,7 +372,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_u16x8_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1u16, 2, 3, 4, 5, 6, 7, 8];
                 let v = u16x8::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -383,7 +383,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i8x16_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [
                     1i8, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16,
                 ];
@@ -394,7 +394,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i8x16_add_sub() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = i8x16::from_array(
                     token,
                     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
@@ -415,7 +415,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_u8x16_from_array_to_array() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let input = [1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
                 let v = u8x16::from_array(token, input);
                 assert_eq!(v.to_array(), input);
@@ -426,7 +426,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_to_i32x4() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let f = f32x4::from_array(token, [1.0, 2.5, -3.7, 4.9]);
                 // Truncation
                 let i = f.to_i32x4();
@@ -439,7 +439,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_i32x4_to_f32x4() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let i = i32x4::from_array(token, [1, 2, -3, 4]);
                 let f = i.to_f32x4();
                 assert_eq!(f.to_array(), [1.0, 2.0, -3.0, 4.0]);
@@ -450,7 +450,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_interleave_deinterleave_4ch() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let r = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
                 let g = f32x4::from_array(token, [10.0, 20.0, 30.0, 40.0]);
                 let b = f32x4::from_array(token, [100.0, 200.0, 300.0, 400.0]);
@@ -474,7 +474,7 @@ macro_rules! w128_parity_suite {
 
         #[test]
         fn test_f32x4_interleave_lo_hi() {
-            if let Some(token) = <$token_ty>::try_new() {
+            if let Some(token) = <$token_ty>::summon() {
                 let a = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
                 let b = f32x4::from_array(token, [5.0, 6.0, 7.0, 8.0]);
 

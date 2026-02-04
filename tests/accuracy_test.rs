@@ -185,7 +185,7 @@ impl AccuracyStats {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_cbrt_midp_brute_force() {
-    let Some(token) = X64V3Token::try_new() else {
+    let Some(token) = X64V3Token::summon() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -284,7 +284,7 @@ fn test_cbrt_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_pow_midp_brute_force() {
-    let Some(token) = X64V3Token::try_new() else {
+    let Some(token) = X64V3Token::summon() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -356,7 +356,7 @@ fn test_pow_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_exp2_midp_brute_force() {
-    let Some(token) = X64V3Token::try_new() else {
+    let Some(token) = X64V3Token::summon() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -388,7 +388,7 @@ fn test_exp2_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_log2_midp_brute_force() {
-    let Some(token) = X64V3Token::try_new() else {
+    let Some(token) = X64V3Token::summon() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -428,7 +428,7 @@ fn test_log2_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_ln_midp_brute_force() {
-    let Some(token) = X64V3Token::try_new() else {
+    let Some(token) = X64V3Token::summon() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -463,7 +463,7 @@ fn test_ln_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_exp_midp_brute_force() {
-    let Some(token) = X64V3Token::try_new() else {
+    let Some(token) = X64V3Token::summon() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
@@ -501,7 +501,7 @@ fn test_exp_midp_brute_force() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_lowp_functions_brute_force() {
-    let Some(token) = X64V3Token::try_new() else {
+    let Some(token) = X64V3Token::summon() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };

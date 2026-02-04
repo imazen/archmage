@@ -102,7 +102,7 @@ mod x86_impl {
         let expected = sum_scalar(&data);
         println!("Expected sum: {:.2}\n", expected);
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let polyfill_result = sum_polyfill(token, &data);
             let native_sse_result = sum_native_sse(token, &data);
 
@@ -115,7 +115,7 @@ mod x86_impl {
             );
         }
 
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let native_avx2_result = sum_native_avx2(token, &data);
             println!("Native AVX2 f32x8:       {:.2}", native_avx2_result);
         }
@@ -139,7 +139,7 @@ mod x86_impl {
         );
 
         // SSE polyfill (f32x8 emulated with 2x f32x4)
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 result = sum_polyfill(token, &data);
@@ -167,7 +167,7 @@ mod x86_impl {
         }
 
         // Native AVX2 f32x8
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 result = sum_native_avx2(token, &data);

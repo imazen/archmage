@@ -21,7 +21,7 @@ The `forge_token_dangerously()` method creates tokens without feature verificati
 If called when CPU features are not available, subsequent SIMD operations cause UB.
 
 **Invariant**: Every `forge_token_dangerously()` call must be inside:
-- A `try_new()` that verified features, OR
+- A `summon()` that verified features, OR
 - A function with `#[target_feature]` matching the token's requirements, OR
 - Generated code inside `#[arcane]`/`#[multiwidth]` macros
 
@@ -43,15 +43,15 @@ will execute SIMD instructions without proper CPU support.
 
 ---
 
-### 3. try_new() Feature Checks (CRITICAL)
+### 3. summon() Feature Checks (CRITICAL)
 
 **File**: `xtask/src/token_gen.rs` → generates `src/tokens/generated/*.rs`
 
-Each token's `try_new()` must check ALL required CPU features before calling
+Each token's `summon()` must check ALL required CPU features before calling
 `forge_token_dangerously()`. Missing a feature check allows token creation on
 unsupported hardware.
 
-**Invariant**: Features checked in `try_new()` must match `token-registry.toml`.
+**Invariant**: Features checked in `summon()` must match `token-registry.toml`.
 
 **Verified by**: `cargo xtask validate` (step 4 of CI)
 
@@ -150,7 +150,7 @@ The `cargo xtask audit` command scans for these markers and reports:
 |------|-------------|--------------|------|---------|
 | Token forge | `xtask validate` | feature_consistency | N/A | N/A |
 | Macro extraction | `xtask validate` | compile_fail tests | N/A | N/A |
-| try_new() checks | `xtask validate` | feature_consistency | N/A | N/A |
+| summon() checks | `xtask validate` | feature_consistency | N/A | N/A |
 | Memory ops | `xtask soundness` | boundary tests | ✓ | TODO |
 | Intrinsic mapping | `xtask soundness` | N/A | N/A | N/A |
 | Polyfills | N/A | polyfill_parity | ✓ | TODO |

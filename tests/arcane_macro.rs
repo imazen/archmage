@@ -1,4 +1,4 @@
-//! Tests for the #[simd_fn] attribute macro.
+//! Tests for the #[arcane] attribute macro.
 
 #![allow(unused)]
 
@@ -6,11 +6,11 @@
 mod x86_tests {
     #[cfg(feature = "avx512")]
     use archmage::Avx512Token;
-    use archmage::{Avx2FmaToken, Desktop64, Has256BitSimd, SimdToken, X64V3Token, simd_fn};
+    use archmage::{Avx2FmaToken, Desktop64, Has256BitSimd, SimdToken, X64V3Token, arcane};
     use std::arch::x86_64::*;
 
-    /// Basic test: simd_fn with X64V3Token
-    #[simd_fn]
+    /// Basic test: arcane with X64V3Token
+    #[arcane]
     fn double_values(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
@@ -20,8 +20,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_basic() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_basic() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = double_values(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -29,7 +29,7 @@ mod x86_tests {
     }
 
     /// Test with FMA token (Avx2FmaToken is now alias for X64V3Token)
-    #[simd_fn]
+    #[arcane]
     fn fma_operation(token: Avx2FmaToken, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
         let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
         let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
@@ -42,8 +42,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_fma() {
-        if let Some(token) = Avx2FmaToken::try_new() {
+    fn test_arcane_fma() {
+        if let Some(token) = Avx2FmaToken::summon() {
             let a = [2.0f32; 8];
             let b = [3.0f32; 8];
             let c = [1.0f32; 8];
@@ -54,7 +54,7 @@ mod x86_tests {
     }
 
     /// Test with profile token (X64V3Token)
-    #[simd_fn]
+    #[arcane]
     fn profile_token_test(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         // Use both AVX2 and FMA instructions
@@ -66,8 +66,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_profile_token() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_profile_token() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = profile_token_test(token, &input);
             // 2 * v * v
@@ -77,7 +77,7 @@ mod x86_tests {
     }
 
     /// Test with multiple parameters
-    #[simd_fn]
+    #[arcane]
     fn multi_param(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], scale: f32) -> [f32; 8] {
         let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
         let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
@@ -90,8 +90,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_multi_param() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_multi_param() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32; 8];
             let b = [2.0f32; 8];
             let output = multi_param(token, &a, &b, 3.0);
@@ -101,7 +101,7 @@ mod x86_tests {
     }
 
     /// Test with return type that's not an array
-    #[simd_fn]
+    #[arcane]
     fn horizontal_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         // Horizontal add within 128-bit lanes
@@ -115,8 +115,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_scalar_return() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_scalar_return() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let sum = horizontal_sum(token, &input);
             assert_eq!(sum, 36.0); // 1+2+3+4+5+6+7+8 = 36
@@ -124,7 +124,7 @@ mod x86_tests {
     }
 
     /// Test that value-based intrinsics are safe (no unsafe block needed in body)
-    #[simd_fn]
+    #[arcane]
     fn safe_value_ops(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
         // All these are safe in target_feature context (Rust 1.92+)
         let sum = _mm256_add_ps(a, b);
@@ -134,8 +134,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_value_ops() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_value_ops() {
+        if let Some(token) = X64V3Token::summon() {
             let a = unsafe { _mm256_set1_ps(1.0) };
             let b = unsafe { _mm256_set1_ps(2.0) };
             let _result = safe_value_ops(token, a, b);
@@ -148,7 +148,7 @@ mod x86_tests {
     // =====================================================================
 
     /// Test with impl Trait bound
-    #[simd_fn]
+    #[arcane]
     fn impl_trait_test(token: impl Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
@@ -158,8 +158,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_impl_trait() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_impl_trait() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = impl_trait_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -168,8 +168,8 @@ mod x86_tests {
 
     /// Test that impl Trait accepts different concrete tokens
     #[test]
-    fn test_simd_fn_impl_trait_accepts_x64v3() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_impl_trait_accepts_x64v3() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             // X64V3Token implements Has256BitSimd, so this should work
             let output = impl_trait_test(token, &input);
@@ -178,7 +178,7 @@ mod x86_tests {
     }
 
     /// Test with generic type parameter (inline bounds)
-    #[simd_fn]
+    #[arcane]
     fn generic_inline_bounds<T: Has256BitSimd>(token: T, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
@@ -188,8 +188,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_generic_inline_bounds() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_generic_inline_bounds() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = generic_inline_bounds(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -197,7 +197,7 @@ mod x86_tests {
     }
 
     /// Test with generic type parameter (where clause)
-    #[simd_fn]
+    #[arcane]
     fn generic_where_clause<T>(token: T, data: &[f32; 8]) -> [f32; 8]
     where
         T: Has256BitSimd,
@@ -210,8 +210,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_generic_where_clause() {
-        if let Some(token) = X64V3Token::try_new() {
+    fn test_arcane_generic_where_clause() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = generic_where_clause(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -219,7 +219,7 @@ mod x86_tests {
     }
 
     /// Test with multiple trait bounds using Avx2FmaToken
-    #[simd_fn]
+    #[arcane]
     fn impl_trait_multi_bounds(
         token: Avx2FmaToken,
         a: &[f32; 8],
@@ -237,9 +237,9 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_impl_trait_multi_bounds() {
+    fn test_arcane_impl_trait_multi_bounds() {
         // Avx2FmaToken provides AVX2 + FMA
-        if let Some(token) = Avx2FmaToken::try_new() {
+        if let Some(token) = Avx2FmaToken::summon() {
             let a = [2.0f32; 8];
             let b = [3.0f32; 8];
             let c = [1.0f32; 8];
@@ -250,7 +250,7 @@ mod x86_tests {
     }
 
     /// Test with Avx2FmaToken (provides both 256-bit SIMD and FMA)
-    #[simd_fn]
+    #[arcane]
     fn generic_multi_bounds(
         token: Avx2FmaToken,
         a: &[f32; 8],
@@ -267,8 +267,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_generic_multi_bounds() {
-        if let Some(token) = Avx2FmaToken::try_new() {
+    fn test_arcane_generic_multi_bounds() {
+        if let Some(token) = Avx2FmaToken::summon() {
             let a = [2.0f32; 8];
             let b = [3.0f32; 8];
             let c = [1.0f32; 8];
@@ -278,7 +278,7 @@ mod x86_tests {
     }
 
     /// Test using Has256BitSimd (lower bound) with X64V3Token
-    #[simd_fn]
+    #[arcane]
     fn lower_bound_test(token: impl Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         // AVX instruction (256-bit)
@@ -289,9 +289,9 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_lower_bound_accepts_higher_token() {
+    fn test_arcane_lower_bound_accepts_higher_token() {
         // X64V3Token should work with Has256BitSimd bound
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = lower_bound_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -302,8 +302,8 @@ mod x86_tests {
     // Tests for friendly aliases (Desktop64, Avx512Token)
     // =====================================================================
 
-    /// Test Desktop64 alias with simd_fn macro
-    #[simd_fn]
+    /// Test Desktop64 alias with arcane macro
+    #[arcane]
     fn desktop64_test(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         // Use both AVX2 and FMA (Desktop64 = X64V3Token = AVX2+FMA+BMI2)
@@ -314,8 +314,8 @@ mod x86_tests {
     }
 
     #[test]
-    fn test_simd_fn_desktop64_alias() {
-        if let Some(token) = Desktop64::try_new() {
+    fn test_arcane_desktop64_alias() {
+        if let Some(token) = Desktop64::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = desktop64_test(token, &input);
             // v*v + v
@@ -328,7 +328,7 @@ mod x86_tests {
     #[test]
     fn test_desktop64_is_x64v3() {
         // Desktop64 is a type alias for X64V3Token, so they should be interchangeable
-        if let Some(token) = Desktop64::try_new() {
+        if let Some(token) = Desktop64::summon() {
             // Can pass Desktop64 to function expecting X64V3Token
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = profile_token_test(token, &input);
@@ -340,7 +340,7 @@ mod x86_tests {
     /// Test that Desktop64 works with impl Has256BitSimd bounds
     #[test]
     fn test_desktop64_with_impl_trait() {
-        if let Some(token) = Desktop64::try_new() {
+        if let Some(token) = Desktop64::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             // Desktop64 implements Has256BitSimd
             let output = impl_trait_test(token, &input);
@@ -350,7 +350,7 @@ mod x86_tests {
 
     /// Test Avx512Token alias (only runs on machines with AVX-512)
     #[cfg(feature = "avx512")]
-    #[simd_fn]
+    #[arcane]
     fn server64_test(token: Avx512Token, data: &[f32; 8]) -> [f32; 8] {
         // Avx512Token = X64V4Token = AVX-512, but we'll just use AVX2 ops for simplicity
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
@@ -362,9 +362,9 @@ mod x86_tests {
 
     #[cfg(feature = "avx512")]
     #[test]
-    fn test_simd_fn_server64_alias() {
+    fn test_arcane_server64_alias() {
         // This test only runs on machines with AVX-512
-        if let Some(token) = Avx512Token::try_new() {
+        if let Some(token) = Avx512Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = server64_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -375,14 +375,14 @@ mod x86_tests {
     // Tests for summon() alias
     // =====================================================================
 
-    /// Test that summon() works as an alias for try_new()
+    /// Test that summon() works as an alias for summon()
     #[test]
     fn test_summon_alias() {
-        // summon() should behave identically to try_new()
-        let via_try_new = Desktop64::try_new();
+        // summon() should behave identically to summon()
+        let via_summon = Desktop64::summon();
         let via_summon = Desktop64::summon();
 
-        assert_eq!(via_try_new.is_some(), via_summon.is_some());
+        assert_eq!(via_summon.is_some(), via_summon.is_some());
 
         if let Some(token) = Desktop64::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
@@ -396,7 +396,7 @@ mod x86_tests {
     // Tests for _self = Type support (trait methods with self receivers)
     // =========================================================================
 
-    use archmage::arcane;
+    // arcane already imported
 
     /// A simple wrapper type for testing self receiver support
     #[derive(Clone, Copy, Debug, PartialEq)]

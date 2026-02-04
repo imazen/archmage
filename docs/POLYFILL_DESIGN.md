@@ -174,8 +174,8 @@ pub fn wasm_intrinsic(op: &str, ty: &SimdType) -> String {
 ```rust
 #[test]
 fn polyfill_matches_native_add() {
-    if let Some(avx_token) = X64V3Token::try_new() {
-        if let Some(sse_token) = Sse41Token::try_new() {
+    if let Some(avx_token) = X64V3Token::summon() {
+        if let Some(sse_token) = Sse41Token::summon() {
             let data_a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let data_b = [8.0f32, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
 
@@ -206,7 +206,7 @@ proptest! {
         a in prop::array::uniform8(-1e6f32..1e6f32),
         b in prop::array::uniform8(-1e6f32..1e6f32),
     ) {
-        if let Some(token) = Sse41Token::try_new() {
+        if let Some(token) = Sse41Token::summon() {
             let va = polyfill::sse::f32x8::load(token, &a);
             let vb = polyfill::sse::f32x8::load(token, &b);
 
@@ -248,7 +248,7 @@ jobs:
 ```rust
 #[test]
 fn polyfill_exp_accuracy() {
-    if let Some(token) = Sse41Token::try_new() {
+    if let Some(token) = Sse41Token::summon() {
         // Test against std::f32::exp
         let inputs = [-10.0, -1.0, 0.0, 1.0, 10.0, 88.0];
         for input in inputs {

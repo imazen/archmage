@@ -57,13 +57,13 @@ pub mod my_kernels {
     /// Runtime dispatcher - picks the best available implementation
     pub fn normalize(data: &mut [f32]) {
         #[cfg(feature = "avx512")]
-        if let Some(token) = archmage::X64V4Token::try_new() {
+        if let Some(token) = archmage::X64V4Token::summon() {
             return avx512::normalize(token, data);
         }
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             return avx2::normalize(token, data);
         }
-        if let Some(token) = archmage::Sse41Token::try_new() {
+        if let Some(token) = archmage::Sse41Token::summon() {
             return sse::normalize(token, data);
         }
         // Scalar fallback

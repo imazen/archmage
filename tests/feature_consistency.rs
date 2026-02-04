@@ -27,7 +27,7 @@ fn sse2_instructions_work_baseline() {
 /// If X64V2Token is available, SSE4.2 instructions must work.
 #[test]
 fn x64v2_instructions_work_when_token_available() {
-    if let Some(_token) = X64V2Token::try_new() {
+    if let Some(_token) = X64V2Token::summon() {
         unsafe {
             use core::arch::x86_64::*;
             // SSE4.2 CRC32 instruction
@@ -44,7 +44,7 @@ fn x64v2_instructions_work_when_token_available() {
 /// If X64V3Token is available, AVX2 and FMA instructions must work.
 #[test]
 fn x64v3_instructions_work_when_token_available() {
-    if let Some(_token) = X64V3Token::try_new() {
+    if let Some(_token) = X64V3Token::summon() {
         unsafe {
             use core::arch::x86_64::*;
             // AVX: 256-bit float operations
@@ -71,7 +71,7 @@ fn x64v3_instructions_work_when_token_available() {
 #[cfg(feature = "avx512")]
 #[test]
 fn x64v4_instructions_work_when_token_available() {
-    if let Some(_token) = X64V4Token::try_new() {
+    if let Some(_token) = X64V4Token::summon() {
         unsafe {
             use core::arch::x86_64::*;
             let a = _mm512_setzero_ps();
@@ -86,31 +86,31 @@ fn x64v4_instructions_work_when_token_available() {
 #[test]
 fn token_hierarchy_is_correct() {
     // If v3 is available, v2 must also be available
-    if X64V3Token::try_new().is_some() {
+    if X64V3Token::summon().is_some() {
         assert!(
-            X64V2Token::try_new().is_some(),
+            X64V2Token::summon().is_some(),
             "v3 implies v2 should be available"
         );
         // Avx2FmaToken is an alias for X64V3Token, so it must match
         assert!(
-            Avx2FmaToken::try_new().is_some(),
+            Avx2FmaToken::summon().is_some(),
             "v3 implies Avx2FmaToken (same type)"
         );
     }
 
     // If v4 is available, v3 and v2 must also be available
     #[cfg(feature = "avx512")]
-    if X64V4Token::try_new().is_some() {
+    if X64V4Token::summon().is_some() {
         assert!(
-            X64V3Token::try_new().is_some(),
+            X64V3Token::summon().is_some(),
             "v4 implies v3 should be available"
         );
         assert!(
-            X64V2Token::try_new().is_some(),
+            X64V2Token::summon().is_some(),
             "v4 implies v2 should be available"
         );
         assert!(
-            Avx2FmaToken::try_new().is_some(),
+            Avx2FmaToken::summon().is_some(),
             "v4 implies Avx2FmaToken should be available"
         );
     }
@@ -119,8 +119,8 @@ fn token_hierarchy_is_correct() {
 /// Verify that Avx2FmaToken is truly the same type as X64V3Token.
 #[test]
 fn avx2fma_is_x64v3() {
-    let v3 = X64V3Token::try_new();
-    let avx2fma = Avx2FmaToken::try_new();
+    let v3 = X64V3Token::summon();
+    let avx2fma = Avx2FmaToken::summon();
 
     assert_eq!(
         v3.is_some(),
@@ -140,21 +140,21 @@ fn avx2fma_is_x64v3() {
 fn print_detected_features() {
     println!("Feature detection results:");
     println!("  SSE2:      always (baseline on x86_64)");
-    println!("  x86-64-v2: {}", X64V2Token::try_new().is_some());
+    println!("  x86-64-v2: {}", X64V2Token::summon().is_some());
     println!(
         "  x86-64-v3: {} (Desktop64/Avx2FmaToken)",
-        X64V3Token::try_new().is_some()
+        X64V3Token::summon().is_some()
     );
     #[cfg(feature = "avx512")]
     {
         println!(
             "  x86-64-v4: {} (Avx512Token/Server64)",
-            X64V4Token::try_new().is_some()
+            X64V4Token::summon().is_some()
         );
         println!(
             "  AVX-512 Modern: {}",
-            Avx512ModernToken::try_new().is_some()
+            Avx512ModernToken::summon().is_some()
         );
-        println!("  AVX-512 FP16:   {}", Avx512Fp16Token::try_new().is_some());
+        println!("  AVX-512 FP16:   {}", Avx512Fp16Token::summon().is_some());
     }
 }

@@ -218,7 +218,7 @@ Compare NEON results to scalar reference implementations:
 #[test]
 #[cfg(target_arch = "aarch64")]
 fn verify_neon_add() {
-    let token = NeonToken::try_new().unwrap();
+    let token = NeonToken::summon().unwrap();
     let a = f32x4::load(token, &[1.0, 2.0, 3.0, 4.0]);
     let b = f32x4::load(token, &[4.0, 3.0, 2.0, 1.0]);
     let result = (a + b).to_array();
@@ -235,12 +235,12 @@ Same algorithm, different platforms, same results:
 fn test_algorithm() -> [f32; 4] {
     #[cfg(target_arch = "x86_64")]
     {
-        let token = Sse41Token::try_new().unwrap();
+        let token = Sse41Token::summon().unwrap();
         // ... x86 implementation
     }
     #[cfg(target_arch = "aarch64")]
     {
-        let token = NeonToken::try_new().unwrap();
+        let token = NeonToken::summon().unwrap();
         // ... NEON implementation
     }
 }

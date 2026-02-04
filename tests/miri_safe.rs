@@ -44,20 +44,20 @@ fn token_names() {
 /// Test token hierarchy: X64V3Token can produce X64V2Token.
 #[test]
 fn token_hierarchy_x64v3() {
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         let _v2: X64V2Token = token.v2();
     }
 }
 
-/// Test that try_new is consistent (calling twice gives same result).
+/// Test that summon is consistent (calling twice gives same result).
 #[test]
-fn try_new_is_consistent() {
-    let result1 = X64V3Token::try_new().is_some();
-    let result2 = X64V3Token::try_new().is_some();
+fn summon_is_consistent() {
+    let result1 = X64V3Token::summon().is_some();
+    let result2 = X64V3Token::summon().is_some();
     assert_eq!(result1, result2);
 
-    let result1 = X64V2Token::try_new().is_some();
-    let result2 = X64V2Token::try_new().is_some();
+    let result1 = X64V2Token::summon().is_some();
+    let result2 = X64V2Token::summon().is_some();
     assert_eq!(result1, result2);
 }
 
@@ -69,14 +69,14 @@ fn marker_traits_compile() {
     fn requires_128<T: Has128BitSimd>(_: T) {}
     fn requires_256<T: Has256BitSimd>(_: T) {}
 
-    if let Some(token) = X64V2Token::try_new() {
+    if let Some(token) = X64V2Token::summon() {
         requires_128(token);
     }
-    if let Some(token) = Avx2FmaToken::try_new() {
+    if let Some(token) = Avx2FmaToken::summon() {
         requires_128(token);
         requires_256(token);
     }
-    if let Some(token) = X64V3Token::try_new() {
+    if let Some(token) = X64V3Token::summon() {
         requires_128(token);
         requires_256(token);
     }

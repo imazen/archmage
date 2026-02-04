@@ -7,7 +7,7 @@ fn requires_x64v3(_token: X64V3Token) {}
 
 fn main() {
     // This should fail: X64V2Token cannot be used where X64V3Token is required
-    if let Some(v2) = X64V2Token::try_new() {
+    if let Some(v2) = X64V2Token::summon() {
         requires_x64v3(v2);
     }
 }

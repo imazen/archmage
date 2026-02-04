@@ -432,7 +432,7 @@ mod x86_impl {
     fn test_correctness() {
         println!("=== Correctness Tests ===\n");
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             // Test with gradient pattern
             let mut scalar_block: [f32; 64] = core::array::from_fn(|i| i as f32);
             let mut fast_block = scalar_block;
@@ -504,7 +504,7 @@ mod x86_impl {
         );
 
         // Fast AVX2 implementation
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 block = original;

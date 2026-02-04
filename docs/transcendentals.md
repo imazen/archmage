@@ -400,7 +400,7 @@ fn fast_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 }
 
 // Usage
-if let Some(token) = X64V3Token::try_new() {
+if let Some(token) = X64V3Token::summon() {
     let result = fast_version(token, &input);
 }
 ```

@@ -270,7 +270,7 @@ mod x86_impl {
     fn test_correctness() {
         println!("=== Correctness Tests ===\n");
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             // Test premultiply
             let original = [
                 0.5, 0.3, 0.8, 0.5, // 50% alpha pixel
@@ -380,7 +380,7 @@ mod x86_impl {
             scalar_mpix
         );
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 data.copy_from_slice(&original);
@@ -420,7 +420,7 @@ mod x86_impl {
             scalar_mpix
         );
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 data.copy_from_slice(&premul_data);
@@ -471,7 +471,7 @@ mod x86_impl {
             scalar_mpix
         );
 
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 dst.copy_from_slice(&dst_orig);

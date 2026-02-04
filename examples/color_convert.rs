@@ -283,7 +283,7 @@ mod x86_impl {
         println!("=== Correctness Tests ===\n");
 
         // Test YUV→RGB float vs scalar
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let y_vals = [16.0, 128.0, 235.0, 100.0, 200.0, 50.0, 180.0, 80.0];
             let u_vals = [128.0, 128.0, 128.0, 90.0, 180.0, 200.0, 60.0, 150.0];
             let v_vals = [128.0, 128.0, 128.0, 200.0, 60.0, 100.0, 180.0, 80.0];
@@ -312,7 +312,7 @@ mod x86_impl {
         }
 
         // Test fixed-point vs scalar (should match exactly)
-        if let Some(token) = X64V2Token::try_new() {
+        if let Some(token) = X64V2Token::summon() {
             let y = [16, 128, 235, 100, 200, 50, 180, 80];
             let u = [128, 128, 128, 90, 180, 200, 60, 150];
             let v = [128, 128, 128, 200, 60, 100, 180, 80];
@@ -341,7 +341,7 @@ mod x86_impl {
         }
 
         // Test round-trip RGB→YUV→RGB
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let r_orig = [255.0, 0.0, 0.0, 128.0, 64.0, 192.0, 100.0, 200.0];
             let g_orig = [0.0, 255.0, 0.0, 128.0, 128.0, 64.0, 150.0, 100.0];
             let b_orig = [0.0, 0.0, 255.0, 128.0, 192.0, 128.0, 50.0, 150.0];
@@ -418,7 +418,7 @@ mod x86_impl {
         );
 
         // SIMD f32x8 version
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let start = Instant::now();
             for _ in 0..ITERATIONS {
                 for chunk_start in (0..PIXELS).step_by(8) {
@@ -470,7 +470,7 @@ mod x86_impl {
         }
 
         // Fixed-point SSE2 version
-        if let Some(token) = X64V2Token::try_new() {
+        if let Some(token) = X64V2Token::summon() {
             let y_u8: Vec<u8> = y_data.iter().map(|&v| v as u8).collect();
             let u_u8: Vec<u8> = u_data.iter().map(|&v| v as u8).collect();
             let v_u8: Vec<u8> = v_data.iter().map(|&v| v as u8).collect();

@@ -6,7 +6,7 @@ This document is the authoritative reference for archmage's token architecture, 
 
 Archmage uses zero-sized **capability tokens** to prove CPU features are available at compile time. A token can only be constructed via:
 
-- `try_new()` / `summon()` — runtime feature detection, returns `Option<Self>`
+- `summon()` / `summon()` — runtime feature detection, returns `Option<Self>`
 - `forge_token_dangerously()` — unsafe, caller guarantees features are present
 
 Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the type itself is the proof.
@@ -104,7 +104,7 @@ HasNeonSha3 → HasNeon
 
 ### 1.5 Cross-Platform Stubs
 
-All token types are defined on all architectures. On unsupported architectures, `try_new()` returns `None`. This enables cross-platform code that compiles everywhere but only dispatches on the right arch.
+All token types are defined on all architectures. On unsupported architectures, `summon()` returns `None`. This enables cross-platform code that compiles everywhere but only dispatches on the right arch.
 
 Stub modules: `x86_stubs.rs`, `arm_stubs.rs`, `wasm_stubs.rs`.
 
@@ -115,12 +115,12 @@ Stub modules: `x86_stubs.rs`, `arm_stubs.rs`, `wasm_stubs.rs`.
 For every token `T`:
 
 ```
-target_features_in_macro(T) ⊆ features_checked_in_try_new(T)
+target_features_in_macro(T) ⊆ features_checked_in_summon(T)
 ```
 
-The `#[arcane]` / `#[simd_fn]` macro reads the token type, looks up features via `token_to_features()`, and generates `#[target_feature(enable = "...")]`. If `try_new()` checked fewer features than the macro enables, forging the token would allow calling intrinsics that the CPU doesn't actually support — **undefined behavior** (illegal instructions, crashes, silent data corruption).
+The `#[arcane]` / `#[arcane]` macro reads the token type, looks up features via `token_to_features()`, and generates `#[target_feature(enable = "...")]`. If `summon()` checked fewer features than the macro enables, forging the token would allow calling intrinsics that the CPU doesn't actually support — **undefined behavior** (illegal instructions, crashes, silent data corruption).
 
-The reverse direction (try_new checks more than the macro enables) is safe but wasteful.
+The reverse direction (summon checks more than the macro enables) is safe but wasteful.
 
 ### 2.2 Rust 1.85+ Intrinsic Safety
 
@@ -162,7 +162,7 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = _mm256_setzero_ps();
         // ...
     }
-    // SAFETY: token existence proves CPU support was verified via try_new()
+    // SAFETY: token existence proves CPU support was verified via summon()
     unsafe { inner(data) }
 }
 ```
@@ -233,7 +233,7 @@ Archmage provides detection macros that combine compile-time and runtime checks:
 1. If the feature is enabled at compile time (via `#[target_feature]`, `-C target-cpu`, or being inside a multiversed function variant), the check is eliminated entirely.
 2. Otherwise, falls back to `std::is_x86_feature_detected!` (or architecture equivalent).
 
-This means inside a `#[multiversed]` function compiled for AVX2, `X64V3Token::try_new()` compiles to a constant `Some(token)`.
+This means inside a `#[multiversed]` function compiled for AVX2, `X64V3Token::summon()` compiles to a constant `Some(token)`.
 
 ### 4.2 WASM Special Case
 
@@ -241,7 +241,7 @@ WASM SIMD128 uses compile-time detection only (`#[cfg(target_feature = "simd128"
 
 ### 4.3 AArch64 NEON Special Case
 
-NEON is always available on AArch64 (`NeonToken::try_new()` always returns `Some`). No runtime check needed.
+NEON is always available on AArch64 (`NeonToken::summon()` always returns `Some`). No runtime check needed.
 
 ## 5. QEMU CI Testing
 
@@ -272,7 +272,7 @@ The goal is to replace 10+ independent copies of token-to-feature mappings (in m
 - **Step 2:** Create `token-registry.toml` and xtask registry parser
 - **Step 3:** Generate `archmage-macros/src/generated_registry.rs` from TOML
 - **Step 4:** Wire xtask internals to registry
-- **Step 5:** Add `summon()`/`try_new()` verification (validate source against registry)
+- **Step 5:** Add `summon()`/`summon()` verification (validate source against registry)
 - **Step 7:** Housekeeping (update CLAUDE.md, justfile, bump version)
 
 ### 6.3 Registry Schema
@@ -291,7 +291,7 @@ See the plan file for the full schema.
 
 `cargo xtask validate` will verify:
 1. Generated macro code matches registry
-2. `try_new()` source checks exactly the registry features
+2. `summon()` source checks exactly the registry features
 3. Magetypes intrinsic usage is valid under gating tokens
 4. Trait hierarchy is consistent (token features ⊇ claimed trait features)
 5. Re-running `cargo xtask generate` produces identical output (idempotent)

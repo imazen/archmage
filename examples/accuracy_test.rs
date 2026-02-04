@@ -144,7 +144,7 @@ mod x86_impl {
 
     /// Apply archmage exp2_lowp to a slice
     fn archmage_exp2(input: &[f32]) -> Vec<f32> {
-        let Some(token) = X64V3Token::try_new() else {
+        let Some(token) = X64V3Token::summon() else {
             return input.iter().map(|&x| x.exp2()).collect();
         };
 
@@ -167,7 +167,7 @@ mod x86_impl {
 
     /// Apply archmage log2_lowp to a slice
     fn archmage_log2(input: &[f32]) -> Vec<f32> {
-        let Some(token) = X64V3Token::try_new() else {
+        let Some(token) = X64V3Token::summon() else {
             return input.iter().map(|&x| x.log2()).collect();
         };
 
@@ -189,7 +189,7 @@ mod x86_impl {
 
     /// Apply archmage pow_lowp (fast, low-precision) to a slice
     fn archmage_pow_lowp(input: &[f32], exp: f32) -> Vec<f32> {
-        let Some(token) = X64V3Token::try_new() else {
+        let Some(token) = X64V3Token::summon() else {
             return input.iter().map(|&x| x.powf(exp)).collect();
         };
 
@@ -211,7 +211,7 @@ mod x86_impl {
 
     /// Apply archmage pow_midp (mid-precision) to a slice
     fn archmage_pow_midp(input: &[f32], exp: f32) -> Vec<f32> {
-        let Some(token) = X64V3Token::try_new() else {
+        let Some(token) = X64V3Token::summon() else {
             return input.iter().map(|&x| x.powf(exp)).collect();
         };
 
@@ -291,7 +291,7 @@ mod x86_impl {
             bit_depth, levels
         );
 
-        let Some(_token) = X64V3Token::try_new() else {
+        let Some(_token) = X64V3Token::summon() else {
             eprintln!("AVX2+FMA not available");
             return;
         };
@@ -392,7 +392,7 @@ mod x86_impl {
         println!("Archmage Transcendental Accuracy Analysis");
         println!("=========================================\n");
 
-        if X64V3Token::try_new().is_none() {
+        if X64V3Token::summon().is_none() {
             eprintln!("AVX2+FMA not available, skipping");
             return;
         }

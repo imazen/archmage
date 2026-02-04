@@ -50,7 +50,7 @@
 //! ## Feature Flags
 //!
 //! - `std` (default): Enable std library support
-//! - `macros` (default): Enable `#[arcane]` attribute macro (alias: `#[simd_fn]`)
+//! - `macros` (default): Enable `#[arcane]` attribute macro (alias: `#[arcane]`)
 //! - `avx512`: AVX-512 token support
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -63,7 +63,7 @@ extern crate std;
 
 extern crate alloc;
 
-// Re-export arcane macro (and simd_fn alias) from archmage-macros
+// Re-export arcane macro (and arcane alias) from archmage-macros
 #[cfg(feature = "macros")]
 #[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
 pub use archmage_macros::{arcane, multiwidth, simd_fn};

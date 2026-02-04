@@ -19,7 +19,7 @@
 //! use archmage::{X64V3Token, SimdToken};
 //! use magetypes::f32x8;
 //!
-//! if let Some(token) = X64V3Token::try_new() {
+//! if let Some(token) = X64V3Token::summon() {
 //!     let a = f32x8::splat(token, 1.0);
 //!     let b = f32x8::splat(token, 2.0);
 //!     let c = a + b;  // Natural operators!

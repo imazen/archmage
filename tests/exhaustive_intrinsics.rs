@@ -116,10 +116,10 @@ fn test_disable_archmage_env() {
                 X64V2Token::summon().is_none(),
                 "ARCHMAGE_DISABLE should make summon() return None"
             );
-            // try_new() should still work
+            // summon() should still work
             assert!(
-                X64V2Token::try_new().is_some(),
-                "try_new() should still detect CPU features"
+                X64V2Token::summon().is_some(),
+                "summon() should still detect CPU features"
             );
         }
     }

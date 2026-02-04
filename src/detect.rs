@@ -42,7 +42,7 @@
 ///
 /// // GOOD: Check once, pass token
 /// fn process(data: &[f32]) {
-///     if let Some(token) = X64V3Token::try_new() {
+///     if let Some(token) = X64V3Token::summon() {
 ///         inner(token, data);  // inner KNOWS v3 features are available
 ///     }
 /// }

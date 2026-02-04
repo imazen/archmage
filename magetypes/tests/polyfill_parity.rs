@@ -21,7 +21,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_from_array_to_array() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let n = native::from_array(token, input);
             let p = poly::from_array(token, input);
@@ -31,7 +31,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_add() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let b = [0.1f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
 
@@ -43,7 +43,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_sub() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let b = [0.1f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
 
@@ -55,7 +55,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_mul() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let b = [2.0f32, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0];
 
@@ -67,7 +67,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_div() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [2.0f32, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0];
             let b = [2.0f32, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0];
 
@@ -79,7 +79,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_min_max() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, 5.0, 3.0, 7.0, 2.0, 6.0, 4.0, 8.0];
             let b = [2.0f32, 4.0, 6.0, 8.0, 1.0, 5.0, 3.0, 7.0];
 
@@ -103,7 +103,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_sqrt() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0];
 
             let n = native::from_array(token, a).sqrt().to_array();
@@ -114,7 +114,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_floor_ceil_round() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.3f32, 2.7, -1.3, -2.7, 0.5, 1.5, 2.5, 3.5];
 
             let n_floor = native::from_array(token, a).floor().to_array();
@@ -133,7 +133,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_mul_add() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let b = [2.0f32, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0];
             let c = [0.5f32, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
@@ -150,7 +150,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_abs_neg() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0];
 
             let n_abs = native::from_array(token, a).abs().to_array();
@@ -165,7 +165,7 @@ mod f32x8_parity {
 
     #[test]
     fn test_reduce() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
             let n_add = native::from_array(token, a).reduce_add();
@@ -194,7 +194,7 @@ mod i32x8_parity {
 
     #[test]
     fn test_from_array_to_array() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1i32, -2, 3, -4, 5, -6, 7, -8];
             let n = native::from_array(token, input);
             let p = poly::from_array(token, input);
@@ -204,7 +204,7 @@ mod i32x8_parity {
 
     #[test]
     fn test_add_sub() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [10i32, 20, 30, 40, 50, 60, 70, 80];
             let b = [1i32, 2, 3, 4, 5, 6, 7, 8];
 
@@ -220,7 +220,7 @@ mod i32x8_parity {
 
     #[test]
     fn test_min_max() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1i32, -5, 3, -7, 2, -4, 6, -8];
             let b = [2i32, -4, 2, -8, 1, -5, 5, -9];
 
@@ -244,7 +244,7 @@ mod i32x8_parity {
 
     #[test]
     fn test_abs() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1i32, -2, 3, -4, 5, -6, 7, -8];
 
             let n = native::from_array(token, a).abs().to_array();
@@ -265,7 +265,7 @@ mod f64x4_parity {
 
     #[test]
     fn test_from_array_to_array() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let input = [1.0f64, 2.0, 3.0, 4.0];
             let n = native::from_array(token, input);
             let p = poly::from_array(token, input);
@@ -275,7 +275,7 @@ mod f64x4_parity {
 
     #[test]
     fn test_add_sub_mul_div() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [4.0f64, 8.0, 12.0, 16.0];
             let b = [2.0f64, 2.0, 2.0, 2.0];
 
@@ -299,7 +299,7 @@ mod f64x4_parity {
 
     #[test]
     fn test_sqrt() {
-        if let Some(token) = X64V3Token::try_new() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f64, 4.0, 9.0, 16.0];
 
             let n = native::from_array(token, a).sqrt().to_array();

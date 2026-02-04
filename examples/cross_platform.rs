@@ -26,10 +26,10 @@ pub fn sum_of_squares(data: &[f32]) -> f32 {
     {
         use archmage::SimdToken;
         // Try AVX2 first (8 lanes), then SSE (4 lanes)
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             return sum_of_squares_avx2(token, data);
         }
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             return sum_of_squares_sse(token, data);
         }
     }
@@ -37,7 +37,7 @@ pub fn sum_of_squares(data: &[f32]) -> f32 {
     #[cfg(target_arch = "aarch64")]
     {
         use archmage::SimdToken;
-        if let Some(token) = archmage::NeonToken::try_new() {
+        if let Some(token) = archmage::NeonToken::summon() {
             return sum_of_squares_neon(token, data);
         }
     }
@@ -130,7 +130,7 @@ pub fn polynomial_eval(data: &mut [f32], a: f32, b: f32, c: f32) {
     #[cfg(target_arch = "x86_64")]
     {
         use archmage::SimdToken;
-        if let Some(token) = archmage::X64V3Token::try_new() {
+        if let Some(token) = archmage::X64V3Token::summon() {
             polynomial_eval_avx2(token, data, a, b, c);
             return;
         }
@@ -139,7 +139,7 @@ pub fn polynomial_eval(data: &mut [f32], a: f32, b: f32, c: f32) {
     #[cfg(target_arch = "aarch64")]
     {
         use archmage::SimdToken;
-        if let Some(token) = archmage::NeonToken::try_new() {
+        if let Some(token) = archmage::NeonToken::summon() {
             polynomial_eval_neon(token, data, a, b, c);
             return;
         }
@@ -204,13 +204,13 @@ fn print_platform_info() {
         use archmage::SimdToken;
         println!("  Architecture: x86_64");
         print!("  x86-64-v2: ");
-        if archmage::X64V2Token::try_new().is_some() {
+        if archmage::X64V2Token::summon().is_some() {
             println!("Available (SSE4.2+POPCNT)");
         } else {
             println!("Not available");
         }
         print!("  AVX2+FMA:  ");
-        if archmage::Avx2FmaToken::try_new().is_some() {
+        if archmage::Avx2FmaToken::summon().is_some() {
             println!("Available (8 x f32)");
         } else {
             println!("Not available");
@@ -218,7 +218,7 @@ fn print_platform_info() {
         #[cfg(feature = "avx512")]
         {
             print!("  AVX-512:   ");
-            if archmage::X64V4Token::try_new().is_some() {
+            if archmage::X64V4Token::summon().is_some() {
                 println!("Available (16 x f32)");
             } else {
                 println!("Not available");
@@ -231,7 +231,7 @@ fn print_platform_info() {
         use archmage::SimdToken;
         println!("  Architecture: aarch64");
         print!("  NEON:      ");
-        if archmage::NeonToken::try_new().is_some() {
+        if archmage::NeonToken::summon().is_some() {
             println!("Available (4 x f32)");
         } else {
             println!("Not available");
@@ -365,7 +365,7 @@ fn main() {
     println!("  - On aarch64: Uses NEON (4-wide)");
     println!("  - Elsewhere: Falls back to scalar code");
     println!("\n  The key pattern is:");
-    println!("  1. Token::try_new() to detect CPU features at runtime");
+    println!("  1. Token::summon() to detect CPU features at runtime");
     println!("  2. #[target_feature] functions for optimized codegen");
     println!("  3. Scalar fallback for portability");
     println!();
