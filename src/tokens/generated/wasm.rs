@@ -15,7 +15,20 @@ impl SimdToken for Simd128Token {
     const NAME: &'static str = "SIMD128";
 
     #[inline]
-    fn try_new() -> Option<Self> {
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
+    #[inline]
+    fn summon() -> Option<Self> {
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         {
             Some(unsafe { Self::forge_token_dangerously() })
@@ -27,6 +40,7 @@ impl SimdToken for Simd128Token {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }

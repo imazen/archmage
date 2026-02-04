@@ -15,10 +15,16 @@ impl SimdToken for Simd128Token {
     const NAME: &'static str = "SIMD128";
 
     #[inline]
-    fn try_new() -> Option<Self> {
+    fn guaranteed() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    #[inline]
+    fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
 
+    #[allow(deprecated)]
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }

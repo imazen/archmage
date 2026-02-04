@@ -17,12 +17,19 @@ impl SimdToken for NeonToken {
     const NAME: &'static str = "NEON";
 
     #[inline]
-    fn try_new() -> Option<Self> {
+    fn guaranteed() -> Option<bool> {
+        Some(true)
+    }
+
+    #[allow(deprecated)]
+    #[inline]
+    fn summon() -> Option<Self> {
         // NEON is always available on AArch64
         Some(Self { _private: () })
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -39,8 +46,21 @@ pub struct NeonAesToken {
 impl SimdToken for NeonAesToken {
     const NAME: &'static str = "NEON+AES";
 
+    #[inline]
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(target_feature = "aes"))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(target_feature = "aes")))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
     #[inline(always)]
-    fn try_new() -> Option<Self> {
+    fn summon() -> Option<Self> {
         if crate::is_aarch64_feature_available!("aes") {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -49,6 +69,7 @@ impl SimdToken for NeonAesToken {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -56,6 +77,7 @@ impl SimdToken for NeonAesToken {
 
 impl NeonAesToken {
     /// Get a NeonToken (NEON+AES implies NEON)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
@@ -73,8 +95,21 @@ pub struct NeonSha3Token {
 impl SimdToken for NeonSha3Token {
     const NAME: &'static str = "NEON+SHA3";
 
+    #[inline]
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(target_feature = "sha3"))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(target_feature = "sha3")))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
     #[inline(always)]
-    fn try_new() -> Option<Self> {
+    fn summon() -> Option<Self> {
         if crate::is_aarch64_feature_available!("sha3") {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -83,6 +118,7 @@ impl SimdToken for NeonSha3Token {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -90,6 +126,7 @@ impl SimdToken for NeonSha3Token {
 
 impl NeonSha3Token {
     /// Get a NeonToken (NEON+SHA3 implies NEON)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
@@ -108,8 +145,21 @@ pub struct NeonCrcToken {
 impl SimdToken for NeonCrcToken {
     const NAME: &'static str = "NEON+CRC";
 
+    #[inline]
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(target_feature = "crc"))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(target_feature = "crc")))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
     #[inline(always)]
-    fn try_new() -> Option<Self> {
+    fn summon() -> Option<Self> {
         if crate::is_aarch64_feature_available!("crc") {
             Some(unsafe { Self::forge_token_dangerously() })
         } else {
@@ -118,6 +168,7 @@ impl SimdToken for NeonCrcToken {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -125,6 +176,7 @@ impl SimdToken for NeonCrcToken {
 
 impl NeonCrcToken {
     /// Get a NeonToken (NEON+CRC implies NEON)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }

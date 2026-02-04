@@ -15,10 +15,16 @@ impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
 
     #[inline]
-    fn try_new() -> Option<Self> {
+    fn guaranteed() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    #[inline]
+    fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
 
+    #[allow(deprecated)]
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -35,10 +41,16 @@ impl SimdToken for Avx512ModernToken {
     const NAME: &'static str = "AVX-512Modern";
 
     #[inline]
-    fn try_new() -> Option<Self> {
+    fn guaranteed() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    #[inline]
+    fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
 
+    #[allow(deprecated)]
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -55,10 +67,16 @@ impl SimdToken for Avx512Fp16Token {
     const NAME: &'static str = "AVX-512FP16";
 
     #[inline]
-    fn try_new() -> Option<Self> {
+    fn guaranteed() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    #[inline]
+    fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
 
+    #[allow(deprecated)]
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }

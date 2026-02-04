@@ -17,8 +17,33 @@ pub struct X64V2Token {
 impl SimdToken for X64V2Token {
     const NAME: &'static str = "x86-64-v2";
 
+    #[inline]
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt"
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt"
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
     #[inline(always)]
-    fn try_new() -> Option<Self> {
+    fn summon() -> Option<Self> {
         if crate::is_x86_feature_available!("sse3")
             && crate::is_x86_feature_available!("ssse3")
             && crate::is_x86_feature_available!("sse4.1")
@@ -32,6 +57,7 @@ impl SimdToken for X64V2Token {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -51,8 +77,47 @@ pub struct X64V3Token {
 impl SimdToken for X64V3Token {
     const NAME: &'static str = "x86-64-v3";
 
+    #[inline]
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt"
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt"
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
     #[inline(always)]
-    fn try_new() -> Option<Self> {
+    fn summon() -> Option<Self> {
         if crate::is_x86_feature_available!("sse3")
             && crate::is_x86_feature_available!("ssse3")
             && crate::is_x86_feature_available!("sse4.1")
@@ -73,6 +138,7 @@ impl SimdToken for X64V3Token {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -80,6 +146,7 @@ impl SimdToken for X64V3Token {
 
 impl X64V3Token {
     /// Get a X64V2Token (x86-64-v3 implies x86-64-v2)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }

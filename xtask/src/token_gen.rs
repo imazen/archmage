@@ -2,7 +2,7 @@
 //!
 //! Produces:
 //! - Real implementations for native arch (with runtime detection)
-//! - Stub implementations for cross-platform (try_new → None)
+//! - Stub implementations for cross-platform (summon → None)
 //! - Trait definitions
 //! - Module file with cfg-gated imports
 
@@ -156,12 +156,17 @@ fn gen_real_token_struct(out: &mut String, reg: &Registry, token: &TokenDef, arc
     writeln!(out, "    const NAME: &'static str = \"{display}\";").unwrap();
     writeln!(out).unwrap();
 
-    // try_new()
-    gen_try_new(out, token, arch);
+    // guaranteed()
+    gen_guaranteed(out, token, arch);
+
+    // summon()
+    writeln!(out).unwrap();
+    gen_summon(out, token, arch);
 
     // forge_token_dangerously()
     writeln!(out).unwrap();
     writeln!(out, "    #[inline(always)]").unwrap();
+    writeln!(out, "    #[allow(deprecated)]").unwrap();
     writeln!(out, "    unsafe fn forge_token_dangerously() -> Self {{").unwrap();
     writeln!(out, "        Self {{ _private: () }}").unwrap();
     writeln!(out, "    }}").unwrap();
@@ -171,12 +176,104 @@ fn gen_real_token_struct(out: &mut String, reg: &Registry, token: &TokenDef, arc
     gen_extraction_methods(out, reg, token);
 }
 
-fn gen_try_new(out: &mut String, token: &TokenDef, arch: &str) {
+/// Generate the `guaranteed()` method for a real token.
+fn gen_guaranteed(out: &mut String, token: &TokenDef, arch: &str) {
+    writeln!(out, "    #[inline]").unwrap();
+    writeln!(out, "    fn guaranteed() -> Option<bool> {{").unwrap();
+
+    match arch {
+        "x86" => {
+            if token.always_available {
+                // Always available on x86_64 (like baseline SSE2)
+                writeln!(out, "        Some(true)").unwrap();
+            } else {
+                // Check if all required features are compile-time target_feature
+                let check_features: Vec<&str> = token
+                    .features
+                    .iter()
+                    .filter(|f| *f != "sse" && *f != "sse2") // Baseline, always available
+                    .map(|s| s.as_str())
+                    .collect();
+
+                if check_features.is_empty() {
+                    // All features are baseline
+                    writeln!(out, "        Some(true)").unwrap();
+                } else {
+                    // Generate cfg checks for each feature
+                    // If ALL features are compile-time, return Some(true)
+                    // Otherwise return None (need runtime check)
+                    let mut conditions = Vec::new();
+                    for feat in &check_features {
+                        conditions.push(format!("target_feature = \"{feat}\""));
+                    }
+                    let all_conditions = conditions.join(", ");
+
+                    writeln!(out, "        #[cfg(all({all_conditions}))]").unwrap();
+                    writeln!(out, "        {{ Some(true) }}").unwrap();
+                    writeln!(out, "        #[cfg(not(all({all_conditions})))]").unwrap();
+                    writeln!(out, "        {{ None }}").unwrap();
+                }
+            }
+        }
+        "aarch64" => {
+            if token.always_available {
+                // NEON is always available on aarch64
+                writeln!(out, "        Some(true)").unwrap();
+            } else {
+                // Check if all required features beyond neon are compile-time
+                let check_features: Vec<&str> = token
+                    .features
+                    .iter()
+                    .filter(|f| *f != "neon") // Baseline on aarch64
+                    .map(|s| s.as_str())
+                    .collect();
+
+                if check_features.is_empty() {
+                    writeln!(out, "        Some(true)").unwrap();
+                } else {
+                    let mut conditions = Vec::new();
+                    for feat in &check_features {
+                        conditions.push(format!("target_feature = \"{feat}\""));
+                    }
+                    let all_conditions = conditions.join(", ");
+
+                    writeln!(out, "        #[cfg(all({all_conditions}))]").unwrap();
+                    writeln!(out, "        {{ Some(true) }}").unwrap();
+                    writeln!(out, "        #[cfg(not(all({all_conditions})))]").unwrap();
+                    writeln!(out, "        {{ None }}").unwrap();
+                }
+            }
+        }
+        "wasm" => {
+            // WASM SIMD is compile-time only (no runtime detection)
+            // If simd128 target_feature is set, it's guaranteed
+            writeln!(
+                out,
+                "        #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]"
+            )
+            .unwrap();
+            writeln!(out, "        {{ Some(true) }}").unwrap();
+            writeln!(
+                out,
+                "        #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]"
+            )
+            .unwrap();
+            writeln!(out, "        {{ None }}").unwrap();
+        }
+        _ => unreachable!("unknown arch: {arch}"),
+    }
+
+    writeln!(out, "    }}").unwrap();
+}
+
+fn gen_summon(out: &mut String, token: &TokenDef, arch: &str) {
+    // Add #[allow(deprecated)] since summon() internally uses forge_token_dangerously()
+    writeln!(out, "    #[allow(deprecated)]").unwrap();
     match arch {
         "x86" => {
             if token.always_available {
                 writeln!(out, "    #[inline]").unwrap();
-                writeln!(out, "    fn try_new() -> Option<Self> {{").unwrap();
+                writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
                 writeln!(out, "        Some(Self {{ _private: () }})").unwrap();
                 writeln!(out, "    }}").unwrap();
             } else {
@@ -189,7 +286,7 @@ fn gen_try_new(out: &mut String, token: &TokenDef, arch: &str) {
                     .collect();
 
                 writeln!(out, "    #[inline(always)]").unwrap();
-                writeln!(out, "    fn try_new() -> Option<Self> {{").unwrap();
+                writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
 
                 if check_features.is_empty() {
                     writeln!(
@@ -222,7 +319,7 @@ fn gen_try_new(out: &mut String, token: &TokenDef, arch: &str) {
         "aarch64" => {
             if token.always_available {
                 writeln!(out, "    #[inline]").unwrap();
-                writeln!(out, "    fn try_new() -> Option<Self> {{").unwrap();
+                writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
                 writeln!(out, "        // NEON is always available on AArch64").unwrap();
                 writeln!(out, "        Some(Self {{ _private: () }})").unwrap();
                 writeln!(out, "    }}").unwrap();
@@ -236,7 +333,7 @@ fn gen_try_new(out: &mut String, token: &TokenDef, arch: &str) {
                     .collect();
 
                 writeln!(out, "    #[inline(always)]").unwrap();
-                writeln!(out, "    fn try_new() -> Option<Self> {{").unwrap();
+                writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
 
                 if check_features.is_empty() {
                     writeln!(
@@ -268,7 +365,7 @@ fn gen_try_new(out: &mut String, token: &TokenDef, arch: &str) {
         }
         "wasm" => {
             writeln!(out, "    #[inline]").unwrap();
-            writeln!(out, "    fn try_new() -> Option<Self> {{").unwrap();
+            writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
             writeln!(
                 out,
                 "        #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]"
@@ -320,6 +417,7 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             "    /// Get a {anc_name} ({token_display} implies {anc_display})"
         )
         .unwrap();
+        writeln!(out, "    #[allow(deprecated)]").unwrap();
         writeln!(out, "    #[inline(always)]").unwrap();
         writeln!(out, "    pub fn {short}(self) -> {anc_name} {{").unwrap();
         writeln!(
@@ -333,6 +431,7 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
         for alias_name in &ancestor.extraction_aliases {
             writeln!(out).unwrap();
             writeln!(out, "    /// Get a {anc_name} (alias for `.{short}()`)").unwrap();
+            writeln!(out, "    #[allow(deprecated)]").unwrap();
             writeln!(out, "    #[inline(always)]").unwrap();
             writeln!(out, "    pub fn {alias_name}(self) -> {anc_name} {{").unwrap();
             writeln!(
@@ -432,11 +531,18 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
     writeln!(out, "impl SimdToken for {name} {{").unwrap();
     writeln!(out, "    const NAME: &'static str = \"{display}\";").unwrap();
     writeln!(out).unwrap();
+    // guaranteed() returns Some(false) for stubs — wrong architecture
     writeln!(out, "    #[inline]").unwrap();
-    writeln!(out, "    fn try_new() -> Option<Self> {{").unwrap();
+    writeln!(out, "    fn guaranteed() -> Option<bool> {{").unwrap();
+    writeln!(out, "        Some(false) // Wrong architecture").unwrap();
+    writeln!(out, "    }}").unwrap();
+    writeln!(out).unwrap();
+    writeln!(out, "    #[inline]").unwrap();
+    writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
     writeln!(out, "        None // Not available on this architecture").unwrap();
     writeln!(out, "    }}").unwrap();
     writeln!(out).unwrap();
+    writeln!(out, "    #[allow(deprecated)]").unwrap();
     writeln!(out, "    #[inline(always)]").unwrap();
     writeln!(out, "    unsafe fn forge_token_dangerously() -> Self {{").unwrap();
     writeln!(out, "        Self {{ _private: () }}").unwrap();

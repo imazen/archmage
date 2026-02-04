@@ -15,10 +15,16 @@ impl SimdToken for X64V2Token {
     const NAME: &'static str = "x86-64-v2";
 
     #[inline]
-    fn try_new() -> Option<Self> {
+    fn guaranteed() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    #[inline]
+    fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
 
+    #[allow(deprecated)]
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -35,10 +41,16 @@ impl SimdToken for X64V3Token {
     const NAME: &'static str = "x86-64-v3";
 
     #[inline]
-    fn try_new() -> Option<Self> {
+    fn guaranteed() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    #[inline]
+    fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
 
+    #[allow(deprecated)]
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }

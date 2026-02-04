@@ -22,8 +22,57 @@ pub struct X64V4Token {
 impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
 
+    #[inline]
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl"
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl"
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
     #[inline(always)]
-    fn try_new() -> Option<Self> {
+    fn summon() -> Option<Self> {
         if crate::is_x86_feature_available!("sse3")
             && crate::is_x86_feature_available!("ssse3")
             && crate::is_x86_feature_available!("sse4.1")
@@ -49,6 +98,7 @@ impl SimdToken for X64V4Token {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -56,11 +106,13 @@ impl SimdToken for X64V4Token {
 
 impl X64V4Token {
     /// Get a X64V3Token (AVX-512 implies x86-64-v3)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
     /// Get a X64V2Token (AVX-512 implies x86-64-v2)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
@@ -83,8 +135,77 @@ pub struct Avx512ModernToken {
 impl SimdToken for Avx512ModernToken {
     const NAME: &'static str = "AVX-512Modern";
 
+    #[inline]
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512vpopcntdq",
+            target_feature = "avx512ifma",
+            target_feature = "avx512vbmi",
+            target_feature = "avx512vbmi2",
+            target_feature = "avx512bitalg",
+            target_feature = "avx512vnni",
+            target_feature = "avx512bf16",
+            target_feature = "vpclmulqdq",
+            target_feature = "gfni",
+            target_feature = "vaes"
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512vpopcntdq",
+            target_feature = "avx512ifma",
+            target_feature = "avx512vbmi",
+            target_feature = "avx512vbmi2",
+            target_feature = "avx512bitalg",
+            target_feature = "avx512vnni",
+            target_feature = "avx512bf16",
+            target_feature = "vpclmulqdq",
+            target_feature = "gfni",
+            target_feature = "vaes"
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
     #[inline(always)]
-    fn try_new() -> Option<Self> {
+    fn summon() -> Option<Self> {
         if crate::is_x86_feature_available!("sse3")
             && crate::is_x86_feature_available!("ssse3")
             && crate::is_x86_feature_available!("sse4.1")
@@ -120,6 +241,7 @@ impl SimdToken for Avx512ModernToken {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -127,22 +249,26 @@ impl SimdToken for Avx512ModernToken {
 
 impl Avx512ModernToken {
     /// Get a X64V4Token (AVX-512Modern implies AVX-512)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 
     /// Get a X64V4Token (alias for `.v4()`)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn avx512(self) -> X64V4Token {
         unsafe { X64V4Token::forge_token_dangerously() }
     }
     /// Get a X64V3Token (AVX-512Modern implies x86-64-v3)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
     /// Get a X64V2Token (AVX-512Modern implies x86-64-v2)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
@@ -164,8 +290,59 @@ pub struct Avx512Fp16Token {
 impl SimdToken for Avx512Fp16Token {
     const NAME: &'static str = "AVX-512FP16";
 
+    #[inline]
+    fn guaranteed() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512fp16"
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512fp16"
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
     #[inline(always)]
-    fn try_new() -> Option<Self> {
+    fn summon() -> Option<Self> {
         if crate::is_x86_feature_available!("sse3")
             && crate::is_x86_feature_available!("ssse3")
             && crate::is_x86_feature_available!("sse4.1")
@@ -192,6 +369,7 @@ impl SimdToken for Avx512Fp16Token {
     }
 
     #[inline(always)]
+    #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
@@ -199,22 +377,26 @@ impl SimdToken for Avx512Fp16Token {
 
 impl Avx512Fp16Token {
     /// Get a X64V4Token (AVX-512FP16 implies AVX-512)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 
     /// Get a X64V4Token (alias for `.v4()`)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn avx512(self) -> X64V4Token {
         unsafe { X64V4Token::forge_token_dangerously() }
     }
     /// Get a X64V3Token (AVX-512FP16 implies x86-64-v3)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
     /// Get a X64V2Token (AVX-512FP16 implies x86-64-v2)
+    #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }

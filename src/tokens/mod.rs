@@ -1,27 +1,123 @@
 //! SIMD capability tokens
 //!
 //! Tokens are zero-sized proof types that demonstrate a CPU feature is available.
-//! They can only be constructed via unsafe `forge_token_dangerously()` or fallible `try_new()`.
+//! They should be obtained via `summon()` and passed through function calls.
 //!
-//! ## Cross-Architecture Availability
+//! ## Token Availability
 //!
-//! All token types are available on all architectures for easier cross-platform code.
-//! However, `summon()` / `try_new()` will return `None` on unsupported architectures.
-//! Rust's type system ensures intrinsic methods don't exist on the wrong arch,
-//! so you get compile errors if you try to use them incorrectly.
+//! Use `guaranteed()` to check compile-time availability:
+//! - `Some(true)` — Compiler guarantees this feature (use directly, no runtime check)
+//! - `Some(false)` — Wrong architecture (this token can never be available)
+//! - `None` — Might be available, call `summon()` to check at runtime
+//!
+//! ## Cross-Architecture Design
+//!
+//! All token types exist on all architectures for easier cross-platform code.
+//! On unsupported architectures, `summon()` returns `None` and `guaranteed()`
+//! returns `Some(false)`.
 
 /// Marker trait for SIMD capability tokens.
 ///
 /// All tokens implement this trait, enabling generic code over different
 /// SIMD feature levels.
 ///
-/// # Safety
+/// # Token Lifecycle
 ///
-/// Implementors must ensure that `forge_token_dangerously()` is only called when
-/// the corresponding CPU feature is actually available.
+/// 1. Check `guaranteed()` at compile time to see if runtime check is needed
+/// 2. If `None`, call `summon()` at runtime to detect CPU support
+/// 3. Pass the token through to `#[arcane]` functions — don't forge new ones
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use archmage::{X64V3Token, SimdToken};
+///
+/// fn process(data: &[f32]) -> f32 {
+///     // Check compile-time availability first
+///     match X64V3Token::guaranteed() {
+///         Some(true) => {
+///             // Compiler guarantees AVX2+FMA — no runtime check needed!
+///             let token = X64V3Token::conjure();
+///             return process_avx2(token, data);
+///         }
+///         Some(false) => {
+///             // Wrong architecture — use scalar
+///             return process_scalar(data);
+///         }
+///         None => {
+///             // Need runtime check
+///             if let Some(token) = X64V3Token::summon() {
+///                 return process_avx2(token, data);
+///             }
+///             return process_scalar(data);
+///         }
+///     }
+/// }
+/// ```
 pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// Human-readable name for diagnostics and error messages.
     const NAME: &'static str;
+
+    /// Check if this token is compile-time guaranteed.
+    ///
+    /// Returns:
+    /// - `Some(true)` — Feature is guaranteed by target (e.g., `-C target-cpu=haswell`)
+    /// - `Some(false)` — Wrong architecture, token can never be available
+    /// - `None` — Might be available, call `summon()` to check at runtime
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// match X64V3Token::guaranteed() {
+    ///     Some(true) => { /* use conjure(), skip runtime check */ }
+    ///     Some(false) => { /* use fallback */ }
+    ///     None => { /* call summon() */ }
+    /// }
+    /// ```
+    fn guaranteed() -> Option<bool>;
+
+    /// Conjure a token when `guaranteed()` returns `Some(true)`.
+    ///
+    /// This is the safe way to create a token when the compiler guarantees
+    /// the feature is available (via `-C target-cpu` or `#[target_feature]`).
+    ///
+    /// # Panics
+    ///
+    /// Panics if called when `guaranteed()` does not return `Some(true)`.
+    /// Use `summon()` for runtime detection instead.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// // Only valid when compiled with -C target-cpu=haswell or similar
+    /// if X64V3Token::guaranteed() == Some(true) {
+    ///     let token = X64V3Token::conjure();
+    ///     // Use token...
+    /// }
+    /// ```
+    #[inline(always)]
+    fn conjure() -> Self {
+        match Self::guaranteed() {
+            Some(true) => {
+                // SAFETY: guaranteed() == Some(true) means the feature is
+                // compile-time guaranteed by target_feature
+                #[allow(deprecated)]
+                unsafe { Self::forge_token_dangerously() }
+            }
+            Some(false) => {
+                panic!(
+                    "Cannot conjure {} on this architecture (guaranteed() = Some(false))",
+                    Self::NAME
+                );
+            }
+            None => {
+                panic!(
+                    "Cannot conjure {} without compile-time guarantee. Use summon() instead.",
+                    Self::NAME
+                );
+            }
+        }
+    }
 
     /// Attempt to create a token with runtime feature detection.
     ///
@@ -30,56 +126,48 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// # Example
     ///
     /// ```rust,ignore
-    /// if let Some(token) = X64V3Token::try_new() {
+    /// if let Some(token) = X64V3Token::summon() {
     ///     // Use AVX2+FMA operations
     /// } else {
     ///     // Fallback path
     /// }
     /// ```
-    fn try_new() -> Option<Self>;
+    fn summon() -> Option<Self>;
 
     /// Attempt to create a token with runtime feature detection.
     ///
-    /// This is an alias for [`try_new()`](Self::try_new).
+    /// This is an alias for [`summon()`](Self::summon).
     #[inline(always)]
     fn attempt() -> Option<Self> {
-        Self::try_new()
+        Self::summon()
     }
 
-    /// Summon a token if the CPU supports this feature.
+    /// Legacy alias for [`summon()`](Self::summon).
     ///
-    /// This is a thematic alias for [`try_new()`](Self::try_new). Summoning may fail
-    /// if the required power (CPU features) is not available.
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// use archmage::{Desktop64, SimdToken};
-    ///
-    /// if let Some(token) = Desktop64::summon() {
-    ///     // The power is yours
-    /// }
-    /// ```
+    /// **Deprecated:** Use `summon()` instead.
     #[inline(always)]
-    fn summon() -> Option<Self> {
-        Self::try_new()
+    #[doc(hidden)]
+    fn try_new() -> Option<Self> {
+        Self::summon()
     }
 
-    /// Create a token without runtime checks.
+    /// Create a token without any checks.
+    ///
+    /// # Deprecated
+    ///
+    /// **Do not use.** Pass tokens through from `summon()` or `conjure()` instead.
+    ///
+    /// If you need a token inside a `#[target_feature]` function, use `conjure()`
+    /// when `guaranteed() == Some(true)`, or accept the token as a parameter.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available via one of:
-    /// - Runtime detection (`is_x86_feature_detected!` or equivalent)
-    /// - Compile-time guarantee (`#[target_feature]` attribute)
-    /// - Target CPU specification (`-C target-cpu=native` or similar)
-    /// - Being inside a multiversioned function variant
-    ///
-    /// # Why "forge_token_dangerously"?
-    ///
-    /// The name is intentionally scary to discourage casual use. Forging a token
-    /// for a feature that isn't actually available leads to undefined behavior
-    /// (illegal instructions, crashes, or silent data corruption).
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() or conjure() instead of forging"
+    )]
     unsafe fn forge_token_dangerously() -> Self;
 }
 
