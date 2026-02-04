@@ -102,7 +102,9 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
                 // SAFETY: guaranteed() == Some(true) means the feature is
                 // compile-time guaranteed by target_feature
                 #[allow(deprecated)]
-                unsafe { Self::forge_token_dangerously() }
+                unsafe {
+                    Self::forge_token_dangerously()
+                }
             }
             Some(false) => {
                 panic!(

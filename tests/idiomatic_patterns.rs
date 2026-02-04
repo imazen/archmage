@@ -34,7 +34,7 @@
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_concrete_token {
-    use archmage::{arcane, Desktop64, SimdToken, X64V3Token};
+    use archmage::{Desktop64, SimdToken, X64V3Token, arcane};
     use core::arch::x86_64::*;
 
     /// Basic function with concrete X64V3Token
@@ -101,7 +101,7 @@ mod pattern_concrete_token {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_feature_traits {
-    use archmage::{arcane, HasX64V2, SimdToken, X64V2Token, X64V3Token};
+    use archmage::{HasX64V2, SimdToken, X64V2Token, X64V3Token, arcane};
     #[cfg(feature = "avx512")]
     use archmage::{HasX64V4, X64V4Token};
     use core::arch::x86_64::*;
@@ -191,7 +191,7 @@ mod pattern_feature_traits {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_width_traits_deprecated {
-    use archmage::{arcane, Has256BitSimd, SimdToken, X64V3Token};
+    use archmage::{Has256BitSimd, SimdToken, X64V3Token, arcane};
     use core::arch::x86_64::*;
 
     /// ⚠️ DEPRECATED: Using Has256BitSimd
@@ -209,7 +209,12 @@ mod pattern_width_traits_deprecated {
 
     /// ✅ CORRECT: Use X64V3Token for AVX2+FMA
     #[arcane]
-    pub fn fma_f32x8_correct(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    pub fn fma_f32x8_correct(
+        token: X64V3Token,
+        a: &[f32; 8],
+        b: &[f32; 8],
+        c: &[f32; 8],
+    ) -> [f32; 8] {
         let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
         let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
         let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
@@ -244,7 +249,7 @@ mod pattern_width_traits_deprecated {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_self_receiver {
-    use archmage::{arcane, HasX64V2, SimdToken, X64V3Token};
+    use archmage::{HasX64V2, SimdToken, X64V3Token, arcane};
     use core::arch::x86_64::*;
 
     /// A wrapper type for SIMD operations
@@ -329,7 +334,7 @@ mod pattern_self_receiver {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_token_passthrough {
-    use archmage::{arcane, SimdToken, X64V3Token};
+    use archmage::{SimdToken, X64V3Token, arcane};
     use core::arch::x86_64::*;
 
     /// Low-level helper
@@ -414,9 +419,9 @@ mod pattern_token_passthrough {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_manual_dispatch_x86 {
-    use archmage::{arcane, SimdToken, X64V3Token};
     #[cfg(feature = "avx512")]
     use archmage::X64V4Token;
+    use archmage::{SimdToken, X64V3Token, arcane};
     use core::arch::x86_64::*;
 
     /// AVX2+FMA implementation
@@ -501,7 +506,10 @@ mod pattern_magetypes {
             let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let v = f32x8::load(token, &data);
             let doubled = v + v;
-            assert_eq!(doubled.to_array(), [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+            assert_eq!(
+                doubled.to_array(),
+                [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]
+            );
         }
     }
 
@@ -525,7 +533,7 @@ mod pattern_magetypes {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_separate_platforms_x86 {
-    use archmage::{arcane, SimdToken, X64V3Token};
+    use archmage::{SimdToken, X64V3Token, arcane};
     use core::arch::x86_64::*;
 
     #[arcane]
@@ -549,7 +557,7 @@ mod pattern_separate_platforms_x86 {
 
 #[cfg(target_arch = "aarch64")]
 mod pattern_separate_platforms_arm {
-    use archmage::{arcane, NeonToken, SimdToken};
+    use archmage::{NeonToken, SimdToken, arcane};
     use core::arch::aarch64::*;
 
     #[arcane]
@@ -608,9 +616,9 @@ mod pattern_separate_platforms_arm {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_token_extraction {
-    use archmage::{arcane, SimdToken, X64V2Token, X64V3Token};
     #[cfg(feature = "avx512")]
     use archmage::X64V4Token;
+    use archmage::{SimdToken, X64V2Token, X64V3Token, arcane};
     use core::arch::x86_64::*;
 
     /// Requires only SSE4.2

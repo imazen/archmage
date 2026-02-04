@@ -26,9 +26,9 @@ use archmage::SimdToken;
 
 #[cfg(target_arch = "x86_64")]
 mod x86_stub_tests {
-    use archmage::{NeonToken, NeonAesToken, NeonSha3Token, NeonCrcToken, SimdToken};
     #[cfg(target_feature = "simd128")]
     use archmage::Simd128Token;
+    use archmage::{NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken, SimdToken};
 
     #[test]
     fn neon_token_is_stub_on_x86() {
@@ -69,9 +69,9 @@ mod x86_stub_tests {
 
 #[cfg(target_arch = "aarch64")]
 mod arm_stub_tests {
-    use archmage::{X64V2Token, X64V3Token, SimdToken};
     #[cfg(feature = "avx512")]
-    use archmage::{X64V4Token, Avx512ModernToken, Avx512Fp16Token};
+    use archmage::{Avx512Fp16Token, Avx512ModernToken, X64V4Token};
+    use archmage::{SimdToken, X64V2Token, X64V3Token};
 
     #[test]
     fn x64v2_token_is_stub_on_arm() {
@@ -124,7 +124,7 @@ mod arm_real_tests {
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod avx512_feature_tests {
-    use archmage::{X64V4Token, Avx512ModernToken, Avx512Fp16Token, SimdToken};
+    use archmage::{Avx512Fp16Token, Avx512ModernToken, SimdToken, X64V4Token};
 
     #[test]
     fn avx512_tokens_exist_with_feature() {
@@ -171,7 +171,11 @@ const IS_WASM: bool = true;
 const IS_WASM: bool = false;
 
 // Exactly one platform should be true (for supported platforms)
-#[cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))]
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 const _: () = {
     let count = IS_X86 as u8 + IS_ARM as u8 + IS_WASM as u8;
     assert!(count == 1, "Exactly one platform const should be true");
@@ -217,7 +221,11 @@ static PLATFORM_NAME: &str = "aarch64";
 #[cfg(target_arch = "wasm32")]
 static PLATFORM_NAME: &str = "wasm32";
 
-#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32")))]
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
 static PLATFORM_NAME: &str = "unknown";
 
 #[test]
@@ -260,7 +268,11 @@ fn get_simd_width() -> usize {
         return 128;
     }
 
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32")))]
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )))]
     {
         return 0; // No SIMD
     }
@@ -271,10 +283,16 @@ fn simd_width_is_correct_for_platform() {
     let width = get_simd_width();
 
     #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    assert_eq!(width, 512, "x86_64 with avx512 feature should report 512-bit");
+    assert_eq!(
+        width, 512,
+        "x86_64 with avx512 feature should report 512-bit"
+    );
 
     #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
-    assert_eq!(width, 256, "x86_64 without avx512 feature should report 256-bit");
+    assert_eq!(
+        width, 256,
+        "x86_64 without avx512 feature should report 256-bit"
+    );
 
     #[cfg(target_arch = "aarch64")]
     assert_eq!(width, 128, "aarch64 should report 128-bit");
@@ -291,7 +309,7 @@ fn simd_width_is_correct_for_platform() {
 
 #[cfg(target_arch = "x86_64")]
 mod x86_type_tests {
-    use archmage::{X64V3Token, Desktop64};
+    use archmage::{Desktop64, X64V3Token};
     use core::any::type_name;
 
     #[test]
@@ -307,7 +325,7 @@ mod x86_type_tests {
 
 #[cfg(target_arch = "aarch64")]
 mod arm_type_tests {
-    use archmage::{NeonToken, Arm64};
+    use archmage::{Arm64, NeonToken};
     use core::any::type_name;
 
     #[test]
@@ -329,7 +347,7 @@ mod arm_type_tests {
 
 #[cfg(target_arch = "x86_64")]
 mod runtime_vs_compiletime {
-    use archmage::{X64V3Token, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
 
     /// This function is ALWAYS compiled on x86_64 (cfg allows it).
     /// But the token might not be available at RUNTIME (old CPU).
@@ -364,7 +382,10 @@ mod runtime_vs_compiletime {
         // cfg!() is a compile-time check that returns a bool
         // It's different from #[cfg(...)] which conditionally includes code
 
-        assert!(COMPILED_FOR_X86, "cfg!(target_arch = \"x86_64\") should be true");
+        assert!(
+            COMPILED_FOR_X86,
+            "cfg!(target_arch = \"x86_64\") should be true"
+        );
 
         // This is evaluated at compile time, not runtime
         const HAS_AVX512_FEATURE: bool = cfg!(feature = "avx512");
@@ -428,7 +449,11 @@ fn platform_specific_fn() -> &'static str {
     "wasm32"
 }
 
-#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32")))]
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
 fn platform_specific_fn() -> &'static str {
     "unsupported"
 }
@@ -488,7 +513,7 @@ fn detect_compiletime_features() {
 /// generate the check.
 #[cfg(target_arch = "x86_64")]
 mod compiletime_dispatch_elision {
-    use archmage::{X64V3Token, SimdToken};
+    use archmage::{SimdToken, X64V3Token};
 
     /// Dispatch function that uses compile-time knowledge.
     ///
@@ -636,9 +661,9 @@ fn verify_elision_markers() {
 
 #[cfg(target_arch = "x86_64")]
 mod guaranteed_tests_x86 {
-    use archmage::{NeonToken, X64V2Token, X64V3Token, SimdToken};
     #[cfg(feature = "avx512")]
     use archmage::X64V4Token;
+    use archmage::{NeonToken, SimdToken, X64V2Token, X64V3Token};
 
     #[test]
     fn neon_guaranteed_returns_false_on_x86() {
@@ -698,7 +723,7 @@ mod guaranteed_tests_x86 {
 
 #[cfg(target_arch = "aarch64")]
 mod guaranteed_tests_arm {
-    use archmage::{NeonToken, X64V2Token, X64V3Token, SimdToken};
+    use archmage::{NeonToken, SimdToken, X64V2Token, X64V3Token};
 
     #[test]
     fn x86_guaranteed_returns_false_on_arm() {
