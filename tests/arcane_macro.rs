@@ -488,7 +488,7 @@ mod x86_tests {
 
 #[cfg(target_arch = "x86_64")]
 mod cross_arch_stub_tests {
-    use archmage::{arcane, NeonToken, SimdToken};
+    use archmage::{NeonToken, SimdToken, arcane};
 
     /// This function uses an ARM token on x86 - should compile to a stub
     #[arcane]
@@ -509,7 +509,7 @@ mod cross_arch_stub_tests {
 
 #[cfg(target_arch = "aarch64")]
 mod cross_arch_stub_tests_arm {
-    use archmage::{arcane, X64V3Token, SimdToken};
+    use archmage::{SimdToken, X64V3Token, arcane};
 
     /// This function uses an x86 token on ARM - should compile to a stub
     #[arcane]
