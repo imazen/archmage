@@ -82,7 +82,8 @@ pub mod tokens;
 // Re-exports at crate root for convenience
 // ============================================================================
 
-// Core trait
+// Core traits
+pub use tokens::IntoConcreteToken;
 pub use tokens::SimdToken;
 
 // Width marker traits
@@ -107,6 +108,8 @@ pub use tokens::{
     NeonCrcToken,
     NeonSha3Token,
     NeonToken,
+    // Scalar fallback (always available)
+    ScalarToken,
     // WASM tokens
     Simd128Token,
     X64V2Token,

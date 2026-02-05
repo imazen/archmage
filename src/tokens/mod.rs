@@ -118,3 +118,157 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
 // All token types, traits, and aliases are generated from token-registry.toml.
 mod generated;
 pub use generated::*;
+
+/// Scalar fallback token — always available on all platforms.
+///
+/// Use this for fallback paths when no SIMD is available. `ScalarToken`
+/// provides type-level proof that "we've given up on SIMD" and allows
+/// consistent API shapes in dispatch code.
+///
+/// # Example
+///
+/// ```rust
+/// use archmage::{ScalarToken, SimdToken};
+///
+/// // Always succeeds
+/// let token = ScalarToken::summon().unwrap();
+///
+/// // Or use the shorthand
+/// let token = ScalarToken;
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ScalarToken;
+
+impl SimdToken for ScalarToken {
+    const NAME: &'static str = "Scalar";
+
+    /// Always returns `Some(true)` — scalar fallback is always available.
+    #[inline(always)]
+    fn guaranteed() -> Option<bool> {
+        Some(true)
+    }
+
+    /// Always returns `Some(ScalarToken)`.
+    #[inline(always)]
+    fn summon() -> Option<Self> {
+        Some(Self)
+    }
+
+    #[allow(deprecated)]
+    #[inline(always)]
+    unsafe fn forge_token_dangerously() -> Self {
+        Self
+    }
+}
+
+/// Trait for compile-time dispatch via monomorphization.
+///
+/// Each concrete token implements this trait, returning `Some(self)` for its
+/// own type and `None` for others. The compiler monomorphizes away all the
+/// `None` branches, leaving only the matching path.
+///
+/// # Example
+///
+/// ```rust
+/// use archmage::{IntoConcreteToken, SimdToken, ScalarToken};
+///
+/// fn dispatch<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
+///     // Compiler eliminates non-matching branches
+///     if let Some(_t) = token.as_scalar() {
+///         return data.iter().sum();
+///     }
+///     // ... other paths for x64v3, neon, etc.
+///     0.0
+/// }
+///
+/// let result = dispatch(ScalarToken, &[1.0, 2.0, 3.0]);
+/// assert_eq!(result, 6.0);
+/// ```
+pub trait IntoConcreteToken: SimdToken + Sized {
+    /// Try to cast to X64V2Token.
+    #[inline(always)]
+    fn as_x64v2(self) -> Option<X64V2Token> {
+        None
+    }
+
+    /// Try to cast to X64V3Token.
+    #[inline(always)]
+    fn as_x64v3(self) -> Option<X64V3Token> {
+        None
+    }
+
+    /// Try to cast to X64V4Token (requires `avx512` feature).
+    #[cfg(feature = "avx512")]
+    #[inline(always)]
+    fn as_x64v4(self) -> Option<X64V4Token> {
+        None
+    }
+
+    /// Try to cast to NeonToken.
+    #[inline(always)]
+    fn as_neon(self) -> Option<NeonToken> {
+        None
+    }
+
+    /// Try to cast to Simd128Token.
+    #[inline(always)]
+    fn as_wasm128(self) -> Option<Simd128Token> {
+        None
+    }
+
+    /// Try to cast to ScalarToken.
+    #[inline(always)]
+    fn as_scalar(self) -> Option<ScalarToken> {
+        None
+    }
+}
+
+// Implement IntoConcreteToken for ScalarToken
+impl IntoConcreteToken for ScalarToken {
+    #[inline(always)]
+    fn as_scalar(self) -> Option<ScalarToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for X64V2Token
+impl IntoConcreteToken for X64V2Token {
+    #[inline(always)]
+    fn as_x64v2(self) -> Option<X64V2Token> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for X64V3Token
+impl IntoConcreteToken for X64V3Token {
+    #[inline(always)]
+    fn as_x64v3(self) -> Option<X64V3Token> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for X64V4Token
+#[cfg(feature = "avx512")]
+impl IntoConcreteToken for X64V4Token {
+    #[cfg(feature = "avx512")]
+    #[inline(always)]
+    fn as_x64v4(self) -> Option<X64V4Token> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for NeonToken
+impl IntoConcreteToken for NeonToken {
+    #[inline(always)]
+    fn as_neon(self) -> Option<NeonToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for Simd128Token
+impl IntoConcreteToken for Simd128Token {
+    #[inline(always)]
+    fn as_wasm128(self) -> Option<Simd128Token> {
+        Some(self)
+    }
+}

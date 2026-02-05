@@ -11,6 +11,8 @@ This spec defines the archmage SIMD ecosystem:
 3. **`#[magetypes]`** — Generate platform variants from generic code
 4. **`incant!`** — Dispatch to the right variant at runtime
 5. **Generic dispatch** — Trait-based compile-time routing
+6. **Prelude** — Platform-appropriate types without cfg blocks
+7. **Cross-tier casting** — Safe upcasting inside `#[arcane]` context
 
 ## Naming Convention
 
@@ -71,8 +73,7 @@ pub struct ScalarToken;
 
 impl SimdToken for ScalarToken {
     const NAME: &'static str = "Scalar";
-
-    fn guaranteed() -> Option<bool> { Some(true) }  // always available
+    fn guaranteed() -> Option<bool> { Some(true) }
     fn summon() -> Option<Self> { Some(Self) }
 }
 ```
@@ -137,6 +138,19 @@ impl SimdOps for MyType {
 }
 ```
 
+### Supported Token Forms
+
+| Signature | Works? | Features Enabled |
+|-----------|--------|------------------|
+| `token: X64V3Token` | ✅ | AVX2, FMA, BMI2, etc. |
+| `token: impl HasX64V2` | ✅ | SSE4.2, POPCNT |
+| `token: impl HasX64V4` | ✅ | AVX-512 |
+| `token: impl HasNeon` | ✅ | NEON |
+| `token: impl SimdToken` | ❌ | **No features** — too generic |
+| `token: T where T: SimdToken` | ❌ | **No features** — too generic |
+
+**Rule:** `#[arcane]` requires compile-time-known features. Use concrete tokens or feature-level trait bounds.
+
 ---
 
 ## 3. `#[magetypes]` Macro
@@ -180,16 +194,26 @@ Inside `#[magetypes]`, these aliases resolve per-variant:
 
 ### No Magic Call Rewriting
 
-`#[magetypes]` does NOT transform function calls. If you call another function:
+`#[magetypes]` does **NOT** transform function calls. This keeps the macro simple and predictable.
 
 ```rust
 #[magetypes]
-pub fn outer(token: Token, data: &[f32]) -> f32 {
-    inner_v3(token, data)  // explicit suffix, or use incant!
+mod kernels {
+    pub fn outer(token: Token, data: &[f32]) -> f32 {
+        // WRONG: inner() won't be transformed to inner_v3()
+        inner(token, data)  // compile error - inner() doesn't exist
+
+        // RIGHT: be explicit
+        inner_v3(token, data)  // if you know the variant
+        // OR use incant! for dispatch
+    }
+    pub fn inner(token: Token, data: &[f32]) -> f32 { ... }
 }
 ```
 
-Keep it simple — no hidden transformations.
+For calling sibling functions, either:
+1. Call the suffixed version directly: `inner_v3(token, data)`
+2. Use `incant!` with passthrough: `incant!(inner(data) with token)`
 
 ### Module-Level Usage
 
@@ -282,7 +306,6 @@ impl IntoConcreteToken for NeonToken {
 impl IntoConcreteToken for ScalarToken {
     fn as_scalar(self) -> Option<ScalarToken> { Some(self) }
 }
-
 // ... etc for all tokens
 ```
 
@@ -290,36 +313,6 @@ impl IntoConcreteToken for ScalarToken {
 
 ```rust
 fn invoke<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-    if let Some(t) = token.as_x64v3() {
-        return dot_v3(t, data);
-    }
-    if let Some(t) = token.as_x64v4() {
-        return dot_v4(t, data);
-    }
-    if let Some(t) = token.as_neon() {
-        return dot_neon(t, data);
-    }
-    if let Some(t) = token.as_wasm128() {
-        return dot_wasm128(t, data);
-    }
-    if let Some(t) = token.as_scalar() {
-        return dot_scalar(t, data);
-    }
-    unreachable!()
-}
-```
-
-The compiler monomorphizes this — for `X64V3Token`, only the first branch survives, others are dead code eliminated.
-
-### `incant!` with Passthrough
-
-`incant!(fn(args) with token)` generates this pattern automatically:
-
-```rust
-incant!(dot(data) with token)
-
-// Expands to:
-{
     if let Some(t) = token.as_x64v3() { return dot_v3(t, data); }
     if let Some(t) = token.as_x64v4() { return dot_v4(t, data); }
     if let Some(t) = token.as_neon() { return dot_neon(t, data); }
@@ -329,9 +322,120 @@ incant!(dot(data) with token)
 }
 ```
 
+The compiler monomorphizes this — for `X64V3Token`, only the first branch survives.
+
+### `incant!` with Passthrough
+
+`incant!(fn(args) with token)` generates this pattern automatically.
+
 ---
 
-## 6. Magetypes SIMD Types
+## 6. Prelude System
+
+Platform-appropriate types without manual `#[cfg]` blocks.
+
+### Usage
+
+```rust
+use magetypes::prelude::*;
+
+// Gets the "best" types for the compile target:
+// - x86_64: f32x8, i32x8, etc. (256-bit, X64V3Token)
+// - x86_64 + avx512: f32x16, i32x16, etc. (512-bit, X64V4Token)
+// - aarch64: f32x4, i32x4, etc. (128-bit, NeonToken)
+// - wasm32: f32x4, i32x4, etc. (128-bit, Simd128Token)
+```
+
+### Prelude Contents
+
+```rust
+// magetypes/src/prelude.rs
+
+#[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+pub use crate::simd::x86::w256::*;
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub use crate::simd::x86::w512::*;
+
+#[cfg(target_arch = "aarch64")]
+pub use crate::simd::arm::w128::*;
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+pub use crate::simd::wasm::w128::*;
+
+// Also export the recommended token
+#[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+pub use archmage::X64V3Token as RecommendedToken;
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub use archmage::X64V4Token as RecommendedToken;
+
+#[cfg(target_arch = "aarch64")]
+pub use archmage::NeonToken as RecommendedToken;
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+pub use archmage::Simd128Token as RecommendedToken;
+```
+
+### Prelude vs `#[magetypes]`
+
+- **Prelude**: For non-generic code targeting a single platform
+- **`#[magetypes]`**: For generating multiple platform variants
+
+Code inside `#[magetypes]` doesn't use the prelude — it uses the macro's aliases.
+
+---
+
+## 7. Cross-Tier Casting
+
+Safe upcasting inside `#[arcane]` context, following Rust 1.85+ target_feature rules.
+
+### Upcast (Requires Context)
+
+```rust
+impl x86::w128::f32x4 {
+    /// Upgrade to AVX2-context f32x4.
+    /// Safe inside #[arcane] with X64V3Token, requires unsafe otherwise.
+    #[target_feature(enable = "avx2", enable = "fma")]
+    pub fn upcast_v3(self) -> x86::w256::f32x4 {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+```
+
+Usage:
+```rust
+#[arcane]
+fn process(token: X64V3Token, input: f32x4_sse) -> f32x4_avx2 {
+    // SAFE: Inside #[arcane] with X64V3Token
+    input.upcast_v3()
+}
+```
+
+### Downcast (Always Safe)
+
+```rust
+impl x86::w256::f32x4 {
+    /// Downcast to SSE-context. Always safe.
+    #[inline(always)]
+    pub const fn downcast(self) -> x86::w128::f32x4 {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+```
+
+### Cast Methods
+
+| From | To | Method | Required Features |
+|------|-----|--------|-------------------|
+| `w128::f32x4` | `w256::f32x4` | `upcast_v3()` | avx2, fma |
+| `w128::f32x4` | `w512::f32x4` | `upcast_v4()` | avx512f, avx512vl |
+| `w256::*` | `w128::*` | `downcast()` | (none) |
+| `w512::*` | `w256::*` | `downcast()` | (none) |
+
+---
+
+## 8. Magetypes SIMD Types
 
 The `magetypes` crate provides SIMD types with safe methods:
 
@@ -346,21 +450,10 @@ fn example(token: X64V3Token, data: &[f32; 8]) -> f32 {
 }
 ```
 
-All methods use `#[arcane]` internally — no raw intrinsics needed.
+### SimdTypes Trait
 
-### Generic Over Token
+For generic programming over token types:
 
-```rust
-use archmage::SimdToken;
-use magetypes::SimdTypes;
-
-fn generic<T: SimdToken + SimdTypes>(token: T, data: &[f32]) -> f32 {
-    let v = <T as SimdTypes>::F32::load(token, data);
-    v.reduce_add(token)
-}
-```
-
-Where:
 ```rust
 pub trait SimdTypes: SimdToken {
     type F32: SimdFloat;
@@ -379,9 +472,69 @@ impl SimdTypes for NeonToken {
 }
 ```
 
+Usage:
+```rust
+fn generic<T: SimdToken + SimdTypes>(token: T, data: &[f32]) -> f32 {
+    let v = <T as SimdTypes>::F32::load(token, data);
+    v.reduce_add(token)
+}
+```
+
 ---
 
-## 7. Complete Example
+## 9. Idiomatic Patterns
+
+**See `tests/idiomatic_patterns.rs` for executable examples.**
+
+### Quick Reference
+
+| Pattern | Syntax | Recommended? | Notes |
+|---------|--------|--------------|-------|
+| Concrete token | `fn f(t: X64V3Token)` | ✅ | Best for most code |
+| Friendly alias | `fn f(t: Desktop64)` | ✅ | Same as X64V3Token |
+| Feature trait | `fn f(t: impl HasX64V2)` | ⚠️ | Only SSE4.2, not AVX2 |
+| Feature trait | `fn f(t: impl HasX64V4)` | ✅ | For AVX-512 code |
+| Generic token | `fn f<T: SimdToken>(t: T)` | ❌ | **Cannot work** |
+| `_self` pattern | `#[arcane(_self = T)]` | ✅ | For trait methods |
+| Token passthrough | Nested `#[arcane]` calls | ✅ | Natural composition |
+
+### Trait Implementation Patterns
+
+**Pattern 1: Separate methods per platform**
+```rust
+trait SimdOps {
+    fn process_v3(&self, token: X64V3Token) -> Self;
+    fn process_neon(&self, token: NeonToken) -> Self;
+    fn process_scalar(&self) -> Self;
+}
+```
+
+**Pattern 2: Generic dispatches to concrete helpers**
+```rust
+trait SimdOps {
+    fn process(&self) -> Self;  // No token
+}
+
+impl SimdOps for Data {
+    fn process(&self) -> Self {
+        incant!(self.process_impl())
+    }
+}
+```
+
+**Pattern 3: Use `#[magetypes]` for trait impls**
+```rust
+#[magetypes]
+impl SimdKernel for [f32; LANES] {
+    type Token = Token;
+    fn kernel(&self, token: Token) -> Self { ... }
+}
+// Generates impls for [f32; 8], [f32; 4], etc.
+```
+
+---
+
+## 10. Complete Example
 
 ```rust
 use archmage::{magetypes, incant, SimdToken, ScalarToken};
@@ -390,7 +543,6 @@ use archmage::{magetypes, incant, SimdToken, ScalarToken};
 #[magetypes]
 pub fn dot(token: Token, a: &[f32], b: &[f32]) -> f32 {
     if a.len() < LANES {
-        // Fall back to scalar for small inputs
         return a.iter().zip(b).map(|(a, b)| a * b).sum();
     }
 
@@ -404,12 +556,9 @@ pub fn dot(token: Token, a: &[f32], b: &[f32]) -> f32 {
     }
 
     let mut result = sum.reduce_add(token);
-
-    // Handle remainder
     for i in (chunks * LANES)..a.len() {
         result += a[i] * b[i];
     }
-
     result
 }
 
@@ -417,24 +566,11 @@ pub fn dot(token: Token, a: &[f32], b: &[f32]) -> f32 {
 pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
     incant!(dot(a, b))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_dot() {
-        let a = vec![1.0, 2.0, 3.0, 4.0];
-        let b = vec![5.0, 6.0, 7.0, 8.0];
-        let result = dot_product(&a, &b);
-        assert_eq!(result, 70.0); // 1*5 + 2*6 + 3*7 + 4*8
-    }
-}
 ```
 
 ---
 
-## 8. Migration from V1
+## 11. Migration from V1
 
 | V1 | V2 |
 |----|-----|
@@ -447,7 +583,7 @@ mod tests {
 
 ### Width Traits (Removed)
 
-The traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` are removed. They didn't map to specific features and broke `#[arcane]` optimization.
+`Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` are removed — they didn't map to specific features.
 
 Replace with:
 - Concrete tokens: `X64V3Token`, `NeonToken`
@@ -456,7 +592,7 @@ Replace with:
 
 ---
 
-## 9. Implementation Status
+## 12. Implementation Status
 
 | Feature | Status |
 |---------|--------|
@@ -464,16 +600,18 @@ Replace with:
 | `#[arcane]` cross-arch stubs | ✅ Implemented |
 | `summon()` / `try_new()` | ✅ Implemented |
 | `guaranteed()` | ✅ Implemented |
-| `ScalarToken` | ⬜ Not yet |
-| `IntoConcreteToken` trait | ⬜ Not yet |
-| `#[magetypes]` function-level | ⬜ Not yet (module-level exists as `#[multiwidth]`) |
+| `ScalarToken` | ✅ Implemented |
+| `IntoConcreteToken` trait | ✅ Implemented |
+| `#[magetypes]` function-level | ⬜ Not yet (module-level as `#[multiwidth]`) |
 | `incant!` entry point | ⬜ Not yet |
 | `incant!` passthrough | ⬜ Not yet |
 | `SimdTypes` trait | ⬜ Not yet |
+| Prelude system | ⬜ Not yet |
+| Cross-tier casting | ⬜ Not yet |
 
 ---
 
-## 10. Design Principles
+## 13. Design Principles
 
 1. **No magic** — Explicit is better than implicit. No hidden call rewriting.
 2. **Compile everywhere** — Cross-arch stubs prevent compile errors.

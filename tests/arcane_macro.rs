@@ -522,3 +522,113 @@ mod cross_arch_stub_tests_arm {
         assert!(X64V3Token::summon().is_none());
     }
 }
+
+// =============================================================================
+// ScalarToken tests
+// =============================================================================
+
+mod scalar_token_tests {
+    use archmage::{ScalarToken, SimdToken};
+
+    #[test]
+    fn scalar_token_always_available() {
+        // ScalarToken::summon() always returns Some
+        assert!(ScalarToken::summon().is_some());
+    }
+
+    #[test]
+    fn scalar_token_guaranteed() {
+        // ScalarToken is compile-time guaranteed
+        assert_eq!(ScalarToken::guaranteed(), Some(true));
+    }
+
+    #[test]
+    fn scalar_token_name() {
+        assert_eq!(ScalarToken::NAME, "Scalar");
+    }
+
+    #[test]
+    fn scalar_token_is_copy() {
+        let token = ScalarToken::summon().unwrap();
+        let token2 = token; // Copy
+        let _ = token; // Original still usable
+        let _ = token2;
+    }
+
+    #[test]
+    fn scalar_token_can_be_constructed_directly() {
+        // ScalarToken is a unit struct, can be constructed directly
+        let _token: ScalarToken = ScalarToken;
+    }
+}
+
+// =============================================================================
+// IntoConcreteToken tests
+// =============================================================================
+
+mod into_concrete_token_tests {
+    use archmage::{IntoConcreteToken, ScalarToken, SimdToken, X64V2Token, X64V3Token};
+
+    #[test]
+    fn scalar_token_as_scalar() {
+        let token = ScalarToken;
+        assert!(token.as_scalar().is_some());
+        assert!(token.as_x64v2().is_none());
+        assert!(token.as_x64v3().is_none());
+        assert!(token.as_neon().is_none());
+        assert!(token.as_wasm128().is_none());
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn x64v2_token_as_x64v2() {
+        if let Some(token) = X64V2Token::summon() {
+            assert!(token.as_x64v2().is_some());
+            assert!(token.as_x64v3().is_none());
+            assert!(token.as_scalar().is_none());
+        }
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn x64v3_token_as_x64v3() {
+        if let Some(token) = X64V3Token::summon() {
+            assert!(token.as_x64v3().is_some());
+            assert!(token.as_x64v2().is_none());
+            assert!(token.as_scalar().is_none());
+        }
+    }
+
+    // Test that generic dispatch works via monomorphization
+    fn dispatch_sum<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
+        if let Some(_) = token.as_scalar() {
+            return data.iter().sum();
+        }
+        #[cfg(target_arch = "x86_64")]
+        if let Some(_) = token.as_x64v3() {
+            // In real code, use SIMD here
+            return data.iter().sum();
+        }
+        #[cfg(target_arch = "x86_64")]
+        if let Some(_) = token.as_x64v2() {
+            return data.iter().sum();
+        }
+        // Fallback
+        data.iter().sum()
+    }
+
+    #[test]
+    fn generic_dispatch_with_scalar() {
+        let result = dispatch_sum(ScalarToken, &[1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(result, 10.0);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn generic_dispatch_with_x64v3() {
+        if let Some(token) = X64V3Token::summon() {
+            let result = dispatch_sum(token, &[1.0, 2.0, 3.0, 4.0]);
+            assert_eq!(result, 10.0);
+        }
+    }
+}
