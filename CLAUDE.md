@@ -670,12 +670,13 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
-- **Dispatch/wrapper overhead benchmark**: Create a benchmark demonstrating the overhead of different patterns:
-  1. Raw dispatch (summon in loop) — worst
-  2. Hoisted token, `#[arcane]` in loop — LLVM barrier each iteration
-  3. Loop inside `#[arcane]`, `#[rite]` helpers — best (one optimization region)
+- ~~**Dispatch/wrapper overhead benchmark**~~: Done. See `benches/asm_inspection.rs`. Results:
+  - `#[arcane]` in loop: 2.32 µs (4.1x slower)
+  - `#[rite]` in `#[arcane]`: 572 ns (baseline)
+  - Manual inline: 570 ns (baseline)
+  - `#[rite]` direct unsafe: 2.32 µs (4.1x slower)
 
-  This will quantify the "42% overhead" claim and show why `#[rite]` matters for hot loops.
+  Key insight: `#[inline]` is sufficient when called from matching `#[target_feature]` context. The overhead comes from calling through wrappers or from non-target_feature context. `#[inline(always)]` + `#[target_feature]` is not allowed on stable Rust.
 
 ### safe_unaligned_simd Gaps (discovered in rav1d-safe refactoring)
 
