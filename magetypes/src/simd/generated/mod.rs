@@ -305,7 +305,6 @@ pub mod polyfill;
 // The `xN` aliases and `LANES_*` refer to the natural width.
 // ============================================================================
 
-#[cfg(target_arch = "x86_64")]
 pub mod v3 {
     //! All SIMD types available with `X64V3Token`.
     //!
@@ -314,19 +313,23 @@ pub mod v3 {
     //! Also includes 128-bit native types and 512-bit polyfills
     //! (emulated via 2×256-bit ops). All take `X64V3Token`.
 
+    #[cfg(target_arch = "x86_64")]
     pub use super::x86::w256::{
         f32x8 as f32xN, f64x4 as f64xN, i8x32 as i8xN, i16x16 as i16xN, i32x8 as i32xN,
         i64x4 as i64xN, u8x32 as u8xN, u16x16 as u16xN, u32x8 as u32xN, u64x4 as u64xN,
     };
 
+    #[cfg(target_arch = "x86_64")]
     pub use super::x86::w256::*;
 
     // 128-bit native types (same X64V3Token)
+    #[cfg(target_arch = "x86_64")]
     pub use super::x86::w128::{
         f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
     };
 
     // 512-bit polyfilled types (2×256-bit, same X64V3Token)
+    #[cfg(target_arch = "x86_64")]
     pub use super::polyfill::v3_512::{
         f32x16, f64x8, i8x64, i16x32, i32x16, i64x8, u8x64, u16x32, u32x16, u64x8,
     };
@@ -341,7 +344,6 @@ pub mod v3 {
     pub const LANES_8: usize = 32;
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 pub mod v4 {
     //! All SIMD types available with `X64V4Token`.
     //!
@@ -350,19 +352,23 @@ pub mod v4 {
     //! Also includes 128-bit and 256-bit native types. These accept
     //! `X64V3Token` — use `token.v3()` to downcast your `X64V4Token`.
 
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     pub use super::x86::w512::{
         f32x16 as f32xN, f64x8 as f64xN, i8x64 as i8xN, i16x32 as i16xN, i32x16 as i32xN,
         i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
     };
 
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     pub use super::x86::w512::*;
 
     // 128-bit native types (use token.v3() to downcast)
+    #[cfg(target_arch = "x86_64")]
     pub use super::x86::w128::{
         f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
     };
 
     // 256-bit native types (use token.v3() to downcast)
+    #[cfg(target_arch = "x86_64")]
     pub use super::x86::w256::{
         f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
     };
@@ -377,7 +383,6 @@ pub mod v4 {
     pub const LANES_8: usize = 64;
 }
 
-#[cfg(target_arch = "aarch64")]
 pub mod neon {
     //! All SIMD types available with `NeonToken`.
     //!
@@ -386,14 +391,17 @@ pub mod neon {
     //! Also includes 256-bit polyfills (emulated via 2×128-bit NEON ops).
     //! All take `NeonToken`.
 
+    #[cfg(target_arch = "aarch64")]
     pub use super::arm::w128::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
         i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
+    #[cfg(target_arch = "aarch64")]
     pub use super::arm::w128::*;
 
     // 256-bit polyfilled types (2×128-bit NEON, same NeonToken)
+    #[cfg(target_arch = "aarch64")]
     pub use super::polyfill::neon::{
         f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
     };
@@ -408,7 +416,6 @@ pub mod neon {
     pub const LANES_8: usize = 16;
 }
 
-#[cfg(target_arch = "wasm32")]
 pub mod wasm128 {
     //! All SIMD types available with `Wasm128Token`.
     //!
@@ -417,14 +424,17 @@ pub mod wasm128 {
     //! Also includes 256-bit polyfills (emulated via 2×128-bit WASM ops).
     //! All take `Wasm128Token`.
 
+    #[cfg(target_arch = "wasm32")]
     pub use super::wasm::w128::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
         i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
+    #[cfg(target_arch = "wasm32")]
     pub use super::wasm::w128::*;
 
     // 256-bit polyfilled types (2×128-bit WASM SIMD, same Wasm128Token)
+    #[cfg(target_arch = "wasm32")]
     pub use super::polyfill::wasm128::{
         f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
     };

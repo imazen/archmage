@@ -194,7 +194,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     // Natural width: 256-bit (AVX2). Also includes:
     // - w128 native types (same X64V3Token)
     // - v3_512 polyfilled 512-bit types (same X64V3Token)
-    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
+    // Module is always present; SIMD type re-exports are cfg-gated inside.
     code.push_str("pub mod v3 {\n");
     code.push_str("    //! All SIMD types available with `X64V3Token`.\n");
     code.push_str("    //!\n");
@@ -203,7 +203,8 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    //! Also includes 128-bit native types and 512-bit polyfills\n");
     code.push_str("    //! (emulated via 2×256-bit ops). All take `X64V3Token`.\n\n");
 
-    // xN aliases (natural width = 256-bit)
+    // xN aliases (natural width = 256-bit) — cfg-gated
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("    pub use super::x86::w256::{\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W256) {
         let name = ty.name();
@@ -211,21 +212,25 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     }
     code.push_str("    };\n\n");
 
-    // Native 256-bit (natural width)
+    // Native 256-bit (natural width) — cfg-gated
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("    pub use super::x86::w256::*;\n\n");
 
-    // Native 128-bit (narrower, same token)
+    // Native 128-bit (narrower, same token) — cfg-gated
     code.push_str("    // 128-bit native types (same X64V3Token)\n");
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("    pub use super::x86::w128::{\n");
     code.push_str(&format!("        {},\n", w128_types.join(", ")));
     code.push_str("    };\n\n");
 
-    // Polyfilled 512-bit (wider, same token)
+    // Polyfilled 512-bit (wider, same token) — cfg-gated
     code.push_str("    // 512-bit polyfilled types (2×256-bit, same X64V3Token)\n");
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("    pub use super::polyfill::v3_512::{\n");
     code.push_str(&format!("        {},\n", w512_types.join(", ")));
     code.push_str("    };\n\n");
 
+    // Token and LANES constants — always available
     code.push_str("    /// Token type for this width level\n");
     code.push_str("    pub type Token = archmage::X64V3Token;\n\n");
     code.push_str("    pub const LANES_F32: usize = 8;\n");
@@ -239,7 +244,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     // Natural width: 512-bit (AVX-512). Also includes:
     // - w128 native types (take X64V3Token; use token.v3() to downcast)
     // - w256 native types (take X64V3Token; use token.v3() to downcast)
-    code.push_str("#[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
+    // Module is always present; SIMD type re-exports are cfg-gated inside.
     code.push_str("pub mod v4 {\n");
     code.push_str("    //! All SIMD types available with `X64V4Token`.\n");
     code.push_str("    //!\n");
@@ -248,7 +253,8 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    //! Also includes 128-bit and 256-bit native types. These accept\n");
     code.push_str("    //! `X64V3Token` — use `token.v3()` to downcast your `X64V4Token`.\n\n");
 
-    // xN aliases (natural width = 512-bit)
+    // xN aliases (natural width = 512-bit) — cfg-gated
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
     code.push_str("    pub use super::x86::w512::{\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
         let name = ty.name();
@@ -256,17 +262,20 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     }
     code.push_str("    };\n\n");
 
-    // Native 512-bit (natural width)
+    // Native 512-bit (natural width) — cfg-gated
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
     code.push_str("    pub use super::x86::w512::*;\n\n");
 
-    // Native 128-bit (narrower, needs token.v3())
+    // Native 128-bit (narrower, needs token.v3()) — cfg-gated
     code.push_str("    // 128-bit native types (use token.v3() to downcast)\n");
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("    pub use super::x86::w128::{\n");
     code.push_str(&format!("        {},\n", w128_types.join(", ")));
     code.push_str("    };\n\n");
 
-    // Native 256-bit (narrower, needs token.v3())
+    // Native 256-bit (narrower, needs token.v3()) — cfg-gated
     code.push_str("    // 256-bit native types (use token.v3() to downcast)\n");
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
     code.push_str("    pub use super::x86::w256::{\n");
     let w256_types: Vec<String> = types
         .iter()
@@ -276,6 +285,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str(&format!("        {},\n", w256_types.join(", ")));
     code.push_str("    };\n\n");
 
+    // Token and LANES constants — always available
     code.push_str("    /// Token type for this width level\n");
     code.push_str("    pub type Token = archmage::X64V4Token;\n\n");
     code.push_str("    pub const LANES_F32: usize = 16;\n");
@@ -295,8 +305,8 @@ fn generate_neon_namespace() -> String {
     // Polyfill type names (256-bit emulated via 2×128-bit NEON)
     let polyfill_types = "f32x8, f64x4, i8x32, u8x32, i16x16, u16x16, i32x8, u32x8, i64x4, u64x4";
 
-    code.push_str("\n#[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str("pub mod neon {\n");
+    // Module is always present; SIMD type re-exports are cfg-gated inside.
+    code.push_str("\npub mod neon {\n");
     code.push_str("    //! All SIMD types available with `NeonToken`.\n");
     code.push_str("    //!\n");
     code.push_str("    //! Natural width: 128-bit (NEON). `f32xN` = `f32x4`.\n");
@@ -304,22 +314,26 @@ fn generate_neon_namespace() -> String {
     code.push_str("    //! Also includes 256-bit polyfills (emulated via 2×128-bit NEON ops).\n");
     code.push_str("    //! All take `NeonToken`.\n\n");
 
-    // xN aliases (natural width = 128-bit)
+    // xN aliases (natural width = 128-bit) — cfg-gated
+    code.push_str("    #[cfg(target_arch = \"aarch64\")]\n");
     code.push_str("    pub use super::arm::w128::{\n");
     code.push_str("        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,\n");
     code.push_str("        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,\n");
     code.push_str("        u32x4 as u32xN, u64x2 as u64xN,\n");
     code.push_str("    };\n\n");
 
-    // Native 128-bit (natural width)
+    // Native 128-bit (natural width) — cfg-gated
+    code.push_str("    #[cfg(target_arch = \"aarch64\")]\n");
     code.push_str("    pub use super::arm::w128::*;\n\n");
 
-    // Polyfilled 256-bit (wider, same token)
+    // Polyfilled 256-bit (wider, same token) — cfg-gated
     code.push_str("    // 256-bit polyfilled types (2×128-bit NEON, same NeonToken)\n");
+    code.push_str("    #[cfg(target_arch = \"aarch64\")]\n");
     code.push_str(&format!(
         "    pub use super::polyfill::neon::{{{polyfill_types}}};\n\n"
     ));
 
+    // Token and LANES constants — always available
     code.push_str("    /// Token type for this width level\n");
     code.push_str("    pub type Token = archmage::NeonToken;\n\n");
     code.push_str("    pub const LANES_F32: usize = 4;\n");
@@ -339,8 +353,8 @@ fn generate_simd128_namespace() -> String {
     // Polyfill type names (256-bit emulated via 2×128-bit WASM SIMD)
     let polyfill_types = "f32x8, f64x4, i8x32, u8x32, i16x16, u16x16, i32x8, u32x8, i64x4, u64x4";
 
-    code.push_str("\n#[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str("pub mod wasm128 {\n");
+    // Module is always present; SIMD type re-exports are cfg-gated inside.
+    code.push_str("\npub mod wasm128 {\n");
     code.push_str("    //! All SIMD types available with `Wasm128Token`.\n");
     code.push_str("    //!\n");
     code.push_str("    //! Natural width: 128-bit (SIMD128). `f32xN` = `f32x4`.\n");
@@ -348,22 +362,26 @@ fn generate_simd128_namespace() -> String {
     code.push_str("    //! Also includes 256-bit polyfills (emulated via 2×128-bit WASM ops).\n");
     code.push_str("    //! All take `Wasm128Token`.\n\n");
 
-    // xN aliases (natural width = 128-bit)
+    // xN aliases (natural width = 128-bit) — cfg-gated
+    code.push_str("    #[cfg(target_arch = \"wasm32\")]\n");
     code.push_str("    pub use super::wasm::w128::{\n");
     code.push_str("        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,\n");
     code.push_str("        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,\n");
     code.push_str("        u32x4 as u32xN, u64x2 as u64xN,\n");
     code.push_str("    };\n\n");
 
-    // Native 128-bit (natural width)
+    // Native 128-bit (natural width) — cfg-gated
+    code.push_str("    #[cfg(target_arch = \"wasm32\")]\n");
     code.push_str("    pub use super::wasm::w128::*;\n\n");
 
-    // Polyfilled 256-bit (wider, same token)
+    // Polyfilled 256-bit (wider, same token) — cfg-gated
     code.push_str("    // 256-bit polyfilled types (2×128-bit WASM SIMD, same Wasm128Token)\n");
+    code.push_str("    #[cfg(target_arch = \"wasm32\")]\n");
     code.push_str(&format!(
         "    pub use super::polyfill::wasm128::{{{polyfill_types}}};\n\n"
     ));
 
+    // Token and LANES constants — always available
     code.push_str("    /// Token type for this width level\n");
     code.push_str("    pub type Token = archmage::Wasm128Token;\n\n");
     code.push_str("    pub const LANES_F32: usize = 4;\n");
