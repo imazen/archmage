@@ -480,3 +480,45 @@ mod x86_tests {
         }
     }
 }
+
+// =============================================================================
+// Cross-architecture stub tests
+// =============================================================================
+// Verify that #[arcane] with wrong-arch tokens compiles (generates stub)
+
+#[cfg(target_arch = "x86_64")]
+mod cross_arch_stub_tests {
+    use archmage::{arcane, NeonToken, SimdToken};
+
+    /// This function uses an ARM token on x86 - should compile to a stub
+    #[arcane]
+    fn arm_function_on_x86(_token: NeonToken, data: &[f32]) -> f32 {
+        // This body uses no intrinsics so it would compile either way,
+        // but the key is that #[arcane] generates a stub instead of
+        // trying to enable neon features on x86
+        data.iter().sum()
+    }
+
+    #[test]
+    fn stub_function_compiles() {
+        // We can't call the function (NeonToken::summon() returns None on x86)
+        // but the code compiles, which is the point
+        assert!(NeonToken::summon().is_none());
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+mod cross_arch_stub_tests_arm {
+    use archmage::{arcane, X64V3Token, SimdToken};
+
+    /// This function uses an x86 token on ARM - should compile to a stub
+    #[arcane]
+    fn x86_function_on_arm(_token: X64V3Token, data: &[f32]) -> f32 {
+        data.iter().sum()
+    }
+
+    #[test]
+    fn stub_function_compiles() {
+        assert!(X64V3Token::summon().is_none());
+    }
+}

@@ -418,6 +418,10 @@ impl Registry {
         self.gen_trait_to_features(&mut out);
         writeln!(out).unwrap();
 
+        // token_to_arch()
+        self.gen_token_to_arch(&mut out);
+        writeln!(out).unwrap();
+
         // ALL_CONCRETE_TOKENS
         self.gen_all_concrete_tokens(&mut out);
         writeln!(out).unwrap();
@@ -598,6 +602,54 @@ impl Registry {
         }
 
         writeln!(out).unwrap();
+        writeln!(out, "        _ => None,").unwrap();
+        writeln!(out, "    }}").unwrap();
+        writeln!(out, "}}").unwrap();
+    }
+
+    fn gen_token_to_arch(&self, out: &mut String) {
+        use std::fmt::Write;
+        writeln!(
+            out,
+            "/// Maps a token type name to its target architecture."
+        )
+        .unwrap();
+        writeln!(out, "///").unwrap();
+        writeln!(
+            out,
+            "/// Returns the `target_arch` value (e.g., \"x86_64\", \"aarch64\", \"wasm32\")."
+        )
+        .unwrap();
+        writeln!(
+            out,
+            "pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {{"
+        )
+        .unwrap();
+        writeln!(out, "    match token_name {{").unwrap();
+
+        for token in &self.token {
+            // Build match pattern: "Name" | "Alias1" | "Alias2"
+            let mut names: Vec<&str> = vec![&token.name];
+            for a in &token.aliases {
+                names.push(a);
+            }
+            let pattern: String = names
+                .iter()
+                .map(|n| format!("\"{}\"", n))
+                .collect::<Vec<_>>()
+                .join(" | ");
+
+            // Map registry arch names to Rust target_arch values
+            let target_arch = match token.arch.as_str() {
+                "x86" => "x86_64",
+                "aarch64" => "aarch64",
+                "wasm" => "wasm32",
+                other => other, // pass through unknown
+            };
+
+            writeln!(out, "        {} => Some(\"{}\"),", pattern, target_arch).unwrap();
+        }
+
         writeln!(out, "        _ => None,").unwrap();
         writeln!(out, "    }}").unwrap();
         writeln!(out, "}}").unwrap();

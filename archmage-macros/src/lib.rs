@@ -76,7 +76,7 @@ impl Parse for ArcaneArgs {
 // Token-to-features and trait-to-features mappings are generated from
 // token-registry.toml by xtask. Regenerate with: cargo run -p xtask -- generate
 mod generated;
-use generated::{token_to_features, trait_to_features};
+use generated::{token_to_arch, token_to_features, trait_to_features};
 
 /// Result of extracting token info from a type.
 enum TokenTypeInfo {
@@ -197,8 +197,13 @@ fn traits_to_features(trait_names: &[String]) -> Option<Vec<&'static str>> {
     }
 }
 
-/// Find the first token parameter and return its name and features.
-fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
+/// Find the first token parameter and return its name, features, and target arch.
+///
+/// Returns `(param_ident, features, target_arch)` where:
+/// - `param_ident`: the parameter identifier
+/// - `features`: the target features to enable
+/// - `target_arch`: the target architecture (Some for concrete tokens, None for traits/generics)
+fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>, Option<&'static str>)> {
     for arg in &sig.inputs {
         match arg {
             FnArg::Receiver(_) => {
@@ -211,22 +216,27 @@ fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>)> {
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
                 if let Some(info) = extract_token_type_info(ty) {
-                    let features = match info {
-                        TokenTypeInfo::Concrete(name) => {
-                            token_to_features(&name).map(|f| f.to_vec())
+                    let (features, arch) = match info {
+                        TokenTypeInfo::Concrete(ref name) => {
+                            let features = token_to_features(name).map(|f| f.to_vec());
+                            let arch = token_to_arch(name);
+                            (features, arch)
                         }
-                        TokenTypeInfo::ImplTrait(trait_names) => traits_to_features(&trait_names),
+                        TokenTypeInfo::ImplTrait(trait_names) => {
+                            (traits_to_features(&trait_names), None)
+                        }
                         TokenTypeInfo::Generic(type_name) => {
                             // Look up the generic parameter's bounds
-                            find_generic_bounds(sig, &type_name)
-                                .and_then(|traits| traits_to_features(&traits))
+                            let features = find_generic_bounds(sig, &type_name)
+                                .and_then(|traits| traits_to_features(&traits));
+                            (features, None)
                         }
                     };
 
                     if let Some(features) = features {
                         // Extract parameter name
                         if let syn::Pat::Ident(pat_ident) = pat.as_ref() {
-                            return Some((pat_ident.ident.clone(), features));
+                            return Some((pat_ident.ident.clone(), features, arch));
                         }
                     }
                 }
@@ -269,8 +279,8 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
             .into();
     }
 
-    // Find the token parameter and its features
-    let (_token_ident, features) = match find_token_param(&input_fn.sig) {
+    // Find the token parameter, its features, and target arch
+    let (_token_ident, features, target_arch) = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
             let msg = format!(
@@ -376,18 +386,58 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
         };
 
     // Generate the expanded function
-    let expanded = quote! {
-        #(#attrs)*
-        #vis #sig {
-            #(#target_feature_attrs)*
-            #inline_attr
-            unsafe fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
-            #inner_body
+    // If we know the target arch (concrete token), generate cfg-gated real impl + stub
+    let expanded = if let Some(arch) = target_arch {
+        quote! {
+            // Real implementation for the correct architecture
+            #[cfg(target_arch = #arch)]
+            #(#attrs)*
+            #vis #sig {
+                #(#target_feature_attrs)*
+                #inline_attr
+                unsafe fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
+                #inner_body
 
-            // SAFETY: The token parameter proves the required CPU features are available.
-            // Tokens can only be constructed when features are verified (via summon()
-            // runtime check or forge_token_dangerously() in a context where features are guaranteed).
-            unsafe { #inner_fn_name(#(#inner_args),*) }
+                // SAFETY: The token parameter proves the required CPU features are available.
+                // Tokens can only be constructed when features are verified (via summon()
+                // runtime check or forge_token_dangerously() in a context where features are guaranteed).
+                unsafe { #inner_fn_name(#(#inner_args),*) }
+            }
+
+            // Stub for other architectures - the token cannot be obtained, so this is unreachable
+            #[cfg(not(target_arch = #arch))]
+            #(#attrs)*
+            #vis #sig {
+                // This token type cannot be summoned on this architecture.
+                // If you're seeing this at runtime, there's a bug in your dispatch logic.
+                let _ = (#(#inner_args),*); // suppress unused warnings
+                unreachable!(
+                    concat!(
+                        "Called ",
+                        stringify!(#fn_name),
+                        " with a token that cannot exist on this architecture. ",
+                        "This token requires target_arch = \"",
+                        #arch,
+                        "\"."
+                    )
+                )
+            }
+        }
+    } else {
+        // No specific arch (trait bounds or generic) - generate without cfg guards
+        quote! {
+            #(#attrs)*
+            #vis #sig {
+                #(#target_feature_attrs)*
+                #inline_attr
+                unsafe fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
+                #inner_body
+
+                // SAFETY: The token parameter proves the required CPU features are available.
+                // Tokens can only be constructed when features are verified (via summon()
+                // runtime check or forge_token_dangerously() in a context where features are guaranteed).
+                unsafe { #inner_fn_name(#(#inner_args),*) }
+            }
         }
     };
 

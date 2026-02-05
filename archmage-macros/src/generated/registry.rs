@@ -168,6 +168,25 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
     }
 }
 
+/// Maps a token type name to its target architecture.
+///
+/// Returns the `target_arch` value (e.g., "x86_64", "aarch64", "wasm32").
+pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
+    match token_name {
+        "X64V2Token" => Some("x86_64"),
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("x86_64"),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some("x86_64"),
+        "Avx512ModernToken" => Some("x86_64"),
+        "Avx512Fp16Token" => Some("x86_64"),
+        "NeonToken" | "Arm64" => Some("aarch64"),
+        "NeonAesToken" => Some("aarch64"),
+        "NeonSha3Token" => Some("aarch64"),
+        "NeonCrcToken" => Some("aarch64"),
+        "Simd128Token" => Some("wasm32"),
+        _ => None,
+    }
+}
+
 /// All concrete token names that exist in the runtime crate.
 #[cfg(test)]
 pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
