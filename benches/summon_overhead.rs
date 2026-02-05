@@ -76,6 +76,50 @@ fn just_one_std_detection() -> bool {
     std::arch::is_x86_feature_detected!("avx2")
 }
 
+// Test with more features (like AVX-512 modern would need)
+fn std_many_features() -> bool {
+    std::arch::is_x86_feature_detected!("avx512f")
+        && std::arch::is_x86_feature_detected!("avx512bw")
+        && std::arch::is_x86_feature_detected!("avx512cd")
+        && std::arch::is_x86_feature_detected!("avx512dq")
+        && std::arch::is_x86_feature_detected!("avx512vl")
+        && std::arch::is_x86_feature_detected!("avx512vpopcntdq")
+        && std::arch::is_x86_feature_detected!("avx512ifma")
+        && std::arch::is_x86_feature_detected!("avx512vbmi")
+        && std::arch::is_x86_feature_detected!("avx512vnni")
+}
+
+// Test with Avx512ModernToken-like features (27 features)
+fn std_avx512_modern_features() -> bool {
+    std::arch::is_x86_feature_detected!("sse3")
+        && std::arch::is_x86_feature_detected!("ssse3")
+        && std::arch::is_x86_feature_detected!("sse4.1")
+        && std::arch::is_x86_feature_detected!("sse4.2")
+        && std::arch::is_x86_feature_detected!("popcnt")
+        && std::arch::is_x86_feature_detected!("avx")
+        && std::arch::is_x86_feature_detected!("avx2")
+        && std::arch::is_x86_feature_detected!("fma")
+        && std::arch::is_x86_feature_detected!("bmi1")
+        && std::arch::is_x86_feature_detected!("bmi2")
+        && std::arch::is_x86_feature_detected!("f16c")
+        && std::arch::is_x86_feature_detected!("lzcnt")
+        && std::arch::is_x86_feature_detected!("avx512f")
+        && std::arch::is_x86_feature_detected!("avx512bw")
+        && std::arch::is_x86_feature_detected!("avx512cd")
+        && std::arch::is_x86_feature_detected!("avx512dq")
+        && std::arch::is_x86_feature_detected!("avx512vl")
+        && std::arch::is_x86_feature_detected!("avx512vpopcntdq")
+        && std::arch::is_x86_feature_detected!("avx512ifma")
+        && std::arch::is_x86_feature_detected!("avx512vbmi")
+        && std::arch::is_x86_feature_detected!("avx512vbmi2")
+        && std::arch::is_x86_feature_detected!("avx512bitalg")
+        && std::arch::is_x86_feature_detected!("avx512vnni")
+        && std::arch::is_x86_feature_detected!("avx512bf16")
+        && std::arch::is_x86_feature_detected!("vpclmulqdq")
+        && std::arch::is_x86_feature_detected!("gfni")
+        && std::arch::is_x86_feature_detected!("vaes")
+}
+
 // ============================================================================
 // Benchmarks
 // ============================================================================
@@ -101,6 +145,14 @@ fn bench_summon(c: &mut Criterion) {
 
     group.bench_function("std_one_feature", |b| {
         b.iter(|| black_box(just_one_std_detection()))
+    });
+
+    group.bench_function("std_nine_features", |b| {
+        b.iter(|| black_box(std_many_features()))
+    });
+
+    group.bench_function("std_27_features", |b| {
+        b.iter(|| black_box(std_avx512_modern_features()))
     });
 
     group.finish();
