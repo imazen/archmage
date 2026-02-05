@@ -39,6 +39,40 @@ fn main() {
 
 `summon()` checks CPUID. `#[arcane]` enables `#[target_feature]`, making intrinsics safe (Rust 1.85+). The prelude re-exports `safe_unaligned_simd` functions directly — `_mm256_loadu_ps` takes `&[f32; 8]`, not a raw pointer. Compile with `-C target-cpu=haswell` to elide the runtime check.
 
+## Inner helpers with `#[rite]`
+
+Use `#[rite]` for helpers that are only called from `#[arcane]` functions:
+
+```rust
+use archmage::prelude::*;
+
+// Entry point: use #[arcane]
+#[arcane]
+fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let products = mul_vectors(token, a, b);  // Calls #[rite] helper
+    horizontal_sum(token, products)
+}
+
+// Inner helper: use #[rite] (no wrapper overhead)
+#[rite]
+fn mul_vectors(_: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
+    let va = _mm256_loadu_ps(a);
+    let vb = _mm256_loadu_ps(b);
+    _mm256_mul_ps(va, vb)
+}
+
+#[rite]
+fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
+    let sum = _mm256_hadd_ps(v, v);
+    let sum = _mm256_hadd_ps(sum, sum);
+    let low = _mm256_castps256_ps128(sum);
+    let high = _mm256_extractf128_ps::<1>(sum);
+    _mm_cvtss_f32(_mm_add_ss(low, high))
+}
+```
+
+`#[rite]` adds `#[target_feature]` + `#[inline]` without a wrapper function. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe—no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
+
 ## SIMD types with `magetypes`
 
 ```rust
@@ -104,7 +138,7 @@ All tokens compile on all platforms. `summon()` returns `None` on unsupported ar
 
 - Tokens: `Desktop64`, `Arm64`, `ScalarToken`, etc.
 - Traits: `SimdToken`, `IntoConcreteToken`, `HasX64V2`, etc.
-- Macros: `#[arcane]`, `#[magetypes]`, `incant!`
+- Macros: `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`
 - Intrinsics: `core::arch::*` for your platform
 - Memory ops: `safe_unaligned_simd` functions (reference-based, no raw pointers)
 

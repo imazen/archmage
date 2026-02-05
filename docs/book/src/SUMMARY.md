@@ -13,6 +13,7 @@
 - [Compile-Time vs Runtime](./concepts/compile-vs-runtime.md)
 - [Token Hoisting](./concepts/token-hoisting.md)
 - [The #[arcane] Macro](./concepts/arcane.md)
+- [The #[rite] Macro](./concepts/rite.md)
 - [Cross-Platform Stubs](./concepts/cross-platform.md)
 
 # Dispatch Patterns

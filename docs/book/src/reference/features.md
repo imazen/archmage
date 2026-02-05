@@ -22,7 +22,7 @@ archmage = { version = "0.4", default-features = false }
 
 ### `macros` (default)
 
-Enables procedural macros: `#[arcane]`, `#[multiwidth]`, `incant!`, etc.
+Enables procedural macros: `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`, etc.
 
 ```toml
 # Disable macros (rare)
