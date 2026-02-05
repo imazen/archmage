@@ -6,7 +6,7 @@
 mod x86_tests {
     #[cfg(feature = "avx512")]
     use archmage::Avx512Token;
-    use archmage::{Avx2FmaToken, Desktop64, Has256BitSimd, SimdToken, X64V3Token, arcane};
+    use archmage::{Avx2FmaToken, Desktop64, SimdToken, X64V3Token, arcane};
     use std::arch::x86_64::*;
 
     /// Basic test: arcane with X64V3Token
@@ -147,9 +147,9 @@ mod x86_tests {
     // Tests for impl Trait and generic type parameters
     // =====================================================================
 
-    /// Test with impl Trait bound
+    /// Test with impl Trait bound (using concrete token)
     #[arcane]
-    fn impl_trait_test(token: impl Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
+    fn impl_trait_test(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
         let mut out = [0.0f32; 8];
@@ -166,12 +166,11 @@ mod x86_tests {
         }
     }
 
-    /// Test that impl Trait accepts different concrete tokens
+    /// Test that concrete token function accepts X64V3Token
     #[test]
     fn test_arcane_impl_trait_accepts_x64v3() {
         if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-            // X64V3Token implements Has256BitSimd, so this should work
             let output = impl_trait_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
         }
@@ -179,7 +178,7 @@ mod x86_tests {
 
     /// Test with generic type parameter (inline bounds)
     #[arcane]
-    fn generic_inline_bounds<T: Has256BitSimd>(token: T, data: &[f32; 8]) -> [f32; 8] {
+    fn generic_inline_bounds(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
         let mut out = [0.0f32; 8];
@@ -198,10 +197,7 @@ mod x86_tests {
 
     /// Test with generic type parameter (where clause)
     #[arcane]
-    fn generic_where_clause<T>(token: T, data: &[f32; 8]) -> [f32; 8]
-    where
-        T: Has256BitSimd,
-    {
+    fn generic_where_clause(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         let doubled = _mm256_add_ps(v, v);
         let mut out = [0.0f32; 8];
@@ -277,9 +273,9 @@ mod x86_tests {
         }
     }
 
-    /// Test using Has256BitSimd (lower bound) with X64V3Token
+    /// Test using concrete token X64V3Token
     #[arcane]
-    fn lower_bound_test(token: impl Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
+    fn lower_bound_test(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
         // AVX instruction (256-bit)
         let doubled = _mm256_add_ps(v, v);
@@ -290,7 +286,6 @@ mod x86_tests {
 
     #[test]
     fn test_arcane_lower_bound_accepts_higher_token() {
-        // X64V3Token should work with Has256BitSimd bound
         if let Some(token) = X64V3Token::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let output = lower_bound_test(token, &input);
@@ -337,12 +332,12 @@ mod x86_tests {
         }
     }
 
-    /// Test that Desktop64 works with impl Has256BitSimd bounds
+    /// Test that Desktop64 (alias for X64V3Token) works with X64V3Token functions
     #[test]
     fn test_desktop64_with_impl_trait() {
         if let Some(token) = Desktop64::summon() {
             let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-            // Desktop64 implements Has256BitSimd
+            // Desktop64 = X64V3Token
             let output = impl_trait_test(token, &input);
             assert_eq!(output, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
         }
@@ -414,14 +409,14 @@ mod x86_tests {
 
     /// Trait with all three self receiver types
     trait SimdOps {
-        fn double(&self, token: impl Has256BitSimd) -> Self;
-        fn square(self, token: impl Has256BitSimd) -> Self;
-        fn scale(&mut self, token: impl Has256BitSimd, factor: f32);
+        fn double(&self, token: X64V3Token) -> Self;
+        fn square(self, token: X64V3Token) -> Self;
+        fn scale(&mut self, token: X64V3Token, factor: f32);
     }
 
     impl SimdOps for SimdVec8 {
         #[arcane(_self = SimdVec8)]
-        fn double(&self, _token: impl Has256BitSimd) -> Self {
+        fn double(&self, _token: X64V3Token) -> Self {
             let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
             let doubled = _mm256_add_ps(v, v);
             let mut out = [0.0f32; 8];
@@ -430,7 +425,7 @@ mod x86_tests {
         }
 
         #[arcane(_self = SimdVec8)]
-        fn square(self, _token: impl Has256BitSimd) -> Self {
+        fn square(self, _token: X64V3Token) -> Self {
             let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
             let squared = _mm256_mul_ps(v, v);
             let mut out = [0.0f32; 8];
@@ -439,7 +434,7 @@ mod x86_tests {
         }
 
         #[arcane(_self = SimdVec8)]
-        fn scale(&mut self, _token: impl Has256BitSimd, factor: f32) {
+        fn scale(&mut self, _token: X64V3Token, factor: f32) {
             let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
             let scale = _mm256_set1_ps(factor);
             let scaled = _mm256_mul_ps(v, scale);

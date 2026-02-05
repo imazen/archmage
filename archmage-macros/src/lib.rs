@@ -82,7 +82,7 @@ use generated::{token_to_arch, token_to_features, trait_to_features};
 enum TokenTypeInfo {
     /// Concrete token type (e.g., `Avx2Token`)
     Concrete(String),
-    /// impl Trait with the trait names (e.g., `impl Has256BitSimd`)
+    /// impl Trait with the trait names (e.g., `impl HasX64V2`)
     ImplTrait(Vec<String>),
     /// Generic type parameter name (e.g., `T`)
     Generic(String),
@@ -109,7 +109,7 @@ fn extract_token_type_info(ty: &Type) -> Option<TokenTypeInfo> {
             extract_token_type_info(&type_ref.elem)
         }
         Type::ImplTrait(impl_trait) => {
-            // Handle `impl Has256BitSimd` or `impl HasX64V2 + HasNeon`
+            // Handle `impl HasX64V2` or `impl HasX64V2 + HasNeon`
             let traits: Vec<String> = extract_trait_names_from_bounds(&impl_trait.bounds);
             if traits.is_empty() {
                 None
@@ -471,8 +471,8 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// ```ignore
 /// #[arcane]
-/// fn process(token: impl Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
-///     // Accepts any token that provides 256-bit SIMD
+/// fn process(token: impl HasX64V2, data: &[f32; 8]) -> [f32; 8] {
+///     // Accepts any token with x86-64-v2 features (SSE4.2+)
 /// }
 /// ```
 ///
@@ -480,15 +480,15 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// ```ignore
 /// #[arcane]
-/// fn process<T: Has256BitSimd>(token: T, data: &[f32; 8]) -> [f32; 8] {
-///     // Generic over any 256-bit-capable token
+/// fn process<T: HasX64V2>(token: T, data: &[f32; 8]) -> [f32; 8] {
+///     // Generic over any v2-capable token
 /// }
 ///
 /// // Also works with where clauses:
 /// #[arcane]
 /// fn process<T>(token: T, data: &[f32; 8]) -> [f32; 8]
 /// where
-///     T: Has256BitSimd
+///     T: HasX64V2
 /// {
 ///     // ...
 /// }
@@ -500,29 +500,29 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// `_self = Type` argument. Use `_self` in the function body instead of `self`:
 ///
 /// ```ignore
-/// use archmage::{Has256BitSimd, arcane};
+/// use archmage::{X64V3Token, arcane};
 /// use wide::f32x8;
 ///
 /// trait SimdOps {
-///     fn double(&self, token: impl Has256BitSimd) -> Self;
-///     fn square(self, token: impl Has256BitSimd) -> Self;
-///     fn scale(&mut self, token: impl Has256BitSimd, factor: f32);
+///     fn double(&self, token: X64V3Token) -> Self;
+///     fn square(self, token: X64V3Token) -> Self;
+///     fn scale(&mut self, token: X64V3Token, factor: f32);
 /// }
 ///
 /// impl SimdOps for f32x8 {
 ///     #[arcane(_self = f32x8)]
-///     fn double(&self, _token: impl Has256BitSimd) -> Self {
+///     fn double(&self, _token: X64V3Token) -> Self {
 ///         // Use _self instead of self in the body
 ///         *_self + *_self
 ///     }
 ///
 ///     #[arcane(_self = f32x8)]
-///     fn square(self, _token: impl Has256BitSimd) -> Self {
+///     fn square(self, _token: X64V3Token) -> Self {
 ///         _self * _self
 ///     }
 ///
 ///     #[arcane(_self = f32x8)]
-///     fn scale(&mut self, _token: impl Has256BitSimd, factor: f32) {
+///     fn scale(&mut self, _token: X64V3Token, factor: f32) {
 ///         *_self = *_self * f32x8::splat(factor);
 ///     }
 /// }
@@ -544,8 +544,8 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// ```ignore
 /// #[arcane]
-/// fn fma_kernel(token: impl HasX64V2 + Has256BitSimd, data: &[f32; 8]) -> [f32; 8] {
-///     // Both SSE4.2 and AVX features are enabled here
+/// fn fma_kernel(token: impl HasX64V2 + HasNeon, data: &[f32; 8]) -> [f32; 8] {
+///     // Cross-platform: SSE4.2 on x86, NEON on ARM
 /// }
 /// ```
 ///
@@ -590,9 +590,9 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// # Supported Trait Bounds
 ///
 /// - **x86_64 tiers**: `HasX64V2`, `HasX64V4`
-/// - **x86_64 width**: `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`
 /// - **ARM**: `HasNeon`, `HasNeonAes`, `HasNeonSha3`
 ///
+/// **Preferred:** Use concrete tokens (`X64V3Token`, `Desktop64`, `NeonToken`) directly.
 /// Concrete token types also work as trait bounds (e.g., `impl X64V3Token`).
 ///
 /// # Options

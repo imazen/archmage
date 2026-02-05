@@ -5,12 +5,12 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{Desktop64, Has256BitSimd, SimdToken, arcane};
+use archmage::{Desktop64, SimdToken, arcane};
 use std::arch::x86_64::*;
 
 // Value intrinsics - ALL SAFE inside #[arcane], no unsafe needed!
 #[arcane]
-fn test_value_intrinsics(_token: impl Has256BitSimd, a: __m256, b: __m256) -> __m256 {
+fn test_value_intrinsics(_token: Desktop64, a: __m256, b: __m256) -> __m256 {
     let sum = _mm256_add_ps(a, b);
     let prod = _mm256_mul_ps(sum, sum);
     let blended = _mm256_blend_ps::<0b10101010>(prod, sum);
@@ -19,7 +19,7 @@ fn test_value_intrinsics(_token: impl Has256BitSimd, a: __m256, b: __m256) -> __
 
 // Reference-based load via safe_unaligned_simd - also safe!
 #[arcane]
-fn test_safe_load(_token: impl Has256BitSimd, data: &[f32; 8]) -> __m256 {
+fn test_safe_load(_token: Desktop64, data: &[f32; 8]) -> __m256 {
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
 }
 

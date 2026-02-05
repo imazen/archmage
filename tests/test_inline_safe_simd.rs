@@ -2,11 +2,11 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{Desktop64, Has256BitSimd, SimdToken, arcane};
+use archmage::{Desktop64, SimdToken, arcane};
 use std::arch::x86_64::*;
 
 #[arcane]
-pub fn process(_token: impl Has256BitSimd, data: &mut [[f32; 8]]) {
+pub fn process(_token: Desktop64, data: &mut [[f32; 8]]) {
     for chunk in data.iter_mut() {
         let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(chunk);
         let r = _mm256_mul_ps(v, v);
