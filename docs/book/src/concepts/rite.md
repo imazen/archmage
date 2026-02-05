@@ -4,6 +4,34 @@
 
 Use `#[arcane]` only at **entry points** where the token comes from the outside world.
 
+## How It Works
+
+```mermaid
+flowchart LR
+    A["Your code:<br/>#[rite]<br/>fn helper(token: Desktop64, ...)"] --> B["Macro adds:<br/>#[target_feature(...)]<br/>#[inline]<br/>directly to your function"]
+
+    style A fill:#1a4a6e,color:#fff
+    style B fill:#2d5a27,color:#fff
+```
+
+No wrapper. No inner function. Just attributes on your function. That's why it's zero overhead — there's nothing extra to call through.
+
+```mermaid
+flowchart TD
+    PUB["Public API<br/>(no SIMD features)"] --> ARC["#[arcane] entry point<br/>(creates safe wrapper)"]
+    ARC --> H1["#[rite] helper<br/>(inlines fully)"]
+    ARC --> H2["#[rite] helper<br/>(inlines fully)"]
+    H1 --> H3["#[rite] helper<br/>(inlines fully)"]
+
+    PUB -.->|"unsafe needed<br/>if calling #[rite]<br/>directly"| H1
+
+    style PUB fill:#5a3d1e,color:#fff
+    style ARC fill:#2d5a27,color:#fff
+    style H1 fill:#1a4a6e,color:#fff
+    style H2 fill:#1a4a6e,color:#fff
+    style H3 fill:#1a4a6e,color:#fff
+```
+
 ## The Rule
 
 | Caller | Use |
@@ -45,6 +73,9 @@ fn horizontal_sum(_token: Desktop64, v: __m256) -> f32 {
 
 ## What It Generates
 
+<details>
+<summary>Macro expansion (click to expand)</summary>
+
 ```rust
 // Your code:
 #[rite]
@@ -60,7 +91,7 @@ fn helper(_token: Desktop64, v: __m256) -> __m256 {
 }
 ```
 
-Compare to `#[arcane]` which creates:
+Compare to `#[arcane]` which creates a wrapper:
 ```rust
 fn helper(_token: Desktop64, v: __m256) -> __m256 {
     #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
@@ -71,6 +102,8 @@ fn helper(_token: Desktop64, v: __m256) -> __m256 {
     unsafe { __inner(_token, v) }
 }
 ```
+
+</details>
 
 ## Why This Works (Rust 1.85+)
 

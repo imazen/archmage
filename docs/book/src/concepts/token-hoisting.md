@@ -1,47 +1,28 @@
 # Token Hoisting
 
-**This is the most important performance rule in archmage.**
+Summon tokens once at your API boundary and pass them through. `summon()` hits an atomic cache (~1.3 ns), but in a hot inner loop that adds up fast — we measured a 42% regression from summoning per-call instead of per-batch.
 
-Summon tokens **once** at your API boundary. Pass them through the call chain. Never summon in hot loops.
+```mermaid
+flowchart TD
+    API["Public API<br/>summon() once here"] --> ARC["#[arcane] entry<br/>(token passed in)"]
+    ARC --> L["Loop over data"]
+    L --> R1["#[rite] helper<br/>(token passed through)"]
+    R1 --> R2["#[rite] helper<br/>(token passed through)"]
+    L -->|"next iteration"| L
 
-## The Problem: 42% Performance Regression
-
-```rust
-// WRONG: Summoning in inner function
-fn distance(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    if let Some(token) = X64V3Token::summon() {  // CPUID every call!
-        distance_simd(token, a, b)
-    } else {
-        distance_scalar(a, b)
-    }
-}
-
-fn find_closest(points: &[[f32; 8]], query: &[f32; 8]) -> usize {
-    let mut best_idx = 0;
-    let mut best_dist = f32::MAX;
-
-    for (i, point) in points.iter().enumerate() {
-        let d = distance(point, query);  // summon() called N times!
-        if d < best_dist {
-            best_dist = d;
-            best_idx = i;
-        }
-    }
-    best_idx
-}
+    style API fill:#5a3d1e,color:#fff
+    style ARC fill:#2d5a27,color:#fff
+    style R1 fill:#1a4a6e,color:#fff
+    style R2 fill:#1a4a6e,color:#fff
 ```
 
-This is **42% slower** than hoisting the token. CPUID is not free.
-
-## The Solution: Hoist to API Boundary
+## Example
 
 ```rust
 use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::f32x8;
 
-// RIGHT: Summon once, pass through
 fn find_closest(points: &[[f32; 8]], query: &[f32; 8]) -> usize {
-    // Summon ONCE at entry
     if let Some(token) = X64V3Token::summon() {
         find_closest_simd(token, points, query)
     } else {
@@ -55,7 +36,7 @@ fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -
     let mut best_dist = f32::MAX;
 
     for (i, point) in points.iter().enumerate() {
-        let d = distance_simd(token, point, query);  // Token passed, no summon!
+        let d = distance_simd(token, point, query);
         if d < best_dist {
             best_dist = d;
             best_idx = i;
@@ -66,7 +47,6 @@ fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -
 
 #[arcane]
 fn distance_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    // Just use the token - no detection here
     let va = f32x8::from_array(token, *a);
     let vb = f32x8::from_array(token, *b);
     let diff = va - vb;
@@ -74,71 +54,22 @@ fn distance_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 ```
 
-## The Rule
+The pattern: `summon()` at the public entry point, then pass the token through the call chain. The token is zero-sized — passing it costs nothing at runtime.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  Public API boundary                                     │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │  if let Some(token) = Token::summon() {             ││
-│  │      // ONLY place summon() is called               ││
-│  │      internal_impl(token, ...);                     ││
-│  │  }                                                  ││
-│  └─────────────────────────────────────────────────────┘│
-│                          │                               │
-│                          ▼                               │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │  #[arcane]                                          ││
-│  │  fn internal_impl(token: Token, ...) {              ││
-│  │      helper(token, ...);  // Pass token through     ││
-│  │  }                                                  ││
-│  └─────────────────────────────────────────────────────┘│
-│                          │                               │
-│                          ▼                               │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │  #[arcane]                                          ││
-│  │  fn helper(token: Token, ...) {                     ││
-│  │      // Use token, never summon                     ││
-│  │  }                                                  ││
-│  └─────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────┘
-```
+## With `-Ctarget-cpu=native`
 
-## Why Tokens Are Zero-Cost to Pass
-
-```rust
-// Tokens are zero-sized
-assert_eq!(std::mem::size_of::<X64V3Token>(), 0);
-
-// Passing them costs nothing at runtime
-fn f(token: X64V3Token) { }  // No actual parameter in compiled code
-```
-
-The token exists only at compile time to prove you did the check. At runtime, it's completely erased.
-
-## When `-Ctarget-cpu=native` Helps
-
-With compile-time feature guarantees, `summon()` becomes a no-op:
+When the compiler knows the target has the features, `summon()` compiles away entirely:
 
 ```bash
 RUSTFLAGS="-Ctarget-cpu=native" cargo build --release
 ```
 
-Now `X64V3Token::summon()` compiles to:
-
-```rust
-// Effectively becomes:
-fn summon() -> Option<X64V3Token> {
-    Some(X64V3Token)  // No CPUID, unconditional
-}
-```
-
-But even then, **always hoist**. It's good practice, and your code works correctly when compiled without target-cpu.
+Even so, hoisting is still good practice — your code works correctly when compiled without target-cpu.
 
 ## Summary
 
-| Pattern | Performance | Correctness |
-|---------|-------------|-------------|
-| `summon()` in hot loop | 42% slower | Works |
-| `summon()` at API boundary | Optimal | Works |
-| `summon()` with `-Ctarget-cpu` | Optimal | Works |
+| Pattern | Performance |
+|---------|-------------|
+| `summon()` in hot loop | 42% slower |
+| `summon()` at API boundary | Optimal |
+| `summon()` with `-Ctarget-cpu` | Optimal (compiles away) |

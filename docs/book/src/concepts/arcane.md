@@ -4,6 +4,35 @@
 
 For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md) instead—it has zero wrapper overhead.
 
+## How It Works
+
+```mermaid
+flowchart LR
+    A["Your code:<br/>#[arcane]<br/>fn kernel(token: Desktop64, ...)"] --> B["Macro generates:<br/>outer fn (safe, takes token)<br/>inner fn (#[target_feature])"]
+    B --> C["Outer calls inner<br/>via unsafe { __inner(...) }"]
+    C --> D["SAFETY: token proves<br/>CPU support exists"]
+
+    style A fill:#2d5a27,color:#fff
+    style B fill:#1a4a6e,color:#fff
+    style D fill:#5a3d1e,color:#fff
+```
+
+```mermaid
+flowchart TD
+    S["summon() returns Some(token)"] --> A["#[arcane] fn (entry point)"]
+    A --> R1["#[rite] helper"]
+    A --> R2["#[rite] helper"]
+    R1 --> R3["#[rite] helper"]
+
+    style S fill:#5a3d1e,color:#fff
+    style A fill:#2d5a27,color:#fff
+    style R1 fill:#1a4a6e,color:#fff
+    style R2 fill:#1a4a6e,color:#fff
+    style R3 fill:#1a4a6e,color:#fff
+```
+
+`#[arcane]` sits at the boundary between non-SIMD and SIMD code. Everything below it in the call tree uses `#[rite]`.
+
 ## Basic Usage
 
 ```rust
@@ -24,6 +53,9 @@ fn add_vectors(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 
 ## What It Generates
 
+<details>
+<summary>Macro expansion (click to expand)</summary>
+
 ```rust
 // Your code:
 #[arcane]
@@ -42,6 +74,8 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
     unsafe { __inner(token, a, b) }
 }
 ```
+
+</details>
 
 ## Token-to-Features Mapping
 
@@ -99,7 +133,10 @@ fn v3_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
 
 ## Cross-Platform Stubs
 
-On non-matching architectures, `#[arcane]` generates a stub:
+On non-matching architectures, `#[arcane]` generates an unreachable stub. It compiles but can never execute — `Desktop64::summon()` returns `None` on ARM.
+
+<details>
+<summary>Generated stub (click to expand)</summary>
 
 ```rust
 // On ARM, this becomes:
@@ -109,7 +146,7 @@ fn add(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
-The stub compiles but can never be reached—`Desktop64::summon()` returns `None` on ARM.
+</details>
 
 ## Options
 

@@ -2,6 +2,17 @@
 
 The simplest dispatch pattern: check for tokens explicitly, call the appropriate implementation.
 
+```mermaid
+flowchart TD
+    API["Public fn"] --> CHECK{"Token::summon()?"}
+    CHECK -->|"Some(token)"| SIMD["#[arcane] fn<br/>(SIMD path)"]
+    CHECK -->|None| SCALAR["Scalar fallback"]
+
+    style API fill:#5a3d1e,color:#fff
+    style SIMD fill:#2d5a27,color:#fff
+    style SCALAR fill:#1a4a6e,color:#fff
+```
+
 ## Basic Pattern
 
 ```rust

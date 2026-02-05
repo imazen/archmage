@@ -4,30 +4,31 @@ Real applications need graceful degradation across capability tiers. Here's how 
 
 ## The Tier Hierarchy
 
-```
-x86-64:
-  X64V4Token (AVX-512)
-      ↓
-  X64V3Token (AVX2+FMA)  ← Most common target
-      ↓
-  X64V2Token (SSE4.2)
-      ↓
-  ScalarToken
+```mermaid
+flowchart TD
+    subgraph x86["x86-64"]
+        V4["X64V4Token<br/>(AVX-512)"] --> V3["X64V3Token<br/>(AVX2+FMA)"]
+        V3 --> V2["X64V2Token<br/>(SSE4.2)"]
+        V2 --> S1["ScalarToken"]
+    end
+    subgraph arm["AArch64"]
+        SHA3["NeonSha3Token"] --> NEON["NeonToken<br/>(baseline)"]
+        AES["NeonAesToken"] --> NEON
+        NEON --> S2["ScalarToken"]
+    end
+    subgraph wasm["WASM"]
+        W128["Wasm128Token"] --> S3["ScalarToken"]
+    end
 
-AArch64:
-  NeonSha3Token
-      ↓
-  NeonAesToken
-      ↓
-  NeonToken  ← Baseline (always available)
-      ↓
-  ScalarToken
-
-WASM:
-  Wasm128Token
-      ↓
-  ScalarToken
+    style V3 fill:#2d5a27,color:#fff
+    style NEON fill:#2d5a27,color:#fff
+    style W128 fill:#2d5a27,color:#fff
+    style S1 fill:#1a4a6e,color:#fff
+    style S2 fill:#1a4a6e,color:#fff
+    style S3 fill:#1a4a6e,color:#fff
 ```
+
+Each token implies all the capabilities below it. `summon()` returns the first match.
 
 ## Pattern: Capability Waterfall
 

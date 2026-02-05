@@ -8,7 +8,11 @@ src = "src"
 [build]
 build-dir = "../../target/book"
 
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
 [output.html]
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
 default-theme = "rust"
 preferred-dark-theme = "ayu"
 git-repository-url = "https://github.com/imazen/archmage"

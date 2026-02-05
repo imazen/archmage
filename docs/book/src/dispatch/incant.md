@@ -2,6 +2,51 @@
 
 `incant!` automates dispatch to suffixed function variants. Write one call, get automatic fallback through capability tiers.
 
+## Dispatch Flow
+
+```mermaid
+flowchart TD
+    CALL["incant!(process(data))"] --> V4{"X64V4Token::summon()?<br/>(x86 + avx512 feature)"}
+    V4 -->|Some| PV4["process_v4(token, data)"]
+    V4 -->|None / wrong arch| V3{"X64V3Token::summon()?<br/>(x86)"}
+    V3 -->|Some| PV3["process_v3(token, data)"]
+    V3 -->|None / wrong arch| NEON{"NeonToken::summon()?<br/>(aarch64)"}
+    NEON -->|Some| PN["process_neon(token, data)"]
+    NEON -->|None / wrong arch| WASM{"Wasm128Token::summon()?<br/>(wasm32)"}
+    WASM -->|Some| PW["process_wasm128(token, data)"]
+    WASM -->|None / wrong arch| PS["process_scalar(data)"]
+
+    style CALL fill:#5a3d1e,color:#fff
+    style PV4 fill:#2d5a27,color:#fff
+    style PV3 fill:#2d5a27,color:#fff
+    style PN fill:#2d5a27,color:#fff
+    style PW fill:#2d5a27,color:#fff
+    style PS fill:#1a4a6e,color:#fff
+```
+
+Missing variants are skipped at compile time. You only need to implement the platforms you care about plus `_scalar`.
+
+### Passthrough Mode
+
+```mermaid
+flowchart TD
+    CALL["incant!(token =><br/>process(data))"] --> CHECK{"token.as_x64v4()?"}
+    CHECK -->|Some| PV4["process_v4(v4_token, data)"]
+    CHECK -->|None| CHECK3{"token.as_x64v3()?"}
+    CHECK3 -->|Some| PV3["process_v3(v3_token, data)"]
+    CHECK3 -->|None| CHECKN{"token.as_neon()?"}
+    CHECKN -->|Some| PN["process_neon(neon_token, data)"]
+    CHECKN -->|None| PS["process_scalar(data)"]
+
+    style CALL fill:#5a3d1e,color:#fff
+    style PV4 fill:#2d5a27,color:#fff
+    style PV3 fill:#2d5a27,color:#fff
+    style PN fill:#2d5a27,color:#fff
+    style PS fill:#1a4a6e,color:#fff
+```
+
+Passthrough uses `IntoConcreteToken` to check what the token actually is, without re-summoning.
+
 ## Basic Usage
 
 ```rust
@@ -32,7 +77,8 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 
 ## How It Works
 
-`incant!` expands to a dispatch chain:
+<details>
+<summary>Macro expansion (click to expand)</summary>
 
 ```rust
 // incant!(process(data)) expands to approximately:
@@ -60,6 +106,8 @@ pub fn sum(data: &[f32; 8]) -> f32 {
     process_scalar(data)
 }
 ```
+
+</details>
 
 ## Suffix Conventions
 
