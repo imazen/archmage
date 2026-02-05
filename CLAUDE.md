@@ -666,6 +666,41 @@ These are documented semantic differences between architectures. Tests must acco
 | `blend` signature | `(mask, true, false)` | `(mask, true, false)` | `(self, other, mask)` | Avoid in portable code; use bitcast + comparison verification |
 | `interleave_lo/hi` | f32x4 only | f32x4 only | f32x4 only | Only use on f32x4, not integer types |
 
+### Planned: Type Implementation Verification
+
+Magetypes vectors should have an `.implementation_name() -> &'static str` method that returns a string identifying the implementation (e.g., `"x86::w256::f32x8"` vs `"polyfill::neon::f32x8"`).
+
+**Purpose:**
+1. Verify that when importing from `magetypes::simd::*` in a general context (outside of `#[magetypes]` functions), we get the best type the compiler can guarantee for the target
+2. Verify that when using an unprefixed `f32x8` inside a `#[magetypes]` function, we get the one matching the function variant (i.e., the macro generated the optimal use path)
+
+**CI Testing Strategy:**
+- Run tests with a comprehensive range of `-Ctarget-cpu=` values on every architecture
+- Validate optimal compile-time elision and runtime behavior
+- Inside `#[magetypes]` functions: comprehensive token tier test ensuring imported types have the correct `implementation_name()`
+
+**Example test pattern:**
+```rust
+#[magetypes]
+fn verify_implementation(token: Token) -> &'static str {
+    f32x8::implementation_name()
+}
+
+#[test]
+fn v3_uses_native_f32x8() {
+    if let Some(_) = X64V3Token::summon() {
+        assert_eq!(verify_implementation_v3(X64V3Token), "x86::w256::f32x8");
+    }
+}
+
+#[test]
+fn neon_uses_polyfill_f32x8() {
+    if let Some(_) = NeonToken::summon() {
+        assert_eq!(verify_implementation_neon(NeonToken), "polyfill::neon::f32x8");
+    }
+}
+```
+
 ### Long-Term
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
