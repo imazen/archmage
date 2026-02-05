@@ -12,7 +12,7 @@ pub struct Wasm128Token {
 }
 
 impl SimdToken for Wasm128Token {
-    const NAME: &'static str = "SIMD128";
+    const NAME: &'static str = "WASM SIMD128";
 
     #[inline]
     fn guaranteed() -> Option<bool> {

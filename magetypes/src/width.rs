@@ -1334,7 +1334,7 @@ mod arm_impl {
 #[cfg(target_arch = "wasm32")]
 mod wasm_impl {
     use super::WidthDispatch;
-    use archmage::{Wasm128Token, SimdToken};
+    use archmage::{SimdToken, Wasm128Token};
 
     use crate::simd::{f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2};
 

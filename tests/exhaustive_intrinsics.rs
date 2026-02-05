@@ -203,7 +203,7 @@ fn test_token_names() {
     assert_eq!(NeonCrcToken::NAME, "NEON+CRC");
 
     // WASM tokens
-    assert_eq!(Wasm128Token::NAME, "SIMD128");
+    assert_eq!(Wasm128Token::NAME, "WASM SIMD128");
 }
 
 /// Print all token names for debugging.
@@ -234,4 +234,45 @@ fn print_all_token_names() {
     println!("    NeonCrcToken:      {}", archmage::NeonCrcToken::NAME);
     println!("  WASM tokens:");
     println!("    Wasm128Token:      {}", archmage::Wasm128Token::NAME);
+}
+
+/// Test that implementation_name() returns the correct implementation path.
+#[test]
+fn test_implementation_names() {
+    use magetypes::simd::*;
+
+    // x86 native types
+    #[cfg(target_arch = "x86_64")]
+    {
+        assert_eq!(f32x4::implementation_name(), "x86::w128::f32x4");
+        assert_eq!(f64x2::implementation_name(), "x86::w128::f64x2");
+        assert_eq!(i32x4::implementation_name(), "x86::w128::i32x4");
+        assert_eq!(f32x8::implementation_name(), "x86::w256::f32x8");
+        assert_eq!(f64x4::implementation_name(), "x86::w256::f64x4");
+        assert_eq!(i32x8::implementation_name(), "x86::w256::i32x8");
+
+        #[cfg(feature = "avx512")]
+        {
+            assert_eq!(f32x16::implementation_name(), "x86::w512::f32x16");
+            assert_eq!(i32x16::implementation_name(), "x86::w512::i32x16");
+        }
+
+        // Polyfill types (on x86, w512 is polyfilled from w256 when not using avx512 feature)
+        // Not testing here since they overlap with native types when avx512 is enabled
+    }
+
+    // ARM types (would fail on x86 since types don't exist)
+    #[cfg(target_arch = "aarch64")]
+    {
+        assert_eq!(f32x4::implementation_name(), "arm::w128::f32x4");
+        assert_eq!(f64x2::implementation_name(), "arm::w128::f64x2");
+        assert_eq!(i32x4::implementation_name(), "arm::w128::i32x4");
+    }
+
+    // WASM types
+    #[cfg(target_arch = "wasm32")]
+    {
+        assert_eq!(f32x4::implementation_name(), "wasm::w128::f32x4");
+        assert_eq!(i32x4::implementation_name(), "wasm::w128::i32x4");
+    }
 }

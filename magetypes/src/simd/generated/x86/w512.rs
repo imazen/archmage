@@ -168,6 +168,17 @@ impl f32x16 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::f32x16"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1414,6 +1425,17 @@ impl f64x8 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::f64x8"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -2032,6 +2054,17 @@ impl i8x64 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::i8x64"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -2486,6 +2519,17 @@ impl u8x64 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::u8x64"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -2915,6 +2959,17 @@ impl i16x32 {
     pub fn from_bytes_owned(_: archmage::X64V4Token, bytes: [u8; 64]) -> Self {
         // SAFETY: [u8; 64] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::i16x32"
     }
 
     /// Element-wise minimum
@@ -3355,6 +3410,17 @@ impl u16x32 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::u16x32"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -3778,6 +3844,17 @@ impl i32x16 {
     pub fn from_bytes_owned(_: archmage::X64V4Token, bytes: [u8; 64]) -> Self {
         // SAFETY: [u8; 64] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::i32x16"
     }
 
     /// Element-wise minimum
@@ -4243,6 +4320,17 @@ impl u32x16 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::u32x16"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -4683,6 +4771,17 @@ impl i64x8 {
     pub fn from_bytes_owned(_: archmage::X64V4Token, bytes: [u8; 64]) -> Self {
         // SAFETY: [u8; 64] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::i64x8"
     }
 
     /// Element-wise minimum
@@ -5136,6 +5235,17 @@ impl u64x8 {
     pub fn from_bytes_owned(_: archmage::X64V4Token, bytes: [u8; 64]) -> Self {
         // SAFETY: [u8; 64] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w512::u64x8"
     }
 
     /// Element-wise minimum

@@ -216,6 +216,18 @@ pub mod sse {
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::f32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::f32x8"
+        }
     }
 
     impl Add for f32x8 {
@@ -501,6 +513,18 @@ pub mod sse {
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::f64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::f64x4"
+        }
     }
 
     impl Add for f64x4 {
@@ -709,6 +733,18 @@ pub mod sse {
         pub fn bitcast_mut_u8x32(&mut self) -> &mut u8x32 {
             unsafe { &mut *(self as *mut Self as *mut u8x32) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::i8x32"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::i8x32"
+        }
     }
 
     impl Add for i8x32 {
@@ -860,6 +896,18 @@ pub mod sse {
         #[inline(always)]
         pub fn bitcast_mut_i8x32(&mut self) -> &mut i8x32 {
             unsafe { &mut *(self as *mut Self as *mut i8x32) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::u8x32"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::u8x32"
         }
     }
 
@@ -1021,6 +1069,18 @@ pub mod sse {
         #[inline(always)]
         pub fn bitcast_mut_u16x16(&mut self) -> &mut u16x16 {
             unsafe { &mut *(self as *mut Self as *mut u16x16) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::i16x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::i16x16"
         }
     }
 
@@ -1191,6 +1251,18 @@ pub mod sse {
         #[inline(always)]
         pub fn bitcast_mut_i16x16(&mut self) -> &mut i16x16 {
             unsafe { &mut *(self as *mut Self as *mut i16x16) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::u16x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::u16x16"
         }
     }
 
@@ -1391,6 +1463,18 @@ pub mod sse {
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::i32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::i32x8"
+        }
     }
 
     impl Add for i32x8 {
@@ -1581,6 +1665,18 @@ pub mod sse {
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::u32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::u32x8"
+        }
     }
 
     impl Add for u32x8 {
@@ -1747,6 +1843,18 @@ pub mod sse {
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::i64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::i64x4"
+        }
     }
 
     impl Add for i64x4 {
@@ -1894,6 +2002,18 @@ pub mod sse {
         #[inline(always)]
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::sse::u64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::sse::u64x4"
         }
     }
 
@@ -2169,6 +2289,18 @@ pub mod neon {
         #[inline(always)]
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::f32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::f32x8"
         }
     }
 
@@ -2455,6 +2587,18 @@ pub mod neon {
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::f64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::f64x4"
+        }
     }
 
     impl Add for f64x4 {
@@ -2663,6 +2807,18 @@ pub mod neon {
         pub fn bitcast_mut_u8x32(&mut self) -> &mut u8x32 {
             unsafe { &mut *(self as *mut Self as *mut u8x32) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::i8x32"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::i8x32"
+        }
     }
 
     impl Add for i8x32 {
@@ -2814,6 +2970,18 @@ pub mod neon {
         #[inline(always)]
         pub fn bitcast_mut_i8x32(&mut self) -> &mut i8x32 {
             unsafe { &mut *(self as *mut Self as *mut i8x32) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::u8x32"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::u8x32"
         }
     }
 
@@ -2975,6 +3143,18 @@ pub mod neon {
         #[inline(always)]
         pub fn bitcast_mut_u16x16(&mut self) -> &mut u16x16 {
             unsafe { &mut *(self as *mut Self as *mut u16x16) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::i16x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::i16x16"
         }
     }
 
@@ -3145,6 +3325,18 @@ pub mod neon {
         #[inline(always)]
         pub fn bitcast_mut_i16x16(&mut self) -> &mut i16x16 {
             unsafe { &mut *(self as *mut Self as *mut i16x16) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::u16x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::u16x16"
         }
     }
 
@@ -3345,6 +3537,18 @@ pub mod neon {
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::i32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::i32x8"
+        }
     }
 
     impl Add for i32x8 {
@@ -3535,6 +3739,18 @@ pub mod neon {
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::u32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::u32x8"
+        }
     }
 
     impl Add for u32x8 {
@@ -3701,6 +3917,18 @@ pub mod neon {
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::i64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::i64x4"
+        }
     }
 
     impl Add for i64x4 {
@@ -3849,6 +4077,18 @@ pub mod neon {
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::neon::u64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::neon::u64x4"
+        }
     }
 
     impl Add for u64x4 {
@@ -3915,7 +4155,7 @@ pub mod neon {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub mod wasm128 {
+pub mod simd128 {
     //! Polyfilled 256-bit types using WASM SIMD128 (128-bit) operations.
 
     use crate::simd::generated::wasm::w128::{
@@ -4123,6 +4363,18 @@ pub mod wasm128 {
         #[inline(always)]
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::f32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::f32x8"
         }
     }
 
@@ -4409,6 +4661,18 @@ pub mod wasm128 {
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::f64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::f64x4"
+        }
     }
 
     impl Add for f64x4 {
@@ -4617,6 +4881,18 @@ pub mod wasm128 {
         pub fn bitcast_mut_u8x32(&mut self) -> &mut u8x32 {
             unsafe { &mut *(self as *mut Self as *mut u8x32) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::i8x32"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::i8x32"
+        }
     }
 
     impl Add for i8x32 {
@@ -4768,6 +5044,18 @@ pub mod wasm128 {
         #[inline(always)]
         pub fn bitcast_mut_i8x32(&mut self) -> &mut i8x32 {
             unsafe { &mut *(self as *mut Self as *mut i8x32) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::u8x32"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::u8x32"
         }
     }
 
@@ -4929,6 +5217,18 @@ pub mod wasm128 {
         #[inline(always)]
         pub fn bitcast_mut_u16x16(&mut self) -> &mut u16x16 {
             unsafe { &mut *(self as *mut Self as *mut u16x16) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::i16x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::i16x16"
         }
     }
 
@@ -5099,6 +5399,18 @@ pub mod wasm128 {
         #[inline(always)]
         pub fn bitcast_mut_i16x16(&mut self) -> &mut i16x16 {
             unsafe { &mut *(self as *mut Self as *mut i16x16) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::u16x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::u16x16"
         }
     }
 
@@ -5299,6 +5611,18 @@ pub mod wasm128 {
         pub fn bitcast_mut_u32x8(&mut self) -> &mut u32x8 {
             unsafe { &mut *(self as *mut Self as *mut u32x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::i32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::i32x8"
+        }
     }
 
     impl Add for i32x8 {
@@ -5489,6 +5813,18 @@ pub mod wasm128 {
         pub fn bitcast_mut_i32x8(&mut self) -> &mut i32x8 {
             unsafe { &mut *(self as *mut Self as *mut i32x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::u32x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::u32x8"
+        }
     }
 
     impl Add for u32x8 {
@@ -5655,6 +5991,18 @@ pub mod wasm128 {
         pub fn bitcast_mut_u64x4(&mut self) -> &mut u64x4 {
             unsafe { &mut *(self as *mut Self as *mut u64x4) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::i64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::i64x4"
+        }
     }
 
     impl Add for i64x4 {
@@ -5802,6 +6150,18 @@ pub mod wasm128 {
         #[inline(always)]
         pub fn bitcast_mut_i64x4(&mut self) -> &mut i64x4 {
             unsafe { &mut *(self as *mut Self as *mut i64x4) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::simd128::u64x4"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::simd128::u64x4"
         }
     }
 
@@ -6071,6 +6431,18 @@ pub mod avx2 {
         #[inline(always)]
         pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
             unsafe { &mut *(self as *mut Self as *mut u32x16) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::f32x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::f32x16"
         }
     }
 
@@ -6351,6 +6723,18 @@ pub mod avx2 {
         pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
             unsafe { &mut *(self as *mut Self as *mut u64x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::f64x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::f64x8"
+        }
     }
 
     impl Add for f64x8 {
@@ -6553,6 +6937,18 @@ pub mod avx2 {
         pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
             unsafe { &mut *(self as *mut Self as *mut u8x64) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::i8x64"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::i8x64"
+        }
     }
 
     impl Add for i8x64 {
@@ -6698,6 +7094,18 @@ pub mod avx2 {
         #[inline(always)]
         pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
             unsafe { &mut *(self as *mut Self as *mut i8x64) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::u8x64"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::u8x64"
         }
     }
 
@@ -6853,6 +7261,18 @@ pub mod avx2 {
         #[inline(always)]
         pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
             unsafe { &mut *(self as *mut Self as *mut u16x32) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::i16x32"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::i16x32"
         }
     }
 
@@ -7017,6 +7437,18 @@ pub mod avx2 {
         #[inline(always)]
         pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
             unsafe { &mut *(self as *mut Self as *mut i16x32) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::u16x32"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::u16x32"
         }
     }
 
@@ -7211,6 +7643,18 @@ pub mod avx2 {
         pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
             unsafe { &mut *(self as *mut Self as *mut u32x16) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::i32x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::i32x16"
+        }
     }
 
     impl Add for i32x16 {
@@ -7395,6 +7839,18 @@ pub mod avx2 {
         pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
             unsafe { &mut *(self as *mut Self as *mut i32x16) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::u32x16"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::u32x16"
+        }
     }
 
     impl Add for u32x16 {
@@ -7555,6 +8011,18 @@ pub mod avx2 {
         pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
             unsafe { &mut *(self as *mut Self as *mut u64x8) }
         }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::i64x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::i64x8"
+        }
     }
 
     impl Add for i64x8 {
@@ -7696,6 +8164,18 @@ pub mod avx2 {
         #[inline(always)]
         pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
             unsafe { &mut *(self as *mut Self as *mut i64x8) }
+        }
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"polyfill::avx2::u64x8"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {
+            "polyfill::avx2::u64x8"
         }
     }
 

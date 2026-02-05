@@ -168,6 +168,17 @@ impl f32x8 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::f32x8"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1563,6 +1574,17 @@ impl f64x4 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::f64x4"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -2142,6 +2164,17 @@ impl i8x32 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::i8x32"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -2571,6 +2604,17 @@ impl u8x32 {
     pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::u8x32"
     }
 
     /// Element-wise minimum
@@ -3073,6 +3117,17 @@ impl i16x16 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::i16x16"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -3569,6 +3624,17 @@ impl u16x16 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::u16x16"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -4038,6 +4104,17 @@ impl i32x8 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::i32x8"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -4503,6 +4580,17 @@ impl u32x8 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::u32x8"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -4927,6 +5015,17 @@ impl i64x4 {
     pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::i64x4"
     }
 
     /// Element-wise minimum (polyfill via compare+select)
@@ -5390,6 +5489,17 @@ impl u64x4 {
     pub fn from_bytes_owned(_: archmage::X64V3Token, bytes: [u8; 32]) -> Self {
         // SAFETY: [u8; 32] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time or at runtime (via `#[magetypes]` dispatch).
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "x86::w256::u64x4"
     }
 
     /// Element-wise minimum (polyfill via unsigned compare+select)

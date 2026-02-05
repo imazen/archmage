@@ -161,6 +161,19 @@ impl f32x4 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::f32x4"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::f32x4"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -1439,6 +1452,19 @@ impl f64x2 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::f64x2"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::f64x2"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -2003,6 +2029,19 @@ impl i8x16 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::i8x16"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::i8x16"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -2427,6 +2466,19 @@ impl u8x16 {
     pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::u8x16"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::u8x16"
     }
 
     /// Element-wise minimum
@@ -2869,6 +2921,19 @@ impl i16x8 {
     pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::i16x8"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::i16x8"
     }
 
     /// Element-wise minimum
@@ -3360,6 +3425,19 @@ impl u16x8 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::u16x8"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::u16x8"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -3802,6 +3880,19 @@ impl i32x4 {
     pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::i32x4"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::i32x4"
     }
 
     /// Element-wise minimum
@@ -4297,6 +4388,19 @@ impl u32x4 {
         Self(unsafe { core::mem::transmute(bytes) })
     }
 
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::u32x4"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::u32x4"
+    }
+
     /// Element-wise minimum
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
@@ -4730,6 +4834,19 @@ impl i64x2 {
     pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::i64x2"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::i64x2"
     }
 
     /// Absolute value (polyfill via conditional negate)
@@ -5183,6 +5300,19 @@ impl u64x2 {
     pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
+    }
+
+    // ========== Implementation identification ==========
+
+    /// Returns a string identifying this type's implementation.
+    ///
+    /// This is useful for verifying that the correct implementation is being used
+    /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+    ///
+    /// Returns `"wasm::w128::u64x2"`.
+    #[inline(always)]
+    pub const fn implementation_name() -> &'static str {
+        "wasm::w128::u64x2"
     }
 
     /// Element-wise minimum (polyfill via unsigned compare+select)

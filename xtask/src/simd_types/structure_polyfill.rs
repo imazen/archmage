@@ -466,6 +466,44 @@ fn generate_polyfill_type(elem: ElementType, platform: &PlatformConfig) -> Strin
             .replace('\n', "\n    "),
     );
 
+    // Implementation identification
+    let mod_name = platform.mod_name;
+    writeln!(
+        code,
+        "        // ========== Implementation identification ==========\n"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        /// Returns a string identifying this type's implementation."
+    )
+    .unwrap();
+    writeln!(code, "        ///").unwrap();
+    writeln!(
+        code,
+        "        /// This is useful for verifying that the correct implementation is being used"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch)."
+    )
+    .unwrap();
+    writeln!(code, "        ///").unwrap();
+    writeln!(
+        code,
+        "        /// Returns `\"polyfill::{mod_name}::{full_name}\"`."
+    )
+    .unwrap();
+    writeln!(code, "        #[inline(always)]").unwrap();
+    writeln!(
+        code,
+        "        pub const fn implementation_name() -> &'static str {{"
+    )
+    .unwrap();
+    writeln!(code, "            \"polyfill::{mod_name}::{full_name}\"").unwrap();
+    writeln!(code, "        }}\n").unwrap();
+
     writeln!(code, "    }}\n").unwrap();
 
     // Operator impls
@@ -818,6 +856,44 @@ fn generate_w512_polyfill_type(elem: ElementType, platform: &W512PlatformConfig)
         &ops_bitcast::generate_polyfill_bitcasts(elem, SimdWidth::W512, SimdWidth::W256)
             .replace('\n', "\n    "),
     );
+
+    // Implementation identification
+    let mod_name = platform.mod_name;
+    writeln!(
+        code,
+        "        // ========== Implementation identification ==========\n"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        /// Returns a string identifying this type's implementation."
+    )
+    .unwrap();
+    writeln!(code, "        ///").unwrap();
+    writeln!(
+        code,
+        "        /// This is useful for verifying that the correct implementation is being used"
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch)."
+    )
+    .unwrap();
+    writeln!(code, "        ///").unwrap();
+    writeln!(
+        code,
+        "        /// Returns `\"polyfill::{mod_name}::{full_name}\"`."
+    )
+    .unwrap();
+    writeln!(code, "        #[inline(always)]").unwrap();
+    writeln!(
+        code,
+        "        pub const fn implementation_name() -> &'static str {{"
+    )
+    .unwrap();
+    writeln!(code, "            \"polyfill::{mod_name}::{full_name}\"").unwrap();
+    writeln!(code, "        }}\n").unwrap();
 
     writeln!(code, "    }}\n").unwrap();
 

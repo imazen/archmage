@@ -75,6 +75,7 @@ pub fn generate_type(ty: &SimdType) -> String {
 
 /// Generate construction and extraction methods
 fn generate_construction_methods(ty: &SimdType) -> String {
+    let name = ty.name();
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = Wasm::intrinsic_type(ty.elem, ty.width);
@@ -227,6 +228,19 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; {byte_size}]) -> Self {{
         // SAFETY: [u8; {byte_size}] and Self have identical size
         Self(unsafe {{ core::mem::transmute(bytes) }})
+        }}
+
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
+        ///
+        /// Returns `"wasm::w128::{name}"`.
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {{
+        "wasm::w128::{name}"
         }}
 
     "#}

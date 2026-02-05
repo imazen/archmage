@@ -338,6 +338,7 @@ pub fn generate_type(ty: &SimdType) -> String {
 
 /// Generate construction and extraction methods
 fn generate_construction_methods(ty: &SimdType) -> String {
+    let name = ty.name();
     let lanes = ty.lanes();
     let elem = ty.elem.name();
     let inner = ty.x86_inner_type();
@@ -347,6 +348,9 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     let bits = ty.width.bits();
     let byte_size = ty.lanes() * ty.elem.size_bytes();
     let zero_lit = ty.elem.zero_literal();
+
+    // Implementation name for identification
+    let impl_name = format!("x86::w{bits}::{name}");
 
     // Load intrinsic body
     let load_body = if ty.elem.is_float() {
@@ -540,6 +544,17 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         pub fn from_bytes_owned(_: archmage::{token}, bytes: [u8; {byte_size}]) -> Self {{
         // SAFETY: [u8; {byte_size}] and Self have identical size
         Self(unsafe {{ core::mem::transmute(bytes) }})
+        }}
+
+        // ========== Implementation identification ==========
+
+        /// Returns a string identifying this type's implementation.
+        ///
+        /// This is useful for verifying that the correct implementation is being used
+        /// at compile time or at runtime (via `#[magetypes]` dispatch).
+        #[inline(always)]
+        pub const fn implementation_name() -> &'static str {{
+        \"{impl_name}\"
         }}
 
     "}

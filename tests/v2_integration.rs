@@ -439,4 +439,3 @@ fn sub_tier_dispatch_neon() {
         assert_eq!(dispatch_with_sub_tiers(token), "neon_aes");
     }
 }
-
