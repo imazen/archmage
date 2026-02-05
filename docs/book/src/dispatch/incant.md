@@ -5,18 +5,28 @@
 ## Basic Usage
 
 ```rust
-use archmage::{incant, arcane};
-use magetypes::f32x8;
+use archmage::{incant, rite, X64V3Token, NeonToken};
+use magetypes::prelude::*;
 
 // Define variants with standard suffixes
-#[arcane]
-fn sum_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    f32x8::from_array(token, *data).reduce_add()
+#[cfg(target_arch = "x86_64")]
+#[rite]
+fn sum_v3(token: X64V3Token, data: &[f32]) -> f32 {
+    let mut total = f32x8::zero(token);
+    for chunk in data.chunks_exact(8) {
+        total = total + f32x8::from_slice(token, chunk);
+    }
+    total.reduce_add() + data.chunks_exact(8).remainder().iter().sum::<f32>()
 }
 
-#[arcane]
-fn sum_neon(token: NeonToken, data: &[f32; 4]) -> f32 {
-    // NEON implementation
+#[cfg(target_arch = "aarch64")]
+#[rite]
+fn sum_neon(token: NeonToken, data: &[f32]) -> f32 {
+    let mut total = f32x4::zero(token);
+    for chunk in data.chunks_exact(4) {
+        total = total + f32x4::from_slice(token, chunk);
+    }
+    total.reduce_add() + data.chunks_exact(4).remainder().iter().sum::<f32>()
 }
 
 fn sum_scalar(data: &[f32]) -> f32 {
@@ -24,7 +34,7 @@ fn sum_scalar(data: &[f32]) -> f32 {
 }
 
 // Dispatch automatically
-pub fn sum(data: &[f32; 8]) -> f32 {
+pub fn sum(data: &[f32]) -> f32 {
     incant!(sum(data))
     // Tries: sum_v4 → sum_v3 → sum_neon → sum_wasm128 → sum_scalar
 }
@@ -32,29 +42,29 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 
 ## How It Works
 
-`incant!` expands to a dispatch chain:
+`incant!` expands to a dispatch chain that tries each variant in order:
 
 ```rust
 // incant!(process(data)) expands to approximately:
-{
+'__incant: {
     #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     if let Some(token) = X64V4Token::summon() {
-        return process_v4(token, data);
+        break '__incant process_v4(token, data);
     }
 
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = X64V3Token::summon() {
-        return process_v3(token, data);
+        break '__incant process_v3(token, data);
     }
 
     #[cfg(target_arch = "aarch64")]
     if let Some(token) = NeonToken::summon() {
-        return process_neon(token, data);
+        break '__incant process_neon(token, data);
     }
 
     #[cfg(target_arch = "wasm32")]
     if let Some(token) = Simd128Token::summon() {
-        return process_wasm128(token, data);
+        break '__incant process_wasm128(token, data);
     }
 
     process_scalar(data)
@@ -70,64 +80,82 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 | `_v2` | `X64V2Token` | x86-64 SSE4.2 |
 | `_neon` | `NeonToken` | AArch64 |
 | `_wasm128` | `Simd128Token` | WASM |
-| `_scalar` | — | Fallback |
+| `_scalar` | — | Fallback (always tried last) |
 
-You don't need all variants—`incant!` skips missing ones.
+Define only the variants you need — `incant!` skips missing ones.
 
 ## Passthrough Mode
 
 When you already have a token and want to dispatch to specialized variants:
 
 ```rust
+use archmage::{incant, IntoConcreteToken};
+
 fn outer<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-    // Passthrough: token already obtained, dispatch to best variant
+    // Passthrough: use existing token to pick best variant
     incant!(token => process(data))
 }
 ```
 
-This uses `IntoConcreteToken` to check the token's actual type and dispatch accordingly, without re-summoning.
+This uses `IntoConcreteToken` to check the token's type and dispatch accordingly, without re-summoning.
 
-## Example: Complete Implementation
+## Complete Example
 
 ```rust
-use archmage::{arcane, incant, X64V3Token, NeonToken, SimdToken};
-use magetypes::f32x8;
+use archmage::{incant, rite, X64V3Token, NeonToken, SimdToken};
+use magetypes::prelude::*;
+
+// Public API
+pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
+    assert_eq!(a.len(), b.len());
+    incant!(dot_product(a, b))
+}
 
 // AVX2 variant
 #[cfg(target_arch = "x86_64")]
-#[arcane]
-fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = f32x8::from_array(token, *a);
-    let vb = f32x8::from_array(token, *b);
-    (va * vb).reduce_add()
+#[rite]
+fn dot_product_v3(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
+    let mut sum = f32x8::zero(token);
+    let chunks_a = a.chunks_exact(8);
+    let chunks_b = b.chunks_exact(8);
+
+    for (ca, cb) in chunks_a.clone().zip(chunks_b.clone()) {
+        let va = f32x8::from_slice(token, ca);
+        let vb = f32x8::from_slice(token, cb);
+        sum = va.mul_add(vb, sum);
+    }
+
+    let mut total = sum.reduce_add();
+    for (x, y) in chunks_a.remainder().iter().zip(chunks_b.remainder()) {
+        total += x * y;
+    }
+    total
 }
 
-// NEON variant (128-bit, so process 4 at a time)
+// NEON variant
 #[cfg(target_arch = "aarch64")]
-#[arcane]
-fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    use magetypes::f32x4;
-    let sum1 = {
-        let va = f32x4::from_slice(token, &a[0..4]);
-        let vb = f32x4::from_slice(token, &b[0..4]);
-        (va * vb).reduce_add()
-    };
-    let sum2 = {
-        let va = f32x4::from_slice(token, &a[4..8]);
-        let vb = f32x4::from_slice(token, &b[4..8]);
-        (va * vb).reduce_add()
-    };
-    sum1 + sum2
+#[rite]
+fn dot_product_neon(token: NeonToken, a: &[f32], b: &[f32]) -> f32 {
+    let mut sum = f32x4::zero(token);
+    let chunks_a = a.chunks_exact(4);
+    let chunks_b = b.chunks_exact(4);
+
+    for (ca, cb) in chunks_a.clone().zip(chunks_b.clone()) {
+        let va = f32x4::from_slice(token, ca);
+        let vb = f32x4::from_slice(token, cb);
+        sum = va.mul_add(vb, sum);
+    }
+
+    let mut total = sum.reduce_add();
+    for (x, y) in chunks_a.remainder().iter().zip(chunks_b.remainder()) {
+        total += x * y;
+    }
+    total
 }
 
 // Scalar fallback
-fn dot_product_scalar(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
-}
-
-// Public API
-pub fn dot_product(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    incant!(dot_product(a, b))
+fn dot_product_scalar(a: &[f32], b: &[f32]) -> f32 {
+    a.iter().zip(b).map(|(x, y)| x * y).sum()
 }
 ```
 

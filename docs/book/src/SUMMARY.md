@@ -10,18 +10,16 @@
 
 # Core Concepts
 
+- [#\[rite\] vs #\[arcane\]](./concepts/arcane-vs-rite.md)
+- [Cross-Platform Code](./concepts/cross-platform.md)
 - [Compile-Time vs Runtime](./concepts/compile-vs-runtime.md)
-- [Token Hoisting](./concepts/token-hoisting.md)
-- [The #[arcane] Macro](./concepts/arcane.md)
-- [The #[rite] Macro](./concepts/rite.md)
-- [Cross-Platform Stubs](./concepts/cross-platform.md)
 
 # Dispatch Patterns
 
 - [Manual Dispatch](./dispatch/manual.md)
 - [incant! Macro](./dispatch/incant.md)
-- [IntoConcreteToken Trait](./dispatch/into-concrete.md)
 - [Tiered Fallback](./dispatch/tiered-fallback.md)
+- [IntoConcreteToken](./dispatch/into-concrete.md)
 
 # magetypes SIMD Types
 
@@ -31,10 +29,11 @@
 - [Transcendental Functions](./magetypes/transcendentals.md)
 - [Memory Operations](./magetypes/memory.md)
 
-# Advanced Patterns
+# Advanced Topics
 
-- [Methods with #[arcane]](./advanced/methods.md)
+- [Methods with #\[arcane\]](./advanced/methods.md)
 - [LLVM Optimization Boundaries](./advanced/llvm-boundaries.md)
+- [Raw Intrinsics](./advanced/raw-intrinsics.md)
 - [AVX-512 Patterns](./advanced/avx512.md)
 - [WASM SIMD](./advanced/wasm.md)
 

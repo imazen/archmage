@@ -1,89 +1,96 @@
-# Archmage & Magetypes
+# Archmage
 
-> Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
-> Cast primitive magics faster than any mage alive.
+Archmage makes SIMD programming in Rust safe and zero-overhead. You prove CPU feature availability once with a **token**, then write safe SIMD code that compiles to raw instructions.
 
-**Archmage** makes SIMD programming in Rust safe and ergonomic. Instead of scattering `unsafe` blocks throughout your code, you prove CPU feature availability once with a **capability token**, then write safe code that the compiler optimizes into raw SIMD instructions.
+## The Pattern
 
-**Magetypes** provides SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators that integrate with archmage tokens.
+Here's everything you need to know:
+
+```rust
+use archmage::{Desktop64, SimdToken, rite};
+use magetypes::f32x8;
+
+// PUBLIC API: Check CPU features once, dispatch to SIMD or scalar
+pub fn sum_of_squares(data: &[f32]) -> f32 {
+    if let Some(token) = Desktop64::summon() {
+        sum_of_squares_simd(token, data)
+    } else {
+        data.iter().map(|x| x * x).sum()
+    }
+}
+
+// SIMD IMPLEMENTATION: Loop goes inside, use #[rite] for all SIMD functions
+#[rite]
+fn sum_of_squares_simd(token: Desktop64, data: &[f32]) -> f32 {
+    let mut total = 0.0;
+    for chunk in data.chunks_exact(8) {
+        let v = f32x8::from_slice(token, chunk);
+        total += (v * v).reduce_add();
+    }
+    // Handle remainder
+    for &x in data.chunks_exact(8).remainder() {
+        total += x * x;
+    }
+    total
+}
+```
+
+That's it. Three things to remember:
+
+1. **`summon()` once** at your API boundary — returns `Some(token)` if CPU supports the features
+2. **Put loops inside** the SIMD function — not outside calling in
+3. **Use `#[rite]`** for all SIMD functions — it enables SIMD instructions with zero overhead
+
+## Why This Works
+
+**Tokens** are zero-sized proof types. `Desktop64` proves the CPU has AVX2+FMA (available on Intel Haswell 2013+, AMD Zen 1 2017+, basically any x86-64 from the last decade).
+
+**`#[rite]`** tells the compiler "this function uses SIMD instructions." It adds `#[target_feature(enable = "avx2,fma,...")]` and `#[inline]`. Since Rust 1.85, SIMD intrinsics are safe inside these functions.
+
+**magetypes** provides SIMD vector types (`f32x8`, `i32x4`, etc.) with natural operators. You get `+`, `-`, `*`, `/` that compile to single SIMD instructions.
 
 ## Zero Overhead
 
-Archmage is **never slower than equivalent unsafe code**. The safety abstractions exist only at compile time. At runtime, you get the exact same assembly as hand-written `#[target_feature]` + `unsafe` code.
+Archmage generates identical assembly to hand-written unsafe code:
 
 ```
-Benchmark: 1000 iterations of 8-float vector operations
-  Manual unsafe code:     570 ns
-  #[rite] in #[arcane]:   572 ns  ← identical
-  #[arcane] in loop:     2320 ns  ← wrong pattern (see below)
+Benchmark: 1000 iterations, 8-float operations
+  Hand-written unsafe:    570 ns
+  #[rite] functions:      572 ns  ← same
 ```
 
-The key is using the right pattern: put loops inside `#[arcane]`, use `#[rite]` for helpers. See [Token Hoisting](./concepts/token-hoisting.md) and [The #\[rite\] Macro](./concepts/rite.md).
+The abstraction is purely compile-time. At runtime, it's just your SIMD instructions.
 
-## The Problem
+## Cross-Platform by Default
 
-Raw SIMD in Rust requires `unsafe`:
+Token types exist on all platforms. On unsupported platforms, `summon()` returns `None`:
 
 ```rust
-use std::arch::x86_64::*;
-
-// Every. Single. Call.
-unsafe {
-    let a = _mm256_loadu_ps(data.as_ptr());
-    let b = _mm256_set1_ps(2.0);
-    let c = _mm256_mul_ps(a, b);
-    _mm256_storeu_ps(out.as_mut_ptr(), c);
+// This compiles on ARM, WASM, everywhere
+if let Some(token) = Desktop64::summon() {
+    // Only runs on x86-64 with AVX2+FMA
+    process_avx2(token, data);
+} else {
+    // Runs on ARM, WASM, older x86, etc.
+    process_scalar(data);
 }
 ```
 
-This is tedious and error-prone. Miss a feature check? Undefined behavior on older CPUs.
+No `#[cfg(target_arch)]` needed for basic dispatch. Write once, compile everywhere.
 
-## The Solution
+## Token Quick Reference
 
-Archmage separates **proof of capability** from **use of capability**:
+| Token | Features | Typical CPUs |
+|-------|----------|--------------|
+| `Desktop64` | AVX2 + FMA | Intel Haswell+, AMD Zen+ |
+| `X64V4Token` | + AVX-512 | Intel Skylake-X+, AMD Zen 4+ |
+| `Arm64` | NEON | All 64-bit ARM |
+| `Simd128Token` | WASM SIMD128 | Modern browsers |
 
-```rust
-use archmage::{Desktop64, SimdToken, arcane};
-use std::arch::x86_64::*;
-
-#[arcane]
-fn multiply(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // Safe! The token proves AVX2+FMA are available
-    let a = _mm256_loadu_ps(data.as_ptr());  // safe_unaligned_simd version
-    let b = _mm256_set1_ps(2.0);
-    let c = _mm256_mul_ps(a, b);
-    let mut out = [0.0f32; 8];
-    _mm256_storeu_ps(&mut out, c);
-    out
-}
-
-fn main() {
-    // Runtime check happens ONCE here
-    if let Some(token) = Desktop64::summon() {
-        let result = multiply(token, &[1.0; 8]);
-        println!("{:?}", result);
-    }
-}
-```
-
-## Key Concepts
-
-1. **Tokens** are zero-sized proof types. `Desktop64::summon()` returns `Some(token)` only if the CPU supports AVX2+FMA.
-
-2. **`#[arcane]`** generates a `#[target_feature]` inner function. Inside, SIMD intrinsics are safe.
-
-3. **Token hoisting**: Call `summon()` once at your API boundary, pass the token through. Don't summon in hot loops.
-
-## Supported Platforms
-
-| Platform | Tokens | Register Width |
-|----------|--------|----------------|
-| x86-64 | `X64V2Token`, `X64V3Token`/`Desktop64`, `X64V4Token`/`Server64` | 128-512 bit |
-| AArch64 | `NeonToken`/`Arm64`, `NeonAesToken`, `NeonSha3Token` | 128 bit |
-| WASM | `Simd128Token` | 128 bit |
+`Desktop64` is the sweet spot for x86-64 — wide availability, good performance.
 
 ## Next Steps
 
-- [Installation](./getting-started/installation.md) — Add archmage to your project
-- [Your First SIMD Function](./getting-started/first-simd.md) — Write real SIMD code
-- [Understanding Tokens](./getting-started/tokens.md) — Learn the token system
+- **[Installation](./getting-started/installation.md)** — Add archmage to your project
+- **[Your First SIMD Function](./getting-started/first-simd.md)** — Complete walkthrough
+- **[When to Use #\[arcane\]](./concepts/arcane-vs-rite.md)** — Entry points vs internal functions

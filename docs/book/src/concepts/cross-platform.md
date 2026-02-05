@@ -1,161 +1,154 @@
-# Cross-Platform Stubs
+# Cross-Platform Code
 
-Archmage lets you write x86 SIMD code that compiles on ARM and vice versa. Functions become unreachable stubs on non-matching architectures.
+Your archmage code compiles on all platforms. On unsupported platforms, `summon()` returns `None` and SIMD functions become unreachable stubs.
 
-## How It Works
+## The Simple Case
 
-When you write:
-
-```rust
-use archmage::{Desktop64, arcane};
-
-#[arcane]
-fn avx2_kernel(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // x86-64 SIMD code
-    let v = _mm256_loadu_ps(data.as_ptr());
-    // ...
-}
-```
-
-On **x86-64**, you get the real implementation.
-
-On **ARM/WASM**, you get:
+This works everywhere without `#[cfg]`:
 
 ```rust
-fn avx2_kernel(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    unreachable!("Desktop64 cannot exist on this architecture")
-}
-```
+use archmage::{Desktop64, SimdToken, rite};
+use magetypes::f32x8;
 
-## Why This Is Safe
-
-The stub can never execute because:
-
-1. `Desktop64::summon()` returns `None` on ARM
-2. You can't construct `Desktop64` any other way (safely)
-3. The only path to `avx2_kernel` is through a token you can't obtain
-
-```rust
-fn process(data: &[f32; 8]) -> [f32; 8] {
-    if let Some(token) = Desktop64::summon() {
-        avx2_kernel(token, data)  // Never reached on ARM
-    } else {
-        scalar_fallback(data)     // ARM takes this path
-    }
-}
-```
-
-## Writing Cross-Platform Libraries
-
-Structure your code with platform-specific implementations:
-
-```rust
-// Public API - works everywhere
 pub fn process(data: &mut [f32]) {
-    #[cfg(target_arch = "x86_64")]
     if let Some(token) = Desktop64::summon() {
-        return process_avx2(token, data);
-    }
-
-    #[cfg(target_arch = "aarch64")]
-    if let Some(token) = NeonToken::summon() {
-        return process_neon(token, data);
-    }
-
-    process_scalar(data);
-}
-
-#[cfg(target_arch = "x86_64")]
-#[arcane]
-fn process_avx2(token: Desktop64, data: &mut [f32]) {
-    // AVX2 implementation
-}
-
-#[cfg(target_arch = "aarch64")]
-#[arcane]
-fn process_neon(token: NeonToken, data: &mut [f32]) {
-    // NEON implementation
-}
-
-fn process_scalar(data: &mut [f32]) {
-    // Works everywhere
-}
-```
-
-## Token Existence vs Token Availability
-
-All token **types** exist on all platforms:
-
-```rust
-// These types compile on ARM:
-use archmage::{Desktop64, X64V3Token, X64V4Token};
-
-// But summon() returns None:
-assert!(Desktop64::summon().is_none());  // On ARM
-
-// And guaranteed() tells you:
-assert_eq!(Desktop64::guaranteed(), Some(false));  // Wrong arch
-```
-
-This enables cross-platform code without `#[cfg]` soup:
-
-```rust
-// Compiles everywhere, dispatches at runtime
-fn process<T: IntoConcreteToken>(token: T, data: &[f32]) {
-    if let Some(t) = token.as_x64v3() {
-        process_v3(t, data);
-    } else if let Some(t) = token.as_neon() {
-        process_neon(t, data);
+        process_simd(token, data);
     } else {
         process_scalar(data);
     }
 }
+
+#[rite]
+fn process_simd(token: Desktop64, data: &mut [f32]) {
+    for chunk in data.chunks_exact_mut(8) {
+        let v = f32x8::from_slice(token, chunk);
+        (v * v).store_slice(chunk);
+    }
+}
+
+fn process_scalar(data: &mut [f32]) {
+    for x in data { *x *= *x; }
+}
 ```
 
-## The ScalarToken Escape Hatch
+On x86-64: `Desktop64::summon()` returns `Some(token)`, takes the SIMD path.
+On ARM/WASM: Returns `None`, takes scalar path.
 
-`ScalarToken` works everywhere:
+## Multi-Platform SIMD
+
+For SIMD on multiple platforms, use `#[cfg]` for the implementations:
+
+```rust
+use archmage::{Desktop64, Arm64, SimdToken, rite};
+
+pub fn process(data: &mut [f32]) {
+    // x86-64
+    if let Some(token) = Desktop64::summon() {
+        return process_x86(token, data);
+    }
+
+    // ARM
+    if let Some(token) = Arm64::summon() {
+        return process_arm(token, data);
+    }
+
+    // Fallback
+    process_scalar(data);
+}
+
+#[cfg(target_arch = "x86_64")]
+#[rite]
+fn process_x86(token: Desktop64, data: &mut [f32]) {
+    use magetypes::simd::x86::f32x8;
+    for chunk in data.chunks_exact_mut(8) {
+        let v = f32x8::from_slice(token, chunk);
+        (v * v).store_slice(chunk);
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+#[rite]
+fn process_arm(token: Arm64, data: &mut [f32]) {
+    use magetypes::simd::arm::f32x4;
+    for chunk in data.chunks_exact_mut(4) {
+        let v = f32x4::from_slice(token, chunk);
+        (v * v).store_slice(chunk);
+    }
+}
+
+fn process_scalar(data: &mut [f32]) {
+    for x in data { *x *= *x; }
+}
+```
+
+## Why Stubs Are Safe
+
+On ARM, the `#[rite]` function for x86 becomes:
+
+```rust
+fn process_x86(token: Desktop64, data: &mut [f32]) {
+    unreachable!("Desktop64 cannot exist on this architecture")
+}
+```
+
+This can never execute because:
+1. `Desktop64::summon()` returns `None` on ARM
+2. You can't construct `Desktop64` any other way (safely)
+
+## Token Existence vs Availability
+
+Token **types** exist everywhere — only `summon()` behavior differs:
+
+```rust
+// On ARM, this compiles:
+use archmage::{Desktop64, SimdToken};
+
+// But this returns None:
+let result = Desktop64::summon();  // None on ARM
+
+// Check at compile time:
+match Desktop64::guaranteed() {
+    Some(true) => "Guaranteed available",
+    Some(false) => "Wrong architecture",
+    None => "Runtime check needed",
+}
+```
+
+## ScalarToken
+
+`ScalarToken` succeeds everywhere — use it for fallbacks:
 
 ```rust
 use archmage::{ScalarToken, SimdToken};
 
-// Always succeeds, any platform
-let token = ScalarToken::summon().unwrap();
-
-// Or just construct it
+let token = ScalarToken::summon().unwrap();  // Always works
+// Or:
 let token = ScalarToken;
 ```
 
-Use it for fallback paths that need a token for API consistency:
+## Using incant! for Cross-Platform
+
+The `incant!` macro handles dispatch automatically:
 
 ```rust
-fn must_have_token<T: SimdToken>(token: T, data: &[f32]) -> f32 {
-    // ...
+use archmage::incant;
+
+pub fn process(data: &[f32]) -> f32 {
+    incant!(process(data))
+    // Tries: process_v4 → process_v3 → process_neon → process_wasm128 → process_scalar
 }
 
-// On platforms without SIMD:
-let result = must_have_token(ScalarToken, &data);
-```
-
-## Testing Cross-Platform Code
-
-Test your dispatch logic without needing every CPU:
-
-```rust
-#[test]
-fn test_scalar_fallback() {
-    // Force scalar path even on AVX2 machine
-    let token = ScalarToken;
-    let result = process_with_token(token, &data);
-    assert_eq!(result, expected);
-}
-
-#[test]
 #[cfg(target_arch = "x86_64")]
-fn test_avx2_path() {
-    if let Some(token) = Desktop64::summon() {
-        let result = process_with_token(token, &data);
-        assert_eq!(result, expected);
-    }
+#[rite]
+fn process_v3(token: X64V3Token, data: &[f32]) -> f32 { ... }
+
+#[cfg(target_arch = "aarch64")]
+#[rite]
+fn process_neon(token: NeonToken, data: &[f32]) -> f32 { ... }
+
+fn process_scalar(data: &[f32]) -> f32 {
+    data.iter().sum()
 }
 ```
+
+Only define the variants you need — `incant!` skips missing ones.
