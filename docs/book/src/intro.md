@@ -1,46 +1,10 @@
 # Archmage & Magetypes
 
-> Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
-> Cast primitive magics faster than any mage alive.
+**Archmage** makes SIMD programming in Rust safe and ergonomic. You prove CPU feature availability once with a **capability token**, then write clean code that compiles to raw SIMD instructions.
 
-**Archmage** makes SIMD programming in Rust safe and ergonomic. Instead of scattering `unsafe` blocks throughout your code, you prove CPU feature availability once with a **capability token**, then write safe code that the compiler optimizes into raw SIMD instructions.
+**Magetypes** provides SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators.
 
-**Magetypes** provides SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators that integrate with archmage tokens.
-
-## Zero Overhead
-
-Archmage is **never slower than equivalent unsafe code**. The safety abstractions exist only at compile time. At runtime, you get the exact same assembly as hand-written `#[target_feature]` + `unsafe` code.
-
-```
-Benchmark: 1000 iterations of 8-float vector operations
-  Manual unsafe code:     570 ns
-  #[rite] in #[arcane]:   572 ns  ← identical
-  #[arcane] in loop:     2320 ns  ← wrong pattern (see below)
-```
-
-The key is using the right pattern: put loops inside `#[arcane]`, use `#[rite]` for helpers. See [Token Hoisting](./concepts/token-hoisting.md) and [The #\[rite\] Macro](./concepts/rite.md).
-
-## The Problem
-
-Raw SIMD in Rust requires `unsafe`:
-
-```rust
-use std::arch::x86_64::*;
-
-// Every. Single. Call.
-unsafe {
-    let a = _mm256_loadu_ps(data.as_ptr());
-    let b = _mm256_set1_ps(2.0);
-    let c = _mm256_mul_ps(a, b);
-    _mm256_storeu_ps(out.as_mut_ptr(), c);
-}
-```
-
-This is tedious and error-prone. Miss a feature check? Undefined behavior on older CPUs.
-
-## The Solution
-
-Archmage separates **proof of capability** from **use of capability**:
+## Quick Example
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
@@ -55,7 +19,6 @@ fn multiply(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 }
 
 fn main() {
-    // Runtime check happens ONCE here
     if let Some(token) = Desktop64::summon() {
         let result = multiply(token, &[1.0; 8]);
         println!("{:?}", result);
@@ -63,13 +26,27 @@ fn main() {
 }
 ```
 
-## Key Concepts
+## How It Works
 
-1. **Tokens** are zero-sized proof types. `Desktop64::summon()` returns `Some(token)` only if the CPU supports AVX2+FMA.
+1. **`summon()`** checks CPU features at runtime. Returns `Some(token)` if the CPU supports AVX2+FMA.
 
-2. **`#[arcane]`** generates a `#[target_feature]` inner function. Inside, SIMD intrinsics are safe.
+2. **The token** is a zero-sized proof type. You can't fake it — it only exists if the check passed.
 
-3. **Token hoisting**: Call `summon()` once at your API boundary, pass the token through. Don't summon in hot loops.
+3. **`#[arcane]`** tells the compiler to use SIMD instructions. The token parameter proves the CPU supports them.
+
+4. **magetypes** gives you `f32x8`, `i32x4`, etc. with natural operators (`+`, `-`, `*`, `/`).
+
+## Zero Overhead
+
+The safety abstractions exist only at compile time. At runtime, you get the exact same assembly as hand-tuned SIMD:
+
+```
+Benchmark: 1000 iterations of 8-float vector operations
+  Hand-tuned SIMD:        570 ns
+  #[rite] in #[arcane]:   572 ns  ← identical
+```
+
+The key is using the right pattern: put loops inside `#[arcane]`, use `#[rite]` for helpers. See [Token Hoisting](./concepts/token-hoisting.md).
 
 ## Supported Platforms
 
@@ -82,5 +59,5 @@ fn main() {
 ## Next Steps
 
 - [Installation](./getting-started/installation.md) — Add archmage to your project
-- [Your First SIMD Function](./getting-started/first-simd.md) — Write real SIMD code
-- [Understanding Tokens](./getting-started/tokens.md) — Learn the token system
+- [Your First SIMD Function](./getting-started/first-simd.md) — Complete walkthrough
+- [Understanding Tokens](./getting-started/tokens.md) — Learn the token hierarchy

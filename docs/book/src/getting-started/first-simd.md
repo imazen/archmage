@@ -2,7 +2,7 @@
 
 Let's write a function that squares 8 floats in parallel using AVX2.
 
-## The Simple Way: magetypes
+## The Code
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
@@ -11,7 +11,7 @@ use magetypes::f32x8;
 #[arcane]
 fn square_f32x8(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::from_array(token, *data);
-    let squared = v * v;  // Natural operator!
+    let squared = v * v;
     squared.to_array()
 }
 
@@ -27,13 +27,11 @@ fn main() {
 }
 ```
 
-That's it. The token proves CPU support, `#[arcane]` enables SIMD codegen, and magetypes gives you natural operators.
-
 ## What's Happening
 
 1. **`Desktop64::summon()`** — Runtime check via CPUID. Returns `Some(token)` if CPU has AVX2+FMA.
 
-2. **`#[arcane]`** — Tells LLVM to use AVX2 instructions in this function. The token parameter proves the check happened.
+2. **`#[arcane]`** — Tells the compiler to use AVX2 instructions in this function. The token parameter proves the check happened.
 
 3. **`f32x8`** — A vector of 8 floats. Operations compile to single AVX2 instructions.
 
@@ -41,13 +39,13 @@ That's it. The token proves CPU support, `#[arcane]` enables SIMD codegen, and m
 
 ## Key Points
 
-- **`Desktop64`** = AVX2 + FMA + BMI1 + BMI2 (Haswell 2013+, Zen 1+)
+- **`Desktop64`** = AVX2 + FMA + BMI1 + BMI2 (Intel Haswell 2013+, AMD Zen 2017+)
 - **Token is zero-sized** — no runtime overhead passing it around
-- **`#[arcane]` is required** for optimal codegen when using intrinsics
+- **`#[arcane]`** is required for the compiler to use SIMD instructions
 
-## Alternative: Raw Intrinsics
+## Using Raw Intrinsics
 
-If you need direct control, use `std::arch` intrinsics with `safe_unaligned_simd` for memory operations:
+If you need direct control over instruction selection, use `std::arch` intrinsics with `safe_unaligned_simd`:
 
 ```toml
 [dependencies]
@@ -62,41 +60,16 @@ use safe_unaligned_simd::x86_64 as safe_simd;
 
 #[arcane]
 fn square_f32x8(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    let v = safe_simd::_mm256_loadu_ps(data);  // Safe load
-    let squared = _mm256_mul_ps(v, v);         // Arithmetic is safe inside #[arcane]
+    let v = safe_simd::_mm256_loadu_ps(data);
+    let squared = _mm256_mul_ps(v, v);
 
     let mut out = [0.0f32; 8];
-    safe_simd::_mm256_storeu_ps(&mut out, squared);  // Safe store
+    safe_simd::_mm256_storeu_ps(&mut out, squared);
     out
 }
 ```
 
-This gives you full control over instruction selection while keeping memory operations safe.
-
-## What `#[arcane]` Generates
-
-The macro creates a safe wrapper:
-
-```rust
-// You write:
-#[arcane]
-fn square(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // body
-}
-
-// Macro generates:
-fn square(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
-    #[inline]
-    unsafe fn __inner(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-        // body
-    }
-    // SAFETY: token proves CPU support
-    unsafe { __inner(token, data) }
-}
-```
-
-The outer function is safe to call. The inner function has `#[target_feature]` which tells LLVM to use SIMD instructions.
+`safe_unaligned_simd` provides safe wrappers for memory operations. Arithmetic intrinsics like `_mm256_mul_ps` are safe inside `#[arcane]`.
 
 ## Next Steps
 
