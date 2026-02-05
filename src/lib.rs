@@ -66,7 +66,7 @@ extern crate alloc;
 // Re-export macros from archmage-macros
 #[cfg(feature = "macros")]
 #[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
-pub use archmage_macros::{arcane, incant, multiwidth, simd_fn, simd_route};
+pub use archmage_macros::{arcane, incant, magetypes, multiwidth, simd_fn, simd_route};
 
 // Optimized feature detection
 #[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]

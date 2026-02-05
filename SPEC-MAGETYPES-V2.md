@@ -602,12 +602,12 @@ Replace with:
 | `guaranteed()` | ✅ Implemented |
 | `ScalarToken` | ✅ Implemented |
 | `IntoConcreteToken` trait | ✅ Implemented |
-| `#[magetypes]` function-level | ⬜ Not yet (module-level as `#[multiwidth]`) |
+| `#[magetypes]` function-level | ✅ Implemented |
 | `incant!` entry point | ✅ Implemented |
 | `incant!` passthrough | ✅ Implemented |
-| `SimdTypes` trait | ⬜ Not yet |
+| `SimdTypes` trait | ✅ Implemented |
 | Prelude system | ✅ Implemented |
-| Cross-tier casting | ⬜ Not yet |
+| Cross-tier casting | ⚠️ Documented (methods not generated) |
 
 ---
 

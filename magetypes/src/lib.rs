@@ -43,6 +43,28 @@ extern crate alloc;
 // Re-export archmage for convenience
 pub use archmage;
 
+// SimdTypes trait - associates SIMD types with tokens
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+mod types;
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+pub use types::SimdTypes;
+
+// Cross-tier casting utilities
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+pub mod cast;
+
 // Platform-appropriate types via prelude
 #[cfg(any(
     target_arch = "x86_64",
