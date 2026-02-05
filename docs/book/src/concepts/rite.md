@@ -1,12 +1,17 @@
 # The #[rite] Macro
 
-`#[rite]` is for **inner helpers** that are only called from `#[arcane]` functions. It adds `#[target_feature]` without creating a wrapper function.
+`#[rite]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly—no wrapper overhead.
 
-## When to Use #[rite]
+Use `#[arcane]` only at **entry points** where the token comes from the outside world.
 
-**Use `#[arcane]` for:** Entry points where you summon the token or receive it from external callers.
+## The Rule
 
-**Use `#[rite]` for:** Internal helpers that are always called from an `#[arcane]` context.
+| Caller | Use |
+|--------|-----|
+| Called from `#[arcane]` or `#[rite]` with same/compatible token | `#[rite]` |
+| Called from non-SIMD code (tests, public API, after `summon()`) | `#[arcane]` |
+
+**Default to `#[rite]}`.** Only use `#[arcane]` when you need the safe wrapper.
 
 ```rust
 use archmage::{arcane, rite, Desktop64};
@@ -114,14 +119,16 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 
 ## Choosing Between #[arcane] and #[rite]
 
-| Situation | Use |
-|-----------|-----|
-| Public API function | `#[arcane]` |
-| Called from non-SIMD code | `#[arcane]` |
-| Called from tests directly | `#[arcane]` (or `#[rite]` + unsafe) |
-| Internal helper in a SIMD module | `#[rite]` |
-| Composable building blocks | `#[rite]` |
-| Functions that must be safe to call | `#[arcane]` |
+**Default to `#[rite]`** — only use `#[arcane]` when necessary.
+
+| Situation | Use | Why |
+|-----------|-----|-----|
+| Internal helper | `#[rite]` | Zero overhead, inlines fully |
+| Composable building blocks | `#[rite]` | Same target features = one optimization region |
+| Most SIMD functions | `#[rite]` | This should be your default |
+| Entry point (receives token from outside) | `#[arcane]` | Needs safe wrapper |
+| Public API | `#[arcane]` | Callers aren't in target_feature context |
+| Called from tests | `#[arcane]` | Tests aren't in target_feature context |
 
 ## Composing Helpers
 

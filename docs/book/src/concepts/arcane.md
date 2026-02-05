@@ -1,6 +1,8 @@
 # The #[arcane] Macro
 
-`#[arcane]` is the core macro that makes SIMD intrinsics safe. It transforms your function to enable target features based on the token type.
+`#[arcane]` creates a safe wrapper around SIMD code. Use it at **entry points**—functions called from non-SIMD code (after `summon()`, from tests, public APIs).
+
+For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md) instead—it has zero wrapper overhead.
 
 ## Basic Usage
 

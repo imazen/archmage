@@ -308,9 +308,34 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 
 ## CRITICAL: Documentation Examples
 
-### Always prefer `#[arcane]` over manual `#[target_feature]`
+### Prefer `#[rite]` for internal code, `#[arcane]` only at entry points
 
-**DO NOT write examples with manual `#[target_feature]` + unsafe wrappers.** The `#[arcane]` macro does this automatically and is the correct pattern for archmage.
+**`#[rite]` should be the default.** It adds `#[target_feature]` + `#[inline]` with zero wrapper overhead.
+
+Use `#[arcane]` only when the function is called from non-SIMD code:
+- After `summon()` in a public API
+- From tests
+- From non-`#[target_feature]` contexts
+
+```rust
+// Entry point (called after summon) - use #[arcane]
+#[arcane]
+pub fn process(token: Desktop64, data: &mut [f32]) {
+    for chunk in data.chunks_exact_mut(8) {
+        process_chunk(token, chunk);  // Calls #[rite]
+    }
+}
+
+// Internal helper (called from #[arcane] or #[rite]) - use #[rite]
+#[rite]
+fn process_chunk(_: Desktop64, chunk: &mut [f32; 8]) {
+    // ...
+}
+```
+
+### Never use manual `#[target_feature]`
+
+**DO NOT write examples with manual `#[target_feature]` + unsafe wrappers.** Use `#[arcane]` or `#[rite]` instead.
 
 ```rust
 // WRONG - manual #[target_feature] wrapping

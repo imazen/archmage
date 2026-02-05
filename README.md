@@ -41,7 +41,7 @@ fn main() {
 
 ## Inner helpers with `#[rite]`
 
-Use `#[rite]` for helpers that are only called from `#[arcane]` functions:
+**`#[rite]` should be your default.** Use `#[arcane]` only at entry points.
 
 ```rust
 use archmage::prelude::*;
