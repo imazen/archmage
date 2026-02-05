@@ -77,6 +77,45 @@ fn dist_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 **The rule:** `summon()` at API boundary, pass token everywhere else.
 
+### CRITICAL: Generic Bounds Are Optimization Barriers
+
+**Generic passthrough with trait bounds breaks inlining.** The compiler cannot inline across generic boundaries — each trait-bounded call is a potential indirect call.
+
+```rust
+// BAD: Generic bound prevents inlining into caller
+#[arcane]
+fn process_generic<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
+    inner_work(token, data)  // Can't inline — T could be any type
+}
+
+#[arcane]
+fn inner_work<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
+    // Even with #[inline(always)], this may not inline through generic
+    ...
+}
+```
+
+```rust
+// GOOD: Concrete token enables full inlining
+#[arcane]
+fn process_concrete(token: X64V3Token, data: &[f32]) -> f32 {
+    inner_work(token, data)  // Fully inlinable — concrete type
+}
+
+#[arcane]
+fn inner_work(token: X64V3Token, data: &[f32]) -> f32 {
+    // Inlines into caller, single #[target_feature] region
+    ...
+}
+```
+
+**Why this matters:**
+- `#[target_feature]` functions inline to share the feature-enabled region
+- Generic bounds break this chain — each function is a separate compilation unit
+- Even `#[inline(always)]` can't force inlining across trait object boundaries
+
+**The rule:** Use concrete tokens (`X64V3Token`, `Desktop64`) for hot paths. Reserve trait bounds (`impl HasX64V2`) for public API signatures that need flexibility at the cost of inlining.
+
 ### When `-Ctarget-cpu=native` Is Fine
 
 **Use it when:** Building for your own machine or known deployment target.
