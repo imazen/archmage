@@ -13,26 +13,186 @@
 
 **We are mages, not bureaucrats.** Write `Token::summon()`, not `Token::try_new()`.
 
-## CRITICAL: `#[cfg]` is COMPILE-TIME
+## Reference: CPU Features, Detection, and Dispatch
 
-**`#[cfg(feature = "...")]` and `#[cfg(target_arch = "...")]` are COMPILE-TIME checks, NOT runtime.**
+### The Core Distinction: Compile-Time vs Runtime
+
+| Mechanism | When | Effect |
+|-----------|------|--------|
+| `#[cfg(target_arch = "...")]` | Compile | Include/exclude code from binary |
+| `#[cfg(target_feature = "...")]` | Compile | True only if feature is in target spec |
+| `#[cfg(feature = "...")]` | Compile | Cargo feature flag |
+| `-Ctarget-cpu=native` | Compile | LLVM assumes current CPU's features |
+| `is_x86_feature_detected!()` | Runtime | CPUID instruction |
+| `Token::summon()` | Runtime | Archmage's detection (compiles away when guaranteed) |
+
+### CRITICAL: Token Hoisting (42% Performance Impact)
+
+**Summon tokens ONCE at the outer call site, pass through the call chain.**
 
 ```rust
-// COMPILE-TIME: Code is included/excluded during compilation
-#[cfg(feature = "avx512")]        // Only compiled if avx512 feature enabled
-#[cfg(target_arch = "x86_64")]    // Only compiled for x86_64 targets
-#[cfg(target_feature = "simd128")] // Only compiled if simd128 is a target feature
+// WRONG: 42% performance regression
+fn dist(a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    if let Some(token) = X64V3Token::summon() {  // Called millions of times!
+        dist_simd(token, a, b)
+    } else {
+        dist_scalar(a, b)
+    }
+}
 
-// RUNTIME: Actual CPU feature detection at program execution
-if let Some(token) = X64V4Token::summon() {  // Runtime check
-    // AVX-512 is available on this CPU
+fn process_all(points: &[[f32; 8]]) {
+    for i in 0..points.len() {
+        for j in i+1..points.len() {
+            dist(&points[i], &points[j]);  // summon() in hot loop!
+        }
+    }
 }
 ```
 
-**When to use which:**
-- `#[cfg(feature = "avx512")]` — Cargo feature gate, user opts in at build time
-- `#[cfg(target_arch = "...")]` — Platform-specific code paths
-- `Token::summon()` — Runtime detection of CPU features
+```rust
+// RIGHT: Zero overhead
+fn process_all(points: &[[f32; 8]]) {
+    // Summon ONCE at entry point
+    if let Some(token) = X64V3Token::summon() {
+        process_all_simd(token, points);
+    } else {
+        process_all_scalar(points);
+    }
+}
+
+#[arcane]
+fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
+    for i in 0..points.len() {
+        for j in i+1..points.len() {
+            dist_simd(token, &points[i], &points[j]);  // Token passed through
+        }
+    }
+}
+
+#[arcane]
+fn dist_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    // No summon() here — token proves features available
+}
+```
+
+**The rule:** `summon()` at API boundary, pass token everywhere else.
+
+### When `-Ctarget-cpu=native` Is Fine
+
+**Use it when:** Building for your own machine or known deployment target.
+
+```bash
+RUSTFLAGS="-Ctarget-cpu=native" cargo build --release
+```
+
+**Detection compiles away:** With `-Ctarget-cpu=haswell`, `X64V3Token::guaranteed()` returns `Some(true)` and `summon()` becomes a no-op. The compiler elides the check entirely.
+
+**Don't use it when:** Distributing binaries to unknown CPUs.
+
+### How `#[cfg(target_feature)]` Actually Works
+
+```rust
+// TRUE only if compiled with -Ctarget-cpu=haswell or -Ctarget-feature=+avx2
+#[cfg(target_feature = "avx2")]
+fn only_with_avx2_target() { }
+
+// ALWAYS true on x86_64 (baseline)
+#[cfg(target_feature = "sse2")]
+fn always_on_x86_64() { }
+```
+
+Default `x86_64-unknown-linux-gnu` only enables SSE/SSE2. Extended features require `-Ctarget-cpu` or `-Ctarget-feature`.
+
+### The Cargo Feature Trap
+
+**WRONG:** Gating type aliases on cargo features:
+
+```rust
+// BAD: Types don't exist unless cargo feature enabled!
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub use crate::simd::x86::w512::f32x16 as F32Vec;
+```
+
+This breaks runtime dispatch — types aren't available even if CPU supports AVX-512.
+
+**Cargo features should control:**
+- Whether to *attempt* higher tiers at runtime
+- Compile-time-only paths for known targets
+
+**Cargo features should NOT control:**
+- Whether SIMD types exist
+
+### `#[arcane]`: Cross-Arch Compilation
+
+On wrong architecture, generates unreachable stub:
+
+```rust
+// On ARM: stub that compiles but can't be reached
+#[cfg(not(target_arch = "x86_64"))]
+fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    unreachable!("X64V3Token cannot exist on this architecture")
+}
+```
+
+### `#[arcane]` with Methods
+
+Use `_self = Type` and reference `_self` in body:
+
+```rust
+impl Processor {
+    #[arcane(_self = Processor)]
+    fn process(&self, token: X64V3Token, data: &[f32; 8]) -> f32 {
+        _self.threshold  // Use _self, not self
+    }
+}
+```
+
+### `incant!`: Dispatch Macro
+
+```rust
+use archmage::incant;
+
+pub fn sum(data: &[f32]) -> f32 {
+    incant!(sum(data))
+}
+
+// Requires suffixed functions:
+// sum_v3(token: X64V3Token, ...)
+// sum_v4(token: X64V4Token, ...)     // if feature = "avx512"
+// sum_neon(token: NeonToken, ...)
+// sum_wasm128(token: Simd128Token, ...)
+// sum_scalar(token: ScalarToken, ...)
+```
+
+**Passthrough mode** (already have token):
+
+```rust
+fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
+    incant!(with token => process(data))
+}
+```
+
+### `ScalarToken`
+
+Always-available fallback. Used for:
+- `incant!()` convention (`_scalar` suffix)
+- Consistent API shape in dispatch
+
+### Fixed-Size Types with Polyfills
+
+**Pick a concrete size. Use polyfills for portability.**
+
+```rust
+use magetypes::simd::f32x8;  // Always 8 lanes, polyfilled on ARM/WASM
+
+#[arcane]
+fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    let v = f32x8::load(token, data);
+    v.reduce_add()
+}
+```
+
+On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 
 ---
 
@@ -343,34 +503,30 @@ For v3 (AVX2+FMA), use `X64V3Token` directly - it's the recommended baseline.
 
 ## SIMD Types (magetypes crate)
 
-Token-gated SIMD types live in the **magetypes** crate:
+Token-gated SIMD types live in the **magetypes** crate. **Use fixed-size types:**
 
 ```rust
-use archmage::{X64V3Token, SimdToken};
+use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::f32x8;
 
-if let Some(token) = X64V3Token::summon() {
-    let a = f32x8::splat(token, 1.0);
-    let b = f32x8::splat(token, 2.0);
-    let c = a + b;  // Natural operators!
-}
-```
-
-For multiwidth code, use `magetypes::simd::*`:
-
-```rust
-use archmage::multiwidth;
-
-#[multiwidth]
-mod kernels {
-    use magetypes::simd::*;
-
-    pub fn sum(token: Token, data: &[f32]) -> f32 {
-        let mut acc = f32xN::zero(token);
-        // ...
+pub fn process(data: &[f32; 8]) -> f32 {
+    if let Some(token) = X64V3Token::summon() {
+        process_simd(token, data)
+    } else {
+        data.iter().sum()
     }
 }
+
+#[arcane]
+fn process_simd(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    let a = f32x8::load(token, data);
+    let b = f32x8::splat(token, 2.0);
+    let c = a * b;
+    c.reduce_add()
+}
 ```
+
+On ARM/WASM, `f32x8` is polyfilled with two `f32x4` operations. Pick the size that fits your algorithm.
 
 ## Safe Memory Operations
 
