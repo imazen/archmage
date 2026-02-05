@@ -678,6 +678,14 @@ These are documented semantic differences between architectures. Tests must acco
 
   Key insight: `#[inline]` is sufficient when called from matching `#[target_feature]` context. The overhead comes from calling through wrappers or from non-target_feature context. `#[inline(always)]` + `#[target_feature]` is not allowed on stable Rust.
 
+- ~~**summon() caching benchmark**~~: Done. See `benches/summon_overhead.rs`. Results:
+  - `std::is_x86_feature_detected!` (1 feature): ~0.5 ns
+  - `Desktop64::summon()` (4 features): ~2.6 ns
+  - Atomic caching layer: ~1.2 ns (2.2x faster)
+  - TLS caching: ~1.8 ns (1.4x faster)
+
+  Key insight: std's built-in caching is incredibly fast. Our 2.6 ns overhead is from checking 4 features. Adding our own caching could halve it, but **it doesn't matter** — 2.6 ns is irrelevant compared to any real SIMD workload. The reason to hoist `summon()` isn't its performance, it's keeping dispatch outside hot loops so LLVM can optimize inner code.
+
 ### safe_unaligned_simd Gaps (discovered in rav1d-safe refactoring)
 
 Found during pal.rs refactoring to use `#[arcane]` + `safe_unaligned_simd`:

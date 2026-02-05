@@ -43,6 +43,10 @@ harness = false
 name = "asm_inspection"
 harness = false
 
+[[bench]]
+name = "summon_overhead"
+harness = false
+
 [package.metadata.docs.rs]
 features = ["std", "macros", "safe_unaligned_simd", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]
