@@ -204,9 +204,41 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
+    /// Try to cast to Avx512ModernToken (requires `avx512` feature).
+    #[cfg(feature = "avx512")]
+    #[inline(always)]
+    fn as_avx512_modern(self) -> Option<Avx512ModernToken> {
+        None
+    }
+
+    /// Try to cast to Avx512Fp16Token (requires `avx512` feature).
+    #[cfg(feature = "avx512")]
+    #[inline(always)]
+    fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> {
+        None
+    }
+
     /// Try to cast to NeonToken.
     #[inline(always)]
     fn as_neon(self) -> Option<NeonToken> {
+        None
+    }
+
+    /// Try to cast to NeonAesToken.
+    #[inline(always)]
+    fn as_neon_aes(self) -> Option<NeonAesToken> {
+        None
+    }
+
+    /// Try to cast to NeonSha3Token.
+    #[inline(always)]
+    fn as_neon_sha3(self) -> Option<NeonSha3Token> {
+        None
+    }
+
+    /// Try to cast to NeonCrcToken.
+    #[inline(always)]
+    fn as_neon_crc(self) -> Option<NeonCrcToken> {
         None
     }
 
@@ -250,9 +282,26 @@ impl IntoConcreteToken for X64V3Token {
 // Implement IntoConcreteToken for X64V4Token
 #[cfg(feature = "avx512")]
 impl IntoConcreteToken for X64V4Token {
-    #[cfg(feature = "avx512")]
     #[inline(always)]
     fn as_x64v4(self) -> Option<X64V4Token> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for Avx512ModernToken
+#[cfg(feature = "avx512")]
+impl IntoConcreteToken for Avx512ModernToken {
+    #[inline(always)]
+    fn as_avx512_modern(self) -> Option<Avx512ModernToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for Avx512Fp16Token
+#[cfg(feature = "avx512")]
+impl IntoConcreteToken for Avx512Fp16Token {
+    #[inline(always)]
+    fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> {
         Some(self)
     }
 }
@@ -261,6 +310,30 @@ impl IntoConcreteToken for X64V4Token {
 impl IntoConcreteToken for NeonToken {
     #[inline(always)]
     fn as_neon(self) -> Option<NeonToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for NeonAesToken
+impl IntoConcreteToken for NeonAesToken {
+    #[inline(always)]
+    fn as_neon_aes(self) -> Option<NeonAesToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for NeonSha3Token
+impl IntoConcreteToken for NeonSha3Token {
+    #[inline(always)]
+    fn as_neon_sha3(self) -> Option<NeonSha3Token> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for NeonCrcToken
+impl IntoConcreteToken for NeonCrcToken {
+    #[inline(always)]
+    fn as_neon_crc(self) -> Option<NeonCrcToken> {
         Some(self)
     }
 }

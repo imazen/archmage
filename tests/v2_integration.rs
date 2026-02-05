@@ -266,6 +266,9 @@ fn scalar_token_into_concrete() {
     assert!(token.as_x64v2().is_none());
     assert!(token.as_x64v3().is_none());
     assert!(token.as_neon().is_none());
+    assert!(token.as_neon_aes().is_none());
+    assert!(token.as_neon_sha3().is_none());
+    assert!(token.as_neon_crc().is_none());
     assert!(token.as_wasm128().is_none());
 }
 
@@ -275,6 +278,181 @@ fn x64v3_into_concrete() {
     if let Some(token) = archmage::X64V3Token::summon() {
         assert!(token.as_x64v3().is_some());
         assert!(token.as_scalar().is_none());
+        assert!(token.as_x64v2().is_none());
         assert!(token.as_neon().is_none());
+        assert!(token.as_neon_aes().is_none());
+        assert!(token.as_neon_sha3().is_none());
+        assert!(token.as_neon_crc().is_none());
+        assert!(token.as_wasm128().is_none());
+    }
+}
+
+// =============================================================================
+// IntoConcreteToken — all tokens match only themselves
+// =============================================================================
+
+#[test]
+fn x64v2_into_concrete() {
+    let token = archmage::X64V2Token::summon();
+    if let Some(t) = token {
+        assert!(t.as_x64v2().is_some());
+        assert!(t.as_x64v3().is_none());
+        assert!(t.as_scalar().is_none());
+        assert!(t.as_neon().is_none());
+        assert!(t.as_neon_aes().is_none());
+        assert!(t.as_neon_sha3().is_none());
+        assert!(t.as_neon_crc().is_none());
+        assert!(t.as_wasm128().is_none());
+    }
+}
+
+#[test]
+fn neon_into_concrete() {
+    let token = archmage::NeonToken::summon();
+    if let Some(t) = token {
+        assert!(t.as_neon().is_some());
+        assert!(t.as_neon_aes().is_none());
+        assert!(t.as_neon_sha3().is_none());
+        assert!(t.as_neon_crc().is_none());
+        assert!(t.as_scalar().is_none());
+        assert!(t.as_x64v2().is_none());
+        assert!(t.as_x64v3().is_none());
+        assert!(t.as_wasm128().is_none());
+    }
+}
+
+#[test]
+fn neon_aes_into_concrete() {
+    let token = archmage::NeonAesToken::summon();
+    if let Some(t) = token {
+        assert!(t.as_neon_aes().is_some());
+        assert!(t.as_neon().is_none());
+        assert!(t.as_neon_sha3().is_none());
+        assert!(t.as_neon_crc().is_none());
+        assert!(t.as_scalar().is_none());
+        assert!(t.as_x64v2().is_none());
+        assert!(t.as_x64v3().is_none());
+        assert!(t.as_wasm128().is_none());
+    }
+}
+
+#[test]
+fn neon_sha3_into_concrete() {
+    let token = archmage::NeonSha3Token::summon();
+    if let Some(t) = token {
+        assert!(t.as_neon_sha3().is_some());
+        assert!(t.as_neon().is_none());
+        assert!(t.as_neon_aes().is_none());
+        assert!(t.as_neon_crc().is_none());
+        assert!(t.as_scalar().is_none());
+    }
+}
+
+#[test]
+fn neon_crc_into_concrete() {
+    let token = archmage::NeonCrcToken::summon();
+    if let Some(t) = token {
+        assert!(t.as_neon_crc().is_some());
+        assert!(t.as_neon().is_none());
+        assert!(t.as_neon_aes().is_none());
+        assert!(t.as_neon_sha3().is_none());
+        assert!(t.as_scalar().is_none());
+    }
+}
+
+#[test]
+fn wasm128_into_concrete() {
+    let token = archmage::Simd128Token::summon();
+    if let Some(t) = token {
+        assert!(t.as_wasm128().is_some());
+        assert!(t.as_scalar().is_none());
+        assert!(t.as_neon().is_none());
+        assert!(t.as_neon_aes().is_none());
+        assert!(t.as_neon_sha3().is_none());
+        assert!(t.as_neon_crc().is_none());
+        assert!(t.as_x64v2().is_none());
+        assert!(t.as_x64v3().is_none());
+    }
+}
+
+#[cfg(feature = "avx512")]
+mod avx512_into_concrete {
+    use archmage::{IntoConcreteToken, SimdToken};
+
+    #[test]
+    fn x64v4_into_concrete() {
+        if let Some(t) = archmage::X64V4Token::summon() {
+            assert!(t.as_x64v4().is_some());
+            assert!(t.as_avx512_modern().is_none());
+            assert!(t.as_avx512_fp16().is_none());
+            assert!(t.as_x64v2().is_none());
+            assert!(t.as_x64v3().is_none());
+            assert!(t.as_scalar().is_none());
+            assert!(t.as_neon().is_none());
+        }
+    }
+
+    #[test]
+    fn avx512_modern_into_concrete() {
+        if let Some(t) = archmage::Avx512ModernToken::summon() {
+            assert!(t.as_avx512_modern().is_some());
+            assert!(t.as_x64v4().is_none());
+            assert!(t.as_avx512_fp16().is_none());
+            assert!(t.as_x64v2().is_none());
+            assert!(t.as_x64v3().is_none());
+            assert!(t.as_scalar().is_none());
+        }
+    }
+
+    #[test]
+    fn avx512_fp16_into_concrete() {
+        if let Some(t) = archmage::Avx512Fp16Token::summon() {
+            assert!(t.as_avx512_fp16().is_some());
+            assert!(t.as_avx512_modern().is_none());
+            assert!(t.as_x64v4().is_none());
+            assert!(t.as_x64v2().is_none());
+            assert!(t.as_x64v3().is_none());
+            assert!(t.as_scalar().is_none());
+        }
+    }
+}
+
+// =============================================================================
+// Generic dispatch with sub-tier tokens
+// =============================================================================
+
+/// Verify that IntoConcreteToken enables manual dispatch for sub-tier tokens
+fn dispatch_with_sub_tiers<T: IntoConcreteToken>(token: T) -> &'static str {
+    if token.as_neon_aes().is_some() {
+        return "neon_aes";
+    }
+    if token.as_neon_sha3().is_some() {
+        return "neon_sha3";
+    }
+    if token.as_neon_crc().is_some() {
+        return "neon_crc";
+    }
+    if token.as_neon().is_some() {
+        return "neon";
+    }
+    if token.as_scalar().is_some() {
+        return "scalar";
+    }
+    "unknown"
+}
+
+#[test]
+fn sub_tier_dispatch_scalar() {
+    assert_eq!(dispatch_with_sub_tiers(ScalarToken), "scalar");
+}
+
+#[cfg(target_arch = "aarch64")]
+#[test]
+fn sub_tier_dispatch_neon() {
+    if let Some(token) = archmage::NeonToken::summon() {
+        assert_eq!(dispatch_with_sub_tiers(token), "neon");
+    }
+    if let Some(token) = archmage::NeonAesToken::summon() {
+        assert_eq!(dispatch_with_sub_tiers(token), "neon_aes");
     }
 }
