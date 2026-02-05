@@ -10,8 +10,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CI: true
-  # All stable features (excludes 'sleef' which requires nightly)
-  FEATURES: "std macros bytemuck avx512"
+  # All stable features
+  FEATURES: "std macros avx512"
 
 jobs:
   # ==========================================================================

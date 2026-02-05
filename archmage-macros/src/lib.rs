@@ -691,16 +691,9 @@ pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Arguments for the `#[rite]` macro.
+#[derive(Default)]
 struct RiteArgs {
     inline_always: bool,
-}
-
-impl Default for RiteArgs {
-    fn default() -> Self {
-        Self {
-            inline_always: false,
-        }
-    }
 }
 
 impl Parse for RiteArgs {
@@ -759,7 +752,7 @@ fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
     // Prepend attributes to the function
     let mut new_attrs = target_feature_attrs;
     new_attrs.push(inline_attr);
-    new_attrs.extend(input_fn.attrs.drain(..));
+    new_attrs.append(&mut input_fn.attrs);
     input_fn.attrs = new_attrs;
 
     // If we know the target arch, generate cfg-gated impl + stub
