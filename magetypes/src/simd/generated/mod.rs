@@ -295,47 +295,24 @@ pub use wasm::w128::*;
 pub mod polyfill;
 
 // ============================================================================
-// Width-aliased namespaces for multi-width dispatch
+// Per-token namespaces (all available widths per token level)
 //
-// Use these with the #[multiwidth] macro to write width-agnostic code:
-//   use archmage::simd::avx2::*;  // f32xN = f32x8, Token = X64V3Token
+// Each module re-exports ALL types usable with that token:
+//   - Native types at the token's natural width
+//   - Narrower native types (same token or use .v3()/.v2() to downcast)
+//   - Wider polyfilled types built from the natural width
+//
+// The `xN` aliases and `LANES_*` refer to the natural width.
 // ============================================================================
 
 #[cfg(target_arch = "x86_64")]
-pub mod sse {
-    //! SSE/SSE4.1 width aliases (128-bit SIMD)
+pub mod v3 {
+    //! All SIMD types available with `X64V3Token`.
     //!
-    //! - `f32xN` = `f32x4` (4 lanes)
-    //! - `Token` = `X64V3Token`
-
-    pub use super::x86::w128::{
-        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
-        i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
-    };
-
-    pub use super::x86::w128::*;
-
-    /// Token type for this width level
-    pub type Token = archmage::X64V3Token;
-
-    /// Number of f32 lanes
-    pub const LANES_F32: usize = 4;
-    /// Number of f64 lanes
-    pub const LANES_F64: usize = 2;
-    /// Number of i32/u32 lanes
-    pub const LANES_32: usize = 4;
-    /// Number of i16/u16 lanes
-    pub const LANES_16: usize = 8;
-    /// Number of i8/u8 lanes
-    pub const LANES_8: usize = 16;
-}
-
-#[cfg(target_arch = "x86_64")]
-pub mod avx2 {
-    //! AVX2+FMA width aliases (256-bit SIMD)
+    //! Natural width: 256-bit (AVX2+FMA). `f32xN` = `f32x8`.
     //!
-    //! - `f32xN` = `f32x8` (8 lanes)
-    //! - `Token` = `X64V3Token`
+    //! Also includes 128-bit native types and 512-bit polyfills
+    //! (emulated via 2×256-bit ops). All take `X64V3Token`.
 
     pub use super::x86::w256::{
         f32x8 as f32xN, f64x4 as f64xN, i8x32 as i8xN, i16x16 as i16xN, i32x8 as i32xN,
@@ -343,6 +320,16 @@ pub mod avx2 {
     };
 
     pub use super::x86::w256::*;
+
+    // 128-bit native types (same X64V3Token)
+    pub use super::x86::w128::{
+        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
+    };
+
+    // 512-bit polyfilled types (2×256-bit, same X64V3Token)
+    pub use super::polyfill::v3_512::{
+        f32x16, f64x8, i8x64, i16x32, i32x16, i64x8, u8x64, u16x32, u32x16, u64x8,
+    };
 
     /// Token type for this width level
     pub type Token = archmage::X64V3Token;
@@ -355,11 +342,13 @@ pub mod avx2 {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-pub mod avx512 {
-    //! AVX-512 width aliases (512-bit SIMD)
+pub mod v4 {
+    //! All SIMD types available with `X64V4Token`.
     //!
-    //! - `f32xN` = `f32x16` (16 lanes)
-    //! - `Token` = `X64V4Token`
+    //! Natural width: 512-bit (AVX-512). `f32xN` = `f32x16`.
+    //!
+    //! Also includes 128-bit and 256-bit native types. These accept
+    //! `X64V3Token` — use `token.v3()` to downcast your `X64V4Token`.
 
     pub use super::x86::w512::{
         f32x16 as f32xN, f64x8 as f64xN, i8x64 as i8xN, i16x32 as i16xN, i32x16 as i32xN,
@@ -367,6 +356,16 @@ pub mod avx512 {
     };
 
     pub use super::x86::w512::*;
+
+    // 128-bit native types (use token.v3() to downcast)
+    pub use super::x86::w128::{
+        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
+    };
+
+    // 256-bit native types (use token.v3() to downcast)
+    pub use super::x86::w256::{
+        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
+    };
 
     /// Token type for this width level
     pub type Token = archmage::X64V4Token;
@@ -380,10 +379,12 @@ pub mod avx512 {
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon {
-    //! NEON width aliases (128-bit SIMD)
+    //! All SIMD types available with `NeonToken`.
     //!
-    //! - `f32xN` = `f32x4` (4 lanes)
-    //! - `Token` = `NeonToken`
+    //! Natural width: 128-bit (NEON). `f32xN` = `f32x4`.
+    //!
+    //! Also includes 256-bit polyfills (emulated via 2×128-bit NEON ops).
+    //! All take `NeonToken`.
 
     pub use super::arm::w128::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
@@ -392,27 +393,29 @@ pub mod neon {
 
     pub use super::arm::w128::*;
 
+    // 256-bit polyfilled types (2×128-bit NEON, same NeonToken)
+    pub use super::polyfill::neon::{
+        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
+    };
+
     /// Token type for this width level
     pub type Token = archmage::NeonToken;
 
-    /// Number of f32 lanes
     pub const LANES_F32: usize = 4;
-    /// Number of f64 lanes
     pub const LANES_F64: usize = 2;
-    /// Number of i32/u32 lanes
     pub const LANES_32: usize = 4;
-    /// Number of i16/u16 lanes
     pub const LANES_16: usize = 8;
-    /// Number of i8/u8 lanes
     pub const LANES_8: usize = 16;
 }
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm128 {
-    //! WASM SIMD128 width aliases (128-bit SIMD)
+    //! All SIMD types available with `Wasm128Token`.
     //!
-    //! - `f32xN` = `f32x4` (4 lanes)
-    //! - `Token` = `Wasm128Token`
+    //! Natural width: 128-bit (SIMD128). `f32xN` = `f32x4`.
+    //!
+    //! Also includes 256-bit polyfills (emulated via 2×128-bit WASM ops).
+    //! All take `Wasm128Token`.
 
     pub use super::wasm::w128::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
@@ -421,17 +424,17 @@ pub mod wasm128 {
 
     pub use super::wasm::w128::*;
 
+    // 256-bit polyfilled types (2×128-bit WASM SIMD, same Wasm128Token)
+    pub use super::polyfill::wasm128::{
+        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
+    };
+
     /// Token type for this width level
     pub type Token = archmage::Wasm128Token;
 
-    /// Number of f32 lanes
     pub const LANES_F32: usize = 4;
-    /// Number of f64 lanes
     pub const LANES_F64: usize = 2;
-    /// Number of i32/u32 lanes
     pub const LANES_32: usize = 4;
-    /// Number of i16/u16 lanes
     pub const LANES_16: usize = 8;
-    /// Number of i8/u8 lanes
     pub const LANES_8: usize = 16;
 }
