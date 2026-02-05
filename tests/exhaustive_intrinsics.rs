@@ -562,70 +562,39 @@ fn test_implementation_names() {
     {
         use magetypes::simd;
 
-        // simd::sse - maps to x86::w128 (128-bit SIMD)
-        // f32xN = f32x4, i32xN = i32x4, etc.
-        assert_eq!(simd::sse::f32xN::implementation_name(), "x86::v3::f32x4");
-        assert_eq!(simd::sse::f64xN::implementation_name(), "x86::v3::f64x2");
-        assert_eq!(simd::sse::i8xN::implementation_name(), "x86::v3::i8x16");
-        assert_eq!(simd::sse::u8xN::implementation_name(), "x86::v3::u8x16");
-        assert_eq!(simd::sse::i16xN::implementation_name(), "x86::v3::i16x8");
-        assert_eq!(simd::sse::u16xN::implementation_name(), "x86::v3::u16x8");
-        assert_eq!(simd::sse::i32xN::implementation_name(), "x86::v3::i32x4");
-        assert_eq!(simd::sse::u32xN::implementation_name(), "x86::v3::u32x4");
-        assert_eq!(simd::sse::i64xN::implementation_name(), "x86::v3::i64x2");
-        assert_eq!(simd::sse::u64xN::implementation_name(), "x86::v3::u64x2");
-        // Also verify the non-aliased types are accessible
-        assert_eq!(simd::sse::f32x4::implementation_name(), "x86::v3::f32x4");
+        // Note: No simd::sse namespace - v2 is legacy. 128-bit types available via simd::x86::w128::*
 
-        // simd::avx2 - maps to x86::w256 (256-bit SIMD)
+        // simd::v3 - maps to x86::w256 (256-bit SIMD)
         // f32xN = f32x8, i32xN = i32x8, etc.
-        assert_eq!(simd::avx2::f32xN::implementation_name(), "x86::v3::f32x8");
-        assert_eq!(simd::avx2::f64xN::implementation_name(), "x86::v3::f64x4");
-        assert_eq!(simd::avx2::i8xN::implementation_name(), "x86::v3::i8x32");
-        assert_eq!(simd::avx2::u8xN::implementation_name(), "x86::v3::u8x32");
-        assert_eq!(simd::avx2::i16xN::implementation_name(), "x86::v3::i16x16");
-        assert_eq!(simd::avx2::u16xN::implementation_name(), "x86::v3::u16x16");
-        assert_eq!(simd::avx2::i32xN::implementation_name(), "x86::v3::i32x8");
-        assert_eq!(simd::avx2::u32xN::implementation_name(), "x86::v3::u32x8");
-        assert_eq!(simd::avx2::i64xN::implementation_name(), "x86::v3::i64x4");
-        assert_eq!(simd::avx2::u64xN::implementation_name(), "x86::v3::u64x4");
+        assert_eq!(simd::v3::f32xN::implementation_name(), "x86::v3::f32x8");
+        assert_eq!(simd::v3::f64xN::implementation_name(), "x86::v3::f64x4");
+        assert_eq!(simd::v3::i8xN::implementation_name(), "x86::v3::i8x32");
+        assert_eq!(simd::v3::u8xN::implementation_name(), "x86::v3::u8x32");
+        assert_eq!(simd::v3::i16xN::implementation_name(), "x86::v3::i16x16");
+        assert_eq!(simd::v3::u16xN::implementation_name(), "x86::v3::u16x16");
+        assert_eq!(simd::v3::i32xN::implementation_name(), "x86::v3::i32x8");
+        assert_eq!(simd::v3::u32xN::implementation_name(), "x86::v3::u32x8");
+        assert_eq!(simd::v3::i64xN::implementation_name(), "x86::v3::i64x4");
+        assert_eq!(simd::v3::u64xN::implementation_name(), "x86::v3::u64x4");
         // Also verify the non-aliased types are accessible
-        assert_eq!(simd::avx2::f32x8::implementation_name(), "x86::v3::f32x8");
+        assert_eq!(simd::v3::f32x8::implementation_name(), "x86::v3::f32x8");
 
-        // simd::avx512 - maps to x86::w512 (512-bit SIMD)
+        // simd::v4 - maps to x86::w512 (512-bit SIMD)
         // f32xN = f32x16, i32xN = i32x16, etc.
         #[cfg(feature = "avx512")]
         {
-            assert_eq!(
-                simd::avx512::f32xN::implementation_name(),
-                "x86::v4::f32x16"
-            );
-            assert_eq!(simd::avx512::f64xN::implementation_name(), "x86::v4::f64x8");
-            assert_eq!(simd::avx512::i8xN::implementation_name(), "x86::v4::i8x64");
-            assert_eq!(simd::avx512::u8xN::implementation_name(), "x86::v4::u8x64");
-            assert_eq!(
-                simd::avx512::i16xN::implementation_name(),
-                "x86::v4::i16x32"
-            );
-            assert_eq!(
-                simd::avx512::u16xN::implementation_name(),
-                "x86::v4::u16x32"
-            );
-            assert_eq!(
-                simd::avx512::i32xN::implementation_name(),
-                "x86::v4::i32x16"
-            );
-            assert_eq!(
-                simd::avx512::u32xN::implementation_name(),
-                "x86::v4::u32x16"
-            );
-            assert_eq!(simd::avx512::i64xN::implementation_name(), "x86::v4::i64x8");
-            assert_eq!(simd::avx512::u64xN::implementation_name(), "x86::v4::u64x8");
+            assert_eq!(simd::v4::f32xN::implementation_name(), "x86::v4::f32x16");
+            assert_eq!(simd::v4::f64xN::implementation_name(), "x86::v4::f64x8");
+            assert_eq!(simd::v4::i8xN::implementation_name(), "x86::v4::i8x64");
+            assert_eq!(simd::v4::u8xN::implementation_name(), "x86::v4::u8x64");
+            assert_eq!(simd::v4::i16xN::implementation_name(), "x86::v4::i16x32");
+            assert_eq!(simd::v4::u16xN::implementation_name(), "x86::v4::u16x32");
+            assert_eq!(simd::v4::i32xN::implementation_name(), "x86::v4::i32x16");
+            assert_eq!(simd::v4::u32xN::implementation_name(), "x86::v4::u32x16");
+            assert_eq!(simd::v4::i64xN::implementation_name(), "x86::v4::i64x8");
+            assert_eq!(simd::v4::u64xN::implementation_name(), "x86::v4::u64x8");
             // Also verify the non-aliased types are accessible
-            assert_eq!(
-                simd::avx512::f32x16::implementation_name(),
-                "x86::v4::f32x16"
-            );
+            assert_eq!(simd::v4::f32x16::implementation_name(), "x86::v4::f32x16");
         }
     }
 

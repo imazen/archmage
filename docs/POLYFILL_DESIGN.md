@@ -14,7 +14,7 @@ This document outlines the architecture for cross-platform SIMD polyfills in arc
 | WebAssembly SIMD128 | `Wasm128Token` | ❌ Not yet |
 
 ### Current Polyfill (hand-written)
-- `polyfill::sse::f32x8` - emulates AVX2 f32x8 using two SSE f32x4
+- `polyfill::v3::f32x8` - emulates AVX2 f32x8 using two SSE f32x4
 - Works but has maintainability concerns
 
 ## Design Goals
@@ -185,8 +185,8 @@ fn polyfill_matches_native_add() {
             let native_result = (native_a + native_b).to_array();
 
             // Polyfill (2×SSE)
-            let poly_a = polyfill::sse::f32x8::load(sse_token, &data_a);
-            let poly_b = polyfill::sse::f32x8::load(sse_token, &data_b);
+            let poly_a = polyfill::v3::f32x8::load(sse_token, &data_a);
+            let poly_b = polyfill::v3::f32x8::load(sse_token, &data_b);
             let poly_result = (poly_a + poly_b).to_array();
 
             assert_eq!(native_result, poly_result);
@@ -207,8 +207,8 @@ proptest! {
         b in prop::array::uniform8(-1e6f32..1e6f32),
     ) {
         if let Some(token) = Sse41Token::summon() {
-            let va = polyfill::sse::f32x8::load(token, &a);
-            let vb = polyfill::sse::f32x8::load(token, &b);
+            let va = polyfill::v3::f32x8::load(token, &a);
+            let vb = polyfill::v3::f32x8::load(token, &b);
 
             let result1 = (va + vb).to_array();
             let result2 = (vb + va).to_array();
@@ -252,7 +252,7 @@ fn polyfill_exp_accuracy() {
         // Test against std::f32::exp
         let inputs = [-10.0, -1.0, 0.0, 1.0, 10.0, 88.0];
         for input in inputs {
-            let v = polyfill::sse::f32x8::splat(token, input);
+            let v = polyfill::v3::f32x8::splat(token, input);
             let result = v.exp_lowp().to_array();
             let expected = input.exp();
 
@@ -357,11 +357,11 @@ Use const assertions to verify polyfill correctness:
 
 ```rust
 // Verify lane counts match
-const _: () = assert!(polyfill::sse::f32x8::LANES == native::f32x8::LANES);
+const _: () = assert!(polyfill::v3::f32x8::LANES == native::f32x8::LANES);
 
 // Verify size matches
 const _: () = assert!(
-    core::mem::size_of::<polyfill::sse::f32x8>() ==
+    core::mem::size_of::<polyfill::v3::f32x8>() ==
     core::mem::size_of::<native::f32x8>()
 );
 ```

@@ -281,7 +281,7 @@ The registry uses TOML with these table types:
 
 - `[[token]]` — token definitions with name, arch, aliases, features, traits, optional cargo_feature
 - `[[trait]]` — trait definitions with name, features, parents
-- `[[width_namespace]]` — multiwidth codegen config
+- `[[width_namespace]]` — width namespace config for simd type re-exports
 - `[[magetypes_file]]` — file-to-token validation mappings
 - `[[polyfill_w256]]` / `[[polyfill_w512]]` — polyfill platform configs
 

@@ -23,7 +23,7 @@ If called when CPU features are not available, subsequent SIMD operations cause 
 **Invariant**: Every `forge_token_dangerously()` call must be inside:
 - A `summon()` that verified features, OR
 - A function with `#[target_feature]` matching the token's requirements, OR
-- Generated code inside `#[arcane]`/`#[multiwidth]` macros
+- Generated code inside `#[arcane]`/`#[magetypes]` macros
 
 **Audit command**: `cargo xtask audit --forge-calls`
 

@@ -1,24 +1,21 @@
 # Archmage Safety Model & Idiomatic Usage
 
-This is the authoritative reference for understanding and teaching archmage correctly. Read this before writing docs, examples, or explanations.
+Authoritative reference for understanding and teaching archmage. Read before writing docs or examples.
 
-## Terminology: Get These Right
+## Terminology
 
-| Term | Definition | Example |
-|------|------------|---------|
-| **safe** | No `unsafe` keyword required | `let x = vec![1,2,3];` |
-| **unsafe** | Requires `unsafe` keyword (Rust says "I can't verify this") | `unsafe { ptr.read() }` |
-| **sound** | Cannot cause UB when used as documented | Most safe Rust code |
-| **unsound** | CAN cause UB even when used correctly | A buggy `unsafe` impl |
+| Term | Definition |
+|------|------------|
+| **safe** | No `unsafe` keyword required |
+| **unsafe** | Requires `unsafe` keyword (Rust can't verify the invariant) |
+| **sound** | Cannot cause UB when used as documented |
+| **unsound** | CAN cause UB even when used correctly |
 
-**Key insight:** These are orthogonal properties.
-- Safe code is usually sound, but not always (e.g., pre-1.0 `mem::uninitialized`)
-- Unsafe code CAN be sound if it upholds all invariants correctly
-- Archmage's `#[arcane]` generates unsafe code that IS sound (token proves features exist)
+These are orthogonal. Archmage's `#[arcane]` generates unsafe code that IS sound — the token proves features exist.
 
 ## The Core Safety Model
 
-### 1. Tokens Are Proofs, Not Runtime Overhead
+### 1. Tokens Are Proofs
 
 ```rust
 #[derive(Clone, Copy)]  // Zero-sized!
@@ -27,7 +24,7 @@ pub struct X64V3Token;  // Contains no data
 impl SimdToken for X64V3Token {
     fn summon() -> Option<Self> {
         if /* runtime CPUID check */ {
-            Some(Self)  // Token existence = proof features are available
+            Some(Self)  // Existence = proof features are available
         } else {
             None
         }
@@ -35,7 +32,7 @@ impl SimdToken for X64V3Token {
 }
 ```
 
-**Token existence is the proof.** You cannot construct a token except through `summon()` (or the deprecated `forge_token_dangerously()`). If you have a token, the CPU features are available. Period.
+You can't construct a token except through `summon()`. If you have one, the features are available.
 
 ### 2. `#[arcane]` Generates Safe-to-Call Code
 
@@ -51,7 +48,7 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
 fn kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     #[target_feature(enable = "avx2,fma,...")]
     unsafe fn __inner(data: &[f32; 8]) -> f32 {
-        let v = _mm256_setzero_ps();  // Safe because we're in #[target_feature]
+        let v = _mm256_setzero_ps();
         // ...
     }
     // SAFETY: Token existence proves CPU support
@@ -59,66 +56,37 @@ fn kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
 }
 ```
 
-The outer function `kernel` is **safe to call**. It contains an `unsafe` block, but that's an implementation detail. The token parameter proves the invariant that makes it sound.
+The outer function is safe. The `unsafe` is an implementation detail justified by the token.
 
 ### 3. Rust 1.85+ Changed Everything
 
-As of Rust 1.85 (target_feature_11 stabilization), **value-based intrinsics are safe inside `#[target_feature]` functions**:
+Value-based intrinsics are safe inside `#[target_feature]` functions:
 
 ```rust
 #[target_feature(enable = "avx2")]
 fn example() {
-    // ALL of these are SAFE — no `unsafe` needed:
-    let a = _mm256_setzero_ps();
-    let b = _mm256_add_ps(a, a);
-    let c = _mm256_mul_ps(b, b);
-    let d = _mm256_fmadd_ps(a, b, c);
+    let a = _mm256_setzero_ps();       // Safe
+    let b = _mm256_add_ps(a, a);       // Safe
+    let c = _mm256_fmadd_ps(a, b, c);  // Safe
 
-    // ONLY memory operations need `unsafe`:
+    // Only memory operations need unsafe:
     let v = unsafe { _mm256_loadu_ps(ptr) };  // Raw pointer
-    unsafe { _mm256_storeu_ps(ptr, v) };       // Raw pointer
 }
 ```
 
-**This is why archmage works.** The `unsafe` in the generated code is just for calling the `#[target_feature]` function from non-target-feature context. Inside that function, most intrinsics are safe.
+## Two Crates
 
-## Two Crates, Two Philosophies
+**Archmage** provides tokens, macros, and detection. Minimal.
 
-### Archmage: Minimal
-
-Archmage provides **only** what's needed for safe SIMD dispatch:
-
-- **Tokens** — Proof of CPU features (`X64V3Token`, `NeonToken`, etc.)
-- **`#[arcane]`** — Generate `#[target_feature]` wrapper (called from non-SIMD code)
-- **`#[rite]`** — Add `#[target_feature]` + `#[inline]` (called from `#[arcane]`/`#[rite]`)
-- **`incant!`** — Runtime dispatch to suffixed functions
-- **Detection** — `summon()`, `guaranteed()`, feature macros
-
-That's it. No SIMD types, no operator overloading, no method chains.
-
-### Magetypes: Maximal
-
-Magetypes provides **everything** for convenient SIMD programming:
-
-- **SIMD types** — `f32x8`, `i32x4`, `u8x16`, etc.
-- **Operators** — `+`, `-`, `*`, `/`, `&`, `|`, `^`
-- **Methods** — `.abs()`, `.sqrt()`, `.blend()`, `.reduce_add()`, etc.
-- **Transcendentals** — `.log2()`, `.exp()`, `.sin()` (approximations)
-- **Memory ops** — `.load()`, `.store()`, `.from_array()`, `.to_array()`
-- **Cross-platform** — Same API on x86/ARM/WASM via polyfills
-
-All magetypes operations are token-gated and safe inside `#[arcane]`.
+**Magetypes** provides SIMD types (`f32x8`, `i32x4`), operators, methods, transcendentals, and cross-platform polyfills. Maximal.
 
 ## Idiomatic Patterns
 
-### Pattern 1: `#[rite]` Inside, `#[arcane]` at the Boundary
+### `#[rite]` inside, `#[arcane]` at the boundary
 
-**`#[rite]` is for any function called exclusively from `#[arcane]` or `#[rite]` code.** It adds `#[target_feature]` + `#[inline]` with zero wrapper overhead.
-
-**`#[arcane]` is for the boundary** where you transition from non-SIMD to SIMD code (after `summon()`).
+`#[rite]` adds `#[target_feature]` + `#[inline]` with zero wrapper overhead. `#[arcane]` generates a wrapper function (needed when transitioning from non-SIMD code).
 
 ```rust
-// Entry point (called after summon) — use #[arcane]
 pub fn public_api(data: &[f32]) -> f32 {
     if let Some(token) = Desktop64::summon() {
         process_simd(token, data)
@@ -127,7 +95,7 @@ pub fn public_api(data: &[f32]) -> f32 {
     }
 }
 
-#[arcane]
+#[arcane]  // Boundary: called from non-SIMD code
 fn process_simd(token: Desktop64, data: &[f32]) -> f32 {
     let mut sum = 0.0;
     for chunk in data.chunks_exact(8) {
@@ -136,260 +104,107 @@ fn process_simd(token: Desktop64, data: &[f32]) -> f32 {
     sum
 }
 
-// Called from #[arcane] — use #[rite]
-#[rite]
+#[rite]  // Internal: inlines into caller's target_feature context
 fn process_chunk(token: Desktop64, chunk: &[f32; 8]) -> f32 {
     let v = f32x8::from_array(token, *chunk);
     v.reduce_add()
 }
 ```
 
-**Why this matters:** `#[arcane]` generates a wrapper. Calling `#[arcane]` from `#[arcane]` pays wrapper overhead on each call. `#[rite]` inlines into the caller's `#[target_feature]` context.
+Calling `#[arcane]` from `#[arcane]` pays wrapper overhead every time (4x slower in benchmarks). `#[rite]` inlines fully.
 
-### Pattern 2: Summon Once, Pass Everywhere
+### Summon once, pass everywhere
 
-**Token hoisting is critical for performance.**
+`summon()` hits an atomic cache (~1.3 ns), but in a hot loop that adds up. Summon at the API boundary, pass the token through.
+
+### Concrete tokens for hot paths
+
+This is subtle: generic bounds create LLVM optimization barriers.
 
 ```rust
-// WRONG: 42% performance regression
-fn process_pair(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    if let Some(token) = Desktop64::summon() {  // Called millions of times!
-        process_simd(token, a, b)
-    } else {
-        0.0
-    }
-}
+// Generic bound prevents LLVM from inlining across the call
+#[arcane]
+fn process<T: HasX64V2>(token: T, data: &[f32]) -> f32 { ... }
 
-fn process_all(pairs: &[([f32; 8], [f32; 8])]) -> f32 {
-    pairs.iter().map(|(a, b)| process_pair(a, b)).sum()
-}
+// Concrete token: full inlining, single target_feature region
+#[arcane]
+fn process(token: X64V3Token, data: &[f32]) -> f32 { ... }
 ```
 
-```rust
-// RIGHT: Zero overhead
-fn process_all(pairs: &[([f32; 8], [f32; 8])]) -> f32 {
-    if let Some(token) = Desktop64::summon() {
-        // Summon ONCE at entry
-        process_all_simd(token, pairs)
-    } else {
-        process_all_scalar(pairs)
-    }
-}
+`#[target_feature]` changes LLVM's compilation target for that function. Generic callers and concrete callees have mismatched targets, preventing optimization across the boundary. Downcasting (V4 -> V3) is free. Dispatch once at the entry point.
 
-#[arcane]
-fn process_all_simd(token: Desktop64, pairs: &[([f32; 8], [f32; 8])]) -> f32 {
-    // Token passed through — no repeated summon()
-    pairs.iter().map(|(a, b)| process_simd(token, a, b)).sum()
-}
-```
+### Memory operations via `safe_unaligned_simd`
 
-### Pattern 3: Concrete Tokens for Hot Paths
-
-**Generic bounds are optimization barriers.**
+The prelude re-exports `safe_unaligned_simd`, which takes references instead of raw pointers:
 
 ```rust
-// BAD: Generic bound prevents LLVM inlining
-#[arcane]
-fn process_generic<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
-    inner_work(token, data)  // May not inline — T could be any type
-}
-
-// GOOD: Concrete token enables full inlining
-#[arcane]
-fn process_concrete(token: X64V3Token, data: &[f32]) -> f32 {
-    inner_work(token, data)  // Fully inlinable — concrete type
-}
-```
-
-Downcasting is free (V4 → V3). Use concrete tokens and let the compiler optimize.
-
-### Pattern 4: Memory Operations via `safe_unaligned_simd`
-
-The prelude re-exports `safe_unaligned_simd`. This is THE way to do memory operations:
-
-```rust
-use archmage::prelude::*;  // Includes safe_unaligned_simd
+use archmage::prelude::*;
 
 #[arcane]
 fn load_and_square(token: Desktop64, data: &[f32; 8]) -> __m256 {
-    // safe_unaligned_simd takes references, not raw pointers
-    let v = _mm256_loadu_ps(data);  // Safe! From prelude
-    _mm256_mul_ps(v, v)             // Arithmetic is safe inside #[arcane]
+    let v = _mm256_loadu_ps(data);  // Takes &[f32; 8], not *const f32
+    _mm256_mul_ps(v, v)
 }
 ```
 
-For high-level code, prefer magetypes (which uses `safe_unaligned_simd` internally):
-
-```rust
-#[arcane]
-fn load_and_square(token: Desktop64, data: &[f32; 8]) -> f32x8 {
-    let v = f32x8::from_array(token, *data);
-    v * v
-}
-```
-
-## Common Mistakes
-
-### Mistake 1: Calling Intrinsics "Unsafe"
-
-**WRONG:** "Intrinsics are unsafe, so you need `unsafe` blocks."
-
-**RIGHT:** Value-based intrinsics are **safe inside `#[target_feature]`** (Rust 1.85+). Only memory operations (raw pointers) need `unsafe`.
-
-### Mistake 2: Over-Explaining Safety
-
-**WRONG:** Long explanations about why `#[arcane]` is sound, with disclaimers about unsafe code.
-
-**RIGHT:** "The token proves CPU support. Inside `#[arcane]`, SIMD operations are safe."
-
-### Mistake 3: Manual `#[target_feature]` in Examples
-
-**WRONG:**
-```rust
-#[target_feature(enable = "avx2,fma")]
-unsafe fn inner(data: &[f32]) -> f32 { ... }
-
-fn outer(token: X64V3Token, data: &[f32]) -> f32 {
-    unsafe { inner(data) }
-}
-```
-
-**RIGHT:**
-```rust
-#[arcane]
-fn process(token: X64V3Token, data: &[f32]) -> f32 {
-    // Just write the code
-}
-```
-
-### Mistake 4: Using `#[arcane]` for Internal Functions
-
-**WRONG:** `#[arcane]` on functions that are only called from other SIMD code.
-
-**RIGHT:** `#[arcane]` at the boundary (after `summon()`), `#[rite]` for everything called from `#[arcane]`/`#[rite]`.
-
-### Mistake 5: Forgetting Token in Dispatch
-
-**WRONG:**
-```rust
-pub fn api(data: &[f32]) -> f32 {
-    if Desktop64::summon().is_some() {
-        process_simd(data)  // Where's the token?
-    } else {
-        process_scalar(data)
-    }
-}
-```
-
-**RIGHT:**
-```rust
-pub fn api(data: &[f32]) -> f32 {
-    if let Some(token) = Desktop64::summon() {
-        process_simd(token, data)  // Pass the token!
-    } else {
-        process_scalar(data)
-    }
-}
-```
+For high-level code, prefer magetypes (which uses `safe_unaligned_simd` internally).
 
 ## The Soundness Invariant
-
-For archmage to be sound:
 
 ```
 features_enabled_by_arcane(Token) ⊆ features_checked_by_summon(Token)
 ```
 
-The `#[arcane]` macro enables features based on the token type. `summon()` checks those same features at runtime. If they match, the system is sound.
-
-This is verified by `cargo xtask validate` which checks that the macro's feature lists match the summon() implementations.
+Verified by `cargo xtask validate`.
 
 ## Teaching Checklist
 
 When explaining archmage:
 
-1. ✅ Tokens are zero-sized proofs of CPU features
-2. ✅ `summon()` does the runtime check, returns `Option<Token>`
-3. ✅ `#[arcane]` generates `#[target_feature]` code
-4. ✅ Inside `#[target_feature]`, most intrinsics are safe (Rust 1.85+)
-5. ✅ `#[arcane]` at the boundary, `#[rite]` for anything called from SIMD code
-6. ✅ Summon once at API boundary, pass token through
-7. ✅ Concrete tokens enable better optimization than trait bounds
-8. ✅ `safe_unaligned_simd` (in prelude) is how you do memory operations
-9. ✅ magetypes provides high-level SIMD types that use tokens
+1. Tokens are zero-sized proofs of CPU features
+2. `summon()` does the runtime check, returns `Option<Token>`
+3. `#[arcane]` generates `#[target_feature]` code
+4. Inside `#[target_feature]`, most intrinsics are safe (Rust 1.85+)
+5. `#[arcane]` at the boundary, `#[rite]` for everything else
+6. Summon once, pass token through
+7. Concrete tokens optimize better than trait bounds
+8. `safe_unaligned_simd` (in prelude) for memory operations
+9. magetypes provides high-level SIMD types
 
 When showing examples:
 
-1. ✅ Show the simple path first (magetypes + `#[arcane]`)
-2. ✅ Explain what the macro generates (for understanding)
-3. ✅ Memory ops use `safe_unaligned_simd` from the prelude, not raw pointers
-4. ✅ Include the `summon()` call in context
-5. ✅ Show `#[rite]` for any function called from `#[arcane]`/`#[rite]`
+1. Show the simple path first (magetypes + `#[arcane]`)
+2. Explain what the macro generates (for understanding)
+3. Memory ops use `safe_unaligned_simd`, not raw pointers
+4. Include the `summon()` call in context
+5. Show `#[rite]` for any function called from SIMD code
 
-## Banned from Code AND Docs
+## Banned from Docs
 
-**NEVER use or document these prelude aliases:**
+These prelude aliases exist for convenience but must not appear in documentation or examples:
 
-| ❌ Banned | ✅ Use instead |
-|-----------|----------------|
+| Alias | Use instead |
+|-------|-------------|
 | `F32Vec`, `I32Vec`, etc. | `f32x8`, `f32x4`, `i32x8`, `i32x4` |
 | `RecommendedToken` | `Desktop64`, `Arm64`, `Wasm128Token` |
 | `LANES` (outside `#[magetypes]`) | Explicit: `8`, `4`, or width in type name |
 
-**Why:** These aliases pretend platforms are interchangeable. They're not. An 8-wide AVX2 algorithm is fundamentally different from a 4-wide NEON algorithm. Hiding the width breeds bugs and confusion.
+These aliases pretend platforms are interchangeable. An 8-wide AVX2 algorithm is fundamentally different from a 4-wide NEON algorithm. Width-generic code belongs inside `#[magetypes]`, where `Token`, `f32xN`, and `LANES` are substitution placeholders that generate explicit implementations per platform.
 
-**The only place width-generic code belongs:** Inside `#[magetypes]` macro, where `Token`, `f32xN`, and `LANES` are substitution placeholders that generate explicit, separate implementations for each platform.
-
-```rust
-// ❌ WRONG: Hides what's actually happening
-use magetypes::prelude::{F32Vec, RecommendedToken, LANES};
-
-fn process(data: &[f32]) -> f32 {
-    if let Some(token) = RecommendedToken::summon() {
-        // What width? Who knows!
-    }
-}
-
-// ✅ RIGHT: Explicit types, explicit dispatch
-fn process(data: &[f32]) -> f32 {
-    if let Some(token) = Desktop64::summon() {
-        process_avx2(token, data)  // 8-wide, f32x8
-    } else if let Some(token) = Arm64::summon() {
-        process_neon(token, data)  // 4-wide, f32x4
-    } else {
-        process_scalar(data)
-    }
-}
-
-// ✅ ALSO RIGHT: #[magetypes] for code generation
-#[magetypes]
-fn process_impl(token: Token, data: &[f32]) -> f32 {
-    // Token, f32xN, LANES are placeholders here — generates separate functions
-}
-
-pub fn process(data: &[f32]) -> f32 {
-    incant!(process_impl(data))
-}
-```
-
-## Cross-Architecture Notes
+## Cross-Architecture
 
 All tokens exist on all architectures. On wrong arch, `summon()` returns `None`:
 
 ```rust
-// This compiles on ARM:
 #[arcane]
 fn x86_kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
     // On ARM: generates unreachable!() stub
 }
 
-// Dispatch works on all platforms:
 if let Some(token) = X64V3Token::summon() {
     x86_kernel(token, &data)  // Only runs on x86 with AVX2
 }
 ```
-
-This enables single-crate cross-platform SIMD without `#[cfg]` everywhere.
 
 ### Eliminating Runtime Dispatch
 
@@ -400,36 +215,25 @@ This enables single-crate cross-platform SIMD without `#[cfg]` everywhere.
 | AArch64 | (default target) | `Arm64::summon()` always succeeds (NEON is baseline) |
 | WASM | `--target wasm32-unknown-unknown -Ctarget-feature=+simd128` | `Wasm128Token::summon()` compiles away |
 
-**For ARM binaries:** NEON is mandatory on AArch64, so `Arm64::summon()` always returns `Some`. If you're distributing ARM binaries, there's no runtime dispatch needed for basic NEON—just use the token directly. The `summon()` call is still good practice for code clarity and cross-compilation safety.
-
-**For x86 binaries with known deployment:** If you control the deployment environment and know AVX2 is available, compile with `-Ctarget-cpu=haswell` (or `native` for your machine). The `summon()` becomes a no-op that the compiler eliminates entirely.
-
 ## Open Design Questions
 
-These are recorded for future consideration:
+1. **Should magetypes root export SSE2 types on x86-64?** SSE2 is baseline. Currently the root exports all widths. Should w128 be the "default" with higher tiers in submodules?
 
-1. **Should magetypes root export SSE2 types on x86-64?** SSE2 is baseline on x86-64. Currently the root exports all widths (w128, w256, w512). Should w128 (SSE2) be the "default" with higher tiers in submodules?
+2. **Implicit token downcasting:** Should `impl From<X64V4Token> for X64V3Token` exist?
 
-2. **Submodule organization:** Current structure works because types are named by width (`f32x4`, `f32x8`). Submodules exist for explicit access:
-   - `magetypes::simd::x86::w128::f32x4` — SSE
-   - `magetypes::simd::x86::w256::f32x8` — AVX2
-   - `magetypes::simd::arm::w128::f32x4` — NEON
+3. **Implicit vector downcasting:** Should `f32x8` offer extract-low-half to `f32x4`?
 
-   The root `magetypes::simd::*` re-exports all, which is fine since names don't conflict. **Recommendation:** Keep current structure, document submodule paths for explicit access.
-
-3. **Implicit token downcasting:** Can you pass `X64V4Token` where `X64V3Token` is expected? Currently no implicit conversion. Should there be `impl From<X64V4Token> for X64V3Token`?
-
-4. **Implicit vector type downcasting:** Can you use an `f32x8` (AVX2) in a context expecting `f32x4` (SSE) by extracting the low half? This needs explicit methods today.
-
-## Missing Methods (should be added to magetypes)
-
-These methods were expected but don't exist:
+## Missing Methods
 
 | Method | Description | Workaround |
 |--------|-------------|------------|
-| `signum` | Returns -1, 0, or 1 | Use comparison + blend |
-| `tanh` / `tanh_lowp` | Hyperbolic tangent | Implement via `(exp(2x) - 1) / (exp(2x) + 1)` |
-| `sin` / `cos` | Trigonometric functions | Not implemented |
-| `and` / `or` / `xor` on floats | Bitwise ops | Cast to integer type, operate, cast back |
+| `signum` | Returns -1, 0, or 1 | Comparison + blend |
+| `tanh` / `tanh_lowp` | Hyperbolic tangent | `(exp(2x) - 1) / (exp(2x) + 1)` |
+| `sin` / `cos` | Trigonometric | Not implemented |
+| `and` / `or` / `xor` on floats | Bitwise ops on float vectors | Cast to integer, operate, cast back |
 
 Note: `rcp` is `rcp_approx`, `rsqrt` is `rsqrt_approx` for fast approximations. Use `recip()` and `rsqrt()` for full precision.
+
+## License
+
+MIT OR Apache-2.0

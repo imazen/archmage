@@ -84,36 +84,6 @@ if let Some(token) = X64V3Token::summon() {
 - With `#[arcane]`, operators inline into single SIMD instructions
 - Performance matches or exceeds the `wide` crate
 
-## Pattern 4: Multi-Width Code with `#[multiwidth]`
-
-For code that should work across SSE, AVX2, and AVX-512:
-
-```rust
-#[multiwidth]
-mod kernels {
-    use archmage::simd::*;
-
-    pub fn sum(token: Token, data: &[f32]) -> f32 {
-        let mut acc = f32xN::zero(token);  // Width-agnostic type!
-        let chunks = data.chunks_exact(LANES_F32);
-
-        for chunk in chunks {
-            let arr: &[f32; LANES_F32] = chunk.try_into().unwrap();
-            let v = f32xN::load(token, arr);
-            acc = acc + v;
-        }
-
-        acc.reduce_add()
-    }
-}
-
-// The macro generates:
-// - kernels::sse::sum(Sse41Token, &[f32])     - 4-wide
-// - kernels::avx2::sum(X64V3Token, &[f32])  - 8-wide
-// - kernels::avx512::sum(X64V4Token, &[f32])  - 16-wide (with feature)
-// - kernels::sum(&[f32])                       - auto-dispatch
-```
-
 ## Platform-Specific Types
 
 ### x86_64

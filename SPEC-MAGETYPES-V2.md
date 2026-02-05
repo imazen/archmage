@@ -21,7 +21,7 @@ This spec defines the archmage SIMD ecosystem:
 | `#[arcane]` | `#[simd_fn]` | Enable target features via token |
 | `summon()` | `try_new()` | Runtime feature detection |
 | `incant!` | `simd_route!` | Dispatch to platform variants |
-| `#[magetypes]` | `#[multiwidth]` | Generate platform variants |
+| `#[magetypes]` | — | Generate platform variants |
 
 ---
 
@@ -576,10 +576,9 @@ pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
 |----|-----|
 | `#[simd_fn]` | `#[arcane]` |
 | `Token::try_new()` | `Token::summon()` |
-| `#[multiwidth]` | `#[magetypes]` |
+| — | `#[magetypes]` |
 | Manual dispatch | `incant!()` |
 | `impl Has256BitSimd` | Use concrete tokens or `#[magetypes]` |
-| `conjure()` | `summon().unwrap()` |
 
 ### Width Traits (Removed)
 

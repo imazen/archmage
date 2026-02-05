@@ -516,7 +516,7 @@ archmage/                    # Main crate: tokens, macros, detect
 │   │       ├── x86_stubs.rs   # x86 stubs (summon → None)
 │   │       ├── arm_stubs.rs   # ARM stubs
 │   │       └── wasm_stubs.rs  # WASM stubs
-archmage-macros/             # Proc-macro crate (#[arcane], #[multiwidth])
+archmage-macros/             # Proc-macro crate (#[arcane], #[rite], #[magetypes], incant!)
 └── src/
     ├── lib.rs              # Macro implementation
     └── generated/          # Generated from token-registry.toml
