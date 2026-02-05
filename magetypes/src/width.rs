@@ -180,16 +180,16 @@ mod x86_impl {
         type U64x4 = u64x4;
 
         // 512-bit types
-        type F32x16 = crate::simd::polyfill::avx2::f32x16;
-        type F64x8 = crate::simd::polyfill::avx2::f64x8;
-        type I8x64 = crate::simd::polyfill::avx2::i8x64;
-        type U8x64 = crate::simd::polyfill::avx2::u8x64;
-        type I16x32 = crate::simd::polyfill::avx2::i16x32;
-        type U16x32 = crate::simd::polyfill::avx2::u16x32;
-        type I32x16 = crate::simd::polyfill::avx2::i32x16;
-        type U32x16 = crate::simd::polyfill::avx2::u32x16;
-        type I64x8 = crate::simd::polyfill::avx2::i64x8;
-        type U64x8 = crate::simd::polyfill::avx2::u64x8;
+        type F32x16 = crate::simd::polyfill::v3::f32x16;
+        type F64x8 = crate::simd::polyfill::v3::f64x8;
+        type I8x64 = crate::simd::polyfill::v3::i8x64;
+        type U8x64 = crate::simd::polyfill::v3::u8x64;
+        type I16x32 = crate::simd::polyfill::v3::i16x32;
+        type U16x32 = crate::simd::polyfill::v3::u16x32;
+        type I32x16 = crate::simd::polyfill::v3::i32x16;
+        type U32x16 = crate::simd::polyfill::v3::u32x16;
+        type I64x8 = crate::simd::polyfill::v3::i64x8;
+        type U64x8 = crate::simd::polyfill::v3::u64x8;
 
         #[inline(always)]
         fn f32x4_splat(self, v: f32) -> Self::F32x4 {
@@ -563,143 +563,143 @@ mod x86_impl {
         }
         #[inline(always)]
         fn f32x16_splat(self, v: f32) -> Self::F32x16 {
-            crate::simd::polyfill::avx2::f32x16::splat(self, v)
+            crate::simd::polyfill::v3::f32x16::splat(self, v)
         }
 
         #[inline(always)]
         fn f32x16_zero(self) -> Self::F32x16 {
-            crate::simd::polyfill::avx2::f32x16::zero(self)
+            crate::simd::polyfill::v3::f32x16::zero(self)
         }
 
         #[inline(always)]
         fn f32x16_load(self, data: &[f32; 16]) -> Self::F32x16 {
-            crate::simd::polyfill::avx2::f32x16::load(self, data)
+            crate::simd::polyfill::v3::f32x16::load(self, data)
         }
         #[inline(always)]
         fn f64x8_splat(self, v: f64) -> Self::F64x8 {
-            crate::simd::polyfill::avx2::f64x8::splat(self, v)
+            crate::simd::polyfill::v3::f64x8::splat(self, v)
         }
 
         #[inline(always)]
         fn f64x8_zero(self) -> Self::F64x8 {
-            crate::simd::polyfill::avx2::f64x8::zero(self)
+            crate::simd::polyfill::v3::f64x8::zero(self)
         }
 
         #[inline(always)]
         fn f64x8_load(self, data: &[f64; 8]) -> Self::F64x8 {
-            crate::simd::polyfill::avx2::f64x8::load(self, data)
+            crate::simd::polyfill::v3::f64x8::load(self, data)
         }
         #[inline(always)]
         fn i8x64_splat(self, v: i8) -> Self::I8x64 {
-            crate::simd::polyfill::avx2::i8x64::splat(self, v)
+            crate::simd::polyfill::v3::i8x64::splat(self, v)
         }
 
         #[inline(always)]
         fn i8x64_zero(self) -> Self::I8x64 {
-            crate::simd::polyfill::avx2::i8x64::zero(self)
+            crate::simd::polyfill::v3::i8x64::zero(self)
         }
 
         #[inline(always)]
         fn i8x64_load(self, data: &[i8; 64]) -> Self::I8x64 {
-            crate::simd::polyfill::avx2::i8x64::load(self, data)
+            crate::simd::polyfill::v3::i8x64::load(self, data)
         }
         #[inline(always)]
         fn u8x64_splat(self, v: u8) -> Self::U8x64 {
-            crate::simd::polyfill::avx2::u8x64::splat(self, v)
+            crate::simd::polyfill::v3::u8x64::splat(self, v)
         }
 
         #[inline(always)]
         fn u8x64_zero(self) -> Self::U8x64 {
-            crate::simd::polyfill::avx2::u8x64::zero(self)
+            crate::simd::polyfill::v3::u8x64::zero(self)
         }
 
         #[inline(always)]
         fn u8x64_load(self, data: &[u8; 64]) -> Self::U8x64 {
-            crate::simd::polyfill::avx2::u8x64::load(self, data)
+            crate::simd::polyfill::v3::u8x64::load(self, data)
         }
         #[inline(always)]
         fn i16x32_splat(self, v: i16) -> Self::I16x32 {
-            crate::simd::polyfill::avx2::i16x32::splat(self, v)
+            crate::simd::polyfill::v3::i16x32::splat(self, v)
         }
 
         #[inline(always)]
         fn i16x32_zero(self) -> Self::I16x32 {
-            crate::simd::polyfill::avx2::i16x32::zero(self)
+            crate::simd::polyfill::v3::i16x32::zero(self)
         }
 
         #[inline(always)]
         fn i16x32_load(self, data: &[i16; 32]) -> Self::I16x32 {
-            crate::simd::polyfill::avx2::i16x32::load(self, data)
+            crate::simd::polyfill::v3::i16x32::load(self, data)
         }
         #[inline(always)]
         fn u16x32_splat(self, v: u16) -> Self::U16x32 {
-            crate::simd::polyfill::avx2::u16x32::splat(self, v)
+            crate::simd::polyfill::v3::u16x32::splat(self, v)
         }
 
         #[inline(always)]
         fn u16x32_zero(self) -> Self::U16x32 {
-            crate::simd::polyfill::avx2::u16x32::zero(self)
+            crate::simd::polyfill::v3::u16x32::zero(self)
         }
 
         #[inline(always)]
         fn u16x32_load(self, data: &[u16; 32]) -> Self::U16x32 {
-            crate::simd::polyfill::avx2::u16x32::load(self, data)
+            crate::simd::polyfill::v3::u16x32::load(self, data)
         }
         #[inline(always)]
         fn i32x16_splat(self, v: i32) -> Self::I32x16 {
-            crate::simd::polyfill::avx2::i32x16::splat(self, v)
+            crate::simd::polyfill::v3::i32x16::splat(self, v)
         }
 
         #[inline(always)]
         fn i32x16_zero(self) -> Self::I32x16 {
-            crate::simd::polyfill::avx2::i32x16::zero(self)
+            crate::simd::polyfill::v3::i32x16::zero(self)
         }
 
         #[inline(always)]
         fn i32x16_load(self, data: &[i32; 16]) -> Self::I32x16 {
-            crate::simd::polyfill::avx2::i32x16::load(self, data)
+            crate::simd::polyfill::v3::i32x16::load(self, data)
         }
         #[inline(always)]
         fn u32x16_splat(self, v: u32) -> Self::U32x16 {
-            crate::simd::polyfill::avx2::u32x16::splat(self, v)
+            crate::simd::polyfill::v3::u32x16::splat(self, v)
         }
 
         #[inline(always)]
         fn u32x16_zero(self) -> Self::U32x16 {
-            crate::simd::polyfill::avx2::u32x16::zero(self)
+            crate::simd::polyfill::v3::u32x16::zero(self)
         }
 
         #[inline(always)]
         fn u32x16_load(self, data: &[u32; 16]) -> Self::U32x16 {
-            crate::simd::polyfill::avx2::u32x16::load(self, data)
+            crate::simd::polyfill::v3::u32x16::load(self, data)
         }
         #[inline(always)]
         fn i64x8_splat(self, v: i64) -> Self::I64x8 {
-            crate::simd::polyfill::avx2::i64x8::splat(self, v)
+            crate::simd::polyfill::v3::i64x8::splat(self, v)
         }
 
         #[inline(always)]
         fn i64x8_zero(self) -> Self::I64x8 {
-            crate::simd::polyfill::avx2::i64x8::zero(self)
+            crate::simd::polyfill::v3::i64x8::zero(self)
         }
 
         #[inline(always)]
         fn i64x8_load(self, data: &[i64; 8]) -> Self::I64x8 {
-            crate::simd::polyfill::avx2::i64x8::load(self, data)
+            crate::simd::polyfill::v3::i64x8::load(self, data)
         }
         #[inline(always)]
         fn u64x8_splat(self, v: u64) -> Self::U64x8 {
-            crate::simd::polyfill::avx2::u64x8::splat(self, v)
+            crate::simd::polyfill::v3::u64x8::splat(self, v)
         }
 
         #[inline(always)]
         fn u64x8_zero(self) -> Self::U64x8 {
-            crate::simd::polyfill::avx2::u64x8::zero(self)
+            crate::simd::polyfill::v3::u64x8::zero(self)
         }
 
         #[inline(always)]
         fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8 {
-            crate::simd::polyfill::avx2::u64x8::load(self, data)
+            crate::simd::polyfill::v3::u64x8::load(self, data)
         }
     }
 }

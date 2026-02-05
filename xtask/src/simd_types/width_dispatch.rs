@@ -140,7 +140,7 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
         native_width: 256,
         forge_token_for_128: Some("X64V3Token"),
         poly_w256: None, // native
-        poly_w512: Some("crate::simd::polyfill::avx2"),
+        poly_w512: Some("crate::simd::polyfill::v3"),
     },
     TokenConfig {
         token: "NeonToken",

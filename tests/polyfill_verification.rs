@@ -7,7 +7,7 @@
 
 use archmage::{SimdToken, X64V3Token};
 use magetypes::simd::f32x8;
-use magetypes::simd::polyfill::sse as poly;
+use magetypes::simd::polyfill::v3 as poly;
 
 // ============================================================================
 // Helper: Compare polyfill f32x8 to native f32x8

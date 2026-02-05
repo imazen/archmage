@@ -535,13 +535,13 @@ fn generate_polyfill_parity() -> String {
         use archmage::{{SimdToken, X64V3Token}};
 
         // ============================================================================
-        // f32x8: polyfill::sse vs native w256
+        // f32x8: polyfill::v3 vs native w256
         // ============================================================================
 
         mod f32x8_parity {{
             use super::*;
             use magetypes::simd::x86::w256::f32x8 as native;
-            use magetypes::simd::polyfill::sse::f32x8 as poly;
+            use magetypes::simd::polyfill::v3::f32x8 as poly;
 
             #[test]
             fn test_from_array_to_array() {{
@@ -700,13 +700,13 @@ fn generate_polyfill_parity() -> String {
         }}
 
         // ============================================================================
-        // i32x8: polyfill::sse vs native w256
+        // i32x8: polyfill::v3 vs native w256
         // ============================================================================
 
         mod i32x8_parity {{
             use super::*;
             use magetypes::simd::x86::w256::i32x8 as native;
-            use magetypes::simd::polyfill::sse::i32x8 as poly;
+            use magetypes::simd::polyfill::v3::i32x8 as poly;
 
             #[test]
             fn test_from_array_to_array() {{
@@ -763,13 +763,13 @@ fn generate_polyfill_parity() -> String {
         }}
 
         // ============================================================================
-        // f64x4: polyfill::sse vs native w256
+        // f64x4: polyfill::v3 vs native w256
         // ============================================================================
 
         mod f64x4_parity {{
             use super::*;
             use magetypes::simd::x86::w256::f64x4 as native;
-            use magetypes::simd::polyfill::sse::f64x4 as poly;
+            use magetypes::simd::polyfill::v3::f64x4 as poly;
 
             #[test]
             fn test_from_array_to_array() {{

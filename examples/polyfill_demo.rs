@@ -16,7 +16,7 @@ fn main() {}
 #[cfg(target_arch = "x86_64")]
 mod x86_impl {
     use archmage::{SimdToken, X64V3Token, arcane};
-    use magetypes::simd::polyfill::sse as poly;
+    use magetypes::simd::polyfill::v3 as poly;
     use std::time::Instant;
 
     const N: usize = 64 * 1024;
