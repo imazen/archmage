@@ -707,7 +707,7 @@ Found during pal.rs refactoring to use `#[arcane]` + `safe_unaligned_simd`:
 
 ### Completed
 
-- ~~**Type implementation verification**~~: Done. Added `implementation_name() -> &'static str` to all magetypes vectors. Returns paths like `"x86::w256::f32x8"` or `"polyfill::neon::f32x8"`. Test added in `tests/exhaustive_intrinsics.rs`.
+- ~~**Type implementation verification**~~: Done. Added `implementation_name() -> &'static str` to all magetypes vectors. Uses tier-based naming: `"x86::v3::f32x8"`, `"x86::v4::f32x16"`, `"arm::neon::f32x4"`, `"wasm::wasm128::f32x4"`, `"polyfill::v3::f32x8"`, `"polyfill::v3_512::f32x16"`, `"polyfill::neon::f32x8"`. Test in `tests/exhaustive_intrinsics.rs`.
 - ~~**WASM u64x2 ordering comparisons**~~: Done. Added simd_lt/le/gt/ge via bias-to-signed polyfill (XOR with i64::MIN, then i64x2_lt/gt). Parity: 4 → 0.
 - ~~**x86 byte shift polyfills**~~: Done. Added i8x16/u8x16 shl, shr, shr_arithmetic for all x86 widths. Uses 16-bit shift + byte mask (~2 instructions). AVX-512 shr_arithmetic uses mask registers. Parity: 9 → 4.
 - ~~**All actionable parity issues**~~: Done. Closed 28 remaining issues: extend/pack ops (17), RGBA pixel ops (4), i64/u64 polyfill math (7). Parity: 37 → 9 (0 actionable).
