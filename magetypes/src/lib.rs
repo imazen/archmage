@@ -17,7 +17,7 @@
 //! # #[cfg(target_arch = "x86_64")]
 //! # fn main() {
 //! use archmage::{X64V3Token, SimdToken};
-//! use magetypes::f32x8;
+//! use magetypes::simd::f32x8;
 //!
 //! if let Some(token) = X64V3Token::summon() {
 //!     let a = f32x8::splat(token, 1.0);
@@ -93,17 +93,5 @@ pub mod simd;
 mod width;
 pub use width::WidthDispatch;
 
-// Re-export common types at crate root for convenience
-#[cfg(target_arch = "x86_64")]
-pub use simd::{f32x4, f32x8, f64x2, f64x4, i8x16, i8x32, i16x8, i16x16, i32x4, i32x8};
-#[cfg(target_arch = "x86_64")]
-pub use simd::{u8x16, u8x32, u16x8, u16x16, u32x4, u32x8, u64x2, u64x4};
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-pub use simd::{f32x16, f64x8, i8x64, i16x32, i32x16, i64x8, u8x64, u16x32, u32x16, u64x8};
-
-#[cfg(target_arch = "aarch64")]
-pub use simd::{f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2};
-
-#[cfg(target_arch = "wasm32")]
-pub use simd::{f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2};
+// Types are accessed via magetypes::simd::* - no root re-exports
+// This keeps the API stable during development
