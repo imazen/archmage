@@ -19,7 +19,7 @@ This is the mechanism that makes SIMD work. It tells LLVM: "Inside this function
 
 ```rust
 #[target_feature(enable = "avx2,fma")]
-unsafe fn process_avx2(data: &[f32; 8]) -> f32 {
+fn process_avx2(data: &[f32; 8]) -> f32 {
     // LLVM generates AVX2 instructions here
     // _mm256_* intrinsics compile to single instructions
     let v = _mm256_loadu_ps(data.as_ptr());
@@ -27,7 +27,7 @@ unsafe fn process_avx2(data: &[f32; 8]) -> f32 {
 }
 ```
 
-**Why `unsafe`?** The function uses AVX2 instructions, but LLVM doesn't verify the caller checked for AVX2. If you call this on a CPU without AVX2, you get an illegal instruction fault. The `unsafe` is the contract: "caller must ensure CPU support."
+Since Rust 1.85, the function itself isn't `unsafe`. But **calling** it from a context without matching target features requires `unsafe` — because without a `summon()` or CPUID check, there's no proof the CPU supports those instructions. Calling on an unsupported CPU means an illegal instruction fault.
 
 **This is what `#[arcane]` does for you:**
 
@@ -47,7 +47,7 @@ fn process(token: Desktop64, data: &[f32; 8]) -> f32 {
 }
 ```
 
-The token proves the runtime check happened. The inner function gets LLVM's optimizations.
+The `unsafe` call is where we cross from "no target features" to "avx2+fma" — calling a function compiled for a different LLVM target than the caller. The token proves `summon()` succeeded, making that crossing sound.
 
 ## LLVM Optimization and Feature Boundaries
 
