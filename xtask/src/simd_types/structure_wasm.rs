@@ -237,10 +237,10 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"wasm::w128::{name}"`.
+        /// Returns `"wasm::simd128::{name}"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {{
-        "wasm::w128::{name}"
+        "wasm::simd128::{name}"
         }}
 
     "#}

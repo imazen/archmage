@@ -236,43 +236,270 @@ fn print_all_token_names() {
     println!("    Wasm128Token:      {}", archmage::Wasm128Token::NAME);
 }
 
-/// Test that implementation_name() returns the correct implementation path.
+/// Test that implementation_name() returns the correct implementation path for all types.
+///
+/// This tests:
+/// 1. Native types at each width level
+/// 2. Polyfill types (always available alongside native types)
+/// 3. Every element type (f32, f64, i8, u8, i16, u16, i32, u32, i64, u64)
 #[test]
 fn test_implementation_names() {
-    use magetypes::simd::*;
-
-    // x86 native types
+    // ========== x86_64 native types ==========
     #[cfg(target_arch = "x86_64")]
     {
-        assert_eq!(f32x4::implementation_name(), "x86::w128::f32x4");
-        assert_eq!(f64x2::implementation_name(), "x86::w128::f64x2");
-        assert_eq!(i32x4::implementation_name(), "x86::w128::i32x4");
-        assert_eq!(f32x8::implementation_name(), "x86::w256::f32x8");
-        assert_eq!(f64x4::implementation_name(), "x86::w256::f64x4");
-        assert_eq!(i32x8::implementation_name(), "x86::w256::i32x8");
+        use magetypes::simd::x86;
 
+        // W128 (SSE) - all 10 element types
+        assert_eq!(x86::w128::f32x4::implementation_name(), "x86::v3::f32x4");
+        assert_eq!(x86::w128::f64x2::implementation_name(), "x86::v3::f64x2");
+        assert_eq!(x86::w128::i8x16::implementation_name(), "x86::v3::i8x16");
+        assert_eq!(x86::w128::u8x16::implementation_name(), "x86::v3::u8x16");
+        assert_eq!(x86::w128::i16x8::implementation_name(), "x86::v3::i16x8");
+        assert_eq!(x86::w128::u16x8::implementation_name(), "x86::v3::u16x8");
+        assert_eq!(x86::w128::i32x4::implementation_name(), "x86::v3::i32x4");
+        assert_eq!(x86::w128::u32x4::implementation_name(), "x86::v3::u32x4");
+        assert_eq!(x86::w128::i64x2::implementation_name(), "x86::v3::i64x2");
+        assert_eq!(x86::w128::u64x2::implementation_name(), "x86::v3::u64x2");
+
+        // W256 (AVX2) - all 10 element types
+        assert_eq!(x86::w256::f32x8::implementation_name(), "x86::v3::f32x8");
+        assert_eq!(x86::w256::f64x4::implementation_name(), "x86::v3::f64x4");
+        assert_eq!(x86::w256::i8x32::implementation_name(), "x86::v3::i8x32");
+        assert_eq!(x86::w256::u8x32::implementation_name(), "x86::v3::u8x32");
+        assert_eq!(x86::w256::i16x16::implementation_name(), "x86::v3::i16x16");
+        assert_eq!(x86::w256::u16x16::implementation_name(), "x86::v3::u16x16");
+        assert_eq!(x86::w256::i32x8::implementation_name(), "x86::v3::i32x8");
+        assert_eq!(x86::w256::u32x8::implementation_name(), "x86::v3::u32x8");
+        assert_eq!(x86::w256::i64x4::implementation_name(), "x86::v3::i64x4");
+        assert_eq!(x86::w256::u64x4::implementation_name(), "x86::v3::u64x4");
+
+        // W512 (AVX-512) - all 10 element types
         #[cfg(feature = "avx512")]
         {
-            assert_eq!(f32x16::implementation_name(), "x86::w512::f32x16");
-            assert_eq!(i32x16::implementation_name(), "x86::w512::i32x16");
+            assert_eq!(x86::w512::f32x16::implementation_name(), "x86::v4::f32x16");
+            assert_eq!(x86::w512::f64x8::implementation_name(), "x86::v4::f64x8");
+            assert_eq!(x86::w512::i8x64::implementation_name(), "x86::v4::i8x64");
+            assert_eq!(x86::w512::u8x64::implementation_name(), "x86::v4::u8x64");
+            assert_eq!(x86::w512::i16x32::implementation_name(), "x86::v4::i16x32");
+            assert_eq!(x86::w512::u16x32::implementation_name(), "x86::v4::u16x32");
+            assert_eq!(x86::w512::i32x16::implementation_name(), "x86::v4::i32x16");
+            assert_eq!(x86::w512::u32x16::implementation_name(), "x86::v4::u32x16");
+            assert_eq!(x86::w512::i64x8::implementation_name(), "x86::v4::i64x8");
+            assert_eq!(x86::w512::u64x8::implementation_name(), "x86::v4::u64x8");
         }
-
-        // Polyfill types (on x86, w512 is polyfilled from w256 when not using avx512 feature)
-        // Not testing here since they overlap with native types when avx512 is enabled
     }
 
-    // ARM types (would fail on x86 since types don't exist)
+    // ========== x86_64 polyfill types ==========
+    // These are ALWAYS available, even when native types exist!
+    #[cfg(target_arch = "x86_64")]
+    {
+        use magetypes::simd::polyfill;
+
+        // polyfill::sse - W256 emulated from W128 (all 10 element types)
+        assert_eq!(polyfill::sse::f32x8::implementation_name(), "polyfill::sse::f32x8");
+        assert_eq!(polyfill::sse::f64x4::implementation_name(), "polyfill::sse::f64x4");
+        assert_eq!(polyfill::sse::i8x32::implementation_name(), "polyfill::sse::i8x32");
+        assert_eq!(polyfill::sse::u8x32::implementation_name(), "polyfill::sse::u8x32");
+        assert_eq!(polyfill::sse::i16x16::implementation_name(), "polyfill::sse::i16x16");
+        assert_eq!(polyfill::sse::u16x16::implementation_name(), "polyfill::sse::u16x16");
+        assert_eq!(polyfill::sse::i32x8::implementation_name(), "polyfill::sse::i32x8");
+        assert_eq!(polyfill::sse::u32x8::implementation_name(), "polyfill::sse::u32x8");
+        assert_eq!(polyfill::sse::i64x4::implementation_name(), "polyfill::sse::i64x4");
+        assert_eq!(polyfill::sse::u64x4::implementation_name(), "polyfill::sse::u64x4");
+
+        // polyfill::avx2 - W512 emulated from W256 (all 10 element types)
+        assert_eq!(polyfill::avx2::f32x16::implementation_name(), "polyfill::avx2::f32x16");
+        assert_eq!(polyfill::avx2::f64x8::implementation_name(), "polyfill::avx2::f64x8");
+        assert_eq!(polyfill::avx2::i8x64::implementation_name(), "polyfill::avx2::i8x64");
+        assert_eq!(polyfill::avx2::u8x64::implementation_name(), "polyfill::avx2::u8x64");
+        assert_eq!(polyfill::avx2::i16x32::implementation_name(), "polyfill::avx2::i16x32");
+        assert_eq!(polyfill::avx2::u16x32::implementation_name(), "polyfill::avx2::u16x32");
+        assert_eq!(polyfill::avx2::i32x16::implementation_name(), "polyfill::avx2::i32x16");
+        assert_eq!(polyfill::avx2::u32x16::implementation_name(), "polyfill::avx2::u32x16");
+        assert_eq!(polyfill::avx2::i64x8::implementation_name(), "polyfill::avx2::i64x8");
+        assert_eq!(polyfill::avx2::u64x8::implementation_name(), "polyfill::avx2::u64x8");
+    }
+
+    // ========== aarch64 native types ==========
     #[cfg(target_arch = "aarch64")]
     {
-        assert_eq!(f32x4::implementation_name(), "arm::w128::f32x4");
-        assert_eq!(f64x2::implementation_name(), "arm::w128::f64x2");
-        assert_eq!(i32x4::implementation_name(), "arm::w128::i32x4");
+        use magetypes::simd::arm;
+
+        // W128 (NEON) - all 10 element types
+        assert_eq!(arm::w128::f32x4::implementation_name(), "arm::neon::f32x4");
+        assert_eq!(arm::w128::f64x2::implementation_name(), "arm::neon::f64x2");
+        assert_eq!(arm::w128::i8x16::implementation_name(), "arm::neon::i8x16");
+        assert_eq!(arm::w128::u8x16::implementation_name(), "arm::neon::u8x16");
+        assert_eq!(arm::w128::i16x8::implementation_name(), "arm::neon::i16x8");
+        assert_eq!(arm::w128::u16x8::implementation_name(), "arm::neon::u16x8");
+        assert_eq!(arm::w128::i32x4::implementation_name(), "arm::neon::i32x4");
+        assert_eq!(arm::w128::u32x4::implementation_name(), "arm::neon::u32x4");
+        assert_eq!(arm::w128::i64x2::implementation_name(), "arm::neon::i64x2");
+        assert_eq!(arm::w128::u64x2::implementation_name(), "arm::neon::u64x2");
     }
 
-    // WASM types
+    // ========== aarch64 polyfill types ==========
+    #[cfg(target_arch = "aarch64")]
+    {
+        use magetypes::simd::polyfill;
+
+        // polyfill::neon - W256 emulated from W128 (all 10 element types)
+        assert_eq!(polyfill::neon::f32x8::implementation_name(), "polyfill::neon::f32x8");
+        assert_eq!(polyfill::neon::f64x4::implementation_name(), "polyfill::neon::f64x4");
+        assert_eq!(polyfill::neon::i8x32::implementation_name(), "polyfill::neon::i8x32");
+        assert_eq!(polyfill::neon::u8x32::implementation_name(), "polyfill::neon::u8x32");
+        assert_eq!(polyfill::neon::i16x16::implementation_name(), "polyfill::neon::i16x16");
+        assert_eq!(polyfill::neon::u16x16::implementation_name(), "polyfill::neon::u16x16");
+        assert_eq!(polyfill::neon::i32x8::implementation_name(), "polyfill::neon::i32x8");
+        assert_eq!(polyfill::neon::u32x8::implementation_name(), "polyfill::neon::u32x8");
+        assert_eq!(polyfill::neon::i64x4::implementation_name(), "polyfill::neon::i64x4");
+        assert_eq!(polyfill::neon::u64x4::implementation_name(), "polyfill::neon::u64x4");
+    }
+
+    // ========== wasm32 native types ==========
     #[cfg(target_arch = "wasm32")]
     {
-        assert_eq!(f32x4::implementation_name(), "wasm::w128::f32x4");
-        assert_eq!(i32x4::implementation_name(), "wasm::w128::i32x4");
+        use magetypes::simd::wasm;
+
+        // W128 (SIMD128) - all 10 element types
+        assert_eq!(wasm::w128::f32x4::implementation_name(), "wasm::simd128::f32x4");
+        assert_eq!(wasm::w128::f64x2::implementation_name(), "wasm::simd128::f64x2");
+        assert_eq!(wasm::w128::i8x16::implementation_name(), "wasm::simd128::i8x16");
+        assert_eq!(wasm::w128::u8x16::implementation_name(), "wasm::simd128::u8x16");
+        assert_eq!(wasm::w128::i16x8::implementation_name(), "wasm::simd128::i16x8");
+        assert_eq!(wasm::w128::u16x8::implementation_name(), "wasm::simd128::u16x8");
+        assert_eq!(wasm::w128::i32x4::implementation_name(), "wasm::simd128::i32x4");
+        assert_eq!(wasm::w128::u32x4::implementation_name(), "wasm::simd128::u32x4");
+        assert_eq!(wasm::w128::i64x2::implementation_name(), "wasm::simd128::i64x2");
+        assert_eq!(wasm::w128::u64x2::implementation_name(), "wasm::simd128::u64x2");
+    }
+
+    // ========== wasm32 polyfill types ==========
+    #[cfg(target_arch = "wasm32")]
+    {
+        use magetypes::simd::polyfill;
+
+        // polyfill::wasm128 - W256 emulated from W128 (all 10 element types)
+        assert_eq!(polyfill::wasm128::f32x8::implementation_name(), "polyfill::wasm128::f32x8");
+        assert_eq!(polyfill::wasm128::f64x4::implementation_name(), "polyfill::wasm128::f64x4");
+        assert_eq!(polyfill::wasm128::i8x32::implementation_name(), "polyfill::wasm128::i8x32");
+        assert_eq!(polyfill::wasm128::u8x32::implementation_name(), "polyfill::wasm128::u8x32");
+        assert_eq!(polyfill::wasm128::i16x16::implementation_name(), "polyfill::wasm128::i16x16");
+        assert_eq!(polyfill::wasm128::u16x16::implementation_name(), "polyfill::wasm128::u16x16");
+        assert_eq!(polyfill::wasm128::i32x8::implementation_name(), "polyfill::wasm128::i32x8");
+        assert_eq!(polyfill::wasm128::u32x8::implementation_name(), "polyfill::wasm128::u32x8");
+        assert_eq!(polyfill::wasm128::i64x4::implementation_name(), "polyfill::wasm128::i64x4");
+        assert_eq!(polyfill::wasm128::u64x4::implementation_name(), "polyfill::wasm128::u64x4");
+    }
+
+    // ========== Verify top-level re-exports use native types ==========
+    // When importing from `magetypes::simd::*`, we should get the native (fastest) types
+    #[cfg(target_arch = "x86_64")]
+    {
+        use magetypes::simd::*;
+        // Top-level f32x4 should be native x86::w128::f32x4
+        assert_eq!(f32x4::implementation_name(), "x86::v3::f32x4");
+        // Top-level f32x8 should be native x86::w256::f32x8
+        assert_eq!(f32x8::implementation_name(), "x86::v3::f32x8");
+        // With avx512 feature, top-level f32x16 should be native x86::w512::f32x16
+        #[cfg(feature = "avx512")]
+        assert_eq!(f32x16::implementation_name(), "x86::v4::f32x16");
+    }
+
+    // ========== x86_64 width-aliased namespaces ==========
+    // These are the "token tier" modules - each corresponds to a specific SIMD level
+    #[cfg(target_arch = "x86_64")]
+    {
+        use magetypes::simd;
+
+        // simd::sse - maps to x86::w128 (128-bit SIMD)
+        // f32xN = f32x4, i32xN = i32x4, etc.
+        assert_eq!(simd::sse::f32xN::implementation_name(), "x86::v3::f32x4");
+        assert_eq!(simd::sse::f64xN::implementation_name(), "x86::v3::f64x2");
+        assert_eq!(simd::sse::i8xN::implementation_name(), "x86::v3::i8x16");
+        assert_eq!(simd::sse::u8xN::implementation_name(), "x86::v3::u8x16");
+        assert_eq!(simd::sse::i16xN::implementation_name(), "x86::v3::i16x8");
+        assert_eq!(simd::sse::u16xN::implementation_name(), "x86::v3::u16x8");
+        assert_eq!(simd::sse::i32xN::implementation_name(), "x86::v3::i32x4");
+        assert_eq!(simd::sse::u32xN::implementation_name(), "x86::v3::u32x4");
+        assert_eq!(simd::sse::i64xN::implementation_name(), "x86::v3::i64x2");
+        assert_eq!(simd::sse::u64xN::implementation_name(), "x86::v3::u64x2");
+        // Also verify the non-aliased types are accessible
+        assert_eq!(simd::sse::f32x4::implementation_name(), "x86::v3::f32x4");
+
+        // simd::avx2 - maps to x86::w256 (256-bit SIMD)
+        // f32xN = f32x8, i32xN = i32x8, etc.
+        assert_eq!(simd::avx2::f32xN::implementation_name(), "x86::v3::f32x8");
+        assert_eq!(simd::avx2::f64xN::implementation_name(), "x86::v3::f64x4");
+        assert_eq!(simd::avx2::i8xN::implementation_name(), "x86::v3::i8x32");
+        assert_eq!(simd::avx2::u8xN::implementation_name(), "x86::v3::u8x32");
+        assert_eq!(simd::avx2::i16xN::implementation_name(), "x86::v3::i16x16");
+        assert_eq!(simd::avx2::u16xN::implementation_name(), "x86::v3::u16x16");
+        assert_eq!(simd::avx2::i32xN::implementation_name(), "x86::v3::i32x8");
+        assert_eq!(simd::avx2::u32xN::implementation_name(), "x86::v3::u32x8");
+        assert_eq!(simd::avx2::i64xN::implementation_name(), "x86::v3::i64x4");
+        assert_eq!(simd::avx2::u64xN::implementation_name(), "x86::v3::u64x4");
+        // Also verify the non-aliased types are accessible
+        assert_eq!(simd::avx2::f32x8::implementation_name(), "x86::v3::f32x8");
+
+        // simd::avx512 - maps to x86::w512 (512-bit SIMD)
+        // f32xN = f32x16, i32xN = i32x16, etc.
+        #[cfg(feature = "avx512")]
+        {
+            assert_eq!(simd::avx512::f32xN::implementation_name(), "x86::v4::f32x16");
+            assert_eq!(simd::avx512::f64xN::implementation_name(), "x86::v4::f64x8");
+            assert_eq!(simd::avx512::i8xN::implementation_name(), "x86::v4::i8x64");
+            assert_eq!(simd::avx512::u8xN::implementation_name(), "x86::v4::u8x64");
+            assert_eq!(simd::avx512::i16xN::implementation_name(), "x86::v4::i16x32");
+            assert_eq!(simd::avx512::u16xN::implementation_name(), "x86::v4::u16x32");
+            assert_eq!(simd::avx512::i32xN::implementation_name(), "x86::v4::i32x16");
+            assert_eq!(simd::avx512::u32xN::implementation_name(), "x86::v4::u32x16");
+            assert_eq!(simd::avx512::i64xN::implementation_name(), "x86::v4::i64x8");
+            assert_eq!(simd::avx512::u64xN::implementation_name(), "x86::v4::u64x8");
+            // Also verify the non-aliased types are accessible
+            assert_eq!(simd::avx512::f32x16::implementation_name(), "x86::v4::f32x16");
+        }
+    }
+
+    // ========== aarch64 width-aliased namespaces ==========
+    #[cfg(target_arch = "aarch64")]
+    {
+        use magetypes::simd;
+
+        // simd::neon - maps to arm::w128 (128-bit SIMD)
+        // f32xN = f32x4, i32xN = i32x4, etc.
+        assert_eq!(simd::neon::f32xN::implementation_name(), "arm::neon::f32x4");
+        assert_eq!(simd::neon::f64xN::implementation_name(), "arm::neon::f64x2");
+        assert_eq!(simd::neon::i8xN::implementation_name(), "arm::neon::i8x16");
+        assert_eq!(simd::neon::u8xN::implementation_name(), "arm::neon::u8x16");
+        assert_eq!(simd::neon::i16xN::implementation_name(), "arm::neon::i16x8");
+        assert_eq!(simd::neon::u16xN::implementation_name(), "arm::neon::u16x8");
+        assert_eq!(simd::neon::i32xN::implementation_name(), "arm::neon::i32x4");
+        assert_eq!(simd::neon::u32xN::implementation_name(), "arm::neon::u32x4");
+        assert_eq!(simd::neon::i64xN::implementation_name(), "arm::neon::i64x2");
+        assert_eq!(simd::neon::u64xN::implementation_name(), "arm::neon::u64x2");
+        // Also verify the non-aliased types are accessible
+        assert_eq!(simd::neon::f32x4::implementation_name(), "arm::neon::f32x4");
+    }
+
+    // ========== wasm32 width-aliased namespaces ==========
+    #[cfg(target_arch = "wasm32")]
+    {
+        use magetypes::simd;
+
+        // simd::wasm128 - maps to wasm::w128 (128-bit SIMD)
+        // f32xN = f32x4, i32xN = i32x4, etc.
+        assert_eq!(simd::wasm128::f32xN::implementation_name(), "wasm::simd128::f32x4");
+        assert_eq!(simd::wasm128::f64xN::implementation_name(), "wasm::simd128::f64x2");
+        assert_eq!(simd::wasm128::i8xN::implementation_name(), "wasm::simd128::i8x16");
+        assert_eq!(simd::wasm128::u8xN::implementation_name(), "wasm::simd128::u8x16");
+        assert_eq!(simd::wasm128::i16xN::implementation_name(), "wasm::simd128::i16x8");
+        assert_eq!(simd::wasm128::u16xN::implementation_name(), "wasm::simd128::u16x8");
+        assert_eq!(simd::wasm128::i32xN::implementation_name(), "wasm::simd128::i32x4");
+        assert_eq!(simd::wasm128::u32xN::implementation_name(), "wasm::simd128::u32x4");
+        assert_eq!(simd::wasm128::i64xN::implementation_name(), "wasm::simd128::i64x2");
+        assert_eq!(simd::wasm128::u64xN::implementation_name(), "wasm::simd128::u64x2");
+        // Also verify the non-aliased types are accessible
+        assert_eq!(simd::wasm128::f32x4::implementation_name(), "wasm::simd128::f32x4");
     }
 }

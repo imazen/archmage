@@ -168,10 +168,10 @@ impl f32x4 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::f32x4"`.
+    /// Returns `"arm::neon::f32x4"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::f32x4"
+        "arm::neon::f32x4"
     }
 
     /// Element-wise minimum
@@ -1454,10 +1454,10 @@ impl f64x2 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::f64x2"`.
+    /// Returns `"arm::neon::f64x2"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::f64x2"
+        "arm::neon::f64x2"
     }
 
     /// Element-wise minimum
@@ -2007,10 +2007,10 @@ impl i8x16 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::i8x16"`.
+    /// Returns `"arm::neon::i8x16"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::i8x16"
+        "arm::neon::i8x16"
     }
 
     /// Element-wise minimum
@@ -2438,10 +2438,10 @@ impl u8x16 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::u8x16"`.
+    /// Returns `"arm::neon::u8x16"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::u8x16"
+        "arm::neon::u8x16"
     }
 
     /// Element-wise minimum
@@ -2890,10 +2890,10 @@ impl i16x8 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::i16x8"`.
+    /// Returns `"arm::neon::i16x8"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::i16x8"
+        "arm::neon::i16x8"
     }
 
     /// Element-wise minimum
@@ -3385,10 +3385,10 @@ impl u16x8 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::u16x8"`.
+    /// Returns `"arm::neon::u16x8"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::u16x8"
+        "arm::neon::u16x8"
     }
 
     /// Element-wise minimum
@@ -3837,10 +3837,10 @@ impl i32x4 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::i32x4"`.
+    /// Returns `"arm::neon::i32x4"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::i32x4"
+        "arm::neon::i32x4"
     }
 
     /// Element-wise minimum
@@ -4325,10 +4325,10 @@ impl u32x4 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::u32x4"`.
+    /// Returns `"arm::neon::u32x4"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::u32x4"
+        "arm::neon::u32x4"
     }
 
     /// Element-wise minimum
@@ -4757,10 +4757,10 @@ impl i64x2 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::i64x2"`.
+    /// Returns `"arm::neon::i64x2"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::i64x2"
+        "arm::neon::i64x2"
     }
 
     /// Element-wise minimum
@@ -5199,10 +5199,10 @@ impl u64x2 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"arm::w128::u64x2"`.
+    /// Returns `"arm::neon::u64x2"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "arm::w128::u64x2"
+        "arm::neon::u64x2"
     }
 
     /// Element-wise minimum

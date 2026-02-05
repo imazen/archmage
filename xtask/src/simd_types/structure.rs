@@ -349,8 +349,12 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     let byte_size = ty.lanes() * ty.elem.size_bytes();
     let zero_lit = ty.elem.zero_literal();
 
-    // Implementation name for identification
-    let impl_name = format!("x86::w{bits}::{name}");
+    // Implementation name for identification (uses token tier, not width)
+    let tier_name = match ty.width {
+        SimdWidth::W128 | SimdWidth::W256 => "v3",
+        SimdWidth::W512 => "v4",
+    };
+    let impl_name = format!("x86::{tier_name}::{name}");
 
     // Load intrinsic body
     let load_body = if ty.elem.is_float() {

@@ -4155,7 +4155,7 @@ pub mod neon {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub mod simd128 {
+pub mod wasm128 {
     //! Polyfilled 256-bit types using WASM SIMD128 (128-bit) operations.
 
     use crate::simd::generated::wasm::w128::{
@@ -4371,10 +4371,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::f32x8"`.
+        /// Returns `"polyfill::wasm128::f32x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::f32x8"
+            "polyfill::wasm128::f32x8"
         }
     }
 
@@ -4668,10 +4668,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::f64x4"`.
+        /// Returns `"polyfill::wasm128::f64x4"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::f64x4"
+            "polyfill::wasm128::f64x4"
         }
     }
 
@@ -4888,10 +4888,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::i8x32"`.
+        /// Returns `"polyfill::wasm128::i8x32"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::i8x32"
+            "polyfill::wasm128::i8x32"
         }
     }
 
@@ -5052,10 +5052,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::u8x32"`.
+        /// Returns `"polyfill::wasm128::u8x32"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::u8x32"
+            "polyfill::wasm128::u8x32"
         }
     }
 
@@ -5225,10 +5225,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::i16x16"`.
+        /// Returns `"polyfill::wasm128::i16x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::i16x16"
+            "polyfill::wasm128::i16x16"
         }
     }
 
@@ -5407,10 +5407,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::u16x16"`.
+        /// Returns `"polyfill::wasm128::u16x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::u16x16"
+            "polyfill::wasm128::u16x16"
         }
     }
 
@@ -5618,10 +5618,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::i32x8"`.
+        /// Returns `"polyfill::wasm128::i32x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::i32x8"
+            "polyfill::wasm128::i32x8"
         }
     }
 
@@ -5820,10 +5820,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::u32x8"`.
+        /// Returns `"polyfill::wasm128::u32x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::u32x8"
+            "polyfill::wasm128::u32x8"
         }
     }
 
@@ -5998,10 +5998,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::i64x4"`.
+        /// Returns `"polyfill::wasm128::i64x4"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::i64x4"
+            "polyfill::wasm128::i64x4"
         }
     }
 
@@ -6158,10 +6158,10 @@ pub mod simd128 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::simd128::u64x4"`.
+        /// Returns `"polyfill::wasm128::u64x4"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::simd128::u64x4"
+            "polyfill::wasm128::u64x4"
         }
     }
 

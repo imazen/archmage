@@ -176,7 +176,7 @@ impl f32x16 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::f32x16"
+        "x86::v4::f32x16"
     }
 
     /// Element-wise minimum
@@ -1433,7 +1433,7 @@ impl f64x8 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::f64x8"
+        "x86::v4::f64x8"
     }
 
     /// Element-wise minimum
@@ -2062,7 +2062,7 @@ impl i8x64 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::i8x64"
+        "x86::v4::i8x64"
     }
 
     /// Element-wise minimum
@@ -2527,7 +2527,7 @@ impl u8x64 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::u8x64"
+        "x86::v4::u8x64"
     }
 
     /// Element-wise minimum
@@ -2969,7 +2969,7 @@ impl i16x32 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::i16x32"
+        "x86::v4::i16x32"
     }
 
     /// Element-wise minimum
@@ -3418,7 +3418,7 @@ impl u16x32 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::u16x32"
+        "x86::v4::u16x32"
     }
 
     /// Element-wise minimum
@@ -3854,7 +3854,7 @@ impl i32x16 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::i32x16"
+        "x86::v4::i32x16"
     }
 
     /// Element-wise minimum
@@ -4328,7 +4328,7 @@ impl u32x16 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::u32x16"
+        "x86::v4::u32x16"
     }
 
     /// Element-wise minimum
@@ -4781,7 +4781,7 @@ impl i64x8 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::i64x8"
+        "x86::v4::i64x8"
     }
 
     /// Element-wise minimum
@@ -5245,7 +5245,7 @@ impl u64x8 {
     /// at compile time or at runtime (via `#[magetypes]` dispatch).
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "x86::w512::u64x8"
+        "x86::v4::u64x8"
     }
 
     /// Element-wise minimum
