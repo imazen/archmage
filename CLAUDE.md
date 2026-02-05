@@ -378,8 +378,8 @@ CI checks (all must pass):
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
 3. `cargo xtask validate` — intrinsic safety + summon() feature verification
 4. `cargo xtask parity` — parity check (0 issues remaining)
-5. `cargo clippy --features "std macros bytemuck avx512"` — zero warnings
-6. `cargo test --features "std macros bytemuck avx512"` — all tests pass
+5. `cargo clippy --features "std macros avx512"` — zero warnings
+6. `cargo test --features "std macros avx512"` — all tests pass
 7. `cargo fmt --check` — code is formatted
 
 **Note:** Parity check reports 0 issues. All W128 types have identical APIs across x86/ARM/WASM.
@@ -680,7 +680,7 @@ Found during pal.rs refactoring to use `#[arcane]` + `safe_unaligned_simd`:
 - ~~**ARM bitwise ops**~~: Done. Added not, shl, shr for all integer types.
 - ~~**ARM boolean reductions**~~: Done. Added all_true, any_true, bitmask for all integer types.
 - ~~**x86 boolean reductions**~~: Done. Added all_true, any_true, bitmask for all integer types (128/256/512-bit).
-- ~~**WASM bytemuck methods**~~: Done. Added cast_slice, cast_slice_mut, as_bytes, as_bytes_mut, from_bytes, from_bytes_owned.
+- ~~**WASM token-gated casting methods**~~: Done. Added cast_slice, cast_slice_mut, as_bytes, as_bytes_mut, from_bytes, from_bytes_owned (token-gated replacements for bytemuck, NOT actual Pod/Zeroable implementations).
 - ~~**ARM reduce_add for unsigned**~~: Done. Extended reduce_add to all integer types including unsigned.
 - ~~**Approximations (rcp, rsqrt) for ARM/WASM**~~: Done. ARM uses native vrecpe/vrsqrte, WASM uses division.
 - ~~**mul_sub for ARM/WASM**~~: Done. ARM uses vfma with negation, WASM uses mul+sub.

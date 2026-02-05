@@ -78,24 +78,6 @@ magetypes = { version = "0.4", features = ["avx512"] }
 - `i16x32`, `i8x64`
 - `u32x16`, `u64x8`, `u16x32`, `u8x64`
 
-### `bytemuck`
-
-Implements `Pod` and `Zeroable` for SIMD types.
-
-```toml
-magetypes = { version = "0.4", features = ["bytemuck"] }
-```
-
-**Enables**:
-
-```rust
-use bytemuck::{Pod, Zeroable, cast_slice};
-
-// Cast slices safely
-let floats: &[f32] = &[1.0; 64];
-let vectors: &[f32x8] = cast_slice(floats);
-```
-
 ## Feature Combinations
 
 ### Full-Featured x86
@@ -103,7 +85,7 @@ let vectors: &[f32x8] = cast_slice(floats);
 ```toml
 [dependencies]
 archmage = { version = "0.4", features = ["avx512", "safe_unaligned_simd"] }
-magetypes = { version = "0.4", features = ["avx512", "bytemuck"] }
+magetypes = { version = "0.4", features = ["avx512"] }
 ```
 
 ### Minimal no_std

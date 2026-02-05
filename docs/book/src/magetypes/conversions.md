@@ -103,19 +103,56 @@ let (low, high) = full.split();
 let combined = f32x8::from_halves(token, low, high);
 ```
 
-## Using `bytemuck`
+## Slice Casting (Token-Gated)
 
-With the `bytemuck` feature, types implement `Pod` and `Zeroable`:
+magetypes provides safe, token-gated slice casting as an alternative to `bytemuck`:
 
 ```rust
-use bytemuck::{Pod, Zeroable, cast_slice, cast_slice_mut};
-
-// Cast slice of f32 to slice of f32x8
+// Cast aligned &[f32] to &[f32x8]
 let data: &[f32] = &[1.0; 64];
-let chunks: &[f32x8] = cast_slice(data);
+if let Some(chunks) = f32x8::cast_slice(token, data) {
+    // chunks: &[f32x8] with 8 elements
+    for chunk in chunks {
+        // ...
+    }
+}
 
-// Cast back
-let flat: &[f32] = cast_slice(chunks);
+// Mutable version
+let data: &mut [f32] = &mut [0.0; 64];
+if let Some(chunks) = f32x8::cast_slice_mut(token, data) {
+    // chunks: &mut [f32x8]
+}
+```
+
+**Why not `bytemuck`?** Implementing `Pod`/`Zeroable` would let users bypass token-gated construction:
+
+```rust
+// bytemuck would allow this (BAD):
+let v: f32x8 = bytemuck::Zeroable::zeroed();  // No token check!
+
+// magetypes requires token (GOOD):
+let v = f32x8::zero(token);  // Token proves CPU support
+```
+
+The token-gated `cast_slice` returns `None` if alignment or length is wrong—no UB possible.
+
+## Byte-Level Access
+
+View vectors as bytes (no token needed—you already have the vector):
+
+```rust
+let v = f32x8::splat(token, 1.0);
+
+// View as bytes (zero-cost)
+let bytes: &[u8; 32] = v.as_bytes();
+
+// Mutable view
+let mut v = f32x8::splat(token, 0.0);
+let bytes: &mut [u8; 32] = v.as_bytes_mut();
+
+// Create from bytes (token-gated)
+let bytes = [0u8; 32];
+let v = f32x8::from_bytes(token, &bytes);
 ```
 
 ## Conversion Example: Image Processing

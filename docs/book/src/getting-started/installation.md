@@ -31,7 +31,6 @@ magetypes = "0.4"
 |---------|---------|-------------|
 | `std` | ✓ | Standard library support |
 | `avx512` | ✗ | 512-bit types (`f32x16`, etc.) |
-| `bytemuck` | ✗ | `Pod`/`Zeroable` implementations |
 
 ## Platform Requirements
 

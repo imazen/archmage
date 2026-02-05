@@ -76,7 +76,7 @@ All magetypes SIMD types are:
 - **Clone** — Explicit cloning works
 - **Debug** — Print for debugging
 - **Send + Sync** — Thread-safe
-- **Pod** (with `bytemuck` feature) — Safe transmutation
+- **Token-gated construction** — Cannot create without proving CPU support
 
 ```rust
 // Zero-cost copies
@@ -84,6 +84,8 @@ let a = f32x8::splat(token, 1.0);
 let b = a;  // Copy, not move
 let c = a + b;  // Both still valid
 ```
+
+**Why no `Pod`/`Zeroable`?** Implementing bytemuck traits would let users bypass token-gated construction (e.g., `bytemuck::zeroed::<f32x8>()`), creating vectors without proving CPU support. Use the token-gated `cast_slice` and `from_bytes` methods instead.
 
 ## Using the Prelude
 
@@ -121,5 +123,4 @@ use magetypes::simd::wasm::*;
 | Feature | Effect |
 |---------|--------|
 | `avx512` | Enable 512-bit types on x86-64 |
-| `bytemuck` | `Pod` and `Zeroable` implementations |
 | `std` | Standard library support (default) |
