@@ -691,32 +691,27 @@ pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Arguments for the `#[rite]` macro.
+///
+/// Currently empty - `#[inline(always)]` is not supported because
+/// `#[inline(always)]` + `#[target_feature]` requires nightly Rust.
+/// The regular `#[inline]` hint is sufficient when called from
+/// matching `#[target_feature]` contexts.
 #[derive(Default)]
 struct RiteArgs {
-    inline_always: bool,
+    // No options currently - inline_always doesn't work on stable
 }
 
 impl Parse for RiteArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut args = RiteArgs::default();
-
-        while !input.is_empty() {
+        if !input.is_empty() {
             let ident: Ident = input.parse()?;
-            match ident.to_string().as_str() {
-                "inline_always" => args.inline_always = true,
-                other => {
-                    return Err(syn::Error::new(
-                        ident.span(),
-                        format!("unknown rite argument: `{}`", other),
-                    ))
-                }
-            }
-            if input.peek(Token![,]) {
-                let _: Token![,] = input.parse()?;
-            }
+            return Err(syn::Error::new(
+                ident.span(),
+                "#[rite] takes no arguments. Note: inline_always is not supported \
+                 because #[inline(always)] + #[target_feature] requires nightly Rust.",
+            ));
         }
-
-        Ok(args)
+        Ok(RiteArgs::default())
     }
 }
 
@@ -742,12 +737,9 @@ fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
         .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
         .collect();
 
-    // Choose inline attribute
-    let inline_attr: Attribute = if args.inline_always {
-        parse_quote!(#[inline(always)])
-    } else {
-        parse_quote!(#[inline])
-    };
+    // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
+    let _ = args; // RiteArgs is currently empty but kept for future extensibility
+    let inline_attr: Attribute = parse_quote!(#[inline]);
 
     // Prepend attributes to the function
     let mut new_attrs = target_feature_attrs;
