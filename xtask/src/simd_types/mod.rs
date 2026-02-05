@@ -316,7 +316,9 @@ fn generate_neon_namespace() -> String {
 
     // Polyfilled 256-bit (wider, same token)
     code.push_str("    // 256-bit polyfilled types (2×128-bit NEON, same NeonToken)\n");
-    code.push_str(&format!("    pub use super::polyfill::neon::{{{polyfill_types}}};\n\n"));
+    code.push_str(&format!(
+        "    pub use super::polyfill::neon::{{{polyfill_types}}};\n\n"
+    ));
 
     code.push_str("    /// Token type for this width level\n");
     code.push_str("    pub type Token = archmage::NeonToken;\n\n");
@@ -358,7 +360,9 @@ fn generate_simd128_namespace() -> String {
 
     // Polyfilled 256-bit (wider, same token)
     code.push_str("    // 256-bit polyfilled types (2×128-bit WASM SIMD, same Wasm128Token)\n");
-    code.push_str(&format!("    pub use super::polyfill::wasm128::{{{polyfill_types}}};\n\n"));
+    code.push_str(&format!(
+        "    pub use super::polyfill::wasm128::{{{polyfill_types}}};\n\n"
+    ));
 
     code.push_str("    /// Token type for this width level\n");
     code.push_str("    pub type Token = archmage::Wasm128Token;\n\n");
