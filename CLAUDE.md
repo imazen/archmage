@@ -114,7 +114,26 @@ fn inner_work(token: X64V3Token, data: &[f32]) -> f32 {
 - Generic bounds break this chain — each function is a separate compilation unit
 - Even `#[inline(always)]` can't force inlining across trait object boundaries
 
-**The rule:** Use concrete tokens (`X64V3Token`, `Desktop64`) for hot paths. Reserve trait bounds (`impl HasX64V2`) for public API signatures that need flexibility at the cost of inlining.
+**Downcasting is fine:** You CAN pass a higher token to a function expecting a lower one. Nested `#[arcane]` with downcasting preserves the inlining chain:
+
+```rust
+#[arcane]
+fn v4_kernel(token: X64V4Token, data: &mut [f32]) {
+    // Can call V3 functions — V4 is a superset
+    let partial = v3_helper(token, &data[..8]);  // Downcasts, still inlines
+    // ... AVX-512 specific work ...
+}
+
+#[arcane]
+fn v3_helper(token: X64V3Token, chunk: &[f32]) -> f32 {
+    // AVX2+FMA work — inlines into v4_kernel
+    ...
+}
+```
+
+**Never upcast:** You cannot treat `X64V3Token` as `X64V4Token` — that would claim features that aren't proven.
+
+**The rule:** Use concrete tokens for hot paths. Downcasting (V4→V3) is free. Upcasting is impossible. Generic bounds cost inlining.
 
 ### When `-Ctarget-cpu=native` Is Fine
 
