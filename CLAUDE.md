@@ -26,6 +26,8 @@
 | `is_x86_feature_detected!()` | Runtime | CPUID instruction |
 | `Token::summon()` | Runtime | Archmage's detection (compiles away when guaranteed) |
 
+**Tokens exist everywhere.** `Desktop64`, `Arm64`, etc. compile on all platforms—`summon()` just returns `None` on unsupported architectures. This means **you rarely need `#[cfg(target_arch)]` guards** in user code. The stubs handle cross-compilation cleanly.
+
 ### CRITICAL: Token Hoisting (42% Performance Impact)
 
 **Summon tokens ONCE at the outer call site, pass through the call chain.**
