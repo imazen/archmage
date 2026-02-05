@@ -1597,10 +1597,12 @@ fn incant_impl(input: IncantInput) -> TokenStream {
     let fn_wasm128 = format_ident!("{}_wasm128", func_name);
     let fn_scalar = format_ident!("{}_scalar", func_name);
 
+    // Use labeled blocks instead of `return` so incant! can be chained.
+    // Labeled blocks are stable since Rust 1.65.
     if let Some(token_expr) = &input.with_token {
         // Passthrough mode: use IntoConcreteToken for compile-time dispatch
         let expanded = quote! {
-            {
+            '__incant: {
                 use archmage::IntoConcreteToken;
                 let __incant_token = #token_expr;
 
@@ -1608,25 +1610,25 @@ fn incant_impl(input: IncantInput) -> TokenStream {
                 {
                     #[cfg(feature = "avx512")]
                     if let Some(__t) = __incant_token.as_x64v4() {
-                        return #fn_v4(__t, #(#args),*);
+                        break '__incant #fn_v4(__t, #(#args),*);
                     }
                     if let Some(__t) = __incant_token.as_x64v3() {
-                        return #fn_v3(__t, #(#args),*);
+                        break '__incant #fn_v3(__t, #(#args),*);
                     }
                 }
 
                 #[cfg(target_arch = "aarch64")]
                 if let Some(__t) = __incant_token.as_neon() {
-                    return #fn_neon(__t, #(#args),*);
+                    break '__incant #fn_neon(__t, #(#args),*);
                 }
 
                 #[cfg(target_arch = "wasm32")]
                 if let Some(__t) = __incant_token.as_wasm128() {
-                    return #fn_wasm128(__t, #(#args),*);
+                    break '__incant #fn_wasm128(__t, #(#args),*);
                 }
 
                 if let Some(__t) = __incant_token.as_scalar() {
-                    return #fn_scalar(__t, #(#args),*);
+                    break '__incant #fn_scalar(__t, #(#args),*);
                 }
 
                 unreachable!("Token did not match any known variant")
@@ -1636,28 +1638,28 @@ fn incant_impl(input: IncantInput) -> TokenStream {
     } else {
         // Entry point mode: summon tokens and dispatch
         let expanded = quote! {
-            {
+            '__incant: {
                 use archmage::SimdToken;
 
                 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
                 {
                     #[cfg(feature = "avx512")]
                     if let Some(__t) = archmage::X64V4Token::summon() {
-                        return #fn_v4(__t, #(#args),*);
+                        break '__incant #fn_v4(__t, #(#args),*);
                     }
                     if let Some(__t) = archmage::X64V3Token::summon() {
-                        return #fn_v3(__t, #(#args),*);
+                        break '__incant #fn_v3(__t, #(#args),*);
                     }
                 }
 
                 #[cfg(target_arch = "aarch64")]
                 if let Some(__t) = archmage::NeonToken::summon() {
-                    return #fn_neon(__t, #(#args),*);
+                    break '__incant #fn_neon(__t, #(#args),*);
                 }
 
                 #[cfg(target_arch = "wasm32")]
                 if let Some(__t) = archmage::Simd128Token::summon() {
-                    return #fn_wasm128(__t, #(#args),*);
+                    break '__incant #fn_wasm128(__t, #(#args),*);
                 }
 
                 // Scalar fallback
