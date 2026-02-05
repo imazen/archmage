@@ -1,8 +1,9 @@
 # Token Hoisting
 
-Summon tokens once at your API boundary and pass them through. `summon()` hits an atomic cache (~1.3 ns), but in a hot inner loop that adds up fast — we measured a 42% regression from summoning per-call instead of per-batch.
+Summon tokens once at your API boundary and pass them through. The cost isn't `summon()` itself (~1.3 ns cached) — it's the `#[target_feature]` boundary. Each `#[arcane]` wrapper is a transition between LLVM optimization regions: the caller has baseline features, the callee has AVX2+FMA. LLVM can't optimize across that boundary. We measured a 42% regression from dispatching per-call instead of per-batch.
 
 ```mermaid
+%%{init: { 'theme': 'dark' }}%%
 flowchart TD
     API["Public API<br/>summon() once here"] --> ARC["#[arcane] entry<br/>(token passed in)"]
     ARC --> L["Loop over data"]
@@ -56,9 +57,15 @@ fn distance_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 The pattern: `summon()` at the public entry point, then pass the token through the call chain. The token is zero-sized — passing it costs nothing at runtime.
 
+## Why This Matters: Target Feature Boundaries
+
+`#[target_feature(enable = "avx2,fma,...")]` changes LLVM's compilation target for that function. When two functions share the same target features, LLVM optimizes across them freely — inlining, constant propagation, instruction combining all work. When they differ, LLVM must be conservative at the boundary.
+
+Every `#[arcane]` call from non-SIMD code crosses this boundary. If your hot loop calls `#[arcane]` each iteration, that's a boundary crossing per iteration — LLVM sees each call as leaving one optimization region and entering another. Moving the loop *inside* `#[arcane]` means one boundary crossing total, with `#[rite]` helpers inlining freely within the same target-feature region.
+
 ## With `-Ctarget-cpu=native`
 
-When the compiler knows the target has the features, `summon()` compiles away entirely:
+When the compiler knows the target has the features, `summon()` compiles away entirely and the whole binary shares the same LLVM target — no boundaries at all:
 
 ```bash
 RUSTFLAGS="-Ctarget-cpu=native" cargo build --release
@@ -70,6 +77,6 @@ Even so, hoisting is still good practice — your code works correctly when comp
 
 | Pattern | Performance |
 |---------|-------------|
-| `summon()` in hot loop | 42% slower |
-| `summon()` at API boundary | Optimal |
-| `summon()` with `-Ctarget-cpu` | Optimal (compiles away) |
+| `#[arcane]` called per iteration | 42% slower (target-feature boundary per call) |
+| Loop inside `#[arcane]`, `#[rite]` helpers | Optimal (one boundary, one optimization region) |
+| With `-Ctarget-cpu=native` | Optimal (no boundaries, features are global) |

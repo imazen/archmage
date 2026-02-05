@@ -28,15 +28,17 @@
 
 **Tokens exist everywhere.** `Desktop64`, `Arm64`, etc. compile on all platforms—`summon()` just returns `None` on unsupported architectures. This means **you rarely need `#[cfg(target_arch)]` guards** in user code. The stubs handle cross-compilation cleanly.
 
-### CRITICAL: Token Hoisting (42% Performance Impact)
+### CRITICAL: Target-Feature Boundaries (42% Performance Impact)
 
-**Summon tokens ONCE at the outer call site, pass through the call chain.**
+**Dispatch once at the outer call site, put loops inside `#[arcane]`, use `#[rite]` for helpers.**
+
+The cost isn't `summon()` (~1.3 ns cached) — it's the `#[target_feature]` boundary. Each `#[arcane]` call transitions between LLVM optimization regions. The caller has baseline features; the callee has AVX2+FMA. LLVM can't optimize across mismatched targets. Per-call dispatch in a hot loop means a boundary crossing per iteration.
 
 ```rust
-// WRONG: 42% performance regression
+// WRONG: target-feature boundary every iteration (42% regression)
 fn dist(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    if let Some(token) = X64V3Token::summon() {  // Called millions of times!
-        dist_simd(token, a, b)
+    if let Some(token) = X64V3Token::summon() {
+        dist_simd(token, a, b)  // #[arcane] boundary per call
     } else {
         dist_scalar(a, b)
     }
@@ -45,7 +47,7 @@ fn dist(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 fn process_all(points: &[[f32; 8]]) {
     for i in 0..points.len() {
         for j in i+1..points.len() {
-            dist(&points[i], &points[j]);  // summon() in hot loop!
+            dist(&points[i], &points[j]);  // boundary in hot loop!
         }
     }
 }

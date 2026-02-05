@@ -250,35 +250,38 @@ fn maybe_avx2() {
 }
 ```
 
-### Mistake 3: Summoning in Hot Loops
+### Mistake 3: Dispatching in Hot Loops
 
 ```rust
-// WRONG: CPUID in every iteration
+// WRONG: crosses target-feature boundary every iteration
 for chunk in data.chunks(8) {
-    if let Some(token) = Desktop64::summon() {  // Don't!
-        process(token, chunk);
+    if let Some(token) = Desktop64::summon() {
+        process(token, chunk);  // #[arcane] wrapper = boundary per call
     }
 }
 
-// RIGHT: Summon once, pass through
+// BETTER: summon once, but still a boundary per iteration
 if let Some(token) = Desktop64::summon() {
     for chunk in data.chunks(8) {
-        process(token, chunk);
+        process(token, chunk);  // Still calling #[arcane] each iteration
     }
+}
+
+// BEST: loop inside #[arcane], use #[rite] helpers
+if let Some(token) = Desktop64::summon() {
+    process_all(token, data);  // One boundary crossing
 }
 ```
 
-**How fast is `summon()` anyway?**
+**The real cost isn't `summon()`** — it's the `#[target_feature]` boundary. `summon()` is a cached atomic load (~1.3 ns). But each `#[arcane]` call transitions between LLVM optimization regions: the caller has baseline features, the callee has AVX2+FMA. LLVM can't optimize across that boundary — no inlining, no constant propagation, no instruction combining.
 
-Archmage caches detection results in a static atomic, so repeated `summon()` calls after the first are essentially a single atomic load (~1.2 ns). The first call does the actual feature detection.
+Put the loop *inside* `#[arcane]` and use `#[rite]` for helpers. Everything inside shares the same target features, so LLVM treats it as one optimization region.
 
 | Operation | Time |
 |-----------|------|
 | `Desktop64::summon()` (cached) | ~1.3 ns |
 | First call (actual detection) | ~2.6 ns |
 | With `-Ctarget-cpu=haswell` | 0 ns (compiles to `Some(token)`) |
-
-The caching makes `summon()` fast enough that even calling it frequently won't hurt performance. But the reason to hoist summons isn't performance of `summon()`, it's keeping the dispatch decision outside your hot loop so LLVM can optimize the inner code.
 
 ### Mistake 4: Using `#[cfg(target_arch)]` Unnecessarily
 

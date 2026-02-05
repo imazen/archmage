@@ -71,7 +71,7 @@ fn main() {
 
 2. **`#[arcane]`** generates a `#[target_feature]` inner function. Inside, SIMD intrinsics are safe.
 
-3. **Token hoisting**: Call `summon()` once at your API boundary, pass the token through. Don't summon in hot loops.
+3. **Dispatch once, loop inside**: Call `summon()` at your API boundary, put loops inside `#[arcane]`, use `#[rite]` for helpers. Each `#[arcane]` call crosses a `#[target_feature]` boundary that LLVM can't optimize across.
 
 ## Supported Platforms
 

@@ -131,17 +131,17 @@ Note: `#[cfg(feature = "avx512")]` is a **Cargo feature** gate (compile-time opt
 ### Don't Dispatch in Hot Loops
 
 ```rust
-// WRONG - CPUID every iteration
+// WRONG - summon + dispatch every iteration
 for chunk in data.chunks_mut(8) {
     if let Some(token) = Desktop64::summon() {
         process_chunk(token, chunk);
     }
 }
 
-// BETTER - hoist token outside loop
+// BETTER - summon once, but still crosses target-feature boundary per iteration
 if let Some(token) = Desktop64::summon() {
     for chunk in data.chunks_mut(8) {
-        process_chunk(token, chunk);  // But still has #[arcane] wrapper overhead
+        process_chunk(token, chunk);  // #[arcane] wrapper = boundary per call
     }
 } else {
     for chunk in data.chunks_mut(8) {
@@ -149,7 +149,7 @@ if let Some(token) = Desktop64::summon() {
     }
 }
 
-// BEST - put the loop inside #[arcane], call #[rite] helpers
+// BEST - loop inside #[arcane], #[rite] helpers stay in the same LLVM region
 if let Some(token) = Desktop64::summon() {
     process_all_chunks(token, data);
 } else {
@@ -165,11 +165,11 @@ fn process_all_chunks(token: Desktop64, data: &mut [f32]) {
 
 #[rite]
 fn process_chunk(_: Desktop64, chunk: &mut [f32; 8]) {
-    // This inlines into process_all_chunks with zero overhead
+    // Same target features as caller — LLVM optimizes across both
 }
 ```
 
-The "BETTER" pattern still calls through an `#[arcane]` wrapper each iteration—an LLVM optimization barrier. The "BEST" pattern puts the loop inside `#[arcane]` and uses `#[rite]` for the inner work, so LLVM sees one optimization region for the entire loop.
+The "BETTER" pattern still calls through an `#[arcane]` wrapper each iteration. Each wrapper crosses a `#[target_feature]` boundary — the caller has baseline features, the callee has AVX2+FMA. LLVM can't optimize across that. The "BEST" pattern puts the loop inside `#[arcane]` and uses `#[rite]` for the inner work, so LLVM sees one optimization region for the entire loop.
 
 ### Don't Forget Early Returns
 
