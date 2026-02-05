@@ -525,8 +525,8 @@ mod compiletime_dispatch_elision {
         {
             // AVX2 is guaranteed at compile time - no runtime check needed!
             // This is the "fast path" that completely skips summon()
-            // conjure() is safe here because guaranteed() == Some(true)
-            let token = X64V3Token::conjure();
+            // summon().unwrap() is safe here because guaranteed() == Some(true)
+            let token = X64V3Token::summon().unwrap();
             return sum_avx2(token, data);
         }
 
@@ -706,18 +706,18 @@ mod guaranteed_tests_x86 {
         );
     }
 
-    // Test that conjure() works when guaranteed() is Some(true)
+    // Test that summon().unwrap() is safe when guaranteed() is Some(true)
     #[test]
     #[cfg(target_feature = "avx2")]
-    fn can_conjure_when_guaranteed_true() {
+    fn summon_unwrap_safe_when_guaranteed_true() {
         // When compiling with -C target-cpu=haswell or similar, AVX2 is guaranteed
         assert_eq!(
             X64V3Token::guaranteed(),
             Some(true),
             "X64V3Token::guaranteed() should be Some(true) when target_feature=avx2"
         );
-        // conjure() should work without panic
-        let _token = X64V3Token::conjure();
+        // summon().unwrap() is safe and efficient - no runtime check
+        let _token = X64V3Token::summon().unwrap();
     }
 }
 
@@ -748,32 +748,9 @@ mod guaranteed_tests_arm {
             Some(true),
             "NeonToken::guaranteed() should be Some(true) on aarch64"
         );
-        // conjure() should work
-        let _token = NeonToken::conjure();
+        // summon().unwrap() is safe when guaranteed
+        let _token = NeonToken::summon().unwrap();
     }
-}
-
-// =============================================================================
-// TEST: conjure() panics when not guaranteed
-// =============================================================================
-//
-// conjure() should only be called when guaranteed() == Some(true).
-// Calling it otherwise should panic.
-
-#[cfg(target_arch = "x86_64")]
-mod conjure_safety_tests {
-    use archmage::{NeonToken, SimdToken};
-
-    #[test]
-    #[should_panic(expected = "Cannot conjure")]
-    fn conjure_panics_for_wrong_arch() {
-        // This should panic because NEON is never available on x86
-        let _token = NeonToken::conjure();
-    }
-
-    // Note: We can't test the "None" case panic because whether a token
-    // is guaranteed or not is a compile-time property. If AVX2 is not
-    // compile-time guaranteed, X64V3Token::conjure() would panic.
 }
 
 // =============================================================================
@@ -792,4 +769,3 @@ mod conjure_safety_tests {
 // 8. **Target-feature elision**: Lower-tier variants elided when higher is compile-time
 // 9. **`#[magetypes]` expected behavior**: Document how the macro should elide variants
 // 10. **guaranteed()**: Returns Some(true) for compile-time, Some(false) for wrong arch, None for runtime
-// 11. **conjure()**: Safe token creation when guaranteed() == Some(true), panics otherwise

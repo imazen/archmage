@@ -6,7 +6,7 @@
 //! ## Token Availability
 //!
 //! Use `guaranteed()` to check compile-time availability:
-//! - `Some(true)` — Compiler guarantees this feature (use directly, no runtime check)
+//! - `Some(true)` — Compiler guarantees this feature (use `summon().unwrap()`)
 //! - `Some(false)` — Wrong architecture (this token can never be available)
 //! - `None` — Might be available, call `summon()` to check at runtime
 //!
@@ -23,8 +23,8 @@
 ///
 /// # Token Lifecycle
 ///
-/// 1. Check `guaranteed()` at compile time to see if runtime check is needed
-/// 2. If `None`, call `summon()` at runtime to detect CPU support
+/// 1. Optionally check `guaranteed()` to see if runtime check is needed
+/// 2. Call `summon()` at runtime to detect CPU support
 /// 3. Pass the token through to `#[arcane]` functions — don't forge new ones
 ///
 /// # Example
@@ -33,25 +33,10 @@
 /// use archmage::{X64V3Token, SimdToken};
 ///
 /// fn process(data: &[f32]) -> f32 {
-///     // Check compile-time availability first
-///     match X64V3Token::guaranteed() {
-///         Some(true) => {
-///             // Compiler guarantees AVX2+FMA — no runtime check needed!
-///             let token = X64V3Token::conjure();
-///             return process_avx2(token, data);
-///         }
-///         Some(false) => {
-///             // Wrong architecture — use scalar
-///             return process_scalar(data);
-///         }
-///         None => {
-///             // Need runtime check
-///             if let Some(token) = X64V3Token::summon() {
-///                 return process_avx2(token, data);
-///             }
-///             return process_scalar(data);
-///         }
+///     if let Some(token) = X64V3Token::summon() {
+///         return process_avx2(token, data);
 ///     }
+///     process_scalar(data)
 /// }
 /// ```
 pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
@@ -65,61 +50,19 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     /// - `Some(false)` — Wrong architecture, token can never be available
     /// - `None` — Might be available, call `summon()` to check at runtime
     ///
+    /// When `guaranteed()` returns `Some(true)`, `summon().unwrap()` is safe and
+    /// the compiler will elide the runtime check entirely.
+    ///
     /// # Example
     ///
     /// ```rust,ignore
     /// match X64V3Token::guaranteed() {
-    ///     Some(true) => { /* use conjure(), skip runtime check */ }
-    ///     Some(false) => { /* use fallback */ }
-    ///     None => { /* call summon() */ }
+    ///     Some(true) => { /* summon().unwrap() is safe, no runtime check */ }
+    ///     Some(false) => { /* use fallback, this arch can't support it */ }
+    ///     None => { /* call summon() to check at runtime */ }
     /// }
     /// ```
     fn guaranteed() -> Option<bool>;
-
-    /// Conjure a token when `guaranteed()` returns `Some(true)`.
-    ///
-    /// This is the safe way to create a token when the compiler guarantees
-    /// the feature is available (via `-C target-cpu` or `#[target_feature]`).
-    ///
-    /// # Panics
-    ///
-    /// Panics if called when `guaranteed()` does not return `Some(true)`.
-    /// Use `summon()` for runtime detection instead.
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// // Only valid when compiled with -C target-cpu=haswell or similar
-    /// if X64V3Token::guaranteed() == Some(true) {
-    ///     let token = X64V3Token::conjure();
-    ///     // Use token...
-    /// }
-    /// ```
-    #[inline(always)]
-    fn conjure() -> Self {
-        match Self::guaranteed() {
-            Some(true) => {
-                // SAFETY: guaranteed() == Some(true) means the feature is
-                // compile-time guaranteed by target_feature
-                #[allow(deprecated)]
-                unsafe {
-                    Self::forge_token_dangerously()
-                }
-            }
-            Some(false) => {
-                panic!(
-                    "Cannot conjure {} on this architecture (guaranteed() = Some(false))",
-                    Self::NAME
-                );
-            }
-            None => {
-                panic!(
-                    "Cannot conjure {} without compile-time guarantee. Use summon() instead.",
-                    Self::NAME
-                );
-            }
-        }
-    }
 
     /// Attempt to create a token with runtime feature detection.
     ///
@@ -155,20 +98,19 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
 
     /// Create a token without any checks.
     ///
-    /// # Deprecated
-    ///
-    /// **Do not use.** Pass tokens through from `summon()` or `conjure()` instead.
-    ///
-    /// If you need a token inside a `#[target_feature]` function, use `conjure()`
-    /// when `guaranteed() == Some(true)`, or accept the token as a parameter.
-    ///
     /// # Safety
     ///
     /// Caller must guarantee the CPU feature is available. Using a forged token
     /// when the feature is unavailable causes undefined behavior.
+    ///
+    /// # Deprecated
+    ///
+    /// **Do not use in new code.** Pass tokens through from `summon()` instead.
+    /// If you're inside a `#[cfg(target_feature = "...")]` block where the
+    /// feature is compile-time guaranteed, use `summon().unwrap()`.
     #[deprecated(
         since = "0.5.0",
-        note = "Pass tokens through from summon() or conjure() instead of forging"
+        note = "Pass tokens through from summon() instead of forging"
     )]
     unsafe fn forge_token_dangerously() -> Self;
 }
