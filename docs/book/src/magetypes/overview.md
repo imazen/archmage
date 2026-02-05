@@ -105,15 +105,15 @@ if let Some(token) = Desktop64::summon() {
 If you need just one platform:
 
 ```rust
-// x86-64 only
+// These platform modules only exist on their target architecture,
+// so #[cfg] guards are required here. Prefer `use magetypes::simd::f32x8`
+// (the top-level re-exports) for cross-platform code.
 #[cfg(target_arch = "x86_64")]
 use magetypes::simd::x86::*;
 
-// AArch64 only
 #[cfg(target_arch = "aarch64")]
 use magetypes::simd::arm::*;
 
-// WASM only
 #[cfg(target_arch = "wasm32")]
 use magetypes::simd::wasm::*;
 ```

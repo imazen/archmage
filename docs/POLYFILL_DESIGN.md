@@ -72,26 +72,9 @@ fn generate_polyfill(config: &PolyfillConfig) -> String {
 ### 4. Cross-Platform Type System
 
 ```rust
-// src/simd/portable.rs - Platform-agnostic types
-
-/// 128-bit float vector (4 × f32)
-pub struct f32x4 {
-    #[cfg(target_arch = "x86_64")]
-    inner: x86::f32x4,
-    #[cfg(target_arch = "aarch64")]
-    inner: neon::f32x4,
-    #[cfg(target_arch = "wasm32")]
-    inner: wasm::f32x4,
-}
-
-/// 256-bit float vector (8 × f32)
-pub struct f32x8 {
-    #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-    inner: x86::f32x8,  // Native AVX2
-    #[cfg(not(all(target_arch = "x86_64", target_feature = "avx2")))]
-    lo: f32x4,
-    hi: f32x4,  // Polyfill using 2×f32x4
-}
+// NOTE: This was an early design concept. The actual implementation uses
+// per-platform generated types + polyfills, not a single portable struct.
+// See magetypes/src/simd/generated/ for the real implementation.
 ```
 
 ## ARM NEON Support

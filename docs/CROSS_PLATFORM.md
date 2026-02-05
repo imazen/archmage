@@ -21,24 +21,16 @@ x86_64, aarch64, and wasm32.
 ## Pattern 1: Simple Runtime Dispatch
 
 ```rust
+use archmage::SimdToken;
+
 pub fn process(data: &[f32]) -> f32 {
-    #[cfg(target_arch = "x86_64")]
-    {
-        use archmage::SimdToken;
-        if let Some(token) = archmage::X64V3Token::summon() {
-            return process_avx2(token, data);
-        }
-        if let Some(token) = archmage::Sse41Token::summon() {
-            return process_sse(token, data);
-        }
+    // No #[cfg(target_arch)] needed — summon() returns None on wrong architecture
+    if let Some(token) = archmage::X64V3Token::summon() {
+        return process_avx2(token, data);
     }
 
-    #[cfg(target_arch = "aarch64")]
-    {
-        use archmage::SimdToken;
-        if let Some(token) = archmage::NeonToken::summon() {
-            return process_neon(token, data);
-        }
+    if let Some(token) = archmage::NeonToken::summon() {
+        return process_neon(token, data);
     }
 
     // Scalar fallback

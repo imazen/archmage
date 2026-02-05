@@ -69,15 +69,13 @@ Write once, run on x86, ARM, and WASM:
 ```rust
 use archmage::{Desktop64, NeonToken, Wasm128Token, SimdToken, incant};
 
-// Define platform-specific implementations
-#[cfg(target_arch = "x86_64")]
+// Platform variants — #[arcane] generates stubs on non-matching architectures
 #[arcane]
 fn sum_v3(token: Desktop64, data: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x8;
     f32x8::from_array(token, *data).reduce_add()
 }
 
-#[cfg(target_arch = "aarch64")]
 #[arcane]
 fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x4;
@@ -86,7 +84,6 @@ fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
     a.reduce_add() + b.reduce_add()
 }
 
-#[cfg(target_arch = "wasm32")]
 #[arcane]
 fn sum_wasm128(token: Wasm128Token, data: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x4;

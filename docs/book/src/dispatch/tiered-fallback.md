@@ -36,31 +36,24 @@ Each token implies all the capabilities below it. `summon()` returns the first m
 use archmage::*;
 
 pub fn process(data: &mut [f32]) -> f32 {
-    // x86-64 path
-    #[cfg(target_arch = "x86_64")]
-    {
-        #[cfg(feature = "avx512")]
-        if let Some(token) = X64V4Token::summon() {
-            return process_v4(token, data);
-        }
-
-        if let Some(token) = X64V3Token::summon() {
-            return process_v3(token, data);
-        }
-
-        if let Some(token) = X64V2Token::summon() {
-            return process_v2(token, data);
-        }
+    // Try highest tier first — summon() returns None on wrong architecture
+    #[cfg(feature = "avx512")]
+    if let Some(token) = X64V4Token::summon() {
+        return process_v4(token, data);
     }
 
-    // AArch64 path
-    #[cfg(target_arch = "aarch64")]
+    if let Some(token) = X64V3Token::summon() {
+        return process_v3(token, data);
+    }
+
+    if let Some(token) = X64V2Token::summon() {
+        return process_v2(token, data);
+    }
+
     if let Some(token) = NeonToken::summon() {
         return process_neon(token, data);
     }
 
-    // WASM path
-    #[cfg(target_arch = "wasm32")]
     if let Some(token) = Wasm128Token::summon() {
         return process_wasm(token, data);
     }
@@ -78,20 +71,16 @@ When your algorithm naturally works at different widths:
 use magetypes::*;
 
 pub fn sum_f32(data: &[f32]) -> f32 {
-    #[cfg(target_arch = "x86_64")]
-    {
-        // Try 256-bit first
-        if let Some(token) = X64V3Token::summon() {
-            return sum_f32x8(token, data);
-        }
-
-        // Fall back to 128-bit
-        if let Some(token) = X64V2Token::summon() {
-            return sum_f32x4(token, data);
-        }
+    // Try 256-bit first
+    if let Some(token) = X64V3Token::summon() {
+        return sum_f32x8(token, data);
     }
 
-    #[cfg(target_arch = "aarch64")]
+    // Fall back to 128-bit
+    if let Some(token) = X64V2Token::summon() {
+        return sum_f32x4(token, data);
+    }
+
     if let Some(token) = NeonToken::summon() {
         return sum_f32x4_neon(token, data);
     }
@@ -99,7 +88,6 @@ pub fn sum_f32(data: &[f32]) -> f32 {
     sum_scalar(data)
 }
 
-#[cfg(target_arch = "x86_64")]
 #[arcane]
 fn sum_f32x8(token: X64V3Token, data: &[f32]) -> f32 {
     let mut acc = f32x8::zero(token);
@@ -135,17 +123,15 @@ static SIMD_LEVEL: OnceLock<SimdLevel> = OnceLock::new();
 
 fn detect_level() -> SimdLevel {
     *SIMD_LEVEL.get_or_init(|| {
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(feature = "avx512")]
         if X64V4Token::summon().is_some() {
             return SimdLevel::Avx512;
         }
 
-        #[cfg(target_arch = "x86_64")]
         if X64V3Token::summon().is_some() {
             return SimdLevel::Avx2;
         }
 
-        #[cfg(target_arch = "x86_64")]
         if X64V2Token::summon().is_some() {
             return SimdLevel::Sse42;
         }
@@ -157,11 +143,10 @@ fn detect_level() -> SimdLevel {
 pub fn process(data: &mut [f32]) {
     match detect_level() {
         SimdLevel::Avx512 => {
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(feature = "avx512")]
             process_v4(X64V4Token::summon().unwrap(), data);
         }
         SimdLevel::Avx2 => {
-            #[cfg(target_arch = "x86_64")]
             process_v3(X64V3Token::summon().unwrap(), data);
         }
         // ... etc

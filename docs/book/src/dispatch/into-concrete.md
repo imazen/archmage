@@ -115,13 +115,11 @@ pub fn transform<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
 #[arcane]
 fn transform_avx2(token: X64V3Token, data: &mut [f32]) {
     // AVX2 implementation
 }
 
-#[cfg(target_arch = "aarch64")]
 #[arcane]
 fn transform_neon(token: NeonToken, data: &mut [f32]) {
     // NEON implementation

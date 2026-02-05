@@ -216,13 +216,14 @@ Compare NEON results to scalar reference implementations:
 
 ```rust
 #[test]
-#[cfg(target_arch = "aarch64")]
 fn verify_neon_add() {
-    let token = NeonToken::summon().unwrap();
-    let a = f32x4::load(token, &[1.0, 2.0, 3.0, 4.0]);
-    let b = f32x4::load(token, &[4.0, 3.0, 2.0, 1.0]);
-    let result = (a + b).to_array();
-    assert_eq!(result, [5.0, 5.0, 5.0, 5.0]);
+    // summon() returns None on non-ARM — test is skipped naturally
+    if let Some(token) = NeonToken::summon() {
+        let a = f32x4::load(token, &[1.0, 2.0, 3.0, 4.0]);
+        let b = f32x4::load(token, &[4.0, 3.0, 2.0, 1.0]);
+        let result = (a + b).to_array();
+        assert_eq!(result, [5.0, 5.0, 5.0, 5.0]);
+    }
 }
 ```
 
@@ -231,17 +232,14 @@ fn verify_neon_add() {
 Same algorithm, different platforms, same results:
 
 ```rust
-// Run on both x86 and ARM, compare outputs
+// Run on both x86 and ARM — summon() handles the dispatch
 fn test_algorithm() -> [f32; 4] {
-    #[cfg(target_arch = "x86_64")]
-    {
-        let token = Sse41Token::summon().unwrap();
+    if let Some(token) = X64V2Token::summon() {
         // ... x86 implementation
-    }
-    #[cfg(target_arch = "aarch64")]
-    {
-        let token = NeonToken::summon().unwrap();
+    } else if let Some(token) = NeonToken::summon() {
         // ... NEON implementation
+    } else {
+        // scalar fallback
     }
 }
 ```

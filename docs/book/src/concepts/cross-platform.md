@@ -50,14 +50,12 @@ fn process(data: &[f32; 8]) -> [f32; 8] {
 Structure your code with platform-specific implementations:
 
 ```rust
-// Public API - works everywhere
+// Public API - works everywhere, no #[cfg] needed
 pub fn process(data: &mut [f32]) {
-    #[cfg(target_arch = "x86_64")]
     if let Some(token) = Desktop64::summon() {
         return process_avx2(token, data);
     }
 
-    #[cfg(target_arch = "aarch64")]
     if let Some(token) = NeonToken::summon() {
         return process_neon(token, data);
     }
@@ -65,13 +63,12 @@ pub fn process(data: &mut [f32]) {
     process_scalar(data);
 }
 
-#[cfg(target_arch = "x86_64")]
+// #[arcane] generates unreachable stubs on non-matching architectures
 #[arcane]
 fn process_avx2(token: Desktop64, data: &mut [f32]) {
     // AVX2 implementation
 }
 
-#[cfg(target_arch = "aarch64")]
 #[arcane]
 fn process_neon(token: NeonToken, data: &mut [f32]) {
     // NEON implementation
@@ -151,8 +148,8 @@ fn test_scalar_fallback() {
 }
 
 #[test]
-#[cfg(target_arch = "x86_64")]
 fn test_avx2_path() {
+    // summon() returns None on non-x86, so test is skipped naturally
     if let Some(token) = Desktop64::summon() {
         let result = process_with_token(token, &data);
         assert_eq!(result, expected);

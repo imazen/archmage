@@ -141,8 +141,7 @@ This uses `IntoConcreteToken` to check the token's actual type and dispatch acco
 use archmage::{arcane, incant, X64V3Token, NeonToken, SimdToken};
 use magetypes::simd::f32x8;
 
-// AVX2 variant
-#[cfg(target_arch = "x86_64")]
+// AVX2 variant — #[arcane] generates a stub on non-x86
 #[arcane]
 fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::from_array(token, *a);
@@ -151,7 +150,6 @@ fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 
 // NEON variant (128-bit, so process 4 at a time)
-#[cfg(target_arch = "aarch64")]
 #[arcane]
 fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x4;

@@ -349,8 +349,7 @@ fn process(token: X64V3Token, data: &[f32]) -> f32 {
     unsafe { process_inner(data) }
 }
 
-// CORRECT - use #[arcane] (it generates the above automatically)
-#[cfg(target_arch = "x86_64")]
+// CORRECT - use #[arcane] (generates #[target_feature] + stubs on other arches)
 #[arcane]
 fn process(token: X64V3Token, data: &[f32]) -> f32 {
     // This function body is compiled with #[target_feature(enable = "avx2,fma")]
