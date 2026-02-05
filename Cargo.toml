@@ -17,7 +17,6 @@ categories = ["development-tools", "hardware-support", "no-std"]
 default = ["std", "macros", "safe-simd"]
 std = []
 macros = ["dep:archmage-macros"]
-bytemuck = ["dep:bytemuck"]
 safe-simd = ["dep:safe_unaligned_simd"]
 # AVX-512 token support (Avx512Token, Avx512ModernToken, X64V4Token, etc.)
 avx512 = []
@@ -25,8 +24,6 @@ avx512 = []
 [dependencies]
 # Proc-macro crate for #[arcane] attribute
 archmage-macros = { version = "0.4.0", path = "archmage-macros", optional = true }
-# Zero-cost type casts (Pod, Zeroable)
-bytemuck = { version = "1.24", optional = true }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
 safe_unaligned_simd = { version = "0.2.4", optional = true }
 

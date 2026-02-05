@@ -34,7 +34,6 @@ name = "archmage"
 version = "0.4.0"
 dependencies = [
  "archmage-macros",
- "bytemuck",
  "criterion",
  "magetypes",
  "safe_unaligned_simd",
@@ -82,12 +81,6 @@ name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5dd9dc738b7a8311c7ade152424974d8115f2cdad61e8dab8dac9f2362298510"
-
-[[package]]
-name = "bytemuck"
-version = "1.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fbdf580320f38b612e485521afda1ee26d10cc9884efaaa750d383e13e3c5f4"
 
 [[package]]
 name = "cast"
