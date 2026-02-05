@@ -6,6 +6,11 @@
 //!
 //! This re-exports tokens, traits, macros, `core::arch` intrinsics,
 //! and `safe_unaligned_simd` memory operations for the current platform.
+//!
+//! The safe_unaligned_simd functions shadow the core::arch versions with the
+//! same names — `_mm256_loadu_ps` takes `&[f32; 8]` instead of a raw pointer.
+
+#![allow(ambiguous_glob_reexports)]
 
 // -- Traits --
 pub use crate::tokens::SimdToken;
@@ -43,13 +48,13 @@ pub use core::arch::wasm32::*;
 
 // -- safe_unaligned_simd memory operations for the current platform --
 #[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
-pub use safe_unaligned_simd::x86_64 as safe_simd;
+pub use safe_unaligned_simd::x86_64::*;
 
 #[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86"))]
-pub use safe_unaligned_simd::x86 as safe_simd;
+pub use safe_unaligned_simd::x86::*;
 
 #[cfg(all(feature = "safe_unaligned_simd", any(target_arch = "aarch64", target_arch = "arm64ec")))]
-pub use safe_unaligned_simd::aarch64 as safe_simd;
+pub use safe_unaligned_simd::aarch64::*;
 
 #[cfg(all(feature = "safe_unaligned_simd", target_arch = "wasm32"))]
-pub use safe_unaligned_simd::wasm32 as safe_simd;
+pub use safe_unaligned_simd::wasm32::*;
