@@ -641,6 +641,21 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
+### safe_unaligned_simd Gaps (discovered in rav1d-safe refactoring)
+
+Found during pal.rs refactoring to use `#[arcane]` + `safe_unaligned_simd`:
+
+- **Missing 64-bit partial load/store wrappers**:
+  - `_mm_loadl_epi64` (64-bit load into lower half of __m128i)
+  - `_mm_storel_epi64` (64-bit store from lower half of __m128i)
+  - These are commonly used for tail handling in SIMD loops
+  - Would need `Is64BitsUnaligned` trait or similar
+  - Currently require `unsafe {}` blocks even in `#[arcane]` functions
+
+- **Verified: No overhead from slice-to-array conversion**
+  - `slice[..32].try_into().unwrap()` optimizes away completely
+  - `safe_simd::_mm256_loadu_si256(arr)` → same `vmovdqu` as raw pointer
+
 ### Completed
 
 - ~~**WASM u64x2 ordering comparisons**~~: Done. Added simd_lt/le/gt/ge via bias-to-signed polyfill (XOR with i64::MIN, then i64x2_lt/gt). Parity: 4 → 0.
