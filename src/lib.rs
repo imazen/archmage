@@ -9,18 +9,18 @@
 //! ## Quick Example
 //!
 //! ```rust,ignore
-//! use archmage::{Desktop64, Has256BitSimd, SimdToken, arcane};
+//! use archmage::{Desktop64, SimdToken, arcane};
 //! use std::arch::x86_64::*;
 //!
 //! #[arcane]
-//! fn multiply_add(_token: impl Has256BitSimd, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+//! fn multiply_add(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 //!     // safe_unaligned_simd calls are SAFE inside #[arcane] - no unsafe needed!
 //!     let va = safe_unaligned_simd::x86_64::_mm256_loadu_ps(a);
 //!     let vb = safe_unaligned_simd::x86_64::_mm256_loadu_ps(b);
 //!
 //!     // Value-based intrinsics are also SAFE inside #[arcane]!
-//!     let result = _mm256_add_ps(va, vb);
-//!     let result = _mm256_mul_ps(result, result);
+//!     // FMA is available because Desktop64 = X64V3Token = AVX2+FMA
+//!     let result = _mm256_fmadd_ps(va, vb, va);
 //!
 //!     let mut out = [0.0f32; 8];
 //!     safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, result);
@@ -44,8 +44,8 @@
 //! **The `#[arcane]` macro** generates an inner function with `#[target_feature]`,
 //! making intrinsics safe inside. The token parameter proves CPU support was verified.
 //!
-//! **Generic bounds** like `impl Has256BitSimd` let functions accept any token that
-//! provides 256-bit SIMD (e.g., `X64V3Token`, `Desktop64`, `X64V4Token`).
+//! Use concrete tokens like `Desktop64` (AVX2+FMA) or `X64V4Token` (AVX-512).
+//! For generic code, use tier traits like `HasX64V2` or `HasX64V4`.
 //!
 //! ## Feature Flags
 //!

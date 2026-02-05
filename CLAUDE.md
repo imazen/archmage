@@ -227,6 +227,9 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 3. **Single trait per tier** - `HasX64V2`, `HasX64V4` only
 4. **NEON includes fp16** - They always appear together on AArch64
 5. **NO SVE** - `SveToken`, `Sve2Token`, `HasSve`, `HasSve2` are PROHIBITED (Rust stable lacks SVE support)
+6. **NO WIDTH TRAITS** - `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` are DEPRECATED and will be removed:
+   - `Has256BitSimd` only enables AVX, **NOT AVX2 or FMA** — misleading and causes suboptimal codegen
+   - Use concrete tokens (`X64V3Token`) or feature traits (`HasX64V2`, `HasX64V4`) instead
 
 ---
 
