@@ -42,14 +42,14 @@ pub use core::arch::aarch64::*;
 pub use core::arch::wasm32::*;
 
 // -- safe_unaligned_simd memory operations for the current platform --
-#[cfg(all(feature = "safe-simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
 pub use safe_unaligned_simd::x86_64 as safe_simd;
 
-#[cfg(all(feature = "safe-simd", target_arch = "x86"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86"))]
 pub use safe_unaligned_simd::x86 as safe_simd;
 
-#[cfg(all(feature = "safe-simd", any(target_arch = "aarch64", target_arch = "arm64ec")))]
+#[cfg(all(feature = "safe_unaligned_simd", any(target_arch = "aarch64", target_arch = "arm64ec")))]
 pub use safe_unaligned_simd::aarch64 as safe_simd;
 
-#[cfg(all(feature = "safe-simd", target_arch = "wasm32"))]
+#[cfg(all(feature = "safe_unaligned_simd", target_arch = "wasm32"))]
 pub use safe_unaligned_simd::wasm32 as safe_simd;

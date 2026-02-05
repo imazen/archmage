@@ -14,10 +14,10 @@ keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
-default = ["std", "macros", "safe-simd"]
+default = ["std", "macros", "safe_unaligned_simd"]
 std = []
 macros = ["dep:archmage-macros"]
-safe-simd = ["dep:safe_unaligned_simd"]
+safe_unaligned_simd = ["dep:safe_unaligned_simd"]
 # AVX-512 token support (Avx512Token, Avx512ModernToken, X64V4Token, etc.)
 avx512 = []
 
@@ -40,7 +40,7 @@ name = "tokens"
 harness = false
 
 [package.metadata.docs.rs]
-features = ["std", "macros", "safe-simd", "avx512"]
+features = ["std", "macros", "safe_unaligned_simd", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]
 # Build docs for multiple targets to show all platform-specific tokens
 targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]
