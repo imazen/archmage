@@ -5,6 +5,7 @@ Real applications need graceful degradation across capability tiers. Here's how 
 ## The Tier Hierarchy
 
 ```mermaid
+%%{init: { 'theme': 'dark' }}%%
 flowchart TD
     subgraph x86["x86-64"]
         V4["X64V4Token<br/>(AVX-512)"] --> V3["X64V3Token<br/>(AVX2+FMA)"]

@@ -7,6 +7,7 @@ For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md
 ## How It Works
 
 ```mermaid
+%%{init: { 'theme': 'dark' }}%%
 flowchart LR
     A["Your code:<br/>#[arcane]<br/>fn kernel(token: Desktop64, ...)"] --> B["Macro generates:<br/>outer fn (safe, takes token)<br/>inner fn (#[target_feature])"]
     B --> C["Outer calls inner<br/>via unsafe { __inner(...) }"]
@@ -18,6 +19,7 @@ flowchart LR
 ```
 
 ```mermaid
+%%{init: { 'theme': 'dark' }}%%
 flowchart TD
     S["summon() returns Some(token)"] --> A["#[arcane] fn (entry point)"]
     A --> R1["#[rite] helper"]

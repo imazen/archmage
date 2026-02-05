@@ -3,6 +3,7 @@
 The simplest dispatch pattern: check for tokens explicitly, call the appropriate implementation.
 
 ```mermaid
+%%{init: { 'theme': 'dark' }}%%
 flowchart TD
     API["Public fn"] --> CHECK{"Token::summon()?"}
     CHECK -->|"Some(token)"| SIMD["#[arcane] fn<br/>(SIMD path)"]

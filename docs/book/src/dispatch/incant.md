@@ -5,6 +5,7 @@
 ## Dispatch Flow
 
 ```mermaid
+%%{init: { 'theme': 'dark' }}%%
 flowchart TD
     CALL["incant!(process(data))"] --> V4{"X64V4Token::summon()?<br/>(x86 + avx512 feature)"}
     V4 -->|Some| PV4["process_v4(token, data)"]
@@ -29,6 +30,7 @@ Missing variants are skipped at compile time. You only need to implement the pla
 ### Passthrough Mode
 
 ```mermaid
+%%{init: { 'theme': 'dark' }}%%
 flowchart TD
     CALL["incant!(token =><br/>process(data))"] --> CHECK{"token.as_x64v4()?"}
     CHECK -->|Some| PV4["process_v4(v4_token, data)"]
