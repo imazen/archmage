@@ -9,14 +9,88 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 
-**archmage** provides zero-cost capability tokens that prove CPU features are available at runtime, making raw SIMD intrinsics safe to call via the `#[arcane]` macro.
-
-## Quick Start
+Zero-cost capability tokens that prove CPU features exist at runtime, making SIMD safe to use in Rust. Works across x86-64, ARM, and WASM.
 
 ```toml
 [dependencies]
 archmage = "0.4"
-safe_unaligned_simd = "0.2"  # For safe memory operations
+magetypes = "0.4"
+```
+
+## Usage
+
+### High-level: the prelude
+
+The prelude gives you the best SIMD types for whatever platform you're compiling on. No `#[cfg]` blocks needed.
+
+```rust
+use archmage::SimdToken;
+use magetypes::prelude::*;
+
+fn magnitude_squared(data: &[f32]) -> f32 {
+    if let Some(token) = RecommendedToken::summon() {
+        let chunks = data.chunks_exact(LANES);
+        let remainder = chunks.remainder();
+
+        let mut acc = F32Vec::splat(token, 0.0);
+        for chunk in chunks {
+            let v = F32Vec::from_slice(token, chunk);
+            acc = v.mul_add(v, acc);
+        }
+
+        let mut sum: f32 = acc.reduce_add();
+        for &x in remainder {
+            sum += x * x;
+        }
+        sum
+    } else {
+        data.iter().map(|x| x * x).sum()
+    }
+}
+```
+
+`RecommendedToken` is `X64V3Token` on x86-64 (AVX2+FMA), `NeonToken` on ARM, `Simd128Token` on WASM. `F32Vec` and `LANES` match: `f32x8`/8, `f32x4`/4, `f32x4`/4 respectively.
+
+### Multi-platform codegen: `#[magetypes]`
+
+Write one function with placeholder types. The macro generates platform-specific variants. `incant!` dispatches to the best one at runtime.
+
+```rust
+use archmage::{incant, magetypes};
+
+#[magetypes]
+fn magnitude_squared(token: Token, data: &[f32]) -> f32 {
+    let _ = token;
+    let chunks = data.chunks_exact(LANES);
+    let remainder = chunks.remainder();
+    let mut acc = f32xN::splat(token, 0.0);
+    for chunk in chunks {
+        let v = f32xN::from_slice(token, chunk);
+        acc = v.mul_add(v, acc);
+    }
+    let mut sum: f32 = acc.reduce_add();
+    for &x in remainder {
+        sum += x * x;
+    }
+    sum
+}
+
+// Dispatches to magnitude_squared_v3, _v4, _neon, _wasm128, or _scalar
+pub fn magnitude_squared_api(data: &[f32]) -> f32 {
+    incant!(magnitude_squared(data))
+}
+```
+
+`Token`, `f32xN`, and `LANES` are replaced with concrete types for each variant. The scalar fallback always compiles.
+
+### Low-level: raw intrinsics with `#[arcane]`
+
+When you need specific SIMD instructions, `#[arcane]` makes them safe. It sets `#[target_feature]` on the generated inner function, which means value-based intrinsics are safe (Rust 1.85+). Memory operations use `safe_unaligned_simd` for reference-based safety.
+
+```toml
+[dependencies]
+archmage = "0.4"
+safe_unaligned_simd = "0.2"
 ```
 
 ```rust
@@ -24,181 +98,157 @@ use archmage::{Desktop64, SimdToken, arcane};
 use std::arch::x86_64::*;
 
 #[arcane]
-fn square(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
-    let squared = _mm256_mul_ps(v, v);
-    let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, squared);
-    out
+fn dot_product(_token: Desktop64, a: &[f32], b: &[f32]) -> f32 {
+    // safe_unaligned_simd loads are safe inside #[arcane]
+    let va = safe_unaligned_simd::x86_64::_mm256_loadu_ps(&a[..8]);
+    let vb = safe_unaligned_simd::x86_64::_mm256_loadu_ps(&b[..8]);
+    // Value-based intrinsics are safe inside #[arcane]
+    let product = _mm256_mul_ps(va, vb);
+    // horizontal sum...
+    # let mut out = [0.0f32; 8];
+    # safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, product);
+    # out.iter().sum()
 }
 
 fn main() {
     if let Some(token) = Desktop64::summon() {
-        let result = square(token, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-        println!("{:?}", result); // [1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0]
+        let result = dot_product(token, &[1.0; 8], &[2.0; 8]);
     }
 }
 ```
 
-## How It Works
+## How tokens work
 
-SIMD intrinsics are unsafe for two reasons:
-1. **Feature availability**: Calling AVX2 instructions on a CPU without AVX2 is undefined behavior
-2. **Memory operations**: Load/store intrinsics use raw pointers
-
-archmage solves #1 with **capability tokens** - zero-sized types that can only be created after runtime CPU detection succeeds:
+SIMD intrinsics are unsafe because calling AVX2 on a CPU without AVX2 is undefined behavior. Tokens fix this: they're zero-sized types that can only be created after runtime CPUID detection succeeds.
 
 ```rust
-// summon() checks CPUID and returns Some only if features are available
+// summon() checks CPUID, returns Some only if features are present
 if let Some(token) = Desktop64::summon() {
-    // Token exists = CPU definitely has AVX2 + FMA
+    // Token exists = CPU has AVX2 + FMA. Pass it to #[arcane] functions.
 }
 ```
 
-The `#[arcane]` macro transforms your function to enable `#[target_feature]`, which makes value-based intrinsics safe (Rust 1.85+):
+If you compile with `-C target-cpu=haswell` (or any target that includes the token's features), `summon()` becomes a no-op, the `else` branch is dead code, and the compiler eliminates both.
 
-```rust
-#[arcane]
-fn example(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);  // Safe!
-    let result = _mm256_mul_ps(v, v);  // Safe! (value-based)
-    // ...
-}
-```
+## Token reference
 
-For memory operations (#2), use the `safe_unaligned_simd` crate which provides reference-based alternatives.
+### x86-64
 
-## Token Reference
+| Token | Features | CPUs |
+|-------|----------|------|
+| `X64V2Token` | SSE4.2, POPCNT | Nehalem 2008+; Windows 11 baseline |
+| `X64V3Token` / `Desktop64` | AVX2, FMA, BMI2 | Haswell 2013+, Zen 1+; ~95% of desktops |
 
-### x86-64 Tokens
+### x86-64 AVX-512 (requires `avx512` feature)
 
-Use `X64V3Token` (or its alias `Desktop64`) for most applications:
+| Token | Features | CPUs |
+|-------|----------|------|
+| `X64V4Token` / `Server64` | AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4+ |
+| `Avx512ModernToken` | + VBMI2, VNNI, BF16 | Ice Lake 2019+, Zen 4+ |
+| `Avx512Fp16Token` | + FP16 | Sapphire Rapids 2023+ |
 
-| Token | Features | CPU Support |
-|-------|----------|-------------|
-| `X64V2Token` | SSE4.2 + POPCNT | Windows 11 minimum, Nehalem 2008+ |
-| **`X64V3Token`** | AVX2 + FMA + BMI2 | 95%+ of CPUs, Haswell 2013+, Zen 1+ |
-| `Desktop64` | AVX2 + FMA + BMI2 | Alias for X64V3Token |
+Intel 12th-14th gen consumer CPUs do not have AVX-512.
 
-### x86-64 AVX-512 Tokens (requires `avx512` feature)
+### ARM
 
-```toml
-[dependencies]
-archmage = { version = "0.4", features = ["avx512"] }
-```
+| Token | Features | CPUs |
+|-------|----------|------|
+| `NeonToken` / `Arm64` | NEON | All AArch64 (baseline) |
+| `NeonAesToken` | + AES | ARMv8 with crypto |
+| `NeonSha3Token` | + SHA3 | ARMv8.2+ |
+| `NeonCrcToken` | + CRC | Most ARMv8 |
 
-| Token | Features | CPU Support |
-|-------|----------|-------------|
-| **`X64V4Token`** | AVX-512 F/BW/CD/DQ/VL | Intel Skylake-X 2017+, AMD Zen 4 2022+ |
-| `Avx512ModernToken` | + VBMI2, VNNI, BF16, etc. | Intel Ice Lake 2019+, AMD Zen 4+ |
-| `Avx512Fp16Token` | + FP16 | Intel Sapphire Rapids 2023+ |
-
-Note: Intel 12th-14th gen consumer CPUs do NOT have AVX-512.
-
-### ARM Tokens
-
-| Token | Features | CPU Support |
-|-------|----------|-------------|
-| **`Arm64`** | NEON | All AArch64 (baseline) |
-| `NeonToken` | NEON | Same as Arm64 (alias) |
-| `NeonAesToken` | NEON + AES | ARM with crypto extensions |
-| `NeonSha3Token` | NEON + SHA3 | ARMv8.2+ |
-| `NeonCrcToken` | NEON + CRC | Most ARMv8 CPUs |
-
-### WASM Tokens
+### WASM
 
 | Token | Features |
 |-------|----------|
 | `Simd128Token` | WASM SIMD |
 
-## Target Selection
+## Token hierarchy and traits
 
-### Choosing Your Baseline
-
-**x86-64-v2** is the minimum requirement for Windows 11, making it a safe baseline for distributed binaries. However, **95%+ of desktop/laptop CPUs** from the last decade support x86-64-v3 (AVX2+FMA), so optimizing for v3 covers nearly all users.
-
-| Target | Use Case | Coverage |
-|--------|----------|----------|
-| x86-64-v2 | Maximum compatibility (Windows 11 minimum) | ~100% |
-| **x86-64-v3** | Recommended for most apps | ~95%+ |
-| x86-64-v4 | Server/HPC workloads | Xeon, Zen 4+ |
-
-For most applications, compile a v2 baseline and add v3-optimized paths:
+Higher tokens can extract lower ones:
 
 ```rust
-if let Some(token) = X64V3Token::summon() {
-    fast_path(token, data);  // 95%+ of users
-} else {
-    baseline_path(data);      // Fallback
-}
-```
-
-### Compile-Time Optimization
-
-When you compile with `-C target-cpu=native` or specify target features that match or exceed a token's requirements, **runtime detection is eliminated**:
-
-```rust
-// Compiled with RUSTFLAGS="-C target-cpu=haswell"
-if let Some(token) = X64V3Token::summon() {  // Always succeeds, check optimized away
-    process(token, data);
-} else {
-    fallback(data);  // Dead code, optimized away entirely
-}
-```
-
-This means:
-- `summon()` becomes a no-op returning `Some`
-- The `else` branch is eliminated by the optimizer
-- Zero runtime overhead for feature detection
-
-Build for your deployment target and let the compiler eliminate unused paths.
-
-## Token Hierarchy
-
-Tokens form a hierarchy. Higher-level tokens can extract lower-level ones:
-
-```rust
-if let Some(v3) = X64V3Token::summon() {
-    let v2: X64V2Token = v3.v2();  // v3 implies v2
-}
-
 if let Some(v4) = X64V4Token::summon() {
     let v3: X64V3Token = v4.v3();  // v4 implies v3
     let v2: X64V2Token = v4.v2();  // v4 implies v2
 }
 ```
 
-## Trait Bounds
-
-Use trait bounds for generic SIMD code:
+Use trait bounds for generic code:
 
 ```rust
-use archmage::{HasX64V2, SimdToken, arcane};
+use archmage::{HasX64V2, arcane};
 
-// Accept any token with at least v2 features
 #[arcane]
 fn process<T: HasX64V2>(_token: T, data: &[u8]) {
-    // SSE4.2 intrinsics available
+    // SSE4.2 intrinsics available here
 }
 ```
-
-**Available traits:**
 
 | Trait | Meaning |
 |-------|---------|
 | `SimdToken` | Base trait for all tokens |
-| `HasX64V2` | Has SSE4.2 + POPCNT |
-| `HasX64V4` | Has AVX-512 (requires `avx512` feature) |
-| `Has128BitSimd` | Has 128-bit vectors |
-| `Has256BitSimd` | Has 256-bit vectors |
-| `Has512BitSimd` | Has 512-bit vectors |
-| `HasNeon` | Has ARM NEON |
-| `HasNeonAes` | Has NEON + AES |
-| `HasNeonSha3` | Has NEON + SHA3 |
+| `HasX64V2` | SSE4.2 + POPCNT |
+| `HasX64V4` | AVX-512 (requires `avx512` feature) |
+| `Has128BitSimd` | 128-bit vectors |
+| `Has256BitSimd` | 256-bit vectors |
+| `Has512BitSimd` | 512-bit vectors |
+| `HasNeon` | ARM NEON |
+| `HasNeonAes` | NEON + AES |
+| `HasNeonSha3` | NEON + SHA3 |
 
-## Cross-Platform Code
+## Compile-time dispatch with `IntoConcreteToken`
 
-All tokens compile on all platforms. `summon()` returns `None` on unsupported architectures:
+For generic dispatch where the token type is a type parameter, `IntoConcreteToken` lets you branch at compile time. The compiler monomorphizes away non-matching branches.
+
+```rust
+use archmage::{IntoConcreteToken, SimdToken, ScalarToken};
+
+fn process<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
+    if let Some(t) = token.as_x64v3() {
+        process_avx2(t, data);
+    } else if let Some(t) = token.as_neon() {
+        process_neon(t, data);
+    } else if let Some(_) = token.as_scalar() {
+        process_scalar(data);
+    }
+}
+```
+
+Or use `incant!` in passthrough mode to do this automatically:
+
+```rust
+fn process<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
+    incant!(some_magetypes_fn(data) with token)
+}
+```
+
+## SIMD types (magetypes)
+
+| Width | Float | Signed | Unsigned | Token |
+|-------|-------|--------|----------|-------|
+| 128-bit | `f32x4`, `f64x2` | `i8x16`..`i64x2` | `u8x16`..`u64x2` | `X64V3Token` / `NeonToken` / `Simd128Token` |
+| 256-bit | `f32x8`, `f64x4` | `i8x32`..`i64x4` | `u8x32`..`u64x4` | `X64V3Token` |
+| 512-bit | `f32x16`, `f64x8` | `i8x64`..`i64x8` | `u8x64`..`u64x8` | `X64V4Token` |
+
+**Construction** (token required): `splat`, `from_array`, `from_slice`, `zero`, `load`
+
+**Extraction**: `to_array`, `as_array`, `store`, `reduce_add`, `reduce_min`, `reduce_max`
+
+**Arithmetic**: `+`, `-`, `*`, `/`, `mul_add`, `mul_sub`
+
+**Math**: `sqrt`, `abs`, `floor`, `ceil`, `round`, `min`, `max`, `clamp`, `recip`, `rsqrt`
+
+**Transcendentals**: `log2_lowp`, `exp2_lowp`, `ln_lowp`, `exp_lowp`, `pow_lowp` (and `_midp` variants)
+
+**Comparison**: `simd_eq`, `simd_ne`, `simd_lt`, `simd_le`, `simd_gt`, `simd_ge`
+
+**Bitwise/shifts**: `&`, `|`, `^`, `shl::<N>`, `shr::<N>`, `shr_arithmetic::<N>`
+
+## Cross-platform code
+
+All tokens compile on all platforms. `summon()` returns `None` on unsupported architectures, so dispatch chains work everywhere:
 
 ```rust
 use archmage::{Desktop64, Arm64, SimdToken};
@@ -214,63 +264,14 @@ fn process(data: &mut [f32]) {
 }
 ```
 
-## SIMD Types
+## Feature flags
 
-The companion crate `magetypes` provides token-gated SIMD types with ergonomic operators:
-
-```toml
-[dependencies]
-magetypes = "0.4"
-```
-
-```rust
-use archmage::{Desktop64, SimdToken};
-use magetypes::simd::f32x8;
-
-if let Some(token) = Desktop64::summon() {
-    let a = f32x8::splat(token, 2.0);
-    let b = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-    let c = a * b + a;  // Operators work naturally
-    let result = c.sqrt();
-    println!("{:?}", result.to_array());
-}
-```
-
-### Available Types
-
-| Width | Float | Signed Int | Unsigned Int | Token Required |
-|-------|-------|------------|--------------|----------------|
-| 128-bit | `f32x4`, `f64x2` | `i8x16`, `i16x8`, `i32x4`, `i64x2` | `u8x16`, `u16x8`, `u32x4`, `u64x2` | `X64V3Token` |
-| 256-bit | `f32x8`, `f64x4` | `i8x32`, `i16x16`, `i32x8`, `i64x4` | `u8x32`, `u16x16`, `u32x8`, `u64x4` | `X64V3Token` |
-| 512-bit | `f32x16`, `f64x8` | `i8x64`, `i16x32`, `i32x16`, `i64x8` | `u8x64`, `u16x32`, `u32x16`, `u64x8` | `X64V4Token` |
-
-### Operations
-
-**Construction** (requires token): `splat`, `from_array`, `load`, `zero`
-
-**Extraction**: `to_array`, `as_array`, `store`, `raw`
-
-**Arithmetic**: `+`, `-`, `*`, `/` and assignment variants
-
-**Bitwise**: `&`, `|`, `^` and assignment variants
-
-**Math** (float): `sqrt`, `abs`, `floor`, `ceil`, `round`, `min`, `max`, `clamp`, `mul_add`, `mul_sub`, `recip`, `rsqrt`
-
-**Transcendentals** (float): `log2_lowp`, `log2_midp`, `exp2_lowp`, `exp2_midp`, `ln_lowp`, `ln_midp`, `exp_lowp`, `exp_midp`, `pow_lowp`, `pow_midp`, `cbrt_midp`
-
-**Comparison**: `simd_eq`, `simd_ne`, `simd_lt`, `simd_le`, `simd_gt`, `simd_ge`
-
-**Reduction**: `reduce_add`, `reduce_min`, `reduce_max`
-
-**Integer**: `shl::<N>`, `shr::<N>`, `shr_arithmetic::<N>`
-
-## Feature Flags
-
-| Feature | Description |
-|---------|-------------|
-| `std` (default) | Standard library support |
-| `macros` (default) | `#[arcane]` macro |
-| `avx512` | AVX-512 tokens |
+| Feature | Default | Description |
+|---------|---------|-------------|
+| `std` | yes | Standard library support |
+| `macros` | yes | `#[arcane]`, `#[magetypes]`, `incant!` |
+| `bytemuck` | yes | Pod/Zeroable casts for SIMD types |
+| `avx512` | no | AVX-512 tokens and 512-bit types |
 
 ## License
 
