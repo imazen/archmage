@@ -114,7 +114,7 @@ fn inner_work(token: X64V3Token, data: &[f32]) -> f32 {
 - Generic bounds break this chain — each function is a separate compilation unit
 - Even `#[inline(always)]` can't force inlining across trait object boundaries
 
-**Downcasting is fine:** You CAN pass a higher token to a function expecting a lower one. Nested `#[arcane]` with downcasting preserves the inlining chain:
+**Downcasting is free:** Pass a higher token to a function expecting a lower one. Nested `#[arcane]` with downcasting preserves the inlining chain:
 
 ```rust
 #[arcane]
@@ -131,7 +131,18 @@ fn v3_helper(token: X64V3Token, chunk: &[f32]) -> f32 {
 }
 ```
 
-**Never upcast:** You cannot treat `X64V3Token` as `X64V4Token` — that would claim features that aren't proven.
+**Upcasting via `IntoConcreteToken`:** Safe but has runtime cost — don't do it in loops:
+
+```rust
+fn process<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
+    // Check ONCE outside loop, not per-iteration
+    if let Some(v4) = token.as_x64v4() {
+        process_v4(v4, data);  // Fast path
+    } else if let Some(v3) = token.as_x64v3() {
+        process_v3(v3, data);  // Fallback
+    }
+}
+```
 
 **The rule:** Use concrete tokens for hot paths. Downcasting (V4→V3) is free. Upcasting is impossible. Generic bounds cost inlining.
 
