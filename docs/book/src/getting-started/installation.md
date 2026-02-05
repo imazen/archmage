@@ -4,15 +4,15 @@ Add archmage to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-archmage = "0.4"
+archmage = "0.5"
 ```
 
 For SIMD vector types with natural operators, also add magetypes:
 
 ```toml
 [dependencies]
-archmage = "0.4"
-magetypes = "0.4"
+archmage = "0.5"
+magetypes = "0.5"
 ```
 
 ## Feature Flags

@@ -13,8 +13,8 @@
 
 ```toml
 [dependencies]
-archmage = "0.4"
-magetypes = "0.4"
+archmage = "0.5"
+magetypes = "0.5"
 ```
 
 ## Raw intrinsics with `#[arcane]`
