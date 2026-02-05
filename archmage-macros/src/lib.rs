@@ -1214,6 +1214,183 @@ fn generate_dispatchers(
 }
 
 // =============================================================================
+// incant! macro - dispatch to platform-specific variants
+// =============================================================================
+
+/// Input for the incant! macro
+struct IncantInput {
+    /// Function name to call
+    func_name: Ident,
+    /// Arguments to pass
+    args: Vec<syn::Expr>,
+    /// Optional token variable for passthrough mode
+    with_token: Option<syn::Expr>,
+}
+
+impl Parse for IncantInput {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        // Parse: function_name(arg1, arg2, ...) [with token_expr]
+        let func_name: Ident = input.parse()?;
+
+        // Parse parenthesized arguments
+        let content;
+        syn::parenthesized!(content in input);
+        let args = content
+            .parse_terminated(syn::Expr::parse, Token![,])?
+            .into_iter()
+            .collect();
+
+        // Check for optional "with token"
+        let with_token = if input.peek(Ident) {
+            let kw: Ident = input.parse()?;
+            if kw != "with" {
+                return Err(syn::Error::new_spanned(kw, "expected `with` keyword"));
+            }
+            Some(input.parse()?)
+        } else {
+            None
+        };
+
+        Ok(IncantInput {
+            func_name,
+            args,
+            with_token,
+        })
+    }
+}
+
+/// Dispatch to platform-specific SIMD variants.
+///
+/// # Entry Point Mode (no token yet)
+///
+/// Summons tokens and dispatches to the best available variant:
+///
+/// ```rust,ignore
+/// pub fn public_api(data: &[f32]) -> f32 {
+///     incant!(dot(data))
+/// }
+/// ```
+///
+/// Expands to runtime feature detection + dispatch to `dot_v3`, `dot_v4`,
+/// `dot_neon`, `dot_wasm128`, or `dot_scalar`.
+///
+/// # Passthrough Mode (already have token)
+///
+/// Uses compile-time dispatch via `IntoConcreteToken`:
+///
+/// ```rust,ignore
+/// #[arcane]
+/// fn outer(token: X64V3Token, data: &[f32]) -> f32 {
+///     incant!(inner(data) with token)
+/// }
+/// ```
+///
+/// The compiler monomorphizes the dispatch, eliminating non-matching branches.
+///
+/// # Variant Naming
+///
+/// Functions must have suffixed variants:
+/// - `_v3` for `X64V3Token`
+/// - `_v4` for `X64V4Token` (requires `avx512` feature)
+/// - `_neon` for `NeonToken`
+/// - `_wasm128` for `Simd128Token`
+/// - `_scalar` for `ScalarToken`
+#[proc_macro]
+pub fn incant(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as IncantInput);
+    incant_impl(input)
+}
+
+/// Legacy alias for [`incant!`].
+#[proc_macro]
+pub fn simd_route(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as IncantInput);
+    incant_impl(input)
+}
+
+fn incant_impl(input: IncantInput) -> TokenStream {
+    let func_name = &input.func_name;
+    let args = &input.args;
+
+    // Create suffixed function names
+    let fn_v3 = format_ident!("{}_v3", func_name);
+    let fn_v4 = format_ident!("{}_v4", func_name);
+    let fn_neon = format_ident!("{}_neon", func_name);
+    let fn_wasm128 = format_ident!("{}_wasm128", func_name);
+    let fn_scalar = format_ident!("{}_scalar", func_name);
+
+    if let Some(token_expr) = &input.with_token {
+        // Passthrough mode: use IntoConcreteToken for compile-time dispatch
+        let expanded = quote! {
+            {
+                use archmage::IntoConcreteToken;
+                let __incant_token = #token_expr;
+
+                #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+                {
+                    #[cfg(feature = "avx512")]
+                    if let Some(__t) = __incant_token.as_x64v4() {
+                        return #fn_v4(__t, #(#args),*);
+                    }
+                    if let Some(__t) = __incant_token.as_x64v3() {
+                        return #fn_v3(__t, #(#args),*);
+                    }
+                }
+
+                #[cfg(target_arch = "aarch64")]
+                if let Some(__t) = __incant_token.as_neon() {
+                    return #fn_neon(__t, #(#args),*);
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                if let Some(__t) = __incant_token.as_wasm128() {
+                    return #fn_wasm128(__t, #(#args),*);
+                }
+
+                if let Some(__t) = __incant_token.as_scalar() {
+                    return #fn_scalar(__t, #(#args),*);
+                }
+
+                unreachable!("Token did not match any known variant")
+            }
+        };
+        expanded.into()
+    } else {
+        // Entry point mode: summon tokens and dispatch
+        let expanded = quote! {
+            {
+                use archmage::SimdToken;
+
+                #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+                {
+                    #[cfg(feature = "avx512")]
+                    if let Some(__t) = archmage::X64V4Token::summon() {
+                        return #fn_v4(__t, #(#args),*);
+                    }
+                    if let Some(__t) = archmage::X64V3Token::summon() {
+                        return #fn_v3(__t, #(#args),*);
+                    }
+                }
+
+                #[cfg(target_arch = "aarch64")]
+                if let Some(__t) = archmage::NeonToken::summon() {
+                    return #fn_neon(__t, #(#args),*);
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                if let Some(__t) = archmage::Simd128Token::summon() {
+                    return #fn_wasm128(__t, #(#args),*);
+                }
+
+                // Scalar fallback
+                #fn_scalar(archmage::ScalarToken, #(#args),*)
+            }
+        };
+        expanded.into()
+    }
+}
+
+// =============================================================================
 // Unit tests for token/trait recognition maps
 // =============================================================================
 

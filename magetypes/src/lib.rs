@@ -43,6 +43,14 @@ extern crate alloc;
 // Re-export archmage for convenience
 pub use archmage;
 
+// Platform-appropriate types via prelude
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+pub mod prelude;
+
 // Auto-generated SIMD types with natural operators
 #[cfg(any(
     target_arch = "x86_64",

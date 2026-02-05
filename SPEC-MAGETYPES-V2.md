@@ -603,10 +603,10 @@ Replace with:
 | `ScalarToken` | ✅ Implemented |
 | `IntoConcreteToken` trait | ✅ Implemented |
 | `#[magetypes]` function-level | ⬜ Not yet (module-level as `#[multiwidth]`) |
-| `incant!` entry point | ⬜ Not yet |
-| `incant!` passthrough | ⬜ Not yet |
+| `incant!` entry point | ✅ Implemented |
+| `incant!` passthrough | ✅ Implemented |
 | `SimdTypes` trait | ⬜ Not yet |
-| Prelude system | ⬜ Not yet |
+| Prelude system | ✅ Implemented |
 | Cross-tier casting | ⬜ Not yet |
 
 ---
