@@ -44,17 +44,14 @@ Archmage separates **proof of capability** from **use of capability**:
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
-use std::arch::x86_64::*;
+use magetypes::f32x8;
 
 #[arcane]
 fn multiply(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // Safe! The token proves AVX2+FMA are available
-    let a = _mm256_loadu_ps(data.as_ptr());  // safe_unaligned_simd version
-    let b = _mm256_set1_ps(2.0);
-    let c = _mm256_mul_ps(a, b);
-    let mut out = [0.0f32; 8];
-    _mm256_storeu_ps(&mut out, c);
-    out
+    let a = f32x8::from_array(token, *data);
+    let b = f32x8::splat(token, 2.0);
+    let c = a * b;
+    c.to_array()
 }
 
 fn main() {
