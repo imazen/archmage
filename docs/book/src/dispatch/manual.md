@@ -25,25 +25,73 @@ fn process_scalar(data: &mut [f32]) {
 }
 ```
 
-## Multi-Tier Dispatch
+**That's it.** No `#[cfg(target_arch)]` needed—this compiles and runs everywhere.
+
+## No Architecture Guards Needed
+
+Tokens exist on all platforms. On unsupported architectures, `summon()` returns `None` and `#[arcane]` functions become unreachable stubs. You write one dispatch block:
+
+```rust
+use archmage::{Desktop64, Arm64, Simd128Token, SimdToken};
+
+pub fn process(data: &mut [f32]) {
+    // Try x86 AVX2
+    if let Some(token) = Desktop64::summon() {
+        return process_x86(token, data);
+    }
+
+    // Try ARM NEON
+    if let Some(token) = Arm64::summon() {
+        return process_arm(token, data);
+    }
+
+    // Try WASM SIMD
+    if let Some(token) = Simd128Token::summon() {
+        return process_wasm(token, data);
+    }
+
+    // Scalar fallback
+    process_scalar(data);
+}
+
+#[arcane]
+fn process_x86(token: Desktop64, data: &mut [f32]) { /* ... */ }
+
+#[arcane]
+fn process_arm(token: Arm64, data: &mut [f32]) { /* ... */ }
+
+#[arcane]
+fn process_wasm(token: Simd128Token, data: &mut [f32]) { /* ... */ }
+
+fn process_scalar(data: &mut [f32]) { /* ... */ }
+```
+
+On x86-64: `Desktop64::summon()` may succeed, others return `None`.
+On ARM: `Arm64::summon()` succeeds, others return `None`.
+On WASM: `Simd128Token::summon()` may succeed, others return `None`.
+
+The `#[arcane]` functions for other architectures compile to unreachable stubs—the code exists but can never be called.
+
+## Multi-Tier x86 Dispatch
 
 Check from highest to lowest capability:
 
 ```rust
-use archmage::{X64V4Token, X64V3Token, X64V2Token, SimdToken};
+use archmage::{X64V4Token, Desktop64, X64V2Token, SimdToken};
 
 pub fn process(data: &mut [f32]) {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    // AVX-512 (requires avx512 feature)
+    #[cfg(feature = "avx512")]
     if let Some(token) = X64V4Token::summon() {
         return process_v4(token, data);
     }
 
-    #[cfg(target_arch = "x86_64")]
-    if let Some(token) = X64V3Token::summon() {
+    // AVX2+FMA (Haswell+, Zen+)
+    if let Some(token) = Desktop64::summon() {
         return process_v3(token, data);
     }
 
-    #[cfg(target_arch = "x86_64")]
+    // SSE4.2 (Nehalem+)
     if let Some(token) = X64V2Token::summon() {
         return process_v2(token, data);
     }
@@ -52,61 +100,36 @@ pub fn process(data: &mut [f32]) {
 }
 ```
 
-## Cross-Platform Dispatch
-
-```rust
-use archmage::{Desktop64, NeonToken, Simd128Token, SimdToken};
-
-pub fn process(data: &mut [f32]) {
-    #[cfg(target_arch = "x86_64")]
-    if let Some(token) = Desktop64::summon() {
-        return process_x86(token, data);
-    }
-
-    #[cfg(target_arch = "aarch64")]
-    if let Some(token) = NeonToken::summon() {
-        return process_arm(token, data);
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    if let Some(token) = Simd128Token::summon() {
-        return process_wasm(token, data);
-    }
-
-    process_scalar(data);
-}
-```
+Note: `#[cfg(feature = "avx512")]` is a **Cargo feature** gate (compile-time opt-in), not an architecture check. The actual CPU detection is still runtime via `summon()`.
 
 ## When to Use Manual Dispatch
 
-**Pros:**
-- Explicit and readable
-- Full control over fallback logic
-- Easy to understand
+**Use manual dispatch when:**
+- You have 2-3 tiers
+- You want explicit, readable control flow
+- Different tiers have different APIs
 
-**Cons:**
-- Verbose for many tiers
-- Easy to forget a tier
-- Repeated boilerplate
-
-For complex dispatch with many tiers, consider [`incant!`](./incant.md) or [`IntoConcreteToken`](./into-concrete.md).
+**Consider [`incant!`](./incant.md) when:**
+- You have many tiers
+- All implementations have the same signature
+- You want automatic best-available selection
 
 ## Avoiding Common Mistakes
 
 ### Don't Dispatch in Hot Loops
 
 ```rust
-// WRONG
+// WRONG - CPUID every iteration
 for chunk in data.chunks_mut(8) {
-    if let Some(token) = Desktop64::summon() {  // CPUID every iteration!
+    if let Some(token) = Desktop64::summon() {
         process_chunk(token, chunk);
     }
 }
 
-// RIGHT
+// RIGHT - hoist token outside loop
 if let Some(token) = Desktop64::summon() {
     for chunk in data.chunks_mut(8) {
-        process_chunk(token, chunk);  // Token hoisted
+        process_chunk(token, chunk);
     }
 } else {
     for chunk in data.chunks_mut(8) {
