@@ -203,6 +203,8 @@ fn gen_real_token_struct(out: &mut String, reg: &Registry, token: &TokenDef, arc
     writeln!(out, "}}").unwrap();
     writeln!(out).unwrap();
 
+    writeln!(out, "impl crate::tokens::Sealed for {name} {{}}").unwrap();
+    writeln!(out).unwrap();
     writeln!(out, "impl SimdToken for {name} {{").unwrap();
     writeln!(out, "    const NAME: &'static str = \"{display}\";").unwrap();
     writeln!(out).unwrap();
@@ -680,6 +682,8 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
     writeln!(out, "}}").unwrap();
     writeln!(out).unwrap();
 
+    writeln!(out, "impl crate::tokens::Sealed for {name} {{}}").unwrap();
+    writeln!(out).unwrap();
     writeln!(out, "impl SimdToken for {name} {{").unwrap();
     writeln!(out, "    const NAME: &'static str = \"{display}\";").unwrap();
     writeln!(out).unwrap();

@@ -48,6 +48,18 @@ impl f32x4 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 4`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[f32]) -> Self {
+        let arr: [f32; 4] = slice[..4].try_into().unwrap();
+        // SAFETY: [f32; 4] and __m128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [f32; 4]) {
@@ -1168,14 +1180,6 @@ crate::impl_bitwise_ops!(f32x4, __m128, _mm_and_ps, _mm_or_ps, _mm_xor_ps);
 crate::impl_index!(f32x4, f32, 4);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[f32; 4]> for f32x4 {
-    #[inline(always)]
-    fn from(arr: [f32; 4]) -> Self {
-        // SAFETY: [f32; 4] and __m128 have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<f32x4> for [f32; 4] {
     #[inline(always)]
     fn from(v: f32x4) -> Self {
@@ -1265,6 +1269,18 @@ impl f64x2 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [f64; 2]) -> Self {
+        // SAFETY: [f64; 2] and __m128d have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 2`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[f64]) -> Self {
+        let arr: [f64; 2] = slice[..2].try_into().unwrap();
         // SAFETY: [f64; 2] and __m128d have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1739,14 +1755,6 @@ crate::impl_bitwise_ops!(f64x2, __m128d, _mm_and_pd, _mm_or_pd, _mm_xor_pd);
 crate::impl_index!(f64x2, f64, 2);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[f64; 2]> for f64x2 {
-    #[inline(always)]
-    fn from(arr: [f64; 2]) -> Self {
-        // SAFETY: [f64; 2] and __m128d have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<f64x2> for [f64; 2] {
     #[inline(always)]
     fn from(v: f64x2) -> Self {
@@ -1836,6 +1844,18 @@ impl i8x16 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [i8; 16]) -> Self {
+        // SAFETY: [i8; 16] and __m128i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 16`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[i8]) -> Self {
+        let arr: [i8; 16] = slice[..16].try_into().unwrap();
         // SAFETY: [i8; 16] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2197,14 +2217,6 @@ crate::impl_bitwise_ops!(i8x16, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si
 crate::impl_index!(i8x16, i8, 16);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[i8; 16]> for i8x16 {
-    #[inline(always)]
-    fn from(arr: [i8; 16]) -> Self {
-        // SAFETY: [i8; 16] and __m128i have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<i8x16> for [i8; 16] {
     #[inline(always)]
     fn from(v: i8x16) -> Self {
@@ -2272,6 +2284,18 @@ impl u8x16 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and __m128i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 16`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[u8]) -> Self {
+        let arr: [u8; 16] = slice[..16].try_into().unwrap();
         // SAFETY: [u8; 16] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2662,14 +2686,6 @@ crate::impl_bitwise_ops!(u8x16, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si
 crate::impl_index!(u8x16, u8, 16);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[u8; 16]> for u8x16 {
-    #[inline(always)]
-    fn from(arr: [u8; 16]) -> Self {
-        // SAFETY: [u8; 16] and __m128i have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<u8x16> for [u8; 16] {
     #[inline(always)]
     fn from(v: u8x16) -> Self {
@@ -2737,6 +2753,18 @@ impl i16x8 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [i16; 8]) -> Self {
+        // SAFETY: [i16; 8] and __m128i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 8`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[i16]) -> Self {
+        let arr: [i16; 8] = slice[..8].try_into().unwrap();
         // SAFETY: [i16; 8] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3139,14 +3167,6 @@ crate::impl_bitwise_ops!(i16x8, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si
 crate::impl_index!(i16x8, i16, 8);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[i16; 8]> for i16x8 {
-    #[inline(always)]
-    fn from(arr: [i16; 8]) -> Self {
-        // SAFETY: [i16; 8] and __m128i have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<i16x8> for [i16; 8] {
     #[inline(always)]
     fn from(v: i16x8) -> Self {
@@ -3214,6 +3234,18 @@ impl u16x8 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [u16; 8]) -> Self {
+        // SAFETY: [u16; 8] and __m128i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 8`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[u16]) -> Self {
+        let arr: [u16; 8] = slice[..8].try_into().unwrap();
         // SAFETY: [u16; 8] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3590,14 +3622,6 @@ crate::impl_bitwise_ops!(u16x8, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si
 crate::impl_index!(u16x8, u16, 8);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[u16; 8]> for u16x8 {
-    #[inline(always)]
-    fn from(arr: [u16; 8]) -> Self {
-        // SAFETY: [u16; 8] and __m128i have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<u16x8> for [u16; 8] {
     #[inline(always)]
     fn from(v: u16x8) -> Self {
@@ -3665,6 +3689,18 @@ impl i32x4 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [i32; 4]) -> Self {
+        // SAFETY: [i32; 4] and __m128i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 4`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[i32]) -> Self {
+        let arr: [i32; 4] = slice[..4].try_into().unwrap();
         // SAFETY: [i32; 4] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4062,14 +4098,6 @@ crate::impl_bitwise_ops!(i32x4, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si
 crate::impl_index!(i32x4, i32, 4);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[i32; 4]> for i32x4 {
-    #[inline(always)]
-    fn from(arr: [i32; 4]) -> Self {
-        // SAFETY: [i32; 4] and __m128i have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<i32x4> for [i32; 4] {
     #[inline(always)]
     fn from(v: i32x4) -> Self {
@@ -4137,6 +4165,18 @@ impl u32x4 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [u32; 4]) -> Self {
+        // SAFETY: [u32; 4] and __m128i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 4`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[u32]) -> Self {
+        let arr: [u32; 4] = slice[..4].try_into().unwrap();
         // SAFETY: [u32; 4] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4493,14 +4533,6 @@ crate::impl_bitwise_ops!(u32x4, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si
 crate::impl_index!(u32x4, u32, 4);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[u32; 4]> for u32x4 {
-    #[inline(always)]
-    fn from(arr: [u32; 4]) -> Self {
-        // SAFETY: [u32; 4] and __m128i have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<u32x4> for [u32; 4] {
     #[inline(always)]
     fn from(v: u32x4) -> Self {
@@ -4568,6 +4600,18 @@ impl i64x2 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [i64; 2]) -> Self {
+        // SAFETY: [i64; 2] and __m128i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 2`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[i64]) -> Self {
+        let arr: [i64; 2] = slice[..2].try_into().unwrap();
         // SAFETY: [i64; 2] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4961,14 +5005,6 @@ crate::impl_bitwise_ops!(i64x2, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si
 crate::impl_index!(i64x2, i64, 2);
 
 #[cfg(target_arch = "x86_64")]
-impl From<[i64; 2]> for i64x2 {
-    #[inline(always)]
-    fn from(arr: [i64; 2]) -> Self {
-        // SAFETY: [i64; 2] and __m128i have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
-#[cfg(target_arch = "x86_64")]
 impl From<i64x2> for [i64; 2] {
     #[inline(always)]
     fn from(v: i64x2) -> Self {
@@ -5036,6 +5072,18 @@ impl u64x2 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::X64V3Token, arr: [u64; 2]) -> Self {
+        // SAFETY: [u64; 2] and __m128i have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 2`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::X64V3Token, slice: &[u64]) -> Self {
+        let arr: [u64; 2] = slice[..2].try_into().unwrap();
         // SAFETY: [u64; 2] and __m128i have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -5421,14 +5469,6 @@ crate::impl_bitwise_ops!(u64x2, __m128i, _mm_and_si128, _mm_or_si128, _mm_xor_si
 #[cfg(target_arch = "x86_64")]
 crate::impl_index!(u64x2, u64, 2);
 
-#[cfg(target_arch = "x86_64")]
-impl From<[u64; 2]> for u64x2 {
-    #[inline(always)]
-    fn from(arr: [u64; 2]) -> Self {
-        // SAFETY: [u64; 2] and __m128i have identical size and layout
-        Self(unsafe { core::mem::transmute(arr) })
-    }
-}
 #[cfg(target_arch = "x86_64")]
 impl From<u64x2> for [u64; 2] {
     #[inline(always)]

@@ -19,6 +19,8 @@ pub struct NeonToken {
     _private: (),
 }
 
+impl crate::tokens::Sealed for NeonToken {}
+
 impl SimdToken for NeonToken {
     const NAME: &'static str = "NEON";
 
@@ -48,6 +50,8 @@ impl SimdToken for NeonToken {
 pub struct NeonAesToken {
     _private: (),
 }
+
+impl crate::tokens::Sealed for NeonAesToken {}
 
 impl SimdToken for NeonAesToken {
     const NAME: &'static str = "NEON+AES";
@@ -116,6 +120,8 @@ pub struct NeonSha3Token {
     _private: (),
 }
 
+impl crate::tokens::Sealed for NeonSha3Token {}
+
 impl SimdToken for NeonSha3Token {
     const NAME: &'static str = "NEON+SHA3";
 
@@ -183,6 +189,8 @@ impl NeonSha3Token {
 pub struct NeonCrcToken {
     _private: (),
 }
+
+impl crate::tokens::Sealed for NeonCrcToken {}
 
 impl SimdToken for NeonCrcToken {
     const NAME: &'static str = "NEON+CRC";

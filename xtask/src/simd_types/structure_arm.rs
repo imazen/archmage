@@ -116,6 +116,18 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         Self(unsafe {{ core::mem::transmute(arr) }})
         }}
 
+        /// Create from slice (token-gated).
+        ///
+        /// # Panics
+        ///
+        /// Panics if `slice.len() < {lanes}`.
+        #[inline(always)]
+        pub fn from_slice(_: archmage::NeonToken, slice: &[{elem}]) -> Self {{
+        let arr: [{elem}; {lanes}] = slice[..{lanes}].try_into().unwrap();
+        // SAFETY: [{elem}; {lanes}] and {inner} have identical size and layout
+        Self(unsafe {{ core::mem::transmute(arr) }})
+        }}
+
         /// Store to array
         #[inline(always)]
         pub fn store(self, out: &mut [{elem}; {lanes}]) {{

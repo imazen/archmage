@@ -11,6 +11,8 @@ pub struct Wasm128Token {
     _private: (),
 }
 
+impl crate::tokens::Sealed for Wasm128Token {}
+
 impl SimdToken for Wasm128Token {
     const NAME: &'static str = "WASM SIMD128";
 

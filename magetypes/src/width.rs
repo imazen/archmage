@@ -147,7 +147,7 @@ pub trait WidthDispatch: SimdToken + Copy {
 #[cfg(target_arch = "x86_64")]
 mod x86_impl {
     use super::WidthDispatch;
-    use archmage::{SimdToken, X64V3Token};
+    use archmage::X64V3Token;
 
     use crate::simd::{
         f32x4, f32x8, f64x2, f64x4, i8x16, i8x32, i16x8, i16x16, i32x4, i32x8, i64x2, i64x4, u8x16,
@@ -193,233 +193,143 @@ mod x86_impl {
 
         #[inline(always)]
         fn f32x4_splat(self, v: f32) -> Self::F32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                f32x4::splat(token, v)
-            }
+            f32x4::splat(self, v)
         }
 
         #[inline(always)]
         fn f32x4_zero(self) -> Self::F32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                f32x4::zero(token)
-            }
+            f32x4::zero(self)
         }
 
         #[inline(always)]
         fn f32x4_load(self, data: &[f32; 4]) -> Self::F32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                f32x4::load(token, data)
-            }
+            f32x4::load(self, data)
         }
         #[inline(always)]
         fn f64x2_splat(self, v: f64) -> Self::F64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                f64x2::splat(token, v)
-            }
+            f64x2::splat(self, v)
         }
 
         #[inline(always)]
         fn f64x2_zero(self) -> Self::F64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                f64x2::zero(token)
-            }
+            f64x2::zero(self)
         }
 
         #[inline(always)]
         fn f64x2_load(self, data: &[f64; 2]) -> Self::F64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                f64x2::load(token, data)
-            }
+            f64x2::load(self, data)
         }
         #[inline(always)]
         fn i8x16_splat(self, v: i8) -> Self::I8x16 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i8x16::splat(token, v)
-            }
+            i8x16::splat(self, v)
         }
 
         #[inline(always)]
         fn i8x16_zero(self) -> Self::I8x16 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i8x16::zero(token)
-            }
+            i8x16::zero(self)
         }
 
         #[inline(always)]
         fn i8x16_load(self, data: &[i8; 16]) -> Self::I8x16 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i8x16::load(token, data)
-            }
+            i8x16::load(self, data)
         }
         #[inline(always)]
         fn u8x16_splat(self, v: u8) -> Self::U8x16 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u8x16::splat(token, v)
-            }
+            u8x16::splat(self, v)
         }
 
         #[inline(always)]
         fn u8x16_zero(self) -> Self::U8x16 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u8x16::zero(token)
-            }
+            u8x16::zero(self)
         }
 
         #[inline(always)]
         fn u8x16_load(self, data: &[u8; 16]) -> Self::U8x16 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u8x16::load(token, data)
-            }
+            u8x16::load(self, data)
         }
         #[inline(always)]
         fn i16x8_splat(self, v: i16) -> Self::I16x8 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i16x8::splat(token, v)
-            }
+            i16x8::splat(self, v)
         }
 
         #[inline(always)]
         fn i16x8_zero(self) -> Self::I16x8 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i16x8::zero(token)
-            }
+            i16x8::zero(self)
         }
 
         #[inline(always)]
         fn i16x8_load(self, data: &[i16; 8]) -> Self::I16x8 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i16x8::load(token, data)
-            }
+            i16x8::load(self, data)
         }
         #[inline(always)]
         fn u16x8_splat(self, v: u16) -> Self::U16x8 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u16x8::splat(token, v)
-            }
+            u16x8::splat(self, v)
         }
 
         #[inline(always)]
         fn u16x8_zero(self) -> Self::U16x8 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u16x8::zero(token)
-            }
+            u16x8::zero(self)
         }
 
         #[inline(always)]
         fn u16x8_load(self, data: &[u16; 8]) -> Self::U16x8 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u16x8::load(token, data)
-            }
+            u16x8::load(self, data)
         }
         #[inline(always)]
         fn i32x4_splat(self, v: i32) -> Self::I32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i32x4::splat(token, v)
-            }
+            i32x4::splat(self, v)
         }
 
         #[inline(always)]
         fn i32x4_zero(self) -> Self::I32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i32x4::zero(token)
-            }
+            i32x4::zero(self)
         }
 
         #[inline(always)]
         fn i32x4_load(self, data: &[i32; 4]) -> Self::I32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i32x4::load(token, data)
-            }
+            i32x4::load(self, data)
         }
         #[inline(always)]
         fn u32x4_splat(self, v: u32) -> Self::U32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u32x4::splat(token, v)
-            }
+            u32x4::splat(self, v)
         }
 
         #[inline(always)]
         fn u32x4_zero(self) -> Self::U32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u32x4::zero(token)
-            }
+            u32x4::zero(self)
         }
 
         #[inline(always)]
         fn u32x4_load(self, data: &[u32; 4]) -> Self::U32x4 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u32x4::load(token, data)
-            }
+            u32x4::load(self, data)
         }
         #[inline(always)]
         fn i64x2_splat(self, v: i64) -> Self::I64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i64x2::splat(token, v)
-            }
+            i64x2::splat(self, v)
         }
 
         #[inline(always)]
         fn i64x2_zero(self) -> Self::I64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i64x2::zero(token)
-            }
+            i64x2::zero(self)
         }
 
         #[inline(always)]
         fn i64x2_load(self, data: &[i64; 2]) -> Self::I64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                i64x2::load(token, data)
-            }
+            i64x2::load(self, data)
         }
         #[inline(always)]
         fn u64x2_splat(self, v: u64) -> Self::U64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u64x2::splat(token, v)
-            }
+            u64x2::splat(self, v)
         }
 
         #[inline(always)]
         fn u64x2_zero(self) -> Self::U64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u64x2::zero(token)
-            }
+            u64x2::zero(self)
         }
 
         #[inline(always)]
         fn u64x2_load(self, data: &[u64; 2]) -> Self::U64x2 {
-            {
-                let token = unsafe { X64V3Token::forge_token_dangerously() };
-                u64x2::load(token, data)
-            }
+            u64x2::load(self, data)
         }
         #[inline(always)]
         fn f32x8_splat(self, v: f32) -> Self::F32x8 {
@@ -707,7 +617,7 @@ mod x86_impl {
 #[cfg(target_arch = "aarch64")]
 mod arm_impl {
     use super::WidthDispatch;
-    use archmage::{NeonToken, SimdToken};
+    use archmage::NeonToken;
 
     use crate::simd::{f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2};
 
@@ -1031,8 +941,7 @@ mod arm_impl {
         #[inline(always)]
         fn f32x16_splat(self, v: f32) -> Self::F32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = f32x4::splat(token, v);
+                let part = f32x4::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1040,8 +949,7 @@ mod arm_impl {
         #[inline(always)]
         fn f32x16_zero(self) -> Self::F32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = f32x4::zero(token);
+                let part = f32x4::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1049,20 +957,18 @@ mod arm_impl {
         #[inline(always)]
         fn f32x16_load(self, data: &[f32; 16]) -> Self::F32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    f32x4::load(token, data[0..4].try_into().unwrap()),
-                    f32x4::load(token, data[4..8].try_into().unwrap()),
-                    f32x4::load(token, data[8..12].try_into().unwrap()),
-                    f32x4::load(token, data[12..16].try_into().unwrap()),
+                    f32x4::load(self, data[0..4].try_into().unwrap()),
+                    f32x4::load(self, data[4..8].try_into().unwrap()),
+                    f32x4::load(self, data[8..12].try_into().unwrap()),
+                    f32x4::load(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn f64x8_splat(self, v: f64) -> Self::F64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = f64x2::splat(token, v);
+                let part = f64x2::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1070,8 +976,7 @@ mod arm_impl {
         #[inline(always)]
         fn f64x8_zero(self) -> Self::F64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = f64x2::zero(token);
+                let part = f64x2::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1079,20 +984,18 @@ mod arm_impl {
         #[inline(always)]
         fn f64x8_load(self, data: &[f64; 8]) -> Self::F64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    f64x2::load(token, data[0..2].try_into().unwrap()),
-                    f64x2::load(token, data[2..4].try_into().unwrap()),
-                    f64x2::load(token, data[4..6].try_into().unwrap()),
-                    f64x2::load(token, data[6..8].try_into().unwrap()),
+                    f64x2::load(self, data[0..2].try_into().unwrap()),
+                    f64x2::load(self, data[2..4].try_into().unwrap()),
+                    f64x2::load(self, data[4..6].try_into().unwrap()),
+                    f64x2::load(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i8x64_splat(self, v: i8) -> Self::I8x64 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = i8x16::splat(token, v);
+                let part = i8x16::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1100,8 +1003,7 @@ mod arm_impl {
         #[inline(always)]
         fn i8x64_zero(self) -> Self::I8x64 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = i8x16::zero(token);
+                let part = i8x16::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1109,20 +1011,18 @@ mod arm_impl {
         #[inline(always)]
         fn i8x64_load(self, data: &[i8; 64]) -> Self::I8x64 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    i8x16::load(token, data[0..16].try_into().unwrap()),
-                    i8x16::load(token, data[16..32].try_into().unwrap()),
-                    i8x16::load(token, data[32..48].try_into().unwrap()),
-                    i8x16::load(token, data[48..64].try_into().unwrap()),
+                    i8x16::load(self, data[0..16].try_into().unwrap()),
+                    i8x16::load(self, data[16..32].try_into().unwrap()),
+                    i8x16::load(self, data[32..48].try_into().unwrap()),
+                    i8x16::load(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u8x64_splat(self, v: u8) -> Self::U8x64 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = u8x16::splat(token, v);
+                let part = u8x16::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1130,8 +1030,7 @@ mod arm_impl {
         #[inline(always)]
         fn u8x64_zero(self) -> Self::U8x64 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = u8x16::zero(token);
+                let part = u8x16::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1139,20 +1038,18 @@ mod arm_impl {
         #[inline(always)]
         fn u8x64_load(self, data: &[u8; 64]) -> Self::U8x64 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    u8x16::load(token, data[0..16].try_into().unwrap()),
-                    u8x16::load(token, data[16..32].try_into().unwrap()),
-                    u8x16::load(token, data[32..48].try_into().unwrap()),
-                    u8x16::load(token, data[48..64].try_into().unwrap()),
+                    u8x16::load(self, data[0..16].try_into().unwrap()),
+                    u8x16::load(self, data[16..32].try_into().unwrap()),
+                    u8x16::load(self, data[32..48].try_into().unwrap()),
+                    u8x16::load(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i16x32_splat(self, v: i16) -> Self::I16x32 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = i16x8::splat(token, v);
+                let part = i16x8::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1160,8 +1057,7 @@ mod arm_impl {
         #[inline(always)]
         fn i16x32_zero(self) -> Self::I16x32 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = i16x8::zero(token);
+                let part = i16x8::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1169,20 +1065,18 @@ mod arm_impl {
         #[inline(always)]
         fn i16x32_load(self, data: &[i16; 32]) -> Self::I16x32 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    i16x8::load(token, data[0..8].try_into().unwrap()),
-                    i16x8::load(token, data[8..16].try_into().unwrap()),
-                    i16x8::load(token, data[16..24].try_into().unwrap()),
-                    i16x8::load(token, data[24..32].try_into().unwrap()),
+                    i16x8::load(self, data[0..8].try_into().unwrap()),
+                    i16x8::load(self, data[8..16].try_into().unwrap()),
+                    i16x8::load(self, data[16..24].try_into().unwrap()),
+                    i16x8::load(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u16x32_splat(self, v: u16) -> Self::U16x32 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = u16x8::splat(token, v);
+                let part = u16x8::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1190,8 +1084,7 @@ mod arm_impl {
         #[inline(always)]
         fn u16x32_zero(self) -> Self::U16x32 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = u16x8::zero(token);
+                let part = u16x8::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1199,20 +1092,18 @@ mod arm_impl {
         #[inline(always)]
         fn u16x32_load(self, data: &[u16; 32]) -> Self::U16x32 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    u16x8::load(token, data[0..8].try_into().unwrap()),
-                    u16x8::load(token, data[8..16].try_into().unwrap()),
-                    u16x8::load(token, data[16..24].try_into().unwrap()),
-                    u16x8::load(token, data[24..32].try_into().unwrap()),
+                    u16x8::load(self, data[0..8].try_into().unwrap()),
+                    u16x8::load(self, data[8..16].try_into().unwrap()),
+                    u16x8::load(self, data[16..24].try_into().unwrap()),
+                    u16x8::load(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i32x16_splat(self, v: i32) -> Self::I32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = i32x4::splat(token, v);
+                let part = i32x4::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1220,8 +1111,7 @@ mod arm_impl {
         #[inline(always)]
         fn i32x16_zero(self) -> Self::I32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = i32x4::zero(token);
+                let part = i32x4::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1229,20 +1119,18 @@ mod arm_impl {
         #[inline(always)]
         fn i32x16_load(self, data: &[i32; 16]) -> Self::I32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    i32x4::load(token, data[0..4].try_into().unwrap()),
-                    i32x4::load(token, data[4..8].try_into().unwrap()),
-                    i32x4::load(token, data[8..12].try_into().unwrap()),
-                    i32x4::load(token, data[12..16].try_into().unwrap()),
+                    i32x4::load(self, data[0..4].try_into().unwrap()),
+                    i32x4::load(self, data[4..8].try_into().unwrap()),
+                    i32x4::load(self, data[8..12].try_into().unwrap()),
+                    i32x4::load(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u32x16_splat(self, v: u32) -> Self::U32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = u32x4::splat(token, v);
+                let part = u32x4::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1250,8 +1138,7 @@ mod arm_impl {
         #[inline(always)]
         fn u32x16_zero(self) -> Self::U32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = u32x4::zero(token);
+                let part = u32x4::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1259,20 +1146,18 @@ mod arm_impl {
         #[inline(always)]
         fn u32x16_load(self, data: &[u32; 16]) -> Self::U32x16 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    u32x4::load(token, data[0..4].try_into().unwrap()),
-                    u32x4::load(token, data[4..8].try_into().unwrap()),
-                    u32x4::load(token, data[8..12].try_into().unwrap()),
-                    u32x4::load(token, data[12..16].try_into().unwrap()),
+                    u32x4::load(self, data[0..4].try_into().unwrap()),
+                    u32x4::load(self, data[4..8].try_into().unwrap()),
+                    u32x4::load(self, data[8..12].try_into().unwrap()),
+                    u32x4::load(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i64x8_splat(self, v: i64) -> Self::I64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = i64x2::splat(token, v);
+                let part = i64x2::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1280,8 +1165,7 @@ mod arm_impl {
         #[inline(always)]
         fn i64x8_zero(self) -> Self::I64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = i64x2::zero(token);
+                let part = i64x2::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1289,20 +1173,18 @@ mod arm_impl {
         #[inline(always)]
         fn i64x8_load(self, data: &[i64; 8]) -> Self::I64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    i64x2::load(token, data[0..2].try_into().unwrap()),
-                    i64x2::load(token, data[2..4].try_into().unwrap()),
-                    i64x2::load(token, data[4..6].try_into().unwrap()),
-                    i64x2::load(token, data[6..8].try_into().unwrap()),
+                    i64x2::load(self, data[0..2].try_into().unwrap()),
+                    i64x2::load(self, data[2..4].try_into().unwrap()),
+                    i64x2::load(self, data[4..6].try_into().unwrap()),
+                    i64x2::load(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u64x8_splat(self, v: u64) -> Self::U64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = u64x2::splat(token, v);
+                let part = u64x2::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1310,8 +1192,7 @@ mod arm_impl {
         #[inline(always)]
         fn u64x8_zero(self) -> Self::U64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
-                let part = u64x2::zero(token);
+                let part = u64x2::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1319,12 +1200,11 @@ mod arm_impl {
         #[inline(always)]
         fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8 {
             {
-                let token = unsafe { NeonToken::forge_token_dangerously() };
                 [
-                    u64x2::load(token, data[0..2].try_into().unwrap()),
-                    u64x2::load(token, data[2..4].try_into().unwrap()),
-                    u64x2::load(token, data[4..6].try_into().unwrap()),
-                    u64x2::load(token, data[6..8].try_into().unwrap()),
+                    u64x2::load(self, data[0..2].try_into().unwrap()),
+                    u64x2::load(self, data[2..4].try_into().unwrap()),
+                    u64x2::load(self, data[4..6].try_into().unwrap()),
+                    u64x2::load(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
@@ -1334,7 +1214,7 @@ mod arm_impl {
 #[cfg(target_arch = "wasm32")]
 mod wasm_impl {
     use super::WidthDispatch;
-    use archmage::{SimdToken, Wasm128Token};
+    use archmage::Wasm128Token;
 
     use crate::simd::{f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2};
 
@@ -1658,8 +1538,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f32x16_splat(self, v: f32) -> Self::F32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = f32x4::splat(token, v);
+                let part = f32x4::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1667,8 +1546,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f32x16_zero(self) -> Self::F32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = f32x4::zero(token);
+                let part = f32x4::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1676,20 +1554,18 @@ mod wasm_impl {
         #[inline(always)]
         fn f32x16_load(self, data: &[f32; 16]) -> Self::F32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    f32x4::load(token, data[0..4].try_into().unwrap()),
-                    f32x4::load(token, data[4..8].try_into().unwrap()),
-                    f32x4::load(token, data[8..12].try_into().unwrap()),
-                    f32x4::load(token, data[12..16].try_into().unwrap()),
+                    f32x4::load(self, data[0..4].try_into().unwrap()),
+                    f32x4::load(self, data[4..8].try_into().unwrap()),
+                    f32x4::load(self, data[8..12].try_into().unwrap()),
+                    f32x4::load(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn f64x8_splat(self, v: f64) -> Self::F64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = f64x2::splat(token, v);
+                let part = f64x2::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1697,8 +1573,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f64x8_zero(self) -> Self::F64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = f64x2::zero(token);
+                let part = f64x2::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1706,20 +1581,18 @@ mod wasm_impl {
         #[inline(always)]
         fn f64x8_load(self, data: &[f64; 8]) -> Self::F64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    f64x2::load(token, data[0..2].try_into().unwrap()),
-                    f64x2::load(token, data[2..4].try_into().unwrap()),
-                    f64x2::load(token, data[4..6].try_into().unwrap()),
-                    f64x2::load(token, data[6..8].try_into().unwrap()),
+                    f64x2::load(self, data[0..2].try_into().unwrap()),
+                    f64x2::load(self, data[2..4].try_into().unwrap()),
+                    f64x2::load(self, data[4..6].try_into().unwrap()),
+                    f64x2::load(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i8x64_splat(self, v: i8) -> Self::I8x64 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = i8x16::splat(token, v);
+                let part = i8x16::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1727,8 +1600,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i8x64_zero(self) -> Self::I8x64 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = i8x16::zero(token);
+                let part = i8x16::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1736,20 +1608,18 @@ mod wasm_impl {
         #[inline(always)]
         fn i8x64_load(self, data: &[i8; 64]) -> Self::I8x64 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    i8x16::load(token, data[0..16].try_into().unwrap()),
-                    i8x16::load(token, data[16..32].try_into().unwrap()),
-                    i8x16::load(token, data[32..48].try_into().unwrap()),
-                    i8x16::load(token, data[48..64].try_into().unwrap()),
+                    i8x16::load(self, data[0..16].try_into().unwrap()),
+                    i8x16::load(self, data[16..32].try_into().unwrap()),
+                    i8x16::load(self, data[32..48].try_into().unwrap()),
+                    i8x16::load(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u8x64_splat(self, v: u8) -> Self::U8x64 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = u8x16::splat(token, v);
+                let part = u8x16::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1757,8 +1627,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u8x64_zero(self) -> Self::U8x64 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = u8x16::zero(token);
+                let part = u8x16::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1766,20 +1635,18 @@ mod wasm_impl {
         #[inline(always)]
         fn u8x64_load(self, data: &[u8; 64]) -> Self::U8x64 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    u8x16::load(token, data[0..16].try_into().unwrap()),
-                    u8x16::load(token, data[16..32].try_into().unwrap()),
-                    u8x16::load(token, data[32..48].try_into().unwrap()),
-                    u8x16::load(token, data[48..64].try_into().unwrap()),
+                    u8x16::load(self, data[0..16].try_into().unwrap()),
+                    u8x16::load(self, data[16..32].try_into().unwrap()),
+                    u8x16::load(self, data[32..48].try_into().unwrap()),
+                    u8x16::load(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i16x32_splat(self, v: i16) -> Self::I16x32 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = i16x8::splat(token, v);
+                let part = i16x8::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1787,8 +1654,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i16x32_zero(self) -> Self::I16x32 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = i16x8::zero(token);
+                let part = i16x8::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1796,20 +1662,18 @@ mod wasm_impl {
         #[inline(always)]
         fn i16x32_load(self, data: &[i16; 32]) -> Self::I16x32 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    i16x8::load(token, data[0..8].try_into().unwrap()),
-                    i16x8::load(token, data[8..16].try_into().unwrap()),
-                    i16x8::load(token, data[16..24].try_into().unwrap()),
-                    i16x8::load(token, data[24..32].try_into().unwrap()),
+                    i16x8::load(self, data[0..8].try_into().unwrap()),
+                    i16x8::load(self, data[8..16].try_into().unwrap()),
+                    i16x8::load(self, data[16..24].try_into().unwrap()),
+                    i16x8::load(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u16x32_splat(self, v: u16) -> Self::U16x32 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = u16x8::splat(token, v);
+                let part = u16x8::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1817,8 +1681,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u16x32_zero(self) -> Self::U16x32 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = u16x8::zero(token);
+                let part = u16x8::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1826,20 +1689,18 @@ mod wasm_impl {
         #[inline(always)]
         fn u16x32_load(self, data: &[u16; 32]) -> Self::U16x32 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    u16x8::load(token, data[0..8].try_into().unwrap()),
-                    u16x8::load(token, data[8..16].try_into().unwrap()),
-                    u16x8::load(token, data[16..24].try_into().unwrap()),
-                    u16x8::load(token, data[24..32].try_into().unwrap()),
+                    u16x8::load(self, data[0..8].try_into().unwrap()),
+                    u16x8::load(self, data[8..16].try_into().unwrap()),
+                    u16x8::load(self, data[16..24].try_into().unwrap()),
+                    u16x8::load(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i32x16_splat(self, v: i32) -> Self::I32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = i32x4::splat(token, v);
+                let part = i32x4::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1847,8 +1708,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i32x16_zero(self) -> Self::I32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = i32x4::zero(token);
+                let part = i32x4::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1856,20 +1716,18 @@ mod wasm_impl {
         #[inline(always)]
         fn i32x16_load(self, data: &[i32; 16]) -> Self::I32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    i32x4::load(token, data[0..4].try_into().unwrap()),
-                    i32x4::load(token, data[4..8].try_into().unwrap()),
-                    i32x4::load(token, data[8..12].try_into().unwrap()),
-                    i32x4::load(token, data[12..16].try_into().unwrap()),
+                    i32x4::load(self, data[0..4].try_into().unwrap()),
+                    i32x4::load(self, data[4..8].try_into().unwrap()),
+                    i32x4::load(self, data[8..12].try_into().unwrap()),
+                    i32x4::load(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u32x16_splat(self, v: u32) -> Self::U32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = u32x4::splat(token, v);
+                let part = u32x4::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1877,8 +1735,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u32x16_zero(self) -> Self::U32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = u32x4::zero(token);
+                let part = u32x4::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1886,20 +1743,18 @@ mod wasm_impl {
         #[inline(always)]
         fn u32x16_load(self, data: &[u32; 16]) -> Self::U32x16 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    u32x4::load(token, data[0..4].try_into().unwrap()),
-                    u32x4::load(token, data[4..8].try_into().unwrap()),
-                    u32x4::load(token, data[8..12].try_into().unwrap()),
-                    u32x4::load(token, data[12..16].try_into().unwrap()),
+                    u32x4::load(self, data[0..4].try_into().unwrap()),
+                    u32x4::load(self, data[4..8].try_into().unwrap()),
+                    u32x4::load(self, data[8..12].try_into().unwrap()),
+                    u32x4::load(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i64x8_splat(self, v: i64) -> Self::I64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = i64x2::splat(token, v);
+                let part = i64x2::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1907,8 +1762,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i64x8_zero(self) -> Self::I64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = i64x2::zero(token);
+                let part = i64x2::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1916,20 +1770,18 @@ mod wasm_impl {
         #[inline(always)]
         fn i64x8_load(self, data: &[i64; 8]) -> Self::I64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    i64x2::load(token, data[0..2].try_into().unwrap()),
-                    i64x2::load(token, data[2..4].try_into().unwrap()),
-                    i64x2::load(token, data[4..6].try_into().unwrap()),
-                    i64x2::load(token, data[6..8].try_into().unwrap()),
+                    i64x2::load(self, data[0..2].try_into().unwrap()),
+                    i64x2::load(self, data[2..4].try_into().unwrap()),
+                    i64x2::load(self, data[4..6].try_into().unwrap()),
+                    i64x2::load(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u64x8_splat(self, v: u64) -> Self::U64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = u64x2::splat(token, v);
+                let part = u64x2::splat(self, v);
                 [part, part, part, part]
             }
         }
@@ -1937,8 +1789,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u64x8_zero(self) -> Self::U64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
-                let part = u64x2::zero(token);
+                let part = u64x2::zero(self);
                 [part, part, part, part]
             }
         }
@@ -1946,12 +1797,11 @@ mod wasm_impl {
         #[inline(always)]
         fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8 {
             {
-                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
-                    u64x2::load(token, data[0..2].try_into().unwrap()),
-                    u64x2::load(token, data[2..4].try_into().unwrap()),
-                    u64x2::load(token, data[4..6].try_into().unwrap()),
-                    u64x2::load(token, data[6..8].try_into().unwrap()),
+                    u64x2::load(self, data[0..2].try_into().unwrap()),
+                    u64x2::load(self, data[2..4].try_into().unwrap()),
+                    u64x2::load(self, data[4..6].try_into().unwrap()),
+                    u64x2::load(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }

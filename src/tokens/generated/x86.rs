@@ -19,6 +19,8 @@ pub struct X64V2Token {
     _private: (),
 }
 
+impl crate::tokens::Sealed for X64V2Token {}
+
 impl SimdToken for X64V2Token {
     const NAME: &'static str = "x86-64-v2";
 
@@ -107,6 +109,8 @@ impl SimdToken for X64V2Token {
 pub struct X64V3Token {
     _private: (),
 }
+
+impl crate::tokens::Sealed for X64V3Token {}
 
 impl SimdToken for X64V3Token {
     const NAME: &'static str = "x86-64-v3";

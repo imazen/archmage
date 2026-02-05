@@ -42,6 +42,18 @@ impl f32x4 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 4`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[f32]) -> Self {
+        let arr: [f32; 4] = slice[..4].try_into().unwrap();
+        // SAFETY: [f32; 4] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [f32; 4]) {
@@ -1333,6 +1345,18 @@ impl f64x2 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 2`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[f64]) -> Self {
+        let arr: [f64; 2] = slice[..2].try_into().unwrap();
+        // SAFETY: [f64; 2] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [f64; 2]) {
@@ -1910,6 +1934,18 @@ impl i8x16 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 16`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[i8]) -> Self {
+        let arr: [i8; 16] = slice[..16].try_into().unwrap();
+        // SAFETY: [i8; 16] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [i8; 16]) {
@@ -2345,6 +2381,18 @@ impl u8x16 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::Wasm128Token, arr: [u8; 16]) -> Self {
+        // SAFETY: [u8; 16] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 16`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[u8]) -> Self {
+        let arr: [u8; 16] = slice[..16].try_into().unwrap();
         // SAFETY: [u8; 16] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2800,6 +2848,18 @@ impl i16x8 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::Wasm128Token, arr: [i16; 8]) -> Self {
+        // SAFETY: [i16; 8] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 8`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[i16]) -> Self {
+        let arr: [i16; 8] = slice[..8].try_into().unwrap();
         // SAFETY: [i16; 8] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3306,6 +3366,18 @@ impl u16x8 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 8`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[u16]) -> Self {
+        let arr: [u16; 8] = slice[..8].try_into().unwrap();
+        // SAFETY: [u16; 8] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [u16; 8]) {
@@ -3759,6 +3831,18 @@ impl i32x4 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::Wasm128Token, arr: [i32; 4]) -> Self {
+        // SAFETY: [i32; 4] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 4`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[i32]) -> Self {
+        let arr: [i32; 4] = slice[..4].try_into().unwrap();
         // SAFETY: [i32; 4] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4269,6 +4353,18 @@ impl u32x4 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 4`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[u32]) -> Self {
+        let arr: [u32; 4] = slice[..4].try_into().unwrap();
+        // SAFETY: [u32; 4] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [u32; 4]) {
@@ -4713,6 +4809,18 @@ impl i64x2 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::Wasm128Token, arr: [i64; 2]) -> Self {
+        // SAFETY: [i64; 2] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 2`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[i64]) -> Self {
+        let arr: [i64; 2] = slice[..2].try_into().unwrap();
         // SAFETY: [i64; 2] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -5179,6 +5287,18 @@ impl u64x2 {
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
     pub fn from_array(_: archmage::Wasm128Token, arr: [u64; 2]) -> Self {
+        // SAFETY: [u64; 2] and v128 have identical size and layout
+        Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Create from slice (token-gated).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() < 2`.
+    #[inline(always)]
+    pub fn from_slice(_: archmage::Wasm128Token, slice: &[u64]) -> Self {
+        let arr: [u64; 2] = slice[..2].try_into().unwrap();
         // SAFETY: [u64; 2] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }

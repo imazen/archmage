@@ -16,10 +16,20 @@
 //! On unsupported architectures, `summon()` returns `None` and `guaranteed()`
 //! returns `Some(false)`.
 
+mod sealed {
+    /// Sealed trait preventing external implementations of [`SimdToken`](super::SimdToken).
+    pub trait Sealed {}
+}
+
+pub use sealed::Sealed;
+
 /// Marker trait for SIMD capability tokens.
 ///
 /// All tokens implement this trait, enabling generic code over different
 /// SIMD feature levels.
+///
+/// This trait is **sealed** — it cannot be implemented outside of archmage.
+/// Only tokens created by `summon()` or downcasting are valid.
 ///
 /// # Token Lifecycle
 ///
@@ -39,7 +49,7 @@
 ///     process_scalar(data)
 /// }
 /// ```
-pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
+pub trait SimdToken: sealed::Sealed + Copy + Clone + Send + Sync + 'static {
     /// Human-readable name for diagnostics and error messages.
     const NAME: &'static str;
 
@@ -138,6 +148,8 @@ pub use generated::*;
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ScalarToken;
+
+impl sealed::Sealed for ScalarToken {}
 
 impl SimdToken for ScalarToken {
     const NAME: &'static str = "Scalar";

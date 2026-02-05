@@ -25,6 +25,8 @@ pub struct X64V4Token {
     _private: (),
 }
 
+impl crate::tokens::Sealed for X64V4Token {}
+
 impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
 
@@ -190,6 +192,8 @@ impl X64V4Token {
 pub struct Avx512ModernToken {
     _private: (),
 }
+
+impl crate::tokens::Sealed for Avx512ModernToken {}
 
 impl SimdToken for Avx512ModernToken {
     const NAME: &'static str = "AVX-512Modern";
@@ -418,6 +422,8 @@ impl Avx512ModernToken {
 pub struct Avx512Fp16Token {
     _private: (),
 }
+
+impl crate::tokens::Sealed for Avx512Fp16Token {}
 
 impl SimdToken for Avx512Fp16Token {
     const NAME: &'static str = "AVX-512FP16";

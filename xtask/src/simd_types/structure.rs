@@ -430,6 +430,18 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         Self(unsafe {{ core::mem::transmute(arr) }})
         }}
 
+        /// Create from slice (token-gated).
+        ///
+        /// # Panics
+        ///
+        /// Panics if `slice.len() < {lanes}`.
+        #[inline(always)]
+        pub fn from_slice(_: archmage::{token}, slice: &[{elem}]) -> Self {{
+        let arr: [{elem}; {lanes}] = slice[..{lanes}].try_into().unwrap();
+        // SAFETY: [{elem}; {lanes}] and {inner} have identical size and layout
+        Self(unsafe {{ core::mem::transmute(arr) }})
+        }}
+
         /// Store to array
         #[inline(always)]
         pub fn store(self, out: &mut [{elem}; {lanes}]) {{
@@ -620,16 +632,12 @@ fn generate_operator_impls(ty: &SimdType, cfg_attr: &str) -> String {
         "{cfg_attr}crate::impl_index!({name}, {elem}, {lanes});\n"
     ));
 
-    // From<[T; N]> and Into<[T; N]> implementations
+    // Into<[T; N]> implementation (extraction is always safe — no intrinsics needed)
+    // From<[T; N]> is deliberately NOT implemented for x86 types:
+    // construction requires a token to prove CPU feature availability.
+    // Use from_array(token, arr) or from_slice(token, slice) instead.
     code.push_str(&formatdoc! {"
 
-        {cfg_attr}impl From<[{elem}; {lanes}]> for {name} {{
-        #[inline(always)]
-        fn from(arr: [{elem}; {lanes}]) -> Self {{
-        // SAFETY: [{elem}; {lanes}] and {inner} have identical size and layout
-        Self(unsafe {{ core::mem::transmute(arr) }})
-        }}
-        }}
         {cfg_attr}impl From<{name}> for [{elem}; {lanes}] {{
         #[inline(always)]
         fn from(v: {name}) -> Self {{

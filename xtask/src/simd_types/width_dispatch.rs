@@ -108,10 +108,9 @@ fn assoc_type_name(elem: &ElemType, width: u32) -> String {
 
 /// What kind of constructor strategy to use.
 enum Strategy {
-    /// Native width: pass self directly. `type_name::splat(self, v)`
+    /// Native width or narrower: pass self directly. `type_name::splat(self, v)`
+    /// Works because wider tokens downcast to narrower tokens' required type.
     Native,
-    /// Narrower than native: forge token. `let t = unsafe { Token::forge_token_dangerously() }; type_name::splat(t, v)`
-    Forge { forge_token: &'static str },
     /// Polyfill exists: `poly_mod::type_name::splat(self, v)`
     Polyfill { poly_mod: &'static str },
     /// No polyfill: array of w128. `[part, part, part, part]`
@@ -124,8 +123,6 @@ struct TokenConfig {
     cfg: &'static str,
     mod_name: &'static str,
     native_width: u32,
-    /// For w128 when native is 256: forge token type
-    forge_token_for_128: Option<&'static str>,
     /// Polyfill module for w256 (when native is 128)
     poly_w256: Option<&'static str>,
     /// Polyfill module for w512
@@ -138,7 +135,6 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
         cfg: "target_arch = \"x86_64\"",
         mod_name: "x86_impl",
         native_width: 256,
-        forge_token_for_128: Some("X64V3Token"),
         poly_w256: None, // native
         poly_w512: Some("crate::simd::polyfill::v3_512"),
     },
@@ -147,7 +143,6 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
         cfg: "target_arch = \"aarch64\"",
         mod_name: "arm_impl",
         native_width: 128,
-        forge_token_for_128: None, // native
         poly_w256: Some("crate::simd::polyfill::neon"),
         poly_w512: None, // array fallback
     },
@@ -156,7 +151,6 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
         cfg: "target_arch = \"wasm32\"",
         mod_name: "wasm_impl",
         native_width: 128,
-        forge_token_for_128: None, // native
         poly_w256: Some("crate::simd::polyfill::wasm128"),
         poly_w512: None, // array fallback
     },
@@ -165,14 +159,10 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
 fn strategy(tc: &TokenConfig, elem: &ElemType, width: u32) -> Strategy {
     match width {
         128 => {
-            if tc.native_width == 128 {
-                Strategy::Native
-            } else {
-                // Native is wider (256): forge a token for 128-bit ops
-                Strategy::Forge {
-                    forge_token: tc.forge_token_for_128.unwrap(),
-                }
-            }
+            // Native or narrower than native: pass self directly.
+            // e.g. X64V3Token (native 256) can be passed to w128 types
+            // that accept X64V3Token — no forging needed.
+            Strategy::Native
         }
         256 => {
             if tc.native_width >= 256 {
@@ -247,56 +237,37 @@ fn generate_trait_def() -> String {
 fn gen_splat(strat: &Strategy, tc: &TokenConfig, tn: &str, scalar: &str) -> String {
     match strat {
         Strategy::Native => format!("{tn}::splat(self, v)"),
-        Strategy::Forge { forge_token } => formatdoc! {r#"
-            {{
-                        let token = unsafe {{ {forge_token}::forge_token_dangerously() }};
-                        {tn}::splat(token, v)
-                    }}"#},
         Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::splat(self, v)"),
         Strategy::Array { w128_type, .. } => {
             let _ = scalar;
             formatdoc! {r#"
                 {{
-                            let token = unsafe {{ {forge}::forge_token_dangerously() }};
-                            let part = {w128_type}::splat(token, v);
+                            let part = {w128_type}::splat(self, v);
                             [part, part, part, part]
-                        }}"#,
-                forge = tc.forge_token_for_128.unwrap_or(tc.token)
+                        }}"#
             }
         }
     }
 }
 
-fn gen_zero(strat: &Strategy, tc: &TokenConfig, tn: &str) -> String {
+fn gen_zero(strat: &Strategy, _tc: &TokenConfig, tn: &str) -> String {
     match strat {
         Strategy::Native => format!("{tn}::zero(self)"),
-        Strategy::Forge { forge_token } => formatdoc! {r#"
-            {{
-                        let token = unsafe {{ {forge_token}::forge_token_dangerously() }};
-                        {tn}::zero(token)
-                    }}"#},
         Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::zero(self)"),
         Strategy::Array { w128_type, .. } => {
             formatdoc! {r#"
                 {{
-                            let token = unsafe {{ {forge}::forge_token_dangerously() }};
-                            let part = {w128_type}::zero(token);
+                            let part = {w128_type}::zero(self);
                             [part, part, part, part]
-                        }}"#,
-                forge = tc.forge_token_for_128.unwrap_or(tc.token)
+                        }}"#
             }
         }
     }
 }
 
-fn gen_load(strat: &Strategy, tc: &TokenConfig, tn: &str, elem: &ElemType, width: u32) -> String {
+fn gen_load(strat: &Strategy, _tc: &TokenConfig, tn: &str, elem: &ElemType, width: u32) -> String {
     match strat {
         Strategy::Native => format!("{tn}::load(self, data)"),
-        Strategy::Forge { forge_token } => formatdoc! {r#"
-            {{
-                        let token = unsafe {{ {forge_token}::forge_token_dangerously() }};
-                        {tn}::load(token, data)
-                    }}"#},
         Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::load(self, data)"),
         Strategy::Array { w128_type, chunks } => {
             let w128_lanes = lanes(elem, 128);
@@ -309,19 +280,17 @@ fn gen_load(strat: &Strategy, tc: &TokenConfig, tn: &str, elem: &ElemType, width
                 }
                 write!(
                     parts,
-                    "{w128_type}::load(token, data[{start}..{end}].try_into().unwrap())"
+                    "{w128_type}::load(self, data[{start}..{end}].try_into().unwrap())"
                 )
                 .unwrap();
             }
             let _ = width;
             formatdoc! {r#"
                 {{
-                            let token = unsafe {{ {forge}::forge_token_dangerously() }};
                             [
                                 {parts}
                             ]
-                        }}"#,
-                forge = tc.forge_token_for_128.unwrap_or(tc.token)
+                        }}"#
             }
         }
     }
@@ -332,7 +301,7 @@ fn gen_assoc_type(tc: &TokenConfig, elem: &ElemType, width: u32) -> String {
     let strat = strategy(tc, elem, width);
     let tn = type_name(elem, width);
     match strat {
-        Strategy::Native | Strategy::Forge { .. } => tn,
+        Strategy::Native => tn,
         Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}"),
         Strategy::Array { w128_type, chunks } => {
             format!("[{w128_type}; {chunks}]")
@@ -353,7 +322,7 @@ fn generate_impl_block(tc: &TokenConfig) -> String {
         r#"#[cfg({cfg})]
 mod {mod_name} {{
     use super::WidthDispatch;
-    use archmage::{{SimdToken, {token}}};
+    use archmage::{token};
 "#
     )
     .unwrap();
@@ -366,7 +335,7 @@ mod {mod_name} {{
             let strat = strategy(tc, elem, width);
             let tn = type_name(elem, width);
             match &strat {
-                Strategy::Native | Strategy::Forge { .. } => {
+                Strategy::Native => {
                     if !native_imports.contains(&tn) {
                         native_imports.push(tn);
                     }
