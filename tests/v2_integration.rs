@@ -456,3 +456,60 @@ fn sub_tier_dispatch_neon() {
         assert_eq!(dispatch_with_sub_tiers(token), "neon_aes");
     }
 }
+
+// =============================================================================
+// #[magetypes] with f32xN type - demonstrates scalar→SIMD→scalar
+// =============================================================================
+
+#[magetypes]
+pub fn sum_squares(token: Token, data: &[f32]) -> f32 {
+    let _ = token;
+    let chunks = data.chunks_exact(LANES);
+    let remainder = chunks.remainder();
+
+    let mut acc = f32xN::splat(token, 0.0);
+    for chunk in chunks {
+        // Convert slice to array, then to SIMD
+        let arr: [f32; LANES] = chunk.try_into().unwrap();
+        let v = f32xN::from_array(token, arr);
+        acc = acc + v * v;
+    }
+
+    // Reduce SIMD to scalar
+    let mut sum: f32 = acc.reduce_add();
+
+    // Handle remainder scalar
+    for &x in remainder {
+        sum += x * x;
+    }
+    sum
+}
+
+pub fn sum_squares_api(data: &[f32]) -> f32 {
+    incant!(sum_squares(data))
+}
+
+#[test]
+fn sum_squares_basic() {
+    let data = [1.0, 2.0, 3.0, 4.0];
+    let result = sum_squares_api(&data);
+    assert_eq!(result, 1.0 + 4.0 + 9.0 + 16.0);
+}
+
+#[test]
+fn sum_squares_with_remainder() {
+    // 10 elements: 8 in SIMD chunk + 2 remainder on AVX2
+    let data: Vec<f32> = (1..=10).map(|x| x as f32).collect();
+    let expected: f32 = data.iter().map(|x| x * x).sum();
+    assert_eq!(sum_squares_api(&data), expected);
+}
+
+#[test]
+fn sum_squares_empty() {
+    assert_eq!(sum_squares_api(&[]), 0.0);
+}
+
+#[test]
+fn sum_squares_single() {
+    assert_eq!(sum_squares_api(&[5.0]), 25.0);
+}

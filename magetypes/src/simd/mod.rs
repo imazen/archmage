@@ -19,5 +19,11 @@
 // All generated code lives in the generated/ subfolder
 mod generated;
 
+// Scalar polyfill types (f32x1, i32x1, etc.) for #[magetypes] fallback
+pub mod scalar;
+
 // Re-export everything from generated module
 pub use generated::*;
+
+// Re-export scalar types
+pub use scalar::*;
