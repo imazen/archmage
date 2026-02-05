@@ -22,7 +22,7 @@ Use the `_self` argument and reference `_self` in your code:
 
 ```rust
 use archmage::{Desktop64, arcane};
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 struct Vector8([f32; 8]);
 

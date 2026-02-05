@@ -2,20 +2,21 @@
 
 Let's write a function that squares 8 floats in parallel using AVX2.
 
-## Using Raw Intrinsics
+## The Recommended Way
+
+Use `archmage::prelude::*` which includes `safe_unaligned_simd` for memory operations:
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
-use std::arch::x86_64::*;
+use archmage::prelude::*;
 
 #[arcane]
-fn square_f32x8(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // Inside #[arcane], value-based intrinsics are SAFE
-    let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+fn square_f32x8(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    // safe_unaligned_simd takes references - fully safe!
+    let v = _mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
 
     let mut out = [0.0f32; 8];
-    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), squared) };
+    _mm256_storeu_ps(&mut out, squared);
     out
 }
 
@@ -31,39 +32,13 @@ fn main() {
 }
 ```
 
-## Using safe_unaligned_simd
-
-The `safe_unaligned_simd` crate provides reference-based load/store that's fully safe inside `#[arcane]`:
-
-```toml
-[dependencies]
-archmage = "0.4"
-safe_unaligned_simd = "0.2"
-```
-
-```rust
-use archmage::{Desktop64, SimdToken, arcane};
-use std::arch::x86_64::*;
-
-#[arcane]
-fn square_f32x8(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // Completely safe - no unsafe blocks needed!
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
-    let squared = _mm256_mul_ps(v, v);
-
-    let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, squared);
-    out
-}
-```
-
 ## Using magetypes
 
 For the most ergonomic experience, use magetypes' vector types:
 
 ```rust
 use archmage::{Desktop64, SimdToken};
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 fn square_f32x8(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::from_array(token, *data);

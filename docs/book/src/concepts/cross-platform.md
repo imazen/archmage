@@ -7,12 +7,12 @@ Archmage lets you write x86 SIMD code that compiles on ARM and vice versa. Funct
 When you write:
 
 ```rust
-use archmage::{Desktop64, arcane};
+use archmage::prelude::*;
 
 #[arcane]
-fn avx2_kernel(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // x86-64 SIMD code
-    let v = _mm256_loadu_ps(data.as_ptr());
+fn avx2_kernel(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    // x86-64 SIMD code - safe_unaligned_simd takes references
+    let v = _mm256_loadu_ps(data);
     // ...
 }
 ```

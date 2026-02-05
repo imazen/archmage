@@ -7,18 +7,17 @@ For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md
 ## Basic Usage
 
 ```rust
-use archmage::{Desktop64, arcane};
-use std::arch::x86_64::*;
+use archmage::prelude::*;
 
 #[arcane]
-fn add_vectors(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // Inside here, AVX2+FMA intrinsics are SAFE
-    let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
-    let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
-    let sum = _mm256_add_ps(va, vb);  // Safe! No unsafe needed
+fn add_vectors(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    // safe_unaligned_simd takes references - fully safe inside #[arcane]!
+    let va = _mm256_loadu_ps(a);
+    let vb = _mm256_loadu_ps(b);
+    let sum = _mm256_add_ps(va, vb);
 
     let mut out = [0.0f32; 8];
-    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), sum) };
+    _mm256_storeu_ps(&mut out, sum);
     out
 }
 ```
@@ -59,7 +58,7 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
 Functions with the same token type inline into each other:
 
 ```rust
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 #[arcane]
 fn outer(token: Desktop64, data: &[f32; 8]) -> f32 {
@@ -81,7 +80,7 @@ fn inner(token: Desktop64, data: &[f32; 8]) -> f32 {
 Higher tokens can call functions expecting lower tokens:
 
 ```rust
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 #[arcane]
 fn v4_kernel(token: X64V4Token, data: &[f32; 8]) -> f32 {

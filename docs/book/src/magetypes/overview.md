@@ -48,7 +48,7 @@ magetypes provides SIMD vector types with natural Rust operators. Each type wrap
 
 ```rust
 use archmage::{Desktop64, SimdToken};
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 fn example() {
     if let Some(token) = Desktop64::summon() {

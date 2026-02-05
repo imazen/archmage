@@ -37,7 +37,7 @@ This is **42% slower** than hoisting the token. CPUID is not free.
 
 ```rust
 use archmage::{X64V3Token, SimdToken, arcane};
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 // RIGHT: Summon once, pass through
 fn find_closest(points: &[[f32; 8]], query: &[f32; 8]) -> usize {

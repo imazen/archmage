@@ -14,8 +14,7 @@ Use `#[arcane]` only at **entry points** where the token comes from the outside 
 **Default to `#[rite]}`.** Only use `#[arcane]` when you need the safe wrapper.
 
 ```rust
-use archmage::{arcane, rite, Desktop64};
-use std::arch::x86_64::*;
+use archmage::prelude::*;
 
 // ENTRY POINT: receives token from caller
 #[arcane]
@@ -27,9 +26,10 @@ pub fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 // INNER HELPER: only called from #[arcane] context
 #[rite]
 fn mul_vectors(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
-    let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
-    let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
-    _mm256_mul_ps(va, vb)  // Safe inside #[target_feature]!
+    // safe_unaligned_simd takes references - no unsafe needed!
+    let va = _mm256_loadu_ps(a);
+    let vb = _mm256_loadu_ps(b);
+    _mm256_mul_ps(va, vb)
 }
 
 // INNER HELPER: only called from #[arcane] context

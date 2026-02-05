@@ -7,7 +7,7 @@ Efficiently moving data between memory and SIMD registers is critical for perfor
 ### Unaligned Load
 
 ```rust
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 // From array reference
 let arr = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];

@@ -43,13 +43,12 @@ This is tedious and error-prone. Miss a feature check? Undefined behavior on old
 Archmage separates **proof of capability** from **use of capability**:
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
-use std::arch::x86_64::*;
+use archmage::prelude::*;
 
 #[arcane]
-fn multiply(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // Safe! The token proves AVX2+FMA are available
-    let a = _mm256_loadu_ps(data.as_ptr());  // safe_unaligned_simd version
+fn multiply(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    // Safe! Token proves AVX2+FMA, safe_unaligned_simd takes references
+    let a = _mm256_loadu_ps(data);
     let b = _mm256_set1_ps(2.0);
     let c = _mm256_mul_ps(a, b);
     let mut out = [0.0f32; 8];

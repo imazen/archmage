@@ -176,7 +176,7 @@ let shr_arith = a.shr_arithmetic(1);  // Sign-extending shift
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 #[arcane]
 fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {

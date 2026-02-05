@@ -6,7 +6,7 @@
 
 ```rust
 use archmage::{incant, arcane};
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 // Define variants with standard suffixes
 #[arcane]
@@ -91,7 +91,7 @@ This uses `IntoConcreteToken` to check the token's actual type and dispatch acco
 
 ```rust
 use archmage::{arcane, incant, X64V3Token, NeonToken, SimdToken};
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 // AVX2 variant
 #[cfg(target_arch = "x86_64")]
@@ -106,7 +106,7 @@ fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 #[cfg(target_arch = "aarch64")]
 #[arcane]
 fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    use magetypes::f32x4;
+    use magetypes::simd::f32x4;
     let sum1 = {
         let va = f32x4::from_slice(token, &a[0..4]);
         let vb = f32x4::from_slice(token, &b[0..4]);

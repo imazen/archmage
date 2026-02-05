@@ -52,7 +52,7 @@ fn check_wasm_simd() {
 
 ```rust
 use archmage::{Simd128Token, arcane};
-use magetypes::f32x4;
+use magetypes::simd::f32x4;
 
 #[arcane]
 fn dot_product(token: Simd128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
@@ -73,14 +73,14 @@ use archmage::{Desktop64, NeonToken, Simd128Token, SimdToken, incant};
 #[cfg(target_arch = "x86_64")]
 #[arcane]
 fn sum_v3(token: Desktop64, data: &[f32; 8]) -> f32 {
-    use magetypes::f32x8;
+    use magetypes::simd::f32x8;
     f32x8::from_array(token, *data).reduce_add()
 }
 
 #[cfg(target_arch = "aarch64")]
 #[arcane]
 fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
-    use magetypes::f32x4;
+    use magetypes::simd::f32x4;
     let a = f32x4::from_slice(token, &data[0..4]);
     let b = f32x4::from_slice(token, &data[4..8]);
     a.reduce_add() + b.reduce_add()
@@ -89,7 +89,7 @@ fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
 #[cfg(target_arch = "wasm32")]
 #[arcane]
 fn sum_wasm128(token: Simd128Token, data: &[f32; 8]) -> f32 {
-    use magetypes::f32x4;
+    use magetypes::simd::f32x4;
     let a = f32x4::from_slice(token, &data[0..4]);
     let b = f32x4::from_slice(token, &data[4..8]);
     a.reduce_add() + b.reduce_add()
@@ -140,7 +140,7 @@ RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo build
 ```rust
 use wasm_bindgen::prelude::*;
 use archmage::{Simd128Token, SimdToken, arcane};
-use magetypes::u8x16;
+use magetypes::simd::u8x16;
 
 #[wasm_bindgen]
 pub fn brighten_image(pixels: &mut [u8], amount: u8) {

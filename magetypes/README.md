@@ -20,7 +20,7 @@ Token-gated SIMD types with natural operators.
 
 ```rust
 use archmage::{X64V3Token, SimdToken};
-use magetypes::f32x8;
+use magetypes::simd::f32x8;
 
 fn main() {
     // Token proves CPU supports AVX2+FMA
@@ -56,7 +56,7 @@ Build with `RUSTFLAGS="-C target-feature=+simd128"` for WASM targets.
 ```rust
 // WASM example - no runtime detection needed
 use archmage::{Simd128Token, SimdToken};
-use magetypes::f32x4;
+use magetypes::simd::f32x4;
 
 // When compiled with +simd128, token is always available
 let token = Simd128Token::summon().unwrap();
@@ -99,11 +99,40 @@ let v = f32x8::from_bytes(token, &bytes);
 - **`std`** (default): Enable std library support
 - **`avx512`**: Enable 512-bit types for AVX-512
 
+## Using with #[arcane] and #[rite]
+
+For SIMD kernels, use `#[arcane]` at entry points and `#[rite]` for internal helpers:
+
+```rust
+use archmage::prelude::*;
+use magetypes::simd::f32x8;
+
+// Entry point - receives token from caller
+#[arcane]
+pub fn dot_product(token: Desktop64, a: &[f32], b: &[f32]) -> f32 {
+    let mut acc = f32x8::zero(token);
+    for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
+        acc = accumulate(token, acc, a_chunk, b_chunk);
+    }
+    acc.reduce_add()
+}
+
+// Internal helper - use #[rite] for zero overhead
+#[rite]
+fn accumulate(token: Desktop64, acc: f32x8, a: &[f32], b: &[f32]) -> f32x8 {
+    let va = f32x8::from_array(token, a.try_into().unwrap());
+    let vb = f32x8::from_array(token, b.try_into().unwrap());
+    va.mul_add(vb, acc)
+}
+```
+
+**Performance tip:** `#[rite]` inlines with zero overhead. `#[arcane]` creates a wrapper. Use `#[rite]` for helpers called from hot loops.
+
 ## Relationship to archmage
 
 `magetypes` depends on `archmage` for:
-- Token types (`X64V3Token`, `NeonToken`, etc.)
-- The `#[arcane]` macro for writing SIMD kernels
+- Token types (`Desktop64`, `Arm64`, etc.)
+- The `#[arcane]` and `#[rite]` macros
 - Runtime CPU feature detection
 
 Use `archmage` directly when you need raw intrinsics. Use `magetypes` when you want ergonomic SIMD types with operators.
