@@ -39,6 +39,10 @@ magetypes = { path = "magetypes", features = ["avx512"] }
 name = "tokens"
 harness = false
 
+[[bench]]
+name = "asm_inspection"
+harness = false
+
 [package.metadata.docs.rs]
 features = ["std", "macros", "safe_unaligned_simd", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]
