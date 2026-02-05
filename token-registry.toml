@@ -213,22 +213,18 @@ features = ["neon", "sha3"]
 parents = ["HasNeon"]
 doc = "Marker trait for NEON + SHA3.\n\nSHA3 extension is available on ARMv8.2-A and later."
 
-# ──── Width Namespaces (multiwidth + magetypes codegen) ────
+# ──── Width Namespaces (simd type re-exports) ────
+
+# Note: No v2/sse namespace - v2 is legacy. 128-bit types available via simd::x86::w128::*
 
 [[width_namespace]]
-name = "sse"
-arch = "x86"
-width = 128
-token = "X64V3Token"
-
-[[width_namespace]]
-name = "avx2"
+name = "v3"
 arch = "x86"
 width = 256
 token = "X64V3Token"
 
 [[width_namespace]]
-name = "avx512"
+name = "v4"
 arch = "x86"
 width = 512
 token = "X64V4Token"

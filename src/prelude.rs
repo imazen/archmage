@@ -31,7 +31,7 @@ pub use crate::tokens::{Desktop64, X64V2Token, X64V3Token};
 
 // -- Macros --
 #[cfg(feature = "macros")]
-pub use archmage_macros::{arcane, incant, magetypes, multiwidth, rite, simd_fn, simd_route};
+pub use archmage_macros::{arcane, incant, magetypes, rite, simd_fn, simd_route};
 
 // -- core::arch intrinsics for the current platform --
 #[cfg(target_arch = "x86_64")]

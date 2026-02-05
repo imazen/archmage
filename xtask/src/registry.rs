@@ -74,7 +74,7 @@ pub struct TraitDef {
     pub doc: Option<String>,
 }
 
-/// A width namespace for multiwidth codegen.
+/// A width namespace for simd type re-exports.
 #[derive(Debug, Deserialize)]
 pub struct WidthNamespace {
     pub name: String,
@@ -400,7 +400,6 @@ impl Registry {
     /// - `trait_to_features()` — maps trait and token names to feature lists (for bounds)
     /// - `ALL_CONCRETE_TOKENS` — all token names including aliases
     /// - `ALL_TRAIT_NAMES` — all trait names
-    /// - `X86_WIDTH_CONFIGS` / `WASM_WIDTH_CONFIGS` / `ARM_WIDTH_CONFIGS` — width configs
     pub fn generate_macro_registry(&self) -> String {
         use std::fmt::Write;
         let mut out = String::with_capacity(8192);
@@ -429,9 +428,6 @@ impl Registry {
         // ALL_TRAIT_NAMES
         self.gen_all_trait_names(&mut out);
         writeln!(out).unwrap();
-
-        // Width configs
-        self.gen_width_configs(&mut out);
 
         out
     }
@@ -516,7 +512,7 @@ impl Registry {
         writeln!(out, "    match trait_name {{").unwrap();
 
         // Traits first — do NOT strip sse/sse2, these are used for #[target_feature]
-        // in multiwidth codegen where the baseline is needed for generic bounds
+        // in codegen where the baseline is needed for generic bounds
         for trait_def in &self.traits {
             let features: Vec<&str> = if !trait_def.x86_features.is_empty() {
                 trait_def.x86_features.iter().map(|s| s.as_str()).collect()
@@ -682,79 +678,6 @@ impl Registry {
             writeln!(out, "    \"{}\",", trait_def.name).unwrap();
         }
         writeln!(out, "];").unwrap();
-    }
-
-    fn gen_width_configs(&self, out: &mut String) {
-        use std::fmt::Write;
-
-        // Group namespaces by arch
-        let x86: Vec<&WidthNamespace> = self
-            .width_namespace
-            .iter()
-            .filter(|n| n.arch == "x86")
-            .collect();
-        let arm: Vec<&WidthNamespace> = self
-            .width_namespace
-            .iter()
-            .filter(|n| n.arch == "aarch64")
-            .collect();
-        let wasm: Vec<&WidthNamespace> = self
-            .width_namespace
-            .iter()
-            .filter(|n| n.arch == "wasm")
-            .collect();
-
-        // Emit WidthConfig struct
-        writeln!(out, "/// Width configuration for multiwidth codegen.").unwrap();
-        writeln!(out, "#[allow(dead_code)]").unwrap();
-        writeln!(out, "pub(crate) struct WidthConfig {{").unwrap();
-        writeln!(out, "    pub name: &'static str,").unwrap();
-        writeln!(out, "    pub namespace: &'static str,").unwrap();
-        writeln!(out, "    pub token: &'static str,").unwrap();
-        writeln!(out, "    pub feature: Option<&'static str>,").unwrap();
-        writeln!(out, "    pub target_features: &'static [&'static str],").unwrap();
-        writeln!(out, "}}").unwrap();
-        writeln!(out).unwrap();
-
-        // Helper to emit one array
-        let emit_configs =
-            |out: &mut String, label: &str, name: &str, configs: &[&WidthNamespace]| {
-                writeln!(out, "/// Width configuration for {} targets.", label).unwrap();
-                writeln!(out, "#[allow(dead_code)]").unwrap();
-                writeln!(out, "pub(crate) const {}: &[WidthConfig] = &[", name).unwrap();
-                for ns in configs {
-                    let token_def = self.find_token(&ns.token).expect("validated");
-                    let macro_features: Vec<&str> = token_def
-                        .features
-                        .iter()
-                        .filter(|f| *f != "sse" && *f != "sse2")
-                        .map(|s| s.as_str())
-                        .collect();
-
-                    writeln!(out, "    WidthConfig {{").unwrap();
-                    writeln!(out, "        name: \"{}\",", ns.name).unwrap();
-                    writeln!(out, "        namespace: \"magetypes::simd::{}\",", ns.name).unwrap();
-                    writeln!(out, "        token: \"archmage::{}\",", ns.token).unwrap();
-                    match &ns.cargo_feature {
-                        Some(f) => writeln!(out, "        feature: Some(\"{}\"),", f).unwrap(),
-                        None => writeln!(out, "        feature: None,").unwrap(),
-                    }
-                    let features_str: String = macro_features
-                        .iter()
-                        .map(|f| format!("\"{}\"", f))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    writeln!(out, "        target_features: &[{}],", features_str).unwrap();
-                    writeln!(out, "    }},").unwrap();
-                }
-                writeln!(out, "];").unwrap();
-            };
-
-        emit_configs(out, "x86_64", "X86_WIDTH_CONFIGS", &x86);
-        writeln!(out).unwrap();
-        emit_configs(out, "aarch64", "ARM_WIDTH_CONFIGS", &arm);
-        writeln!(out).unwrap();
-        emit_configs(out, "wasm32", "WASM_WIDTH_CONFIGS", &wasm);
     }
 }
 
