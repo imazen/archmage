@@ -374,6 +374,7 @@ pub mod v4 {
     };
 
     /// Token type for this width level
+    #[cfg(feature = "avx512")]
     pub type Token = archmage::X64V4Token;
 
     pub const LANES_F32: usize = 16;

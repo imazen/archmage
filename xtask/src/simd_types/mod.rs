@@ -285,8 +285,9 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str(&format!("        {},\n", w256_types.join(", ")));
     code.push_str("    };\n\n");
 
-    // Token and LANES constants — always available
+    // Token type alias — gated on avx512 feature
     code.push_str("    /// Token type for this width level\n");
+    code.push_str("    #[cfg(feature = \"avx512\")]\n");
     code.push_str("    pub type Token = archmage::X64V4Token;\n\n");
     code.push_str("    pub const LANES_F32: usize = 16;\n");
     code.push_str("    pub const LANES_F64: usize = 8;\n");
