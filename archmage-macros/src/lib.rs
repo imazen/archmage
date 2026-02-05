@@ -631,6 +631,167 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 // ============================================================================
+// Rite macro for inner SIMD functions (no wrapper overhead)
+// ============================================================================
+
+/// Annotate inner SIMD helpers called from `#[arcane]` functions.
+///
+/// Unlike `#[arcane]`, which creates a wrapper function, `#[rite]` simply adds
+/// `#[target_feature]` and `#[inline]` attributes. This allows the function to
+/// inline directly into calling `#[arcane]` functions without optimization barriers.
+///
+/// # When to Use
+///
+/// Use `#[rite]` for helper functions that are **only** called from within
+/// `#[arcane]` functions with matching or superset token types:
+///
+/// ```ignore
+/// use archmage::{arcane, rite, X64V3Token};
+///
+/// #[arcane]
+/// fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
+///     // helper inlines directly - no wrapper overhead
+///     helper(token, data) * 2.0
+/// }
+///
+/// #[rite]
+/// fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 {
+///     // Just has #[target_feature(enable = "avx2,fma,...")]
+///     // Called from #[arcane] context, so features are guaranteed
+///     let v = f32x8::from_array(token, *data);
+///     v.reduce_add()
+/// }
+/// ```
+///
+/// # Safety
+///
+/// `#[rite]` functions can only be safely called from contexts where the
+/// required CPU features are enabled:
+/// - From within `#[arcane]` functions with matching/superset tokens
+/// - From within other `#[rite]` functions with matching/superset tokens
+/// - From code compiled with `-Ctarget-cpu` that enables the features
+///
+/// Calling from other contexts requires `unsafe` and the caller must ensure
+/// the CPU supports the required features.
+///
+/// # Comparison with #[arcane]
+///
+/// | Aspect | `#[arcane]` | `#[rite]` |
+/// |--------|-------------|-----------|
+/// | Creates wrapper | Yes | No |
+/// | Entry point | Yes | No |
+/// | Inlines into caller | No (barrier) | Yes |
+/// | Safe to call anywhere | Yes (with token) | Only from feature-enabled context |
+#[proc_macro_attribute]
+pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Parse optional arguments (currently just inline_always)
+    let args = parse_macro_input!(attr as RiteArgs);
+    let input_fn = parse_macro_input!(item as ItemFn);
+    rite_impl(input_fn, args)
+}
+
+/// Arguments for the `#[rite]` macro.
+struct RiteArgs {
+    inline_always: bool,
+}
+
+impl Default for RiteArgs {
+    fn default() -> Self {
+        Self {
+            inline_always: false,
+        }
+    }
+}
+
+impl Parse for RiteArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut args = RiteArgs::default();
+
+        while !input.is_empty() {
+            let ident: Ident = input.parse()?;
+            match ident.to_string().as_str() {
+                "inline_always" => args.inline_always = true,
+                other => {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        format!("unknown rite argument: `{}`", other),
+                    ))
+                }
+            }
+            if input.peek(Token![,]) {
+                let _: Token![,] = input.parse()?;
+            }
+        }
+
+        Ok(args)
+    }
+}
+
+/// Implementation for the `#[rite]` macro.
+fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
+    // Find the token parameter and its features
+    let (_, features, target_arch) = match find_token_param(&input_fn.sig) {
+        Some(result) => result,
+        None => {
+            let msg = "rite requires a token parameter. Supported forms:\n\
+                 - Concrete: `token: X64V3Token`\n\
+                 - impl Trait: `token: impl HasX64V2`\n\
+                 - Generic: `fn foo<T: HasX64V2>(token: T, ...)`";
+            return syn::Error::new_spanned(&input_fn.sig, msg)
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    // Build target_feature attributes
+    let target_feature_attrs: Vec<Attribute> = features
+        .iter()
+        .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
+        .collect();
+
+    // Choose inline attribute
+    let inline_attr: Attribute = if args.inline_always {
+        parse_quote!(#[inline(always)])
+    } else {
+        parse_quote!(#[inline])
+    };
+
+    // Prepend attributes to the function
+    let mut new_attrs = target_feature_attrs;
+    new_attrs.push(inline_attr);
+    new_attrs.extend(input_fn.attrs.drain(..));
+    input_fn.attrs = new_attrs;
+
+    // If we know the target arch, generate cfg-gated impl + stub
+    if let Some(arch) = target_arch {
+        let vis = &input_fn.vis;
+        let sig = &input_fn.sig;
+        let attrs = &input_fn.attrs;
+        let block = &input_fn.block;
+
+        quote! {
+            #[cfg(target_arch = #arch)]
+            #(#attrs)*
+            #vis #sig
+            #block
+
+            #[cfg(not(target_arch = #arch))]
+            #vis #sig {
+                unreachable!(concat!(
+                    "This function requires ",
+                    #arch,
+                    " architecture"
+                ))
+            }
+        }
+        .into()
+    } else {
+        // No specific arch (trait bounds) - just emit the annotated function
+        quote!(#input_fn).into()
+    }
+}
+
+// ============================================================================
 // Multiwidth macro for width-agnostic SIMD code
 // ============================================================================
 
