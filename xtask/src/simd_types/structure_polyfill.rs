@@ -59,8 +59,10 @@ fn has_mul(elem: ElementType) -> bool {
 
 /// Platform configuration for polyfill generation.
 struct PlatformConfig {
-    /// Module name (e.g., "sse", "neon", "simd128")
+    /// Module name (e.g., "sse", "neon", "wasm128")
     mod_name: &'static str,
+    /// Tier name for implementation_name() (e.g., "v3", "neon", "simd128")
+    tier_name: &'static str,
     /// Doc comment for the module
     doc: &'static str,
     /// cfg attribute (e.g., `target_arch = "x86_64"`)
@@ -73,14 +75,16 @@ struct PlatformConfig {
 
 const PLATFORMS: &[PlatformConfig] = &[
     PlatformConfig {
-        mod_name: "sse",
-        doc: "Polyfilled 256-bit types using SSE (128-bit) operations.",
+        mod_name: "v3",
+        tier_name: "v3",
+        doc: "Polyfilled 256-bit types using x86-64-v3 (128-bit) operations.",
         cfg: "target_arch = \"x86_64\"",
         token: "X64V3Token",
         w128_import: "crate::simd::generated::x86::w128",
     },
     PlatformConfig {
         mod_name: "neon",
+        tier_name: "neon",
         doc: "Polyfilled 256-bit types using NEON (128-bit) operations.",
         cfg: "target_arch = \"aarch64\"",
         token: "NeonToken",
@@ -88,6 +92,7 @@ const PLATFORMS: &[PlatformConfig] = &[
     },
     PlatformConfig {
         mod_name: "wasm128",
+        tier_name: "wasm128",
         doc: "Polyfilled 256-bit types using WASM SIMD128 (128-bit) operations.",
         cfg: "target_arch = \"wasm32\"",
         token: "Wasm128Token",
@@ -99,6 +104,8 @@ const PLATFORMS: &[PlatformConfig] = &[
 struct W512PlatformConfig {
     /// Module name
     mod_name: &'static str,
+    /// Tier name for implementation_name() (e.g., "v3")
+    tier_name: &'static str,
     /// Doc comment
     doc: &'static str,
     /// cfg attribute
@@ -110,8 +117,9 @@ struct W512PlatformConfig {
 }
 
 const W512_PLATFORMS: &[W512PlatformConfig] = &[W512PlatformConfig {
-    mod_name: "avx2",
-    doc: "Polyfilled 512-bit types using AVX2 (256-bit) operations.",
+    mod_name: "v3",
+    tier_name: "v3",
+    doc: "Polyfilled 512-bit types using x86-64-v3 (256-bit) operations.",
     cfg: "target_arch = \"x86_64\"",
     token: "X64V3Token",
     w256_import: "crate::simd::generated::x86::w256",
@@ -467,7 +475,8 @@ fn generate_polyfill_type(elem: ElementType, platform: &PlatformConfig) -> Strin
     );
 
     // Implementation identification
-    let mod_name = platform.mod_name;
+    let tier_name = platform.tier_name;
+    let impl_name = format!("polyfill::{tier_name}::{full_name}");
     writeln!(
         code,
         "        // ========== Implementation identification ==========\n"
@@ -490,18 +499,14 @@ fn generate_polyfill_type(elem: ElementType, platform: &PlatformConfig) -> Strin
     )
     .unwrap();
     writeln!(code, "        ///").unwrap();
-    writeln!(
-        code,
-        "        /// Returns `\"polyfill::{mod_name}::{full_name}\"`."
-    )
-    .unwrap();
+    writeln!(code, "        /// Returns `\"{impl_name}\"`.",).unwrap();
     writeln!(code, "        #[inline(always)]").unwrap();
     writeln!(
         code,
         "        pub const fn implementation_name() -> &'static str {{"
     )
     .unwrap();
-    writeln!(code, "            \"polyfill::{mod_name}::{full_name}\"").unwrap();
+    writeln!(code, "            \"{impl_name}\"").unwrap();
     writeln!(code, "        }}\n").unwrap();
 
     writeln!(code, "    }}\n").unwrap();
@@ -858,7 +863,8 @@ fn generate_w512_polyfill_type(elem: ElementType, platform: &W512PlatformConfig)
     );
 
     // Implementation identification
-    let mod_name = platform.mod_name;
+    let tier_name = platform.tier_name;
+    let impl_name = format!("polyfill::{tier_name}::{full_name}");
     writeln!(
         code,
         "        // ========== Implementation identification ==========\n"
@@ -881,18 +887,14 @@ fn generate_w512_polyfill_type(elem: ElementType, platform: &W512PlatformConfig)
     )
     .unwrap();
     writeln!(code, "        ///").unwrap();
-    writeln!(
-        code,
-        "        /// Returns `\"polyfill::{mod_name}::{full_name}\"`."
-    )
-    .unwrap();
+    writeln!(code, "        /// Returns `\"{impl_name}\"`.",).unwrap();
     writeln!(code, "        #[inline(always)]").unwrap();
     writeln!(
         code,
         "        pub const fn implementation_name() -> &'static str {{"
     )
     .unwrap();
-    writeln!(code, "            \"polyfill::{mod_name}::{full_name}\"").unwrap();
+    writeln!(code, "            \"{impl_name}\"").unwrap();
     writeln!(code, "        }}\n").unwrap();
 
     writeln!(code, "    }}\n").unwrap();

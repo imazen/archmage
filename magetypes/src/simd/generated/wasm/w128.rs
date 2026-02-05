@@ -168,10 +168,10 @@ impl f32x4 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::f32x4"`.
+    /// Returns `"wasm::wasm128::f32x4"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::f32x4"
+        "wasm::wasm128::f32x4"
     }
 
     /// Element-wise minimum
@@ -1459,10 +1459,10 @@ impl f64x2 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::f64x2"`.
+    /// Returns `"wasm::wasm128::f64x2"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::f64x2"
+        "wasm::wasm128::f64x2"
     }
 
     /// Element-wise minimum
@@ -2036,10 +2036,10 @@ impl i8x16 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::i8x16"`.
+    /// Returns `"wasm::wasm128::i8x16"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::i8x16"
+        "wasm::wasm128::i8x16"
     }
 
     /// Element-wise minimum
@@ -2475,10 +2475,10 @@ impl u8x16 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::u8x16"`.
+    /// Returns `"wasm::wasm128::u8x16"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::u8x16"
+        "wasm::wasm128::u8x16"
     }
 
     /// Element-wise minimum
@@ -2930,10 +2930,10 @@ impl i16x8 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::i16x8"`.
+    /// Returns `"wasm::wasm128::i16x8"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::i16x8"
+        "wasm::wasm128::i16x8"
     }
 
     /// Element-wise minimum
@@ -3432,10 +3432,10 @@ impl u16x8 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::u16x8"`.
+    /// Returns `"wasm::wasm128::u16x8"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::u16x8"
+        "wasm::wasm128::u16x8"
     }
 
     /// Element-wise minimum
@@ -3889,10 +3889,10 @@ impl i32x4 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::i32x4"`.
+    /// Returns `"wasm::wasm128::i32x4"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::i32x4"
+        "wasm::wasm128::i32x4"
     }
 
     /// Element-wise minimum
@@ -4395,10 +4395,10 @@ impl u32x4 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::u32x4"`.
+    /// Returns `"wasm::wasm128::u32x4"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::u32x4"
+        "wasm::wasm128::u32x4"
     }
 
     /// Element-wise minimum
@@ -4843,10 +4843,10 @@ impl i64x2 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::i64x2"`.
+    /// Returns `"wasm::wasm128::i64x2"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::i64x2"
+        "wasm::wasm128::i64x2"
     }
 
     /// Absolute value (polyfill via conditional negate)
@@ -5309,10 +5309,10 @@ impl u64x2 {
     /// This is useful for verifying that the correct implementation is being used
     /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
     ///
-    /// Returns `"wasm::simd128::u64x2"`.
+    /// Returns `"wasm::wasm128::u64x2"`.
     #[inline(always)]
     pub const fn implementation_name() -> &'static str {
-        "wasm::simd128::u64x2"
+        "wasm::wasm128::u64x2"
     }
 
     /// Element-wise minimum (polyfill via unsigned compare+select)

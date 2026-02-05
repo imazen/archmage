@@ -7,8 +7,8 @@
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
 #[cfg(target_arch = "x86_64")]
-pub mod sse {
-    //! Polyfilled 256-bit types using SSE (128-bit) operations.
+pub mod v3 {
+    //! Polyfilled 256-bit types using x86-64-v3 (128-bit) operations.
 
     use crate::simd::generated::x86::w128::{
         f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
@@ -223,10 +223,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::f32x8"`.
+        /// Returns `"polyfill::v3::f32x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::f32x8"
+            "polyfill::v3::f32x8"
         }
     }
 
@@ -520,10 +520,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::f64x4"`.
+        /// Returns `"polyfill::v3::f64x4"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::f64x4"
+            "polyfill::v3::f64x4"
         }
     }
 
@@ -740,10 +740,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::i8x32"`.
+        /// Returns `"polyfill::v3::i8x32"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::i8x32"
+            "polyfill::v3::i8x32"
         }
     }
 
@@ -904,10 +904,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::u8x32"`.
+        /// Returns `"polyfill::v3::u8x32"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::u8x32"
+            "polyfill::v3::u8x32"
         }
     }
 
@@ -1077,10 +1077,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::i16x16"`.
+        /// Returns `"polyfill::v3::i16x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::i16x16"
+            "polyfill::v3::i16x16"
         }
     }
 
@@ -1259,10 +1259,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::u16x16"`.
+        /// Returns `"polyfill::v3::u16x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::u16x16"
+            "polyfill::v3::u16x16"
         }
     }
 
@@ -1470,10 +1470,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::i32x8"`.
+        /// Returns `"polyfill::v3::i32x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::i32x8"
+            "polyfill::v3::i32x8"
         }
     }
 
@@ -1672,10 +1672,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::u32x8"`.
+        /// Returns `"polyfill::v3::u32x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::u32x8"
+            "polyfill::v3::u32x8"
         }
     }
 
@@ -1850,10 +1850,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::i64x4"`.
+        /// Returns `"polyfill::v3::i64x4"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::i64x4"
+            "polyfill::v3::i64x4"
         }
     }
 
@@ -2010,10 +2010,10 @@ pub mod sse {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::sse::u64x4"`.
+        /// Returns `"polyfill::v3::u64x4"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::sse::u64x4"
+            "polyfill::v3::u64x4"
         }
     }
 
@@ -6229,8 +6229,8 @@ pub mod wasm128 {
 }
 
 #[cfg(target_arch = "x86_64")]
-pub mod avx2 {
-    //! Polyfilled 512-bit types using AVX2 (256-bit) operations.
+pub mod v3 {
+    //! Polyfilled 512-bit types using x86-64-v3 (256-bit) operations.
 
     use crate::simd::generated::x86::w256::{
         f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
@@ -6439,10 +6439,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::f32x16"`.
+        /// Returns `"polyfill::v3::f32x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::f32x16"
+            "polyfill::v3::f32x16"
         }
     }
 
@@ -6730,10 +6730,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::f64x8"`.
+        /// Returns `"polyfill::v3::f64x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::f64x8"
+            "polyfill::v3::f64x8"
         }
     }
 
@@ -6944,10 +6944,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::i8x64"`.
+        /// Returns `"polyfill::v3::i8x64"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::i8x64"
+            "polyfill::v3::i8x64"
         }
     }
 
@@ -7102,10 +7102,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::u8x64"`.
+        /// Returns `"polyfill::v3::u8x64"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::u8x64"
+            "polyfill::v3::u8x64"
         }
     }
 
@@ -7269,10 +7269,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::i16x32"`.
+        /// Returns `"polyfill::v3::i16x32"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::i16x32"
+            "polyfill::v3::i16x32"
         }
     }
 
@@ -7445,10 +7445,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::u16x32"`.
+        /// Returns `"polyfill::v3::u16x32"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::u16x32"
+            "polyfill::v3::u16x32"
         }
     }
 
@@ -7650,10 +7650,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::i32x16"`.
+        /// Returns `"polyfill::v3::i32x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::i32x16"
+            "polyfill::v3::i32x16"
         }
     }
 
@@ -7846,10 +7846,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::u32x16"`.
+        /// Returns `"polyfill::v3::u32x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::u32x16"
+            "polyfill::v3::u32x16"
         }
     }
 
@@ -8018,10 +8018,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::i64x8"`.
+        /// Returns `"polyfill::v3::i64x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::i64x8"
+            "polyfill::v3::i64x8"
         }
     }
 
@@ -8172,10 +8172,10 @@ pub mod avx2 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::avx2::u64x8"`.
+        /// Returns `"polyfill::v3::u64x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::avx2::u64x8"
+            "polyfill::v3::u64x8"
         }
     }
 
