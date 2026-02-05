@@ -75,8 +75,8 @@ AVX-512 tokens require the `avx512` feature. Higher tokens imply lower ones (`v4
 |---------|---------|---|
 | `std` | yes | Standard library support |
 | `macros` | yes | `#[arcane]`, `#[magetypes]`, `incant!` |
-| `bytemuck` | yes | Pod/Zeroable casts |
 | `safe-simd` | yes | Re-exports `safe_unaligned_simd` via prelude |
+| `bytemuck` | no | Pod/Zeroable casts |
 | `avx512` | no | AVX-512 tokens |
 
 ## License

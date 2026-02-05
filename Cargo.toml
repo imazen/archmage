@@ -14,7 +14,7 @@ keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
 
 [features]
-default = ["std", "macros", "bytemuck", "safe-simd"]
+default = ["std", "macros", "safe-simd"]
 std = []
 macros = ["dep:archmage-macros"]
 bytemuck = ["dep:bytemuck"]
