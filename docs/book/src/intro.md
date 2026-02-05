@@ -3,7 +3,9 @@
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 > Cast primitive magics faster than any mage alive.
 
-**Archmage** makes SIMD programming in Rust safe and ergonomic. Instead of scattering `unsafe` blocks throughout your code, you prove CPU feature availability once with a **capability token**, then write safe code that the compiler optimizes into raw SIMD instructions.
+Rust 1.85 made value-based SIMD intrinsics safe inside `#[target_feature]` functions. [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd) made memory intrinsics safe by taking references instead of raw pointers. **Archmage** fills the last gap: proving at the type level that the CPU actually supports those features, so you never call a `#[target_feature]` function on hardware that can't run it.
+
+You prove CPU feature availability once with a **capability token**, then write safe code that the compiler optimizes into raw SIMD instructions. No `unsafe` needed for the SIMD work itself.
 
 **Magetypes** provides SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators that integrate with archmage tokens.
 
