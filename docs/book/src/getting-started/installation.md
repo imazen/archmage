@@ -60,24 +60,18 @@ RUSTFLAGS="-Ctarget-feature=+simd128" cargo build --target wasm32-unknown-unknow
 ## Verify Installation
 
 ```rust
-use archmage::SimdToken;
+use archmage::{SimdToken, Desktop64, Arm64};
 
 fn main() {
-    #[cfg(target_arch = "x86_64")]
-    {
-        use archmage::Desktop64;
-        match Desktop64::summon() {
-            Some(token) => println!("AVX2+FMA: {} available!", token.name()),
-            None => println!("AVX2+FMA not available, would use scalar fallback"),
-        }
+    // Tokens compile everywhere - summon() returns None on unsupported platforms
+    match Desktop64::summon() {
+        Some(token) => println!("{} available!", token.name()),
+        None => println!("No AVX2+FMA"),
     }
 
-    #[cfg(target_arch = "aarch64")]
-    {
-        use archmage::Arm64;
-        // NEON is always available on aarch64
-        let token = Arm64::summon().unwrap();
-        println!("NEON: {} available!", token.name());
+    match Arm64::summon() {
+        Some(token) => println!("{} available!", token.name()),
+        None => println!("No NEON"),
     }
 }
 ```
@@ -88,4 +82,5 @@ Run it:
 cargo run
 ```
 
-On a modern x86-64 machine (Haswell 2013+ or Zen 1+), you'll see "AVX2+FMA: X64V3 available!".
+On x86-64 (Haswell+/Zen+): "X64V3 available!" and "No NEON".
+On AArch64: "No AVX2+FMA" and "Neon available!".
