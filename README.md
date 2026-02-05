@@ -142,7 +142,7 @@ fn sum_squares_api(data: &[f32]) -> f32 {
 | `X64V3Token` | `Desktop64` | AVX2, FMA, BMI2 |
 | `X64V4Token` | `Server64` | AVX-512 (requires `avx512` feature) |
 | `NeonToken` | `Arm64` | NEON |
-| `Simd128Token` | | WASM SIMD |
+| `Wasm128Token` | | WASM SIMD |
 | `ScalarToken` | | Always available |
 
 All tokens compile on all platforms. `summon()` returns `None` on unsupported architectures. Detection is cached: ~1.3 ns after first call, 0 ns with `-Ctarget-cpu=haswell` (compiles away).

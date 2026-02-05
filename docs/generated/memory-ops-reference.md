@@ -387,7 +387,7 @@ fn _mm_broadcast_ss(mem_addr: &f32) -> __m128
 
 Features: `avx`
 
-## Simd128Token (17 functions)
+## Wasm128Token (17 functions)
 
 ### `i16x8_load_extend_i8x8`
 

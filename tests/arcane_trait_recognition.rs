@@ -589,14 +589,14 @@ mod wasm_tokens {
     use std::arch::wasm32::*;
 
     #[arcane]
-    fn with_simd128(token: archmage::Simd128Token) -> f32 {
+    fn with_simd128(token: archmage::Wasm128Token) -> f32 {
         let v = f32x4_splat(1.0);
         f32x4_extract_lane::<0>(v)
     }
 
     #[test]
     fn test_wasm_concrete() {
-        if let Some(t) = archmage::Simd128Token::summon() {
+        if let Some(t) = archmage::Wasm128Token::summon() {
             assert_eq!(with_simd128(t), 1.0);
         }
     }

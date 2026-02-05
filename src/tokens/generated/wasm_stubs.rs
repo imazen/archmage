@@ -7,11 +7,11 @@ use crate::tokens::SimdToken;
 
 /// Stub for SIMD128 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
-pub struct Simd128Token {
+pub struct Wasm128Token {
     _private: (),
 }
 
-impl SimdToken for Simd128Token {
+impl SimdToken for Wasm128Token {
     const NAME: &'static str = "SIMD128";
 
     #[inline]
@@ -31,4 +31,4 @@ impl SimdToken for Simd128Token {
     }
 }
 
-impl Has128BitSimd for Simd128Token {}
+impl Has128BitSimd for Wasm128Token {}

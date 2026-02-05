@@ -85,19 +85,19 @@ fn generate_construction_methods(ty: &SimdType) -> String {
     formatdoc! {r#"
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(_: archmage::Simd128Token, data: &[{elem}; {lanes}]) -> Self {{
+        pub fn load(_: archmage::Wasm128Token, data: &[{elem}; {lanes}]) -> Self {{
         Self(unsafe {{ v128_load(data.as_ptr() as *const v128) }})
         }}
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(_: archmage::Simd128Token, v: {elem}) -> Self {{
+        pub fn splat(_: archmage::Wasm128Token, v: {elem}) -> Self {{
         Self({splat_fn}(v))
         }}
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(_: archmage::Simd128Token) -> Self {{
+        pub fn zero(_: archmage::Wasm128Token) -> Self {{
         Self({splat_fn}({zero_val}))
         }}
 
@@ -105,7 +105,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         ///
         /// This is a zero-cost transmute, not a memory load.
         #[inline(always)]
-        pub fn from_array(_: archmage::Simd128Token, arr: [{elem}; {lanes}]) -> Self {{
+        pub fn from_array(_: archmage::Wasm128Token, arr: [{elem}; {lanes}]) -> Self {{
         // SAFETY: [{elem}; {lanes}] and {inner} have identical size and layout
         Self(unsafe {{ core::mem::transmute(arr) }})
         }}
@@ -160,7 +160,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         ///
         /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
         #[inline(always)]
-        pub fn cast_slice(_: archmage::Simd128Token, slice: &[{elem}]) -> Option<&[Self]> {{
+        pub fn cast_slice(_: archmage::Wasm128Token, slice: &[{elem}]) -> Option<&[Self]> {{
         if slice.len() % {lanes} != 0 {{
             return None;
         }}
@@ -180,7 +180,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         ///
         /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
         #[inline(always)]
-        pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [{elem}]) -> Option<&mut [Self]> {{
+        pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [{elem}]) -> Option<&mut [Self]> {{
         if slice.len() % {lanes} != 0 {{
             return None;
         }}
@@ -215,7 +215,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         ///
         /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
         #[inline(always)]
-        pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; {byte_size}]) -> Self {{
+        pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; {byte_size}]) -> Self {{
         // SAFETY: [u8; {byte_size}] and Self have identical size
         Self(unsafe {{ core::mem::transmute(*bytes) }})
         }}
@@ -224,7 +224,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         ///
         /// This is a zero-cost transmute from an owned byte array.
         #[inline(always)]
-        pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; {byte_size}]) -> Self {{
+        pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; {byte_size}]) -> Self {{
         // SAFETY: [u8; {byte_size}] and Self have identical size
         Self(unsafe {{ core::mem::transmute(bytes) }})
         }}

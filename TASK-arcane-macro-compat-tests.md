@@ -42,7 +42,7 @@ Create `tests/arcane_trait_recognition.rs` that tests every form the macro shoul
 - `Avx512Fp16Token`
 - `NeonToken`, `Arm64`, `NeonAesToken`, `NeonSha3Token`
 - `ArmCryptoToken`, `ArmCrypto3Token`
-- `Simd128Token`
+- `Wasm128Token`
 
 **All trait names** (from `trait_to_features()`):
 - `HasX64V2`, `HasX64V4`

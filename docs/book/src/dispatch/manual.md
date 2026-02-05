@@ -32,7 +32,7 @@ fn process_scalar(data: &mut [f32]) {
 Tokens exist on all platforms. On unsupported architectures, `summon()` returns `None` and `#[arcane]` functions become unreachable stubs. You write one dispatch block:
 
 ```rust
-use archmage::{Desktop64, Arm64, Simd128Token, SimdToken};
+use archmage::{Desktop64, Arm64, Wasm128Token, SimdToken};
 
 pub fn process(data: &mut [f32]) {
     // Try x86 AVX2
@@ -46,7 +46,7 @@ pub fn process(data: &mut [f32]) {
     }
 
     // Try WASM SIMD
-    if let Some(token) = Simd128Token::summon() {
+    if let Some(token) = Wasm128Token::summon() {
         return process_wasm(token, data);
     }
 
@@ -61,14 +61,14 @@ fn process_x86(token: Desktop64, data: &mut [f32]) { /* ... */ }
 fn process_arm(token: Arm64, data: &mut [f32]) { /* ... */ }
 
 #[arcane]
-fn process_wasm(token: Simd128Token, data: &mut [f32]) { /* ... */ }
+fn process_wasm(token: Wasm128Token, data: &mut [f32]) { /* ... */ }
 
 fn process_scalar(data: &mut [f32]) { /* ... */ }
 ```
 
 On x86-64: `Desktop64::summon()` may succeed, others return `None`.
 On ARM: `Arm64::summon()` succeeds, others return `None`.
-On WASM: `Simd128Token::summon()` may succeed, others return `None`.
+On WASM: `Wasm128Token::summon()` may succeed, others return `None`.
 
 The `#[arcane]` functions for other architectures compile to unreachable stubs—the code exists but can never be called.
 

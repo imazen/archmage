@@ -53,7 +53,7 @@ pub fn sum(data: &[f32; 8]) -> f32 {
     }
 
     #[cfg(target_arch = "wasm32")]
-    if let Some(token) = Simd128Token::summon() {
+    if let Some(token) = Wasm128Token::summon() {
         return process_wasm128(token, data);
     }
 
@@ -69,7 +69,7 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 | `_v3` | `X64V3Token` | x86-64 AVX2+FMA |
 | `_v2` | `X64V2Token` | x86-64 SSE4.2 |
 | `_neon` | `NeonToken` | AArch64 |
-| `_wasm128` | `Simd128Token` | WASM |
+| `_wasm128` | `Wasm128Token` | WASM |
 | `_scalar` | — | Fallback |
 
 You don't need all variants—`incant!` skips missing ones.

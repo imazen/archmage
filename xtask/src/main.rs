@@ -337,7 +337,7 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
 ///
 /// Special cases:
 /// - NeonToken: always returns Some (neon is baseline AArch64), skip check
-/// - Simd128Token: uses #[cfg(target_feature)] not runtime detection, skip check
+/// - Wasm128Token: uses #[cfg(target_feature)] not runtime detection, skip check
 /// - x86 tokens: sse/sse2 are baseline, not checked at runtime
 /// - AArch64 tokens: neon is baseline, not checked at runtime
 fn validate_summon(reg: &registry::Registry) -> Result<()> {
@@ -384,7 +384,7 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
 
             // Handle special cases before parsing
             if *arch == "wasm" {
-                // Simd128Token uses #[cfg(target_feature)], not runtime detection
+                // Wasm128Token uses #[cfg(target_feature)], not runtime detection
                 println!(
                     "  {} — compile-time cfg check (no runtime detection)",
                     token_name
@@ -653,7 +653,7 @@ fn map_features_to_token(features: &str, arch: &str) -> String {
             _ => format!("({})", features),
         },
         "aarch64" => "NeonToken / Arm64".to_string(),
-        "wasm32" => "Simd128Token".to_string(),
+        "wasm32" => "Wasm128Token".to_string(),
         _ => "Unknown".to_string(),
     }
 }

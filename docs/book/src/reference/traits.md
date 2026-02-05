@@ -32,7 +32,7 @@ pub trait IntoConcreteToken: SimdToken {
     fn as_neon_aes(self) -> Option<NeonAesToken> { None }
     fn as_neon_sha3(self) -> Option<NeonSha3Token> { None }
     fn as_neon_crc(self) -> Option<NeonCrcToken> { None }
-    fn as_wasm128(self) -> Option<Simd128Token> { None }
+    fn as_wasm128(self) -> Option<Wasm128Token> { None }
     fn as_scalar(self) -> Option<ScalarToken> { None }
 }
 ```

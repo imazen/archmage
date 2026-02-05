@@ -23,7 +23,7 @@ pub use crate::tokens::{HasNeon, HasNeonAes, HasNeonSha3};
 
 // -- Tokens (all compile on all platforms; summon() returns None on wrong arch) --
 pub use crate::tokens::ScalarToken;
-pub use crate::tokens::Simd128Token;
+pub use crate::tokens::Wasm128Token;
 pub use crate::tokens::{Arm64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken};
 #[cfg(feature = "avx512")]
 pub use crate::tokens::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};

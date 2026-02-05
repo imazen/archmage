@@ -39,9 +39,9 @@ magetypes provides SIMD vector types with natural Rust operators. Each type wrap
 
 | Type | Elements | Width | Token |
 |------|----------|-------|-------|
-| `f32x4` | 4 × f32 | 128-bit | `Simd128Token` |
-| `f64x2` | 2 × f64 | 128-bit | `Simd128Token` |
-| `i32x4` | 4 × i32 | 128-bit | `Simd128Token` |
+| `f32x4` | 4 × f32 | 128-bit | `Wasm128Token` |
+| `f64x2` | 2 × f64 | 128-bit | `Wasm128Token` |
+| `i32x4` | 4 × i32 | 128-bit | `Wasm128Token` |
 | ... | ... | ... | ... |
 
 ## Basic Usage

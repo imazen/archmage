@@ -69,7 +69,7 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
         "NeonAesToken" => Some(&["neon", "aes"]),
         "NeonSha3Token" => Some(&["neon", "sha3"]),
         "NeonCrcToken" => Some(&["neon", "crc"]),
-        "Simd128Token" => Some(&["simd128"]),
+        "Wasm128Token" => Some(&["simd128"]),
         _ => None,
     }
 }
@@ -162,7 +162,7 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
         "NeonAesToken" => Some(&["neon", "aes"]),
         "NeonSha3Token" => Some(&["neon", "sha3"]),
         "NeonCrcToken" => Some(&["neon", "crc"]),
-        "Simd128Token" => Some(&["simd128"]),
+        "Wasm128Token" => Some(&["simd128"]),
 
         _ => None,
     }
@@ -182,7 +182,7 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
         "NeonAesToken" => Some("aarch64"),
         "NeonSha3Token" => Some("aarch64"),
         "NeonCrcToken" => Some("aarch64"),
-        "Simd128Token" => Some("wasm32"),
+        "Wasm128Token" => Some("wasm32"),
         _ => None,
     }
 }
@@ -204,7 +204,7 @@ pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
     "NeonAesToken",
     "NeonSha3Token",
     "NeonCrcToken",
-    "Simd128Token",
+    "Wasm128Token",
 ];
 
 /// All trait names that exist in the runtime crate.
@@ -278,9 +278,9 @@ pub(crate) const ARM_WIDTH_CONFIGS: &[WidthConfig] = &[WidthConfig {
 /// Width configuration for wasm32 targets.
 #[allow(dead_code)]
 pub(crate) const WASM_WIDTH_CONFIGS: &[WidthConfig] = &[WidthConfig {
-    name: "simd128",
-    namespace: "magetypes::simd::simd128",
-    token: "archmage::Simd128Token",
+    name: "wasm128",
+    namespace: "magetypes::simd::wasm128",
+    token: "archmage::Wasm128Token",
     feature: None,
     target_features: &["simd128"],
 }];

@@ -1,7 +1,7 @@
 //! Width dispatch code generation.
 //!
 //! Generates `magetypes/src/width.rs` with the `WidthDispatch` trait and
-//! implementations for X64V3Token, NeonToken, and Simd128Token.
+//! implementations for X64V3Token, NeonToken, and Wasm128Token.
 
 use indoc::formatdoc;
 use std::fmt::Write as FmtWrite;
@@ -152,12 +152,12 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
         poly_w512: None, // array fallback
     },
     TokenConfig {
-        token: "Simd128Token",
+        token: "Wasm128Token",
         cfg: "target_arch = \"wasm32\"",
         mod_name: "wasm_impl",
         native_width: 128,
         forge_token_for_128: None, // native
-        poly_w256: Some("crate::simd::polyfill::simd128"),
+        poly_w256: Some("crate::simd::polyfill::wasm128"),
         poly_w512: None, // array fallback
     },
 ];

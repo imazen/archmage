@@ -37,7 +37,7 @@ fn sum_neon(_token: archmage::NeonToken, data: &[f32]) -> f32 {
 
 // WASM implementation
 #[cfg(target_arch = "wasm32")]
-fn sum_wasm128(_token: archmage::Simd128Token, data: &[f32]) -> f32 {
+fn sum_wasm128(_token: archmage::Wasm128Token, data: &[f32]) -> f32 {
     data.iter().sum::<f32>() * 1.0
 }
 
@@ -149,7 +149,7 @@ mod scalar_fallback_tests {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn double_wasm128(_token: archmage::Simd128Token, x: i32) -> i32 {
+    fn double_wasm128(_token: archmage::Wasm128Token, x: i32) -> i32 {
         x * 2
     }
 
@@ -199,7 +199,7 @@ mod multi_arg_tests {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn dot_wasm128(_token: archmage::Simd128Token, a: &[f32], b: &[f32]) -> f32 {
+    fn dot_wasm128(_token: archmage::Wasm128Token, a: &[f32], b: &[f32]) -> f32 {
         a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
     }
 
@@ -245,7 +245,7 @@ mod return_type_tests {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn make_array_wasm128(_token: archmage::Simd128Token, val: f32) -> [f32; 4] {
+    fn make_array_wasm128(_token: archmage::Wasm128Token, val: f32) -> [f32; 4] {
         [val, val, val, val]
     }
 
@@ -288,7 +288,7 @@ mod alias_tests {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn add_wasm128(_token: archmage::Simd128Token, a: i32, b: i32) -> i32 {
+    fn add_wasm128(_token: archmage::Wasm128Token, a: i32, b: i32) -> i32 {
         a + b
     }
 

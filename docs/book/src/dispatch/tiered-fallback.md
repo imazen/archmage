@@ -24,7 +24,7 @@ AArch64:
   ScalarToken
 
 WASM:
-  Simd128Token
+  Wasm128Token
       ↓
   ScalarToken
 ```
@@ -60,7 +60,7 @@ pub fn process(data: &mut [f32]) -> f32 {
 
     // WASM path
     #[cfg(target_arch = "wasm32")]
-    if let Some(token) = Simd128Token::summon() {
+    if let Some(token) = Wasm128Token::summon() {
         return process_wasm(token, data);
     }
 

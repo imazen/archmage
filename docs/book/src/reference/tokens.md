@@ -142,16 +142,16 @@ if let Some(token) = NeonCrcToken::summon() {
 
 ## WASM Token
 
-### Simd128Token
+### Wasm128Token
 
 **Features**: WASM SIMD128
 
 **Requires**: Compile with `-Ctarget-feature=+simd128`
 
 ```rust
-use archmage::{Simd128Token, SimdToken};
+use archmage::{Wasm128Token, SimdToken};
 
-if let Some(token) = Simd128Token::summon() {
+if let Some(token) = Wasm128Token::summon() {
     // WASM SIMD128 operations
 }
 ```

@@ -3915,13 +3915,13 @@ pub mod neon {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub mod simd128 {
+pub mod wasm128 {
     //! Polyfilled 256-bit types using WASM SIMD128 (128-bit) operations.
 
     use crate::simd::generated::wasm::w128::{
         f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
     };
-    use archmage::Simd128Token;
+    use archmage::Wasm128Token;
     use core::ops::{Add, Div, Mul, Neg, Sub};
 
     /// Emulated 8-wide f32 vector using two f32x4 vectors.
@@ -3936,7 +3936,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[f32; 8]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[f32; 8]) -> Self {
             let lo_arr: &[f32; 4] = data[0..4].try_into().unwrap();
             let hi_arr: &[f32; 4] = data[4..8].try_into().unwrap();
             Self {
@@ -3947,7 +3947,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: f32) -> Self {
+        pub fn splat(token: Wasm128Token, v: f32) -> Self {
             Self {
                 lo: f32x4::splat(token, v),
                 hi: f32x4::splat(token, v),
@@ -3956,7 +3956,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: f32x4::zero(token),
                 hi: f32x4::zero(token),
@@ -3965,7 +3965,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [f32; 8]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [f32; 8]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -4221,7 +4221,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[f64; 4]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[f64; 4]) -> Self {
             let lo_arr: &[f64; 2] = data[0..2].try_into().unwrap();
             let hi_arr: &[f64; 2] = data[2..4].try_into().unwrap();
             Self {
@@ -4232,7 +4232,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: f64) -> Self {
+        pub fn splat(token: Wasm128Token, v: f64) -> Self {
             Self {
                 lo: f64x2::splat(token, v),
                 hi: f64x2::splat(token, v),
@@ -4241,7 +4241,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: f64x2::zero(token),
                 hi: f64x2::zero(token),
@@ -4250,7 +4250,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [f64; 4]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [f64; 4]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -4506,7 +4506,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[i8; 32]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[i8; 32]) -> Self {
             let lo_arr: &[i8; 16] = data[0..16].try_into().unwrap();
             let hi_arr: &[i8; 16] = data[16..32].try_into().unwrap();
             Self {
@@ -4517,7 +4517,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: i8) -> Self {
+        pub fn splat(token: Wasm128Token, v: i8) -> Self {
             Self {
                 lo: i8x16::splat(token, v),
                 hi: i8x16::splat(token, v),
@@ -4526,7 +4526,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: i8x16::zero(token),
                 hi: i8x16::zero(token),
@@ -4535,7 +4535,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [i8; 32]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [i8; 32]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -4667,7 +4667,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[u8; 32]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[u8; 32]) -> Self {
             let lo_arr: &[u8; 16] = data[0..16].try_into().unwrap();
             let hi_arr: &[u8; 16] = data[16..32].try_into().unwrap();
             Self {
@@ -4678,7 +4678,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: u8) -> Self {
+        pub fn splat(token: Wasm128Token, v: u8) -> Self {
             Self {
                 lo: u8x16::splat(token, v),
                 hi: u8x16::splat(token, v),
@@ -4687,7 +4687,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: u8x16::zero(token),
                 hi: u8x16::zero(token),
@@ -4696,7 +4696,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [u8; 32]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [u8; 32]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -4819,7 +4819,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[i16; 16]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[i16; 16]) -> Self {
             let lo_arr: &[i16; 8] = data[0..8].try_into().unwrap();
             let hi_arr: &[i16; 8] = data[8..16].try_into().unwrap();
             Self {
@@ -4830,7 +4830,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: i16) -> Self {
+        pub fn splat(token: Wasm128Token, v: i16) -> Self {
             Self {
                 lo: i16x8::splat(token, v),
                 hi: i16x8::splat(token, v),
@@ -4839,7 +4839,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: i16x8::zero(token),
                 hi: i16x8::zero(token),
@@ -4848,7 +4848,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [i16; 16]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [i16; 16]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -4998,7 +4998,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[u16; 16]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[u16; 16]) -> Self {
             let lo_arr: &[u16; 8] = data[0..8].try_into().unwrap();
             let hi_arr: &[u16; 8] = data[8..16].try_into().unwrap();
             Self {
@@ -5009,7 +5009,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: u16) -> Self {
+        pub fn splat(token: Wasm128Token, v: u16) -> Self {
             Self {
                 lo: u16x8::splat(token, v),
                 hi: u16x8::splat(token, v),
@@ -5018,7 +5018,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: u16x8::zero(token),
                 hi: u16x8::zero(token),
@@ -5027,7 +5027,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [u16; 16]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [u16; 16]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -5168,7 +5168,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[i32; 8]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[i32; 8]) -> Self {
             let lo_arr: &[i32; 4] = data[0..4].try_into().unwrap();
             let hi_arr: &[i32; 4] = data[4..8].try_into().unwrap();
             Self {
@@ -5179,7 +5179,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: i32) -> Self {
+        pub fn splat(token: Wasm128Token, v: i32) -> Self {
             Self {
                 lo: i32x4::splat(token, v),
                 hi: i32x4::splat(token, v),
@@ -5188,7 +5188,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: i32x4::zero(token),
                 hi: i32x4::zero(token),
@@ -5197,7 +5197,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [i32; 8]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [i32; 8]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -5367,7 +5367,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[u32; 8]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[u32; 8]) -> Self {
             let lo_arr: &[u32; 4] = data[0..4].try_into().unwrap();
             let hi_arr: &[u32; 4] = data[4..8].try_into().unwrap();
             Self {
@@ -5378,7 +5378,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: u32) -> Self {
+        pub fn splat(token: Wasm128Token, v: u32) -> Self {
             Self {
                 lo: u32x4::splat(token, v),
                 hi: u32x4::splat(token, v),
@@ -5387,7 +5387,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: u32x4::zero(token),
                 hi: u32x4::zero(token),
@@ -5396,7 +5396,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [u32; 8]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [u32; 8]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -5557,7 +5557,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[i64; 4]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[i64; 4]) -> Self {
             let lo_arr: &[i64; 2] = data[0..2].try_into().unwrap();
             let hi_arr: &[i64; 2] = data[2..4].try_into().unwrap();
             Self {
@@ -5568,7 +5568,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: i64) -> Self {
+        pub fn splat(token: Wasm128Token, v: i64) -> Self {
             Self {
                 lo: i64x2::splat(token, v),
                 hi: i64x2::splat(token, v),
@@ -5577,7 +5577,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: i64x2::zero(token),
                 hi: i64x2::zero(token),
@@ -5586,7 +5586,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [i64; 4]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [i64; 4]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -5705,7 +5705,7 @@ pub mod simd128 {
 
         /// Load from array (token-gated)
         #[inline(always)]
-        pub fn load(token: Simd128Token, data: &[u64; 4]) -> Self {
+        pub fn load(token: Wasm128Token, data: &[u64; 4]) -> Self {
             let lo_arr: &[u64; 2] = data[0..2].try_into().unwrap();
             let hi_arr: &[u64; 2] = data[2..4].try_into().unwrap();
             Self {
@@ -5716,7 +5716,7 @@ pub mod simd128 {
 
         /// Broadcast scalar to all lanes (token-gated)
         #[inline(always)]
-        pub fn splat(token: Simd128Token, v: u64) -> Self {
+        pub fn splat(token: Wasm128Token, v: u64) -> Self {
             Self {
                 lo: u64x2::splat(token, v),
                 hi: u64x2::splat(token, v),
@@ -5725,7 +5725,7 @@ pub mod simd128 {
 
         /// Zero vector (token-gated)
         #[inline(always)]
-        pub fn zero(token: Simd128Token) -> Self {
+        pub fn zero(token: Wasm128Token) -> Self {
             Self {
                 lo: u64x2::zero(token),
                 hi: u64x2::zero(token),
@@ -5734,7 +5734,7 @@ pub mod simd128 {
 
         /// Create from array (token-gated)
         #[inline(always)]
-        pub fn from_array(token: Simd128Token, arr: [u64; 4]) -> Self {
+        pub fn from_array(token: Wasm128Token, arr: [u64; 4]) -> Self {
             Self::load(token, &arr)
         }
 
@@ -5865,7 +5865,7 @@ pub mod simd128 {
     pub const LANES_8: usize = 32;
 
     /// Token type for this polyfill level
-    pub type Token = archmage::Simd128Token;
+    pub type Token = archmage::Wasm128Token;
 }
 
 #[cfg(target_arch = "x86_64")]

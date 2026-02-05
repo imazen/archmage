@@ -90,7 +90,7 @@ const PLATFORMS: &[PlatformConfig] = &[
         mod_name: "simd128",
         doc: "Polyfilled 256-bit types using WASM SIMD128 (128-bit) operations.",
         cfg: "target_arch = \"wasm32\"",
-        token: "Simd128Token",
+        token: "Wasm128Token",
         w128_import: "crate::simd::generated::wasm::w128",
     },
 ];

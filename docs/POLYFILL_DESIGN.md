@@ -11,7 +11,7 @@ This document outlines the architecture for cross-platform SIMD polyfills in arc
 | x86_64 AVX2+FMA | `X64V3Token` | ✅ f32x8, i32x8, etc. |
 | x86_64 AVX-512 | `X64V4Token` | ✅ f32x16, i32x16, etc. |
 | AArch64 NEON | `NeonToken` | ❌ Not yet |
-| WebAssembly SIMD128 | `Simd128Token` | ❌ Not yet |
+| WebAssembly SIMD128 | `Wasm128Token` | ❌ Not yet |
 
 ### Current Polyfill (hand-written)
 - `polyfill::sse::f32x8` - emulates AVX2 f32x8 using two SSE f32x4
@@ -144,7 +144,7 @@ pub struct f32x8 {
 
 ### Token (already exists)
 ```rust
-Simd128Token // 128-bit SIMD, always compile-time known
+Wasm128Token // 128-bit SIMD, always compile-time known
 ```
 
 ### WASM Type Generation

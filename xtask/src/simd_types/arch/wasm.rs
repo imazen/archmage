@@ -51,7 +51,7 @@ impl Arch for Wasm {
     }
 
     fn required_token(_width: SimdWidth, _needs_int_ops: bool) -> &'static str {
-        "Simd128Token"
+        "Wasm128Token"
     }
 
     fn required_feature(_width: SimdWidth) -> Option<&'static str> {

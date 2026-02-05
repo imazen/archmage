@@ -242,9 +242,9 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
-    /// Try to cast to Simd128Token.
+    /// Try to cast to Wasm128Token.
     #[inline(always)]
-    fn as_wasm128(self) -> Option<Simd128Token> {
+    fn as_wasm128(self) -> Option<Wasm128Token> {
         None
     }
 
@@ -338,10 +338,10 @@ impl IntoConcreteToken for NeonCrcToken {
     }
 }
 
-// Implement IntoConcreteToken for Simd128Token
-impl IntoConcreteToken for Simd128Token {
+// Implement IntoConcreteToken for Wasm128Token
+impl IntoConcreteToken for Wasm128Token {
     #[inline(always)]
-    fn as_wasm128(self) -> Option<Simd128Token> {
+    fn as_wasm128(self) -> Option<Wasm128Token> {
         Some(self)
     }
 }

@@ -26,7 +26,7 @@ Tokens are the core of archmage's safety model. They're zero-sized proof types t
 
 | Token | Features |
 |-------|----------|
-| `Simd128Token` | WASM SIMD128 |
+| `Wasm128Token` | WASM SIMD128 |
 
 ## Summoning Tokens
 

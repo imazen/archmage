@@ -333,7 +333,7 @@ When showing examples:
 | ❌ Banned | ✅ Use instead |
 |-----------|----------------|
 | `F32Vec`, `I32Vec`, etc. | `f32x8`, `f32x4`, `i32x8`, `i32x4` |
-| `RecommendedToken` | `Desktop64`, `Arm64`, `Simd128Token` |
+| `RecommendedToken` | `Desktop64`, `Arm64`, `Wasm128Token` |
 | `LANES` (outside `#[magetypes]`) | Explicit: `8`, `4`, or width in type name |
 
 **Why:** These aliases pretend platforms are interchangeable. They're not. An 8-wide AVX2 algorithm is fundamentally different from a 4-wide NEON algorithm. Hiding the width breeds bugs and confusion.
@@ -398,7 +398,7 @@ This enables single-crate cross-platform SIMD without `#[cfg]` everywhere.
 | x86-64 AVX2 | `-Ctarget-cpu=haswell` | `Desktop64::summon()` compiles away |
 | x86-64 AVX-512 | `-Ctarget-cpu=skylake-avx512` | `Server64::summon()` compiles away |
 | AArch64 | (default target) | `Arm64::summon()` always succeeds (NEON is baseline) |
-| WASM | `--target wasm32-unknown-unknown -Ctarget-feature=+simd128` | `Simd128Token::summon()` compiles away |
+| WASM | `--target wasm32-unknown-unknown -Ctarget-feature=+simd128` | `Wasm128Token::summon()` compiles away |
 
 **For ARM binaries:** NEON is mandatory on AArch64, so `Arm64::summon()` always returns `Some`. If you're distributing ARM binaries, there's no runtime dispatch needed for basic NEON—just use the token directly. The `summon()` call is still good practice for code clarity and cross-compilation safety.
 

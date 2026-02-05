@@ -114,7 +114,7 @@ pub use tokens::{
     // Scalar fallback (always available)
     ScalarToken,
     // WASM tokens
-    Simd128Token,
+    Wasm128Token,
     X64V2Token,
     X64V3Token,
 };

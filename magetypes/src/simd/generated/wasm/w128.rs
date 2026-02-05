@@ -17,19 +17,19 @@ impl f32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[f32; 4]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[f32; 4]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: f32) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: f32) -> Self {
         Self(f32x4_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(f32x4_splat(0.0f32))
     }
 
@@ -37,7 +37,7 @@ impl f32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [f32; 4]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [f32; 4]) -> Self {
         // SAFETY: [f32; 4] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -92,7 +92,7 @@ impl f32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[f32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[f32]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -112,7 +112,7 @@ impl f32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [f32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [f32]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -147,7 +147,7 @@ impl f32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -156,7 +156,7 @@ impl f32x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -1295,19 +1295,19 @@ impl f64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[f64; 2]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[f64; 2]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: f64) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: f64) -> Self {
         Self(f64x2_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(f64x2_splat(0.0f64))
     }
 
@@ -1315,7 +1315,7 @@ impl f64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [f64; 2]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [f64; 2]) -> Self {
         // SAFETY: [f64; 2] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1370,7 +1370,7 @@ impl f64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[f64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[f64]) -> Option<&[Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -1390,7 +1390,7 @@ impl f64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [f64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [f64]) -> Option<&mut [Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -1425,7 +1425,7 @@ impl f64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -1434,7 +1434,7 @@ impl f64x2 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -1859,19 +1859,19 @@ impl i8x16 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[i8; 16]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[i8; 16]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: i8) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: i8) -> Self {
         Self(i8x16_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(i8x16_splat(0i8))
     }
 
@@ -1879,7 +1879,7 @@ impl i8x16 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [i8; 16]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [i8; 16]) -> Self {
         // SAFETY: [i8; 16] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -1934,7 +1934,7 @@ impl i8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[i8]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[i8]) -> Option<&[Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -1954,7 +1954,7 @@ impl i8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [i8]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [i8]) -> Option<&mut [Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -1989,7 +1989,7 @@ impl i8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -1998,7 +1998,7 @@ impl i8x16 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -2285,19 +2285,19 @@ impl u8x16 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[u8; 16]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[u8; 16]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: u8) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: u8) -> Self {
         Self(u8x16_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(u8x16_splat(0u8))
     }
 
@@ -2305,7 +2305,7 @@ impl u8x16 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [u8; 16]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2360,7 +2360,7 @@ impl u8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[u8]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[u8]) -> Option<&[Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -2380,7 +2380,7 @@ impl u8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [u8]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [u8]) -> Option<&mut [Self]> {
         if slice.len() % 16 != 0 {
             return None;
         }
@@ -2415,7 +2415,7 @@ impl u8x16 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -2424,7 +2424,7 @@ impl u8x16 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -2727,19 +2727,19 @@ impl i16x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[i16; 8]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[i16; 8]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: i16) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: i16) -> Self {
         Self(i16x8_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(i16x8_splat(0i16))
     }
 
@@ -2747,7 +2747,7 @@ impl i16x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [i16; 8]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [i16; 8]) -> Self {
         // SAFETY: [i16; 8] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -2802,7 +2802,7 @@ impl i16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[i16]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[i16]) -> Option<&[Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -2822,7 +2822,7 @@ impl i16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [i16]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [i16]) -> Option<&mut [Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -2857,7 +2857,7 @@ impl i16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -2866,7 +2866,7 @@ impl i16x8 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -3216,19 +3216,19 @@ impl u16x8 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[u16; 8]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[u16; 8]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: u16) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: u16) -> Self {
         Self(u16x8_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(u16x8_splat(0u16))
     }
 
@@ -3236,7 +3236,7 @@ impl u16x8 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [u16; 8]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [u16; 8]) -> Self {
         // SAFETY: [u16; 8] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3291,7 +3291,7 @@ impl u16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[u16]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[u16]) -> Option<&[Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -3311,7 +3311,7 @@ impl u16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [u16]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [u16]) -> Option<&mut [Self]> {
         if slice.len() % 8 != 0 {
             return None;
         }
@@ -3346,7 +3346,7 @@ impl u16x8 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -3355,7 +3355,7 @@ impl u16x8 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -3660,19 +3660,19 @@ impl i32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[i32; 4]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[i32; 4]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: i32) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: i32) -> Self {
         Self(i32x4_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(i32x4_splat(0i32))
     }
 
@@ -3680,7 +3680,7 @@ impl i32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [i32; 4]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [i32; 4]) -> Self {
         // SAFETY: [i32; 4] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -3735,7 +3735,7 @@ impl i32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[i32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[i32]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -3755,7 +3755,7 @@ impl i32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [i32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [i32]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -3790,7 +3790,7 @@ impl i32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -3799,7 +3799,7 @@ impl i32x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -4153,19 +4153,19 @@ impl u32x4 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[u32; 4]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[u32; 4]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: u32) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: u32) -> Self {
         Self(u32x4_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(u32x4_splat(0u32))
     }
 
@@ -4173,7 +4173,7 @@ impl u32x4 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [u32; 4]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [u32; 4]) -> Self {
         // SAFETY: [u32; 4] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4228,7 +4228,7 @@ impl u32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[u32]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[u32]) -> Option<&[Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -4248,7 +4248,7 @@ impl u32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [u32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [u32]) -> Option<&mut [Self]> {
         if slice.len() % 4 != 0 {
             return None;
         }
@@ -4283,7 +4283,7 @@ impl u32x4 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -4292,7 +4292,7 @@ impl u32x4 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -4588,19 +4588,19 @@ impl i64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[i64; 2]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[i64; 2]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: i64) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: i64) -> Self {
         Self(i64x2_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(i64x2_splat(0i64))
     }
 
@@ -4608,7 +4608,7 @@ impl i64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [i64; 2]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [i64; 2]) -> Self {
         // SAFETY: [i64; 2] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -4663,7 +4663,7 @@ impl i64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[i64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[i64]) -> Option<&[Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -4683,7 +4683,7 @@ impl i64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [i64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [i64]) -> Option<&mut [Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -4718,7 +4718,7 @@ impl i64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -4727,7 +4727,7 @@ impl i64x2 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }
@@ -5041,19 +5041,19 @@ impl u64x2 {
 
     /// Load from array (token-gated)
     #[inline(always)]
-    pub fn load(_: archmage::Simd128Token, data: &[u64; 2]) -> Self {
+    pub fn load(_: archmage::Wasm128Token, data: &[u64; 2]) -> Self {
         Self(unsafe { v128_load(data.as_ptr() as *const v128) })
     }
 
     /// Broadcast scalar to all lanes (token-gated)
     #[inline(always)]
-    pub fn splat(_: archmage::Simd128Token, v: u64) -> Self {
+    pub fn splat(_: archmage::Wasm128Token, v: u64) -> Self {
         Self(u64x2_splat(v))
     }
 
     /// Zero vector (token-gated)
     #[inline(always)]
-    pub fn zero(_: archmage::Simd128Token) -> Self {
+    pub fn zero(_: archmage::Wasm128Token) -> Self {
         Self(u64x2_splat(0u64))
     }
 
@@ -5061,7 +5061,7 @@ impl u64x2 {
     ///
     /// This is a zero-cost transmute, not a memory load.
     #[inline(always)]
-    pub fn from_array(_: archmage::Simd128Token, arr: [u64; 2]) -> Self {
+    pub fn from_array(_: archmage::Wasm128Token, arr: [u64; 2]) -> Self {
         // SAFETY: [u64; 2] and v128 have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
     }
@@ -5116,7 +5116,7 @@ impl u64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice`.
     #[inline(always)]
-    pub fn cast_slice(_: archmage::Simd128Token, slice: &[u64]) -> Option<&[Self]> {
+    pub fn cast_slice(_: archmage::Wasm128Token, slice: &[u64]) -> Option<&[Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -5136,7 +5136,7 @@ impl u64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::cast_slice_mut`.
     #[inline(always)]
-    pub fn cast_slice_mut(_: archmage::Simd128Token, slice: &mut [u64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(_: archmage::Wasm128Token, slice: &mut [u64]) -> Option<&mut [Self]> {
         if slice.len() % 2 != 0 {
             return None;
         }
@@ -5171,7 +5171,7 @@ impl u64x2 {
     ///
     /// This is a safe, token-gated replacement for `bytemuck::from_bytes`.
     #[inline(always)]
-    pub fn from_bytes(_: archmage::Simd128Token, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes(_: archmage::Wasm128Token, bytes: &[u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(*bytes) })
     }
@@ -5180,7 +5180,7 @@ impl u64x2 {
     ///
     /// This is a zero-cost transmute from an owned byte array.
     #[inline(always)]
-    pub fn from_bytes_owned(_: archmage::Simd128Token, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned(_: archmage::Wasm128Token, bytes: [u8; 16]) -> Self {
         // SAFETY: [u8; 16] and Self have identical size
         Self(unsafe { core::mem::transmute(bytes) })
     }

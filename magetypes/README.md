@@ -55,11 +55,11 @@ Build with `RUSTFLAGS="-C target-feature=+simd128"` for WASM targets.
 
 ```rust
 // WASM example - no runtime detection needed
-use archmage::{Simd128Token, SimdToken};
+use archmage::{Wasm128Token, SimdToken};
 use magetypes::simd::f32x4;
 
 // When compiled with +simd128, token is always available
-let token = Simd128Token::summon().unwrap();
+let token = Wasm128Token::summon().unwrap();
 let a = f32x4::splat(token, 1.0);
 let b = f32x4::splat(token, 2.0);
 let c = a + b;
@@ -92,7 +92,7 @@ let v = f32x8::from_bytes(token, &bytes);
 |----------|--------|-------|--------------|
 | x86-64 | **Full** | `X64V3Token`, `X64V4Token` | 128, 256, 512-bit |
 | AArch64 | **Full** | `NeonToken` | 128-bit |
-| WASM | **Full** | `Simd128Token` | 128-bit |
+| WASM | **Full** | `Wasm128Token` | 128-bit |
 
 ## Features
 

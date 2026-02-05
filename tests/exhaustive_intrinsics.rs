@@ -39,14 +39,14 @@ fn test_cross_platform_token_types_exist() {
     assert_eq!(core::mem::size_of::<NeonCrcToken>(), 0);
 
     // WASM token - should compile everywhere
-    use archmage::Simd128Token;
-    assert_eq!(core::mem::size_of::<Simd128Token>(), 0);
+    use archmage::Wasm128Token;
+    assert_eq!(core::mem::size_of::<Wasm128Token>(), 0);
 }
 
 /// Test that summon() works correctly for the current platform.
 #[test]
 fn test_summon_behavior() {
-    use archmage::{Arm64, NeonToken, Simd128Token};
+    use archmage::{Arm64, NeonToken, Wasm128Token};
 
     // On x86_64, Desktop64/Avx512Token may succeed
     #[cfg(target_arch = "x86_64")]
@@ -60,7 +60,7 @@ fn test_summon_behavior() {
         assert!(NeonToken::summon().is_none(), "NEON unavailable on x86");
         assert!(Arm64::summon().is_none(), "Arm64 unavailable on x86");
         assert!(
-            Simd128Token::summon().is_none(),
+            Wasm128Token::summon().is_none(),
             "WASM SIMD unavailable on x86"
         );
     }
@@ -83,7 +83,7 @@ fn test_summon_behavior() {
             "Avx512Token unavailable on ARM"
         );
         assert!(
-            Simd128Token::summon().is_none(),
+            Wasm128Token::summon().is_none(),
             "WASM SIMD unavailable on ARM"
         );
     }
@@ -174,7 +174,7 @@ fn test_cross_platform_dispatch_pattern() {
 fn test_token_names() {
     use archmage::{
         Arm64, Avx2FmaToken, Desktop64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken,
-        Simd128Token, X64V2Token, X64V3Token,
+        Wasm128Token, X64V2Token, X64V3Token,
     };
 
     // x86 tier tokens
@@ -203,7 +203,7 @@ fn test_token_names() {
     assert_eq!(NeonCrcToken::NAME, "NEON+CRC");
 
     // WASM tokens
-    assert_eq!(Simd128Token::NAME, "SIMD128");
+    assert_eq!(Wasm128Token::NAME, "SIMD128");
 }
 
 /// Print all token names for debugging.
@@ -233,5 +233,5 @@ fn print_all_token_names() {
     println!("    NeonSha3Token:     {}", archmage::NeonSha3Token::NAME);
     println!("    NeonCrcToken:      {}", archmage::NeonCrcToken::NAME);
     println!("  WASM tokens:");
-    println!("    Simd128Token:      {}", archmage::Simd128Token::NAME);
+    println!("    Wasm128Token:      {}", archmage::Wasm128Token::NAME);
 }

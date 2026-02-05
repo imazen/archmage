@@ -79,7 +79,7 @@ fn main() {
 |----------|--------|----------------|
 | x86-64 | `X64V2Token`, `X64V3Token`/`Desktop64`, `X64V4Token`/`Server64` | 128-512 bit |
 | AArch64 | `NeonToken`/`Arm64`, `NeonAesToken`, `NeonSha3Token` | 128 bit |
-| WASM | `Simd128Token` | 128 bit |
+| WASM | `Wasm128Token` | 128 bit |
 
 ## Next Steps
 

@@ -51,7 +51,7 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
 | `X64V3Token` / `Desktop64` | + avx, avx2, fma, bmi1, bmi2, f16c |
 | `X64V4Token` / `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl |
 | `NeonToken` / `Arm64` | neon |
-| `Simd128Token` | simd128 |
+| `Wasm128Token` | simd128 |
 
 ## Nesting #[arcane] Functions
 

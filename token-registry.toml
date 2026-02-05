@@ -151,12 +151,12 @@ doc = "Proof that NEON + CRC is available.\n\nCRC32 extension is common on most 
 # ──── WASM ────
 
 [[token]]
-name = "Simd128Token"
+name = "Wasm128Token"
 arch = "wasm"
 features = ["simd128"]
 traits = ["Has128BitSimd"]
-display_name = "SIMD128"
-short_name = "simd128"
+display_name = "WASM SIMD128"
+short_name = "wasm128"
 doc = "Proof that WASM SIMD128 is available."
 
 # ──── Traits ────
@@ -241,10 +241,10 @@ width = 128
 token = "NeonToken"
 
 [[width_namespace]]
-name = "simd128"
+name = "wasm128"
 arch = "wasm"
 width = 128
-token = "Simd128Token"
+token = "Wasm128Token"
 
 # ──── Magetypes File-to-Token Validation Mappings ────
 # All generated files are under generated/ subfolder
@@ -271,7 +271,7 @@ arch = "arm"
 
 [[magetypes_file]]
 rel_path = "generated/wasm/w128.rs"
-token = "Simd128Token"
+token = "Wasm128Token"
 arch = "wasm"
 
 # ──── Polyfill Platforms ────
@@ -290,9 +290,9 @@ token = "NeonToken"
 w128_import = "crate::simd::generated::arm::w128"
 
 [[polyfill_w256]]
-mod_name = "simd128"
+mod_name = "wasm128"
 cfg = 'target_arch = "wasm32"'
-token = "Simd128Token"
+token = "Wasm128Token"
 w128_import = "crate::simd::generated::wasm::w128"
 
 [[polyfill_w512]]

@@ -46,7 +46,7 @@ SVE/SVE2 tokens are prohibited — SVE hasn't shipped in consumer hardware.
 
 | Token | Features | Notes |
 |-------|----------|-------|
-| `Simd128Token` | simd128 | Compile-time only (`#[cfg(target_feature = "simd128")]`) |
+| `Wasm128Token` | simd128 | Compile-time only (`#[cfg(target_feature = "simd128")]`) |
 
 ### 1.3 Token Hierarchy
 
@@ -100,7 +100,7 @@ HasNeonSha3 → HasNeon
 | NeonAesToken | x | | | | | x | x | |
 | NeonSha3Token | x | | | | | x | | x |
 | NeonCrcToken | x | | | | | x | | |
-| Simd128Token | x | | | | | | | |
+| Wasm128Token | x | | | | | | | |
 
 ### 1.5 Cross-Platform Stubs
 

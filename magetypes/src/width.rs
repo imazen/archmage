@@ -1334,11 +1334,11 @@ mod arm_impl {
 #[cfg(target_arch = "wasm32")]
 mod wasm_impl {
     use super::WidthDispatch;
-    use archmage::{Simd128Token, SimdToken};
+    use archmage::{Wasm128Token, SimdToken};
 
     use crate::simd::{f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2};
 
-    impl WidthDispatch for Simd128Token {
+    impl WidthDispatch for Wasm128Token {
         // 128-bit types
         type F32x4 = f32x4;
         type F64x2 = f64x2;
@@ -1352,16 +1352,16 @@ mod wasm_impl {
         type U64x2 = u64x2;
 
         // 256-bit types
-        type F32x8 = crate::simd::polyfill::simd128::f32x8;
-        type F64x4 = crate::simd::polyfill::simd128::f64x4;
-        type I8x32 = crate::simd::polyfill::simd128::i8x32;
-        type U8x32 = crate::simd::polyfill::simd128::u8x32;
-        type I16x16 = crate::simd::polyfill::simd128::i16x16;
-        type U16x16 = crate::simd::polyfill::simd128::u16x16;
-        type I32x8 = crate::simd::polyfill::simd128::i32x8;
-        type U32x8 = crate::simd::polyfill::simd128::u32x8;
-        type I64x4 = crate::simd::polyfill::simd128::i64x4;
-        type U64x4 = crate::simd::polyfill::simd128::u64x4;
+        type F32x8 = crate::simd::polyfill::wasm128::f32x8;
+        type F64x4 = crate::simd::polyfill::wasm128::f64x4;
+        type I8x32 = crate::simd::polyfill::wasm128::i8x32;
+        type U8x32 = crate::simd::polyfill::wasm128::u8x32;
+        type I16x16 = crate::simd::polyfill::wasm128::i16x16;
+        type U16x16 = crate::simd::polyfill::wasm128::u16x16;
+        type I32x8 = crate::simd::polyfill::wasm128::i32x8;
+        type U32x8 = crate::simd::polyfill::wasm128::u32x8;
+        type I64x4 = crate::simd::polyfill::wasm128::i64x4;
+        type U64x4 = crate::simd::polyfill::wasm128::u64x4;
 
         // 512-bit types
         type F32x16 = [f32x4; 4];
@@ -1517,148 +1517,148 @@ mod wasm_impl {
         }
         #[inline(always)]
         fn f32x8_splat(self, v: f32) -> Self::F32x8 {
-            crate::simd::polyfill::simd128::f32x8::splat(self, v)
+            crate::simd::polyfill::wasm128::f32x8::splat(self, v)
         }
 
         #[inline(always)]
         fn f32x8_zero(self) -> Self::F32x8 {
-            crate::simd::polyfill::simd128::f32x8::zero(self)
+            crate::simd::polyfill::wasm128::f32x8::zero(self)
         }
 
         #[inline(always)]
         fn f32x8_load(self, data: &[f32; 8]) -> Self::F32x8 {
-            crate::simd::polyfill::simd128::f32x8::load(self, data)
+            crate::simd::polyfill::wasm128::f32x8::load(self, data)
         }
         #[inline(always)]
         fn f64x4_splat(self, v: f64) -> Self::F64x4 {
-            crate::simd::polyfill::simd128::f64x4::splat(self, v)
+            crate::simd::polyfill::wasm128::f64x4::splat(self, v)
         }
 
         #[inline(always)]
         fn f64x4_zero(self) -> Self::F64x4 {
-            crate::simd::polyfill::simd128::f64x4::zero(self)
+            crate::simd::polyfill::wasm128::f64x4::zero(self)
         }
 
         #[inline(always)]
         fn f64x4_load(self, data: &[f64; 4]) -> Self::F64x4 {
-            crate::simd::polyfill::simd128::f64x4::load(self, data)
+            crate::simd::polyfill::wasm128::f64x4::load(self, data)
         }
         #[inline(always)]
         fn i8x32_splat(self, v: i8) -> Self::I8x32 {
-            crate::simd::polyfill::simd128::i8x32::splat(self, v)
+            crate::simd::polyfill::wasm128::i8x32::splat(self, v)
         }
 
         #[inline(always)]
         fn i8x32_zero(self) -> Self::I8x32 {
-            crate::simd::polyfill::simd128::i8x32::zero(self)
+            crate::simd::polyfill::wasm128::i8x32::zero(self)
         }
 
         #[inline(always)]
         fn i8x32_load(self, data: &[i8; 32]) -> Self::I8x32 {
-            crate::simd::polyfill::simd128::i8x32::load(self, data)
+            crate::simd::polyfill::wasm128::i8x32::load(self, data)
         }
         #[inline(always)]
         fn u8x32_splat(self, v: u8) -> Self::U8x32 {
-            crate::simd::polyfill::simd128::u8x32::splat(self, v)
+            crate::simd::polyfill::wasm128::u8x32::splat(self, v)
         }
 
         #[inline(always)]
         fn u8x32_zero(self) -> Self::U8x32 {
-            crate::simd::polyfill::simd128::u8x32::zero(self)
+            crate::simd::polyfill::wasm128::u8x32::zero(self)
         }
 
         #[inline(always)]
         fn u8x32_load(self, data: &[u8; 32]) -> Self::U8x32 {
-            crate::simd::polyfill::simd128::u8x32::load(self, data)
+            crate::simd::polyfill::wasm128::u8x32::load(self, data)
         }
         #[inline(always)]
         fn i16x16_splat(self, v: i16) -> Self::I16x16 {
-            crate::simd::polyfill::simd128::i16x16::splat(self, v)
+            crate::simd::polyfill::wasm128::i16x16::splat(self, v)
         }
 
         #[inline(always)]
         fn i16x16_zero(self) -> Self::I16x16 {
-            crate::simd::polyfill::simd128::i16x16::zero(self)
+            crate::simd::polyfill::wasm128::i16x16::zero(self)
         }
 
         #[inline(always)]
         fn i16x16_load(self, data: &[i16; 16]) -> Self::I16x16 {
-            crate::simd::polyfill::simd128::i16x16::load(self, data)
+            crate::simd::polyfill::wasm128::i16x16::load(self, data)
         }
         #[inline(always)]
         fn u16x16_splat(self, v: u16) -> Self::U16x16 {
-            crate::simd::polyfill::simd128::u16x16::splat(self, v)
+            crate::simd::polyfill::wasm128::u16x16::splat(self, v)
         }
 
         #[inline(always)]
         fn u16x16_zero(self) -> Self::U16x16 {
-            crate::simd::polyfill::simd128::u16x16::zero(self)
+            crate::simd::polyfill::wasm128::u16x16::zero(self)
         }
 
         #[inline(always)]
         fn u16x16_load(self, data: &[u16; 16]) -> Self::U16x16 {
-            crate::simd::polyfill::simd128::u16x16::load(self, data)
+            crate::simd::polyfill::wasm128::u16x16::load(self, data)
         }
         #[inline(always)]
         fn i32x8_splat(self, v: i32) -> Self::I32x8 {
-            crate::simd::polyfill::simd128::i32x8::splat(self, v)
+            crate::simd::polyfill::wasm128::i32x8::splat(self, v)
         }
 
         #[inline(always)]
         fn i32x8_zero(self) -> Self::I32x8 {
-            crate::simd::polyfill::simd128::i32x8::zero(self)
+            crate::simd::polyfill::wasm128::i32x8::zero(self)
         }
 
         #[inline(always)]
         fn i32x8_load(self, data: &[i32; 8]) -> Self::I32x8 {
-            crate::simd::polyfill::simd128::i32x8::load(self, data)
+            crate::simd::polyfill::wasm128::i32x8::load(self, data)
         }
         #[inline(always)]
         fn u32x8_splat(self, v: u32) -> Self::U32x8 {
-            crate::simd::polyfill::simd128::u32x8::splat(self, v)
+            crate::simd::polyfill::wasm128::u32x8::splat(self, v)
         }
 
         #[inline(always)]
         fn u32x8_zero(self) -> Self::U32x8 {
-            crate::simd::polyfill::simd128::u32x8::zero(self)
+            crate::simd::polyfill::wasm128::u32x8::zero(self)
         }
 
         #[inline(always)]
         fn u32x8_load(self, data: &[u32; 8]) -> Self::U32x8 {
-            crate::simd::polyfill::simd128::u32x8::load(self, data)
+            crate::simd::polyfill::wasm128::u32x8::load(self, data)
         }
         #[inline(always)]
         fn i64x4_splat(self, v: i64) -> Self::I64x4 {
-            crate::simd::polyfill::simd128::i64x4::splat(self, v)
+            crate::simd::polyfill::wasm128::i64x4::splat(self, v)
         }
 
         #[inline(always)]
         fn i64x4_zero(self) -> Self::I64x4 {
-            crate::simd::polyfill::simd128::i64x4::zero(self)
+            crate::simd::polyfill::wasm128::i64x4::zero(self)
         }
 
         #[inline(always)]
         fn i64x4_load(self, data: &[i64; 4]) -> Self::I64x4 {
-            crate::simd::polyfill::simd128::i64x4::load(self, data)
+            crate::simd::polyfill::wasm128::i64x4::load(self, data)
         }
         #[inline(always)]
         fn u64x4_splat(self, v: u64) -> Self::U64x4 {
-            crate::simd::polyfill::simd128::u64x4::splat(self, v)
+            crate::simd::polyfill::wasm128::u64x4::splat(self, v)
         }
 
         #[inline(always)]
         fn u64x4_zero(self) -> Self::U64x4 {
-            crate::simd::polyfill::simd128::u64x4::zero(self)
+            crate::simd::polyfill::wasm128::u64x4::zero(self)
         }
 
         #[inline(always)]
         fn u64x4_load(self, data: &[u64; 4]) -> Self::U64x4 {
-            crate::simd::polyfill::simd128::u64x4::load(self, data)
+            crate::simd::polyfill::wasm128::u64x4::load(self, data)
         }
         #[inline(always)]
         fn f32x16_splat(self, v: f32) -> Self::F32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = f32x4::splat(token, v);
                 [part, part, part, part]
             }
@@ -1667,7 +1667,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f32x16_zero(self) -> Self::F32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = f32x4::zero(token);
                 [part, part, part, part]
             }
@@ -1676,7 +1676,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f32x16_load(self, data: &[f32; 16]) -> Self::F32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     f32x4::load(token, data[0..4].try_into().unwrap()),
                     f32x4::load(token, data[4..8].try_into().unwrap()),
@@ -1688,7 +1688,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f64x8_splat(self, v: f64) -> Self::F64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = f64x2::splat(token, v);
                 [part, part, part, part]
             }
@@ -1697,7 +1697,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f64x8_zero(self) -> Self::F64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = f64x2::zero(token);
                 [part, part, part, part]
             }
@@ -1706,7 +1706,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f64x8_load(self, data: &[f64; 8]) -> Self::F64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     f64x2::load(token, data[0..2].try_into().unwrap()),
                     f64x2::load(token, data[2..4].try_into().unwrap()),
@@ -1718,7 +1718,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i8x64_splat(self, v: i8) -> Self::I8x64 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = i8x16::splat(token, v);
                 [part, part, part, part]
             }
@@ -1727,7 +1727,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i8x64_zero(self) -> Self::I8x64 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = i8x16::zero(token);
                 [part, part, part, part]
             }
@@ -1736,7 +1736,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i8x64_load(self, data: &[i8; 64]) -> Self::I8x64 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     i8x16::load(token, data[0..16].try_into().unwrap()),
                     i8x16::load(token, data[16..32].try_into().unwrap()),
@@ -1748,7 +1748,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u8x64_splat(self, v: u8) -> Self::U8x64 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = u8x16::splat(token, v);
                 [part, part, part, part]
             }
@@ -1757,7 +1757,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u8x64_zero(self) -> Self::U8x64 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = u8x16::zero(token);
                 [part, part, part, part]
             }
@@ -1766,7 +1766,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u8x64_load(self, data: &[u8; 64]) -> Self::U8x64 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     u8x16::load(token, data[0..16].try_into().unwrap()),
                     u8x16::load(token, data[16..32].try_into().unwrap()),
@@ -1778,7 +1778,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i16x32_splat(self, v: i16) -> Self::I16x32 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = i16x8::splat(token, v);
                 [part, part, part, part]
             }
@@ -1787,7 +1787,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i16x32_zero(self) -> Self::I16x32 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = i16x8::zero(token);
                 [part, part, part, part]
             }
@@ -1796,7 +1796,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i16x32_load(self, data: &[i16; 32]) -> Self::I16x32 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     i16x8::load(token, data[0..8].try_into().unwrap()),
                     i16x8::load(token, data[8..16].try_into().unwrap()),
@@ -1808,7 +1808,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u16x32_splat(self, v: u16) -> Self::U16x32 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = u16x8::splat(token, v);
                 [part, part, part, part]
             }
@@ -1817,7 +1817,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u16x32_zero(self) -> Self::U16x32 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = u16x8::zero(token);
                 [part, part, part, part]
             }
@@ -1826,7 +1826,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u16x32_load(self, data: &[u16; 32]) -> Self::U16x32 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     u16x8::load(token, data[0..8].try_into().unwrap()),
                     u16x8::load(token, data[8..16].try_into().unwrap()),
@@ -1838,7 +1838,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i32x16_splat(self, v: i32) -> Self::I32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = i32x4::splat(token, v);
                 [part, part, part, part]
             }
@@ -1847,7 +1847,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i32x16_zero(self) -> Self::I32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = i32x4::zero(token);
                 [part, part, part, part]
             }
@@ -1856,7 +1856,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i32x16_load(self, data: &[i32; 16]) -> Self::I32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     i32x4::load(token, data[0..4].try_into().unwrap()),
                     i32x4::load(token, data[4..8].try_into().unwrap()),
@@ -1868,7 +1868,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u32x16_splat(self, v: u32) -> Self::U32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = u32x4::splat(token, v);
                 [part, part, part, part]
             }
@@ -1877,7 +1877,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u32x16_zero(self) -> Self::U32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = u32x4::zero(token);
                 [part, part, part, part]
             }
@@ -1886,7 +1886,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u32x16_load(self, data: &[u32; 16]) -> Self::U32x16 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     u32x4::load(token, data[0..4].try_into().unwrap()),
                     u32x4::load(token, data[4..8].try_into().unwrap()),
@@ -1898,7 +1898,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i64x8_splat(self, v: i64) -> Self::I64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = i64x2::splat(token, v);
                 [part, part, part, part]
             }
@@ -1907,7 +1907,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i64x8_zero(self) -> Self::I64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = i64x2::zero(token);
                 [part, part, part, part]
             }
@@ -1916,7 +1916,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i64x8_load(self, data: &[i64; 8]) -> Self::I64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     i64x2::load(token, data[0..2].try_into().unwrap()),
                     i64x2::load(token, data[2..4].try_into().unwrap()),
@@ -1928,7 +1928,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u64x8_splat(self, v: u64) -> Self::U64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = u64x2::splat(token, v);
                 [part, part, part, part]
             }
@@ -1937,7 +1937,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u64x8_zero(self) -> Self::U64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 let part = u64x2::zero(token);
                 [part, part, part, part]
             }
@@ -1946,7 +1946,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8 {
             {
-                let token = unsafe { Simd128Token::forge_token_dangerously() };
+                let token = unsafe { Wasm128Token::forge_token_dangerously() };
                 [
                     u64x2::load(token, data[0..2].try_into().unwrap()),
                     u64x2::load(token, data[2..4].try_into().unwrap()),

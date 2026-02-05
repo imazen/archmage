@@ -39,7 +39,7 @@ Tokens are zero-sized types that prove CPU features are available.
 | `Avx512ModernToken` | x86_64 | + VNNI, VBMI2, etc. |
 | `NeonToken` / `Arm64` | aarch64 | NEON (always available) |
 | `NeonAesToken` | aarch64 | + AES |
-| `Simd128Token` | wasm32 | WASM SIMD |
+| `Wasm128Token` | wasm32 | WASM SIMD |
 | `ScalarToken` | all | No SIMD (fallback) |
 
 ### SimdToken Trait
@@ -178,7 +178,7 @@ Generates:
 - `dot_v3(token: X64V3Token, ...)` — AVX2, f32x8
 - `dot_v4(token: X64V4Token, ...)` — AVX-512, f32x16
 - `dot_neon(token: NeonToken, ...)` — NEON, f32x4
-- `dot_wasm128(token: Simd128Token, ...)` — WASM, f32x4
+- `dot_wasm128(token: Wasm128Token, ...)` — WASM, f32x4
 - `dot_scalar(token: ScalarToken, ...)` — No SIMD
 
 ### Type Aliases
@@ -187,7 +187,7 @@ Inside `#[magetypes]`, these aliases resolve per-variant:
 
 | Alias | v3 (AVX2) | v4 (AVX-512) | neon | wasm128 | scalar |
 |-------|-----------|--------------|------|---------|--------|
-| `Token` | `X64V3Token` | `X64V4Token` | `NeonToken` | `Simd128Token` | `ScalarToken` |
+| `Token` | `X64V3Token` | `X64V4Token` | `NeonToken` | `Wasm128Token` | `ScalarToken` |
 | `f32xN` | `f32x8` | `f32x16` | `f32x4` | `f32x4` | `f32` |
 | `i32xN` | `i32x8` | `i32x16` | `i32x4` | `i32x4` | `i32` |
 | `LANES` | `8` | `16` | `4` | `4` | `1` |
@@ -258,7 +258,7 @@ pub fn public_api(data: &[f32]) -> f32 {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(token) = Simd128Token::summon() {
+        if let Some(token) = Wasm128Token::summon() {
             return dot_wasm128(token, data);
         }
     }
@@ -291,7 +291,7 @@ pub trait IntoConcreteToken: SimdToken + Sized {
     fn as_x64v3(self) -> Option<X64V3Token> { None }
     fn as_x64v4(self) -> Option<X64V4Token> { None }
     fn as_neon(self) -> Option<NeonToken> { None }
-    fn as_wasm128(self) -> Option<Simd128Token> { None }
+    fn as_wasm128(self) -> Option<Wasm128Token> { None }
     fn as_scalar(self) -> Option<ScalarToken> { None }
 }
 
@@ -343,7 +343,7 @@ use magetypes::prelude::*;
 // - x86_64: f32x8, i32x8, etc. (256-bit, X64V3Token)
 // - x86_64 + avx512: f32x16, i32x16, etc. (512-bit, X64V4Token)
 // - aarch64: f32x4, i32x4, etc. (128-bit, NeonToken)
-// - wasm32: f32x4, i32x4, etc. (128-bit, Simd128Token)
+// - wasm32: f32x4, i32x4, etc. (128-bit, Wasm128Token)
 ```
 
 ### Prelude Contents
@@ -374,7 +374,7 @@ pub use archmage::X64V4Token as RecommendedToken;
 pub use archmage::NeonToken as RecommendedToken;
 
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-pub use archmage::Simd128Token as RecommendedToken;
+pub use archmage::Wasm128Token as RecommendedToken;
 ```
 
 ### Prelude vs `#[magetypes]`

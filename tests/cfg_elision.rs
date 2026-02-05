@@ -27,7 +27,7 @@ use archmage::SimdToken;
 #[cfg(target_arch = "x86_64")]
 mod x86_stub_tests {
     #[cfg(target_feature = "simd128")]
-    use archmage::Simd128Token;
+    use archmage::Wasm128Token;
     use archmage::{NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken, SimdToken};
 
     #[test]

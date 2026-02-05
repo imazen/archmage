@@ -585,7 +585,7 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// - **x86_64 tiers**: `X64V2Token`, `X64V3Token` / `Desktop64` / `Avx2FmaToken`,
 ///   `X64V4Token` / `Avx512Token` / `Server64`, `Avx512ModernToken`, `Avx512Fp16Token`
 /// - **ARM**: `NeonToken` / `Arm64`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
-/// - **WASM**: `Simd128Token`
+/// - **WASM**: `Wasm128Token`
 ///
 /// # Supported Trait Bounds
 ///
@@ -1367,20 +1367,6 @@ fn generate_dispatchers(
 struct MagetypesVariant {
     suffix: &'static str,
     token_type: &'static str,
-    f32_type: &'static str,
-    f64_type: &'static str,
-    i8_type: &'static str,
-    i16_type: &'static str,
-    i32_type: &'static str,
-    i64_type: &'static str,
-    u8_type: &'static str,
-    u16_type: &'static str,
-    u32_type: &'static str,
-    u64_type: &'static str,
-    lanes: &'static str,
-    f32_lanes: &'static str,
-    f64_lanes: &'static str,
-    i32_lanes: &'static str,
     target_arch: Option<&'static str>,
     cargo_feature: Option<&'static str>,
 }
@@ -1390,20 +1376,6 @@ const MAGETYPES_VARIANTS: &[MagetypesVariant] = &[
     MagetypesVariant {
         suffix: "v3",
         token_type: "archmage::X64V3Token",
-        f32_type: "magetypes::simd::x86::w256::f32x8",
-        f64_type: "magetypes::simd::x86::w256::f64x4",
-        i8_type: "magetypes::simd::x86::w256::i8x32",
-        i16_type: "magetypes::simd::x86::w256::i16x16",
-        i32_type: "magetypes::simd::x86::w256::i32x8",
-        i64_type: "magetypes::simd::x86::w256::i64x4",
-        u8_type: "magetypes::simd::x86::w256::u8x32",
-        u16_type: "magetypes::simd::x86::w256::u16x16",
-        u32_type: "magetypes::simd::x86::w256::u32x8",
-        u64_type: "magetypes::simd::x86::w256::u64x4",
-        lanes: "8",
-        f32_lanes: "8",
-        f64_lanes: "4",
-        i32_lanes: "8",
         target_arch: Some("x86_64"),
         cargo_feature: None,
     },
@@ -1411,20 +1383,6 @@ const MAGETYPES_VARIANTS: &[MagetypesVariant] = &[
     MagetypesVariant {
         suffix: "v4",
         token_type: "archmage::X64V4Token",
-        f32_type: "magetypes::simd::x86::w512::f32x16",
-        f64_type: "magetypes::simd::x86::w512::f64x8",
-        i8_type: "magetypes::simd::x86::w512::i8x64",
-        i16_type: "magetypes::simd::x86::w512::i16x32",
-        i32_type: "magetypes::simd::x86::w512::i32x16",
-        i64_type: "magetypes::simd::x86::w512::i64x8",
-        u8_type: "magetypes::simd::x86::w512::u8x64",
-        u16_type: "magetypes::simd::x86::w512::u16x32",
-        u32_type: "magetypes::simd::x86::w512::u32x16",
-        u64_type: "magetypes::simd::x86::w512::u64x8",
-        lanes: "16",
-        f32_lanes: "16",
-        f64_lanes: "8",
-        i32_lanes: "16",
         target_arch: Some("x86_64"),
         cargo_feature: Some("avx512"),
     },
@@ -1432,100 +1390,57 @@ const MAGETYPES_VARIANTS: &[MagetypesVariant] = &[
     MagetypesVariant {
         suffix: "neon",
         token_type: "archmage::NeonToken",
-        f32_type: "magetypes::simd::arm::w128::f32x4",
-        f64_type: "magetypes::simd::arm::w128::f64x2",
-        i8_type: "magetypes::simd::arm::w128::i8x16",
-        i16_type: "magetypes::simd::arm::w128::i16x8",
-        i32_type: "magetypes::simd::arm::w128::i32x4",
-        i64_type: "magetypes::simd::arm::w128::i64x2",
-        u8_type: "magetypes::simd::arm::w128::u8x16",
-        u16_type: "magetypes::simd::arm::w128::u16x8",
-        u32_type: "magetypes::simd::arm::w128::u32x4",
-        u64_type: "magetypes::simd::arm::w128::u64x2",
-        lanes: "4",
-        f32_lanes: "4",
-        f64_lanes: "2",
-        i32_lanes: "4",
         target_arch: Some("aarch64"),
         cargo_feature: None,
     },
     // wasm32 SIMD128
     MagetypesVariant {
         suffix: "wasm128",
-        token_type: "archmage::Simd128Token",
-        f32_type: "magetypes::simd::wasm::w128::f32x4",
-        f64_type: "magetypes::simd::wasm::w128::f64x2",
-        i8_type: "magetypes::simd::wasm::w128::i8x16",
-        i16_type: "magetypes::simd::wasm::w128::i16x8",
-        i32_type: "magetypes::simd::wasm::w128::i32x4",
-        i64_type: "magetypes::simd::wasm::w128::i64x2",
-        u8_type: "magetypes::simd::wasm::w128::u8x16",
-        u16_type: "magetypes::simd::wasm::w128::u16x8",
-        u32_type: "magetypes::simd::wasm::w128::u32x4",
-        u64_type: "magetypes::simd::wasm::w128::u64x2",
-        lanes: "4",
-        f32_lanes: "4",
-        f64_lanes: "2",
-        i32_lanes: "4",
+        token_type: "archmage::Wasm128Token",
         target_arch: Some("wasm32"),
         cargo_feature: None,
     },
-    // Scalar fallback (uses scalar polyfill types from magetypes)
+    // Scalar fallback
     MagetypesVariant {
         suffix: "scalar",
         token_type: "archmage::ScalarToken",
-        f32_type: "magetypes::simd::scalar::f32x1",
-        f64_type: "magetypes::simd::scalar::f64x1",
-        i8_type: "magetypes::simd::scalar::i8x1",
-        i16_type: "magetypes::simd::scalar::i16x1",
-        i32_type: "magetypes::simd::scalar::i32x1",
-        i64_type: "magetypes::simd::scalar::i64x1",
-        u8_type: "magetypes::simd::scalar::u8x1",
-        u16_type: "magetypes::simd::scalar::u16x1",
-        u32_type: "magetypes::simd::scalar::u32x1",
-        u64_type: "magetypes::simd::scalar::u64x1",
-        lanes: "1",
-        f32_lanes: "1",
-        f64_lanes: "1",
-        i32_lanes: "1",
         target_arch: None, // Always available
         cargo_feature: None,
     },
 ];
 
-/// Generate platform-specific variants from a generic function.
+/// Generate platform-specific variants from a function using explicit types.
 ///
-/// This macro takes a function using generic type aliases (`Token`, `f32xN`, etc.)
-/// and generates platform-specific versions with suffixes (`_v3`, `_neon`, etc.).
+/// Write your function with explicit SIMD types (e.g., `f32x8`) and use `Token`
+/// as a placeholder for the token type. The macro generates platform-specific
+/// variants (`_v3`, `_neon`, `_wasm128`, `_scalar`) with cfg guards.
 ///
-/// # Type Aliases
+/// # How It Works
 ///
-/// Inside the function, these aliases are available:
-///
-/// | Alias | v3 (AVX2) | v4 (AVX-512) | neon | wasm128 | scalar |
-/// |-------|-----------|--------------|------|---------|--------|
-/// | `Token` | `X64V3Token` | `X64V4Token` | `NeonToken` | `Simd128Token` | `ScalarToken` |
-/// | `f32xN` | `f32x8` | `f32x16` | `f32x4` | `f32x4` | `f32` |
-/// | `i32xN` | `i32x8` | `i32x16` | `i32x4` | `i32x4` | `i32` |
-/// | `LANES` | `8` | `16` | `4` | `4` | `1` |
+/// - `Token` is replaced with the concrete token type for each variant
+/// - Each variant is wrapped in the appropriate `#[cfg(target_arch = ...)]`
+/// - Use `use magetypes::simd::*;` to get types that work on all platforms
+///   (native on x86, polyfilled on ARM/WASM)
 ///
 /// # Example
 ///
 /// ```rust,ignore
 /// use archmage::magetypes;
+/// use magetypes::simd::*;  // f32x8 works everywhere via polyfill
 ///
 /// #[magetypes]
-/// pub fn sum(token: Token, data: &[f32]) -> f32 {
-///     // Generic implementation using aliases
-///     data.iter().sum() // Simplified - real code would use SIMD
+/// pub fn dot(token: Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+///     let va = f32x8::load(token, a);
+///     let vb = f32x8::load(token, b);
+///     (va * vb).reduce_add()
 /// }
 ///
 /// // Generates:
-/// // - sum_v3(token: X64V3Token, data: &[f32]) -> f32
-/// // - sum_v4(token: X64V4Token, data: &[f32]) -> f32
-/// // - sum_neon(token: NeonToken, data: &[f32]) -> f32
-/// // - sum_wasm128(token: Simd128Token, data: &[f32]) -> f32
-/// // - sum_scalar(token: ScalarToken, data: &[f32]) -> f32
+/// // - dot_v3(token: X64V3Token, ...) - x86_64 only
+/// // - dot_v4(token: X64V4Token, ...) - x86_64 + avx512 feature
+/// // - dot_neon(token: NeonToken, ...) - aarch64 only
+/// // - dot_wasm128(token: Wasm128Token, ...) - wasm32 only
+/// // - dot_scalar(token: ScalarToken, ...) - always available
 /// ```
 ///
 /// # Usage with incant!
@@ -1533,8 +1448,8 @@ const MAGETYPES_VARIANTS: &[MagetypesVariant] = &[
 /// The generated variants work with `incant!` for dispatch:
 ///
 /// ```rust,ignore
-/// pub fn sum_api(data: &[f32]) -> f32 {
-///     incant!(sum(data))
+/// pub fn dot_api(a: &[f32; 8], b: &[f32; 8]) -> f32 {
+///     incant!(dot(a, b))
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -1564,26 +1479,8 @@ fn magetypes_impl(input_fn: ItemFn) -> TokenStream {
         // Replace function name
         variant_str = variant_str.replacen(&fn_name.to_string(), &suffixed_name, 1);
 
-        // Replace Token type
+        // Replace Token type with concrete token
         variant_str = variant_str.replace("Token", variant.token_type);
-
-        // Replace SIMD types
-        variant_str = variant_str.replace("f32xN", variant.f32_type);
-        variant_str = variant_str.replace("f64xN", variant.f64_type);
-        variant_str = variant_str.replace("i8xN", variant.i8_type);
-        variant_str = variant_str.replace("i16xN", variant.i16_type);
-        variant_str = variant_str.replace("i32xN", variant.i32_type);
-        variant_str = variant_str.replace("i64xN", variant.i64_type);
-        variant_str = variant_str.replace("u8xN", variant.u8_type);
-        variant_str = variant_str.replace("u16xN", variant.u16_type);
-        variant_str = variant_str.replace("u32xN", variant.u32_type);
-        variant_str = variant_str.replace("u64xN", variant.u64_type);
-
-        // Replace lane counts (be careful with order - longer first)
-        variant_str = variant_str.replace("LANES_F32", variant.f32_lanes);
-        variant_str = variant_str.replace("LANES_F64", variant.f64_lanes);
-        variant_str = variant_str.replace("LANES_I32", variant.i32_lanes);
-        variant_str = variant_str.replace("LANES", variant.lanes);
 
         // Parse back to tokens
         let variant_tokens: proc_macro2::TokenStream = match variant_str.parse() {
@@ -1717,7 +1614,7 @@ impl Parse for IncantInput {
 /// - `_v3` for `X64V3Token`
 /// - `_v4` for `X64V4Token` (requires `avx512` feature)
 /// - `_neon` for `NeonToken`
-/// - `_wasm128` for `Simd128Token`
+/// - `_wasm128` for `Wasm128Token`
 /// - `_scalar` for `ScalarToken`
 #[proc_macro]
 pub fn incant(input: TokenStream) -> TokenStream {
@@ -1804,7 +1701,7 @@ fn incant_impl(input: IncantInput) -> TokenStream {
                 }
 
                 #[cfg(target_arch = "wasm32")]
-                if let Some(__t) = archmage::Simd128Token::summon() {
+                if let Some(__t) = archmage::Wasm128Token::summon() {
                     break '__incant #fn_wasm128(__t, #(#args),*);
                 }
 

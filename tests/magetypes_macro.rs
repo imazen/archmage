@@ -149,42 +149,6 @@ mod incant_integration {
 }
 
 // =============================================================================
-// LANES constant substitution
-// =============================================================================
-
-mod lanes_substitution {
-    use super::*;
-    use archmage::magetypes;
-
-    #[magetypes]
-    pub fn get_lanes(token: Token) -> usize {
-        let _ = token;
-        LANES
-    }
-
-    #[test]
-    fn scalar_has_1_lane() {
-        assert_eq!(get_lanes_scalar(ScalarToken), 1);
-    }
-
-    #[cfg(target_arch = "x86_64")]
-    #[test]
-    fn v3_has_8_lanes() {
-        if let Some(token) = archmage::X64V3Token::summon() {
-            assert_eq!(get_lanes_v3(token), 8);
-        }
-    }
-
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    #[test]
-    fn v4_has_16_lanes() {
-        if let Some(token) = archmage::X64V4Token::summon() {
-            assert_eq!(get_lanes_v4(token), 16);
-        }
-    }
-}
-
-// =============================================================================
 // Mutable reference arguments
 // =============================================================================
 

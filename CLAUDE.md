@@ -233,7 +233,7 @@ pub fn sum(data: &[f32]) -> f32 {
 // sum_v3(token: X64V3Token, ...)
 // sum_v4(token: X64V4Token, ...)     // if feature = "avx512"
 // sum_neon(token: NeonToken, ...)
-// sum_wasm128(token: Simd128Token, ...)
+// sum_wasm128(token: Wasm128Token, ...)
 // sum_scalar(token: ScalarToken, ...)
 ```
 

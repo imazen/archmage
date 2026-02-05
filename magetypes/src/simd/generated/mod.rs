@@ -287,7 +287,7 @@ pub use arm::w128::*;
 pub use polyfill::neon::*;
 
 #[cfg(target_arch = "wasm32")]
-pub use polyfill::simd128::*;
+pub use polyfill::wasm128::*;
 #[cfg(target_arch = "wasm32")]
 pub use wasm::w128::*;
 
@@ -408,11 +408,11 @@ pub mod neon {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub mod simd128 {
+pub mod wasm128 {
     //! WASM SIMD128 width aliases (128-bit SIMD)
     //!
     //! - `f32xN` = `f32x4` (4 lanes)
-    //! - `Token` = `Simd128Token`
+    //! - `Token` = `Wasm128Token`
 
     pub use super::wasm::w128::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
@@ -422,7 +422,7 @@ pub mod simd128 {
     pub use super::wasm::w128::*;
 
     /// Token type for this width level
-    pub type Token = archmage::Simd128Token;
+    pub type Token = archmage::Wasm128Token;
 
     /// Number of f32 lanes
     pub const LANES_F32: usize = 4;

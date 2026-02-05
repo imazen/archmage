@@ -5,7 +5,7 @@
 //! - **x86_64**: 256-bit types (f32x8, i32x8, etc.) with `X64V3Token`
 //! - **x86_64 + avx512**: 512-bit types (f32x16, i32x16, etc.) with `X64V4Token`
 //! - **aarch64**: 128-bit types (f32x4, i32x4, etc.) with `NeonToken`
-//! - **wasm32**: 128-bit types (f32x4, i32x4, etc.) with `Simd128Token`
+//! - **wasm32**: 128-bit types (f32x4, i32x4, etc.) with `Wasm128Token`
 //!
 //! # Example
 //!
@@ -129,7 +129,7 @@ pub use crate::simd::wasm::w128::{
 };
 
 #[cfg(target_arch = "wasm32")]
-pub use archmage::Simd128Token as RecommendedToken;
+pub use archmage::Wasm128Token as RecommendedToken;
 
 #[cfg(target_arch = "wasm32")]
 /// Number of f32 lanes in the recommended vector type.
