@@ -1844,7 +1844,7 @@ fn run_ci() -> Result<()> {
         .args([
             "clippy",
             "--features",
-            "std macros bytemuck avx512",
+            "std macros avx512",
             "--",
             "-D",
             "warnings",
@@ -1860,7 +1860,7 @@ fn run_ci() -> Result<()> {
     // Step 8: Tests
     println!("┌─ Step 8/10: Running tests ─────────────────────────────────────────┐");
     let tests = std::process::Command::new("cargo")
-        .args(["test", "--features", "std macros bytemuck avx512"])
+        .args(["test", "--features", "std macros avx512"])
         .status()
         .context("Failed to run tests")?;
     if !tests.success() {
