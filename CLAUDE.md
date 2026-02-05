@@ -131,20 +131,22 @@ fn v3_helper(token: X64V3Token, chunk: &[f32]) -> f32 {
 }
 ```
 
-**Upcasting via `IntoConcreteToken`:** Safe but has runtime cost — don't do it in loops:
+**Upcasting via `IntoConcreteToken`:** Safe, but creates an LLVM optimization boundary:
 
 ```rust
 fn process<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
-    // Check ONCE outside loop, not per-iteration
+    // Generic caller has baseline LLVM target
     if let Some(v4) = token.as_x64v4() {
-        process_v4(v4, data);  // Fast path
+        process_v4(v4, data);  // Callee has AVX-512 target — mismatched
     } else if let Some(v3) = token.as_x64v3() {
-        process_v3(v3, data);  // Fallback
+        process_v3(v3, data);
     }
 }
 ```
 
-**The rule:** Use concrete tokens for hot paths. Downcasting (V4→V3) is free. Upcasting is impossible. Generic bounds cost inlining.
+The issue: `#[target_feature]` changes LLVM's target for that function. Generic caller and feature-enabled callee have mismatched targets, so LLVM can't optimize across that boundary. Do dispatch once at entry, not deep in hot code.
+
+**The rule:** Use concrete tokens for hot paths. Downcasting (V4→V3) is free. Upcasting via `IntoConcreteToken` is safe but creates optimization boundaries.
 
 ### When `-Ctarget-cpu=native` Is Fine
 
