@@ -9,6 +9,32 @@
 use crate::registry::{Registry, TokenDef, TraitDef};
 use std::fmt::Write;
 
+/// Convert token name to a screaming snake case cache variable name.
+fn cache_var_name(token_name: &str) -> String {
+    // X64V3Token -> X64V3_CACHE
+    // NeonAesToken -> NEON_AES_CACHE
+    let mut result = String::new();
+    let mut prev_was_upper = false;
+    for (i, c) in token_name.chars().enumerate() {
+        if c.is_uppercase() {
+            if i > 0 && !prev_was_upper {
+                result.push('_');
+            }
+            result.push(c);
+            prev_was_upper = true;
+        } else if c.is_lowercase() {
+            result.push(c.to_ascii_uppercase());
+            prev_was_upper = false;
+        } else {
+            result.push(c);
+            prev_was_upper = false;
+        }
+    }
+    // Remove "TOKEN" suffix and add "_CACHE"
+    let result = result.trim_end_matches("_TOKEN").to_string();
+    format!("{result}_CACHE")
+}
+
 /// All generated token files as (relative_path, content) pairs.
 ///
 /// Relative to `src/tokens/generated/`.
@@ -76,6 +102,13 @@ fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
     // Imports
     writeln!(out, "use crate::tokens::SimdToken;").unwrap();
 
+    // Check if we need atomic imports (for tokens with runtime detection)
+    let needs_atomics = tokens.iter().any(|t| !t.always_available);
+    if needs_atomics && arch != "wasm" {
+        // WASM has no runtime detection - it's all compile-time
+        writeln!(out, "use core::sync::atomic::{{AtomicU8, Ordering}};").unwrap();
+    }
+
     // Collect all trait names used by tokens in this file
     let trait_names: Vec<&str> = tokens
         .iter()
@@ -113,6 +146,20 @@ fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
     }
 
     writeln!(out).unwrap();
+
+    // Generate cache statics for tokens that need runtime detection
+    // (skip WASM - it's compile-time only, and skip always_available tokens)
+    if arch != "wasm" {
+        let cached_tokens: Vec<_> = tokens.iter().filter(|t| !t.always_available).collect();
+        if !cached_tokens.is_empty() {
+            writeln!(out, "// Cache statics: 0 = unknown, 1 = unavailable, 2 = available").unwrap();
+            for token in &cached_tokens {
+                let cache_name = cache_var_name(&token.name);
+                writeln!(out, "static {cache_name}: AtomicU8 = AtomicU8::new(0);").unwrap();
+            }
+            writeln!(out).unwrap();
+        }
+    }
 
     // Generate each token
     for token in tokens {
@@ -270,126 +317,187 @@ fn gen_summon(out: &mut String, token: &TokenDef, arch: &str) {
     // Add #[allow(deprecated)] since summon() internally uses forge_token_dangerously()
     writeln!(out, "    #[allow(deprecated)]").unwrap();
     match arch {
-        "x86" => {
-            if token.always_available {
-                writeln!(out, "    #[inline]").unwrap();
-                writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
-                writeln!(out, "        Some(Self {{ _private: () }})").unwrap();
-                writeln!(out, "    }}").unwrap();
-            } else {
-                // Filter out sse/sse2 (x86_64 baseline, always available)
-                let check_features: Vec<&str> = token
-                    .features
-                    .iter()
-                    .filter(|f| *f != "sse" && *f != "sse2")
-                    .map(|s| s.as_str())
-                    .collect();
-
-                writeln!(out, "    #[inline(always)]").unwrap();
-                writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
-
-                if check_features.is_empty() {
-                    writeln!(
-                        out,
-                        "        Some(unsafe {{ Self::forge_token_dangerously() }})"
-                    )
-                    .unwrap();
-                } else {
-                    write!(out, "        if ").unwrap();
-                    for (i, feat) in check_features.iter().enumerate() {
-                        if i > 0 {
-                            write!(out, "            && ").unwrap();
-                        }
-                        writeln!(out, "crate::is_x86_feature_available!(\"{feat}\")").unwrap();
-                    }
-                    writeln!(out, "        {{").unwrap();
-                    writeln!(
-                        out,
-                        "            Some(unsafe {{ Self::forge_token_dangerously() }})"
-                    )
-                    .unwrap();
-                    writeln!(out, "        }} else {{").unwrap();
-                    writeln!(out, "            None").unwrap();
-                    writeln!(out, "        }}").unwrap();
-                }
-
-                writeln!(out, "    }}").unwrap();
-            }
-        }
-        "aarch64" => {
-            if token.always_available {
-                writeln!(out, "    #[inline]").unwrap();
-                writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
-                writeln!(out, "        // NEON is always available on AArch64").unwrap();
-                writeln!(out, "        Some(Self {{ _private: () }})").unwrap();
-                writeln!(out, "    }}").unwrap();
-            } else {
-                // Filter out neon (aarch64 baseline)
-                let check_features: Vec<&str> = token
-                    .features
-                    .iter()
-                    .filter(|f| *f != "neon")
-                    .map(|s| s.as_str())
-                    .collect();
-
-                writeln!(out, "    #[inline(always)]").unwrap();
-                writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
-
-                if check_features.is_empty() {
-                    writeln!(
-                        out,
-                        "        Some(unsafe {{ Self::forge_token_dangerously() }})"
-                    )
-                    .unwrap();
-                } else {
-                    write!(out, "        if ").unwrap();
-                    for (i, feat) in check_features.iter().enumerate() {
-                        if i > 0 {
-                            write!(out, "            && ").unwrap();
-                        }
-                        writeln!(out, "crate::is_aarch64_feature_available!(\"{feat}\")").unwrap();
-                    }
-                    writeln!(out, "        {{").unwrap();
-                    writeln!(
-                        out,
-                        "            Some(unsafe {{ Self::forge_token_dangerously() }})"
-                    )
-                    .unwrap();
-                    writeln!(out, "        }} else {{").unwrap();
-                    writeln!(out, "            None").unwrap();
-                    writeln!(out, "        }}").unwrap();
-                }
-
-                writeln!(out, "    }}").unwrap();
-            }
-        }
-        "wasm" => {
-            writeln!(out, "    #[inline]").unwrap();
-            writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
-            writeln!(
-                out,
-                "        #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]"
-            )
-            .unwrap();
-            writeln!(out, "        {{").unwrap();
-            writeln!(
-                out,
-                "            Some(unsafe {{ Self::forge_token_dangerously() }})"
-            )
-            .unwrap();
-            writeln!(out, "        }}").unwrap();
-            writeln!(
-                out,
-                "        #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]"
-            )
-            .unwrap();
-            writeln!(out, "        {{").unwrap();
-            writeln!(out, "            None").unwrap();
-            writeln!(out, "        }}").unwrap();
-            writeln!(out, "    }}").unwrap();
-        }
+        "x86" => gen_summon_x86(out, token),
+        "aarch64" => gen_summon_aarch64(out, token),
+        "wasm" => gen_summon_wasm(out),
         _ => unreachable!("unknown arch: {arch}"),
     }
+}
+
+fn gen_summon_x86(out: &mut String, token: &TokenDef) {
+    if token.always_available {
+        writeln!(out, "    #[inline]").unwrap();
+        writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
+        writeln!(out, "        Some(Self {{ _private: () }})").unwrap();
+        writeln!(out, "    }}").unwrap();
+        return;
+    }
+
+    // Filter out sse/sse2 (x86_64 baseline, always available)
+    let check_features: Vec<&str> = token
+        .features
+        .iter()
+        .filter(|f| *f != "sse" && *f != "sse2")
+        .map(|s| s.as_str())
+        .collect();
+
+    if check_features.is_empty() {
+        writeln!(out, "    #[inline]").unwrap();
+        writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
+        writeln!(out, "        Some(unsafe {{ Self::forge_token_dangerously() }})").unwrap();
+        writeln!(out, "    }}").unwrap();
+        return;
+    }
+
+    let cache_name = cache_var_name(&token.name);
+    let all_features = check_features
+        .iter()
+        .map(|f| format!("target_feature = \"{f}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    writeln!(out, "    #[inline(always)]").unwrap();
+    writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
+
+    // Compile-time fast path: if all features are guaranteed, return immediately
+    writeln!(out, "        // Compile-time fast path").unwrap();
+    writeln!(out, "        #[cfg(all({all_features}))]").unwrap();
+    writeln!(out, "        {{").unwrap();
+    writeln!(out, "            return Some(unsafe {{ Self::forge_token_dangerously() }});").unwrap();
+    writeln!(out, "        }}").unwrap();
+    writeln!(out).unwrap();
+
+    // Runtime path with caching
+    writeln!(out, "        // Runtime path with caching").unwrap();
+    writeln!(out, "        #[cfg(not(all({all_features})))]").unwrap();
+    writeln!(out, "        {{").unwrap();
+    writeln!(out, "            match {cache_name}.load(Ordering::Relaxed) {{").unwrap();
+    writeln!(out, "                2 => Some(unsafe {{ Self::forge_token_dangerously() }}),").unwrap();
+    writeln!(out, "                1 => None,").unwrap();
+    writeln!(out, "                _ => {{").unwrap();
+
+    // Feature detection
+    write!(out, "                    let available = ").unwrap();
+    for (i, feat) in check_features.iter().enumerate() {
+        if i > 0 {
+            write!(out, "                        && ").unwrap();
+        }
+        writeln!(out, "crate::is_x86_feature_available!(\"{feat}\")").unwrap();
+    }
+    writeln!(out, "                    ;").unwrap();
+    writeln!(out, "                    {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);").unwrap();
+    writeln!(out, "                    if available {{").unwrap();
+    writeln!(out, "                        Some(unsafe {{ Self::forge_token_dangerously() }})").unwrap();
+    writeln!(out, "                    }} else {{").unwrap();
+    writeln!(out, "                        None").unwrap();
+    writeln!(out, "                    }}").unwrap();
+    writeln!(out, "                }}").unwrap();
+    writeln!(out, "            }}").unwrap();
+    writeln!(out, "        }}").unwrap();
+
+    writeln!(out, "    }}").unwrap();
+}
+
+fn gen_summon_aarch64(out: &mut String, token: &TokenDef) {
+    if token.always_available {
+        writeln!(out, "    #[inline]").unwrap();
+        writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
+        writeln!(out, "        // NEON is always available on AArch64").unwrap();
+        writeln!(out, "        Some(Self {{ _private: () }})").unwrap();
+        writeln!(out, "    }}").unwrap();
+        return;
+    }
+
+    // Filter out neon (aarch64 baseline)
+    let check_features: Vec<&str> = token
+        .features
+        .iter()
+        .filter(|f| *f != "neon")
+        .map(|s| s.as_str())
+        .collect();
+
+    if check_features.is_empty() {
+        writeln!(out, "    #[inline]").unwrap();
+        writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
+        writeln!(out, "        Some(unsafe {{ Self::forge_token_dangerously() }})").unwrap();
+        writeln!(out, "    }}").unwrap();
+        return;
+    }
+
+    let cache_name = cache_var_name(&token.name);
+    let all_features = check_features
+        .iter()
+        .map(|f| format!("target_feature = \"{f}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    writeln!(out, "    #[inline(always)]").unwrap();
+    writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
+
+    // Compile-time fast path
+    writeln!(out, "        // Compile-time fast path").unwrap();
+    writeln!(out, "        #[cfg(all({all_features}))]").unwrap();
+    writeln!(out, "        {{").unwrap();
+    writeln!(out, "            return Some(unsafe {{ Self::forge_token_dangerously() }});").unwrap();
+    writeln!(out, "        }}").unwrap();
+    writeln!(out).unwrap();
+
+    // Runtime path with caching
+    writeln!(out, "        // Runtime path with caching").unwrap();
+    writeln!(out, "        #[cfg(not(all({all_features})))]").unwrap();
+    writeln!(out, "        {{").unwrap();
+    writeln!(out, "            match {cache_name}.load(Ordering::Relaxed) {{").unwrap();
+    writeln!(out, "                2 => Some(unsafe {{ Self::forge_token_dangerously() }}),").unwrap();
+    writeln!(out, "                1 => None,").unwrap();
+    writeln!(out, "                _ => {{").unwrap();
+
+    // Feature detection
+    write!(out, "                    let available = ").unwrap();
+    for (i, feat) in check_features.iter().enumerate() {
+        if i > 0 {
+            write!(out, "                        && ").unwrap();
+        }
+        writeln!(out, "crate::is_aarch64_feature_available!(\"{feat}\")").unwrap();
+    }
+    writeln!(out, "                    ;").unwrap();
+    writeln!(out, "                    {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);").unwrap();
+    writeln!(out, "                    if available {{").unwrap();
+    writeln!(out, "                        Some(unsafe {{ Self::forge_token_dangerously() }})").unwrap();
+    writeln!(out, "                    }} else {{").unwrap();
+    writeln!(out, "                        None").unwrap();
+    writeln!(out, "                    }}").unwrap();
+    writeln!(out, "                }}").unwrap();
+    writeln!(out, "            }}").unwrap();
+    writeln!(out, "        }}").unwrap();
+
+    writeln!(out, "    }}").unwrap();
+}
+
+fn gen_summon_wasm(out: &mut String) {
+    // WASM has no runtime detection - it's all compile-time
+    writeln!(out, "    #[inline]").unwrap();
+    writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
+    writeln!(
+        out,
+        "        #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]"
+    )
+    .unwrap();
+    writeln!(out, "        {{").unwrap();
+    writeln!(
+        out,
+        "            Some(unsafe {{ Self::forge_token_dangerously() }})"
+    )
+    .unwrap();
+    writeln!(out, "        }}").unwrap();
+    writeln!(
+        out,
+        "        #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]"
+    )
+    .unwrap();
+    writeln!(out, "        {{").unwrap();
+    writeln!(out, "            None").unwrap();
+    writeln!(out, "        }}").unwrap();
+    writeln!(out, "    }}").unwrap();
 }
 
 fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {

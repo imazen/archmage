@@ -6,6 +6,12 @@ use super::x86::X64V2Token;
 use super::x86::X64V3Token;
 use crate::tokens::SimdToken;
 use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasX64V2, HasX64V4};
+use core::sync::atomic::{AtomicU8, Ordering};
+
+// Cache statics: 0 = unknown, 1 = unavailable, 2 = available
+static X64_V4_CACHE: AtomicU8 = AtomicU8::new(0);
+static AVX512_MODERN_CACHE: AtomicU8 = AtomicU8::new(0);
+static AVX512_FP16_CACHE: AtomicU8 = AtomicU8::new(0);
 
 /// Proof that AVX-512 (F + CD + VL + DQ + BW) is available.
 ///
@@ -73,27 +79,80 @@ impl SimdToken for X64V4Token {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        if crate::is_x86_feature_available!("sse3")
-            && crate::is_x86_feature_available!("ssse3")
-            && crate::is_x86_feature_available!("sse4.1")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("popcnt")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("avx2")
-            && crate::is_x86_feature_available!("fma")
-            && crate::is_x86_feature_available!("bmi1")
-            && crate::is_x86_feature_available!("bmi2")
-            && crate::is_x86_feature_available!("f16c")
-            && crate::is_x86_feature_available!("lzcnt")
-            && crate::is_x86_feature_available!("avx512f")
-            && crate::is_x86_feature_available!("avx512bw")
-            && crate::is_x86_feature_available!("avx512cd")
-            && crate::is_x86_feature_available!("avx512dq")
-            && crate::is_x86_feature_available!("avx512vl")
+        // Compile-time fast path
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl"
+        ))]
         {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl"
+        )))]
+        {
+            match X64_V4_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_x86_feature_available!("sse3")
+                        && crate::is_x86_feature_available!("ssse3")
+                        && crate::is_x86_feature_available!("sse4.1")
+                        && crate::is_x86_feature_available!("sse4.2")
+                        && crate::is_x86_feature_available!("popcnt")
+                        && crate::is_x86_feature_available!("avx")
+                        && crate::is_x86_feature_available!("avx2")
+                        && crate::is_x86_feature_available!("fma")
+                        && crate::is_x86_feature_available!("bmi1")
+                        && crate::is_x86_feature_available!("bmi2")
+                        && crate::is_x86_feature_available!("f16c")
+                        && crate::is_x86_feature_available!("lzcnt")
+                        && crate::is_x86_feature_available!("avx512f")
+                        && crate::is_x86_feature_available!("avx512bw")
+                        && crate::is_x86_feature_available!("avx512cd")
+                        && crate::is_x86_feature_available!("avx512dq")
+                        && crate::is_x86_feature_available!("avx512vl");
+                    X64_V4_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 
@@ -206,37 +265,110 @@ impl SimdToken for Avx512ModernToken {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        if crate::is_x86_feature_available!("sse3")
-            && crate::is_x86_feature_available!("ssse3")
-            && crate::is_x86_feature_available!("sse4.1")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("popcnt")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("avx2")
-            && crate::is_x86_feature_available!("fma")
-            && crate::is_x86_feature_available!("bmi1")
-            && crate::is_x86_feature_available!("bmi2")
-            && crate::is_x86_feature_available!("f16c")
-            && crate::is_x86_feature_available!("lzcnt")
-            && crate::is_x86_feature_available!("avx512f")
-            && crate::is_x86_feature_available!("avx512bw")
-            && crate::is_x86_feature_available!("avx512cd")
-            && crate::is_x86_feature_available!("avx512dq")
-            && crate::is_x86_feature_available!("avx512vl")
-            && crate::is_x86_feature_available!("avx512vpopcntdq")
-            && crate::is_x86_feature_available!("avx512ifma")
-            && crate::is_x86_feature_available!("avx512vbmi")
-            && crate::is_x86_feature_available!("avx512vbmi2")
-            && crate::is_x86_feature_available!("avx512bitalg")
-            && crate::is_x86_feature_available!("avx512vnni")
-            && crate::is_x86_feature_available!("avx512bf16")
-            && crate::is_x86_feature_available!("vpclmulqdq")
-            && crate::is_x86_feature_available!("gfni")
-            && crate::is_x86_feature_available!("vaes")
+        // Compile-time fast path
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512vpopcntdq",
+            target_feature = "avx512ifma",
+            target_feature = "avx512vbmi",
+            target_feature = "avx512vbmi2",
+            target_feature = "avx512bitalg",
+            target_feature = "avx512vnni",
+            target_feature = "avx512bf16",
+            target_feature = "vpclmulqdq",
+            target_feature = "gfni",
+            target_feature = "vaes"
+        ))]
         {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512vpopcntdq",
+            target_feature = "avx512ifma",
+            target_feature = "avx512vbmi",
+            target_feature = "avx512vbmi2",
+            target_feature = "avx512bitalg",
+            target_feature = "avx512vnni",
+            target_feature = "avx512bf16",
+            target_feature = "vpclmulqdq",
+            target_feature = "gfni",
+            target_feature = "vaes"
+        )))]
+        {
+            match AVX512_MODERN_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_x86_feature_available!("sse3")
+                        && crate::is_x86_feature_available!("ssse3")
+                        && crate::is_x86_feature_available!("sse4.1")
+                        && crate::is_x86_feature_available!("sse4.2")
+                        && crate::is_x86_feature_available!("popcnt")
+                        && crate::is_x86_feature_available!("avx")
+                        && crate::is_x86_feature_available!("avx2")
+                        && crate::is_x86_feature_available!("fma")
+                        && crate::is_x86_feature_available!("bmi1")
+                        && crate::is_x86_feature_available!("bmi2")
+                        && crate::is_x86_feature_available!("f16c")
+                        && crate::is_x86_feature_available!("lzcnt")
+                        && crate::is_x86_feature_available!("avx512f")
+                        && crate::is_x86_feature_available!("avx512bw")
+                        && crate::is_x86_feature_available!("avx512cd")
+                        && crate::is_x86_feature_available!("avx512dq")
+                        && crate::is_x86_feature_available!("avx512vl")
+                        && crate::is_x86_feature_available!("avx512vpopcntdq")
+                        && crate::is_x86_feature_available!("avx512ifma")
+                        && crate::is_x86_feature_available!("avx512vbmi")
+                        && crate::is_x86_feature_available!("avx512vbmi2")
+                        && crate::is_x86_feature_available!("avx512bitalg")
+                        && crate::is_x86_feature_available!("avx512vnni")
+                        && crate::is_x86_feature_available!("avx512bf16")
+                        && crate::is_x86_feature_available!("vpclmulqdq")
+                        && crate::is_x86_feature_available!("gfni")
+                        && crate::is_x86_feature_available!("vaes");
+                    AVX512_MODERN_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 
@@ -343,28 +475,83 @@ impl SimdToken for Avx512Fp16Token {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        if crate::is_x86_feature_available!("sse3")
-            && crate::is_x86_feature_available!("ssse3")
-            && crate::is_x86_feature_available!("sse4.1")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("popcnt")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("avx2")
-            && crate::is_x86_feature_available!("fma")
-            && crate::is_x86_feature_available!("bmi1")
-            && crate::is_x86_feature_available!("bmi2")
-            && crate::is_x86_feature_available!("f16c")
-            && crate::is_x86_feature_available!("lzcnt")
-            && crate::is_x86_feature_available!("avx512f")
-            && crate::is_x86_feature_available!("avx512bw")
-            && crate::is_x86_feature_available!("avx512cd")
-            && crate::is_x86_feature_available!("avx512dq")
-            && crate::is_x86_feature_available!("avx512vl")
-            && crate::is_x86_feature_available!("avx512fp16")
+        // Compile-time fast path
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512fp16"
+        ))]
         {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512fp16"
+        )))]
+        {
+            match AVX512_FP16_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_x86_feature_available!("sse3")
+                        && crate::is_x86_feature_available!("ssse3")
+                        && crate::is_x86_feature_available!("sse4.1")
+                        && crate::is_x86_feature_available!("sse4.2")
+                        && crate::is_x86_feature_available!("popcnt")
+                        && crate::is_x86_feature_available!("avx")
+                        && crate::is_x86_feature_available!("avx2")
+                        && crate::is_x86_feature_available!("fma")
+                        && crate::is_x86_feature_available!("bmi1")
+                        && crate::is_x86_feature_available!("bmi2")
+                        && crate::is_x86_feature_available!("f16c")
+                        && crate::is_x86_feature_available!("lzcnt")
+                        && crate::is_x86_feature_available!("avx512f")
+                        && crate::is_x86_feature_available!("avx512bw")
+                        && crate::is_x86_feature_available!("avx512cd")
+                        && crate::is_x86_feature_available!("avx512dq")
+                        && crate::is_x86_feature_available!("avx512vl")
+                        && crate::is_x86_feature_available!("avx512fp16");
+                    AVX512_FP16_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 

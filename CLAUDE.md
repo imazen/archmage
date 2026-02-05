@@ -678,13 +678,12 @@ These are documented semantic differences between architectures. Tests must acco
 
   Key insight: `#[inline]` is sufficient when called from matching `#[target_feature]` context. The overhead comes from calling through wrappers or from non-target_feature context. `#[inline(always)]` + `#[target_feature]` is not allowed on stable Rust.
 
-- ~~**summon() caching benchmark**~~: Done. See `benches/summon_overhead.rs`. Results:
-  - `std::is_x86_feature_detected!` (1 feature): ~0.5 ns
-  - `Desktop64::summon()` (4 features): ~2.6 ns
-  - Atomic caching layer: ~1.2 ns (2.2x faster)
-  - TLS caching: ~1.8 ns (1.4x faster)
+- ~~**summon() caching**~~: **Implemented!** See `benches/summon_overhead.rs`. Results after adding atomic caching:
+  - `Desktop64::summon()` (cached): ~1.3 ns (was 2.6 ns — **2x faster**)
+  - `Avx512ModernToken::summon()` (cached): ~1.3 ns (was 7.2 ns — **6x faster**)
+  - With `-Ctarget-cpu=haswell`: 0 ns (compiles away entirely)
 
-  Key insight: std's built-in caching is incredibly fast. Our 2.6 ns overhead is from checking 4 features. Adding our own caching could halve it, but **it doesn't matter** — 2.6 ns is irrelevant compared to any real SIMD workload. The reason to hoist `summon()` isn't its performance, it's keeping dispatch outside hot loops so LLVM can optimize inner code.
+  Implementation: Each token has a static `AtomicU8` cache (0=unknown, 1=unavailable, 2=available). Compile-time `#[cfg(target_feature)]` guard skips the cache entirely when features are guaranteed.
 
 ### safe_unaligned_simd Gaps (discovered in rav1d-safe refactoring)
 

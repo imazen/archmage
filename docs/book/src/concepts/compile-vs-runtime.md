@@ -270,15 +270,15 @@ if let Some(token) = Desktop64::summon() {
 
 **How fast is `summon()` anyway?**
 
-Rust's `std::arch::is_x86_feature_detected!` internally caches CPUID results, so repeated calls are essentially free (~0.5 ns each). `Desktop64::summon()` checks 4 features (avx2, fma, bmi1, bmi2), taking about 2.6 ns total.
+Archmage caches detection results in a static atomic, so repeated `summon()` calls after the first are essentially a single atomic load (~1.2 ns). The first call does the actual feature detection.
 
 | Operation | Time |
 |-----------|------|
-| Single `is_x86_feature_detected!` | ~0.5 ns |
-| `Desktop64::summon()` | ~2.6 ns |
-| 1000× summon in loop | ~2.7 µs |
+| `Desktop64::summon()` (cached) | ~1.3 ns |
+| First call (actual detection) | ~2.6 ns |
+| With `-Ctarget-cpu=haswell` | 0 ns (compiles to `Some(token)`) |
 
-This is fast enough that you don't need to cache the result yourself—the standard library already handles it. The reason to hoist summons isn't performance of `summon()`, it's keeping the dispatch decision outside your hot loop so LLVM can optimize the inner code.
+The caching makes `summon()` fast enough that even calling it frequently won't hurt performance. But the reason to hoist summons isn't performance of `summon()`, it's keeping the dispatch decision outside your hot loop so LLVM can optimize the inner code.
 
 ### Mistake 4: Using `#[cfg(target_arch)]` Unnecessarily
 

@@ -4,6 +4,11 @@
 
 use crate::tokens::SimdToken;
 use crate::tokens::{Has128BitSimd, Has256BitSimd, HasX64V2};
+use core::sync::atomic::{AtomicU8, Ordering};
+
+// Cache statics: 0 = unknown, 1 = unavailable, 2 = available
+static X64_V2_CACHE: AtomicU8 = AtomicU8::new(0);
+static X64_V3_CACHE: AtomicU8 = AtomicU8::new(0);
 
 /// Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).
 ///
@@ -44,15 +49,44 @@ impl SimdToken for X64V2Token {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        if crate::is_x86_feature_available!("sse3")
-            && crate::is_x86_feature_available!("ssse3")
-            && crate::is_x86_feature_available!("sse4.1")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("popcnt")
+        // Compile-time fast path
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt"
+        ))]
         {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt"
+        )))]
+        {
+            match X64_V2_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_x86_feature_available!("sse3")
+                        && crate::is_x86_feature_available!("ssse3")
+                        && crate::is_x86_feature_available!("sse4.1")
+                        && crate::is_x86_feature_available!("sse4.2")
+                        && crate::is_x86_feature_available!("popcnt");
+                    X64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 
@@ -118,22 +152,65 @@ impl SimdToken for X64V3Token {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        if crate::is_x86_feature_available!("sse3")
-            && crate::is_x86_feature_available!("ssse3")
-            && crate::is_x86_feature_available!("sse4.1")
-            && crate::is_x86_feature_available!("sse4.2")
-            && crate::is_x86_feature_available!("popcnt")
-            && crate::is_x86_feature_available!("avx")
-            && crate::is_x86_feature_available!("avx2")
-            && crate::is_x86_feature_available!("fma")
-            && crate::is_x86_feature_available!("bmi1")
-            && crate::is_x86_feature_available!("bmi2")
-            && crate::is_x86_feature_available!("f16c")
-            && crate::is_x86_feature_available!("lzcnt")
+        // Compile-time fast path
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt"
+        ))]
         {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt"
+        )))]
+        {
+            match X64_V3_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_x86_feature_available!("sse3")
+                        && crate::is_x86_feature_available!("ssse3")
+                        && crate::is_x86_feature_available!("sse4.1")
+                        && crate::is_x86_feature_available!("sse4.2")
+                        && crate::is_x86_feature_available!("popcnt")
+                        && crate::is_x86_feature_available!("avx")
+                        && crate::is_x86_feature_available!("avx2")
+                        && crate::is_x86_feature_available!("fma")
+                        && crate::is_x86_feature_available!("bmi1")
+                        && crate::is_x86_feature_available!("bmi2")
+                        && crate::is_x86_feature_available!("f16c")
+                        && crate::is_x86_feature_available!("lzcnt");
+                    X64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 

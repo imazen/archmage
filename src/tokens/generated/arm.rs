@@ -4,6 +4,12 @@
 
 use crate::tokens::SimdToken;
 use crate::tokens::{Has128BitSimd, HasNeon, HasNeonAes, HasNeonSha3};
+use core::sync::atomic::{AtomicU8, Ordering};
+
+// Cache statics: 0 = unknown, 1 = unavailable, 2 = available
+static NEON_AES_CACHE: AtomicU8 = AtomicU8::new(0);
+static NEON_SHA3_CACHE: AtomicU8 = AtomicU8::new(0);
+static NEON_CRC_CACHE: AtomicU8 = AtomicU8::new(0);
 
 /// Proof that NEON is available.
 ///
@@ -61,10 +67,28 @@ impl SimdToken for NeonAesToken {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        if crate::is_aarch64_feature_available!("aes") {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
+        // Compile-time fast path
+        #[cfg(all(target_feature = "aes"))]
+        {
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(target_feature = "aes")))]
+        {
+            match NEON_AES_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_aarch64_feature_available!("aes");
+                    NEON_AES_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 
@@ -110,10 +134,28 @@ impl SimdToken for NeonSha3Token {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        if crate::is_aarch64_feature_available!("sha3") {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
+        // Compile-time fast path
+        #[cfg(all(target_feature = "sha3"))]
+        {
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(target_feature = "sha3")))]
+        {
+            match NEON_SHA3_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_aarch64_feature_available!("sha3");
+                    NEON_SHA3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 
@@ -160,10 +202,28 @@ impl SimdToken for NeonCrcToken {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        if crate::is_aarch64_feature_available!("crc") {
-            Some(unsafe { Self::forge_token_dangerously() })
-        } else {
-            None
+        // Compile-time fast path
+        #[cfg(all(target_feature = "crc"))]
+        {
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(target_feature = "crc")))]
+        {
+            match NEON_CRC_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_aarch64_feature_available!("crc");
+                    NEON_CRC_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 
