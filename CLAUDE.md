@@ -647,12 +647,17 @@ These are documented semantic differences between architectures. Tests must acco
 
 Found during pal.rs refactoring to use `#[arcane]` + `safe_unaligned_simd`:
 
-- **Missing 64-bit partial load/store wrappers**:
-  - `_mm_loadl_epi64` (64-bit load into lower half of __m128i)
-  - `_mm_storel_epi64` (64-bit store from lower half of __m128i)
-  - These are commonly used for tail handling in SIMD loops
-  - Would need `Is64BitsUnaligned` trait or similar
-  - Currently require `unsafe {}` blocks even in `#[arcane]` functions
+- **SOLVED: Created `partial_simd` module in rav1d-safe** with `Is64BitsUnaligned` trait:
+  ```rust
+  // Safe functions with #[target_feature] - callable from #[arcane] without unsafe!
+  #[target_feature(enable = "sse2")]
+  pub fn mm_loadl_epi64<T: Is64BitsUnaligned>(src: &T) -> __m128i {
+      unsafe { _mm_loadl_epi64(ptr::from_ref(src).cast()) }
+  }
+  // Trait: [u8; 8], [i16; 4], [i32; 2], u64, i64, f64, etc.
+  ```
+  - Generates identical `vmovq` instructions (zero overhead)
+  - Pattern ready for upstream to safe_unaligned_simd
 
 - **Verified: No overhead from slice-to-array conversion**
   - `slice[..32].try_into().unwrap()` optimizes away completely
