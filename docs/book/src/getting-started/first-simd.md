@@ -70,7 +70,7 @@ fn square(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 fn square(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
     #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
     #[inline]
-    unsafe fn __inner(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    fn __inner(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
         // body - intrinsics are safe here!
     }
     // SAFETY: token proves CPU support

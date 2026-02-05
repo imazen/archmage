@@ -467,11 +467,12 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 // Macro generates:
 fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     #[target_feature(enable = "avx2,fma")]
-    unsafe fn inner(data: &[f32; 8]) -> [f32; 8] {
+    fn inner(data: &[f32; 8]) -> [f32; 8] {
         let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
         // ...
     }
-    // SAFETY: Token proves CPU support was verified via summon()
+    // SAFETY: Calling #[target_feature] fn from non-matching context.
+    // Token proves CPU support was verified via summon().
     unsafe { inner(data) }
 }
 ```

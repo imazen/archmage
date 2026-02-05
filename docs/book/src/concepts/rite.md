@@ -96,7 +96,7 @@ Compare to `#[arcane]` which creates a wrapper:
 fn helper(_token: Desktop64, v: __m256) -> __m256 {
     #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
     #[inline]
-    unsafe fn __inner(_token: Desktop64, v: __m256) -> __m256 {
+    fn __inner(_token: Desktop64, v: __m256) -> __m256 {
         _mm256_add_ps(v, v)
     }
     unsafe { __inner(_token, v) }

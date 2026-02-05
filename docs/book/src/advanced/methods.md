@@ -125,7 +125,7 @@ impl Vector8 {
     fn process(&self, token: Desktop64) -> f32 {
         #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
         #[inline]
-        unsafe fn __inner(_self: &Vector8, token: Desktop64) -> f32 {
+        fn __inner(_self: &Vector8, token: Desktop64) -> f32 {
             f32x8::from_array(token, _self.0).reduce_add()
         }
         unsafe { __inner(self, token) }

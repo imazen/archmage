@@ -40,7 +40,7 @@ fn process(token: Desktop64, data: &[f32; 8]) -> f32 { /* ... */ }
 fn process(token: Desktop64, data: &[f32; 8]) -> f32 {
     #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
     #[inline]
-    unsafe fn __inner(token: Desktop64, data: &[f32; 8]) -> f32 { /* ... */ }
+    fn __inner(token: Desktop64, data: &[f32; 8]) -> f32 { /* ... */ }
 
     // SAFETY: Token existence proves summon() succeeded
     unsafe { __inner(token, data) }
@@ -163,7 +163,7 @@ This is **safe**—`as_x64v4()` returns `None` if the token doesn't support V4. 
 // #[arcane] creates a wrapper:
 fn entry(token: Desktop64, data: &[f32; 8]) -> f32 {
     #[target_feature(enable = "avx2,fma,...")]
-    unsafe fn __inner(...) { ... }
+    fn __inner(...) { ... }
     unsafe { __inner(...) }
 }
 

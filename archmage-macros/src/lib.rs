@@ -395,12 +395,13 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
-                unsafe fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
+                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
                 #inner_body
 
                 // SAFETY: The token parameter proves the required CPU features are available.
-                // Tokens can only be constructed when features are verified (via summon()
-                // runtime check or forge_token_dangerously() in a context where features are guaranteed).
+                // Calling a #[target_feature] function from a non-matching context requires
+                // unsafe because the CPU may not support those instructions. The token's
+                // existence proves summon() succeeded, so the features are available.
                 unsafe { #inner_fn_name(#(#inner_args),*) }
             }
 
@@ -430,12 +431,11 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
-                unsafe fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
+                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
                 #inner_body
 
-                // SAFETY: The token parameter proves the required CPU features are available.
-                // Tokens can only be constructed when features are verified (via summon()
-                // runtime check or forge_token_dangerously() in a context where features are guaranteed).
+                // SAFETY: Calling a #[target_feature] function from a non-matching context
+                // requires unsafe. The token proves the required CPU features are available.
                 unsafe { #inner_fn_name(#(#inner_args),*) }
             }
         }
@@ -557,14 +557,15 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
 ///     #[target_feature(enable = "avx2")]
 ///     #[inline]
-///     unsafe fn __simd_inner_process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
+///     fn __simd_inner_process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
 ///         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
 ///         let doubled = _mm256_add_ps(v, v);
 ///         let mut out = [0.0f32; 8];
 ///         unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
 ///         out
 ///     }
-///     // SAFETY: Token proves the required features are available
+///     // SAFETY: Calling #[target_feature] fn from non-matching context.
+///     // Token proves the required features are available.
 ///     unsafe { __simd_inner_process(token, data) }
 /// }
 /// ```

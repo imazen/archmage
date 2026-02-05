@@ -69,7 +69,7 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
 fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
     #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
     #[inline]
-    unsafe fn __inner(token: Desktop64, a: __m256, b: __m256) -> __m256 {
+    fn __inner(token: Desktop64, a: __m256, b: __m256) -> __m256 {
         _mm256_add_ps(a, b)  // Safe inside #[target_feature]!
     }
     // SAFETY: Token proves CPU support was verified
