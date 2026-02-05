@@ -31,7 +31,7 @@ safe_unaligned_simd = { version = "0.2.4", optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 trybuild = "1.0"
-safe_unaligned_simd = { version = "0.2.3", features = ["avx512"] }
+safe_unaligned_simd = { version = "0.2.4", features = ["avx512"] }
 # SIMD types for tests and examples
 magetypes = { path = "magetypes", features = ["avx512"] }
 
@@ -40,7 +40,7 @@ name = "tokens"
 harness = false
 
 [package.metadata.docs.rs]
-features = ["std", "macros", "bytemuck", "avx512"]
+features = ["std", "macros", "safe-simd", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]
 # Build docs for multiple targets to show all platform-specific tokens
 targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]
