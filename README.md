@@ -9,6 +9,8 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 
+**Zero overhead.** Archmage generates identical assembly to hand-written unsafe code. The safety abstractions exist only at compile time—at runtime, you get raw SIMD instructions with no wrapper overhead.
+
 ```toml
 [dependencies]
 archmage = "0.4"

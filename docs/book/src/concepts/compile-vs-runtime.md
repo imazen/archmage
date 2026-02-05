@@ -51,7 +51,9 @@ The token proves the runtime check happened. The inner function gets LLVM's opti
 
 ## LLVM Optimization and Feature Boundaries
 
-Here's the critical performance insight: **LLVM's optimization passes respect `#[target_feature]` boundaries.**
+**Archmage is never slower than equivalent unsafe code.** When you use the right patterns (`#[rite]` helpers called from `#[arcane]`), the generated assembly is identical to hand-written `#[target_feature]` + `unsafe` code.
+
+Here's why: **LLVM's optimization passes respect `#[target_feature]` boundaries.**
 
 ### Same Features = Full Optimization
 

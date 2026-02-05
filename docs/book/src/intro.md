@@ -7,6 +7,19 @@
 
 **Magetypes** provides SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators that integrate with archmage tokens.
 
+## Zero Overhead
+
+Archmage is **never slower than equivalent unsafe code**. The safety abstractions exist only at compile time. At runtime, you get the exact same assembly as hand-written `#[target_feature]` + `unsafe` code.
+
+```
+Benchmark: 1000 iterations of 8-float vector operations
+  Manual unsafe code:     570 ns
+  #[rite] in #[arcane]:   572 ns  ← identical
+  #[arcane] in loop:     2320 ns  ← wrong pattern (see below)
+```
+
+The key is using the right pattern: put loops inside `#[arcane]`, use `#[rite]` for helpers. See [Token Hoisting](./concepts/token-hoisting.md) and [The #\[rite\] Macro](./concepts/rite.md).
+
 ## The Problem
 
 Raw SIMD in Rust requires `unsafe`:
