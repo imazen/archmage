@@ -13,21 +13,21 @@
 #![allow(ambiguous_glob_reexports)]
 
 // -- Traits --
-pub use crate::tokens::SimdToken;
-pub use crate::tokens::IntoConcreteToken;
-pub use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 pub use crate::tokens::HasX64V2;
 #[cfg(feature = "avx512")]
 pub use crate::tokens::HasX64V4;
+pub use crate::tokens::IntoConcreteToken;
+pub use crate::tokens::SimdToken;
+pub use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 pub use crate::tokens::{HasNeon, HasNeonAes, HasNeonSha3};
 
 // -- Tokens (all compile on all platforms; summon() returns None on wrong arch) --
 pub use crate::tokens::ScalarToken;
-pub use crate::tokens::{X64V2Token, X64V3Token, Desktop64};
-#[cfg(feature = "avx512")]
-pub use crate::tokens::{X64V4Token, Server64, Avx512Token, Avx512ModernToken, Avx512Fp16Token};
-pub use crate::tokens::{NeonToken, Arm64, NeonAesToken, NeonSha3Token, NeonCrcToken};
 pub use crate::tokens::Simd128Token;
+pub use crate::tokens::{Arm64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken};
+#[cfg(feature = "avx512")]
+pub use crate::tokens::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};
+pub use crate::tokens::{Desktop64, X64V2Token, X64V3Token};
 
 // -- Macros --
 #[cfg(feature = "macros")]
@@ -53,7 +53,10 @@ pub use safe_unaligned_simd::x86_64::*;
 #[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86"))]
 pub use safe_unaligned_simd::x86::*;
 
-#[cfg(all(feature = "safe_unaligned_simd", any(target_arch = "aarch64", target_arch = "arm64ec")))]
+#[cfg(all(
+    feature = "safe_unaligned_simd",
+    any(target_arch = "aarch64", target_arch = "arm64ec")
+))]
 pub use safe_unaligned_simd::aarch64::*;
 
 #[cfg(all(feature = "safe_unaligned_simd", target_arch = "wasm32"))]

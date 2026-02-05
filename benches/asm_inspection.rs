@@ -6,7 +6,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, rite, Desktop64, SimdToken};
+use archmage::{Desktop64, SimdToken, arcane, rite};
 use std::arch::x86_64::*;
 
 // ============================================================================
@@ -62,7 +62,11 @@ fn loop_inner_rite(token: Desktop64, data: &[[f32; 8]], other: &[[f32; 8]]) -> f
 }
 
 #[inline(never)]
-pub fn loop_inside_arcane_with_rite(token: Desktop64, data: &[[f32; 8]], other: &[[f32; 8]]) -> f32 {
+pub fn loop_inside_arcane_with_rite(
+    token: Desktop64,
+    data: &[[f32; 8]],
+    other: &[[f32; 8]],
+) -> f32 {
     loop_inner_rite(token, data, other)
 }
 
@@ -111,7 +115,7 @@ pub fn loop_calling_rite_directly(token: Desktop64, data: &[[f32; 8]], other: &[
 // Criterion benchmark
 // ============================================================================
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 fn bench_patterns(c: &mut Criterion) {
     let data: Vec<[f32; 8]> = (0..1000).map(|i| [i as f32; 8]).collect();

@@ -7,7 +7,7 @@
 #![cfg(target_arch = "x86_64")]
 
 use archmage::{Desktop64, SimdToken, X64V3Token};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use std::sync::atomic::{AtomicU8, Ordering};
 
 // ============================================================================
@@ -68,8 +68,7 @@ fn summon_cached_tls() -> Option<X64V3Token> {
 // ============================================================================
 
 fn just_std_detection() -> bool {
-    std::arch::is_x86_feature_detected!("avx2")
-        && std::arch::is_x86_feature_detected!("fma")
+    std::arch::is_x86_feature_detected!("avx2") && std::arch::is_x86_feature_detected!("fma")
 }
 
 fn just_one_std_detection() -> bool {
@@ -127,17 +126,13 @@ fn std_avx512_modern_features() -> bool {
 fn bench_summon(c: &mut Criterion) {
     let mut group = c.benchmark_group("summon_overhead");
 
-    group.bench_function("current_summon", |b| {
-        b.iter(|| black_box(summon_current()))
-    });
+    group.bench_function("current_summon", |b| b.iter(|| black_box(summon_current())));
 
     group.bench_function("cached_atomic", |b| {
         b.iter(|| black_box(summon_cached_atomic()))
     });
 
-    group.bench_function("cached_tls", |b| {
-        b.iter(|| black_box(summon_cached_tls()))
-    });
+    group.bench_function("cached_tls", |b| b.iter(|| black_box(summon_cached_tls())));
 
     group.bench_function("std_two_features", |b| {
         b.iter(|| black_box(just_std_detection()))

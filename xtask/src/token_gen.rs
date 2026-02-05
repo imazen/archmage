@@ -152,7 +152,11 @@ fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
     if arch != "wasm" {
         let cached_tokens: Vec<_> = tokens.iter().filter(|t| !t.always_available).collect();
         if !cached_tokens.is_empty() {
-            writeln!(out, "// Cache statics: 0 = unknown, 1 = unavailable, 2 = available").unwrap();
+            writeln!(
+                out,
+                "// Cache statics: 0 = unknown, 1 = unavailable, 2 = available"
+            )
+            .unwrap();
             for token in &cached_tokens {
                 let cache_name = cache_var_name(&token.name);
                 writeln!(out, "static {cache_name}: AtomicU8 = AtomicU8::new(0);").unwrap();
@@ -344,7 +348,11 @@ fn gen_summon_x86(out: &mut String, token: &TokenDef) {
     if check_features.is_empty() {
         writeln!(out, "    #[inline]").unwrap();
         writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
-        writeln!(out, "        Some(unsafe {{ Self::forge_token_dangerously() }})").unwrap();
+        writeln!(
+            out,
+            "        Some(unsafe {{ Self::forge_token_dangerously() }})"
+        )
+        .unwrap();
         writeln!(out, "    }}").unwrap();
         return;
     }
@@ -363,7 +371,11 @@ fn gen_summon_x86(out: &mut String, token: &TokenDef) {
     writeln!(out, "        // Compile-time fast path").unwrap();
     writeln!(out, "        #[cfg(all({all_features}))]").unwrap();
     writeln!(out, "        {{").unwrap();
-    writeln!(out, "            return Some(unsafe {{ Self::forge_token_dangerously() }});").unwrap();
+    writeln!(
+        out,
+        "            return Some(unsafe {{ Self::forge_token_dangerously() }});"
+    )
+    .unwrap();
     writeln!(out, "        }}").unwrap();
     writeln!(out).unwrap();
 
@@ -371,8 +383,16 @@ fn gen_summon_x86(out: &mut String, token: &TokenDef) {
     writeln!(out, "        // Runtime path with caching").unwrap();
     writeln!(out, "        #[cfg(not(all({all_features})))]").unwrap();
     writeln!(out, "        {{").unwrap();
-    writeln!(out, "            match {cache_name}.load(Ordering::Relaxed) {{").unwrap();
-    writeln!(out, "                2 => Some(unsafe {{ Self::forge_token_dangerously() }}),").unwrap();
+    writeln!(
+        out,
+        "            match {cache_name}.load(Ordering::Relaxed) {{"
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "                2 => Some(unsafe {{ Self::forge_token_dangerously() }}),"
+    )
+    .unwrap();
     writeln!(out, "                1 => None,").unwrap();
     writeln!(out, "                _ => {{").unwrap();
 
@@ -387,7 +407,11 @@ fn gen_summon_x86(out: &mut String, token: &TokenDef) {
     writeln!(out, "                    ;").unwrap();
     writeln!(out, "                    {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);").unwrap();
     writeln!(out, "                    if available {{").unwrap();
-    writeln!(out, "                        Some(unsafe {{ Self::forge_token_dangerously() }})").unwrap();
+    writeln!(
+        out,
+        "                        Some(unsafe {{ Self::forge_token_dangerously() }})"
+    )
+    .unwrap();
     writeln!(out, "                    }} else {{").unwrap();
     writeln!(out, "                        None").unwrap();
     writeln!(out, "                    }}").unwrap();
@@ -419,7 +443,11 @@ fn gen_summon_aarch64(out: &mut String, token: &TokenDef) {
     if check_features.is_empty() {
         writeln!(out, "    #[inline]").unwrap();
         writeln!(out, "    fn summon() -> Option<Self> {{").unwrap();
-        writeln!(out, "        Some(unsafe {{ Self::forge_token_dangerously() }})").unwrap();
+        writeln!(
+            out,
+            "        Some(unsafe {{ Self::forge_token_dangerously() }})"
+        )
+        .unwrap();
         writeln!(out, "    }}").unwrap();
         return;
     }
@@ -438,7 +466,11 @@ fn gen_summon_aarch64(out: &mut String, token: &TokenDef) {
     writeln!(out, "        // Compile-time fast path").unwrap();
     writeln!(out, "        #[cfg(all({all_features}))]").unwrap();
     writeln!(out, "        {{").unwrap();
-    writeln!(out, "            return Some(unsafe {{ Self::forge_token_dangerously() }});").unwrap();
+    writeln!(
+        out,
+        "            return Some(unsafe {{ Self::forge_token_dangerously() }});"
+    )
+    .unwrap();
     writeln!(out, "        }}").unwrap();
     writeln!(out).unwrap();
 
@@ -446,8 +478,16 @@ fn gen_summon_aarch64(out: &mut String, token: &TokenDef) {
     writeln!(out, "        // Runtime path with caching").unwrap();
     writeln!(out, "        #[cfg(not(all({all_features})))]").unwrap();
     writeln!(out, "        {{").unwrap();
-    writeln!(out, "            match {cache_name}.load(Ordering::Relaxed) {{").unwrap();
-    writeln!(out, "                2 => Some(unsafe {{ Self::forge_token_dangerously() }}),").unwrap();
+    writeln!(
+        out,
+        "            match {cache_name}.load(Ordering::Relaxed) {{"
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "                2 => Some(unsafe {{ Self::forge_token_dangerously() }}),"
+    )
+    .unwrap();
     writeln!(out, "                1 => None,").unwrap();
     writeln!(out, "                _ => {{").unwrap();
 
@@ -462,7 +502,11 @@ fn gen_summon_aarch64(out: &mut String, token: &TokenDef) {
     writeln!(out, "                    ;").unwrap();
     writeln!(out, "                    {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);").unwrap();
     writeln!(out, "                    if available {{").unwrap();
-    writeln!(out, "                        Some(unsafe {{ Self::forge_token_dangerously() }})").unwrap();
+    writeln!(
+        out,
+        "                        Some(unsafe {{ Self::forge_token_dangerously() }})"
+    )
+    .unwrap();
     writeln!(out, "                    }} else {{").unwrap();
     writeln!(out, "                        None").unwrap();
     writeln!(out, "                    }}").unwrap();

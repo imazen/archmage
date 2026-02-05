@@ -2,7 +2,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, rite, Desktop64, SimdToken, X64V3Token};
+use archmage::{Desktop64, SimdToken, X64V3Token, arcane, rite};
 use std::arch::x86_64::*;
 
 // Helper function using #[rite] - no wrapper, just target_feature annotation

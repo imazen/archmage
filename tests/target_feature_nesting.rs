@@ -25,8 +25,7 @@ fn inner_add(data: &[f32; 8]) -> f32 {
         let v = _mm256_loadu_ps(data.as_ptr());
         let sum = _mm256_hadd_ps(v, v);
         let sum = _mm256_hadd_ps(sum, sum);
-        _mm_cvtss_f32(_mm256_castps256_ps128(sum)) +
-        _mm_cvtss_f32(_mm256_extractf128_ps::<1>(sum))
+        _mm_cvtss_f32(_mm256_castps256_ps128(sum)) + _mm_cvtss_f32(_mm256_extractf128_ps::<1>(sum))
     }
 }
 
@@ -38,8 +37,7 @@ fn inner_mul(data: &[f32; 8]) -> f32 {
         let prod = _mm256_mul_ps(v, v);
         let sum = _mm256_hadd_ps(prod, prod);
         let sum = _mm256_hadd_ps(sum, sum);
-        _mm_cvtss_f32(_mm256_castps256_ps128(sum)) +
-        _mm_cvtss_f32(_mm256_extractf128_ps::<1>(sum))
+        _mm_cvtss_f32(_mm256_castps256_ps128(sum)) + _mm_cvtss_f32(_mm256_extractf128_ps::<1>(sum))
     }
 }
 
@@ -71,8 +69,7 @@ fn level3(data: &[f32; 8]) -> f32 {
 #[test]
 fn test_nested_target_feature_no_unsafe() {
     // Runtime check at entry point
-    if std::arch::is_x86_feature_detected!("avx2") &&
-       std::arch::is_x86_feature_detected!("fma") {
+    if std::arch::is_x86_feature_detected!("avx2") && std::arch::is_x86_feature_detected!("fma") {
         let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
         // SAFETY: We checked for avx2+fma above
