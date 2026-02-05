@@ -201,3 +201,19 @@ bench-edge-cases:
 # IMPORTANT: Without -C target-cpu=native, intrinsics won't inline properly
 # and benchmarks will show archmage being 4-5x slower than wide.
 # With native CPU targeting, archmage is 1.2-1.4x faster than wide.
+
+# ============================================================================
+# Documentation
+# ============================================================================
+
+# Build the documentation book
+docs:
+    cd docs/book && mdbook build
+
+# Serve the documentation locally (with auto-reload)
+docs-serve:
+    cd docs/book && mdbook serve
+
+# Clean the built documentation
+docs-clean:
+    rm -rf target/book

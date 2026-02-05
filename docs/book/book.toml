@@ -1,0 +1,19 @@
+[book]
+title = "Archmage & Magetypes"
+authors = ["Lilith River"]
+description = "Safe SIMD with capability tokens"
+language = "en"
+src = "src"
+
+[build]
+build-dir = "../../target/book"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/imazen/archmage"
+edit-url-template = "https://github.com/imazen/archmage/edit/main/docs/book/{path}"
+
+[output.html.fold]
+enable = true
+level = 1
