@@ -11,17 +11,6 @@
 
 **Zero overhead.** Archmage generates identical assembly to hand-written unsafe code. The safety abstractions exist only at compile time—at runtime, you get raw SIMD instructions with no wrapper overhead.
 
-### v0.5 Performance
-
-| What | Time |
-|------|------|
-| `Desktop64::summon()` | 1.3 ns (cached) |
-| With `-Ctarget-cpu=haswell` | 0 ns (compiles away) |
-| `#[rite]` helper in `#[arcane]` | 572 ns (baseline) |
-| `#[arcane]` called from `#[arcane]` | 2320 ns (4x slower) |
-
-**Key insight:** `#[rite]` inlines into the caller. `#[arcane]` generates a wrapper function—calling it repeatedly pays wrapper overhead. Use `#[arcane]` once at entry, `#[rite]` for everything inside.
-
 ```toml
 [dependencies]
 archmage = "0.4"
@@ -86,7 +75,18 @@ fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
 
 `#[rite]` adds `#[target_feature]` + `#[inline]` without a wrapper function. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe—no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
 
-**Performance rule:** Never call `#[arcane]` from `#[arcane]`. Use `#[rite]` for any function called exclusively from SIMD code. The 4x overhead from nested `#[arcane]` calls adds up in hot loops.
+**Performance rule:** Never call `#[arcane]` from `#[arcane]`. Use `#[rite]` for any function called exclusively from SIMD code.
+
+### Why this matters
+
+Processing 1000 8-float vector additions:
+
+| Pattern | Time |
+|---------|------|
+| `#[rite]` helper called from `#[arcane]` | 572 ns |
+| `#[arcane]` called from loop | 2320 ns (4x slower) |
+
+The difference is wrapper overhead. `#[rite]` inlines fully; `#[arcane]` generates an inner function call per invocation.
 
 ## SIMD types with `magetypes`
 
@@ -145,7 +145,7 @@ fn sum_squares_api(data: &[f32]) -> f32 {
 | `Simd128Token` | | WASM SIMD |
 | `ScalarToken` | | Always available |
 
-All tokens compile on all platforms. `summon()` returns `None` on unsupported architectures.
+All tokens compile on all platforms. `summon()` returns `None` on unsupported architectures. Detection is cached: ~1.3 ns after first call, 0 ns with `-Ctarget-cpu=haswell` (compiles away).
 
 ## The prelude
 
