@@ -126,17 +126,38 @@ for chunk in data.chunks_mut(8) {
     }
 }
 
-// RIGHT - hoist token outside loop
+// BETTER - hoist token outside loop
 if let Some(token) = Desktop64::summon() {
     for chunk in data.chunks_mut(8) {
-        process_chunk(token, chunk);
+        process_chunk(token, chunk);  // But still has #[arcane] wrapper overhead
     }
 } else {
     for chunk in data.chunks_mut(8) {
         process_chunk_scalar(chunk);
     }
 }
+
+// BEST - put the loop inside #[arcane], call #[rite] helpers
+if let Some(token) = Desktop64::summon() {
+    process_all_chunks(token, data);
+} else {
+    process_all_chunks_scalar(data);
+}
+
+#[arcane]
+fn process_all_chunks(token: Desktop64, data: &mut [f32]) {
+    for chunk in data.chunks_exact_mut(8) {
+        process_chunk(token, chunk.try_into().unwrap());  // #[rite] inlines fully!
+    }
+}
+
+#[rite]
+fn process_chunk(_: Desktop64, chunk: &mut [f32; 8]) {
+    // This inlines into process_all_chunks with zero overhead
+}
 ```
+
+The "BETTER" pattern still calls through an `#[arcane]` wrapper each iteration—an LLVM optimization barrier. The "BEST" pattern puts the loop inside `#[arcane]` and uses `#[rite]` for the inner work, so LLVM sees one optimization region for the entire loop.
 
 ### Don't Forget Early Returns
 

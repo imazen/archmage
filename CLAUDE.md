@@ -670,6 +670,13 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
+- **Dispatch/wrapper overhead benchmark**: Create a benchmark demonstrating the overhead of different patterns:
+  1. Raw dispatch (summon in loop) — worst
+  2. Hoisted token, `#[arcane]` in loop — LLVM barrier each iteration
+  3. Loop inside `#[arcane]`, `#[rite]` helpers — best (one optimization region)
+
+  This will quantify the "42% overhead" claim and show why `#[rite]` matters for hot loops.
+
 ### safe_unaligned_simd Gaps (discovered in rav1d-safe refactoring)
 
 Found during pal.rs refactoring to use `#[arcane]` + `safe_unaligned_simd`:
