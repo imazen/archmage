@@ -117,8 +117,8 @@ struct W512PlatformConfig {
 }
 
 const W512_PLATFORMS: &[W512PlatformConfig] = &[W512PlatformConfig {
-    mod_name: "v3",
-    tier_name: "v3",
+    mod_name: "v3_512",
+    tier_name: "v3_512",
     doc: "Polyfilled 512-bit types using x86-64-v3 (256-bit) operations.",
     cfg: "target_arch = \"x86_64\"",
     token: "X64V3Token",

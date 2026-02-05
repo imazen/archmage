@@ -6229,7 +6229,7 @@ pub mod wasm128 {
 }
 
 #[cfg(target_arch = "x86_64")]
-pub mod v3 {
+pub mod v3_512 {
     //! Polyfilled 512-bit types using x86-64-v3 (256-bit) operations.
 
     use crate::simd::generated::x86::w256::{
@@ -6439,10 +6439,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::f32x16"`.
+        /// Returns `"polyfill::v3_512::f32x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::f32x16"
+            "polyfill::v3_512::f32x16"
         }
     }
 
@@ -6730,10 +6730,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::f64x8"`.
+        /// Returns `"polyfill::v3_512::f64x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::f64x8"
+            "polyfill::v3_512::f64x8"
         }
     }
 
@@ -6944,10 +6944,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::i8x64"`.
+        /// Returns `"polyfill::v3_512::i8x64"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::i8x64"
+            "polyfill::v3_512::i8x64"
         }
     }
 
@@ -7102,10 +7102,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::u8x64"`.
+        /// Returns `"polyfill::v3_512::u8x64"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::u8x64"
+            "polyfill::v3_512::u8x64"
         }
     }
 
@@ -7269,10 +7269,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::i16x32"`.
+        /// Returns `"polyfill::v3_512::i16x32"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::i16x32"
+            "polyfill::v3_512::i16x32"
         }
     }
 
@@ -7445,10 +7445,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::u16x32"`.
+        /// Returns `"polyfill::v3_512::u16x32"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::u16x32"
+            "polyfill::v3_512::u16x32"
         }
     }
 
@@ -7650,10 +7650,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::i32x16"`.
+        /// Returns `"polyfill::v3_512::i32x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::i32x16"
+            "polyfill::v3_512::i32x16"
         }
     }
 
@@ -7846,10 +7846,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::u32x16"`.
+        /// Returns `"polyfill::v3_512::u32x16"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::u32x16"
+            "polyfill::v3_512::u32x16"
         }
     }
 
@@ -8018,10 +8018,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::i64x8"`.
+        /// Returns `"polyfill::v3_512::i64x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::i64x8"
+            "polyfill::v3_512::i64x8"
         }
     }
 
@@ -8172,10 +8172,10 @@ pub mod v3 {
         /// This is useful for verifying that the correct implementation is being used
         /// at compile time (via `-Ctarget-cpu`) or at runtime (via `#[magetypes]` dispatch).
         ///
-        /// Returns `"polyfill::v3::u64x8"`.
+        /// Returns `"polyfill::v3_512::u64x8"`.
         #[inline(always)]
         pub const fn implementation_name() -> &'static str {
-            "polyfill::v3::u64x8"
+            "polyfill::v3_512::u64x8"
         }
     }
 

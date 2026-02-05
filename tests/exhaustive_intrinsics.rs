@@ -339,44 +339,44 @@ fn test_implementation_names() {
 
         // polyfill::v3 - W512 emulated from W256 (all 10 element types)
         assert_eq!(
-            polyfill::v3::f32x16::implementation_name(),
-            "polyfill::v3::f32x16"
+            polyfill::v3_512::f32x16::implementation_name(),
+            "polyfill::v3_512::f32x16"
         );
         assert_eq!(
-            polyfill::v3::f64x8::implementation_name(),
-            "polyfill::v3::f64x8"
+            polyfill::v3_512::f64x8::implementation_name(),
+            "polyfill::v3_512::f64x8"
         );
         assert_eq!(
-            polyfill::v3::i8x64::implementation_name(),
-            "polyfill::v3::i8x64"
+            polyfill::v3_512::i8x64::implementation_name(),
+            "polyfill::v3_512::i8x64"
         );
         assert_eq!(
-            polyfill::v3::u8x64::implementation_name(),
-            "polyfill::v3::u8x64"
+            polyfill::v3_512::u8x64::implementation_name(),
+            "polyfill::v3_512::u8x64"
         );
         assert_eq!(
-            polyfill::v3::i16x32::implementation_name(),
-            "polyfill::v3::i16x32"
+            polyfill::v3_512::i16x32::implementation_name(),
+            "polyfill::v3_512::i16x32"
         );
         assert_eq!(
-            polyfill::v3::u16x32::implementation_name(),
-            "polyfill::v3::u16x32"
+            polyfill::v3_512::u16x32::implementation_name(),
+            "polyfill::v3_512::u16x32"
         );
         assert_eq!(
-            polyfill::v3::i32x16::implementation_name(),
-            "polyfill::v3::i32x16"
+            polyfill::v3_512::i32x16::implementation_name(),
+            "polyfill::v3_512::i32x16"
         );
         assert_eq!(
-            polyfill::v3::u32x16::implementation_name(),
-            "polyfill::v3::u32x16"
+            polyfill::v3_512::u32x16::implementation_name(),
+            "polyfill::v3_512::u32x16"
         );
         assert_eq!(
-            polyfill::v3::i64x8::implementation_name(),
-            "polyfill::v3::i64x8"
+            polyfill::v3_512::i64x8::implementation_name(),
+            "polyfill::v3_512::i64x8"
         );
         assert_eq!(
-            polyfill::v3::u64x8::implementation_name(),
-            "polyfill::v3::u64x8"
+            polyfill::v3_512::u64x8::implementation_name(),
+            "polyfill::v3_512::u64x8"
         );
     }
 
