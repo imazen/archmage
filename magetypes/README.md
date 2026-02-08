@@ -149,7 +149,7 @@ This works with `#![forbid(unsafe_code)]` — magetypes methods handle unsafe in
 
 ## Using with #[arcane] and #[rite]
 
-For raw intrinsics, use `#[arcane]` at entry points and `#[rite]` for internal helpers. Note that `#[arcane]` generates `unsafe` wrapper blocks, so this approach is incompatible with `#![forbid(unsafe_code)]`.
+For entry points that need `#[target_feature]`, use `#[arcane]`. For internal helpers called from `#[arcane]` functions, use `#[rite]`. Both are compatible with `#![forbid(unsafe_code)]` — the macros generate `#[allow(unsafe_code)]` internally.
 
 ```rust
 use archmage::prelude::*;
