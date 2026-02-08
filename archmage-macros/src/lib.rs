@@ -827,38 +827,42 @@ const MAGETYPES_VARIANTS: &[MagetypesVariant] = &[
     },
 ];
 
-/// Generate platform-specific variants from a function using explicit types.
+/// Generate platform-specific variants from a function by replacing `Token`.
 ///
-/// Write your function with explicit SIMD types (e.g., `f32x8`) and use `Token`
-/// as a placeholder for the token type. The macro generates platform-specific
-/// variants (`_v3`, `_neon`, `_wasm128`, `_scalar`) with cfg guards.
+/// Use `Token` as a placeholder for the token type. The macro generates
+/// suffixed variants (`_v3`, `_v4`, `_neon`, `_wasm128`, `_scalar`) with
+/// `Token` replaced by the concrete token type, and each variant wrapped
+/// in the appropriate `#[cfg(target_arch = ...)]` guard.
 ///
-/// # How It Works
+/// # What gets replaced
 ///
-/// - `Token` is replaced with the concrete token type for each variant
-/// - Each variant is wrapped in the appropriate `#[cfg(target_arch = ...)]`
-/// - Use `use magetypes::simd::*;` to get types that work on all platforms
-///   (native on x86, polyfilled on ARM/WASM)
+/// **Only `Token`** is replaced — with the concrete token type for each variant
+/// (e.g., `archmage::X64V3Token`, `archmage::ScalarToken`). SIMD types like
+/// `f32x8` and constants like `LANES` are **not** replaced by this macro.
+///
+/// This means `#[magetypes]` works well for functions that only need the token
+/// (e.g., to pass to other functions), but not for functions that use
+/// platform-specific SIMD types directly. For those, write `_v3` and `_scalar`
+/// variants manually and use `incant!` for dispatch.
 ///
 /// # Example
 ///
 /// ```rust,ignore
 /// use archmage::magetypes;
-/// use magetypes::simd::*;  // f32x8 works everywhere via polyfill
 ///
+/// // Works: function only uses Token, no SIMD types
 /// #[magetypes]
-/// pub fn dot(token: Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-///     let va = f32x8::load(token, a);
-///     let vb = f32x8::load(token, b);
-///     (va * vb).reduce_add()
+/// fn process(token: Token, data: &[f32]) -> f32 {
+///     // delegates to other functions that handle SIMD internally
+///     inner_simd_work(token, data)
 /// }
 ///
 /// // Generates:
-/// // - dot_v3(token: X64V3Token, ...) - x86_64 only
-/// // - dot_v4(token: X64V4Token, ...) - x86_64 + avx512 feature
-/// // - dot_neon(token: NeonToken, ...) - aarch64 only
-/// // - dot_wasm128(token: Wasm128Token, ...) - wasm32 only
-/// // - dot_scalar(token: ScalarToken, ...) - always available
+/// // - process_v3(token: X64V3Token, ...) — #[cfg(target_arch = "x86_64")]
+/// // - process_v4(token: X64V4Token, ...) — #[cfg(target_arch = "x86_64", feature = "avx512")]
+/// // - process_neon(token: NeonToken, ...) — #[cfg(target_arch = "aarch64")]
+/// // - process_wasm128(token: Wasm128Token, ...) — #[cfg(target_arch = "wasm32")]
+/// // - process_scalar(token: ScalarToken, ...) — always available
 /// ```
 ///
 /// # Usage with incant!
@@ -866,8 +870,8 @@ const MAGETYPES_VARIANTS: &[MagetypesVariant] = &[
 /// The generated variants work with `incant!` for dispatch:
 ///
 /// ```rust,ignore
-/// pub fn dot_api(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-///     incant!(dot(a, b))
+/// pub fn process_api(data: &[f32]) -> f32 {
+///     incant!(process(data))
 /// }
 /// ```
 #[proc_macro_attribute]

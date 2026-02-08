@@ -111,28 +111,60 @@ fn dot_product(a: &[f32], b: &[f32]) -> f32 {
 
 `f32x8` wraps `__m256` with token-gated construction and natural operators.
 
-## Multi-platform with `#[magetypes]`
+## Runtime dispatch with `incant!`
+
+Write platform-specific variants with concrete types, then dispatch at runtime:
 
 ```rust
-use archmage::{incant, magetypes, SimdToken};
+use archmage::incant;
+#[cfg(target_arch = "x86_64")]
+use magetypes::simd::f32x8;
 
-#[magetypes]
-fn sum_squares(token: Token, data: &[f32]) -> f32 {
+#[cfg(target_arch = "x86_64")]
+const LANES: usize = 8;
+
+/// AVX2 path — processes 8 floats at a time.
+#[cfg(target_arch = "x86_64")]
+fn sum_squares_v3(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     let chunks = data.chunks_exact(LANES);
-    let mut acc = f32xN::zero(token);
+    let mut acc = f32x8::zero(token);
     for chunk in chunks {
-        let v = f32xN::from_array(token, chunk.try_into().unwrap());
+        let v = f32x8::from_array(token, chunk.try_into().unwrap());
         acc = v.mul_add(v, acc);
     }
     acc.reduce_add() + chunks.remainder().iter().map(|x| x * x).sum::<f32>()
 }
 
-fn sum_squares_api(data: &[f32]) -> f32 {
+/// Scalar fallback.
+fn sum_squares_scalar(_token: archmage::ScalarToken, data: &[f32]) -> f32 {
+    data.iter().map(|x| x * x).sum()
+}
+
+/// Public API — dispatches to the best available at runtime.
+fn sum_squares(data: &[f32]) -> f32 {
     incant!(sum_squares(data))
 }
 ```
 
-`#[magetypes]` generates `_v3` (AVX2), `_v4` (AVX-512), `_neon`, `_wasm128`, and `_scalar` variants. `Token`, `f32xN`, and `LANES` are replaced with concrete types. `incant!` dispatches to the best available at runtime.
+`incant!` looks for `_v3`, `_v4`, `_neon`, `_wasm128`, and `_scalar` suffixed functions, and dispatches to the best one the CPU supports. Each variant uses concrete SIMD types for its platform; the scalar fallback uses plain math.
+
+### `#[magetypes]` for simple cases
+
+If your function body doesn't use SIMD types (only `Token`), `#[magetypes]` can generate the variants for you by replacing `Token` with the concrete token type for each platform:
+
+```rust
+use archmage::magetypes;
+
+#[magetypes]
+fn process(token: Token, data: &[f32]) -> f32 {
+    // Token is replaced with X64V3Token, NeonToken, ScalarToken, etc.
+    // But SIMD types like f32x8 are NOT replaced — use incant! pattern
+    // for functions that need different types per platform.
+    data.iter().sum()
+}
+```
+
+For functions that use platform-specific SIMD types (`f32x8`, `f32x4`, etc.), write the variants manually and use `incant!` as shown above.
 
 ## Tokens
 

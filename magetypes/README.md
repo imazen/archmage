@@ -86,6 +86,23 @@ let v = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 let v = f32x8::from_bytes(token, &bytes);
 ```
 
+## Per-Token Namespaces
+
+Each token level has a namespace with `f32xN` type aliases at the natural width, a `Token` type alias, and `LANES_*` constants:
+
+| Namespace | Token | `f32xN` | `LANES_F32` |
+|-----------|-------|---------|-------------|
+| `magetypes::simd::v3` | `X64V3Token` | `f32x8` | 8 |
+| `magetypes::simd::v4` | `X64V4Token` | `f32x16` | 16 |
+| `magetypes::simd::neon` | `NeonToken` | `f32x4` | 4 |
+| `magetypes::simd::wasm128` | `Wasm128Token` | `f32x4` | 4 |
+
+Each namespace also includes narrower native types and wider polyfilled types. For example, `v3` includes native 128-bit types and polyfilled 512-bit types (emulated via 2x256-bit ops).
+
+### Scalar polyfills
+
+`magetypes::simd::scalar` provides `f32x1`, `f64x1`, `i32x1`, etc. — single-element types with the same API as SIMD types, taking `ScalarToken`. These are used for scalar fallback code.
+
 ## Platform Support
 
 | Platform | Status | Token | Vector Sizes |
@@ -99,15 +116,45 @@ let v = f32x8::from_bytes(token, &bytes);
 - **`std`** (default): Enable std library support
 - **`avx512`**: Enable 512-bit types for AVX-512
 
+## Using with `incant!` for runtime dispatch
+
+The recommended pattern for multi-platform SIMD: write a `_v3` variant with concrete SIMD types and a `_scalar` fallback, then dispatch with `incant!`:
+
+```rust
+use archmage::incant;
+#[cfg(target_arch = "x86_64")]
+use magetypes::simd::f32x8;
+
+#[cfg(target_arch = "x86_64")]
+fn dot_product_v3(token: archmage::X64V3Token, a: &[f32], b: &[f32]) -> f32 {
+    let mut acc = f32x8::zero(token);
+    for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
+        let va = f32x8::from_array(token, a_chunk.try_into().unwrap());
+        let vb = f32x8::from_array(token, b_chunk.try_into().unwrap());
+        acc = va.mul_add(vb, acc);
+    }
+    acc.reduce_add()
+}
+
+fn dot_product_scalar(_token: archmage::ScalarToken, a: &[f32], b: &[f32]) -> f32 {
+    a.iter().zip(b).map(|(x, y)| x * y).sum()
+}
+
+pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
+    incant!(dot_product(a, b))
+}
+```
+
+This works with `#![forbid(unsafe_code)]` — magetypes methods handle unsafe internally via `#[inline(always)]`.
+
 ## Using with #[arcane] and #[rite]
 
-For SIMD kernels, use `#[arcane]` at entry points and `#[rite]` for internal helpers:
+For raw intrinsics, use `#[arcane]` at entry points and `#[rite]` for internal helpers. Note that `#[arcane]` generates `unsafe` wrapper blocks, so this approach is incompatible with `#![forbid(unsafe_code)]`.
 
 ```rust
 use archmage::prelude::*;
 use magetypes::simd::f32x8;
 
-// Entry point - receives token from caller
 #[arcane]
 pub fn dot_product(token: Desktop64, a: &[f32], b: &[f32]) -> f32 {
     let mut acc = f32x8::zero(token);
@@ -117,7 +164,6 @@ pub fn dot_product(token: Desktop64, a: &[f32], b: &[f32]) -> f32 {
     acc.reduce_add()
 }
 
-// Internal helper - use #[rite] for zero overhead
 #[rite]
 fn accumulate(token: Desktop64, acc: f32x8, a: &[f32], b: &[f32]) -> f32x8 {
     let va = f32x8::from_array(token, a.try_into().unwrap());
@@ -126,7 +172,7 @@ fn accumulate(token: Desktop64, acc: f32x8, a: &[f32], b: &[f32]) -> f32x8 {
 }
 ```
 
-**Performance tip:** `#[rite]` inlines with zero overhead. `#[arcane]` creates a wrapper. Use `#[rite]` for helpers called from hot loops.
+`#[rite]` inlines with zero overhead. `#[arcane]` creates a wrapper. Use `#[rite]` for helpers called from hot loops.
 
 ## Relationship to archmage
 
