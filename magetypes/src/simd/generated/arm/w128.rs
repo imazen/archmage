@@ -95,6 +95,15 @@ impl f32x4 {
         Self(v)
     }
 
+    /// Create from raw `float32x4_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_float32x4_t(_: archmage::NeonToken, v: float32x4_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -1393,6 +1402,15 @@ impl f64x2 {
         Self(v)
     }
 
+    /// Create from raw `float64x2_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_float64x2_t(_: archmage::NeonToken, v: float64x2_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -1958,6 +1976,15 @@ impl i8x16 {
         Self(v)
     }
 
+    /// Create from raw `int8x16_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_int8x16_t(_: archmage::NeonToken, v: int8x16_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -2398,6 +2425,15 @@ impl u8x16 {
     /// Caller must ensure the CPU supports the required SIMD features.
     #[inline(always)]
     pub unsafe fn from_raw(v: uint8x16_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw `uint8x16_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_uint8x16_t(_: archmage::NeonToken, v: uint8x16_t) -> Self {
         Self(v)
     }
 
@@ -2862,6 +2898,15 @@ impl i16x8 {
     /// Caller must ensure the CPU supports the required SIMD features.
     #[inline(always)]
     pub unsafe fn from_raw(v: int16x8_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw `int16x8_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_int16x8_t(_: archmage::NeonToken, v: int16x8_t) -> Self {
         Self(v)
     }
 
@@ -3372,6 +3417,15 @@ impl u16x8 {
         Self(v)
     }
 
+    /// Create from raw `uint16x8_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_uint16x8_t(_: archmage::NeonToken, v: uint16x8_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -3833,6 +3887,15 @@ impl i32x4 {
     /// Caller must ensure the CPU supports the required SIMD features.
     #[inline(always)]
     pub unsafe fn from_raw(v: int32x4_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw `int32x4_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_int32x4_t(_: archmage::NeonToken, v: int32x4_t) -> Self {
         Self(v)
     }
 
@@ -4336,6 +4399,15 @@ impl u32x4 {
         Self(v)
     }
 
+    /// Create from raw `uint32x4_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_uint32x4_t(_: archmage::NeonToken, v: uint32x4_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -4777,6 +4849,15 @@ impl i64x2 {
     /// Caller must ensure the CPU supports the required SIMD features.
     #[inline(always)]
     pub unsafe fn from_raw(v: int64x2_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw `int64x2_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_int64x2_t(_: archmage::NeonToken, v: int64x2_t) -> Self {
         Self(v)
     }
 
@@ -5231,6 +5312,15 @@ impl u64x2 {
     /// Caller must ensure the CPU supports the required SIMD features.
     #[inline(always)]
     pub unsafe fn from_raw(v: uint64x2_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw `uint64x2_t` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_uint64x2_t(_: archmage::NeonToken, v: uint64x2_t) -> Self {
         Self(v)
     }
 

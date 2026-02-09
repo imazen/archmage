@@ -395,6 +395,9 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         format!("Self(unsafe {{ {prefix}_setzero_si{bits}() }})")
     };
 
+    // Safe method name for from_raw alternative (strip leading underscores)
+    let safe_inner = inner.trim_start_matches('_');
+
     // Store intrinsic
     let store_body = if ty.elem.is_float() {
         format!("unsafe {{ {prefix}_storeu_{suffix}(out.as_mut_ptr(), self.0) }};")
@@ -481,6 +484,15 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         /// Use token-gated constructors (`load`, `splat`, `zero`) for safe construction.
         #[inline(always)]
         pub unsafe fn from_raw(v: {inner}) -> Self {{
+        Self(v)
+        }}
+
+        /// Create from raw `{inner}` (token-gated, zero-cost).
+        ///
+        /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+        /// proves the CPU supports the required SIMD features.
+        #[inline(always)]
+        pub fn from_{safe_inner}(_: archmage::{token}, v: {inner}) -> Self {{
         Self(v)
         }}
 

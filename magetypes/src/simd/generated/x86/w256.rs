@@ -102,6 +102,15 @@ impl f32x8 {
         Self(v)
     }
 
+    /// Create from raw `__m256` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256(_: archmage::X64V3Token, v: __m256) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -1512,6 +1521,15 @@ impl f64x4 {
         Self(v)
     }
 
+    /// Create from raw `__m256d` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256d(_: archmage::X64V3Token, v: __m256d) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -2106,6 +2124,15 @@ impl i8x32 {
         Self(v)
     }
 
+    /// Create from raw `__m256i` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256i(_: archmage::X64V3Token, v: __m256i) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -2549,6 +2576,15 @@ impl u8x32 {
     /// Use token-gated constructors (`load`, `splat`, `zero`) for safe construction.
     #[inline(always)]
     pub unsafe fn from_raw(v: __m256i) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw `__m256i` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256i(_: archmage::X64V3Token, v: __m256i) -> Self {
         Self(v)
     }
 
@@ -3067,6 +3103,15 @@ impl i16x16 {
         Self(v)
     }
 
+    /// Create from raw `__m256i` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256i(_: archmage::X64V3Token, v: __m256i) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -3578,6 +3623,15 @@ impl u16x16 {
         Self(v)
     }
 
+    /// Create from raw `__m256i` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256i(_: archmage::X64V3Token, v: __m256i) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -4062,6 +4116,15 @@ impl i32x8 {
         Self(v)
     }
 
+    /// Create from raw `__m256i` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256i(_: archmage::X64V3Token, v: __m256i) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -4542,6 +4605,15 @@ impl u32x8 {
         Self(v)
     }
 
+    /// Create from raw `__m256i` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256i(_: archmage::X64V3Token, v: __m256i) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -4980,6 +5052,15 @@ impl i64x4 {
     /// Use token-gated constructors (`load`, `splat`, `zero`) for safe construction.
     #[inline(always)]
     pub unsafe fn from_raw(v: __m256i) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw `__m256i` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256i(_: archmage::X64V3Token, v: __m256i) -> Self {
         Self(v)
     }
 
@@ -5458,6 +5539,15 @@ impl u64x4 {
     /// Use token-gated constructors (`load`, `splat`, `zero`) for safe construction.
     #[inline(always)]
     pub unsafe fn from_raw(v: __m256i) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw `__m256i` (token-gated, zero-cost).
+    ///
+    /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+    /// proves the CPU supports the required SIMD features.
+    #[inline(always)]
+    pub fn from_m256i(_: archmage::X64V3Token, v: __m256i) -> Self {
         Self(v)
     }
 

@@ -169,6 +169,15 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         Self(v)
         }}
 
+        /// Create from raw `{inner}` (token-gated, zero-cost).
+        ///
+        /// This is the safe alternative to [`from_raw`](Self::from_raw). The token
+        /// proves the CPU supports the required SIMD features.
+        #[inline(always)]
+        pub fn from_{inner}(_: archmage::NeonToken, v: {inner}) -> Self {{
+        Self(v)
+        }}
+
         // ========== Token-gated bytemuck replacements ==========
 
         /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
