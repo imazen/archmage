@@ -190,6 +190,31 @@ All tokens compile on all platforms. `summon()` returns `None` on unsupported ar
 - Intrinsics: `core::arch::*` for your platform
 - Memory ops: `safe_unaligned_simd` functions (reference-based, no raw pointers)
 
+## Testing SIMD dispatch paths
+
+Every `incant!` dispatch and `if let Some(token) = summon()` branch creates a fallback path. Disable tokens at runtime to test those paths on your native hardware — no cross-compilation needed.
+
+```rust
+use archmage::{X64V3Token, SimdToken};
+
+#[test]
+fn scalar_fallback_matches_simd() {
+    let data = vec![1.0f32; 1024];
+    let simd_result = sum_squares(&data);
+
+    // Disable AVX2+FMA — summon() returns None until re-enabled
+    X64V3Token::dangerously_disable_token_process_wide(true).unwrap();
+    let scalar_result = sum_squares(&data);
+    X64V3Token::dangerously_disable_token_process_wide(false).unwrap();
+
+    assert!((simd_result - scalar_result).abs() < 1e-3);
+}
+```
+
+Kill everything at once with `dangerously_disable_tokens_except_wasm(true)` — disabling V2 cascades to V3/V4/Modern/Fp16, disabling NEON cascades to Aes/Sha3/Crc. Re-enable with `false`.
+
+If you compiled with `-Ctarget-cpu=native`, the compiler bakes features in at compile time and `disable` returns an error (it can't un-bake them). The error includes the exact RUSTFLAGS you need to compile without those guarantees so runtime disable works.
+
 ## Feature flags
 
 | Feature | Default | |
