@@ -81,17 +81,18 @@ fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
 
 Processing 1000 8-float vector additions (`cargo bench --bench asm_inspection`):
 
-| Pattern | Time | Wrapper? | Feature mismatch? |
-|---------|------|----------|-------------------|
-| `#[rite]` in `#[arcane]` | 548 ns | yes | no — features match, LLVM inlines |
-| Manual inline in `#[arcane]` | 551 ns | no | no |
-| Scalar via wrapper fn | 545 ns | yes | no — no `#[target_feature]` involved |
-| `#[arcane]` per iteration | 2200 ns (4x) | yes | **yes** — baseline→AVX2 boundary |
-| `#[rite]` called directly | 2280 ns (4x) | **no** | **yes** — baseline→AVX2 boundary |
+| Pattern | Time | Feature mismatch? |
+|---------|------|--------------------|
+| `#[rite]` in `#[arcane]` | 547 ns | no — features match, LLVM inlines |
+| Manual inline in `#[arcane]` | 544 ns | no |
+| Scalar via wrapper fn | 542 ns | no |
+| `#[arcane]` per iteration | 2209 ns (4x) | **yes** — baseline→AVX2 boundary |
+| Bare `#[target_feature]` (no archmage) | 2222 ns (4x) | **yes** — same boundary |
+| `#[rite]` called directly | 2227 ns (4x) | **yes** — same boundary |
 
-The overhead is from the `#[target_feature]` optimization boundary, not from wrapper functions. LLVM cannot inline a function with `#[target_feature(enable = "avx2")]` into a caller without those features — the mismatched LLVM target attributes block it. Each call in a hot loop crosses this boundary, preventing cross-iteration optimization.
+The overhead is from the `#[target_feature]` optimization boundary. LLVM cannot inline a function with `#[target_feature(enable = "avx2")]` into a caller without those features. Bare `#[target_feature]` and `#[arcane]` produce identical timings — archmage adds nothing.
 
-Wrappers without feature mismatch (patterns 2, 5) inline freely and cost nothing.
+The fix: use `#[rite]` for helpers called from SIMD code. `#[rite]` functions inline into any caller with matching features, eliminating the boundary.
 
 ## SIMD types with `magetypes`
 

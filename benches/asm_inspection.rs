@@ -9,14 +9,14 @@
 //! call — LLVM can't hoist loads, sink stores, or vectorize across it.
 //!
 //! Proof:
-//! - Patterns 1 & 4 both cross the boundary per iteration → same speed (~2.2 µs)
+//! - Patterns 1, 4, & 7 all cross the boundary per iteration → same speed (~2.2 µs)
 //! - Pattern 4 has NO wrapper (calls `#[rite]` directly) — still slow
+//! - Pattern 7 is bare `#[target_feature]` with no archmage at all — same speed as 1
 //! - Patterns 5 & 6 use wrappers but WITHOUT target-feature mismatch → fast (~545 ns)
-//! - Pattern 5 wraps SIMD code in a regular fn that inlines → fast
 //!
-//! Conclusion: `#[arcane]`'s overhead comes from the `#[target_feature]` boundary
-//! it creates (LLVM can't inline across mismatched features), not from the wrapper
-//! function call itself.
+//! Conclusion: `#[arcane]`'s overhead equals a bare `#[target_feature]` call.
+//! The cost is from LLVM's inability to inline across mismatched target features,
+//! not from wrapper functions or archmage abstractions.
 
 #![cfg(target_arch = "x86_64")]
 
@@ -169,6 +169,35 @@ pub fn loop_scalar_inline(data: &[[f32; 8]], other: &[[f32; 8]]) -> f32 {
 }
 
 // ============================================================================
+// Pattern 7: Bare #[target_feature] — no archmage, no wrapper, no token
+// Identical cost to pattern 1 (#[arcane]). Proves archmage adds zero overhead
+// vs hand-written #[target_feature] + unsafe.
+// ============================================================================
+
+#[target_feature(enable = "avx2")]
+unsafe fn process_chunk_bare_target_feature(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    unsafe {
+        let va = _mm256_loadu_ps(a.as_ptr());
+        let vb = _mm256_loadu_ps(b.as_ptr());
+        let sum = _mm256_add_ps(va, vb);
+        let mut out = [0.0f32; 8];
+        _mm256_storeu_ps(out.as_mut_ptr(), sum);
+        out
+    }
+}
+
+#[inline(never)]
+pub fn loop_bare_target_feature(data: &[[f32; 8]], other: &[[f32; 8]]) -> f32 {
+    let mut total = 0.0f32;
+    for (a, b) in data.iter().zip(other.iter()) {
+        // SAFETY: benchmark only runs when Desktop64::summon() succeeds
+        let result = unsafe { process_chunk_bare_target_feature(a, b) };
+        total += result[0];
+    }
+    total
+}
+
+// ============================================================================
 // Criterion benchmark
 // ============================================================================
 
@@ -193,6 +222,10 @@ fn bench_patterns(c: &mut Criterion) {
 
         c.bench_function("4_rite_direct_unsafe", |b| {
             b.iter(|| loop_calling_rite_directly(token, black_box(&data), black_box(&other)))
+        });
+
+        c.bench_function("7_bare_target_feature", |b| {
+            b.iter(|| loop_bare_target_feature(black_box(&data), black_box(&other)))
         });
     } else {
         eprintln!("Desktop64 not available, skipping benchmarks");

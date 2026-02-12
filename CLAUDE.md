@@ -28,35 +28,30 @@
 
 **Tokens exist everywhere.** `Desktop64`, `Arm64`, etc. compile on all platforms—`summon()` just returns `None` on unsupported architectures. This means **you rarely need `#[cfg(target_arch)]` guards** in user code. The stubs handle cross-compilation cleanly.
 
-### CRITICAL: Target-Feature Boundaries (42% Performance Impact)
+### CRITICAL: Target-Feature Boundaries (4x Performance Impact)
 
-**Dispatch once at the outer call site, put loops inside `#[arcane]`, use `#[rite]` for helpers.**
+**Enter `#[arcane]` once at the top, use `#[rite]` for everything inside.**
 
-The cost isn't `summon()` (~1.3 ns cached) — it's the `#[target_feature]` boundary. Each `#[arcane]` call transitions between LLVM optimization regions. The caller has baseline features; the callee has AVX2+FMA. LLVM can't optimize across mismatched targets. Per-call dispatch in a hot loop means a boundary crossing per iteration.
+LLVM cannot inline across mismatched `#[target_feature]` attributes. Each `#[arcane]` call from non-SIMD code creates an optimization boundary — LLVM can't hoist loads, sink stores, or vectorize across it. This costs 4x on a simple loop (see `benches/asm_inspection.rs`). Token hoisting doesn't help — even with the token pre-summoned, calling `#[arcane]` per iteration still hits the boundary.
 
 ```rust
-// WRONG: target-feature boundary every iteration (42% regression)
-fn dist(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    if let Some(token) = X64V3Token::summon() {
-        dist_simd(token, a, b)  // #[arcane] boundary per call
-    } else {
-        dist_scalar(a, b)
-    }
-}
+// WRONG: #[arcane] boundary every iteration (4x slower)
+#[arcane]
+fn dist_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 { ... }
 
 fn process_all(points: &[[f32; 8]]) {
+    let token = X64V3Token::summon().unwrap(); // hoisted — doesn't help!
     for i in 0..points.len() {
         for j in i+1..points.len() {
-            dist(&points[i], &points[j]);  // boundary in hot loop!
+            dist_simd(token, &points[i], &points[j]); // boundary per call
         }
     }
 }
 ```
 
 ```rust
-// RIGHT: Zero overhead
+// RIGHT: one #[arcane] entry, #[rite] helpers inline freely
 fn process_all(points: &[[f32; 8]]) {
-    // Summon ONCE at entry point
     if let Some(token) = X64V3Token::summon() {
         process_all_simd(token, points);
     } else {
@@ -68,18 +63,19 @@ fn process_all(points: &[[f32; 8]]) {
 fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     for i in 0..points.len() {
         for j in i+1..points.len() {
-            dist_simd(token, &points[i], &points[j]);  // Token passed through
+            dist_simd(token, &points[i], &points[j]); // #[rite] inlines here
         }
     }
 }
 
-#[arcane]
+#[rite]
 fn dist_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    // No summon() here — token proves features available
+    // Inlines into process_all_simd — same LLVM optimization region
+    ...
 }
 ```
 
-**The rule:** `summon()` at API boundary, pass token everywhere else.
+**The rule:** `#[arcane]` at the entry point, `#[rite]` for everything called from SIMD code.
 
 ### CRITICAL: Generic Bounds Are Optimization Barriers
 
@@ -743,13 +739,14 @@ These are documented semantic differences between architectures. Tests must acco
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
 - ~~**Target-feature boundary overhead benchmark**~~: Done. See `benches/asm_inspection.rs`. Results:
-  - `#[rite]` in `#[arcane]`: 548 ns (features match → LLVM inlines)
-  - Manual inline in `#[arcane]`: 551 ns (same)
-  - Scalar via wrapper fn: 545 ns (no `#[target_feature]` → LLVM inlines wrapper freely)
-  - `#[arcane]` per iteration: 2200 ns (4x — baseline→AVX2 boundary per call)
-  - `#[rite]` direct unsafe (NO wrapper): 2280 ns (4x — same boundary, no wrapper involved)
+  - `#[rite]` in `#[arcane]`: 547 ns (features match → LLVM inlines)
+  - Manual inline in `#[arcane]`: 544 ns (same)
+  - Scalar via wrapper fn: 542 ns (no `#[target_feature]` → LLVM inlines freely)
+  - `#[arcane]` per iteration: 2209 ns (4x — baseline→AVX2 boundary per call)
+  - Bare `#[target_feature]` (no archmage): 2222 ns (4x — identical cost)
+  - `#[rite]` direct unsafe: 2227 ns (4x — same boundary)
 
-  Key insight: the overhead is from the `#[target_feature]` optimization boundary, NOT from wrapper functions. LLVM can't inline across mismatched target attributes. Patterns 4 and 1 prove this: pattern 4 calls `#[rite]` directly with no wrapper and is equally slow, because the caller still lacks `#[target_feature]`. Patterns 5 and 6 prove wrappers themselves are free — scalar wrapper inlines identically to scalar inline.
+  Key insight: the overhead is from the `#[target_feature]` optimization boundary, NOT from wrappers or archmage abstractions. Bare `#[target_feature]` without archmage has the same 4x cost. LLVM can't inline across mismatched target attributes. The fix is `#[rite]` — it inlines into callers with matching features, keeping everything in one LLVM optimization region.
 
 - ~~**summon() caching**~~: **Implemented!** See `benches/summon_overhead.rs`. Results after adding atomic caching:
   - `Desktop64::summon()` (cached): ~1.3 ns (was 2.6 ns — **2x faster**)
