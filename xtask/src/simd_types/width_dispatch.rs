@@ -3,10 +3,8 @@
 //! Generates `magetypes/src/width.rs` with the `WidthDispatch` trait and
 //! implementations for X64V3Token, NeonToken, and Wasm128Token.
 
-use indoc::formatdoc;
-use std::fmt::Write as FmtWrite;
-
 use crate::registry::Registry;
+use indoc::formatdoc;
 
 /// Element type info for width dispatch generation.
 struct ElemType {
@@ -204,11 +202,10 @@ fn generate_trait_def() -> String {
 
     // Associated types grouped by width
     for &width in WIDTHS {
-        let bits = width;
-        write!(code, "\n    // {bits}-bit types\n").unwrap();
+        code.push_str(&format!("\n    // {width}-bit types\n"));
         for elem in ELEM_TYPES {
             let assoc = assoc_type_name(elem, width);
-            writeln!(code, "    type {assoc};").unwrap();
+            code.push_str(&format!("    type {assoc};\n"));
         }
     }
 
@@ -278,11 +275,9 @@ fn gen_load(strat: &Strategy, _tc: &TokenConfig, tn: &str, elem: &ElemType, widt
                 if i > 0 {
                     parts.push_str(",\n                    ");
                 }
-                write!(
-                    parts,
+                parts.push_str(&format!(
                     "{w128_type}::load(self, data[{start}..{end}].try_into().unwrap())"
-                )
-                .unwrap();
+                ));
             }
             let _ = width;
             formatdoc! {r#"
@@ -317,15 +312,9 @@ fn generate_impl_block(tc: &TokenConfig) -> String {
     let mod_name = tc.mod_name;
 
     // Module wrapper with cfg + imports
-    write!(
-        code,
-        r#"#[cfg({cfg})]
-mod {mod_name} {{
-    use super::WidthDispatch;
-    use archmage::{token};
-"#
-    )
-    .unwrap();
+    code.push_str(&format!(
+        "#[cfg({cfg})]\nmod {mod_name} {{\n    use super::WidthDispatch;\n    use archmage::{token};\n"
+    ));
 
     // Collect all native imports needed
     let mut native_imports: Vec<String> = Vec::new();
@@ -356,20 +345,19 @@ mod {mod_name} {{
     if !native_imports.is_empty() {
         native_imports.sort();
         let imports = native_imports.join(", ");
-        writeln!(code, "\n    use crate::simd::{{{imports}}};").unwrap();
+        code.push_str(&format!("\n    use crate::simd::{{{imports}}};\n"));
     }
 
     // Start impl block
-    write!(code, "\n    impl WidthDispatch for {token} {{\n").unwrap();
+    code.push_str(&format!("\n    impl WidthDispatch for {token} {{\n"));
 
     // Associated types
     for &width in WIDTHS {
-        let bits = width;
-        writeln!(code, "        // {bits}-bit types").unwrap();
+        code.push_str(&format!("        // {width}-bit types\n"));
         for elem in ELEM_TYPES {
             let assoc = assoc_type_name(elem, width);
             let concrete = gen_assoc_type(tc, elem, width);
-            writeln!(code, "        type {assoc} = {concrete};").unwrap();
+            code.push_str(&format!("        type {assoc} = {concrete};\n"));
         }
         code.push('\n');
     }

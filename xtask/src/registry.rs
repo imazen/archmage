@@ -401,64 +401,42 @@ impl Registry {
     /// - `ALL_CONCRETE_TOKENS` — all token names including aliases
     /// - `ALL_TRAIT_NAMES` — all trait names
     pub fn generate_macro_registry(&self) -> String {
-        use std::fmt::Write;
+        use indoc::formatdoc;
         let mut out = String::with_capacity(8192);
 
-        writeln!(out, "//! Generated from token-registry.toml — DO NOT EDIT.").unwrap();
-        writeln!(out, "//!").unwrap();
-        writeln!(out, "//! Regenerate with: cargo run -p xtask -- generate").unwrap();
-        writeln!(out).unwrap();
+        out.push_str(&formatdoc! {"
+            //! Generated from token-registry.toml — DO NOT EDIT.
+            //!
+            //! Regenerate with: cargo run -p xtask -- generate
 
-        // token_to_features()
+        "});
+
         self.gen_token_to_features(&mut out);
-        writeln!(out).unwrap();
-
-        // trait_to_features()
+        out.push('\n');
         self.gen_trait_to_features(&mut out);
-        writeln!(out).unwrap();
-
-        // token_to_arch()
+        out.push('\n');
         self.gen_token_to_arch(&mut out);
-        writeln!(out).unwrap();
-
-        // ALL_CONCRETE_TOKENS
+        out.push('\n');
         self.gen_all_concrete_tokens(&mut out);
-        writeln!(out).unwrap();
-
-        // ALL_TRAIT_NAMES
+        out.push('\n');
         self.gen_all_trait_names(&mut out);
-        writeln!(out).unwrap();
+        out.push('\n');
 
         out
     }
 
     fn gen_token_to_features(&self, out: &mut String) {
-        use std::fmt::Write;
-        writeln!(
-            out,
-            "/// Maps a token type name to its required target features."
-        )
-        .unwrap();
-        writeln!(out, "///").unwrap();
-        writeln!(
-            out,
-            "/// Generated from token-registry.toml. One complete feature list per token."
-        )
-        .unwrap();
-        writeln!(out, "pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {{").unwrap();
-        writeln!(out, "    match token_name {{").unwrap();
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps a token type name to its required target features.
+            ///
+            /// Generated from token-registry.toml. One complete feature list per token.
+            pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {{
+                match token_name {{
+        "});
 
         for token in &self.token {
-            // Build match pattern: "Name" | "Alias1" | "Alias2"
-            let mut names: Vec<&str> = vec![&token.name];
-            for a in &token.aliases {
-                names.push(a);
-            }
-            let pattern: String = names
-                .iter()
-                .map(|n| format!("\"{}\"", n))
-                .collect::<Vec<_>>()
-                .join(" | ");
+            let pattern = Self::match_pattern(token);
 
             // Features for macro crate: exclude sse/sse2 (x86_64 baseline, not in #[target_feature])
             let macro_features: Vec<&str> = token
@@ -468,48 +446,23 @@ impl Registry {
                 .map(|s| s.as_str())
                 .collect();
 
-            if macro_features.len() <= 5 {
-                let features_str: String = macro_features
-                    .iter()
-                    .map(|f| format!("\"{}\"", f))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                writeln!(out, "        {} => Some(&[{}]),", pattern, features_str).unwrap();
-            } else {
-                writeln!(out, "        {} => Some(&[", pattern).unwrap();
-                for (i, f) in macro_features.iter().enumerate() {
-                    let comma = if i < macro_features.len() - 1 {
-                        ","
-                    } else {
-                        ","
-                    };
-                    writeln!(out, "            \"{}\"{}", f, comma).unwrap();
-                }
-                writeln!(out, "        ]),").unwrap();
-            }
+            out.push_str(&Self::format_feature_arm(&pattern, &macro_features));
         }
 
-        writeln!(out, "        _ => None,").unwrap();
-        writeln!(out, "    }}").unwrap();
-        writeln!(out, "}}").unwrap();
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
     }
 
     fn gen_trait_to_features(&self, out: &mut String) {
-        use std::fmt::Write;
-        writeln!(
-            out,
-            "/// Maps a trait bound name to its required target features."
-        )
-        .unwrap();
-        writeln!(out, "///").unwrap();
-        writeln!(
-            out,
-            "/// Generated from token-registry.toml. Includes token type names"
-        )
-        .unwrap();
-        writeln!(out, "/// so `impl TokenType` patterns work in the macro.").unwrap();
-        writeln!(out, "pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {{").unwrap();
-        writeln!(out, "    match trait_name {{").unwrap();
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps a trait bound name to its required target features.
+            ///
+            /// Generated from token-registry.toml. Includes token type names
+            /// so `impl TokenType` patterns work in the macro.
+            pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static str]> {{
+                match trait_name {{
+        "});
 
         // Traits first — do NOT strip sse/sse2, these are used for #[target_feature]
         // in codegen where the baseline is needed for generic bounds
@@ -520,54 +473,20 @@ impl Registry {
                 trait_def.features.iter().map(|s| s.as_str()).collect()
             };
 
-            if features.len() <= 5 {
-                let features_str: String = features
-                    .iter()
-                    .map(|f| format!("\"{}\"", f))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                writeln!(
-                    out,
-                    "        \"{}\" => Some(&[{}]),",
-                    trait_def.name, features_str
-                )
-                .unwrap();
-            } else {
-                writeln!(out, "        \"{}\" => Some(&[", trait_def.name).unwrap();
-                for (i, f) in features.iter().enumerate() {
-                    let comma = if i < features.len() - 1 { "," } else { "," };
-                    writeln!(out, "            \"{}\"{}", f, comma).unwrap();
-                }
-                writeln!(out, "        ]),").unwrap();
-            }
+            let pattern = format!("\"{}\"", trait_def.name);
+            out.push_str(&Self::format_feature_arm(&pattern, &features));
         }
 
-        writeln!(out).unwrap();
-        writeln!(
-            out,
-            "        // Token types used as bounds — full feature sets WITH baselines"
-        )
-        .unwrap();
-        writeln!(
-            out,
-            "        // (unlike token_to_features which strips sse/sse2 for #[target_feature])"
-        )
-        .unwrap();
+        out.push('\n');
+        out.push_str("        // Token types used as bounds — full feature sets WITH baselines\n");
+        out.push_str(
+            "        // (unlike token_to_features which strips sse/sse2 for #[target_feature])\n",
+        );
 
         // Token types as bounds — include sse/sse2 baselines for x86 tokens
-        // so that X64V3Token-as-trait properly subsumes HasX64V2 features
         for token in &self.token {
-            let mut names: Vec<&str> = vec![&token.name];
-            for a in &token.aliases {
-                names.push(a);
-            }
-            let pattern: String = names
-                .iter()
-                .map(|n| format!("\"{}\"", n))
-                .collect::<Vec<_>>()
-                .join(" | ");
+            let pattern = Self::match_pattern(token);
 
-            // For x86 tokens, prepend sse/sse2 baselines that token_to_features strips
             let features: Vec<&str> = if token.arch == "x86" {
                 let mut f = vec!["sse", "sse2"];
                 for feat in &token.features {
@@ -580,104 +499,92 @@ impl Registry {
                 token.features.iter().map(|s| s.as_str()).collect()
             };
 
-            if features.len() <= 5 {
-                let features_str: String = features
-                    .iter()
-                    .map(|f| format!("\"{}\"", f))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                writeln!(out, "        {} => Some(&[{}]),", pattern, features_str).unwrap();
-            } else {
-                writeln!(out, "        {} => Some(&[", pattern).unwrap();
-                for (i, f) in features.iter().enumerate() {
-                    let comma = if i < features.len() - 1 { "," } else { "," };
-                    writeln!(out, "            \"{}\"{}", f, comma).unwrap();
-                }
-                writeln!(out, "        ]),").unwrap();
-            }
+            out.push_str(&Self::format_feature_arm(&pattern, &features));
         }
 
-        writeln!(out).unwrap();
-        writeln!(out, "        _ => None,").unwrap();
-        writeln!(out, "    }}").unwrap();
-        writeln!(out, "}}").unwrap();
+        out.push('\n');
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
     }
 
     fn gen_token_to_arch(&self, out: &mut String) {
-        use std::fmt::Write;
-        writeln!(
-            out,
-            "/// Maps a token type name to its target architecture."
-        )
-        .unwrap();
-        writeln!(out, "///").unwrap();
-        writeln!(
-            out,
-            "/// Returns the `target_arch` value (e.g., \"x86_64\", \"aarch64\", \"wasm32\")."
-        )
-        .unwrap();
-        writeln!(
-            out,
-            "pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {{"
-        )
-        .unwrap();
-        writeln!(out, "    match token_name {{").unwrap();
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps a token type name to its target architecture.
+            ///
+            /// Returns the `target_arch` value (e.g., \"x86_64\", \"aarch64\", \"wasm32\").
+            pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {{
+                match token_name {{
+        "});
 
         for token in &self.token {
-            // Build match pattern: "Name" | "Alias1" | "Alias2"
-            let mut names: Vec<&str> = vec![&token.name];
-            for a in &token.aliases {
-                names.push(a);
-            }
-            let pattern: String = names
-                .iter()
-                .map(|n| format!("\"{}\"", n))
-                .collect::<Vec<_>>()
-                .join(" | ");
-
-            // Map registry arch names to Rust target_arch values
+            let pattern = Self::match_pattern(token);
             let target_arch = match token.arch.as_str() {
                 "x86" => "x86_64",
                 "aarch64" => "aarch64",
                 "wasm" => "wasm32",
-                other => other, // pass through unknown
+                other => other,
             };
-
-            writeln!(out, "        {} => Some(\"{}\"),", pattern, target_arch).unwrap();
+            out.push_str(&format!("        {pattern} => Some(\"{target_arch}\"),\n"));
         }
 
-        writeln!(out, "        _ => None,").unwrap();
-        writeln!(out, "    }}").unwrap();
-        writeln!(out, "}}").unwrap();
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
     }
 
     fn gen_all_concrete_tokens(&self, out: &mut String) {
-        use std::fmt::Write;
-        writeln!(
-            out,
-            "/// All concrete token names that exist in the runtime crate."
-        )
-        .unwrap();
-        writeln!(out, "#[cfg(test)]").unwrap();
-        writeln!(out, "pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[").unwrap();
+        out.push_str("/// All concrete token names that exist in the runtime crate.\n");
+        out.push_str("#[cfg(test)]\n");
+        out.push_str("pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[\n");
         for token in &self.token {
-            writeln!(out, "    \"{}\",", token.name).unwrap();
+            out.push_str(&format!("    \"{}\",\n", token.name));
             for a in &token.aliases {
-                writeln!(out, "    \"{}\",", a).unwrap();
+                out.push_str(&format!("    \"{a}\",\n"));
             }
         }
-        writeln!(out, "];").unwrap();
+        out.push_str("];\n");
     }
 
     fn gen_all_trait_names(&self, out: &mut String) {
-        use std::fmt::Write;
-        writeln!(out, "/// All trait names that exist in the runtime crate.").unwrap();
-        writeln!(out, "#[cfg(test)]").unwrap();
-        writeln!(out, "pub(crate) const ALL_TRAIT_NAMES: &[&str] = &[").unwrap();
+        out.push_str("/// All trait names that exist in the runtime crate.\n");
+        out.push_str("#[cfg(test)]\n");
+        out.push_str("pub(crate) const ALL_TRAIT_NAMES: &[&str] = &[\n");
         for trait_def in &self.traits {
-            writeln!(out, "    \"{}\",", trait_def.name).unwrap();
+            out.push_str(&format!("    \"{}\",\n", trait_def.name));
         }
-        writeln!(out, "];").unwrap();
+        out.push_str("];\n");
+    }
+
+    /// Build a match pattern like `"Name" | "Alias1" | "Alias2"` for a token.
+    fn match_pattern(token: &TokenDef) -> String {
+        let mut names: Vec<&str> = vec![&token.name];
+        for a in &token.aliases {
+            names.push(a);
+        }
+        names
+            .iter()
+            .map(|n| format!("\"{n}\""))
+            .collect::<Vec<_>>()
+            .join(" | ")
+    }
+
+    /// Format a match arm for a feature list (short inline or multi-line).
+    fn format_feature_arm(pattern: &str, features: &[&str]) -> String {
+        if features.len() <= 5 {
+            let features_str: String = features
+                .iter()
+                .map(|f| format!("\"{f}\""))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("        {pattern} => Some(&[{features_str}]),\n")
+        } else {
+            let mut s = format!("        {pattern} => Some(&[\n");
+            for f in features {
+                s.push_str(&format!("            \"{f}\",\n"));
+            }
+            s.push_str("        ]),\n");
+            s
+        }
     }
 }
 

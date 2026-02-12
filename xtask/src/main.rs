@@ -7,7 +7,6 @@
 use anyhow::{Context, Result, bail};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -653,19 +652,11 @@ fn map_features_to_token(features: &str, arch: &str) -> String {
 fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
     let mut doc = String::new();
 
-    writeln!(doc, "# x86 Intrinsics by Archmage Token").unwrap();
-    writeln!(doc).unwrap();
-    writeln!(
-        doc,
-        "Auto-generated reference mapping stdarch intrinsics to archmage tokens."
-    )
-    .unwrap();
-    writeln!(
-        doc,
-        "Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`"
-    )
-    .unwrap();
-    writeln!(doc).unwrap();
+    doc.push_str(
+        "# x86 Intrinsics by Archmage Token\n\n\
+        Auto-generated reference mapping stdarch intrinsics to archmage tokens.\n\
+        Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`\n\n",
+    );
 
     // Collect x86 intrinsics and organize by token tier
     struct TierInfo {
@@ -780,19 +771,19 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             continue;
         }
 
-        writeln!(doc, "## {} ({} intrinsics)", tier.name, count).unwrap();
-        writeln!(doc, "Token: `{}`\n", tier.token).unwrap();
+        doc.push_str(&format!("## {} ({} intrinsics)\n", tier.name, count));
+        doc.push_str(&format!("Token: `{}`\n\n", tier.token));
 
         for (category, names) in &tier.intrinsics {
             let mut sorted = names.clone();
             sorted.sort();
-            writeln!(doc, "### {}\n", category).unwrap();
+            doc.push_str(&format!("### {}\n\n", category));
             for name in &sorted {
                 let safe = db.get(name.as_str()).map(|e| !e.is_unsafe).unwrap_or(false);
                 let marker = if safe { "" } else { " (unsafe)" };
-                writeln!(doc, "- `{}`{}", name, marker).unwrap();
+                doc.push_str(&format!("- `{}`{}\n", name, marker));
             }
-            writeln!(doc).unwrap();
+            doc.push('\n');
         }
     }
 
@@ -803,19 +794,11 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
 fn generate_aarch64_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
     let mut doc = String::new();
 
-    writeln!(doc, "# AArch64 Intrinsics by Archmage Token").unwrap();
-    writeln!(doc).unwrap();
-    writeln!(
-        doc,
-        "Auto-generated reference mapping stdarch intrinsics to archmage tokens."
-    )
-    .unwrap();
-    writeln!(
-        doc,
-        "Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`"
-    )
-    .unwrap();
-    writeln!(doc).unwrap();
+    doc.push_str(
+        "# AArch64 Intrinsics by Archmage Token\n\n\
+        Auto-generated reference mapping stdarch intrinsics to archmage tokens.\n\
+        Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`\n\n",
+    );
 
     // Group by feature set
     let mut by_token: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
@@ -849,18 +832,18 @@ fn generate_aarch64_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
 
     for (token, categories) in &by_token {
         let count: usize = categories.values().map(|v| v.len()).sum();
-        writeln!(doc, "## {} ({} intrinsics)\n", token, count).unwrap();
+        doc.push_str(&format!("## {} ({} intrinsics)\n\n", token, count));
 
         for (category, names) in categories {
             let mut sorted = names.clone();
             sorted.sort();
-            writeln!(doc, "### {}\n", category).unwrap();
+            doc.push_str(&format!("### {}\n\n", category));
             for name in &sorted {
                 let safe = db.get(name.as_str()).map(|e| !e.is_unsafe).unwrap_or(false);
                 let marker = if safe { "" } else { " (unsafe)" };
-                writeln!(doc, "- `{}`{}", name, marker).unwrap();
+                doc.push_str(&format!("- `{}`{}\n", name, marker));
             }
-            writeln!(doc).unwrap();
+            doc.push('\n');
         }
     }
 
@@ -871,22 +854,12 @@ fn generate_aarch64_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
 fn generate_memory_ops_reference(safe_simd_ops: &[SafeMemOp]) -> String {
     let mut doc = String::new();
 
-    writeln!(doc, "# Safe Memory Operations Reference").unwrap();
-    writeln!(doc).unwrap();
-    writeln!(
-        doc,
-        "Safe unaligned load/store operations from `safe_unaligned_simd` v{},",
-        SAFE_SIMD_VERSION
-    )
-    .unwrap();
-    writeln!(
-        doc,
-        "organized by the archmage token required to use them inside `#[arcane]` functions."
-    )
-    .unwrap();
-    writeln!(doc).unwrap();
-    writeln!(doc, "Regenerate: `cargo xtask generate`").unwrap();
-    writeln!(doc).unwrap();
+    doc.push_str(&format!(
+        "# Safe Memory Operations Reference\n\n\
+         Safe unaligned load/store operations from `safe_unaligned_simd` v{SAFE_SIMD_VERSION},\n\
+         organized by the archmage token required to use them inside `#[arcane]` functions.\n\n\
+         Regenerate: `cargo xtask generate`\n\n"
+    ));
 
     // Group by token
     let mut by_token: BTreeMap<&str, Vec<&SafeMemOp>> = BTreeMap::new();
@@ -895,20 +868,18 @@ fn generate_memory_ops_reference(safe_simd_ops: &[SafeMemOp]) -> String {
     }
 
     for (token, ops) in &by_token {
-        writeln!(doc, "## {} ({} functions)\n", token, ops.len()).unwrap();
+        doc.push_str(&format!("## {} ({} functions)\n\n", token, ops.len()));
 
         // Sort ops by name for deterministic output across filesystems
         let mut sorted_ops = ops.clone();
         sorted_ops.sort_by_key(|op| &op.name);
         for op in sorted_ops {
-            writeln!(doc, "### `{}`\n", op.name).unwrap();
+            doc.push_str(&format!("### `{}`\n\n", op.name));
             if !op.doc.is_empty() {
-                writeln!(doc, "{}\n", op.doc).unwrap();
+                doc.push_str(&format!("{}\n\n", op.doc));
             }
-            writeln!(doc, "```rust").unwrap();
-            writeln!(doc, "{}", op.signature).unwrap();
-            writeln!(doc, "```\n").unwrap();
-            writeln!(doc, "Features: `{}`\n", op.features).unwrap();
+            doc.push_str(&format!("```rust\n{}\n```\n\n", op.signature));
+            doc.push_str(&format!("Features: `{}`\n\n", op.features));
         }
     }
 

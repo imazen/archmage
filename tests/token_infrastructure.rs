@@ -1,0 +1,605 @@
+//! Comprehensive tests for token infrastructure.
+//!
+//! Tests the token system: compiled_with(), summon(), disable mechanism,
+//! cascading, CompileTimeGuaranteedError, deprecated aliases, IntoConcreteToken,
+//! token extraction (downcast), and public API re-exports.
+//!
+//! Most tests here work on x86_64 using real tokens. Stub behavior is tested
+//! via the ARM/WASM tokens which are stubs on x86_64.
+
+use archmage::{
+    // Aliases
+    Arm64,
+    CompileTimeGuaranteedError,
+    Desktop64,
+    IntoConcreteToken,
+    // ARM tokens (stubs on x86_64)
+    NeonAesToken,
+    NeonCrcToken,
+    NeonSha3Token,
+    NeonToken,
+    ScalarToken,
+    SimdToken,
+    // WASM tokens (stubs on x86_64)
+    Wasm128Token,
+    // x86 tokens
+    X64V2Token,
+    X64V3Token,
+};
+
+#[cfg(feature = "avx512")]
+use archmage::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};
+
+// ============================================================================
+// ScalarToken: always available
+// ============================================================================
+
+#[test]
+fn scalar_compiled_with_always_true() {
+    assert_eq!(ScalarToken::compiled_with(), Some(true));
+}
+
+#[test]
+fn scalar_summon_always_some() {
+    assert!(ScalarToken::summon().is_some());
+}
+
+#[test]
+fn scalar_disable_always_errors() {
+    let result = ScalarToken::dangerously_disable_token_process_wide(true);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.token_name, "Scalar");
+}
+
+#[test]
+fn scalar_manually_disabled_always_errors() {
+    let result = ScalarToken::manually_disabled();
+    assert!(result.is_err());
+}
+
+// ============================================================================
+// Stub tokens: ARM and WASM on x86_64
+// ============================================================================
+
+#[test]
+fn stub_compiled_with_returns_some_false() {
+    // ARM tokens are stubs on x86_64 → compiled_with() = Some(false)
+    assert_eq!(NeonToken::compiled_with(), Some(false));
+    assert_eq!(NeonAesToken::compiled_with(), Some(false));
+    assert_eq!(NeonSha3Token::compiled_with(), Some(false));
+    assert_eq!(NeonCrcToken::compiled_with(), Some(false));
+
+    // WASM token is stub on x86_64
+    assert_eq!(Wasm128Token::compiled_with(), Some(false));
+}
+
+#[test]
+fn stub_summon_returns_none() {
+    assert!(NeonToken::summon().is_none());
+    assert!(NeonAesToken::summon().is_none());
+    assert!(NeonSha3Token::summon().is_none());
+    assert!(NeonCrcToken::summon().is_none());
+    assert!(Wasm128Token::summon().is_none());
+}
+
+#[test]
+fn stub_disable_returns_err() {
+    // Stubs can't be disabled — returns CompileTimeGuaranteedError
+    assert!(NeonToken::dangerously_disable_token_process_wide(true).is_err());
+    assert!(NeonAesToken::dangerously_disable_token_process_wide(true).is_err());
+    assert!(NeonSha3Token::dangerously_disable_token_process_wide(true).is_err());
+    assert!(NeonCrcToken::dangerously_disable_token_process_wide(true).is_err());
+    assert!(Wasm128Token::dangerously_disable_token_process_wide(true).is_err());
+}
+
+#[test]
+fn stub_manually_disabled_returns_err() {
+    assert!(NeonToken::manually_disabled().is_err());
+    assert!(NeonAesToken::manually_disabled().is_err());
+    assert!(NeonSha3Token::manually_disabled().is_err());
+    assert!(NeonCrcToken::manually_disabled().is_err());
+    assert!(Wasm128Token::manually_disabled().is_err());
+}
+
+// ============================================================================
+// x86 tokens: compiled_with() and summon() basics
+// ============================================================================
+
+#[test]
+fn x86_compiled_with_returns_option() {
+    // On x86_64, compiled_with() returns either Some(true) or None,
+    // depending on whether the target features are compile-time enabled.
+    let v2 = X64V2Token::compiled_with();
+    assert!(v2 == Some(true) || v2.is_none());
+
+    let v3 = X64V3Token::compiled_with();
+    assert!(v3 == Some(true) || v3.is_none());
+}
+
+#[test]
+fn x86_summon_returns_option() {
+    // On a modern x86_64 CPU, V2 should almost always succeed.
+    // We don't assert Some because some CI environments may be odd.
+    let _v2 = X64V2Token::summon();
+    let _v3 = X64V3Token::summon();
+}
+
+// ============================================================================
+// Disable mechanism (process-wide)
+// ============================================================================
+
+// NOTE: These tests mutate global state (atomic flags). They MUST be run
+// with `--test-threads=1` or in isolation. cargo test does NOT do this by
+// default, but the individual tests clean up after themselves.
+
+#[test]
+fn disable_v3_makes_summon_return_none() {
+    // Skip if compiled with target features (disable returns Err)
+    if X64V3Token::compiled_with() == Some(true) {
+        return;
+    }
+
+    // Save initial state
+    let was_available = X64V3Token::summon().is_some();
+
+    // Disable
+    let result = X64V3Token::dangerously_disable_token_process_wide(true);
+    assert!(
+        result.is_ok(),
+        "disable should succeed when not compiled with features"
+    );
+    assert!(
+        X64V3Token::summon().is_none(),
+        "summon() should return None when disabled"
+    );
+
+    // manually_disabled() should reflect the state
+    assert_eq!(
+        X64V3Token::manually_disabled().unwrap(),
+        true,
+        "manually_disabled should be true"
+    );
+
+    // Re-enable
+    let result = X64V3Token::dangerously_disable_token_process_wide(false);
+    assert!(result.is_ok());
+    assert_eq!(
+        X64V3Token::manually_disabled().unwrap(),
+        false,
+        "manually_disabled should be false after re-enable"
+    );
+
+    // After re-enable, summon() should be able to detect again
+    // (cache was reset to 0 = unknown)
+    if was_available {
+        assert!(
+            X64V3Token::summon().is_some(),
+            "summon() should detect features again after re-enable"
+        );
+    }
+}
+
+#[test]
+fn disable_v2_makes_summon_return_none() {
+    if X64V2Token::compiled_with() == Some(true) {
+        return;
+    }
+
+    let was_available = X64V2Token::summon().is_some();
+
+    let result = X64V2Token::dangerously_disable_token_process_wide(true);
+    assert!(result.is_ok());
+    assert!(X64V2Token::summon().is_none());
+    assert_eq!(X64V2Token::manually_disabled().unwrap(), true);
+
+    // Re-enable
+    X64V2Token::dangerously_disable_token_process_wide(false).unwrap();
+    assert_eq!(X64V2Token::manually_disabled().unwrap(), false);
+
+    if was_available {
+        assert!(X64V2Token::summon().is_some());
+    }
+}
+
+#[test]
+fn default_is_not_disabled() {
+    // Fresh process: manually_disabled() should be false (or Err for stubs/compiled)
+    match X64V2Token::manually_disabled() {
+        Ok(disabled) => assert!(!disabled, "default should not be disabled"),
+        Err(_) => {} // compiled_with or stub — that's fine
+    }
+    match X64V3Token::manually_disabled() {
+        Ok(disabled) => assert!(!disabled),
+        Err(_) => {}
+    }
+}
+
+// ============================================================================
+// Cascading: disabling parent affects children
+// ============================================================================
+
+#[cfg(feature = "avx512")]
+#[test]
+fn disable_v3_cascades_to_v4() {
+    if X64V3Token::compiled_with() == Some(true) {
+        return;
+    }
+
+    // Record whether V4 was available before
+    let v4_was_available = X64V4Token::summon().is_some();
+
+    // Disable V3 — should cascade to V4, Modern, Fp16
+    X64V3Token::dangerously_disable_token_process_wide(true).unwrap();
+
+    assert!(X64V3Token::summon().is_none(), "V3 should be disabled");
+    assert!(
+        X64V4Token::summon().is_none(),
+        "V4 should be disabled (cascade from V3)"
+    );
+    assert!(
+        Avx512ModernToken::summon().is_none(),
+        "Modern should be disabled (cascade from V3)"
+    );
+    assert!(
+        Avx512Fp16Token::summon().is_none(),
+        "Fp16 should be disabled (cascade from V3)"
+    );
+
+    // Re-enable V3 — should also re-enable cascaded children
+    X64V3Token::dangerously_disable_token_process_wide(false).unwrap();
+
+    // V3 should be detectable again
+    if X64V3Token::summon().is_some() {
+        // V4 should also be detectable again (if CPU supports it)
+        if v4_was_available {
+            assert!(
+                X64V4Token::summon().is_some(),
+                "V4 should be re-detectable after parent re-enabled"
+            );
+        }
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn disable_v2_cascades_to_v3_v4() {
+    if X64V2Token::compiled_with() == Some(true) {
+        return;
+    }
+
+    X64V2Token::dangerously_disable_token_process_wide(true).unwrap();
+
+    assert!(X64V2Token::summon().is_none());
+    assert!(
+        X64V3Token::summon().is_none(),
+        "V3 should be disabled (cascade from V2)"
+    );
+    assert!(
+        X64V4Token::summon().is_none(),
+        "V4 should be disabled (cascade from V2)"
+    );
+
+    // Re-enable
+    X64V2Token::dangerously_disable_token_process_wide(false).unwrap();
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn disable_child_does_not_affect_parent() {
+    if X64V4Token::compiled_with() == Some(true) || X64V3Token::compiled_with() == Some(true) {
+        return;
+    }
+
+    let v3_was_available = X64V3Token::summon().is_some();
+
+    // Disable V4 — should NOT affect V3
+    if X64V4Token::dangerously_disable_token_process_wide(true).is_ok() {
+        assert!(X64V4Token::summon().is_none(), "V4 should be disabled");
+
+        if v3_was_available {
+            assert!(
+                X64V3Token::summon().is_some(),
+                "V3 should NOT be affected by disabling V4"
+            );
+        }
+
+        // Cleanup
+        X64V4Token::dangerously_disable_token_process_wide(false).unwrap();
+    }
+}
+
+// ============================================================================
+// CompileTimeGuaranteedError
+// ============================================================================
+
+#[test]
+fn compile_time_guaranteed_error_display() {
+    let err = CompileTimeGuaranteedError {
+        token_name: "TestToken",
+    };
+    let msg = format!("{err}");
+    assert!(
+        msg.contains("TestToken"),
+        "error message should contain token name"
+    );
+    assert!(
+        msg.contains("compile-time"),
+        "error message should mention compile-time"
+    );
+    assert!(
+        msg.contains("target-cpu") || msg.contains("target-feature"),
+        "error message should mention target-cpu or target-feature"
+    );
+}
+
+#[test]
+fn compile_time_guaranteed_error_debug() {
+    let err = CompileTimeGuaranteedError {
+        token_name: "X64V3Token",
+    };
+    let debug = format!("{err:?}");
+    assert!(debug.contains("X64V3Token"));
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn compile_time_guaranteed_error_is_std_error() {
+    let err = CompileTimeGuaranteedError {
+        token_name: "TestToken",
+    };
+    // Verify it implements std::error::Error
+    let _: &dyn std::error::Error = &err;
+}
+
+// ============================================================================
+// Deprecated aliases
+// ============================================================================
+
+#[test]
+#[allow(deprecated)]
+fn guaranteed_delegates_to_compiled_with() {
+    assert_eq!(ScalarToken::guaranteed(), ScalarToken::compiled_with());
+    assert_eq!(X64V2Token::guaranteed(), X64V2Token::compiled_with());
+    assert_eq!(X64V3Token::guaranteed(), X64V3Token::compiled_with());
+    assert_eq!(NeonToken::guaranteed(), NeonToken::compiled_with());
+    assert_eq!(Wasm128Token::guaranteed(), Wasm128Token::compiled_with());
+}
+
+#[test]
+fn try_new_delegates_to_summon() {
+    #[allow(deprecated)]
+    {
+        assert_eq!(
+            ScalarToken::try_new().is_some(),
+            ScalarToken::summon().is_some()
+        );
+        assert_eq!(
+            X64V2Token::try_new().is_some(),
+            X64V2Token::summon().is_some()
+        );
+        assert_eq!(
+            X64V3Token::try_new().is_some(),
+            X64V3Token::summon().is_some()
+        );
+        assert_eq!(
+            NeonToken::try_new().is_some(),
+            NeonToken::summon().is_some()
+        );
+    }
+}
+
+#[test]
+fn attempt_delegates_to_summon() {
+    assert_eq!(
+        ScalarToken::attempt().is_some(),
+        ScalarToken::summon().is_some()
+    );
+    assert_eq!(
+        X64V2Token::attempt().is_some(),
+        X64V2Token::summon().is_some()
+    );
+    assert_eq!(
+        X64V3Token::attempt().is_some(),
+        X64V3Token::summon().is_some()
+    );
+}
+
+// ============================================================================
+// IntoConcreteToken
+// ============================================================================
+
+#[test]
+fn scalar_into_concrete_token() {
+    let token = ScalarToken;
+    assert!(token.as_scalar().is_some());
+    assert!(token.as_x64v2().is_none());
+    assert!(token.as_x64v3().is_none());
+    assert!(token.as_neon().is_none());
+    assert!(token.as_wasm128().is_none());
+}
+
+#[test]
+fn v2_into_concrete_token() {
+    if let Some(token) = X64V2Token::summon() {
+        assert!(token.as_x64v2().is_some());
+        assert!(token.as_x64v3().is_none());
+        assert!(token.as_neon().is_none());
+        assert!(token.as_scalar().is_none());
+    }
+}
+
+#[test]
+fn v3_into_concrete_token() {
+    if let Some(token) = X64V3Token::summon() {
+        assert!(token.as_x64v3().is_some());
+        assert!(token.as_x64v2().is_none(), "V3 is not V2 (different type)");
+        assert!(token.as_neon().is_none());
+        assert!(token.as_wasm128().is_none());
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn v4_into_concrete_token() {
+    if let Some(token) = X64V4Token::summon() {
+        assert!(token.as_x64v4().is_some());
+        assert!(token.as_x64v3().is_none());
+        assert!(token.as_neon().is_none());
+    }
+}
+
+// ============================================================================
+// Token extraction (downcast: higher → lower)
+// ============================================================================
+
+#[test]
+fn v3_extracts_to_v2() {
+    if let Some(token) = X64V3Token::summon() {
+        let _v2: X64V2Token = token.v2();
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn v4_extracts_to_v3_and_v2() {
+    if let Some(token) = X64V4Token::summon() {
+        let _v3: X64V3Token = token.v3();
+        let _v2: X64V2Token = token.v2();
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn avx512modern_extracts_to_v4_v3_v2() {
+    if let Some(token) = Avx512ModernToken::summon() {
+        let _v4: X64V4Token = token.v4();
+        let _avx512: X64V4Token = token.avx512();
+        let _v3: X64V3Token = token.v3();
+        let _v2: X64V2Token = token.v2();
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn avx512fp16_extracts_to_v4_v3_v2() {
+    if let Some(token) = Avx512Fp16Token::summon() {
+        let _v4: X64V4Token = token.v4();
+        let _avx512: X64V4Token = token.avx512();
+        let _v3: X64V3Token = token.v3();
+        let _v2: X64V2Token = token.v2();
+    }
+}
+
+// ============================================================================
+// Public API re-exports (type aliases)
+// ============================================================================
+
+#[test]
+fn desktop64_is_x64v3() {
+    // Desktop64 is a type alias for X64V3Token
+    fn _takes_desktop64(_t: Desktop64) {}
+    fn _takes_x64v3(t: X64V3Token) {
+        _takes_desktop64(t);
+    }
+
+    // They should have the same compiled_with() and summon()
+    assert_eq!(Desktop64::compiled_with(), X64V3Token::compiled_with());
+    assert_eq!(
+        Desktop64::summon().is_some(),
+        X64V3Token::summon().is_some()
+    );
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn server64_is_x64v4() {
+    assert_eq!(Server64::compiled_with(), X64V4Token::compiled_with());
+    assert_eq!(Server64::summon().is_some(), X64V4Token::summon().is_some());
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn avx512token_is_x64v4() {
+    assert_eq!(Avx512Token::compiled_with(), X64V4Token::compiled_with());
+    assert_eq!(
+        Avx512Token::summon().is_some(),
+        X64V4Token::summon().is_some()
+    );
+}
+
+#[test]
+fn arm64_is_neon() {
+    assert_eq!(Arm64::compiled_with(), NeonToken::compiled_with());
+    assert_eq!(Arm64::summon().is_some(), NeonToken::summon().is_some());
+}
+
+// ============================================================================
+// SimdToken::NAME constants
+// ============================================================================
+
+#[test]
+fn token_names_are_nonempty() {
+    assert!(!X64V2Token::NAME.is_empty());
+    assert!(!X64V3Token::NAME.is_empty());
+    assert!(!NeonToken::NAME.is_empty());
+    assert!(!Wasm128Token::NAME.is_empty());
+    assert!(!ScalarToken::NAME.is_empty());
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn avx512_token_names_are_nonempty() {
+    assert!(!X64V4Token::NAME.is_empty());
+    assert!(!Avx512ModernToken::NAME.is_empty());
+    assert!(!Avx512Fp16Token::NAME.is_empty());
+}
+
+// ============================================================================
+// Token traits: Copy, Clone, Send, Sync
+// ============================================================================
+
+#[test]
+fn tokens_are_copy_clone_send_sync() {
+    fn assert_token_traits<T: Copy + Clone + Send + Sync + 'static>() {}
+
+    assert_token_traits::<ScalarToken>();
+    assert_token_traits::<X64V2Token>();
+    assert_token_traits::<X64V3Token>();
+    assert_token_traits::<NeonToken>();
+    assert_token_traits::<NeonAesToken>();
+    assert_token_traits::<NeonSha3Token>();
+    assert_token_traits::<NeonCrcToken>();
+    assert_token_traits::<Wasm128Token>();
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn avx512_tokens_are_copy_clone_send_sync() {
+    fn assert_token_traits<T: Copy + Clone + Send + Sync + 'static>() {}
+
+    assert_token_traits::<X64V4Token>();
+    assert_token_traits::<Avx512ModernToken>();
+    assert_token_traits::<Avx512Fp16Token>();
+}
+
+// ============================================================================
+// Summon caching: second call should be fast
+// ============================================================================
+
+#[test]
+fn summon_is_idempotent() {
+    // Multiple calls should return the same result (caching should work)
+    let a = X64V3Token::summon().is_some();
+    let b = X64V3Token::summon().is_some();
+    let c = X64V3Token::summon().is_some();
+    assert_eq!(a, b);
+    assert_eq!(b, c);
+}
+
+#[test]
+fn summon_v2_is_idempotent() {
+    let a = X64V2Token::summon().is_some();
+    let b = X64V2Token::summon().is_some();
+    assert_eq!(a, b);
+}
