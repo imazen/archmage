@@ -258,10 +258,9 @@ jobs:
         run: cargo +nightly miri setup
 
       - name: Run Miri on magetypes
-        env:
-          # Isolate Miri's target dir to avoid stale artifacts from stable builds
-          CARGO_TARGET_DIR: target/miri
-        run: cargo +nightly miri test -p magetypes --features avx512
+        # --lib only: proptest (dev-dep) pulls getrandom whose build script
+        # is incompatible with current nightly Miri. Fuzz tests run separately.
+        run: cargo +nightly miri test -p magetypes --lib --features avx512
 
   # ==========================================================================
   # Fuzz testing - property-based divergence detection
