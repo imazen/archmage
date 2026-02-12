@@ -108,4 +108,4 @@ fn process_all_simd(token: Desktop64, points: &[[f32; 8]]) {
 }
 ```
 
-The cost isn't `summon()` (~1.3 ns cached). It's the `#[target_feature]` boundary — LLVM can't inline across mismatched target features. A bare `#[target_feature]` function without archmage has the same 4x cost (verified in `benches/asm_inspection.rs`). The fix is `#[rite]` — it inlines into callers with matching features, keeping everything in one LLVM optimization region.
+The cost isn't `summon()` (~1.3 ns cached). It's the `#[target_feature]` boundary — LLVM can't inline across mismatched target features. A bare `#[target_feature]` function without archmage has the same cost: 4x on simple adds, up to 6.2x on real workloads (verified in `benches/asm_inspection.rs`). The fix is `#[rite]` — it inlines into callers with matching features, keeping everything in one LLVM optimization region. See the [full benchmark data](../../../PERFORMANCE.md).

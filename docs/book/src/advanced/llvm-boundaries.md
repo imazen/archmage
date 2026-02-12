@@ -160,33 +160,24 @@ fn process_v3_impl(token: X64V3Token, data: &[f32]) -> f32 {
 }
 ```
 
-## Measuring the Impact
+## Measured Impact
 
-```rust
-// Benchmark both patterns
-fn bench_generic_dispatch(c: &mut Criterion) {
-    c.bench_function("generic", |b| {
-        let token = Desktop64::summon().unwrap();
-        b.iter(|| generic_dispatch(token, &data))
-    });
-}
+The boundary costs 4x on simple vector adds and up to 6.2x on real workloads like DCT-8 (where LLVM loses FMA fusion and register reuse across the boundary). Benchmark data confirms that feature direction matters for cross-token nesting:
 
-fn bench_concrete_dispatch(c: &mut Criterion) {
-    c.bench_function("concrete", |b| {
-        let token = Desktop64::summon().unwrap();
-        b.iter(|| concrete_path(token, &data))
-    });
-}
-```
+- **Downgrade (V4→V3, V3→V2):** free — caller's superset enables inlining
+- **Upgrade (V2→V3, V3→V4):** 4x — callee needs features the caller lacks
+- **Same level (V3→V3):** free when called from matching `#[target_feature]` context
 
-Typical impact: 10-30% performance difference for small functions.
+All patterns: archmage = bare `#[target_feature]` (zero overhead from the abstraction).
+
+See the [full benchmark data](../../../PERFORMANCE.md) for all patterns and numbers.
 
 ## Summary
 
 | Pattern | Inlining | Recommendation |
 |---------|----------|----------------|
-| `#[rite]` with same token | ✅ Full | Default for hot paths |
-| Downcast (V4→V3) via `#[rite]` | ✅ Full | Safe and fast |
-| `#[arcane]` from non-SIMD code | ❌ Boundary | Entry point only — one crossing |
-| Generic → concrete | ❌ Boundary | Entry point only |
-| Upcast check | ❌ Boundary | Avoid in hot code |
+| `#[rite]` with same token | Full | Default for hot paths |
+| Downcast (V4→V3) via `#[rite]` | Full | Safe and fast — superset enables inlining |
+| Upgrade (V2→V3, V3→V4) | Boundary (4x) | Dispatch at entry point, not in hot code |
+| `#[arcane]` from non-SIMD code | Boundary (4-6x) | Entry point only — one crossing |
+| Generic → concrete | Boundary | Entry point only |

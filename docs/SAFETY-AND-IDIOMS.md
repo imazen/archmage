@@ -111,7 +111,7 @@ fn process_chunk(token: Desktop64, chunk: &[f32; 8]) -> f32 {
 }
 ```
 
-Calling `#[arcane]` from a hot loop crosses the `#[target_feature]` boundary every iteration (4x slower in benchmarks). `#[rite]` inlines into callers with matching features — no boundary.
+Calling `#[arcane]` from a hot loop crosses the `#[target_feature]` boundary every iteration (4-6x slower depending on workload; see [benchmark data](PERFORMANCE.md)). `#[rite]` inlines into callers with matching features — no boundary.
 
 ### Enter `#[arcane]` once, use `#[rite]` inside
 

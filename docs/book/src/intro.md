@@ -11,17 +11,7 @@ You prove CPU feature availability once with a **capability token**, then write 
 
 ## Zero Overhead
 
-Archmage is **never slower than equivalent unsafe code**. The safety abstractions exist only at compile time. At runtime, you get the exact same assembly as hand-written `#[target_feature]` + `unsafe` code.
-
-```
-Benchmark: 1000 iterations of 8-float vector operations
-  Manual unsafe code:      544 ns
-  #[rite] in #[arcane]:    547 ns  ← identical
-  #[arcane] in loop:      2209 ns  ← target-feature boundary per call (see below)
-  Bare #[target_feature]: 2222 ns  ← same cost without archmage
-```
-
-The key is using the right pattern: put loops inside `#[arcane]`, use `#[rite]` for helpers. See [Target-Feature Boundaries](./concepts/token-hoisting.md) and [The #\[rite\] Macro](./concepts/rite.md).
+Archmage generates identical assembly to bare `#[target_feature]` + `unsafe` code. The safety abstractions compile away entirely. The only thing that costs performance is calling `#[arcane]` from the wrong place (4-6x depending on workload). See the [performance guide](../../PERFORMANCE.md) for full benchmark data, or [Target-Feature Boundaries](./concepts/token-hoisting.md) and [The #\[rite\] Macro](./concepts/rite.md) for the fix.
 
 ## The Problem
 

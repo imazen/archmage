@@ -181,14 +181,6 @@ All helpers inline into the caller — no target-feature boundary, one optimizat
 
 ## Inlining Behavior
 
-`#[rite]` uses `#[inline]` which is **sufficient** for full inlining when called from matching `#[target_feature]` context. Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code.
+`#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. Calling `#[arcane]` per iteration instead costs 4x (simple adds) to 6.2x (DCT-8). See the [full benchmark data](../../../PERFORMANCE.md).
 
-**Note:** `#[inline(always)]` combined with `#[target_feature]` is not allowed on stable Rust, so we can't use it anyway. The good news is we don't need it—`#[inline]` works perfectly.
-
-```
-Benchmark results (1000 iterations, 8-float vector add):
-  rite_in_arcane:       547 ns  (baseline — features match, LLVM inlines)
-  manual_inline:        544 ns  (same)
-  arcane_in_loop:      2209 ns  (4x — target-feature boundary per call)
-  bare_target_feature: 2222 ns  (4x — same boundary, no archmage involved)
-```
+`#[inline(always)]` combined with `#[target_feature]` is not allowed on stable Rust, but we don't need it — `#[inline]` works perfectly.

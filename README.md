@@ -79,20 +79,15 @@ fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
 
 ### Why this matters
 
-Processing 1000 8-float vector additions (`cargo bench --bench asm_inspection`):
+Processing 1000 8-float vector additions ([full benchmark details](docs/PERFORMANCE.md)):
 
-| Pattern | Time | Feature mismatch? |
-|---------|------|--------------------|
-| `#[rite]` in `#[arcane]` | 547 ns | no — features match, LLVM inlines |
-| Manual inline in `#[arcane]` | 544 ns | no |
-| Scalar via wrapper fn | 542 ns | no |
-| `#[arcane]` per iteration | 2209 ns (4x) | **yes** — baseline→AVX2 boundary |
-| Bare `#[target_feature]` (no archmage) | 2222 ns (4x) | **yes** — same boundary |
-| `#[rite]` called directly | 2227 ns (4x) | **yes** — same boundary |
+| Pattern | Time | Why |
+|---------|------|-----|
+| `#[rite]` in `#[arcane]` | 547 ns | Features match — LLVM inlines |
+| `#[arcane]` per iteration | 2209 ns (4x) | Target-feature boundary per call |
+| Bare `#[target_feature]` (no archmage) | 2222 ns (4x) | Same boundary — archmage adds nothing |
 
-The overhead is from the `#[target_feature]` optimization boundary. LLVM cannot inline a function with `#[target_feature(enable = "avx2")]` into a caller without those features. Bare `#[target_feature]` and `#[arcane]` produce identical timings — archmage adds nothing.
-
-The fix: use `#[rite]` for helpers called from SIMD code. `#[rite]` functions inline into any caller with matching features, eliminating the boundary.
+The 4x penalty comes from LLVM's `#[target_feature]` optimization boundary, not from archmage. Bare `#[target_feature]` has the same cost. With real workloads (DCT-8), the boundary costs up to 6.2x. Use `#[rite]` for helpers called from SIMD code — it inlines into callers with matching features, eliminating the boundary.
 
 ## SIMD types with `magetypes`
 

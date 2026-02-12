@@ -32,7 +32,7 @@
 
 **Enter `#[arcane]` once at the top, use `#[rite]` for everything inside.**
 
-LLVM cannot inline across mismatched `#[target_feature]` attributes. Each `#[arcane]` call from non-SIMD code creates an optimization boundary — LLVM can't hoist loads, sink stores, or vectorize across it. This costs 4x on a simple loop (see `benches/asm_inspection.rs`). Token hoisting doesn't help — even with the token pre-summoned, calling `#[arcane]` per iteration still hits the boundary.
+LLVM cannot inline across mismatched `#[target_feature]` attributes. Each `#[arcane]` call from non-SIMD code creates an optimization boundary — LLVM can't hoist loads, sink stores, or vectorize across it. This costs 4-6x depending on workload (see `benches/asm_inspection.rs` and `docs/PERFORMANCE.md`). Token hoisting doesn't help — even with the token pre-summoned, calling `#[arcane]` per iteration still hits the boundary.
 
 ```rust
 // WRONG: #[arcane] boundary every iteration (4x slower)
@@ -738,15 +738,12 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
-- ~~**Target-feature boundary overhead benchmark**~~: Done. See `benches/asm_inspection.rs`. Results:
-  - `#[rite]` in `#[arcane]`: 547 ns (features match → LLVM inlines)
-  - Manual inline in `#[arcane]`: 544 ns (same)
-  - Scalar via wrapper fn: 542 ns (no `#[target_feature]` → LLVM inlines freely)
-  - `#[arcane]` per iteration: 2209 ns (4x — baseline→AVX2 boundary per call)
-  - Bare `#[target_feature]` (no archmage): 2222 ns (4x — identical cost)
-  - `#[rite]` direct unsafe: 2227 ns (4x — same boundary)
+- ~~**Target-feature boundary overhead benchmark**~~: Done. See `benches/asm_inspection.rs` and `docs/PERFORMANCE.md`. Key results:
+  - Simple vector add (1000 x 8-float): `#[rite]` in `#[arcane]` 547 ns, `#[arcane]` per iteration 2209 ns (4x), bare `#[target_feature]` 2222 ns (4x, identical)
+  - DCT-8 (100 rows x 8 dot products): `#[rite]` in `#[arcane]` 61 ns, `#[arcane]` per row 376 ns (6.2x), bare `#[target_feature]` 374 ns (6.2x, identical)
+  - Cross-token nesting: downgrade (V4→V3, V3→V2) is free, upgrade (V2→V3, V3→V4) costs 4x, all patterns match bare `#[target_feature]`
 
-  Key insight: the overhead is from the `#[target_feature]` optimization boundary, NOT from wrappers or archmage abstractions. Bare `#[target_feature]` without archmage has the same 4x cost. LLVM can't inline across mismatched target attributes. The fix is `#[rite]` — it inlines into callers with matching features, keeping everything in one LLVM optimization region.
+  Key insight: the overhead is from the `#[target_feature]` optimization boundary, NOT from wrappers or archmage abstractions. The cost scales with computational density (4x simple add, 6.2x DCT-8). Feature direction matters: downgrades are free (superset enables inlining), upgrades hit the boundary.
 
 - ~~**summon() caching**~~: **Implemented!** See `benches/summon_overhead.rs`. Results after adding atomic caching:
   - `Desktop64::summon()` (cached): ~1.3 ns (was 2.6 ns — **2x faster**)

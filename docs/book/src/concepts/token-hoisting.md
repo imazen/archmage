@@ -77,12 +77,4 @@ RUSTFLAGS="-Ctarget-cpu=native" cargo build --release
 
 ## Benchmark results
 
-From `cargo bench --bench asm_inspection` (1000 iterations, 8-float vector add):
-
-| Pattern | Time | Why |
-|---------|------|-----|
-| `#[rite]` in `#[arcane]` | 547 ns | Features match → LLVM inlines |
-| Manual inline in `#[arcane]` | 544 ns | Same LLVM region |
-| `#[arcane]` per iteration | 2209 ns (4x) | Boundary per call |
-| Bare `#[target_feature]` (no archmage) | 2222 ns (4x) | Same boundary — not archmage's fault |
-| With `-Ctarget-cpu=native` | Optimal | No boundaries, features are global |
+The boundary costs 4x on simple vector adds and up to 6.2x on real workloads (DCT-8). Archmage and bare `#[target_feature]` produce identical timings — the boundary is LLVM's, not ours. See the [full benchmark data](../../../PERFORMANCE.md) for all patterns, including cross-token nesting results.
