@@ -5,7 +5,9 @@
 Cross-platform hardening and CI infrastructure.
 
 - **Cross-architecture SIMD API consistency** — final alignment pass across all platforms
-- **Cross-platform CI** — ARM, WASM, and i686 compilation verified; feature combination matrix testing
+- **Coverage tests** — targeted tests for stubs, `forge()`, `disable()`, `detect` helpers, and `IntoConcreteToken` on ARM/WASM stubs. Previously-untested code paths now covered.
+- **Feature combination CI** — 8 feature combos tested (no-default, individual, pairs, all-features) plus aarch64 coverage uploading to codecov with flag-based merging
+- **Cross-platform CI** — ARM, WASM, and i686 compilation verified; arch guards on platform-specific tests
 - **Performance documentation** — DCT-8 and cross-token nesting benchmarks consolidated into `docs/PERFORMANCE.md`
 - **Token disable kill switch** — `dangerously_disable_tokens_except_wasm()` for testing/debugging
 - **SIMD reference mdbook** — searchable docs with ASM-verified load/store patterns
