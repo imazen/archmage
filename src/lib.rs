@@ -121,7 +121,6 @@ pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 
 // x86 tier marker traits (based on LLVM x86-64 microarchitecture levels)
 pub use tokens::HasX64V2;
-#[cfg(feature = "avx512")]
 pub use tokens::HasX64V4;
 
 // AArch64 tier marker traits
@@ -146,6 +145,5 @@ pub use tokens::{
     X64V3Token,
 };
 
-// AVX-512 tokens (requires "avx512" feature)
-#[cfg(feature = "avx512")]
+// AVX-512 tokens (always available; summon() returns None on unsupported CPUs)
 pub use tokens::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};

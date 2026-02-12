@@ -197,13 +197,20 @@ fn traits_to_features(trait_names: &[String]) -> Option<Vec<&'static str>> {
     }
 }
 
-/// Find the first token parameter and return its name, features, and target arch.
-///
-/// Returns `(param_ident, features, target_arch)` where:
-/// - `param_ident`: the parameter identifier
-/// - `features`: the target features to enable
-/// - `target_arch`: the target architecture (Some for concrete tokens, None for traits/generics)
-fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>, Option<&'static str>)> {
+/// Result of finding a token parameter in a function signature.
+struct TokenParamInfo {
+    /// The parameter identifier (e.g., `token`)
+    ident: Ident,
+    /// Target features to enable (e.g., `["avx2", "fma"]`)
+    features: Vec<&'static str>,
+    /// Target architecture (Some for concrete tokens, None for traits/generics)
+    target_arch: Option<&'static str>,
+    /// Concrete token type name (Some for concrete tokens, None for traits/generics)
+    token_type_name: Option<String>,
+}
+
+/// Find the first token parameter in a function signature.
+fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
     for arg in &sig.inputs {
         match arg {
             FnArg::Receiver(_) => {
@@ -216,27 +223,32 @@ fn find_token_param(sig: &Signature) -> Option<(Ident, Vec<&'static str>, Option
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
                 if let Some(info) = extract_token_type_info(ty) {
-                    let (features, arch) = match info {
+                    let (features, arch, token_name) = match info {
                         TokenTypeInfo::Concrete(ref name) => {
                             let features = token_to_features(name).map(|f| f.to_vec());
                             let arch = token_to_arch(name);
-                            (features, arch)
+                            (features, arch, Some(name.clone()))
                         }
                         TokenTypeInfo::ImplTrait(trait_names) => {
-                            (traits_to_features(&trait_names), None)
+                            (traits_to_features(&trait_names), None, None)
                         }
                         TokenTypeInfo::Generic(type_name) => {
                             // Look up the generic parameter's bounds
                             let features = find_generic_bounds(sig, &type_name)
                                 .and_then(|traits| traits_to_features(&traits));
-                            (features, None)
+                            (features, None, None)
                         }
                     };
 
                     if let Some(features) = features {
                         // Extract parameter name
                         if let syn::Pat::Ident(pat_ident) = pat.as_ref() {
-                            return Some((pat_ident.ident.clone(), features, arch));
+                            return Some(TokenParamInfo {
+                                ident: pat_ident.ident.clone(),
+                                features,
+                                target_arch: arch,
+                                token_type_name: token_name,
+                            });
                         }
                     }
                 }
@@ -279,8 +291,13 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
             .into();
     }
 
-    // Find the token parameter, its features, and target arch
-    let (_token_ident, features, target_arch) = match find_token_param(&input_fn.sig) {
+    // Find the token parameter, its features, target arch, and token type name
+    let TokenParamInfo {
+        ident: _token_ident,
+        features,
+        target_arch,
+        token_type_name,
+    } = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
             let msg = format!(
@@ -387,6 +404,7 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 
     // Generate the expanded function
     // If we know the target arch (concrete token), generate cfg-gated real impl + stub
+    let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
     let expanded = if let Some(arch) = target_arch {
         quote! {
             // Real implementation for the correct architecture
@@ -410,17 +428,18 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
             #(#attrs)*
             #vis #sig {
                 // This token type cannot be summoned on this architecture.
-                // If you're seeing this at runtime, there's a bug in your dispatch logic.
+                // If you're seeing this at runtime, there's a bug in dispatch logic
+                // or forge_token_dangerously() was used incorrectly.
                 let _ = (#(#inner_args),*); // suppress unused warnings
                 unreachable!(
-                    concat!(
-                        "Called ",
-                        stringify!(#fn_name),
-                        " with a token that cannot exist on this architecture. ",
-                        "This token requires target_arch = \"",
-                        #arch,
-                        "\"."
-                    )
+                    "BUG: {}() was called but requires {} (target_arch = \"{}\"). \
+                     {}::summon() returns None on this architecture, so this function \
+                     is unreachable in safe code. If you used forge_token_dangerously(), \
+                     that is the bug.",
+                    stringify!(#fn_name),
+                    #token_type_str,
+                    #arch,
+                    #token_type_str,
                 )
             }
         }
@@ -719,7 +738,11 @@ impl Parse for RiteArgs {
 /// Implementation for the `#[rite]` macro.
 fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
     // Find the token parameter and its features
-    let (_, features, target_arch) = match find_token_param(&input_fn.sig) {
+    let TokenParamInfo {
+        features,
+        target_arch,
+        ..
+    } = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
             let msg = "rite requires a token parameter. Supported forms:\n\
@@ -1071,7 +1094,7 @@ fn incant_impl(input: IncantInput) -> TokenStream {
                 use archmage::IntoConcreteToken;
                 let __incant_token = #token_expr;
 
-                #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+                #[cfg(target_arch = "x86_64")]
                 {
                     #[cfg(feature = "avx512")]
                     if let Some(__t) = __incant_token.as_x64v4() {
@@ -1106,7 +1129,7 @@ fn incant_impl(input: IncantInput) -> TokenStream {
             '__incant: {
                 use archmage::SimdToken;
 
-                #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+                #[cfg(target_arch = "x86_64")]
                 {
                     #[cfg(feature = "avx512")]
                     if let Some(__t) = archmage::X64V4Token::summon() {

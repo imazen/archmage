@@ -2195,18 +2195,17 @@ impl i8x16 {
         Self(unsafe { vshlq_n_s8::<N>(self.0) })
     }
 
-    /// Shift right by immediate (const generic)
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For signed types, this is an arithmetic shift (sign-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
-        Self(unsafe { vshrq_n_s8::<N>(self.0) })
+    pub fn shr_logical<const N: i32>(self) -> Self {
+        Self(unsafe { vreinterpretq_s8_u8(vshrq_n_u8::<N>(vreinterpretq_u8_s8(self.0))) })
     }
 
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
-    /// On ARM NEON, this is the same as `shr()` for signed types.
     #[inline(always)]
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_s8::<N>(self.0) })
@@ -2641,11 +2640,11 @@ impl u8x16 {
         Self(unsafe { vshlq_n_u8::<N>(self.0) })
     }
 
-    /// Shift right by immediate (const generic)
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For unsigned types, this is a logical shift (zero-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_u8::<N>(self.0) })
     }
 
@@ -3119,18 +3118,17 @@ impl i16x8 {
         Self(unsafe { vshlq_n_s16::<N>(self.0) })
     }
 
-    /// Shift right by immediate (const generic)
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For signed types, this is an arithmetic shift (sign-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
-        Self(unsafe { vshrq_n_s16::<N>(self.0) })
+    pub fn shr_logical<const N: i32>(self) -> Self {
+        Self(unsafe { vreinterpretq_s16_u16(vshrq_n_u16::<N>(vreinterpretq_u16_s16(self.0))) })
     }
 
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
-    /// On ARM NEON, this is the same as `shr()` for signed types.
     #[inline(always)]
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_s16::<N>(self.0) })
@@ -3629,11 +3627,11 @@ impl u16x8 {
         Self(unsafe { vshlq_n_u16::<N>(self.0) })
     }
 
-    /// Shift right by immediate (const generic)
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For unsigned types, this is a logical shift (zero-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_u16::<N>(self.0) })
     }
 
@@ -4107,18 +4105,17 @@ impl i32x4 {
         Self(unsafe { vshlq_n_s32::<N>(self.0) })
     }
 
-    /// Shift right by immediate (const generic)
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For signed types, this is an arithmetic shift (sign-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
-        Self(unsafe { vshrq_n_s32::<N>(self.0) })
+    pub fn shr_logical<const N: i32>(self) -> Self {
+        Self(unsafe { vreinterpretq_s32_u32(vshrq_n_u32::<N>(vreinterpretq_u32_s32(self.0))) })
     }
 
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
-    /// On ARM NEON, this is the same as `shr()` for signed types.
     #[inline(always)]
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_s32::<N>(self.0) })
@@ -4610,11 +4607,11 @@ impl u32x4 {
         Self(unsafe { vshlq_n_u32::<N>(self.0) })
     }
 
-    /// Shift right by immediate (const generic)
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For unsigned types, this is a logical shift (zero-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_u32::<N>(self.0) })
     }
 
@@ -5075,11 +5072,19 @@ impl i64x2 {
         Self(unsafe { vshlq_n_s64::<N>(self.0) })
     }
 
-    /// Shift right by immediate (const generic)
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For signed types, this is an arithmetic shift (sign-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
+        Self(unsafe { vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(self.0))) })
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_s64::<N>(self.0) })
     }
 
@@ -5532,11 +5537,11 @@ impl u64x2 {
         Self(unsafe { vshlq_n_u64::<N>(self.0) })
     }
 
-    /// Shift right by immediate (const generic)
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For unsigned types, this is a logical shift (zero-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { vshrq_n_u64::<N>(self.0) })
     }
 

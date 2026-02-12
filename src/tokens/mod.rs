@@ -410,22 +410,19 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
-    /// Try to cast to X64V4Token (requires `avx512` feature).
-    #[cfg(feature = "avx512")]
+    /// Try to cast to X64V4Token.
     #[inline(always)]
     fn as_x64v4(self) -> Option<X64V4Token> {
         None
     }
 
-    /// Try to cast to Avx512ModernToken (requires `avx512` feature).
-    #[cfg(feature = "avx512")]
+    /// Try to cast to Avx512ModernToken.
     #[inline(always)]
     fn as_avx512_modern(self) -> Option<Avx512ModernToken> {
         None
     }
 
-    /// Try to cast to Avx512Fp16Token (requires `avx512` feature).
-    #[cfg(feature = "avx512")]
+    /// Try to cast to Avx512Fp16Token.
     #[inline(always)]
     fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> {
         None
@@ -493,7 +490,6 @@ impl IntoConcreteToken for X64V3Token {
 }
 
 // Implement IntoConcreteToken for X64V4Token
-#[cfg(feature = "avx512")]
 impl IntoConcreteToken for X64V4Token {
     #[inline(always)]
     fn as_x64v4(self) -> Option<X64V4Token> {
@@ -502,7 +498,6 @@ impl IntoConcreteToken for X64V4Token {
 }
 
 // Implement IntoConcreteToken for Avx512ModernToken
-#[cfg(feature = "avx512")]
 impl IntoConcreteToken for Avx512ModernToken {
     #[inline(always)]
     fn as_avx512_modern(self) -> Option<Avx512ModernToken> {
@@ -511,7 +506,6 @@ impl IntoConcreteToken for Avx512ModernToken {
 }
 
 // Implement IntoConcreteToken for Avx512Fp16Token
-#[cfg(feature = "avx512")]
 impl IntoConcreteToken for Avx512Fp16Token {
     #[inline(always)]
     fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> {

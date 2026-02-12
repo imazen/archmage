@@ -257,13 +257,12 @@ fn generate_cross_arch_parity() -> String {
                     }}
                 }}
 
-                // Logical shift test (x86 only - ARM shr is arithmetic for signed types)
-                #[cfg(target_arch = "x86_64")]
+                // Logical shift test (now portable — shr_logical is zero-fill on all platforms)
                 #[test]
                 fn test_i32x4_shr_logical() {{
                     if let Some(token) = <$token_ty>::summon() {{
                         let v = i32x4::from_array(token, [4, 8, 16, -32]);
-                        assert_eq!(v.shr::<1>().to_array(), [2, 4, 8, 2147483632]); // logical shift on x86
+                        assert_eq!(v.shr_logical::<1>().to_array(), [2, 4, 8, 2147483632]);
                     }}
                 }}
 

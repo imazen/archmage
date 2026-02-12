@@ -2189,7 +2189,7 @@ impl i8x16 {
     /// Bits shifted out are lost; zeros are shifted in.
     /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         unsafe {
             let shifted = _mm_srli_epi16::<N>(self.0);
             let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2639,7 +2639,7 @@ impl u8x16 {
     /// Bits shifted out are lost; zeros are shifted in.
     /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         unsafe {
             let shifted = _mm_srli_epi16::<N>(self.0);
             let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -3117,7 +3117,7 @@ impl i16x8 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
 
@@ -3608,7 +3608,7 @@ impl u16x8 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi16::<N>(self.0) })
     }
 
@@ -4074,7 +4074,7 @@ impl i32x4 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi32::<N>(self.0) })
     }
 
@@ -4552,7 +4552,7 @@ impl u32x4 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi32::<N>(self.0) })
     }
 
@@ -5035,7 +5035,7 @@ impl i64x2 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
 
@@ -5509,7 +5509,7 @@ impl u64x2 {
     ///
     /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: i32>(self) -> Self {
+    pub fn shr_logical<const N: i32>(self) -> Self {
         Self(unsafe { _mm_srli_epi64::<N>(self.0) })
     }
 

@@ -790,16 +790,25 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
             _ => unreachable!(),
         };
 
-        let shr_fn = match ty.elem {
+        // For shr_logical on signed types, we need unsigned intrinsics + casts
+        let shr_logical_fn = match ty.elem {
             ElementType::U8 => "vshrq_n_u8",
             ElementType::U16 => "vshrq_n_u16",
             ElementType::U32 => "vshrq_n_u32",
             ElementType::U64 => "vshrq_n_u64",
+            ElementType::I8 => "vshrq_n_u8",
+            ElementType::I16 => "vshrq_n_u16",
+            ElementType::I32 => "vshrq_n_u32",
+            ElementType::I64 => "vshrq_n_u64",
+            _ => unreachable!(),
+        };
+
+        let shr_arith_fn = match ty.elem {
             ElementType::I8 => "vshrq_n_s8",
             ElementType::I16 => "vshrq_n_s16",
             ElementType::I32 => "vshrq_n_s32",
             ElementType::I64 => "vshrq_n_s64",
-            _ => unreachable!(),
+            _ => "", // unsigned types don't need arithmetic shift
         };
 
         code.push_str(&formatdoc! {r#"
@@ -812,39 +821,46 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
         "#});
 
         if ty.elem.is_signed() {
+            // Signed shr_logical: cast to unsigned, shift, cast back
+            let (to_unsigned, from_unsigned) = match ty.elem {
+                ElementType::I8 => ("vreinterpretq_u8_s8", "vreinterpretq_s8_u8"),
+                ElementType::I16 => ("vreinterpretq_u16_s16", "vreinterpretq_s16_u16"),
+                ElementType::I32 => ("vreinterpretq_u32_s32", "vreinterpretq_s32_u32"),
+                ElementType::I64 => ("vreinterpretq_u64_s64", "vreinterpretq_s64_u64"),
+                _ => unreachable!(),
+            };
             code.push_str(&formatdoc! {r#"
-                /// Shift right by immediate (const generic)
+                /// Shift right by `N` bits (logical/unsigned shift).
                 ///
-                /// For signed types, this is an arithmetic shift (sign-extending).
+                /// Bits shifted out are lost; zeros are shifted in.
                 #[inline(always)]
-                pub fn shr<const N: i32>(self) -> Self {{
-                Self(unsafe {{ {shr_fn}::<N>(self.0) }})
+                pub fn shr_logical<const N: i32>(self) -> Self {{
+                Self(unsafe {{ {from_unsigned}({shr_logical_fn}::<N>({to_unsigned}(self.0))) }})
                 }}
 
             "#});
         } else {
             code.push_str(&formatdoc! {r#"
-                /// Shift right by immediate (const generic)
+                /// Shift right by `N` bits (logical/unsigned shift).
                 ///
-                /// For unsigned types, this is a logical shift (zero-extending).
+                /// Bits shifted out are lost; zeros are shifted in.
                 #[inline(always)]
-                pub fn shr<const N: i32>(self) -> Self {{
-                Self(unsafe {{ {shr_fn}::<N>(self.0) }})
+                pub fn shr_logical<const N: i32>(self) -> Self {{
+                Self(unsafe {{ {shr_logical_fn}::<N>(self.0) }})
                 }}
 
             "#});
         }
 
-        // shr_arithmetic for signed types (alias for shr on ARM since NEON shr is arithmetic)
-        if ty.elem.is_signed() && !matches!(ty.elem, ElementType::I64) {
+        // shr_arithmetic for signed types
+        if ty.elem.is_signed() {
             code.push_str(&formatdoc! {r#"
                 /// Arithmetic shift right by `N` bits (sign-extending).
                 ///
                 /// The sign bit is replicated into the vacated positions.
-                /// On ARM NEON, this is the same as `shr()` for signed types.
                 #[inline(always)]
                 pub fn shr_arithmetic<const N: i32>(self) -> Self {{
-                Self(unsafe {{ {shr_fn}::<N>(self.0) }})
+                Self(unsafe {{ {shr_arith_fn}::<N>(self.0) }})
                 }}
 
             "#});

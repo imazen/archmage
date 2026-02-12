@@ -808,7 +808,7 @@ pub fn generate_shift_ops(ty: &SimdType) -> String {
         ///
         /// Bits shifted out are lost; zeros are shifted in.
         #[inline(always)]
-        pub fn shr<const N: {const_type}>(self) -> Self {{
+        pub fn shr_logical<const N: {const_type}>(self) -> Self {{
         Self(unsafe {{ {prefix}_srli_{suffix}::<N>(self.0) }})
         }}
 
@@ -876,7 +876,7 @@ fn generate_byte_shift_polyfill(ty: &SimdType) -> String {
         /// Bits shifted out are lost; zeros are shifted in.
         /// Implemented via 16-bit shift + byte mask (no native 8-bit shift in x86).
         #[inline(always)]
-        pub fn shr<const N: {const_type}>(self) -> Self {{
+        pub fn shr_logical<const N: {const_type}>(self) -> Self {{
         unsafe {{
         let shifted = {prefix}_srli_epi16::<N>(self.0);
         let mask = {prefix}_set1_epi8((0xFFu8.wrapping_shr({n_u32})) as i8);

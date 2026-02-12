@@ -231,6 +231,18 @@ impl Wasm {
         format!("{prefix}_shr")
     }
 
+    /// Get logical (unsigned) shift right intrinsic — always uses unsigned variant
+    pub fn shr_logical_intrinsic(elem: ElementType) -> String {
+        let unsigned_prefix = match elem {
+            ElementType::I8 => "u8x16",
+            ElementType::I16 => "u16x8",
+            ElementType::I32 => "u32x4",
+            ElementType::I64 => "u64x2",
+            _ => Self::type_prefix(elem), // unsigned types already use unsigned
+        };
+        format!("{unsigned_prefix}_shr")
+    }
+
     /// Get all_true intrinsic (horizontal and)
     pub fn all_true_intrinsic(elem: ElementType) -> String {
         let prefix = Self::type_prefix(elem);

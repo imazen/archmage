@@ -8,25 +8,11 @@ pub use traits::*;
 // x86: real implementations on x86_64, stubs elsewhere
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 mod x86;
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), feature = "avx512"))]
-mod x86_avx512;
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub use x86::*;
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), feature = "avx512"))]
-pub use x86_avx512::*;
 
-#[cfg(all(
-    not(any(target_arch = "x86_64", target_arch = "x86")),
-    feature = "avx512"
-))]
-mod x86_avx512_stubs;
 #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
 mod x86_stubs;
-#[cfg(all(
-    not(any(target_arch = "x86_64", target_arch = "x86")),
-    feature = "avx512"
-))]
-pub use x86_avx512_stubs::*;
 #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
 pub use x86_stubs::*;
 

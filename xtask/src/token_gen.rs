@@ -54,36 +54,16 @@ pub fn generate_token_files(reg: &Registry) -> Vec<(String, String)> {
     let arm_tokens: Vec<&TokenDef> = reg.token.iter().filter(|t| t.arch == "aarch64").collect();
     let wasm_tokens: Vec<&TokenDef> = reg.token.iter().filter(|t| t.arch == "wasm").collect();
 
-    // Split x86 into base and avx512 (gated on cargo feature)
-    let x86_base: Vec<&TokenDef> = x86_tokens
-        .iter()
-        .filter(|t| t.cargo_feature.is_none())
-        .copied()
-        .collect();
-    let x86_avx512: Vec<&TokenDef> = x86_tokens
-        .iter()
-        .filter(|t| t.cargo_feature.is_some())
-        .copied()
-        .collect();
-
-    // Real implementations
-    files.push(("x86.rs".into(), gen_real_tokens(reg, &x86_base, "x86")));
-    files.push((
-        "x86_avx512.rs".into(),
-        gen_real_tokens(reg, &x86_avx512, "x86"),
-    ));
+    // Real implementations (all x86 tokens in one file — no base/avx512 split)
+    files.push(("x86.rs".into(), gen_real_tokens(reg, &x86_tokens, "x86")));
     files.push((
         "arm.rs".into(),
         gen_real_tokens(reg, &arm_tokens, "aarch64"),
     ));
     files.push(("wasm.rs".into(), gen_real_tokens(reg, &wasm_tokens, "wasm")));
 
-    // Stubs
-    files.push(("x86_stubs.rs".into(), gen_stub_tokens(reg, &x86_base)));
-    files.push((
-        "x86_avx512_stubs.rs".into(),
-        gen_stub_tokens(reg, &x86_avx512),
-    ));
+    // Stubs (all x86 tokens in one file)
+    files.push(("x86_stubs.rs".into(), gen_stub_tokens(reg, &x86_tokens)));
     files.push(("arm_stubs.rs".into(), gen_stub_tokens(reg, &arm_tokens)));
     files.push(("wasm_stubs.rs".into(), gen_stub_tokens(reg, &wasm_tokens)));
 
@@ -823,21 +803,13 @@ fn gen_mod_rs() -> String {
         // x86: real implementations on x86_64, stubs elsewhere
         #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
         mod x86;
-        #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), feature = "avx512"))]
-        mod x86_avx512;
         #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
         pub use x86::*;
-        #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), feature = "avx512"))]
-        pub use x86_avx512::*;
 
         #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
         mod x86_stubs;
-        #[cfg(all(not(any(target_arch = "x86_64", target_arch = "x86")), feature = "avx512"))]
-        mod x86_avx512_stubs;
         #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
         pub use x86_stubs::*;
-        #[cfg(all(not(any(target_arch = "x86_64", target_arch = "x86")), feature = "avx512"))]
-        pub use x86_avx512_stubs::*;
 
         // aarch64: real implementations on aarch64, stubs elsewhere
         #[cfg(target_arch = "aarch64")]
@@ -918,13 +890,7 @@ fn feature_flag_strings(token: &TokenDef) -> (&'static str, String, String, Stri
 /// Determine which generated module file a token lives in.
 fn file_module_for_token(token: &TokenDef) -> &str {
     match token.arch.as_str() {
-        "x86" => {
-            if token.cargo_feature.is_some() {
-                "x86_avx512"
-            } else {
-                "x86"
-            }
-        }
+        "x86" => "x86",
         "aarch64" => "arm",
         "wasm" => "wasm",
         _ => "unknown",

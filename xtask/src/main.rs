@@ -1697,13 +1697,46 @@ fn check_api_parity(strict: bool) -> Result<()> {
     // Known gaps that have no efficient native intrinsic support.
     // These are intentionally allowed and documented.
     let known_gaps: &[&str] = &[
-        // x86 lacks native 8-bit shift-by-immediate intrinsics
-        // (would require expensive emulation: unpack to 16-bit, shift, repack)
-        "  i8x16::shl — missing from: x86",
-        "  i8x16::shr — missing from: x86",
-        "  i8x16::shr_arithmetic — missing from: x86",
-        "  u8x16::shl — missing from: x86",
-        "  u8x16::shr — missing from: x86",
+        // Architecture-specific native type conversions (from_m128i, from_float32x4_t, from_v128)
+        // are intentionally per-platform — no cross-arch equivalent exists.
+        "  f32x4::from_float32x4_t — missing from: x86, WASM",
+        "  f32x4::from_m128 — missing from: ARM, WASM",
+        "  f32x4::from_v128 — missing from: x86, ARM",
+        "  f64x2::from_float64x2_t — missing from: x86, WASM",
+        "  f64x2::from_m128d — missing from: ARM, WASM",
+        "  f64x2::from_v128 — missing from: x86, ARM",
+        "  i8x16::from_int8x16_t — missing from: x86, WASM",
+        "  i8x16::from_m128i — missing from: ARM, WASM",
+        "  i8x16::from_v128 — missing from: x86, ARM",
+        "  u8x16::from_uint8x16_t — missing from: x86, WASM",
+        "  u8x16::from_m128i — missing from: ARM, WASM",
+        "  u8x16::from_v128 — missing from: x86, ARM",
+        "  i16x8::from_int16x8_t — missing from: x86, WASM",
+        "  i16x8::from_m128i — missing from: ARM, WASM",
+        "  i16x8::from_v128 — missing from: x86, ARM",
+        "  u16x8::from_uint16x8_t — missing from: x86, WASM",
+        "  u16x8::from_m128i — missing from: ARM, WASM",
+        "  u16x8::from_v128 — missing from: x86, ARM",
+        "  i32x4::from_int32x4_t — missing from: x86, WASM",
+        "  i32x4::from_m128i — missing from: ARM, WASM",
+        "  i32x4::from_v128 — missing from: x86, ARM",
+        "  u32x4::from_uint32x4_t — missing from: x86, WASM",
+        "  u32x4::from_m128i — missing from: ARM, WASM",
+        "  u32x4::from_v128 — missing from: x86, ARM",
+        "  i64x2::from_int64x2_t — missing from: x86, WASM",
+        "  i64x2::from_m128i — missing from: ARM, WASM",
+        "  i64x2::from_v128 — missing from: x86, ARM",
+        "  u64x2::from_uint64x2_t — missing from: x86, WASM",
+        "  u64x2::from_m128i — missing from: ARM, WASM",
+        "  u64x2::from_v128 — missing from: x86, ARM",
+        // AVX-512 fast-path methods (only available with X64V4Token)
+        "  i64x2::abs_fast — missing from: ARM, WASM",
+        "  i64x2::min_fast — missing from: ARM, WASM",
+        "  i64x2::max_fast — missing from: ARM, WASM",
+        "  u64x2::min_fast — missing from: ARM, WASM",
+        "  u64x2::max_fast — missing from: ARM, WASM",
+        // x86 W128 uses V3 token (no _mm_srai_epi64 until AVX-512)
+        "  i64x2::shr_arithmetic — missing from: x86",
     ];
 
     let actionable_issues: Vec<_> = parity_issues

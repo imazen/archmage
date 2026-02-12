@@ -649,12 +649,12 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
         "#});
     }
 
-    // blend (conditional select using mask)
+    // blend (conditional select using mask) — matches x86/ARM signature
     code.push_str(&formatdoc! {r#"
         /// Blend two vectors based on a mask
         ///
-        /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-        /// otherwise selects from `other`.
+        /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+        /// otherwise selects from `if_false`.
         ///
         /// The mask should come from a comparison operation like `simd_lt()`.
         ///
@@ -663,11 +663,11 @@ fn generate_comparison_ops(ty: &SimdType) -> String {
         /// let a = {name}::splat(token, 1.0);
         /// let b = {name}::splat(token, 2.0);
         /// let mask = a.simd_lt(b);  // all true
-        /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+        /// let result = {name}::blend(mask, a, b);  // selects a
         /// ```
         #[inline(always)]
-        pub fn blend(self, other: Self, mask: Self) -> Self {{
-        Self(v128_bitselect(self.0, other.0, mask.0))
+        pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
         }}
 
     "#});
@@ -689,7 +689,8 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
     // Shift operations for integer types
     if !ty.elem.is_float() {
         let shl_fn = Wasm::shl_intrinsic(ty.elem);
-        let shr_fn = Wasm::shr_intrinsic(ty.elem);
+        let shr_logical_fn = Wasm::shr_logical_intrinsic(ty.elem);
+        let shr_arith_fn = Wasm::shr_intrinsic(ty.elem);
 
         code.push_str(&formatdoc! {r#"
             /// Shift left by constant
@@ -701,37 +702,39 @@ fn generate_bitwise_ops(ty: &SimdType) -> String {
         "#});
 
         if ty.elem.is_signed() {
+            // Signed shr_logical: use unsigned shr intrinsic (v128 bitwise identity)
             code.push_str(&formatdoc! {r#"
-                /// Shift right by constant
+                /// Shift right by `N` bits (logical/unsigned shift).
                 ///
-                /// For signed types, this is an arithmetic shift (sign-extending).
+                /// Bits shifted out are lost; zeros are shifted in.
                 #[inline(always)]
-                pub fn shr<const N: u32>(self) -> Self {{
-                Self({shr_fn}(self.0, N))
+                pub fn shr_logical<const N: u32>(self) -> Self {{
+                Self({shr_logical_fn}(self.0, N))
                 }}
 
             "#});
         } else {
             code.push_str(&formatdoc! {r#"
-                /// Shift right by constant
+                /// Shift right by `N` bits (logical/unsigned shift).
+                ///
+                /// Bits shifted out are lost; zeros are shifted in.
                 #[inline(always)]
-                pub fn shr<const N: u32>(self) -> Self {{
-                Self({shr_fn}(self.0, N))
+                pub fn shr_logical<const N: u32>(self) -> Self {{
+                Self({shr_logical_fn}(self.0, N))
                 }}
 
             "#});
         }
 
-        // shr_arithmetic for signed types (same as shr on WASM since WASM shr is arithmetic for signed)
-        if ty.elem.is_signed() && !matches!(ty.elem, ElementType::I64) {
+        // shr_arithmetic for signed types
+        if ty.elem.is_signed() {
             code.push_str(&formatdoc! {r#"
                 /// Arithmetic shift right by `N` bits (sign-extending).
                 ///
                 /// The sign bit is replicated into the vacated positions.
-                /// On WASM, this is the same as `shr()` for signed types.
                 #[inline(always)]
                 pub fn shr_arithmetic<const N: u32>(self) -> Self {{
-                Self({shr_fn}(self.0, N))
+                Self({shr_arith_fn}(self.0, N))
                 }}
 
             "#});

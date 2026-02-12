@@ -143,7 +143,6 @@
 
 // -- Traits --
 pub use crate::tokens::HasX64V2;
-#[cfg(feature = "avx512")]
 pub use crate::tokens::HasX64V4;
 pub use crate::tokens::IntoConcreteToken;
 pub use crate::tokens::SimdToken;
@@ -154,7 +153,6 @@ pub use crate::tokens::{HasNeon, HasNeonAes, HasNeonSha3};
 pub use crate::tokens::ScalarToken;
 pub use crate::tokens::Wasm128Token;
 pub use crate::tokens::{Arm64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken};
-#[cfg(feature = "avx512")]
 pub use crate::tokens::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};
 pub use crate::tokens::{Desktop64, X64V2Token, X64V3Token};
 

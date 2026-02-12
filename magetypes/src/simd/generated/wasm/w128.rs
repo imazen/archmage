@@ -360,8 +360,8 @@ impl f32x4 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -370,11 +370,11 @@ impl f32x4 {
     /// let a = f32x4::splat(token, 1.0);
     /// let b = f32x4::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = f32x4::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -1631,8 +1631,8 @@ impl f64x2 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -1641,11 +1641,11 @@ impl f64x2 {
     /// let a = f64x2::splat(token, 1.0);
     /// let b = f64x2::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = f64x2::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -2174,8 +2174,8 @@ impl i8x16 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -2184,11 +2184,11 @@ impl i8x16 {
     /// let a = i8x16::splat(token, 1.0);
     /// let b = i8x16::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = i8x16::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -2203,18 +2203,17 @@ impl i8x16 {
         Self(i8x16_shl(self.0, N))
     }
 
-    /// Shift right by constant
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For signed types, this is an arithmetic shift (sign-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
-        Self(i8x16_shr(self.0, N))
+    pub fn shr_logical<const N: u32>(self) -> Self {
+        Self(u8x16_shr(self.0, N))
     }
 
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
-    /// On WASM, this is the same as `shr()` for signed types.
     #[inline(always)]
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(i8x16_shr(self.0, N))
@@ -2628,8 +2627,8 @@ impl u8x16 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -2638,11 +2637,11 @@ impl u8x16 {
     /// let a = u8x16::splat(token, 1.0);
     /// let b = u8x16::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = u8x16::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -2657,9 +2656,11 @@ impl u8x16 {
         Self(u8x16_shl(self.0, N))
     }
 
-    /// Shift right by constant
+    /// Shift right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
+    pub fn shr_logical<const N: u32>(self) -> Self {
         Self(u8x16_shr(self.0, N))
     }
 
@@ -3110,8 +3111,8 @@ impl i16x8 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -3120,11 +3121,11 @@ impl i16x8 {
     /// let a = i16x8::splat(token, 1.0);
     /// let b = i16x8::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = i16x8::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -3139,18 +3140,17 @@ impl i16x8 {
         Self(i16x8_shl(self.0, N))
     }
 
-    /// Shift right by constant
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For signed types, this is an arithmetic shift (sign-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
-        Self(i16x8_shr(self.0, N))
+    pub fn shr_logical<const N: u32>(self) -> Self {
+        Self(u16x8_shr(self.0, N))
     }
 
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
-    /// On WASM, this is the same as `shr()` for signed types.
     #[inline(always)]
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(i16x8_shr(self.0, N))
@@ -3627,8 +3627,8 @@ impl u16x8 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -3637,11 +3637,11 @@ impl u16x8 {
     /// let a = u16x8::splat(token, 1.0);
     /// let b = u16x8::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = u16x8::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -3656,9 +3656,11 @@ impl u16x8 {
         Self(u16x8_shl(self.0, N))
     }
 
-    /// Shift right by constant
+    /// Shift right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
+    pub fn shr_logical<const N: u32>(self) -> Self {
         Self(u16x8_shr(self.0, N))
     }
 
@@ -4113,8 +4115,8 @@ impl i32x4 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -4123,11 +4125,11 @@ impl i32x4 {
     /// let a = i32x4::splat(token, 1.0);
     /// let b = i32x4::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = i32x4::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -4142,18 +4144,17 @@ impl i32x4 {
         Self(i32x4_shl(self.0, N))
     }
 
-    /// Shift right by constant
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For signed types, this is an arithmetic shift (sign-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
-        Self(i32x4_shr(self.0, N))
+    pub fn shr_logical<const N: u32>(self) -> Self {
+        Self(u32x4_shr(self.0, N))
     }
 
     /// Arithmetic shift right by `N` bits (sign-extending).
     ///
     /// The sign bit is replicated into the vacated positions.
-    /// On WASM, this is the same as `shr()` for signed types.
     #[inline(always)]
     pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(i32x4_shr(self.0, N))
@@ -4634,8 +4635,8 @@ impl u32x4 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -4644,11 +4645,11 @@ impl u32x4 {
     /// let a = u32x4::splat(token, 1.0);
     /// let b = u32x4::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = u32x4::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -4663,9 +4664,11 @@ impl u32x4 {
         Self(u32x4_shl(self.0, N))
     }
 
-    /// Shift right by constant
+    /// Shift right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
+    pub fn shr_logical<const N: u32>(self) -> Self {
         Self(u32x4_shr(self.0, N))
     }
 
@@ -5111,8 +5114,8 @@ impl i64x2 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -5121,11 +5124,11 @@ impl i64x2 {
     /// let a = i64x2::splat(token, 1.0);
     /// let b = i64x2::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = i64x2::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -5140,11 +5143,19 @@ impl i64x2 {
         Self(i64x2_shl(self.0, N))
     }
 
-    /// Shift right by constant
+    /// Shift right by `N` bits (logical/unsigned shift).
     ///
-    /// For signed types, this is an arithmetic shift (sign-extending).
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
+    pub fn shr_logical<const N: u32>(self) -> Self {
+        Self(u64x2_shr(self.0, N))
+    }
+
+    /// Arithmetic shift right by `N` bits (sign-extending).
+    ///
+    /// The sign bit is replicated into the vacated positions.
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: u32>(self) -> Self {
         Self(i64x2_shr(self.0, N))
     }
 
@@ -5614,8 +5625,8 @@ impl u64x2 {
 
     /// Blend two vectors based on a mask
     ///
-    /// For each lane, selects from `self` if the corresponding mask lane is all-ones,
-    /// otherwise selects from `other`.
+    /// For each lane, selects from `if_true` if the corresponding mask lane is all-ones,
+    /// otherwise selects from `if_false`.
     ///
     /// The mask should come from a comparison operation like `simd_lt()`.
     ///
@@ -5624,11 +5635,11 @@ impl u64x2 {
     /// let a = u64x2::splat(token, 1.0);
     /// let b = u64x2::splat(token, 2.0);
     /// let mask = a.simd_lt(b);  // all true
-    /// let result = a.blend(b, mask);  // selects from a (all ones in mask)
+    /// let result = u64x2::blend(mask, a, b);  // selects a
     /// ```
     #[inline(always)]
-    pub fn blend(self, other: Self, mask: Self) -> Self {
-        Self(v128_bitselect(self.0, other.0, mask.0))
+    pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
+        Self(v128_bitselect(if_true.0, if_false.0, mask.0))
     }
 
     /// Bitwise NOT
@@ -5643,9 +5654,11 @@ impl u64x2 {
         Self(u64x2_shl(self.0, N))
     }
 
-    /// Shift right by constant
+    /// Shift right by `N` bits (logical/unsigned shift).
+    ///
+    /// Bits shifted out are lost; zeros are shifted in.
     #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
+    pub fn shr_logical<const N: u32>(self) -> Self {
         Self(u64x2_shr(self.0, N))
     }
 

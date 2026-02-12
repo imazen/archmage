@@ -62,7 +62,6 @@ features = [
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
 ]
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
-cargo_feature = "avx512"
 display_name = "AVX-512"
 short_name = "v4"
 parent = "X64V3Token"
@@ -82,7 +81,6 @@ features = [
     "vpclmulqdq", "gfni", "vaes",
 ]
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
-cargo_feature = "avx512"
 display_name = "AVX-512Modern"
 short_name = "modern"
 parent = "X64V4Token"
@@ -99,7 +97,6 @@ features = [
     "avx512fp16",
 ]
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
-cargo_feature = "avx512"
 display_name = "AVX-512FP16"
 short_name = "fp16"
 parent = "X64V4Token"
