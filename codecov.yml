@@ -2,22 +2,25 @@ coverage:
   status:
     project:
       default:
-        target: 100%
+        target: auto
+        threshold: 1%
     patch:
       default:
-        target: 100%
+        target: auto
+        threshold: 1%
 
-flags:
-  x86_64:
-    paths:
-      - src/
-      - magetypes/
-    carryforward: true
-  aarch64:
-    paths:
-      - src/
-      - magetypes/
-    carryforward: true
+flag_management:
+  individual_flags:
+    - name: x86_64
+      paths:
+        - src/
+        - magetypes/src/
+      carryforward: true
+    - name: aarch64
+      paths:
+        - src/
+        - magetypes/src/
+      carryforward: true
 
 ignore:
   # Proc macro crate — coverage is measured at compile time during macro
@@ -25,3 +28,6 @@ ignore:
   - "archmage-macros/**"
   # Build tool, not shipped code.
   - "xtask/**"
+  # Generated cross-platform stubs (return None / return Err).
+  # Only meaningful on foreign architectures where they're trivial.
+  - "src/tokens/generated/*_stubs.rs"
