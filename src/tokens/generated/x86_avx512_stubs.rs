@@ -21,6 +21,8 @@ impl SimdToken for X64V4Token {
         Some(false) // Wrong architecture
     }
 
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
+
     #[inline]
     fn summon() -> Option<Self> {
         None // Not available on this architecture
@@ -67,6 +69,8 @@ impl SimdToken for Avx512ModernToken {
         Some(false) // Wrong architecture
     }
 
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
+
     #[inline]
     fn summon() -> Option<Self> {
         None // Not available on this architecture
@@ -112,6 +116,8 @@ impl SimdToken for Avx512Fp16Token {
     fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
+
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
 
     #[inline]
     fn summon() -> Option<Self> {

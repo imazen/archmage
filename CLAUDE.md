@@ -546,28 +546,94 @@ xtask/                       # Code generator and validation
     └── token_gen.rs        # Token/trait code generator
 ```
 
-## CRITICAL: Codegen Style Rules
+## CRITICAL: Codegen Style Rules — NO `writeln!` CHAINS
 
-**NEVER use `writeln!` chains or `write!` chains for code generation.** Use `r#"..."#` raw strings with `formatdoc!` (from the `indoc` crate) instead:
+**THIS IS MANDATORY. ALL codegen MUST use `formatdoc!` from the `indoc` crate.**
+
+`writeln!` chains are the single biggest readability problem in our codegen. They turn 10 lines of readable Rust into 40 lines of string-escaping noise where you can't see the generated code's structure. Every `{{` and `}}` is a bug waiting to happen. Every `.unwrap()` is visual clutter. Stop it.
+
+### The rule
+
+1. **Use `formatdoc!` with raw strings** for any block of generated code (2+ lines)
+2. **Use `format!` or string literals** for single-line fragments only
+3. **`writeln!` is BANNED** except for trivial single-line output to stdout/stderr (like progress messages)
+4. **`indoc` is already a dependency** of xtask — there is zero excuse
+
+### Pattern: `formatdoc!` with `push_str`
 
 ```rust
-// WRONG - verbose, hard to read, easy to get wrong
-writeln!(code, "/// {doc}").unwrap();
-writeln!(code, "pub fn {name}(self) -> Self {{").unwrap();
-writeln!(code, "    Self({body})").unwrap();
+use indoc::formatdoc;
+
+// WRONG — unreadable writeln! soup (actual current state of token_gen.rs)
+writeln!(code, "impl SimdToken for {name} {{").unwrap();
+writeln!(code, "    const NAME: &'static str = \"{display_name}\";").unwrap();
+writeln!(code, "").unwrap();
+writeln!(code, "    fn compiled_with() -> Option<bool> {{").unwrap();
+writeln!(code, "        #[cfg(all({cfg_all}))]").unwrap();
+writeln!(code, "        {{ Some(true) }}").unwrap();
+writeln!(code, "        #[cfg(not(all({cfg_all})))]").unwrap();
+writeln!(code, "        {{ None }}").unwrap();
+writeln!(code, "    }}").unwrap();
 writeln!(code, "}}").unwrap();
 
-// CORRECT - use formatdoc! with raw strings
-use indoc::formatdoc;
+// CORRECT — you can actually READ the generated code
 code.push_str(&formatdoc! {r#"
-    /// {doc}
-    pub fn {name}(self) -> Self {{
-        Self({body})
+    impl SimdToken for {name} {{
+        const NAME: &'static str = "{display_name}";
+
+        fn compiled_with() -> Option<bool> {{
+            #[cfg(all({cfg_all}))]
+            {{ Some(true) }}
+            #[cfg(not(all({cfg_all})))]
+            {{ None }}
+        }}
     }}
 "#});
 ```
 
-For method generation helpers, use the helpers in `xtask/src/simd_types/types.rs`:
+### Pattern: conditional blocks
+
+```rust
+// Build a section conditionally, then splice it in
+let cascade_code = if !descendants.is_empty() {
+    let mut lines = String::new();
+    for desc in &descendants {
+        lines.push_str(&formatdoc! {r#"
+            super::{module}::{cache}.store(v, Ordering::Relaxed);
+            super::{module}::{disabled}.store(disabled, Ordering::Relaxed);
+        "#, module = desc.module, cache = desc.cache_var, disabled = desc.disabled_var});
+    }
+    lines
+} else {
+    String::new()
+};
+
+code.push_str(&formatdoc! {r#"
+    pub fn disable(disabled: bool) {{
+        CACHE.store(if disabled {{ 1 }} else {{ 0 }}, Ordering::Relaxed);
+        {cascade_code}
+    }}
+"#});
+```
+
+### Pattern: helper functions that return String
+
+```rust
+fn gen_compiled_with(name: &str, cfg_all: &str) -> String {
+    formatdoc! {r#"
+        fn compiled_with() -> Option<bool> {{
+            #[cfg(all({cfg_all}))]
+            {{ Some(true) }}
+            #[cfg(not(all({cfg_all})))]
+            {{ None }}
+        }}
+    "#}
+}
+```
+
+### For magetypes method generation
+
+Use the helpers in `xtask/src/simd_types/types.rs`:
 
 ```rust
 use super::types::{gen_unary_method, gen_binary_method, gen_scalar_method};
@@ -576,6 +642,10 @@ code.push_str(&gen_unary_method("Compute absolute value", "abs", "Self(_mm256_ab
 code.push_str(&gen_binary_method("Add two vectors", "add", "Self(_mm256_add_epi32(self.0, other.0))"));
 code.push_str(&gen_scalar_method("Extract first element", "first", "i32", "_mm_cvtsi128_si32(self.0)"));
 ```
+
+### Enforcement
+
+When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the same commit. Don't add new `writeln!` chains. Existing `writeln!` chains in `token_gen.rs` (297 occurrences!) and `main.rs` (33 occurrences) are tech debt — convert them progressively.
 
 ## Token Hierarchy
 

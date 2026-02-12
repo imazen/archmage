@@ -21,6 +21,8 @@ impl SimdToken for NeonToken {
         Some(false) // Wrong architecture
     }
 
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
+
     #[inline]
     fn summon() -> Option<Self> {
         None // Not available on this architecture
@@ -66,6 +68,8 @@ impl SimdToken for NeonAesToken {
     fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
+
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
 
     #[inline]
     fn summon() -> Option<Self> {
@@ -113,6 +117,8 @@ impl SimdToken for NeonSha3Token {
         Some(false) // Wrong architecture
     }
 
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
+
     #[inline]
     fn summon() -> Option<Self> {
         None // Not available on this architecture
@@ -158,6 +164,8 @@ impl SimdToken for NeonCrcToken {
     fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
+
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
 
     #[inline]
     fn summon() -> Option<Self> {
