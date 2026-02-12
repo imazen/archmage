@@ -1,3 +1,10 @@
+// incant!/magetypes dispatch generates _v3 etc. for x86_64, not for i686
+#![cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+
 use archmage::{IntoConcreteToken, ScalarToken, SimdToken, incant, magetypes};
 
 #[magetypes]

@@ -411,7 +411,7 @@ mod x86_only_module {
 
 #[cfg(target_arch = "aarch64")]
 mod arm_only_module {
-    pub const VALUE: u32 = 0xARM;
+    pub const VALUE: u32 = 0xA4AA; // "NEON" in spirit
 }
 
 #[test]
@@ -420,7 +420,7 @@ fn module_elision_works() {
     assert_eq!(x86_only_module::VALUE, 0x86);
 
     #[cfg(target_arch = "aarch64")]
-    assert_eq!(arm_only_module::VALUE, 0xARM);
+    assert_eq!(arm_only_module::VALUE, 0xA4AA);
 
     // On x86, arm_only_module doesn't exist (elided)
     // On ARM, x86_only_module doesn't exist (elided)

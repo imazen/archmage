@@ -5,14 +5,26 @@
 //!
 //! Run with: cargo run --example magetypes_showcase
 
+// This example is x86_64-only (uses AVX2 intrinsics + magetypes).
+// On other architectures it compiles but does nothing.
+
+#[cfg(not(target_arch = "x86_64"))]
+fn main() {
+    eprintln!("This example requires x86_64.");
+}
+
+#[cfg(target_arch = "x86_64")]
 use archmage::prelude::*;
+#[cfg(target_arch = "x86_64")]
 use magetypes::simd::{f32x8, i32x8};
+#[cfg(target_arch = "x86_64")]
 use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
 
 // ============================================================================
 // COMPARISON: Raw Intrinsics vs Magetypes
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod comparison {
     use super::*;
 
@@ -66,6 +78,7 @@ mod comparison {
 // OPERATORS: +, -, *, / just work
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod operators {
     use super::*;
 
@@ -103,6 +116,7 @@ mod operators {
 // METHODS: Readable names for complex operations
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod methods {
     use super::*;
 
@@ -167,6 +181,7 @@ mod methods {
 // TRANSCENDENTALS: exp, log, pow
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod transcendentals {
     use super::*;
 
@@ -224,6 +239,7 @@ mod transcendentals {
 // COMPARISONS AND BLENDING: Conditional operations without branches
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod conditionals {
     use super::*;
 
@@ -276,6 +292,7 @@ mod conditionals {
 // REAL ALGORITHM: Batch Normalization
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod batch_norm {
     use super::*;
 
@@ -327,6 +344,7 @@ mod batch_norm {
 // REAL ALGORITHM: Layer Normalization
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod layer_norm {
     use super::*;
 
@@ -411,6 +429,7 @@ mod layer_norm {
 // REAL ALGORITHM: Cosine Similarity
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod cosine_similarity {
     use super::*;
 
@@ -469,6 +488,7 @@ mod cosine_similarity {
 // REAL ALGORITHM: Softmax (full)
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 mod softmax {
     use super::*;
 
@@ -548,6 +568,7 @@ mod softmax {
 // MAIN
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 fn main() {
     println!("Magetypes Showcase\n");
 
@@ -611,7 +632,7 @@ fn main() {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "x86_64"))]
 mod tests {
     use super::*;
 
