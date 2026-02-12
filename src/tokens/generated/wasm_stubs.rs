@@ -15,6 +15,9 @@ impl crate::tokens::Sealed for Wasm128Token {}
 
 impl SimdToken for Wasm128Token {
     const NAME: &'static str = "WASM SIMD128";
+    const TARGET_FEATURES: &'static str = "simd128";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+simd128";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-simd128";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -42,6 +45,8 @@ impl Wasm128Token {
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 
@@ -49,6 +54,8 @@ impl Wasm128Token {
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 }

@@ -29,14 +29,17 @@ impl crate::tokens::Sealed for NeonToken {}
 
 impl SimdToken for NeonToken {
     const NAME: &'static str = "NEON";
+    const TARGET_FEATURES: &'static str = "neon";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
-        #[cfg(all(target_feature = "neon"))]
+        #[cfg(all(target_feature = "neon", not(feature = "disable_compile_time_tokens")))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_feature = "neon")))]
+        #[cfg(not(all(target_feature = "neon", not(feature = "disable_compile_time_tokens"))))]
         {
             None
         }
@@ -45,14 +48,14 @@ impl SimdToken for NeonToken {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        // Compile-time fast path
-        #[cfg(all(target_feature = "neon"))]
+        // Compile-time fast path (suppressed by disable_compile_time_tokens)
+        #[cfg(all(target_feature = "neon", not(feature = "disable_compile_time_tokens")))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
         }
 
         // Runtime path with caching
-        #[cfg(not(all(target_feature = "neon")))]
+        #[cfg(not(all(target_feature = "neon", not(feature = "disable_compile_time_tokens"))))]
         {
             match NEON_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
@@ -94,14 +97,16 @@ impl NeonToken {
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
-        #[cfg(all(target_feature = "neon"))]
+        #[cfg(all(target_feature = "neon", not(feature = "disable_compile_time_tokens")))]
         {
             let _ = disabled;
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
-        #[cfg(not(all(target_feature = "neon")))]
+        #[cfg(not(all(target_feature = "neon", not(feature = "disable_compile_time_tokens"))))]
         {
             NEON_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
@@ -120,13 +125,15 @@ impl NeonToken {
     ///
     /// Returns `Err` when all required features are compile-time enabled.
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
-        #[cfg(all(target_feature = "neon"))]
+        #[cfg(all(target_feature = "neon", not(feature = "disable_compile_time_tokens")))]
         {
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
-        #[cfg(not(all(target_feature = "neon")))]
+        #[cfg(not(all(target_feature = "neon", not(feature = "disable_compile_time_tokens"))))]
         {
             Ok(NEON_DISABLED.load(Ordering::Relaxed))
         }
@@ -145,14 +152,25 @@ impl crate::tokens::Sealed for NeonAesToken {}
 
 impl SimdToken for NeonAesToken {
     const NAME: &'static str = "NEON+AES";
+    const TARGET_FEATURES: &'static str = "neon,aes";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+aes";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-aes";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
-        #[cfg(all(target_feature = "neon", target_feature = "aes"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "aes",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "aes")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "aes",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             None
         }
@@ -161,14 +179,22 @@ impl SimdToken for NeonAesToken {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        // Compile-time fast path
-        #[cfg(all(target_feature = "neon", target_feature = "aes"))]
+        // Compile-time fast path (suppressed by disable_compile_time_tokens)
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "aes",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
         }
 
         // Runtime path with caching
-        #[cfg(not(all(target_feature = "neon", target_feature = "aes")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "aes",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             match NEON_AES_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
@@ -215,14 +241,24 @@ impl NeonAesToken {
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
-        #[cfg(all(target_feature = "neon", target_feature = "aes"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "aes",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             let _ = disabled;
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "aes")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "aes",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             NEON_AES_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
@@ -235,13 +271,23 @@ impl NeonAesToken {
     ///
     /// Returns `Err` when all required features are compile-time enabled.
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
-        #[cfg(all(target_feature = "neon", target_feature = "aes"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "aes",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "aes")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "aes",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             Ok(NEON_AES_DISABLED.load(Ordering::Relaxed))
         }
@@ -260,14 +306,25 @@ impl crate::tokens::Sealed for NeonSha3Token {}
 
 impl SimdToken for NeonSha3Token {
     const NAME: &'static str = "NEON+SHA3";
+    const TARGET_FEATURES: &'static str = "neon,sha3";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+sha3";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-sha3";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
-        #[cfg(all(target_feature = "neon", target_feature = "sha3"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "sha3",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "sha3")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "sha3",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             None
         }
@@ -276,14 +333,22 @@ impl SimdToken for NeonSha3Token {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        // Compile-time fast path
-        #[cfg(all(target_feature = "neon", target_feature = "sha3"))]
+        // Compile-time fast path (suppressed by disable_compile_time_tokens)
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "sha3",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
         }
 
         // Runtime path with caching
-        #[cfg(not(all(target_feature = "neon", target_feature = "sha3")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "sha3",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             match NEON_SHA3_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
@@ -330,14 +395,24 @@ impl NeonSha3Token {
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
-        #[cfg(all(target_feature = "neon", target_feature = "sha3"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "sha3",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             let _ = disabled;
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "sha3")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "sha3",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             NEON_SHA3_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
@@ -350,13 +425,23 @@ impl NeonSha3Token {
     ///
     /// Returns `Err` when all required features are compile-time enabled.
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
-        #[cfg(all(target_feature = "neon", target_feature = "sha3"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "sha3",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "sha3")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "sha3",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             Ok(NEON_SHA3_DISABLED.load(Ordering::Relaxed))
         }
@@ -376,14 +461,25 @@ impl crate::tokens::Sealed for NeonCrcToken {}
 
 impl SimdToken for NeonCrcToken {
     const NAME: &'static str = "NEON+CRC";
+    const TARGET_FEATURES: &'static str = "neon,crc";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+crc";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-crc";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
-        #[cfg(all(target_feature = "neon", target_feature = "crc"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "crc",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "crc")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "crc",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             None
         }
@@ -392,14 +488,22 @@ impl SimdToken for NeonCrcToken {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        // Compile-time fast path
-        #[cfg(all(target_feature = "neon", target_feature = "crc"))]
+        // Compile-time fast path (suppressed by disable_compile_time_tokens)
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "crc",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
         }
 
         // Runtime path with caching
-        #[cfg(not(all(target_feature = "neon", target_feature = "crc")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "crc",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             match NEON_CRC_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
@@ -446,14 +550,24 @@ impl NeonCrcToken {
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
-        #[cfg(all(target_feature = "neon", target_feature = "crc"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "crc",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             let _ = disabled;
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "crc")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "crc",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             NEON_CRC_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
@@ -466,13 +580,23 @@ impl NeonCrcToken {
     ///
     /// Returns `Err` when all required features are compile-time enabled.
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
-        #[cfg(all(target_feature = "neon", target_feature = "crc"))]
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "crc",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
-        #[cfg(not(all(target_feature = "neon", target_feature = "crc")))]
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "crc",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             Ok(NEON_CRC_DISABLED.load(Ordering::Relaxed))
         }

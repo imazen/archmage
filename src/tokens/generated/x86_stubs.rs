@@ -15,6 +15,11 @@ impl crate::tokens::Sealed for X64V2Token {}
 
 impl SimdToken for X64V2Token {
     const NAME: &'static str = "x86-64-v2";
+    const TARGET_FEATURES: &'static str = "sse3,ssse3,sse4.1,sse4.2,popcnt";
+    const ENABLE_TARGET_FEATURES: &'static str =
+        "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt";
+    const DISABLE_TARGET_FEATURES: &'static str =
+        "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -42,6 +47,8 @@ impl X64V2Token {
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 
@@ -49,6 +56,8 @@ impl X64V2Token {
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 }
@@ -63,6 +72,10 @@ impl crate::tokens::Sealed for X64V3Token {}
 
 impl SimdToken for X64V3Token {
     const NAME: &'static str = "x86-64-v3";
+    const TARGET_FEATURES: &'static str =
+        "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -90,6 +103,8 @@ impl X64V3Token {
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 
@@ -97,6 +112,8 @@ impl X64V3Token {
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 }

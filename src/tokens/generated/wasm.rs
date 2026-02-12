@@ -15,14 +15,25 @@ impl crate::tokens::Sealed for Wasm128Token {}
 
 impl SimdToken for Wasm128Token {
     const NAME: &'static str = "WASM SIMD128";
+    const TARGET_FEATURES: &'static str = "simd128";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+simd128";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-simd128";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
-        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        #[cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
+        #[cfg(not(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             None
         }
@@ -31,11 +42,19 @@ impl SimdToken for Wasm128Token {
     #[allow(deprecated)]
     #[inline]
     fn summon() -> Option<Self> {
-        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        #[cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            not(feature = "disable_compile_time_tokens")
+        ))]
         {
             Some(unsafe { Self::forge_token_dangerously() })
         }
-        #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
+        #[cfg(not(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            not(feature = "disable_compile_time_tokens")
+        )))]
         {
             None
         }

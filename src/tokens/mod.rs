@@ -68,6 +68,32 @@ pub trait SimdToken: sealed::Sealed + Copy + Clone + Send + Sync + 'static {
     /// Human-readable name for diagnostics and error messages.
     const NAME: &'static str;
 
+    /// Comma-delimited target features (e.g., `"avx2,fma,bmi1,bmi2,f16c,lzcnt"`).
+    ///
+    /// For x86 tokens, SSE/SSE2 are excluded (they are the x86_64 baseline and
+    /// cannot be meaningfully disabled). For AArch64 tokens, all features including
+    /// NEON are listed. For WASM, this is `"simd128"`.
+    ///
+    /// Empty for [`ScalarToken`].
+    const TARGET_FEATURES: &'static str;
+
+    /// RUSTFLAGS to enable these features at compile time.
+    ///
+    /// Example: `"-Ctarget-feature=+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt"`
+    ///
+    /// Empty for [`ScalarToken`].
+    const ENABLE_TARGET_FEATURES: &'static str;
+
+    /// RUSTFLAGS to disable these features at compile time.
+    ///
+    /// Example: `"-Ctarget-feature=-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt"`
+    ///
+    /// Useful in [`CompileTimeGuaranteedError`] messages to tell users how
+    /// to recompile so that runtime disable works.
+    ///
+    /// Empty for [`ScalarToken`].
+    const DISABLE_TARGET_FEATURES: &'static str;
+
     /// Check if this binary was compiled with the required target features enabled.
     ///
     /// Returns:
@@ -175,6 +201,9 @@ impl sealed::Sealed for ScalarToken {}
 
 impl SimdToken for ScalarToken {
     const NAME: &'static str = "Scalar";
+    const TARGET_FEATURES: &'static str = "";
+    const ENABLE_TARGET_FEATURES: &'static str = "";
+    const DISABLE_TARGET_FEATURES: &'static str = "";
 
     /// Always returns `Some(true)` — scalar fallback is always available.
     #[inline(always)]
@@ -205,6 +234,8 @@ impl ScalarToken {
     ) -> Result<(), CompileTimeGuaranteedError> {
         Err(CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 
@@ -214,6 +245,8 @@ impl ScalarToken {
     pub fn manually_disabled() -> Result<bool, CompileTimeGuaranteedError> {
         Err(CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 }
@@ -231,22 +264,33 @@ impl ScalarToken {
 /// To use `dangerously_disable_token_process_wide`, compile without
 /// the target features enabled. For example:
 /// - Remove `-Ctarget-cpu=native` from `RUSTFLAGS`
-/// - Use `-Ctarget-feature=-avx2` to disable specific features
+/// - Use the [`disable_flags`](Self::disable_flags) string to disable specific features
 #[derive(Debug, Clone)]
 pub struct CompileTimeGuaranteedError {
     /// The token type that cannot be disabled.
     pub token_name: &'static str,
+    /// Comma-delimited target features (e.g., `"avx2,fma,bmi1,bmi2,f16c,lzcnt"`).
+    /// Empty for ScalarToken.
+    pub target_features: &'static str,
+    /// RUSTFLAGS to disable these features (e.g., `"-Ctarget-feature=-avx2,-fma,..."`).
+    /// Empty for ScalarToken.
+    pub disable_flags: &'static str,
 }
 
 impl core::fmt::Display for CompileTimeGuaranteedError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "Cannot disable {} — all required features are compile-time enabled. \
-             Remove `-Ctarget-cpu` from RUSTFLAGS, or use \
-             `-Ctarget-feature=-<feature>` to disable specific features.",
-            self.token_name
-        )
+        if self.target_features.is_empty() {
+            write!(f, "Cannot disable {} — always available.", self.token_name)
+        } else {
+            write!(
+                f,
+                "Cannot disable {} — features [{}] are compile-time enabled.\n\n\
+                 To allow runtime disable, recompile with RUSTFLAGS:\n  \
+                 \"{}\"\n\n\
+                 Or remove `-Ctarget-cpu` from RUSTFLAGS entirely.",
+                self.token_name, self.target_features, self.disable_flags
+            )
+        }
     }
 }
 

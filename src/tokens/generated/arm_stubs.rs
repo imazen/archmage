@@ -15,6 +15,9 @@ impl crate::tokens::Sealed for NeonToken {}
 
 impl SimdToken for NeonToken {
     const NAME: &'static str = "NEON";
+    const TARGET_FEATURES: &'static str = "neon";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -42,6 +45,8 @@ impl NeonToken {
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 
@@ -49,6 +54,8 @@ impl NeonToken {
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 }
@@ -63,6 +70,9 @@ impl crate::tokens::Sealed for NeonAesToken {}
 
 impl SimdToken for NeonAesToken {
     const NAME: &'static str = "NEON+AES";
+    const TARGET_FEATURES: &'static str = "neon,aes";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+aes";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-aes";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -90,6 +100,8 @@ impl NeonAesToken {
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 
@@ -97,6 +109,8 @@ impl NeonAesToken {
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 }
@@ -111,6 +125,9 @@ impl crate::tokens::Sealed for NeonSha3Token {}
 
 impl SimdToken for NeonSha3Token {
     const NAME: &'static str = "NEON+SHA3";
+    const TARGET_FEATURES: &'static str = "neon,sha3";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+sha3";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-sha3";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -138,6 +155,8 @@ impl NeonSha3Token {
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 
@@ -145,6 +164,8 @@ impl NeonSha3Token {
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 }
@@ -159,6 +180,9 @@ impl crate::tokens::Sealed for NeonCrcToken {}
 
 impl SimdToken for NeonCrcToken {
     const NAME: &'static str = "NEON+CRC";
+    const TARGET_FEATURES: &'static str = "neon,crc";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+crc";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-crc";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -186,6 +210,8 @@ impl NeonCrcToken {
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 
@@ -193,6 +219,8 @@ impl NeonCrcToken {
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         Err(crate::tokens::CompileTimeGuaranteedError {
             token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
     }
 }

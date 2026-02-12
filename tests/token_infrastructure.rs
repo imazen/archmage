@@ -314,22 +314,47 @@ fn disable_child_does_not_affect_parent() {
 // ============================================================================
 
 #[test]
-fn compile_time_guaranteed_error_display() {
+fn compile_time_guaranteed_error_display_with_features() {
     let err = CompileTimeGuaranteedError {
-        token_name: "TestToken",
+        token_name: "X64V3Token",
+        target_features: "avx2,fma,bmi1,bmi2,f16c,lzcnt",
+        disable_flags: "-Ctarget-feature=-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt",
     };
     let msg = format!("{err}");
     assert!(
-        msg.contains("TestToken"),
+        msg.contains("X64V3Token"),
         "error message should contain token name"
+    );
+    assert!(
+        msg.contains("avx2,fma"),
+        "error message should contain feature list"
+    );
+    assert!(
+        msg.contains("-Ctarget-feature=-avx2"),
+        "error message should contain disable flags"
     );
     assert!(
         msg.contains("compile-time"),
         "error message should mention compile-time"
     );
     assert!(
-        msg.contains("target-cpu") || msg.contains("target-feature"),
-        "error message should mention target-cpu or target-feature"
+        msg.contains("target-cpu"),
+        "error message should mention target-cpu"
+    );
+}
+
+#[test]
+fn compile_time_guaranteed_error_display_empty_features() {
+    let err = CompileTimeGuaranteedError {
+        token_name: "Scalar",
+        target_features: "",
+        disable_flags: "",
+    };
+    let msg = format!("{err}");
+    assert!(msg.contains("Scalar"));
+    assert!(
+        msg.contains("always available"),
+        "scalar error should say always available"
     );
 }
 
@@ -337,6 +362,8 @@ fn compile_time_guaranteed_error_display() {
 fn compile_time_guaranteed_error_debug() {
     let err = CompileTimeGuaranteedError {
         token_name: "X64V3Token",
+        target_features: "avx2,fma",
+        disable_flags: "-Ctarget-feature=-avx2,-fma",
     };
     let debug = format!("{err:?}");
     assert!(debug.contains("X64V3Token"));
@@ -347,6 +374,8 @@ fn compile_time_guaranteed_error_debug() {
 fn compile_time_guaranteed_error_is_std_error() {
     let err = CompileTimeGuaranteedError {
         token_name: "TestToken",
+        target_features: "avx2",
+        disable_flags: "-Ctarget-feature=-avx2",
     };
     // Verify it implements std::error::Error
     let _: &dyn std::error::Error = &err;
@@ -602,4 +631,194 @@ fn summon_v2_is_idempotent() {
     let a = X64V2Token::summon().is_some();
     let b = X64V2Token::summon().is_some();
     assert_eq!(a, b);
+}
+
+// ============================================================================
+// Feature flag strings (TARGET_FEATURES, ENABLE/DISABLE_TARGET_FEATURES)
+// ============================================================================
+
+#[test]
+fn scalar_feature_strings_are_empty() {
+    assert_eq!(ScalarToken::TARGET_FEATURES, "");
+    assert_eq!(ScalarToken::ENABLE_TARGET_FEATURES, "");
+    assert_eq!(ScalarToken::DISABLE_TARGET_FEATURES, "");
+}
+
+#[test]
+fn x64v2_target_features_content() {
+    let features = X64V2Token::TARGET_FEATURES;
+    // Must contain the v2-specific features (NOT sse/sse2 — those are baseline)
+    assert!(features.contains("sse3"), "V2 features should contain sse3");
+    assert!(
+        features.contains("ssse3"),
+        "V2 features should contain ssse3"
+    );
+    assert!(
+        features.contains("sse4.1"),
+        "V2 features should contain sse4.1"
+    );
+    assert!(
+        features.contains("sse4.2"),
+        "V2 features should contain sse4.2"
+    );
+    assert!(
+        features.contains("popcnt"),
+        "V2 features should contain popcnt"
+    );
+    // Must NOT contain sse/sse2 (baseline, excluded)
+    assert!(
+        !features.starts_with("sse,"),
+        "V2 features should not start with bare sse"
+    );
+}
+
+#[test]
+fn x64v3_target_features_content() {
+    let features = X64V3Token::TARGET_FEATURES;
+    assert!(features.contains("avx2"), "V3 features should contain avx2");
+    assert!(features.contains("fma"), "V3 features should contain fma");
+    assert!(features.contains("bmi1"), "V3 features should contain bmi1");
+    assert!(features.contains("bmi2"), "V3 features should contain bmi2");
+    assert!(features.contains("f16c"), "V3 features should contain f16c");
+    assert!(
+        features.contains("lzcnt"),
+        "V3 features should contain lzcnt"
+    );
+}
+
+#[test]
+fn enable_flags_format() {
+    // All non-scalar tokens should have proper ENABLE format
+    let enable = X64V3Token::ENABLE_TARGET_FEATURES;
+    assert!(
+        enable.starts_with("-Ctarget-feature=+"),
+        "enable flags should start with -Ctarget-feature=+, got: {enable}"
+    );
+    assert!(
+        enable.contains("+avx2"),
+        "enable flags should contain +avx2"
+    );
+    assert!(enable.contains("+fma"), "enable flags should contain +fma");
+}
+
+#[test]
+fn disable_flags_format() {
+    let disable = X64V3Token::DISABLE_TARGET_FEATURES;
+    assert!(
+        disable.starts_with("-Ctarget-feature=-"),
+        "disable flags should start with -Ctarget-feature=-, got: {disable}"
+    );
+    assert!(
+        disable.contains("-avx2"),
+        "disable flags should contain -avx2"
+    );
+    assert!(
+        disable.contains("-fma"),
+        "disable flags should contain -fma"
+    );
+}
+
+#[test]
+fn stub_tokens_have_same_feature_strings_as_real() {
+    // ARM tokens are stubs on x86_64, but should still carry feature strings
+    assert!(
+        !NeonToken::TARGET_FEATURES.is_empty(),
+        "NeonToken stub should have non-empty TARGET_FEATURES"
+    );
+    assert!(
+        NeonToken::TARGET_FEATURES.contains("neon"),
+        "NeonToken stub should list neon"
+    );
+    assert!(
+        NeonToken::ENABLE_TARGET_FEATURES.contains("+neon"),
+        "NeonToken stub should have enable flags"
+    );
+    assert!(
+        NeonToken::DISABLE_TARGET_FEATURES.contains("-neon"),
+        "NeonToken stub should have disable flags"
+    );
+
+    // WASM token
+    assert!(
+        Wasm128Token::TARGET_FEATURES.contains("simd128"),
+        "Wasm128Token stub should list simd128"
+    );
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn avx512_feature_strings() {
+    let features = X64V4Token::TARGET_FEATURES;
+    assert!(features.contains("avx512f"));
+    assert!(features.contains("avx512bw"));
+    assert!(features.contains("avx512cd"));
+    assert!(features.contains("avx512dq"));
+    assert!(features.contains("avx512vl"));
+
+    let modern_features = Avx512ModernToken::TARGET_FEATURES;
+    assert!(modern_features.contains("avx512vpopcntdq"));
+    assert!(modern_features.contains("gfni"));
+    assert!(modern_features.contains("vaes"));
+}
+
+#[test]
+// ============================================================================
+// disable_compile_time_tokens feature flag
+// ============================================================================
+#[cfg(feature = "disable_compile_time_tokens")]
+#[test]
+fn dct_compiled_with_returns_none() {
+    // With disable_compile_time_tokens, compiled_with() should return None
+    // even though we're on x86_64 and these features ARE compile-time available.
+    assert_eq!(
+        X64V2Token::compiled_with(),
+        None,
+        "V2 compiled_with() should be None with disable_compile_time_tokens"
+    );
+    assert_eq!(
+        X64V3Token::compiled_with(),
+        None,
+        "V3 compiled_with() should be None with disable_compile_time_tokens"
+    );
+}
+
+#[cfg(feature = "disable_compile_time_tokens")]
+#[test]
+fn dct_disable_returns_ok() {
+    // With disable_compile_time_tokens, disable should succeed even when
+    // compiled with -Ctarget-cpu=native.
+    let result = X64V3Token::dangerously_disable_token_process_wide(true);
+    assert!(
+        result.is_ok(),
+        "disable should succeed with disable_compile_time_tokens"
+    );
+    assert!(
+        X64V3Token::summon().is_none(),
+        "summon should return None after disable"
+    );
+
+    // Re-enable
+    X64V3Token::dangerously_disable_token_process_wide(false).unwrap();
+    assert!(
+        X64V3Token::summon().is_some(),
+        "summon should succeed after re-enable"
+    );
+}
+
+fn compile_time_error_from_disable_contains_features() {
+    // ScalarToken always returns Err with empty features
+    let err = ScalarToken::dangerously_disable_token_process_wide(true).unwrap_err();
+    assert_eq!(err.target_features, "");
+    assert_eq!(err.disable_flags, "");
+
+    // Stub tokens also return Err with populated features
+    let err = NeonToken::dangerously_disable_token_process_wide(true).unwrap_err();
+    assert!(
+        err.target_features.contains("neon"),
+        "neon stub error should have neon in target_features"
+    );
+    assert!(
+        err.disable_flags.contains("-neon"),
+        "neon stub error should have -neon in disable_flags"
+    );
 }

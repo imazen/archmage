@@ -32,6 +32,9 @@ impl crate::tokens::Sealed for X64V4Token {}
 
 impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
+    const TARGET_FEATURES: &'static str = "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -52,7 +55,8 @@ impl SimdToken for X64V4Token {
             target_feature = "avx512bw",
             target_feature = "avx512cd",
             target_feature = "avx512dq",
-            target_feature = "avx512vl"
+            target_feature = "avx512vl",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             Some(true)
@@ -74,7 +78,8 @@ impl SimdToken for X64V4Token {
             target_feature = "avx512bw",
             target_feature = "avx512cd",
             target_feature = "avx512dq",
-            target_feature = "avx512vl"
+            target_feature = "avx512vl",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             None
@@ -84,7 +89,7 @@ impl SimdToken for X64V4Token {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        // Compile-time fast path
+        // Compile-time fast path (suppressed by disable_compile_time_tokens)
         #[cfg(all(
             target_feature = "sse3",
             target_feature = "ssse3",
@@ -102,7 +107,8 @@ impl SimdToken for X64V4Token {
             target_feature = "avx512bw",
             target_feature = "avx512cd",
             target_feature = "avx512dq",
-            target_feature = "avx512vl"
+            target_feature = "avx512vl",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
@@ -126,7 +132,8 @@ impl SimdToken for X64V4Token {
             target_feature = "avx512bw",
             target_feature = "avx512cd",
             target_feature = "avx512dq",
-            target_feature = "avx512vl"
+            target_feature = "avx512vl",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             match X64_V4_CACHE.load(Ordering::Relaxed) {
@@ -218,12 +225,15 @@ impl X64V4Token {
             target_feature = "avx512bw",
             target_feature = "avx512cd",
             target_feature = "avx512dq",
-            target_feature = "avx512vl"
+            target_feature = "avx512vl",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             let _ = disabled;
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
         #[cfg(not(all(
@@ -245,7 +255,8 @@ impl X64V4Token {
             target_feature = "avx512bw",
             target_feature = "avx512cd",
             target_feature = "avx512dq",
-            target_feature = "avx512vl"
+            target_feature = "avx512vl",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
@@ -282,11 +293,14 @@ impl X64V4Token {
             target_feature = "avx512bw",
             target_feature = "avx512cd",
             target_feature = "avx512dq",
-            target_feature = "avx512vl"
+            target_feature = "avx512vl",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
         #[cfg(not(all(
@@ -308,7 +322,8 @@ impl X64V4Token {
             target_feature = "avx512bw",
             target_feature = "avx512cd",
             target_feature = "avx512dq",
-            target_feature = "avx512vl"
+            target_feature = "avx512vl",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             Ok(X64_V4_DISABLED.load(Ordering::Relaxed))
@@ -333,6 +348,9 @@ impl crate::tokens::Sealed for Avx512ModernToken {}
 
 impl SimdToken for Avx512ModernToken {
     const NAME: &'static str = "AVX-512Modern";
+    const TARGET_FEATURES: &'static str = "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,avx512bf16,vpclmulqdq,gfni,vaes";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+avx512bf16,+vpclmulqdq,+gfni,+vaes";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-avx512bf16,-vpclmulqdq,-gfni,-vaes";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -363,7 +381,8 @@ impl SimdToken for Avx512ModernToken {
             target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
-            target_feature = "vaes"
+            target_feature = "vaes",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             Some(true)
@@ -395,7 +414,8 @@ impl SimdToken for Avx512ModernToken {
             target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
-            target_feature = "vaes"
+            target_feature = "vaes",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             None
@@ -405,7 +425,7 @@ impl SimdToken for Avx512ModernToken {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        // Compile-time fast path
+        // Compile-time fast path (suppressed by disable_compile_time_tokens)
         #[cfg(all(
             target_feature = "sse3",
             target_feature = "ssse3",
@@ -433,7 +453,8 @@ impl SimdToken for Avx512ModernToken {
             target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
-            target_feature = "vaes"
+            target_feature = "vaes",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
@@ -467,7 +488,8 @@ impl SimdToken for Avx512ModernToken {
             target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
-            target_feature = "vaes"
+            target_feature = "vaes",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             match AVX512_MODERN_CACHE.load(Ordering::Relaxed) {
@@ -588,12 +610,15 @@ impl Avx512ModernToken {
             target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
-            target_feature = "vaes"
+            target_feature = "vaes",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             let _ = disabled;
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
         #[cfg(not(all(
@@ -625,7 +650,8 @@ impl Avx512ModernToken {
             target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
-            target_feature = "vaes"
+            target_feature = "vaes",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
@@ -668,11 +694,14 @@ impl Avx512ModernToken {
             target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
-            target_feature = "vaes"
+            target_feature = "vaes",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
         #[cfg(not(all(
@@ -704,7 +733,8 @@ impl Avx512ModernToken {
             target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
-            target_feature = "vaes"
+            target_feature = "vaes",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             Ok(AVX512_MODERN_DISABLED.load(Ordering::Relaxed))
@@ -728,6 +758,9 @@ impl crate::tokens::Sealed for Avx512Fp16Token {}
 
 impl SimdToken for Avx512Fp16Token {
     const NAME: &'static str = "AVX-512FP16";
+    const TARGET_FEATURES: &'static str = "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512fp16";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512fp16";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -749,7 +782,8 @@ impl SimdToken for Avx512Fp16Token {
             target_feature = "avx512cd",
             target_feature = "avx512dq",
             target_feature = "avx512vl",
-            target_feature = "avx512fp16"
+            target_feature = "avx512fp16",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             Some(true)
@@ -772,7 +806,8 @@ impl SimdToken for Avx512Fp16Token {
             target_feature = "avx512cd",
             target_feature = "avx512dq",
             target_feature = "avx512vl",
-            target_feature = "avx512fp16"
+            target_feature = "avx512fp16",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             None
@@ -782,7 +817,7 @@ impl SimdToken for Avx512Fp16Token {
     #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
-        // Compile-time fast path
+        // Compile-time fast path (suppressed by disable_compile_time_tokens)
         #[cfg(all(
             target_feature = "sse3",
             target_feature = "ssse3",
@@ -801,7 +836,8 @@ impl SimdToken for Avx512Fp16Token {
             target_feature = "avx512cd",
             target_feature = "avx512dq",
             target_feature = "avx512vl",
-            target_feature = "avx512fp16"
+            target_feature = "avx512fp16",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
@@ -826,7 +862,8 @@ impl SimdToken for Avx512Fp16Token {
             target_feature = "avx512cd",
             target_feature = "avx512dq",
             target_feature = "avx512vl",
-            target_feature = "avx512fp16"
+            target_feature = "avx512fp16",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             match AVX512_FP16_CACHE.load(Ordering::Relaxed) {
@@ -929,12 +966,15 @@ impl Avx512Fp16Token {
             target_feature = "avx512cd",
             target_feature = "avx512dq",
             target_feature = "avx512vl",
-            target_feature = "avx512fp16"
+            target_feature = "avx512fp16",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             let _ = disabled;
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
         #[cfg(not(all(
@@ -957,7 +997,8 @@ impl Avx512Fp16Token {
             target_feature = "avx512cd",
             target_feature = "avx512dq",
             target_feature = "avx512vl",
-            target_feature = "avx512fp16"
+            target_feature = "avx512fp16",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
@@ -991,11 +1032,14 @@ impl Avx512Fp16Token {
             target_feature = "avx512cd",
             target_feature = "avx512dq",
             target_feature = "avx512vl",
-            target_feature = "avx512fp16"
+            target_feature = "avx512fp16",
+            not(feature = "disable_compile_time_tokens")
         ))]
         {
             return Err(crate::tokens::CompileTimeGuaranteedError {
                 token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
             });
         }
         #[cfg(not(all(
@@ -1018,7 +1062,8 @@ impl Avx512Fp16Token {
             target_feature = "avx512cd",
             target_feature = "avx512dq",
             target_feature = "avx512vl",
-            target_feature = "avx512fp16"
+            target_feature = "avx512fp16",
+            not(feature = "disable_compile_time_tokens")
         )))]
         {
             Ok(AVX512_FP16_DISABLED.load(Ordering::Relaxed))

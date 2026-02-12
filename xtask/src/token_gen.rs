@@ -192,6 +192,9 @@ fn gen_real_token_struct(
     // Doc comment
     let doc_block = gen_doc_comment(&token.doc);
 
+    // Feature flag strings
+    let (_, target_features, enable_flags, disable_flags) = feature_flag_strings(token);
+
     out.push_str(&formatdoc! {"
         {doc_block}#[derive(Clone, Copy, Debug)]
         pub struct {name} {{
@@ -202,6 +205,9 @@ fn gen_real_token_struct(
 
         impl SimdToken for {name} {{
             const NAME: &'static str = \"{display}\";
+            const TARGET_FEATURES: &'static str = \"{target_features}\";
+            const ENABLE_TARGET_FEATURES: &'static str = \"{enable_flags}\";
+            const DISABLE_TARGET_FEATURES: &'static str = \"{disable_flags}\";
 
     "});
 
@@ -235,7 +241,14 @@ fn gen_real_token_struct(
 }
 
 /// Generate the `compiled_with()` method for a real token.
+///
+/// When the `disable_compile_time_tokens` feature is active, compile-time
+/// detection always returns `None` so that runtime disable can work.
 fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
+    // The "disable_compile_time_tokens" feature suppresses the compile-time fast path:
+    // compiled_with() returns None instead of Some(true), forcing runtime detection.
+    let dct_guard = ", not(feature = \"disable_compile_time_tokens\")";
+
     match arch {
         "x86" => {
             // Filter out sse/sse2 — they are x86_64 baseline
@@ -258,9 +271,9 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
                 formatdoc! {"
                     {INDENT}#[inline]
                     {INDENT}fn compiled_with() -> Option<bool> {{
-                    {INDENT}    #[cfg(all({all_conditions}))]
+                    {INDENT}    #[cfg(all({all_conditions}{dct_guard}))]
                     {INDENT}    {{ Some(true) }}
-                    {INDENT}    #[cfg(not(all({all_conditions})))]
+                    {INDENT}    #[cfg(not(all({all_conditions}{dct_guard})))]
                     {INDENT}    {{ None }}
                     {INDENT}}}
                 "}
@@ -274,9 +287,9 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
             formatdoc! {"
                 {INDENT}#[inline]
                 {INDENT}fn compiled_with() -> Option<bool> {{
-                {INDENT}    #[cfg(all({all_conditions}))]
+                {INDENT}    #[cfg(all({all_conditions}{dct_guard}))]
                 {INDENT}    {{ Some(true) }}
-                {INDENT}    #[cfg(not(all({all_conditions})))]
+                {INDENT}    #[cfg(not(all({all_conditions}{dct_guard})))]
                 {INDENT}    {{ None }}
                 {INDENT}}}
             "}
@@ -285,9 +298,9 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
             formatdoc! {"
                 {INDENT}#[inline]
                 {INDENT}fn compiled_with() -> Option<bool> {{
-                {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
+                {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"{dct_guard}))]
                 {INDENT}    {{ Some(true) }}
-                {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]
+                {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\"{dct_guard})))]
                 {INDENT}    {{ None }}
                 {INDENT}}}
             "}
@@ -306,6 +319,8 @@ fn gen_summon(token: &TokenDef, arch: &str) -> String {
 }
 
 fn gen_summon_x86(token: &TokenDef) -> String {
+    let dct_guard = ", not(feature = \"disable_compile_time_tokens\")";
+
     // Filter out sse/sse2 (x86_64 baseline, always available)
     let check_features: Vec<&str> = token
         .features
@@ -332,14 +347,14 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         {INDENT}#[allow(deprecated)]
         {INDENT}#[inline(always)]
         {INDENT}fn summon() -> Option<Self> {{
-        {INDENT}    // Compile-time fast path
-        {INDENT}    #[cfg(all({all_features}))]
+        {INDENT}    // Compile-time fast path (suppressed by disable_compile_time_tokens)
+        {INDENT}    #[cfg(all({all_features}{dct_guard}))]
         {INDENT}    {{
         {INDENT}        return Some(unsafe {{ Self::forge_token_dangerously() }});
         {INDENT}    }}
 
         {INDENT}    // Runtime path with caching
-        {INDENT}    #[cfg(not(all({all_features})))]
+        {INDENT}    #[cfg(not(all({all_features}{dct_guard})))]
         {INDENT}    {{
         {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
         {INDENT}            2 => Some(unsafe {{ Self::forge_token_dangerously() }}),
@@ -360,6 +375,8 @@ fn gen_summon_x86(token: &TokenDef) -> String {
 }
 
 fn gen_summon_aarch64(token: &TokenDef) -> String {
+    let dct_guard = ", not(feature = \"disable_compile_time_tokens\")";
+
     // Check ALL features including neon — neon is NOT assumed baseline
     let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
 
@@ -371,14 +388,14 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
         {INDENT}#[allow(deprecated)]
         {INDENT}#[inline(always)]
         {INDENT}fn summon() -> Option<Self> {{
-        {INDENT}    // Compile-time fast path
-        {INDENT}    #[cfg(all({all_features}))]
+        {INDENT}    // Compile-time fast path (suppressed by disable_compile_time_tokens)
+        {INDENT}    #[cfg(all({all_features}{dct_guard}))]
         {INDENT}    {{
         {INDENT}        return Some(unsafe {{ Self::forge_token_dangerously() }});
         {INDENT}    }}
 
         {INDENT}    // Runtime path with caching
-        {INDENT}    #[cfg(not(all({all_features})))]
+        {INDENT}    #[cfg(not(all({all_features}{dct_guard})))]
         {INDENT}    {{
         {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
         {INDENT}            2 => Some(unsafe {{ Self::forge_token_dangerously() }}),
@@ -399,15 +416,17 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
 }
 
 fn gen_summon_wasm() -> String {
+    let dct_guard = ", not(feature = \"disable_compile_time_tokens\")";
+
     formatdoc! {"
         {INDENT}#[allow(deprecated)]
         {INDENT}#[inline]
         {INDENT}fn summon() -> Option<Self> {{
-        {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
+        {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"{dct_guard}))]
         {INDENT}    {{
         {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
         {INDENT}    }}
-        {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]
+        {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\"{dct_guard})))]
         {INDENT}    {{
         {INDENT}        None
         {INDENT}    }}
@@ -471,8 +490,11 @@ fn gen_disable_methods(
     let cache_name = cache_var_name(&token.name);
     let disabled_name = disabled_var_name(&token.name);
 
-    // For the compile-time guard, use the FULL unfiltered feature list
-    let all_conditions = cfg_all_features_full(&token.features);
+    // For the compile-time guard, use the FULL unfiltered feature list.
+    // The disable_compile_time_tokens feature suppresses the guard.
+    let base_conditions = cfg_all_features_full(&token.features);
+    let all_conditions =
+        format!("{base_conditions}, not(feature = \"disable_compile_time_tokens\")");
 
     // Collect descendants (tokens that have this token in their ancestor chain)
     let descendants = collect_descendants(reg, token);
@@ -506,7 +528,7 @@ fn gen_disable_methods(
                 #[cfg(all({all_conditions}))]
                 {{
                     let _ = disabled;
-                    return Err(crate::tokens::CompileTimeGuaranteedError {{ token_name: Self::NAME }});
+                    return Err(crate::tokens::CompileTimeGuaranteedError {{ token_name: Self::NAME, target_features: Self::TARGET_FEATURES, disable_flags: Self::DISABLE_TARGET_FEATURES }});
                 }}
                 #[cfg(not(all({all_conditions})))]
                 {{
@@ -523,7 +545,7 @@ fn gen_disable_methods(
             pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {{
                 #[cfg(all({all_conditions}))]
                 {{
-                    return Err(crate::tokens::CompileTimeGuaranteedError {{ token_name: Self::NAME }});
+                    return Err(crate::tokens::CompileTimeGuaranteedError {{ token_name: Self::NAME, target_features: Self::TARGET_FEATURES, disable_flags: Self::DISABLE_TARGET_FEATURES }});
                 }}
                 #[cfg(not(all({all_conditions})))]
                 {{
@@ -649,6 +671,9 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
     let name = &token.name;
     let display = token.display_name.as_deref().unwrap_or(name);
 
+    // Feature flag strings — stubs carry the SAME strings as real tokens
+    let (_, target_features, enable_flags, disable_flags) = feature_flag_strings(token);
+
     out.push_str(&formatdoc! {"
         /// Stub for {display} token (not available on this architecture).
         #[derive(Clone, Copy, Debug)]
@@ -660,6 +685,9 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
 
         impl SimdToken for {name} {{
             const NAME: &'static str = \"{display}\";
+            const TARGET_FEATURES: &'static str = \"{target_features}\";
+            const ENABLE_TARGET_FEATURES: &'static str = \"{enable_flags}\";
+            const DISABLE_TARGET_FEATURES: &'static str = \"{disable_flags}\";
 
             #[inline]
             fn compiled_with() -> Option<bool> {{
@@ -683,12 +711,12 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
         impl {name} {{
             /// This token is not available on this architecture.
             pub fn dangerously_disable_token_process_wide(_disabled: bool) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {{
-                Err(crate::tokens::CompileTimeGuaranteedError {{ token_name: Self::NAME }})
+                Err(crate::tokens::CompileTimeGuaranteedError {{ token_name: Self::NAME, target_features: Self::TARGET_FEATURES, disable_flags: Self::DISABLE_TARGET_FEATURES }})
             }}
 
             /// This token is not available on this architecture.
             pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {{
-                Err(crate::tokens::CompileTimeGuaranteedError {{ token_name: Self::NAME }})
+                Err(crate::tokens::CompileTimeGuaranteedError {{ token_name: Self::NAME, target_features: Self::TARGET_FEATURES, disable_flags: Self::DISABLE_TARGET_FEATURES }})
             }}
         }}
     "});
@@ -841,6 +869,51 @@ fn gen_mod_rs() -> String {
 
 /// Indent constant for generated code inside impl blocks.
 const INDENT: &str = "    ";
+
+/// Compute the feature flag strings for a token:
+/// (target_features, enable_flags, disable_flags).
+///
+/// For x86: excludes sse/sse2 (baseline, can't be meaningfully disabled).
+/// For aarch64: includes all features (neon is NOT baseline).
+/// For wasm: uses "simd128".
+fn feature_flag_strings(token: &TokenDef) -> (&'static str, String, String, String) {
+    let filtered: Vec<&str> = match token.arch.as_str() {
+        "x86" => token
+            .features
+            .iter()
+            .filter(|f| *f != "sse" && *f != "sse2")
+            .map(|s| s.as_str())
+            .collect(),
+        "aarch64" => token.features.iter().map(|s| s.as_str()).collect(),
+        "wasm" => vec!["simd128"],
+        _ => vec![],
+    };
+
+    if filtered.is_empty() {
+        return ("", String::new(), String::new(), String::new());
+    }
+
+    let target_features = filtered.join(",");
+    let enable = format!(
+        "-Ctarget-feature={}",
+        filtered
+            .iter()
+            .map(|f| format!("+{f}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    let disable = format!(
+        "-Ctarget-feature={}",
+        filtered
+            .iter()
+            .map(|f| format!("-{f}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+
+    // We return a &'static str "" placeholder — caller must use the Strings
+    ("", target_features, enable, disable)
+}
 
 /// Determine which generated module file a token lives in.
 fn file_module_for_token(token: &TokenDef) -> &str {
