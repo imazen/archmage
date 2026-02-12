@@ -1,6 +1,6 @@
 # Safe Memory Operations Reference
 
-Safe unaligned load/store operations from `safe_unaligned_simd` v0.2.3,
+Safe unaligned load/store operations from `safe_unaligned_simd` v0.2.4,
 organized by the archmage token required to use them inside `#[arcane]` functions.
 
 Regenerate: `cargo xtask generate`

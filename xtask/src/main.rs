@@ -15,7 +15,7 @@ mod simd_types;
 mod token_gen;
 
 /// Version of safe_unaligned_simd we're generating from
-const SAFE_SIMD_VERSION: &str = "0.2.3";
+const SAFE_SIMD_VERSION: &str = "0.2.4";
 
 // Feature lookups now come from token-registry.toml via Registry::features_for().
 
