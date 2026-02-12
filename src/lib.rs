@@ -100,6 +100,11 @@ pub mod tokens;
 // Prelude: one import for tokens, traits, macros, core::arch, and safe_unaligned_simd
 pub mod prelude;
 
+// Test utilities for exhaustive token permutation testing
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+pub mod testing;
+
 // SIMD types moved to magetypes crate
 // Use `magetypes::simd` for f32x8, i32x4, etc.
 

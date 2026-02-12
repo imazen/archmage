@@ -192,7 +192,101 @@ All tokens compile on all platforms. `summon()` returns `None` on unsupported ar
 
 ## Testing SIMD dispatch paths
 
-Every `incant!` dispatch and `if let Some(token) = summon()` branch creates a fallback path. Disable tokens at runtime to test those paths on your native hardware — no cross-compilation needed.
+Every `incant!` dispatch and `if let Some(token) = summon()` branch creates a fallback path. You can test all of them on your native hardware — no cross-compilation needed.
+
+### Exhaustive permutation testing
+
+`for_each_token_permutation` runs your closure once for every unique combination of token tiers, from "all SIMD enabled" down to "scalar only". It handles the disable/re-enable lifecycle, mutex serialization, cascade logic, and deduplication.
+
+```rust
+use archmage::testing::{for_each_token_permutation, CompileTimePolicy};
+
+#[test]
+fn sum_squares_matches_across_tiers() {
+    let data: Vec<f32> = (0..1024).map(|i| i as f32).collect();
+    let expected: f32 = data.iter().map(|x| x * x).sum();
+
+    let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
+        let result = sum_squares(&data);
+        assert!(
+            (result - expected).abs() < 1e-1,
+            "mismatch at tier: {perm}"
+        );
+    });
+
+    assert!(report.permutations_run >= 2, "expected multiple tiers");
+}
+```
+
+On an AVX-512 machine, this runs 5–7 permutations (all enabled → AVX-512 only → AVX2+FMA → SSE4.2 → scalar). On a Haswell-era CPU without AVX-512, 3 permutations. Tokens the CPU doesn't have are skipped — they'd produce duplicate states.
+
+Token disabling is process-wide, so run with `--test-threads=1`:
+
+```sh
+cargo test -- --test-threads=1
+```
+
+### `CompileTimePolicy` and `-Ctarget-cpu`
+
+If you compiled with `-Ctarget-cpu=native`, the compiler bakes feature detection into the binary. `summon()` returns `Some` unconditionally, and tokens can't be disabled at runtime — the runtime check was compiled out.
+
+The `CompileTimePolicy` enum controls what happens when `for_each_token_permutation` encounters these undisableable tokens:
+
+- **`Warn`** — Exclude the token from permutations silently. Warnings are collected in the report.
+- **`WarnStderr`** — Same, but also prints each warning to stderr with actionable fix instructions.
+- **`Fail`** — Panic with the exact compiler flags needed to fix it.
+
+For full coverage in CI, use the `disable_compile_time_tokens` feature. This makes `compiled_with()` return `None` even when features are baked in, so `summon()` uses runtime detection and tokens can be disabled:
+
+```toml
+# In your CI test configuration
+[dev-dependencies]
+archmage = { version = "0.6", features = ["disable_compile_time_tokens"] }
+```
+
+### Enforcing full coverage via env var
+
+Wire an environment variable to switch between `Warn` in local development and `Fail` in CI:
+
+```rust
+use archmage::testing::{for_each_token_permutation, CompileTimePolicy};
+
+fn permutation_policy() -> CompileTimePolicy {
+    if std::env::var_os("ARCHMAGE_FULL_PERMUTATIONS").is_some() {
+        CompileTimePolicy::Fail
+    } else {
+        CompileTimePolicy::WarnStderr
+    }
+}
+
+#[test]
+fn my_dispatch_works_at_all_tiers() {
+    let report = for_each_token_permutation(permutation_policy(), |perm| {
+        let result = my_simd_function(&data);
+        assert_eq!(result, expected, "failed at: {perm}");
+    });
+    eprintln!("{report}");
+}
+```
+
+Then in CI (with `disable_compile_time_tokens` enabled):
+
+```sh
+ARCHMAGE_FULL_PERMUTATIONS=1 cargo test -- --test-threads=1
+```
+
+If a token is still compile-time guaranteed (you forgot the feature or have stale RUSTFLAGS), `Fail` panics with the exact flags to fix it:
+
+```
+x86-64-v3: compile-time guaranteed, excluded from permutations. To include it, either:
+  1. Add `disable_compile_time_tokens` to archmage features in Cargo.toml
+  2. Remove `-Ctarget-cpu` from RUSTFLAGS
+  3. Compile with RUSTFLAGS="-Ctarget-feature=-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt"
+```
+
+### Manual single-token disable
+
+For targeted tests that only need to disable one token:
 
 ```rust
 use archmage::{X64V3Token, SimdToken};
@@ -211,9 +305,7 @@ fn scalar_fallback_matches_simd() {
 }
 ```
 
-Kill everything at once with `dangerously_disable_tokens_except_wasm(true)` — disabling V2 cascades to V3/V4/Modern/Fp16, disabling NEON cascades to Aes/Sha3/Crc. Re-enable with `false`.
-
-If you compiled with `-Ctarget-cpu=native`, the compiler bakes features in at compile time and `disable` returns an error (it can't un-bake them). The error includes the exact RUSTFLAGS you need to compile without those guarantees so runtime disable works.
+Disabling cascades downward: disabling V2 also disables V3/V4/Modern/Fp16; disabling NEON also disables Aes/Sha3/Crc. `dangerously_disable_tokens_except_wasm(true)` disables everything at once.
 
 ## Feature flags
 
