@@ -251,7 +251,7 @@ jobs:
       - name: Cache cargo registry
         uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: miri
+          prefix-key: miri-v2
           cache-targets: false
 
       - name: Setup Miri
