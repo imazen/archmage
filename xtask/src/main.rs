@@ -927,6 +927,22 @@ fn generate_reference_docs_new() -> Result<()> {
     fs::write(&mem_path, &mem_ref)?;
     println!("  Wrote {} ({} bytes)", mem_path.display(), mem_ref.len());
 
+    // Copy generated docs into simd_reference book (if it exists)
+    let simd_ref_intrinsics = PathBuf::from("docs/simd_reference/src/intrinsics");
+    if simd_ref_intrinsics.exists() {
+        let copies = [
+            ("x86-intrinsics-by-token.md", "x86.md"),
+            ("aarch64-intrinsics-by-token.md", "aarch64.md"),
+            ("memory-ops-reference.md", "memory-ops.md"),
+        ];
+        for (src, dst) in &copies {
+            let src_path = docs_gen_dir.join(src);
+            let dst_path = simd_ref_intrinsics.join(dst);
+            fs::copy(&src_path, &dst_path)?;
+            println!("  Copied {} → {}", src_path.display(), dst_path.display());
+        }
+    }
+
     Ok(())
 }
 

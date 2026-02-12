@@ -1,0 +1,22 @@
+[book]
+title = "Archmage SIMD Reference"
+authors = ["Lilith River"]
+description = "Searchable reference companion for archmage and magetypes"
+language = "en"
+src = "src"
+
+[build]
+build-dir = "../../target/simd_reference"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/imazen/archmage"
+edit-url-template = "https://github.com/imazen/archmage/edit/main/docs/simd_reference/{path}"
+
+[output.html.search]
+enable = true
+
+[output.html.fold]
+enable = true
+level = 1

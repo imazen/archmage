@@ -163,6 +163,55 @@ check_identical "rite_vs_manual_loop" "asm_inspection" \
 
 echo ""
 
+# ---- Claim 3: .first_chunk() produces vmovups (same as array ref) ----
+echo "Claim: .first_chunk() produces vmovups (256-bit float load)"
+
+check_contains "first_chunk_load" "asm_patterns" \
+    "asm_patterns::load_first_chunk::__simd_inner_load_first_chunk" \
+    "vmovups"
+
+check_contains "array_ref_load" "asm_patterns" \
+    "asm_patterns::load_array_ref::__simd_inner_load_array_ref" \
+    "vmovups"
+
+echo ""
+
+# ---- Claim 4: try_into produces vmovups ----
+echo "Claim: .try_into() produces vmovups (256-bit float load)"
+
+check_contains "try_into_load" "asm_patterns" \
+    "asm_patterns::load_try_into::__simd_inner_load_try_into" \
+    "vmovups"
+
+echo ""
+
+# ---- Claim 5: integer first_chunk → vmovups/vmovdqu (both valid for unaligned int loads) ----
+echo "Claim: integer .first_chunk() produces vmovups or vmovdqu"
+
+check_contains "first_chunk_int_load" "asm_patterns" \
+    "asm_patterns::load_first_chunk_i::__simd_inner_load_first_chunk_i" \
+    "vmov"
+
+echo ""
+
+# ---- Claim 6: 128-bit first_chunk → vmovups ----
+echo "Claim: 128-bit .first_chunk() produces vmovups"
+
+check_contains "first_chunk_128_load" "asm_patterns" \
+    "asm_patterns::load_first_chunk_128::__simd_inner_load_first_chunk_128" \
+    "vmovups"
+
+echo ""
+
+# ---- Claim 7: store via first_chunk_mut → vmovups ----
+echo "Claim: store via .first_chunk_mut() produces vmovups"
+
+check_contains "first_chunk_mut_store" "asm_patterns" \
+    "asm_patterns::store_first_chunk_mut::__simd_inner_store_first_chunk_mut" \
+    "vmovups"
+
+echo ""
+
 # ---- Summary ----
 echo "=== Results ==="
 echo "  Passed:  $PASS"

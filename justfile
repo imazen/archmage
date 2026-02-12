@@ -229,4 +229,12 @@ docs-serve:
 
 # Clean the built documentation
 docs-clean:
-    rm -rf target/book
+    rm -rf target/book target/simd_reference
+
+# Build the SIMD reference book
+simd-ref:
+    cd docs/simd_reference && mdbook build
+
+# Serve the SIMD reference locally (with auto-reload)
+simd-ref-serve:
+    cd docs/simd_reference && mdbook serve
