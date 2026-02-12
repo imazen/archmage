@@ -160,7 +160,7 @@ The issue: `#[target_feature]` changes LLVM's target for that function. Generic 
 RUSTFLAGS="-Ctarget-cpu=native" cargo build --release
 ```
 
-**Detection compiles away:** With `-Ctarget-cpu=haswell`, `X64V3Token::guaranteed()` returns `Some(true)` and `summon()` becomes a no-op. The compiler elides the check entirely.
+**Detection compiles away:** With `-Ctarget-cpu=haswell`, `X64V3Token::compiled_with()` returns `Some(true)` and `summon()` becomes a no-op. The compiler elides the check entirely.
 
 **Don't use it when:** Distributing binaries to unknown CPUs.
 
@@ -288,7 +288,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 
 | Token | Features | Trait |
 |-------|----------|-------|
-| `NeonToken` / `Arm64` | neon (always available) | `HasNeon` (baseline) |
+| `NeonToken` / `Arm64` | neon | `HasNeon` |
 | `NeonAesToken` | + aes | `HasNeonAes` |
 | `NeonSha3Token` | + sha3 | `HasNeonSha3` |
 | `NeonCrcToken` | + crc | Use token directly |
@@ -587,7 +587,7 @@ code.push_str(&gen_scalar_method("Extract first element", "first", "i32", "_mm_c
 - `Avx512Fp16Token` - + FP16 (Sapphire Rapids 2023+)
 
 **ARM:**
-- `NeonToken` / `Arm64` - NEON (baseline, always available)
+- `NeonToken` / `Arm64` - NEON (virtually all AArch64, requires runtime detection)
 - `NeonAesToken` - + AES
 - `NeonSha3Token` - + SHA3
 - `NeonCrcToken` - + CRC
