@@ -62,6 +62,7 @@ fn scalar_manually_disabled_always_errors() {
 // Stub tokens: ARM and WASM on x86_64
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 #[test]
 fn stub_compiled_with_returns_some_false() {
     // ARM tokens are stubs on x86_64 → compiled_with() = Some(false)
@@ -74,6 +75,7 @@ fn stub_compiled_with_returns_some_false() {
     assert_eq!(Wasm128Token::compiled_with(), Some(false));
 }
 
+#[cfg(target_arch = "x86_64")]
 #[test]
 fn stub_summon_returns_none() {
     assert!(NeonToken::summon().is_none());
@@ -83,6 +85,7 @@ fn stub_summon_returns_none() {
     assert!(Wasm128Token::summon().is_none());
 }
 
+#[cfg(target_arch = "x86_64")]
 #[test]
 fn stub_disable_returns_err() {
     // Stubs can't be disabled — returns CompileTimeGuaranteedError
@@ -93,6 +96,7 @@ fn stub_disable_returns_err() {
     assert!(Wasm128Token::dangerously_disable_token_process_wide(true).is_err());
 }
 
+#[cfg(target_arch = "x86_64")]
 #[test]
 fn stub_manually_disabled_returns_err() {
     assert!(NeonToken::manually_disabled().is_err());
@@ -106,6 +110,7 @@ fn stub_manually_disabled_returns_err() {
 // x86 tokens: compiled_with() and summon() basics
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 #[test]
 fn x86_compiled_with_returns_option() {
     // On x86_64, compiled_with() returns either Some(true) or None,
@@ -133,6 +138,7 @@ fn x86_summon_returns_option() {
 // with `--test-threads=1` or in isolation. cargo test does NOT do this by
 // default, but the individual tests clean up after themselves.
 
+#[cfg(target_arch = "x86_64")]
 #[test]
 fn disable_v3_makes_summon_return_none() {
     // Skip if compiled with target features (disable returns Err)
@@ -180,6 +186,7 @@ fn disable_v3_makes_summon_return_none() {
     }
 }
 
+#[cfg(target_arch = "x86_64")]
 #[test]
 fn disable_v2_makes_summon_return_none() {
     if X64V2Token::compiled_with() == Some(true) {
@@ -219,7 +226,7 @@ fn default_is_not_disabled() {
 // Cascading: disabling parent affects children
 // ============================================================================
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn disable_v3_cascades_to_v4() {
     if X64V3Token::compiled_with() == Some(true) {
@@ -261,7 +268,7 @@ fn disable_v3_cascades_to_v4() {
     }
 }
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn disable_v2_cascades_to_v3_v4() {
     if X64V2Token::compiled_with() == Some(true) {
@@ -978,7 +985,7 @@ fn disable_all_simd_error_display() {
 // Coverage: Avx512ModernToken + Avx512Fp16Token disable/manually_disabled
 // ============================================================================
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn avx512modern_disable_and_manually_disabled() {
     if Avx512ModernToken::compiled_with() == Some(true) {
@@ -992,7 +999,7 @@ fn avx512modern_disable_and_manually_disabled() {
     assert_eq!(Avx512ModernToken::manually_disabled().unwrap(), false);
 }
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn avx512fp16_disable_and_manually_disabled() {
     if Avx512Fp16Token::compiled_with() == Some(true) {
