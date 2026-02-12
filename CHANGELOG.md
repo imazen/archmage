@@ -2,16 +2,43 @@
 
 ## 0.6.0 — 2026-02-12
 
-Cross-platform hardening and CI infrastructure.
+Cross-platform hardening, testability, and CI infrastructure.
+
+- **Test every dispatch path without cross-compilation.** Disable individual tokens or kill all SIMD at once to force your code through scalar and lower-tier fallbacks — on your native hardware, in your existing test suite:
+
+  ```rust
+  use archmage::{X64V3Token, SimdToken, dangerously_disable_tokens_except_wasm};
+
+  #[test]
+  fn scalar_fallback_produces_same_results() {
+      let result_simd = my_function(&data);
+
+      // Kill V3 (AVX2+FMA) — summon() now returns None
+      X64V3Token::dangerously_disable_token_process_wide(true).unwrap();
+      let result_scalar = my_function(&data);
+      X64V3Token::dangerously_disable_token_process_wide(false).unwrap();
+
+      assert_eq!(result_simd, result_scalar);
+  }
+
+  #[test]
+  fn everything_works_without_simd() {
+      dangerously_disable_tokens_except_wasm(true).unwrap();
+      // entire test runs through scalar fallbacks
+      run_full_integration_test();
+      dangerously_disable_tokens_except_wasm(false).unwrap();
+  }
+  ```
+
+  Disabling V2 cascades to V3/V4/Modern/Fp16. Disabling NEON cascades to Aes/Sha3/Crc. Per-token `manually_disabled()` lets you query the current state.
 
 - **Cross-architecture SIMD API consistency** — final alignment pass across all platforms
-- **Coverage tests** — targeted tests for stubs, `forge()`, `disable()`, `detect` helpers, and `IntoConcreteToken` on ARM/WASM stubs. Previously-untested code paths now covered.
-- **Feature combination CI** — 8 feature combos tested (no-default, individual, pairs, all-features) plus aarch64 coverage uploading to codecov with flag-based merging
+- **Coverage tests** — targeted tests for stubs, `forge()`, `disable()`, `detect` helpers, and `IntoConcreteToken` on ARM/WASM stubs
+- **Feature combination CI** — 8 feature combos tested (no-default, individual, pairs, all-features) plus aarch64 coverage with codecov flag-based merging
 - **Cross-platform CI** — ARM, WASM, and i686 compilation verified; arch guards on platform-specific tests
 - **Performance documentation** — DCT-8 and cross-token nesting benchmarks consolidated into `docs/PERFORMANCE.md`
-- **Token disable kill switch** — `dangerously_disable_tokens_except_wasm()` for testing/debugging
 - **SIMD reference mdbook** — searchable docs with ASM-verified load/store patterns
-- **Feature flag strings** — `disable_compile_time_tokens()` and `AUDITING.md` for auditors
+- **Feature flag strings and `AUDITING.md`** — `DISABLE_TARGET_FEATURES` string per token tells auditors exactly which RUSTFLAGS to set
 - **Codegen quality** — replaced 330 `writeln!` chains with `formatdoc!` across token_gen.rs and main.rs
 - **Miri CI stability** — isolated target dirs, pinned nightly, gated platform-specific tests
 
