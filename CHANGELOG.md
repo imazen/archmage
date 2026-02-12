@@ -1,0 +1,86 @@
+# Changelog
+
+## 0.6.0 — 2026-02-12
+
+Cross-platform hardening and CI infrastructure.
+
+- **Cross-architecture SIMD API consistency** — final alignment pass across all platforms
+- **Cross-platform CI** — ARM, WASM, and i686 compilation verified; feature combination matrix testing
+- **Performance documentation** — DCT-8 and cross-token nesting benchmarks consolidated into `docs/PERFORMANCE.md`
+- **Token disable kill switch** — `dangerously_disable_tokens_except_wasm()` for testing/debugging
+- **SIMD reference mdbook** — searchable docs with ASM-verified load/store patterns
+- **Feature flag strings** — `disable_compile_time_tokens()` and `AUDITING.md` for auditors
+- **Codegen quality** — replaced 330 `writeln!` chains with `formatdoc!` across token_gen.rs and main.rs
+- **Miri CI stability** — isolated target dirs, pinned nightly, gated platform-specific tests
+
+## 0.5.0 — 2025-12-20
+
+Macro system overhaul and performance infrastructure.
+
+- **`#[rite]` macro** — inner SIMD helpers with `#[target_feature]` + `#[inline]`. Use this by default; `#[arcane]` only at entry points. Benchmarked: calling `#[arcane]` per iteration costs 4-6x vs `#[rite]` inlining.
+- **`incant!` macro** — runtime dispatch across `_v3`, `_v4`, `_neon`, `_wasm128`, `_scalar` suffixed functions
+- **`#[magetypes]` macro** — replaces `#[multiwidth]`. Generates platform-specific variants from a generic `Token` parameter.
+- **`ScalarToken`** — always-available fallback token for `incant!` dispatch
+- **`IntoConcreteToken`** — safe upcasting with `as_x64v3()`, `as_x64v4()`, etc.
+- **Atomic `summon()` caching** — 2-6x faster detection after first call (~1.3 ns cached, 0 ns when compiled away)
+- **`compiled_with()` rename** — `guaranteed()` → `compiled_with()` for clarity
+- **Token disable mechanism** — per-token `.disable(true)` for testing
+- **NEON runtime detection fix** — no longer assumes NEON on AArch64 (broken on some Android/Linux kernels)
+- **`SimdToken` sealed** — removed unsound `From` impls, added `forge()` for `unsafe` token construction
+- **Per-token namespace modules** — `archmage::x64v3::Token`, `archmage::neon::Token`, etc.
+- **Prelude module** — `use archmage::prelude::*` for tokens, traits, macros, intrinsics, and memory ops
+- **`implementation_name()`** — all magetypes vectors report their backing implementation
+- **Cross-architecture stubs** — all tokens compile on all platforms; `summon()` returns `None` on wrong arch
+- **Removed `#[multiwidth]`** — replaced by `#[magetypes]`
+- **Removed `bytemuck` dependency** — token-gated cast methods instead
+- **`safe_unaligned_simd` integration** — re-exported via prelude, reference-based loads/stores
+
+## 0.4.0 — 2025-11-15
+
+Full cross-platform parity.
+
+- **`token-registry.toml`** — single source of truth for all token definitions, feature sets, and trait mappings. Code generation reads this; validation checks against it.
+- **API parity: 270 → 0 issues** — every W128 SIMD type has identical methods across x86, ARM, and WASM
+- **ARM transcendentals** — full lowp + midp coverage: log2, exp2, ln, exp, log10, pow, cbrt for f32x4; lowp for f64x2
+- **WASM transcendentals** — cbrt_midp, f64x2 log10_lowp, complete `_unchecked` and `_precise` suffix variants
+- **ARM/WASM block ops** — interleave, deinterleave, transpose for all W128 types
+- **x86 byte shift polyfills** — i8x16/u8x16 shl, shr, shr_arithmetic
+- **WASM u64x2 ordering comparisons** — simd_lt/le/gt/ge via bias-to-signed polyfill
+- **AVX-512 fast-path methods** — `_fast` variants for i64/u64 min/max/abs accepting `X64V4Token`
+- **`cargo xtask parity`** — detects API variance between architectures
+- **`cargo xtask validate`** — static soundness verification for all magetypes intrinsics
+- **Miri boundary tests** — exhaustive load/store verification under Miri
+- **Proptest fuzzing** — divergence detection across implementations
+- **Codegen refactor** — generated files moved to `generated/` subfolders; all codegen uses `formatdoc!`
+
+## 0.3.0 — 2025-10-28
+
+Architecture cleanup.
+
+- **Microarchitecture-level tokens** — replaced granular per-feature tokens with `X64V2Token`, `X64V3Token`, `X64V4Token` matching LLVM's x86-64 levels
+- **Full WASM SIMD128 support** — `Wasm128Token` with optimized codegen
+- **Intrinsic safety validation** — complete intrinsic database with automated safety checks
+- **Intrinsic reference docs** — auto-generated docs organized by token tier
+- **Removed ~2200 lines of dead wrapper code** and 6 unused dependencies
+
+## 0.2.0 — 2025-10-15
+
+Types and cross-platform.
+
+- **`magetypes` crate** — token-gated SIMD types with natural operators (`f32x4`, `f32x8`, `i32x4`, etc.)
+- **WASM SIMD support** — `Wasm128Token` and W128 types
+- **AArch64 NEON support** — `NeonToken` with polyfilled wide types
+- **`#[multiwidth]` macro** — generate multi-width SIMD variants (later replaced by `#[magetypes]`)
+- **Token-gated bytemuck replacements** — `cast_slice`, `as_bytes`, `from_bytes` without `unsafe`
+- **AVX-512 types** — 512-bit SIMD types behind `avx512` feature
+- **`WidthDispatch` trait** — associated-type-based SIMD width dispatch
+
+## 0.1.0 — 2025-10-01
+
+Initial release.
+
+- **Token-based SIMD capability proof** — `X64V3Token::summon()` returns `Some` only if CPU supports AVX2+FMA
+- **`#[arcane]` macro** — generates `#[target_feature]` functions with cross-arch stubs
+- **Zero overhead** — identical assembly to hand-written `unsafe` code
+- **`#[forbid(unsafe_code)]` compatible** — all unsafety is inside the macro expansion
+- **`no_std` + `alloc` by default** — `std` opt-in via feature flag

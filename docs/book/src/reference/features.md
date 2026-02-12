@@ -10,14 +10,14 @@ Enables standard library support.
 
 ```toml
 [dependencies]
-archmage = "0.5"  # std enabled by default
+archmage = "0.6"  # std enabled by default
 ```
 
 Disable for `no_std`:
 
 ```toml
 [dependencies]
-archmage = { version = "0.5", default-features = false }
+archmage = { version = "0.6", default-features = false }
 ```
 
 ### `macros` (default)
@@ -26,7 +26,7 @@ Enables procedural macros: `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`, et
 
 ```toml
 # Disable macros (rare)
-archmage = { version = "0.5", default-features = false, features = ["std"] }
+archmage = { version = "0.6", default-features = false, features = ["std"] }
 ```
 
 ### `avx512`
@@ -34,7 +34,7 @@ archmage = { version = "0.5", default-features = false, features = ["std"] }
 Enables AVX-512 tokens and 512-bit types.
 
 ```toml
-archmage = { version = "0.5", features = ["avx512"] }
+archmage = { version = "0.6", features = ["avx512"] }
 ```
 
 **Unlocks**:
@@ -48,7 +48,7 @@ archmage = { version = "0.5", features = ["avx512"] }
 Re-exports `safe_unaligned_simd` crate in the prelude.
 
 ```toml
-archmage = { version = "0.5", features = ["safe_unaligned_simd"] }
+archmage = { version = "0.6", features = ["safe_unaligned_simd"] }
 ```
 
 Then use:
@@ -69,7 +69,7 @@ Standard library support.
 Enables 512-bit types.
 
 ```toml
-magetypes = { version = "0.5", features = ["avx512"] }
+magetypes = { version = "0.6", features = ["avx512"] }
 ```
 
 **Unlocks**:
@@ -84,24 +84,24 @@ magetypes = { version = "0.5", features = ["avx512"] }
 
 ```toml
 [dependencies]
-archmage = { version = "0.5", features = ["avx512", "safe_unaligned_simd"] }
-magetypes = { version = "0.5", features = ["avx512"] }
+archmage = { version = "0.6", features = ["avx512", "safe_unaligned_simd"] }
+magetypes = { version = "0.6", features = ["avx512"] }
 ```
 
 ### Minimal no_std
 
 ```toml
 [dependencies]
-archmage = { version = "0.5", default-features = false, features = ["macros"] }
-magetypes = { version = "0.5", default-features = false }
+archmage = { version = "0.6", default-features = false, features = ["macros"] }
+magetypes = { version = "0.6", default-features = false }
 ```
 
 ### Cross-Platform Library
 
 ```toml
 [dependencies]
-archmage = "0.5"
-magetypes = "0.5"
+archmage = "0.6"
+magetypes = "0.6"
 
 [features]
 default = ["std"]
