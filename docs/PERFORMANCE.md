@@ -23,7 +23,9 @@ The 4x penalty comes from LLVM, not archmage. Read on.
 
 This has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. Archmage just makes the safe wrapper; the boundary is LLVM's.
 
-**The fix:** enter `#[arcane]` once at your API boundary, put loops inside it, use `#[rite]` for helpers. `#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into any caller with matching features. Everything stays in one optimization region.
+**The fix:** enter `#[arcane]` once at your API boundary, put loops inside it, use `#[rite]` for helpers.
+
+The boundary only exists when caller and callee have *different* `#[target_feature]` strings. If both functions take the same token type — say, `Desktop64` — archmage generates the same `#[target_feature(enable = "avx2,fma,...")]` on both. LLVM sees matching targets, inlines freely, and there's no boundary at all. `#[rite]` makes this the default by adding `#[target_feature]` + `#[inline]` directly to your function. As long as the token parameter types match, you'll never pay the transition cost.
 
 ```rust
 // WRONG: boundary every iteration (4x slower)
@@ -79,11 +81,11 @@ A realistic signal-processing workload. Each row computes 8 coefficient dot prod
 | `#[arcane]` per row | 376 ns | 6.2x |
 | Bare `#[target_feature]` per row | 374 ns | 6.1x |
 
-Same story: archmage = bare `#[target_feature]`. The boundary costs 6.2x here because DCT-8 has more work per call that LLVM can optimize when inlined (FMA fusion, register reuse across coefficient loads) but can't when each row is a separate call.
+Archmage and bare `#[target_feature]` produce identical numbers here too (376 vs 374 ns — noise). The boundary costs 6.2x instead of 4x because DCT-8 has more optimization potential per call: FMA fusion, register reuse across coefficient loads, instruction scheduling. When LLVM can inline, it exploits all of that. When the boundary forces a separate call, it can't. The multiplier depends on how much work LLVM loses at the boundary, not on which mechanism creates it.
 
 ### Cross-token nesting (1000 iterations, 8-float add)
 
-What happens when `#[arcane]` functions call other `#[arcane]` functions at different feature levels. Direction matters.
+What happens when `#[arcane]` functions call other `#[arcane]` functions at different feature levels. When both functions take the same token type, their `#[target_feature]` strings match and LLVM inlines freely — no boundary. When the token types differ, direction matters.
 
 | Pattern | Time | Ratio | Why |
 |---------|------|-------|-----|
@@ -124,6 +126,6 @@ cargo bench --bench asm_inspection --features "std macros"
 cargo bench --bench asm_inspection --features "std macros avx512"
 ```
 
-Results will vary by CPU. The *ratios* between patterns are stable: boundary-crossing patterns cost 4-6x depending on computational density, and archmage patterns match their bare `#[target_feature]` equivalents.
+Results will vary by CPU. The *ratios* between patterns are stable: archmage always matches bare `#[target_feature]` on the same workload. The boundary multiplier itself (4x on simple adds, 6.2x on DCT-8) depends on how much optimization LLVM loses when it can't inline — denser workloads lose more.
 
 `summon()` overhead is separate: ~1.3 ns cached, 0 ns with `-Ctarget-cpu=haswell` (compiles away). See [`benches/summon_overhead.rs`](../benches/summon_overhead.rs).
