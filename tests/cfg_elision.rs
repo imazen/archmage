@@ -525,7 +525,7 @@ mod compiletime_dispatch_elision {
         {
             // AVX2 is guaranteed at compile time - no runtime check needed!
             // This is the "fast path" that completely skips summon()
-            // summon().unwrap() is safe here because guaranteed() == Some(true)
+            // summon().unwrap() is safe here because compiled_with() == Some(true)
             let token = X64V3Token::summon().unwrap();
             return sum_avx2(token, data);
         }
@@ -651,70 +651,70 @@ fn verify_elision_markers() {
 }
 
 // =============================================================================
-// TEST: guaranteed() returns correct values for token availability
+// TEST: compiled_with() returns correct values for token availability
 // =============================================================================
 //
-// guaranteed() should return:
-// - Some(true): Compiler guarantees this feature (compile-time via target_feature)
+// compiled_with() should return:
+// - Some(true): Binary was compiled with these features enabled (via target_feature)
 // - Some(false): Wrong architecture (this token can never be available)
 // - None: Might be available, call summon() to check at runtime
 
 #[cfg(target_arch = "x86_64")]
-mod guaranteed_tests_x86 {
+mod compiled_with_tests_x86 {
     #[cfg(feature = "avx512")]
     use archmage::X64V4Token;
     use archmage::{NeonToken, SimdToken, X64V2Token, X64V3Token};
 
     #[test]
-    fn neon_guaranteed_returns_false_on_x86() {
-        // NEON can never be available on x86_64, so guaranteed() should return Some(false)
+    fn neon_compiled_with_returns_false_on_x86() {
+        // NEON can never be available on x86_64, so compiled_with() should return Some(false)
         assert_eq!(
-            NeonToken::guaranteed(),
+            NeonToken::compiled_with(),
             Some(false),
-            "NeonToken::guaranteed() should be Some(false) on x86_64"
+            "NeonToken::compiled_with() should be Some(false) on x86_64"
         );
     }
 
     #[test]
-    fn x64v2_guaranteed_is_not_false() {
+    fn x64v2_compiled_with_is_not_false() {
         // X64V2Token on x86_64 should be either Some(true) or None, never Some(false)
         assert_ne!(
-            X64V2Token::guaranteed(),
+            X64V2Token::compiled_with(),
             Some(false),
-            "X64V2Token::guaranteed() should NOT be Some(false) on x86_64"
+            "X64V2Token::compiled_with() should NOT be Some(false) on x86_64"
         );
     }
 
     #[test]
-    fn x64v3_guaranteed_is_not_false() {
+    fn x64v3_compiled_with_is_not_false() {
         // X64V3Token on x86_64 should be either Some(true) or None, never Some(false)
         assert_ne!(
-            X64V3Token::guaranteed(),
+            X64V3Token::compiled_with(),
             Some(false),
-            "X64V3Token::guaranteed() should NOT be Some(false) on x86_64"
+            "X64V3Token::compiled_with() should NOT be Some(false) on x86_64"
         );
     }
 
     #[test]
     #[cfg(feature = "avx512")]
-    fn x64v4_guaranteed_is_not_false() {
+    fn x64v4_compiled_with_is_not_false() {
         // X64V4Token on x86_64 should be either Some(true) or None, never Some(false)
         assert_ne!(
-            X64V4Token::guaranteed(),
+            X64V4Token::compiled_with(),
             Some(false),
-            "X64V4Token::guaranteed() should NOT be Some(false) on x86_64"
+            "X64V4Token::compiled_with() should NOT be Some(false) on x86_64"
         );
     }
 
-    // Test that summon().unwrap() is safe when guaranteed() is Some(true)
+    // Test that summon().unwrap() is safe when compiled_with() is Some(true)
     #[test]
     #[cfg(target_feature = "avx2")]
-    fn summon_unwrap_safe_when_guaranteed_true() {
-        // When compiling with -C target-cpu=haswell or similar, AVX2 is guaranteed
+    fn summon_unwrap_safe_when_compiled_with_true() {
+        // When compiling with -C target-cpu=haswell or similar, AVX2 is compiled_with
         assert_eq!(
-            X64V3Token::guaranteed(),
+            X64V3Token::compiled_with(),
             Some(true),
-            "X64V3Token::guaranteed() should be Some(true) when target_feature=avx2"
+            "X64V3Token::compiled_with() should be Some(true) when target_feature=avx2"
         );
         // summon().unwrap() is safe and efficient - no runtime check
         let _token = X64V3Token::summon().unwrap();
@@ -722,34 +722,34 @@ mod guaranteed_tests_x86 {
 }
 
 #[cfg(target_arch = "aarch64")]
-mod guaranteed_tests_arm {
+mod compiled_with_tests_arm {
     use archmage::{NeonToken, SimdToken, X64V2Token, X64V3Token};
 
     #[test]
-    fn x86_guaranteed_returns_false_on_arm() {
+    fn x86_compiled_with_returns_false_on_arm() {
         // x86 tokens can never be available on ARM
         assert_eq!(
-            X64V2Token::guaranteed(),
+            X64V2Token::compiled_with(),
             Some(false),
-            "X64V2Token::guaranteed() should be Some(false) on aarch64"
+            "X64V2Token::compiled_with() should be Some(false) on aarch64"
         );
         assert_eq!(
-            X64V3Token::guaranteed(),
+            X64V3Token::compiled_with(),
             Some(false),
-            "X64V3Token::guaranteed() should be Some(false) on aarch64"
+            "X64V3Token::compiled_with() should be Some(false) on aarch64"
         );
     }
 
     #[test]
-    fn neon_guaranteed_is_true_on_arm() {
-        // NEON is always available on AArch64, so guaranteed() should return Some(true)
-        assert_eq!(
-            NeonToken::guaranteed(),
-            Some(true),
-            "NeonToken::guaranteed() should be Some(true) on aarch64"
+    fn neon_compiled_with_on_arm() {
+        // NeonToken requires runtime detection unless compiled with +neon
+        // On aarch64 without explicit -Ctarget-feature=+neon, returns None
+        let result = NeonToken::compiled_with();
+        assert_ne!(
+            result,
+            Some(false),
+            "NeonToken::compiled_with() should NOT be Some(false) on aarch64"
         );
-        // summon().unwrap() is safe when guaranteed
-        let _token = NeonToken::summon().unwrap();
     }
 }
 
@@ -768,4 +768,4 @@ mod guaranteed_tests_arm {
 // 7. **Runtime vs compile-time**: cfg is compile-time, summon() is runtime
 // 8. **Target-feature elision**: Lower-tier variants elided when higher is compile-time
 // 9. **`#[magetypes]` expected behavior**: Document how the macro should elide variants
-// 10. **guaranteed()**: Returns Some(true) for compile-time, Some(false) for wrong arch, None for runtime
+// 10. **compiled_with()**: Returns Some(true) for compile-time, Some(false) for wrong arch, None for runtime

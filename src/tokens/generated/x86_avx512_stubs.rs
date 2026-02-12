@@ -17,7 +17,7 @@ impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
 
@@ -30,6 +30,24 @@ impl SimdToken for X64V4Token {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl X64V4Token {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
     }
 }
 
@@ -45,7 +63,7 @@ impl SimdToken for Avx512ModernToken {
     const NAME: &'static str = "AVX-512Modern";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
 
@@ -58,6 +76,24 @@ impl SimdToken for Avx512ModernToken {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl Avx512ModernToken {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
     }
 }
 
@@ -73,7 +109,7 @@ impl SimdToken for Avx512Fp16Token {
     const NAME: &'static str = "AVX-512FP16";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
 
@@ -86,6 +122,24 @@ impl SimdToken for Avx512Fp16Token {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl Avx512Fp16Token {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
     }
 }
 

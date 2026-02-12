@@ -17,7 +17,7 @@ impl SimdToken for NeonToken {
     const NAME: &'static str = "NEON";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
 
@@ -30,6 +30,24 @@ impl SimdToken for NeonToken {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl NeonToken {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
     }
 }
 
@@ -45,7 +63,7 @@ impl SimdToken for NeonAesToken {
     const NAME: &'static str = "NEON+AES";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
 
@@ -58,6 +76,24 @@ impl SimdToken for NeonAesToken {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl NeonAesToken {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
     }
 }
 
@@ -73,7 +109,7 @@ impl SimdToken for NeonSha3Token {
     const NAME: &'static str = "NEON+SHA3";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
 
@@ -86,6 +122,24 @@ impl SimdToken for NeonSha3Token {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl NeonSha3Token {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
     }
 }
 
@@ -101,7 +155,7 @@ impl SimdToken for NeonCrcToken {
     const NAME: &'static str = "NEON+CRC";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         Some(false) // Wrong architecture
     }
 
@@ -114,6 +168,24 @@ impl SimdToken for NeonCrcToken {
     #[inline(always)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl NeonCrcToken {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
     }
 }
 

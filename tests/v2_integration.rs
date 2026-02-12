@@ -237,7 +237,7 @@ mod x86_dispatch {
 
 #[test]
 fn scalar_token_always_available() {
-    assert_eq!(ScalarToken::guaranteed(), Some(true));
+    assert_eq!(ScalarToken::compiled_with(), Some(true));
     assert!(ScalarToken::summon().is_some());
     assert_eq!(ScalarToken::NAME, "Scalar");
 }

@@ -6,12 +6,15 @@ use super::x86::X64V2Token;
 use super::x86::X64V3Token;
 use crate::tokens::SimdToken;
 use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasX64V2, HasX64V4};
-use core::sync::atomic::{AtomicU8, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 // Cache statics: 0 = unknown, 1 = unavailable, 2 = available
-static X64_V4_CACHE: AtomicU8 = AtomicU8::new(0);
-static AVX512_MODERN_CACHE: AtomicU8 = AtomicU8::new(0);
-static AVX512_FP16_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static X64_V4_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static X64_V4_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static AVX512_MODERN_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static AVX512_MODERN_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static AVX512_FP16_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static AVX512_FP16_DISABLED: AtomicBool = AtomicBool::new(false);
 
 /// Proof that AVX-512 (F + CD + VL + DQ + BW) is available.
 ///
@@ -31,7 +34,7 @@ impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         #[cfg(all(
             target_feature = "sse3",
             target_feature = "ssse3",
@@ -180,6 +183,139 @@ impl X64V4Token {
     }
 }
 
+impl X64V4Token {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    ///
+    /// **Cascading:** Also affects descendants:
+    /// - `Avx512ModernToken`
+    /// - `Avx512Fp16Token`
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl"
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl"
+        )))]
+        {
+            X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            X64_V4_CACHE.store(v, Ordering::Relaxed);
+            AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
+            AVX512_MODERN_CACHE.store(v, Ordering::Relaxed);
+            AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
+            AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl"
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl"
+        )))]
+        {
+            Ok(X64_V4_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+
 /// Proof that modern AVX-512 features are available (Ice Lake / Zen 4 level).
 ///
 /// This includes all of `X64V4Token` (F+CD+VL+DQ+BW) plus:
@@ -199,7 +335,7 @@ impl SimdToken for Avx512ModernToken {
     const NAME: &'static str = "AVX-512Modern";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         #[cfg(all(
             target_feature = "sse3",
             target_feature = "ssse3",
@@ -411,6 +547,171 @@ impl Avx512ModernToken {
     }
 }
 
+impl Avx512ModernToken {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512vpopcntdq",
+            target_feature = "avx512ifma",
+            target_feature = "avx512vbmi",
+            target_feature = "avx512vbmi2",
+            target_feature = "avx512bitalg",
+            target_feature = "avx512vnni",
+            target_feature = "avx512bf16",
+            target_feature = "vpclmulqdq",
+            target_feature = "gfni",
+            target_feature = "vaes"
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512vpopcntdq",
+            target_feature = "avx512ifma",
+            target_feature = "avx512vbmi",
+            target_feature = "avx512vbmi2",
+            target_feature = "avx512bitalg",
+            target_feature = "avx512vnni",
+            target_feature = "avx512bf16",
+            target_feature = "vpclmulqdq",
+            target_feature = "gfni",
+            target_feature = "vaes"
+        )))]
+        {
+            AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            AVX512_MODERN_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512vpopcntdq",
+            target_feature = "avx512ifma",
+            target_feature = "avx512vbmi",
+            target_feature = "avx512vbmi2",
+            target_feature = "avx512bitalg",
+            target_feature = "avx512vnni",
+            target_feature = "avx512bf16",
+            target_feature = "vpclmulqdq",
+            target_feature = "gfni",
+            target_feature = "vaes"
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512vpopcntdq",
+            target_feature = "avx512ifma",
+            target_feature = "avx512vbmi",
+            target_feature = "avx512vbmi2",
+            target_feature = "avx512bitalg",
+            target_feature = "avx512vnni",
+            target_feature = "avx512bf16",
+            target_feature = "vpclmulqdq",
+            target_feature = "gfni",
+            target_feature = "vaes"
+        )))]
+        {
+            Ok(AVX512_MODERN_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+
 /// Proof that AVX-512 FP16 (half-precision) is available.
 ///
 /// AVX-512 FP16 provides native 16-bit floating-point arithmetic in 512-bit
@@ -429,7 +730,7 @@ impl SimdToken for Avx512Fp16Token {
     const NAME: &'static str = "AVX-512FP16";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         #[cfg(all(
             target_feature = "sse3",
             target_feature = "ssse3",
@@ -593,6 +894,135 @@ impl Avx512Fp16Token {
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
+    }
+}
+
+impl Avx512Fp16Token {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512fp16"
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512fp16"
+        )))]
+        {
+            AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512fp16"
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+            target_feature = "avx512cd",
+            target_feature = "avx512dq",
+            target_feature = "avx512vl",
+            target_feature = "avx512fp16"
+        )))]
+        {
+            Ok(AVX512_FP16_DISABLED.load(Ordering::Relaxed))
+        }
     }
 }
 

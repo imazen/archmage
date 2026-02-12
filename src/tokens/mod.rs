@@ -5,16 +5,31 @@
 //!
 //! ## Token Availability
 //!
-//! Use `guaranteed()` to check compile-time availability:
-//! - `Some(true)` — Compiler guarantees this feature (use `summon().unwrap()`)
+//! Use `compiled_with()` to check compile-time availability:
+//! - `Some(true)` — Binary was compiled with these features enabled (use `summon().unwrap()`)
 //! - `Some(false)` — Wrong architecture (this token can never be available)
 //! - `None` — Might be available, call `summon()` to check at runtime
 //!
 //! ## Cross-Architecture Design
 //!
 //! All token types exist on all architectures for easier cross-platform code.
-//! On unsupported architectures, `summon()` returns `None` and `guaranteed()`
+//! On unsupported architectures, `summon()` returns `None` and `compiled_with()`
 //! returns `Some(false)`.
+//!
+//! ## Disabling Tokens
+//!
+//! For testing and benchmarking, tokens can be disabled process-wide:
+//!
+//! ```rust,ignore
+//! // Force scalar fallback for benchmarking
+//! X64V3Token::dangerously_disable_token_process_wide(true)?;
+//! // All summon() calls now return None (cascades to V4, Modern, Fp16)
+//! assert!(X64V3Token::summon().is_none());
+//! ```
+//!
+//! Disabling returns `Err(CompileTimeGuaranteedError)` when the features are
+//! compile-time enabled (e.g., via `-Ctarget-cpu=native`), since the compiler
+//! has already elided the runtime checks.
 
 mod sealed {
     /// Sealed trait preventing external implementations of [`SimdToken`](super::SimdToken).
@@ -33,7 +48,7 @@ pub use sealed::Sealed;
 ///
 /// # Token Lifecycle
 ///
-/// 1. Optionally check `guaranteed()` to see if runtime check is needed
+/// 1. Optionally check `compiled_with()` to see if runtime check is needed
 /// 2. Call `summon()` at runtime to detect CPU support
 /// 3. Pass the token through to `#[arcane]` functions — don't forge new ones
 ///
@@ -53,26 +68,33 @@ pub trait SimdToken: sealed::Sealed + Copy + Clone + Send + Sync + 'static {
     /// Human-readable name for diagnostics and error messages.
     const NAME: &'static str;
 
-    /// Check if this token is compile-time guaranteed.
+    /// Check if this binary was compiled with the required target features enabled.
     ///
     /// Returns:
-    /// - `Some(true)` — Feature is guaranteed by target (e.g., `-C target-cpu=haswell`)
+    /// - `Some(true)` — Features are compile-time enabled (e.g., `-C target-cpu=haswell`)
     /// - `Some(false)` — Wrong architecture, token can never be available
     /// - `None` — Might be available, call `summon()` to check at runtime
     ///
-    /// When `guaranteed()` returns `Some(true)`, `summon().unwrap()` is safe and
+    /// When `compiled_with()` returns `Some(true)`, `summon().unwrap()` is safe and
     /// the compiler will elide the runtime check entirely.
     ///
     /// # Example
     ///
     /// ```rust,ignore
-    /// match X64V3Token::guaranteed() {
+    /// match X64V3Token::compiled_with() {
     ///     Some(true) => { /* summon().unwrap() is safe, no runtime check */ }
     ///     Some(false) => { /* use fallback, this arch can't support it */ }
     ///     None => { /* call summon() to check at runtime */ }
     /// }
     /// ```
-    fn guaranteed() -> Option<bool>;
+    fn compiled_with() -> Option<bool>;
+
+    /// Deprecated alias for [`compiled_with()`](Self::compiled_with).
+    #[inline(always)]
+    #[deprecated(since = "0.6.0", note = "Use compiled_with() instead")]
+    fn guaranteed() -> Option<bool> {
+        Self::compiled_with()
+    }
 
     /// Attempt to create a token with runtime feature detection.
     ///
@@ -156,7 +178,7 @@ impl SimdToken for ScalarToken {
 
     /// Always returns `Some(true)` — scalar fallback is always available.
     #[inline(always)]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         Some(true)
     }
 
@@ -172,6 +194,64 @@ impl SimdToken for ScalarToken {
         Self
     }
 }
+
+impl ScalarToken {
+    /// Scalar tokens cannot be disabled (they are always available).
+    ///
+    /// Always returns `Err(CompileTimeGuaranteedError)` because `ScalarToken`
+    /// is unconditionally available — there is no runtime check to bypass.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), CompileTimeGuaranteedError> {
+        Err(CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+
+    /// Scalar tokens cannot be disabled (they are always available).
+    ///
+    /// Always returns `Err(CompileTimeGuaranteedError)`.
+    pub fn manually_disabled() -> Result<bool, CompileTimeGuaranteedError> {
+        Err(CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+        })
+    }
+}
+
+/// Error returned when attempting to disable a token whose features are
+/// compile-time enabled.
+///
+/// When all required features are enabled via `-Ctarget-cpu` or
+/// `-Ctarget-feature`, the compiler has already elided the runtime
+/// detection — `summon()` unconditionally returns `Some`. Disabling
+/// the token would have no effect and silently produce incorrect behavior.
+///
+/// # Resolution
+///
+/// To use `dangerously_disable_token_process_wide`, compile without
+/// the target features enabled. For example:
+/// - Remove `-Ctarget-cpu=native` from `RUSTFLAGS`
+/// - Use `-Ctarget-feature=-avx2` to disable specific features
+#[derive(Debug, Clone)]
+pub struct CompileTimeGuaranteedError {
+    /// The token type that cannot be disabled.
+    pub token_name: &'static str,
+}
+
+impl core::fmt::Display for CompileTimeGuaranteedError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Cannot disable {} — all required features are compile-time enabled. \
+             Remove `-Ctarget-cpu` from RUSTFLAGS, or use \
+             `-Ctarget-feature=-<feature>` to disable specific features.",
+            self.token_name
+        )
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for CompileTimeGuaranteedError {}
 
 /// Trait for compile-time dispatch via monomorphization.
 ///

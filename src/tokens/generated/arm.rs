@@ -4,16 +4,22 @@
 
 use crate::tokens::SimdToken;
 use crate::tokens::{Has128BitSimd, HasNeon, HasNeonAes, HasNeonSha3};
-use core::sync::atomic::{AtomicU8, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 // Cache statics: 0 = unknown, 1 = unavailable, 2 = available
-static NEON_AES_CACHE: AtomicU8 = AtomicU8::new(0);
-static NEON_SHA3_CACHE: AtomicU8 = AtomicU8::new(0);
-static NEON_CRC_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static NEON_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static NEON_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static NEON_AES_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static NEON_AES_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static NEON_SHA3_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static NEON_SHA3_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static NEON_CRC_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static NEON_CRC_DISABLED: AtomicBool = AtomicBool::new(false);
 
 /// Proof that NEON is available.
 ///
-/// NEON is the baseline SIMD for AArch64 - always available on 64-bit ARM.
+/// NEON is available on virtually all AArch64 processors, but requires
+/// runtime detection via `summon()` unless compiled with `-Ctarget-feature=+neon`.
 #[derive(Clone, Copy, Debug)]
 pub struct NeonToken {
     _private: (),
@@ -25,21 +31,105 @@ impl SimdToken for NeonToken {
     const NAME: &'static str = "NEON";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
-        Some(true)
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(target_feature = "neon"))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(target_feature = "neon")))]
+        {
+            None
+        }
     }
 
     #[allow(deprecated)]
-    #[inline]
+    #[inline(always)]
     fn summon() -> Option<Self> {
-        // NEON is always available on AArch64
-        Some(Self { _private: () })
+        // Compile-time fast path
+        #[cfg(all(target_feature = "neon"))]
+        {
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(target_feature = "neon")))]
+        {
+            match NEON_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_aarch64_feature_available!("neon");
+                    NEON_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
+        }
     }
 
     #[inline(always)]
     #[allow(deprecated)]
     unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
+    }
+}
+
+impl NeonToken {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    ///
+    /// **Cascading:** Also affects descendants:
+    /// - `NeonAesToken`
+    /// - `NeonSha3Token`
+    /// - `NeonCrcToken`
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "neon"))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(target_feature = "neon")))]
+        {
+            NEON_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            NEON_CACHE.store(v, Ordering::Relaxed);
+            NEON_AES_DISABLED.store(disabled, Ordering::Relaxed);
+            NEON_AES_CACHE.store(v, Ordering::Relaxed);
+            NEON_SHA3_DISABLED.store(disabled, Ordering::Relaxed);
+            NEON_SHA3_CACHE.store(v, Ordering::Relaxed);
+            NEON_CRC_DISABLED.store(disabled, Ordering::Relaxed);
+            NEON_CRC_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "neon"))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(target_feature = "neon")))]
+        {
+            Ok(NEON_DISABLED.load(Ordering::Relaxed))
+        }
     }
 }
 
@@ -57,12 +147,12 @@ impl SimdToken for NeonAesToken {
     const NAME: &'static str = "NEON+AES";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
-        #[cfg(all(target_feature = "aes"))]
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(target_feature = "neon", target_feature = "aes"))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_feature = "aes")))]
+        #[cfg(not(all(target_feature = "neon", target_feature = "aes")))]
         {
             None
         }
@@ -72,19 +162,20 @@ impl SimdToken for NeonAesToken {
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path
-        #[cfg(all(target_feature = "aes"))]
+        #[cfg(all(target_feature = "neon", target_feature = "aes"))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
         }
 
         // Runtime path with caching
-        #[cfg(not(all(target_feature = "aes")))]
+        #[cfg(not(all(target_feature = "neon", target_feature = "aes")))]
         {
             match NEON_AES_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => {
-                    let available = crate::is_aarch64_feature_available!("aes");
+                    let available = crate::is_aarch64_feature_available!("neon")
+                        && crate::is_aarch64_feature_available!("aes");
                     NEON_AES_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
                     if available {
                         Some(unsafe { Self::forge_token_dangerously() })
@@ -112,6 +203,51 @@ impl NeonAesToken {
     }
 }
 
+impl NeonAesToken {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "neon", target_feature = "aes"))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(target_feature = "neon", target_feature = "aes")))]
+        {
+            NEON_AES_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            NEON_AES_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "neon", target_feature = "aes"))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(target_feature = "neon", target_feature = "aes")))]
+        {
+            Ok(NEON_AES_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+
 /// Proof that NEON + SHA3 is available.
 ///
 /// SHA3 extension is available on ARMv8.2-A and later.
@@ -126,12 +262,12 @@ impl SimdToken for NeonSha3Token {
     const NAME: &'static str = "NEON+SHA3";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
-        #[cfg(all(target_feature = "sha3"))]
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(target_feature = "neon", target_feature = "sha3"))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_feature = "sha3")))]
+        #[cfg(not(all(target_feature = "neon", target_feature = "sha3")))]
         {
             None
         }
@@ -141,19 +277,20 @@ impl SimdToken for NeonSha3Token {
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path
-        #[cfg(all(target_feature = "sha3"))]
+        #[cfg(all(target_feature = "neon", target_feature = "sha3"))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
         }
 
         // Runtime path with caching
-        #[cfg(not(all(target_feature = "sha3")))]
+        #[cfg(not(all(target_feature = "neon", target_feature = "sha3")))]
         {
             match NEON_SHA3_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => {
-                    let available = crate::is_aarch64_feature_available!("sha3");
+                    let available = crate::is_aarch64_feature_available!("neon")
+                        && crate::is_aarch64_feature_available!("sha3");
                     NEON_SHA3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
                     if available {
                         Some(unsafe { Self::forge_token_dangerously() })
@@ -181,6 +318,51 @@ impl NeonSha3Token {
     }
 }
 
+impl NeonSha3Token {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "neon", target_feature = "sha3"))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(target_feature = "neon", target_feature = "sha3")))]
+        {
+            NEON_SHA3_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            NEON_SHA3_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "neon", target_feature = "sha3"))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(target_feature = "neon", target_feature = "sha3")))]
+        {
+            Ok(NEON_SHA3_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+
 /// Proof that NEON + CRC is available.
 ///
 /// CRC32 extension is common on most AArch64 CPUs (part of ARMv8.1-A baseline).
@@ -196,12 +378,12 @@ impl SimdToken for NeonCrcToken {
     const NAME: &'static str = "NEON+CRC";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
-        #[cfg(all(target_feature = "crc"))]
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(target_feature = "neon", target_feature = "crc"))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_feature = "crc")))]
+        #[cfg(not(all(target_feature = "neon", target_feature = "crc")))]
         {
             None
         }
@@ -211,19 +393,20 @@ impl SimdToken for NeonCrcToken {
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path
-        #[cfg(all(target_feature = "crc"))]
+        #[cfg(all(target_feature = "neon", target_feature = "crc"))]
         {
             return Some(unsafe { Self::forge_token_dangerously() });
         }
 
         // Runtime path with caching
-        #[cfg(not(all(target_feature = "crc")))]
+        #[cfg(not(all(target_feature = "neon", target_feature = "crc")))]
         {
             match NEON_CRC_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => {
-                    let available = crate::is_aarch64_feature_available!("crc");
+                    let available = crate::is_aarch64_feature_available!("neon")
+                        && crate::is_aarch64_feature_available!("crc");
                     NEON_CRC_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
                     if available {
                         Some(unsafe { Self::forge_token_dangerously() })
@@ -248,6 +431,51 @@ impl NeonCrcToken {
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+impl NeonCrcToken {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "neon", target_feature = "crc"))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(target_feature = "neon", target_feature = "crc")))]
+        {
+            NEON_CRC_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            NEON_CRC_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "neon", target_feature = "crc"))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+            });
+        }
+        #[cfg(not(all(target_feature = "neon", target_feature = "crc")))]
+        {
+            Ok(NEON_CRC_DISABLED.load(Ordering::Relaxed))
+        }
     }
 }
 

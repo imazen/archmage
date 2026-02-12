@@ -17,7 +17,7 @@ impl SimdToken for Wasm128Token {
     const NAME: &'static str = "WASM SIMD128";
 
     #[inline]
-    fn guaranteed() -> Option<bool> {
+    fn compiled_with() -> Option<bool> {
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         {
             Some(true)

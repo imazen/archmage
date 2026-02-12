@@ -167,7 +167,7 @@ mod scalar_fallback_tests {
     fn scalar_token_always_available() {
         // ScalarToken itself is always available
         assert!(ScalarToken::summon().is_some());
-        assert_eq!(ScalarToken::guaranteed(), Some(true));
+        assert_eq!(ScalarToken::compiled_with(), Some(true));
     }
 }
 

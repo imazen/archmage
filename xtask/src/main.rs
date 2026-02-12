@@ -336,10 +336,10 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
 /// then compares against the registry.
 ///
 /// Special cases:
-/// - NeonToken: always returns Some (neon is baseline AArch64), skip check
+/// - NeonToken: uses runtime detection like other aarch64 tokens
 /// - Wasm128Token: uses #[cfg(target_feature)] not runtime detection, skip check
 /// - x86 tokens: sse/sse2 are baseline, not checked at runtime
-/// - AArch64 tokens: neon is baseline, not checked at runtime
+/// - AArch64 tokens: all features including neon are checked at runtime
 fn validate_summon(reg: &registry::Registry) -> Result<()> {
     println!("=== summon() Feature Verification ===\n");
 
@@ -393,11 +393,7 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
                 continue;
             }
 
-            if token_name == "NeonToken" && token_def.always_available {
-                println!("  {} — always available (no runtime checks)", token_name);
-                verified += 1;
-                continue;
-            }
+            // NeonToken no longer has always_available — uses runtime detection like others
 
             // Find the summon() body for this impl block
             let impl_start = cap.get(0).unwrap().start();
@@ -438,13 +434,8 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
                     .cloned()
                     .collect(),
                 "aarch64" => {
-                    // AArch64 tokens only check the extension feature, not neon (baseline)
-                    token_def
-                        .features
-                        .iter()
-                        .filter(|f| *f != "neon")
-                        .cloned()
-                        .collect()
+                    // AArch64 tokens check ALL features including neon
+                    token_def.features.iter().cloned().collect()
                 }
                 _ => continue,
             };

@@ -113,10 +113,9 @@ arch = "aarch64"
 aliases = ["Arm64"]
 features = ["neon"]
 traits = ["HasNeon", "Has128BitSimd"]
-always_available = true
 display_name = "NEON"
 short_name = "neon"
-doc = "Proof that NEON is available.\n\nNEON is the baseline SIMD for AArch64 - always available on 64-bit ARM."
+doc = "Proof that NEON is available.\n\nNEON is available on virtually all AArch64 processors, but requires\nruntime detection via `summon()` unless compiled with `-Ctarget-feature=+neon`."
 
 [[token]]
 name = "NeonAesToken"
@@ -199,7 +198,7 @@ doc = "Marker trait for x86-64-v4 level (Skylake-X 2017+, Zen 4 2022+).\n\nv4 in
 [[trait]]
 name = "HasNeon"
 features = ["neon"]
-doc = "Marker trait for NEON (baseline on AArch64).\n\nNEON is always available on AArch64."
+doc = "Marker trait for NEON on AArch64.\n\nNEON is available on virtually all AArch64 processors."
 
 [[trait]]
 name = "HasNeonAes"

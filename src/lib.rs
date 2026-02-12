@@ -86,6 +86,7 @@ pub mod prelude;
 // ============================================================================
 
 // Core traits
+pub use tokens::CompileTimeGuaranteedError;
 pub use tokens::IntoConcreteToken;
 pub use tokens::SimdToken;
 

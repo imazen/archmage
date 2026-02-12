@@ -532,9 +532,9 @@ mod scalar_token_tests {
     }
 
     #[test]
-    fn scalar_token_guaranteed() {
-        // ScalarToken is compile-time guaranteed
-        assert_eq!(ScalarToken::guaranteed(), Some(true));
+    fn scalar_token_compiled_with() {
+        // ScalarToken is always compiled_with
+        assert_eq!(ScalarToken::compiled_with(), Some(true));
     }
 
     #[test]

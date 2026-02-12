@@ -24,9 +24,9 @@ pub trait HasX64V2: SimdToken {}
 /// Implies HasX64V2.
 pub trait HasX64V4: HasX64V2 {}
 
-/// Marker trait for NEON (baseline on AArch64).
+/// Marker trait for NEON on AArch64.
 ///
-/// NEON is always available on AArch64.
+/// NEON is available on virtually all AArch64 processors.
 pub trait HasNeon: SimdToken {}
 
 /// Marker trait for NEON + AES.
