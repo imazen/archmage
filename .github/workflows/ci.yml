@@ -255,7 +255,10 @@ jobs:
           cache-targets: false
 
       - name: Setup Miri
-        run: cargo +nightly miri setup
+        run: |
+          # Clean stale build artifacts that cause "outdated or invalid JSON" errors
+          rm -rf target/miri
+          cargo +nightly miri setup
 
       - name: Run Miri on magetypes
         run: cargo +nightly miri test -p magetypes --features avx512
