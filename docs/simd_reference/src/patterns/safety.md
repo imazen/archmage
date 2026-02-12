@@ -78,7 +78,7 @@ The outer function is safe. The `unsafe` call to the inner function is justified
 | Adds `#[target_feature]` | Yes (via wrapper) | Yes (directly) |
 | Safe to call from anywhere | Yes | No — must be called from matching `#[target_feature]` context |
 | Overhead | ~4x in hot loop | Zero (inlines) |
-| Use for | Entry points (after `summon()`) | Internal helpers |
+| Use for | Entry points (from non-SIMD code) | Internal helpers (from SIMD code) |
 
 **Rule of thumb:** `#[arcane]` at the boundary, `#[rite]` for everything else.
 

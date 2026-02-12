@@ -2,7 +2,7 @@
 
 `#[arcane]` creates a safe wrapper around SIMD code. Use it at **entry points**—functions called from non-SIMD code (after `summon()`, from tests, public APIs).
 
-For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md) instead—it has zero wrapper overhead.
+For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
 
 ## How It Works
 

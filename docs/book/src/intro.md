@@ -15,12 +15,13 @@ Archmage is **never slower than equivalent unsafe code**. The safety abstraction
 
 ```
 Benchmark: 1000 iterations of 8-float vector operations
-  Manual unsafe code:     570 ns
-  #[rite] in #[arcane]:   572 ns  ← identical
-  #[arcane] in loop:     2320 ns  ← wrong pattern (see below)
+  Manual unsafe code:      544 ns
+  #[rite] in #[arcane]:    547 ns  ← identical
+  #[arcane] in loop:      2209 ns  ← target-feature boundary per call (see below)
+  Bare #[target_feature]: 2222 ns  ← same cost without archmage
 ```
 
-The key is using the right pattern: put loops inside `#[arcane]`, use `#[rite]` for helpers. See [Token Hoisting](./concepts/token-hoisting.md) and [The #\[rite\] Macro](./concepts/rite.md).
+The key is using the right pattern: put loops inside `#[arcane]`, use `#[rite]` for helpers. See [Target-Feature Boundaries](./concepts/token-hoisting.md) and [The #\[rite\] Macro](./concepts/rite.md).
 
 ## The Problem
 

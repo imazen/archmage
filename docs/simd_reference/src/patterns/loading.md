@@ -113,17 +113,22 @@ let v = _mm256_loadu_ps(data.as_ptr());  // Needs unsafe
 // WRONG: Aligned load on potentially unaligned data
 let v = _mm256_load_ps(data.as_ptr());  // UB if not 32-byte aligned!
 
-// WRONG: summon() inside the loop
+// WRONG: summon() + #[arcane] boundary every iteration
 for chunk in data.chunks_exact(8) {
-    if let Some(token) = Desktop64::summon() {  // 1.3ns overhead per iteration!
-        process(token, chunk);
+    if let Some(token) = Desktop64::summon() {
+        process(token, chunk);  // target-feature boundary per call!
     }
 }
 
-// RIGHT: summon() once, pass token through
+// BETTER: summon hoisted, but still a boundary per iteration
 if let Some(token) = Desktop64::summon() {
     for chunk in data.chunks_exact(8) {
-        process(token, chunk);
+        process(token, chunk);  // still calling #[arcane] each iteration
     }
+}
+
+// BEST: loop inside #[arcane], #[rite] helpers
+if let Some(token) = Desktop64::summon() {
+    process_all(token, data);  // one boundary crossing
 }
 ```

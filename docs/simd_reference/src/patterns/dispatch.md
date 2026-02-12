@@ -78,24 +78,23 @@ pub fn process(data: &mut [f32]) {
 - Need to combine results from multiple tiers
 - Performance-critical dispatch where you want to control the check order
 
-## The Dispatch-Once Rule
+## Enter `#[arcane]` Once
 
-Dispatch at the API boundary, not inside hot loops:
+Enter `#[arcane]` at the API boundary, put loops inside it, use `#[rite]` for helpers:
 
 ```rust
-// WRONG: 42% regression from target-feature boundary per iteration
+// WRONG: target-feature boundary every iteration (4x slower)
 fn process_all(points: &[[f32; 8]]) {
+    let token = Desktop64::summon().unwrap(); // hoisting doesn't help!
     for p in points {
-        if let Some(token) = Desktop64::summon() {
-            process_one(token, p);  // #[arcane] boundary every iteration
-        }
+        process_one(token, p);  // #[arcane] boundary every iteration
     }
 }
 
-// RIGHT: zero overhead
+// RIGHT: one boundary, loop inside
 fn process_all(points: &[[f32; 8]]) {
     if let Some(token) = Desktop64::summon() {
-        process_all_simd(token, points);  // One boundary, loop inside
+        process_all_simd(token, points);
     } else {
         process_all_scalar(points);
     }
@@ -109,4 +108,4 @@ fn process_all_simd(token: Desktop64, points: &[[f32; 8]]) {
 }
 ```
 
-The cost isn't `summon()` (~1.3 ns cached). It's the `#[target_feature]` boundary — LLVM can't optimize across mismatched target features. Each `#[arcane]` call transitions between LLVM optimization regions. Inside the `#[arcane]` function, use `#[rite]` helpers which inline freely.
+The cost isn't `summon()` (~1.3 ns cached). It's the `#[target_feature]` boundary — LLVM can't inline across mismatched target features. A bare `#[target_feature]` function without archmage has the same 4x cost (verified in `benches/asm_inspection.rs`). The fix is `#[rite]` — it inlines into callers with matching features, keeping everything in one LLVM optimization region.

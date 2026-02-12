@@ -31,25 +31,24 @@ SIMD performance depends heavily on:
 
 All of these break at target feature boundaries.
 
-## Good: Same Token Type Chain
+## Good: `#[rite]` Helpers Inside `#[arcane]`
 
 ```rust
 #[arcane]
 fn outer(token: X64V3Token, data: &[f32]) -> f32 {
-    let a = step1(token, data);     // Same token → inlines
-    let b = step2(token, data);     // Same token → inlines
+    let a = step1(token, data);     // #[rite] → inlines
+    let b = step2(token, data);     // #[rite] → inlines
     a + b
 }
 
-#[arcane]
+#[rite]
 fn step1(token: X64V3Token, data: &[f32]) -> f32 {
-    // Shares LLVM target settings with outer
-    // Can inline, share registers, optimize across boundary
+    // Same target features as outer → LLVM inlines freely
 }
 
-#[arcane]
+#[rite]
 fn step2(token: X64V3Token, data: &[f32]) -> f32 {
-    // Same deal
+    // Same — one optimization region
 }
 ```
 
@@ -63,9 +62,9 @@ fn v4_main(token: X64V4Token, data: &[f32]) -> f32 {
     v3_helper(token, data)
 }
 
-#[arcane]
+#[rite]
 fn v3_helper(token: X64V3Token, data: &[f32]) -> f32 {
-    // This inlines properly
+    // V4's features ⊃ V3's features → inlines properly
 }
 ```
 
@@ -126,15 +125,15 @@ pub fn process(data: &[f32]) -> f32 {
 // Each implementation is self-contained
 #[arcane]
 fn process_v4(token: X64V4Token, data: &[f32]) -> f32 {
-    // All V4 code, fully optimizable
-    let result = step1_v4(token, data);
-    step2_v4(token, result)
+    // Entry point — one boundary crossing
+    let result = step1_v4(token, data);  // #[rite] inlines
+    step2_v4(token, result)              // #[rite] inlines
 }
 
-#[arcane]
+#[rite]
 fn step1_v4(token: X64V4Token, data: &[f32]) -> f32 { /* ... */ }
 
-#[arcane]
+#[rite]
 fn step2_v4(token: X64V4Token, result: f32) -> f32 { /* ... */ }
 ```
 
@@ -186,7 +185,8 @@ Typical impact: 10-30% performance difference for small functions.
 
 | Pattern | Inlining | Recommendation |
 |---------|----------|----------------|
-| Same concrete token | ✅ Full | Best for hot paths |
-| Downcast (V4→V3) | ✅ Full | Safe and fast |
+| `#[rite]` with same token | ✅ Full | Default for hot paths |
+| Downcast (V4→V3) via `#[rite]` | ✅ Full | Safe and fast |
+| `#[arcane]` from non-SIMD code | ❌ Boundary | Entry point only — one crossing |
 | Generic → concrete | ❌ Boundary | Entry point only |
 | Upcast check | ❌ Boundary | Avoid in hot code |

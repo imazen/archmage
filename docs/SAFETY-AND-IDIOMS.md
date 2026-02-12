@@ -84,7 +84,7 @@ fn example() {
 
 ### `#[rite]` inside, `#[arcane]` at the boundary
 
-`#[rite]` adds `#[target_feature]` + `#[inline]` with zero wrapper overhead. `#[arcane]` generates a wrapper function (needed when transitioning from non-SIMD code).
+`#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into callers with matching features. `#[arcane]` generates an inner `#[target_feature]` function called from a safe outer function (needed when transitioning from non-SIMD code — this crossing is the target-feature boundary).
 
 ```rust
 pub fn public_api(data: &[f32]) -> f32 {
@@ -111,11 +111,11 @@ fn process_chunk(token: Desktop64, chunk: &[f32; 8]) -> f32 {
 }
 ```
 
-Calling `#[arcane]` from `#[arcane]` pays wrapper overhead every time (4x slower in benchmarks). `#[rite]` inlines fully.
+Calling `#[arcane]` from a hot loop crosses the `#[target_feature]` boundary every iteration (4x slower in benchmarks). `#[rite]` inlines into callers with matching features — no boundary.
 
-### Summon once, pass everywhere
+### Enter `#[arcane]` once, use `#[rite]` inside
 
-`summon()` hits an atomic cache (~1.3 ns), but in a hot loop that adds up. Summon at the API boundary, pass the token through.
+The cost isn't `summon()` (~1.3 ns cached) — it's the `#[target_feature]` boundary. Each `#[arcane]` call from non-SIMD code crosses a boundary that LLVM can't inline across. Even hoisting the token outside the loop doesn't help — you need the loop *inside* `#[arcane]` with `#[rite]` helpers.
 
 ### Concrete tokens for hot paths
 
@@ -166,7 +166,7 @@ When explaining archmage:
 3. `#[arcane]` generates `#[target_feature]` code
 4. Inside `#[target_feature]`, most intrinsics are safe (Rust 1.85+)
 5. `#[arcane]` at the boundary, `#[rite]` for everything else
-6. Summon once, pass token through
+6. Enter `#[arcane]` once, `#[rite]` for everything inside
 7. Concrete tokens optimize better than trait bounds
 8. `safe_unaligned_simd` (in prelude) for memory operations
 9. magetypes provides high-level SIMD types

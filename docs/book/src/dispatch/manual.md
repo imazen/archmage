@@ -138,10 +138,10 @@ for chunk in data.chunks_mut(8) {
     }
 }
 
-// BETTER - summon once, but still crosses target-feature boundary per iteration
+// BETTER - token hoisted, but still crosses target-feature boundary per iteration
 if let Some(token) = Desktop64::summon() {
     for chunk in data.chunks_mut(8) {
-        process_chunk(token, chunk);  // #[arcane] wrapper = boundary per call
+        process_chunk(token, chunk);  // #[arcane] = boundary per call
     }
 } else {
     for chunk in data.chunks_mut(8) {

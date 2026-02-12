@@ -157,7 +157,7 @@ This is **safe**—`as_x64v4()` returns `None` if the token doesn't support V4. 
 
 ## The `#[rite]` Optimization
 
-`#[rite]` exists to eliminate wrapper overhead for inner helpers:
+`#[rite]` exists to stay inside the same `#[target_feature]` optimization region:
 
 ```rust
 // #[arcane] creates a wrapper:
@@ -260,7 +260,7 @@ for chunk in data.chunks(8) {
     }
 }
 
-// BETTER: summon once, but still a boundary per iteration
+// BETTER: summon hoisted, but still a target-feature boundary per iteration
 if let Some(token) = Desktop64::summon() {
     for chunk in data.chunks(8) {
         process(token, chunk);  // Still calling #[arcane] each iteration

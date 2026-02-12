@@ -632,14 +632,14 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 // ============================================================================
-// Rite macro for inner SIMD functions (no wrapper overhead)
+// Rite macro for inner SIMD functions (inlines into matching #[target_feature] callers)
 // ============================================================================
 
 /// Annotate inner SIMD helpers called from `#[arcane]` functions.
 ///
-/// Unlike `#[arcane]`, which creates a wrapper function, `#[rite]` simply adds
-/// `#[target_feature]` and `#[inline]` attributes. This allows the function to
-/// inline directly into calling `#[arcane]` functions without optimization barriers.
+/// Unlike `#[arcane]`, which creates an inner `#[target_feature]` function behind
+/// a safe boundary, `#[rite]` adds `#[target_feature]` and `#[inline]` directly.
+/// LLVM inlines it into any caller with matching features — no boundary crossing.
 ///
 /// # When to Use
 ///
@@ -651,7 +651,7 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// #[arcane]
 /// fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
-///     // helper inlines directly - no wrapper overhead
+///     // helper inlines — same target features, no boundary
 ///     helper(token, data) * 2.0
 /// }
 ///

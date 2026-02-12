@@ -1,4 +1,4 @@
-//! Tests for the #[rite] macro - inner SIMD helpers without wrapper overhead.
+//! Tests for the #[rite] macro - inner SIMD helpers that inline into matching callers.
 
 #![cfg(target_arch = "x86_64")]
 
@@ -43,7 +43,7 @@ fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
 // Entry point using #[arcane] calls #[rite] helpers
 #[arcane]
 fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    // These calls should inline directly - no wrapper overhead
+    // These calls should inline directly - same target features, no boundary
     let products = mul_vectors(token, a, b);
     unsafe {
         let v = _mm256_loadu_ps(products.as_ptr());

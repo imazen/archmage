@@ -1,6 +1,6 @@
 # The #[rite] Macro
 
-`#[rite]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly—no wrapper overhead.
+`#[rite]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly to your function, so LLVM can inline it into any caller with matching features.
 
 Use `#[arcane]` only at **entry points** where the token comes from the outside world.
 
@@ -14,7 +14,7 @@ flowchart LR
     style B fill:#2d5a27,color:#fff
 ```
 
-No wrapper. No inner function. Just attributes on your function. That's why it's zero overhead — there's nothing extra to call through.
+No inner function. Just attributes on your function. LLVM inlines it into any caller with matching `#[target_feature]` — keeping everything in one optimization region.
 
 ```mermaid
 flowchart TD
@@ -145,8 +145,8 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 
 ## Benefits
 
-1. **Zero wrapper overhead**: No extra function call indirection
-2. **Better inlining**: LLVM sees the actual function, not a wrapper
+1. **No target-feature boundary**: Inlines into callers with matching features
+2. **Better inlining**: LLVM sees the actual function with matching target attributes
 3. **Cleaner stack traces**: No `__inner` functions in backtraces
 4. **Syntactic sugar**: No need to manually maintain feature strings
 
@@ -156,7 +156,7 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 
 | Situation | Use | Why |
 |-----------|-----|-----|
-| Internal helper | `#[rite]` | Zero overhead, inlines fully |
+| Internal helper | `#[rite]` | Inlines into caller — no boundary |
 | Composable building blocks | `#[rite]` | Same target features = one optimization region |
 | Most SIMD functions | `#[rite]` | This should be your default |
 | Entry point (receives token from outside) | `#[arcane]` | Needs safe wrapper |
@@ -177,7 +177,7 @@ fn complex_op(token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f32
 }
 ```
 
-All helpers inline into the caller with zero overhead.
+All helpers inline into the caller — no target-feature boundary, one optimization region.
 
 ## Inlining Behavior
 
@@ -187,7 +187,8 @@ All helpers inline into the caller with zero overhead.
 
 ```
 Benchmark results (1000 iterations, 8-float vector add):
-  arcane_in_loop:     2.32 µs  (4.1x slower - wrapper overhead)
-  rite_in_arcane:     572 ns   (baseline - full inlining)
-  manual_inline:      570 ns   (baseline)
+  rite_in_arcane:       547 ns  (baseline — features match, LLVM inlines)
+  manual_inline:        544 ns  (same)
+  arcane_in_loop:      2209 ns  (4x — target-feature boundary per call)
+  bare_target_feature: 2222 ns  (4x — same boundary, no archmage involved)
 ```
