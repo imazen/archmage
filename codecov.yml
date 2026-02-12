@@ -7,6 +7,18 @@ coverage:
       default:
         target: 100%
 
+flags:
+  x86_64:
+    paths:
+      - src/
+      - magetypes/
+    carryforward: true
+  aarch64:
+    paths:
+      - src/
+      - magetypes/
+    carryforward: true
+
 ignore:
   # Proc macro crate — coverage is measured at compile time during macro
   # expansion, not during test execution. Results are not meaningful.

@@ -354,10 +354,54 @@ jobs:
         run: cargo check --features "${{ env.FEATURES }}"
 
   # ==========================================================================
-  # Code Coverage
+  # Feature Combination Testing
+  # ==========================================================================
+  feature-combos:
+    name: Features (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "no-default-features", features: "", args: "--no-default-features" }
+          - { name: "std-only", features: "std", args: "" }
+          - { name: "macros-only", features: "macros", args: "" }
+          - { name: "avx512-only", features: "avx512", args: "" }
+          - { name: "std+macros", features: "std macros", args: "" }
+          - { name: "std+avx512", features: "std avx512", args: "" }
+          - { name: "macros+avx512", features: "macros avx512", args: "" }
+          - { name: "all-features", features: "", args: "--all-features" }
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: |
+          if [ -n "${{ matrix.args }}" ]; then
+            cargo build ${{ matrix.args }}
+          else
+            cargo build --features "${{ matrix.features }}"
+          fi
+
+      - name: Test
+        run: |
+          if [ -n "${{ matrix.args }}" ]; then
+            cargo test ${{ matrix.args }}
+          else
+            cargo test --features "${{ matrix.features }}"
+          fi
+
+  # ==========================================================================
+  # Code Coverage (x86_64)
   # ==========================================================================
   coverage:
-    name: Coverage
+    name: Coverage (x86_64)
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -381,5 +425,38 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: lcov.info
+          flags: x86_64
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ==========================================================================
+  # Code Coverage (aarch64) — covers ARM-specific paths
+  # ==========================================================================
+  coverage-aarch64:
+    name: Coverage (aarch64)
+    runs-on: ubuntu-24.04-arm
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Generate coverage
+        run: cargo llvm-cov --features "${{ env.FEATURES }}" --lcov --output-path lcov.info
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          flags: aarch64
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
