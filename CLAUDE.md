@@ -412,6 +412,17 @@ If ANY check fails:
 - Fix the issue first
 - Re-run `just ci` until it passes
 
+**Git tags are MANDATORY for every publish.** After `cargo publish`, immediately create tags:
+
+```bash
+git tag v{version}                        # archmage
+git tag archmage-macros-v{version}        # archmage-macros
+git tag magetypes-v{version}              # magetypes
+git push origin v{version} archmage-macros-v{version} magetypes-v{version}
+```
+
+Publish order (respect dependency chain): `archmage-macros` → `archmage` → `magetypes`.
+
 ## Source of Truth: token-registry.toml
 
 All token definitions, feature sets, trait mappings, and width configurations
