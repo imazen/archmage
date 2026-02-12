@@ -250,6 +250,8 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: miri
 
       - name: Setup Miri
         run: cargo miri setup
@@ -363,14 +365,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: "no-default-features", features: "", args: "--no-default-features" }
-          - { name: "std-only", features: "std", args: "" }
-          - { name: "macros-only", features: "macros", args: "" }
-          - { name: "avx512-only", features: "avx512", args: "" }
-          - { name: "std+macros", features: "std macros", args: "" }
-          - { name: "std+avx512", features: "std avx512", args: "" }
-          - { name: "macros+avx512", features: "macros avx512", args: "" }
-          - { name: "all-features", features: "", args: "--all-features" }
+          - { name: "no-default-features", build: "--no-default-features", test: "--no-default-features --lib" }
+          - { name: "std-only", build: "--features std", test: "--features std --lib" }
+          - { name: "macros-only", build: "--features macros", test: "--features macros" }
+          - { name: "avx512-only", build: "--features avx512", test: "--features avx512 --lib" }
+          - { name: "std+macros", build: "--features 'std macros'", test: "--features 'std macros'" }
+          - { name: "std+avx512", build: "--features 'std avx512'", test: "--features 'std avx512' --lib" }
+          - { name: "macros+avx512", build: "--features 'macros avx512'", test: "--features 'macros avx512'" }
+          - { name: "all-features", build: "--all-features", test: "--all-features" }
 
     steps:
       - uses: actions/checkout@v6
@@ -382,20 +384,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: |
-          if [ -n "${{ matrix.args }}" ]; then
-            cargo build ${{ matrix.args }}
-          else
-            cargo build --features "${{ matrix.features }}"
-          fi
+        run: cargo build ${{ matrix.build }}
 
       - name: Test
-        run: |
-          if [ -n "${{ matrix.args }}" ]; then
-            cargo test ${{ matrix.args }}
-          else
-            cargo test --features "${{ matrix.features }}"
-          fi
+        run: cargo test ${{ matrix.test }}
 
   # ==========================================================================
   # Code Coverage (x86_64)

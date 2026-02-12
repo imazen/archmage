@@ -3,6 +3,7 @@
 //! This file verifies that the examples in the documentation are syntactically
 //! correct and type-check. Not all examples are runnable (some are fragments).
 
+#![cfg(target_arch = "x86_64")]
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]

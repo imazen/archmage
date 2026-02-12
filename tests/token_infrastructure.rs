@@ -482,6 +482,7 @@ fn v4_into_concrete_token() {
 // Token extraction (downcast: higher → lower)
 // ============================================================================
 
+#[cfg(target_arch = "x86_64")]
 #[test]
 fn v3_extracts_to_v2() {
     if let Some(token) = X64V3Token::summon() {
@@ -489,7 +490,7 @@ fn v3_extracts_to_v2() {
     }
 }
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn v4_extracts_to_v3_and_v2() {
     if let Some(token) = X64V4Token::summon() {
@@ -498,7 +499,7 @@ fn v4_extracts_to_v3_and_v2() {
     }
 }
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn avx512modern_extracts_to_v4_v3_v2() {
     if let Some(token) = Avx512ModernToken::summon() {
@@ -509,7 +510,7 @@ fn avx512modern_extracts_to_v4_v3_v2() {
     }
 }
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn avx512fp16_extracts_to_v4_v3_v2() {
     if let Some(token) = Avx512Fp16Token::summon() {
@@ -932,7 +933,7 @@ fn avx512fp16_forge_and_into_concrete_token() {
     }
 }
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[allow(deprecated)]
 #[test]
 fn avx512fp16_forge_and_downcast() {
