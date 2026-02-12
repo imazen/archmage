@@ -9,7 +9,7 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 
-**Zero overhead.** Archmage generates identical assembly to hand-written unsafe code. The safety abstractions exist only at compile time—at runtime, you get raw SIMD instructions.
+**Zero overhead.** Archmage generates identical assembly to hand-written unsafe code. The safety abstractions exist only at compile time—at runtime, you get raw SIMD instructions. Calling an `#[arcane]` function costs exactly the same as calling a bare `#[target_feature]` function directly.
 
 ```toml
 [dependencies]
