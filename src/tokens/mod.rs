@@ -297,6 +297,83 @@ impl core::fmt::Display for CompileTimeGuaranteedError {
 #[cfg(feature = "std")]
 impl std::error::Error for CompileTimeGuaranteedError {}
 
+/// Error returned when [`dangerously_disable_tokens_except_wasm`] fails to
+/// disable one or more tokens because their features are compile-time enabled.
+///
+/// Contains the individual [`CompileTimeGuaranteedError`] for each token that
+/// could not be disabled.
+#[derive(Debug, Clone)]
+pub struct DisableAllSimdError {
+    /// The individual errors for each token that could not be disabled.
+    pub errors: alloc::vec::Vec<CompileTimeGuaranteedError>,
+}
+
+impl core::fmt::Display for DisableAllSimdError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Failed to disable {} token(s):", self.errors.len())?;
+        for err in &self.errors {
+            write!(f, "\n  - {}", err.token_name)?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for DisableAllSimdError {}
+
+/// Disable all SIMD tokens process-wide (except WASM, which is always compile-time).
+///
+/// This is a convenience function that calls
+/// [`dangerously_disable_token_process_wide`](X64V2Token::dangerously_disable_token_process_wide)
+/// on each root token for the current architecture. Root tokens cascade to
+/// their descendants, so this disables everything:
+///
+/// - **x86/x86_64:** `X64V2Token` (cascades to V3, V4, Modern, Fp16)
+/// - **AArch64:** `NeonToken` (cascades to Aes, Sha3, Crc)
+///
+/// WASM's `Wasm128Token` is excluded because `simd128` is always a compile-time
+/// decision on `wasm32` — there is no runtime detection to bypass.
+///
+/// Pass `disabled = false` to re-enable all tokens.
+///
+/// # Errors
+///
+/// Returns [`DisableAllSimdError`] if any token's features are compile-time
+/// enabled (e.g., via `-Ctarget-cpu=native`). Tokens that *can* be disabled
+/// are still disabled; only the failures are collected.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use archmage::dangerously_disable_tokens_except_wasm;
+///
+/// // Force scalar fallbacks for benchmarking
+/// dangerously_disable_tokens_except_wasm(true)?;
+/// // ... run benchmarks ...
+/// dangerously_disable_tokens_except_wasm(false)?;
+/// ```
+pub fn dangerously_disable_tokens_except_wasm(disabled: bool) -> Result<(), DisableAllSimdError> {
+    let mut errors = alloc::vec::Vec::new();
+
+    // x86/x86_64: disable V2 (cascades to V3, V4, Modern, Fp16)
+    #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+    if let Err(e) = X64V2Token::dangerously_disable_token_process_wide(disabled) {
+        errors.push(e);
+    }
+
+    // AArch64: disable NEON (cascades to Aes, Sha3, Crc)
+    #[cfg(target_arch = "aarch64")]
+    if let Err(e) = NeonToken::dangerously_disable_token_process_wide(disabled) {
+        errors.push(e);
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(DisableAllSimdError { errors })
+    }
+}
+
 /// Trait for compile-time dispatch via monomorphization.
 ///
 /// Each concrete token implements this trait, returning `Some(self)` for its

@@ -109,8 +109,12 @@ pub mod prelude;
 
 // Core traits
 pub use tokens::CompileTimeGuaranteedError;
+pub use tokens::DisableAllSimdError;
 pub use tokens::IntoConcreteToken;
 pub use tokens::SimdToken;
+
+// Global SIMD kill switch
+pub use tokens::dangerously_disable_tokens_except_wasm;
 
 // Width marker traits
 pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};

@@ -805,6 +805,72 @@ fn dct_disable_returns_ok() {
     );
 }
 
+#[test]
+fn disable_all_tokens_except_wasm() {
+    use archmage::dangerously_disable_tokens_except_wasm;
+
+    let result = dangerously_disable_tokens_except_wasm(true);
+
+    // On x86 without -Ctarget-cpu, this should succeed
+    #[cfg(all(
+        any(target_arch = "x86_64", target_arch = "x86"),
+        not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "disable_compile_time_tokens")
+        ))
+    ))]
+    {
+        assert!(result.is_ok(), "disable_all should succeed: {result:?}");
+        assert!(
+            X64V2Token::summon().is_none(),
+            "V2 summon should be None after disable_all"
+        );
+        assert!(
+            X64V3Token::summon().is_none(),
+            "V3 summon should be None after disable_all"
+        );
+        #[cfg(feature = "avx512")]
+        assert!(
+            archmage::X64V4Token::summon().is_none(),
+            "V4 summon should be None after disable_all"
+        );
+
+        // Re-enable
+        let result = dangerously_disable_tokens_except_wasm(false);
+        assert!(result.is_ok(), "re-enable should succeed: {result:?}");
+        // Tokens that were previously available should come back
+        // (can't assert summon().is_some() since CPU may not actually support them)
+    }
+
+    // If compile-time enabled, we get errors
+    #[cfg(all(
+        any(target_arch = "x86_64", target_arch = "x86"),
+        all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "disable_compile_time_tokens")
+        )
+    ))]
+    {
+        let err = result.unwrap_err();
+        assert!(
+            !err.errors.is_empty(),
+            "should have at least one error for compile-time-enabled tokens"
+        );
+        assert!(
+            err.to_string().contains("Failed to disable"),
+            "Display should mention failure"
+        );
+    }
+}
+
 fn compile_time_error_from_disable_contains_features() {
     // ScalarToken always returns Err with empty features
     let err = ScalarToken::dangerously_disable_token_process_wide(true).unwrap_err();
