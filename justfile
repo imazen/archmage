@@ -203,6 +203,19 @@ bench-edge-cases:
 # With native CPU targeting, archmage is 1.2-1.4x faster than wide.
 
 # ============================================================================
+# ASM Verification (requires cargo-show-asm)
+# Install: cargo install cargo-show-asm
+# ============================================================================
+
+# Verify documented ASM claims match actual compiler output
+verify-asm:
+    ./scripts/verify-asm.sh
+
+# Update expected ASM baselines (run after intentional codegen changes)
+verify-asm-update:
+    ./scripts/verify-asm.sh --update
+
+# ============================================================================
 # Documentation
 # ============================================================================
 
