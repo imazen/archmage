@@ -871,6 +871,7 @@ fn disable_all_tokens_except_wasm() {
     }
 }
 
+#[test]
 fn compile_time_error_from_disable_contains_features() {
     // ScalarToken always returns Err with empty features
     let err = ScalarToken::dangerously_disable_token_process_wide(true).unwrap_err();
@@ -887,4 +888,141 @@ fn compile_time_error_from_disable_contains_features() {
         err.disable_flags.contains("-neon"),
         "neon stub error should have -neon in disable_flags"
     );
+}
+
+// ============================================================================
+// Coverage: forge_token_dangerously + IntoConcreteToken for stubs
+// ============================================================================
+
+#[allow(deprecated)]
+#[test]
+fn stub_forge_and_into_concrete_token() {
+    // ARM/WASM stubs exist on x86_64 and can be forged.
+    // Their IntoConcreteToken impls should return Some(self) for their own type.
+    unsafe {
+        let neon = NeonToken::forge_token_dangerously();
+        assert!(neon.as_neon().is_some());
+        assert!(neon.as_x64v3().is_none());
+
+        let neon_aes = NeonAesToken::forge_token_dangerously();
+        assert!(neon_aes.as_neon_aes().is_some());
+
+        let neon_sha3 = NeonSha3Token::forge_token_dangerously();
+        assert!(neon_sha3.as_neon_sha3().is_some());
+
+        let neon_crc = NeonCrcToken::forge_token_dangerously();
+        assert!(neon_crc.as_neon_crc().is_some());
+
+        let wasm = Wasm128Token::forge_token_dangerously();
+        assert!(wasm.as_wasm128().is_some());
+
+        let scalar = ScalarToken::forge_token_dangerously();
+        assert!(scalar.as_scalar().is_some());
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[allow(deprecated)]
+#[test]
+fn avx512fp16_forge_and_into_concrete_token() {
+    unsafe {
+        let fp16 = Avx512Fp16Token::forge_token_dangerously();
+        assert!(fp16.as_avx512_fp16().is_some());
+        assert!(fp16.as_x64v3().is_none());
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[allow(deprecated)]
+#[test]
+fn avx512fp16_forge_and_downcast() {
+    // Test the downcast extraction methods on a forged Avx512Fp16Token.
+    unsafe {
+        let fp16 = Avx512Fp16Token::forge_token_dangerously();
+        let _v4: X64V4Token = fp16.v4();
+        let _avx512: X64V4Token = fp16.avx512();
+        let _v3: X64V3Token = fp16.v3();
+        let _v2: X64V2Token = fp16.v2();
+    }
+}
+
+// ============================================================================
+// Coverage: DisableAllSimdError Display
+// ============================================================================
+
+#[test]
+fn disable_all_simd_error_display() {
+    use archmage::DisableAllSimdError;
+    let err = DisableAllSimdError {
+        errors: vec![
+            CompileTimeGuaranteedError {
+                token_name: "X64V3Token",
+                target_features: "avx2,fma",
+                disable_flags: "-Ctarget-feature=-avx2,-fma",
+            },
+            CompileTimeGuaranteedError {
+                token_name: "X64V2Token",
+                target_features: "sse4.2,popcnt",
+                disable_flags: "-Ctarget-feature=-sse4.2,-popcnt",
+            },
+        ],
+    };
+    let msg = format!("{err}");
+    assert!(msg.contains("2"), "should mention error count");
+    assert!(msg.contains("X64V3Token"), "should list first token");
+    assert!(msg.contains("X64V2Token"), "should list second token");
+}
+
+// ============================================================================
+// Coverage: Avx512ModernToken + Avx512Fp16Token disable/manually_disabled
+// ============================================================================
+
+#[cfg(feature = "avx512")]
+#[test]
+fn avx512modern_disable_and_manually_disabled() {
+    if Avx512ModernToken::compiled_with() == Some(true) {
+        return;
+    }
+    let result = Avx512ModernToken::dangerously_disable_token_process_wide(true);
+    assert!(result.is_ok());
+    assert_eq!(Avx512ModernToken::manually_disabled().unwrap(), true);
+
+    Avx512ModernToken::dangerously_disable_token_process_wide(false).unwrap();
+    assert_eq!(Avx512ModernToken::manually_disabled().unwrap(), false);
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn avx512fp16_disable_and_manually_disabled() {
+    if Avx512Fp16Token::compiled_with() == Some(true) {
+        return;
+    }
+    let result = Avx512Fp16Token::dangerously_disable_token_process_wide(true);
+    assert!(result.is_ok());
+    assert_eq!(Avx512Fp16Token::manually_disabled().unwrap(), true);
+
+    Avx512Fp16Token::dangerously_disable_token_process_wide(false).unwrap();
+    assert_eq!(Avx512Fp16Token::manually_disabled().unwrap(), false);
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn v4_manually_disabled_default() {
+    match X64V4Token::manually_disabled() {
+        Ok(disabled) => assert!(!disabled, "default should not be disabled"),
+        Err(_) => {} // compiled_with — that's fine
+    }
+}
+
+// ============================================================================
+// Coverage: detect.rs convenience functions
+// ============================================================================
+
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn detect_convenience_functions() {
+    // These are asm-inspection helpers; just verify they return bools.
+    let _avx2 = archmage::detect::check_avx2_available();
+    let _fma = archmage::detect::check_fma_available();
+    let _avx512 = archmage::detect::check_avx512f_available();
 }

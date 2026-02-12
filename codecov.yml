@@ -1,0 +1,15 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 100%
+    patch:
+      default:
+        target: 100%
+
+ignore:
+  # Proc macro crate — coverage is measured at compile time during macro
+  # expansion, not during test execution. Results are not meaningful.
+  - "archmage-macros/**"
+  # Build tool, not shipped code.
+  - "xtask/**"
