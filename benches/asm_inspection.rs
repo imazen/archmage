@@ -1,8 +1,22 @@
-//! ASM inspection for #[rite] vs #[arcane] inlining behavior.
+//! Benchmark: target-feature boundary overhead vs wrapper overhead.
 //!
-//! Run with: cargo asm --bench asm_inspection --rust
+//! Run with: cargo bench --bench asm_inspection
 //!
-//! Or benchmark: cargo bench --bench asm_inspection
+//! ## Key finding: the overhead is from target-feature mismatch, NOT wrappers
+//!
+//! LLVM cannot inline a `#[target_feature(enable = "avx2")]` function into a
+//! caller that lacks those features. This creates an optimization boundary per
+//! call — LLVM can't hoist loads, sink stores, or vectorize across it.
+//!
+//! Proof:
+//! - Patterns 1 & 4 both cross the boundary per iteration → same speed (~2.2 µs)
+//! - Pattern 4 has NO wrapper (calls `#[rite]` directly) — still slow
+//! - Patterns 5 & 6 use wrappers but WITHOUT target-feature mismatch → fast (~545 ns)
+//! - Pattern 5 wraps SIMD code in a regular fn that inlines → fast
+//!
+//! Conclusion: `#[arcane]`'s overhead comes from the `#[target_feature]` boundary
+//! it creates (LLVM can't inline across mismatched features), not from the wrapper
+//! function call itself.
 
 #![cfg(target_arch = "x86_64")]
 
@@ -10,7 +24,7 @@ use archmage::{Desktop64, SimdToken, arcane, rite};
 use std::arch::x86_64::*;
 
 // ============================================================================
-// Pattern 1: #[arcane] called inside loop (wrapper overhead each iteration)
+// Pattern 1: #[arcane] in loop — target-feature boundary each iteration
 // ============================================================================
 
 #[arcane]
@@ -36,7 +50,7 @@ pub fn loop_with_arcane_in_loop(token: Desktop64, data: &[[f32; 8]], other: &[[f
 }
 
 // ============================================================================
-// Pattern 2: Loop inside #[arcane], #[rite] helper with #[inline]
+// Pattern 2: Loop inside #[arcane], #[rite] inlines (features match)
 // ============================================================================
 
 #[rite]
@@ -96,8 +110,8 @@ pub fn loop_inside_arcane_manual(token: Desktop64, data: &[[f32; 8]], other: &[[
 }
 
 // ============================================================================
-// Pattern 4: #[rite] NOT inside #[arcane] - just raw target_feature
-// This shows what happens when #[rite] is called from non-target_feature context
+// Pattern 4: #[rite] called directly from non-target_feature context (NO wrapper)
+// Same speed as pattern 1 — proving the overhead is NOT from the wrapper
 // ============================================================================
 
 #[inline(never)]
@@ -107,6 +121,49 @@ pub fn loop_calling_rite_directly(token: Desktop64, data: &[[f32; 8]], other: &[
         // SAFETY: We have the token, so CPU supports the features
         let result = unsafe { process_chunk_rite(token, a, b) };
         total += result[0];
+    }
+    total
+}
+
+// ============================================================================
+// Pattern 5: Wrapper WITHOUT target-feature mismatch (scalar fallback)
+// Proves that wrapper call overhead itself is negligible — LLVM inlines it.
+// ============================================================================
+
+#[inline]
+fn process_chunk_scalar(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    let mut out = [0.0f32; 8];
+    for i in 0..8 {
+        out[i] = a[i] + b[i];
+    }
+    out
+}
+
+/// Wrapper function (no target_feature) calling scalar helper (no target_feature).
+/// LLVM inlines this freely — no feature mismatch to block it.
+#[inline(never)]
+pub fn loop_scalar_wrapper(data: &[[f32; 8]], other: &[[f32; 8]]) -> f32 {
+    let mut total = 0.0f32;
+    for (a, b) in data.iter().zip(other.iter()) {
+        let result = process_chunk_scalar(a, b);
+        total += result[0];
+    }
+    total
+}
+
+// ============================================================================
+// Pattern 6: Scalar code inlined directly (baseline for pattern 5 comparison)
+// ============================================================================
+
+#[inline(never)]
+pub fn loop_scalar_inline(data: &[[f32; 8]], other: &[[f32; 8]]) -> f32 {
+    let mut total = 0.0f32;
+    for (a, b) in data.iter().zip(other.iter()) {
+        let mut out = [0.0f32; 8];
+        for i in 0..8 {
+            out[i] = a[i] + b[i];
+        }
+        total += out[0];
     }
     total
 }
@@ -140,6 +197,15 @@ fn bench_patterns(c: &mut Criterion) {
     } else {
         eprintln!("Desktop64 not available, skipping benchmarks");
     }
+
+    // These don't need a token — proving wrapper overhead is negligible
+    c.bench_function("5_scalar_wrapper", |b| {
+        b.iter(|| loop_scalar_wrapper(black_box(&data), black_box(&other)))
+    });
+
+    c.bench_function("6_scalar_inline", |b| {
+        b.iter(|| loop_scalar_inline(black_box(&data), black_box(&other)))
+    });
 }
 
 criterion_group!(benches, bench_patterns);

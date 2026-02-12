@@ -9,7 +9,7 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 
-**Zero overhead.** Archmage generates identical assembly to hand-written unsafe code. The safety abstractions exist only at compile time—at runtime, you get raw SIMD instructions with no wrapper overhead.
+**Zero overhead.** Archmage generates identical assembly to hand-written unsafe code. The safety abstractions exist only at compile time—at runtime, you get raw SIMD instructions.
 
 ```toml
 [dependencies]
@@ -55,7 +55,7 @@ fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     horizontal_sum(token, products)
 }
 
-// Inner helper: use #[rite] (no wrapper overhead)
+// Inner helper: use #[rite] (inlines into #[arcane] — features match)
 #[rite]
 fn mul_vectors(_: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     let va = _mm256_loadu_ps(a);
@@ -79,14 +79,19 @@ fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
 
 ### Why this matters
 
-Processing 1000 8-float vector additions:
+Processing 1000 8-float vector additions (`cargo bench --bench asm_inspection`):
 
-| Pattern | Time |
-|---------|------|
-| `#[rite]` helper called from `#[arcane]` | 572 ns |
-| `#[arcane]` called from loop | 2320 ns (4x slower) |
+| Pattern | Time | Wrapper? | Feature mismatch? |
+|---------|------|----------|-------------------|
+| `#[rite]` in `#[arcane]` | 548 ns | yes | no — features match, LLVM inlines |
+| Manual inline in `#[arcane]` | 551 ns | no | no |
+| Scalar via wrapper fn | 545 ns | yes | no — no `#[target_feature]` involved |
+| `#[arcane]` per iteration | 2200 ns (4x) | yes | **yes** — baseline→AVX2 boundary |
+| `#[rite]` called directly | 2280 ns (4x) | **no** | **yes** — baseline→AVX2 boundary |
 
-The difference is wrapper overhead. `#[rite]` inlines fully; `#[arcane]` generates an inner function call per invocation.
+The overhead is from the `#[target_feature]` optimization boundary, not from wrapper functions. LLVM cannot inline a function with `#[target_feature(enable = "avx2")]` into a caller without those features — the mismatched LLVM target attributes block it. Each call in a hot loop crosses this boundary, preventing cross-iteration optimization.
+
+Wrappers without feature mismatch (patterns 2, 5) inline freely and cost nothing.
 
 ## SIMD types with `magetypes`
 

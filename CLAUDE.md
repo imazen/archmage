@@ -312,7 +312,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 
 ### Prefer `#[rite]` for internal code, `#[arcane]` only at entry points
 
-**`#[rite]` should be the default.** It adds `#[target_feature]` + `#[inline]` with zero wrapper overhead.
+**`#[rite]` should be the default.** It adds `#[target_feature]` + `#[inline]` — LLVM inlines it into any caller with matching features.
 
 Use `#[arcane]` only when the function is called from non-SIMD code:
 - After `summon()` in a public API
@@ -742,13 +742,14 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
-- ~~**Dispatch/wrapper overhead benchmark**~~: Done. See `benches/asm_inspection.rs`. Results:
-  - `#[arcane]` in loop: 2.32 µs (4.1x slower)
-  - `#[rite]` in `#[arcane]`: 572 ns (baseline)
-  - Manual inline: 570 ns (baseline)
-  - `#[rite]` direct unsafe: 2.32 µs (4.1x slower)
+- ~~**Target-feature boundary overhead benchmark**~~: Done. See `benches/asm_inspection.rs`. Results:
+  - `#[rite]` in `#[arcane]`: 548 ns (features match → LLVM inlines)
+  - Manual inline in `#[arcane]`: 551 ns (same)
+  - Scalar via wrapper fn: 545 ns (no `#[target_feature]` → LLVM inlines wrapper freely)
+  - `#[arcane]` per iteration: 2200 ns (4x — baseline→AVX2 boundary per call)
+  - `#[rite]` direct unsafe (NO wrapper): 2280 ns (4x — same boundary, no wrapper involved)
 
-  Key insight: `#[inline]` is sufficient when called from matching `#[target_feature]` context. The overhead comes from calling through wrappers or from non-target_feature context. `#[inline(always)]` + `#[target_feature]` is not allowed on stable Rust.
+  Key insight: the overhead is from the `#[target_feature]` optimization boundary, NOT from wrapper functions. LLVM can't inline across mismatched target attributes. Patterns 4 and 1 prove this: pattern 4 calls `#[rite]` directly with no wrapper and is equally slow, because the caller still lacks `#[target_feature]`. Patterns 5 and 6 prove wrappers themselves are free — scalar wrapper inlines identically to scalar inline.
 
 - ~~**summon() caching**~~: **Implemented!** See `benches/summon_overhead.rs`. Results after adding atomic caching:
   - `Desktop64::summon()` (cached): ~1.3 ns (was 2.6 ns — **2x faster**)
