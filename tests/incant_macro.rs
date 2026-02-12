@@ -6,6 +6,14 @@
 //! - Scalar fallback
 //! - Cross-architecture compilation
 
+// incant! generates _v3/_v4 for x86_64, _neon for aarch64, _wasm128 for wasm32.
+// On i686 (target_arch = "x86") none of these exist.
+#![cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+
 use archmage::{IntoConcreteToken, ScalarToken, SimdToken};
 
 // =============================================================================

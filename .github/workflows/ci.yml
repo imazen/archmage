@@ -248,16 +248,17 @@ jobs:
         with:
           components: miri
 
-      - name: Cache cargo
+      - name: Cache cargo registry
         uses: Swatinem/rust-cache@v2
         with:
           prefix-key: miri
+          cache-targets: false
 
       - name: Setup Miri
-        run: cargo miri setup
+        run: cargo +nightly miri setup
 
       - name: Run Miri on magetypes
-        run: cargo miri test -p magetypes --features avx512
+        run: cargo +nightly miri test -p magetypes --features avx512
 
   # ==========================================================================
   # Fuzz testing - property-based divergence detection
