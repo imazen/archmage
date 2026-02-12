@@ -52,6 +52,10 @@ harness = false
 name = "summon_overhead"
 harness = false
 
+[[bench]]
+name = "safe_memory_overhead"
+harness = false
+
 [package.metadata.docs.rs]
 features = ["std", "macros", "safe_unaligned_simd", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]

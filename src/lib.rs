@@ -36,6 +36,28 @@
 //! }
 //! ```
 //!
+//! ## The Prelude
+//!
+//! `use archmage::prelude::*` gives you tokens, traits, macros, platform
+//! intrinsics, and SIMD types in one import. Value-based intrinsics like
+//! `_mm256_add_ps` are already safe inside `#[arcane]` since Rust 1.85.
+//!
+//! For safe memory operations (load/store), import them explicitly from
+//! `safe_unaligned_simd` — the names overlap with `core::arch` and
+//! can't resolve through a glob re-export:
+//!
+//! ```rust,ignore
+//! use archmage::prelude::*;
+//! use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
+//!
+//! #[arcane]
+//! fn load(_token: Desktop64, data: &[f32; 8]) -> __m256 {
+//!     _mm256_loadu_ps(data)  // Safe! Takes &[f32; 8], not *const f32.
+//! }
+//! ```
+//!
+//! See the [`prelude`] module for full documentation of what's included.
+//!
 //! ## How It Works
 //!
 //! **Capability Tokens** are zero-sized proof types created via `summon()`, which

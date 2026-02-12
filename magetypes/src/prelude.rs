@@ -23,6 +23,48 @@
 //! # }
 //! ```
 //!
+//! # What each alias maps to
+//!
+//! ## `RecommendedToken`
+//!
+//! The token type for the platform's recommended SIMD tier:
+//!
+//! | Platform | `RecommendedToken` | Why |
+//! |----------|--------------------|-----|
+//! | x86_64 | `X64V3Token` | AVX2+FMA covers 95%+ of x86_64 CPUs since 2013 |
+//! | x86_64 + `avx512` | `X64V4Token` | AVX-512 for server workloads |
+//! | aarch64 | `NeonToken` | NEON is baseline on all 64-bit ARM |
+//! | wasm32 | `Wasm128Token` | SIMD128 is the only WASM SIMD tier |
+//!
+//! ## Type aliases (`F32Vec`, `I32Vec`, etc.)
+//!
+//! Platform-appropriate SIMD vector types. The concrete type and lane count
+//! vary by platform — `F32Vec` is `f32x8` on x86_64 but `f32x4` on ARM.
+//!
+//! ## Lane counts (`LANES`, `F32_LANES`, `F64_LANES`, `I32_LANES`)
+//!
+//! Constants for the number of lanes in each vector type. Use these instead
+//! of hardcoding lane counts when writing code with the prelude aliases.
+//!
+//! - `LANES` / `F32_LANES`: f32 lanes (8 on x86, 16 with avx512, 4 on ARM/WASM)
+//! - `F64_LANES`: f64 lanes (4 on x86, 8 with avx512, 2 on ARM/WASM)
+//! - `I32_LANES`: i32 lanes (same as `F32_LANES`)
+//!
+//! # When to use this prelude
+//!
+//! Use this for **quick prototyping** and in **`#[magetypes]` macro contexts**
+//! where the macro substitutes the correct types per platform. The aliases
+//! hide which concrete type you're using, which is the point — but it also
+//! means the same source code produces different lane counts on different
+//! architectures.
+//!
+//! For production code where you want explicit control over vector widths,
+//! import concrete types directly:
+//!
+//! ```rust,ignore
+//! use magetypes::simd::f32x8;  // Always 8 lanes, polyfilled on ARM/WASM
+//! ```
+//!
 //! # Prelude vs `#[magetypes]`
 //!
 //! - **Prelude**: For non-generic code targeting a single platform
