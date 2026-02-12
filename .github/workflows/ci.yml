@@ -248,19 +248,16 @@ jobs:
         with:
           components: miri
 
-      - name: Cache cargo registry
-        uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: miri-v2
-          cache-targets: false
-
       - name: Setup Miri
         run: cargo +nightly miri setup
 
       - name: Run Miri on magetypes
-        # --lib only: proptest (dev-dep) pulls getrandom whose build script
-        # is incompatible with current nightly Miri. Fuzz tests run separately.
-        run: cargo +nightly miri test -p magetypes --lib --features avx512
+        # -Zavoid-dev-deps skips proptest→getrandom whose build script
+        # is broken under current nightly Miri. Fuzz tests run separately.
+        run: cargo +nightly -Zavoid-dev-deps miri test -p magetypes --lib --features avx512
+
+      - name: Run Miri on archmage
+        run: cargo +nightly -Zavoid-dev-deps miri test -p archmage --lib --features avx512
 
   # ==========================================================================
   # Fuzz testing - property-based divergence detection
