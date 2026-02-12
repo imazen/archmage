@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.1 — 2026-02-12
+
+- **`archmage::testing` module** — `for_each_token_permutation()` runs a closure for every unique combination of SIMD tokens disabled, testing all dispatch fallback tiers on native hardware. Handles cascade hierarchy, mutex serialization, panic-safe re-enable, and deduplication of equivalent effective states. On an AVX-512 machine this produces 5–7 permutations; on Haswell-era, 3.
+
+  ```rust
+  use archmage::testing::{for_each_token_permutation, CompileTimePolicy};
+
+  #[test]
+  fn dispatch_works_at_all_tiers() {
+      let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
+          let result = sum_squares(&data);
+          assert!((result - expected).abs() < 1e-1, "failed at: {perm}");
+      });
+      assert!(report.permutations_run >= 2);
+  }
+  ```
+
+- **`CompileTimePolicy` enum** — `Warn` (silent, collect in report), `WarnStderr` (also prints), `Fail` (panics with exact compiler flags to fix). Wire an env var for CI enforcement.
+
 ## 0.6.0 — 2026-02-12
 
 Cross-platform hardening, testability, and CI infrastructure.
