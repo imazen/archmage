@@ -227,7 +227,7 @@ pub fn sum(data: &[f32]) -> f32 {
     incant!(sum(data))
 }
 
-// Requires suffixed functions:
+// Default suffixed functions:
 // sum_v3(token: X64V3Token, ...)
 // sum_v4(token: X64V4Token, ...)     // if feature = "avx512"
 // sum_neon(token: NeonToken, ...)
@@ -235,11 +235,28 @@ pub fn sum(data: &[f32]) -> f32 {
 // sum_scalar(token: ScalarToken, ...)
 ```
 
+**Explicit tiers** (only dispatch to these):
+
+```rust
+pub fn sum(data: &[f32]) -> f32 {
+    incant!(sum(data), [v1, v3, neon])
+}
+// Requires: sum_v1, sum_v3, sum_neon, sum_scalar
+```
+
+Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`,
+`neon_sha3`, `neon_crc`, `wasm128`, `scalar`. Scalar is always implicit.
+
 **Passthrough mode** (already have token):
 
 ```rust
 fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-    incant!(with token => process(data))
+    incant!(process(data) with token)
+}
+
+// With explicit tiers:
+fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
+    incant!(process(data) with token, [v3, neon])
 }
 ```
 
@@ -273,7 +290,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 
 | Level | Features | Token | Trait |
 |-------|----------|-------|-------|
-| **v1** | SSE, SSE2 (baseline) | None | None (always available) |
+| **v1** | SSE, SSE2 (baseline) | `X64V1Token` / `Sse2Token` | None (always available on x86_64) |
 | **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | `X64V2Token` | `HasX64V2` |
 | **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` / `Desktop64` | Use token directly |
 | **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` | `HasX64V4` |
@@ -488,6 +505,7 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 | Alias | Token | What it means |
 |-------|-------|---------------|
+| `Sse2Token` | `X64V1Token` | SSE + SSE2 (x86_64 baseline — always available) |
 | `Desktop64` | `X64V3Token` | AVX2 + FMA (Haswell 2013+, Zen 1+) |
 | `Server64` | `X64V4Token` | + AVX-512 (Xeon 2017+, Zen 4+) |
 | `Arm64` | `NeonToken` | NEON + FP16 (all 64-bit ARM) |
@@ -657,8 +675,9 @@ When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the
 ## Token Hierarchy
 
 **x86:**
+- `X64V1Token` / `Sse2Token` - SSE + SSE2 (x86_64 baseline — always available)
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
-- `X64V3Token` / `Desktop64` / `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
+- `X64V3Token` / `Desktop64` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
 - `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
 - `Avx512ModernToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
 - `Avx512Fp16Token` - + FP16 (Sapphire Rapids 2023+)

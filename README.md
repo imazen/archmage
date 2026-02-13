@@ -147,7 +147,18 @@ fn sum_squares(data: &[f32]) -> f32 {
 }
 ```
 
-`incant!` looks for `_v3`, `_v4`, `_neon`, `_wasm128`, and `_scalar` suffixed functions, and dispatches to the best one the CPU supports. Each variant uses concrete SIMD types for its platform; the scalar fallback uses plain math.
+`incant!` looks for `_v3`, `_v4`, `_neon`, `_wasm128`, and `_scalar` suffixed functions by default, and dispatches to the best one the CPU supports. Each variant uses concrete SIMD types for its platform; the scalar fallback uses plain math.
+
+You can specify explicit tiers to control which variants are dispatched to:
+
+```rust
+// Only dispatch to v1, v3, neon, and scalar
+fn sum_squares(data: &[f32]) -> f32 {
+    incant!(sum_squares(data), [v1, v3, neon])
+}
+```
+
+Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`. The `scalar` tier is always included implicitly.
 
 ### `#[magetypes]` for simple cases
 
@@ -165,12 +176,23 @@ fn process(token: Token, data: &[f32]) -> f32 {
 }
 ```
 
+Specify explicit tiers to control which variants are generated:
+
+```rust
+#[magetypes(v1, v3, neon)]
+fn process(token: Token, data: &[f32]) -> f32 {
+    // Generates: process_v1, process_v3, process_neon, process_scalar
+    data.iter().sum()
+}
+```
+
 For functions that use platform-specific SIMD types (`f32x8`, `f32x4`, etc.), write the variants manually and use `incant!` as shown above.
 
 ## Tokens
 
 | Token | Alias | Features |
 |-------|-------|----------|
+| `X64V1Token` | `Sse2Token` | SSE, SSE2 (x86_64 baseline — always available) |
 | `X64V2Token` | | SSE4.2, POPCNT |
 | `X64V3Token` | `Desktop64` | AVX2, FMA, BMI2 |
 | `X64V4Token` | `Server64` | AVX-512 (requires `avx512` feature) |
@@ -305,7 +327,22 @@ fn scalar_fallback_matches_simd() {
 }
 ```
 
-Disabling cascades downward: disabling V2 also disables V3/V4/Modern/Fp16; disabling NEON also disables Aes/Sha3/Crc. `dangerously_disable_tokens_except_wasm(true)` disables everything at once.
+Disabling cascades downward: disabling V2 also disables V3/V4/Modern/Fp16; disabling NEON also disables Aes/Sha3/Crc.
+
+### Disabling all SIMD at once
+
+`dangerously_disable_tokens_except_wasm(true)` disables all SIMD tokens in one call:
+
+```rust
+use archmage::dangerously_disable_tokens_except_wasm;
+
+// Force scalar-only execution for benchmarking
+dangerously_disable_tokens_except_wasm(true).unwrap();
+let scalar_result = my_simd_function(&data);
+dangerously_disable_tokens_except_wasm(false).unwrap();
+```
+
+This disables V2 on x86 (cascading to V3/V4/Modern/Fp16) and NEON on ARM (cascading to Aes/Sha3/Crc). V1 (`Sse2Token`) is not disabled — SSE2 is the x86_64 baseline and can't be meaningfully turned off at runtime. WASM is excluded because `simd128` is always a compile-time decision.
 
 ## Feature flags
 

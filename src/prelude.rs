@@ -100,24 +100,20 @@
 //!
 //! # How `incant!` works
 //!
-//! `incant!` does **not** detect which variant functions exist. It's simpler
-//! than that.
+//! `incant!` generates calls to suffixed variants, wrapping each in `#[cfg]`
+//! gates that eliminate wrong-platform branches at compile time.
 //!
-//! The macro unconditionally generates calls to all suffixed variants (`_v3`,
-//! `_v4`, `_neon`, `_wasm128`, `_scalar`), but wraps each in `#[cfg]` gates
-//! that eliminate wrong-platform branches at compile time:
+//! By default, it dispatches to `_v4`, `_v3`, `_neon`, `_wasm128`, and
+//! `_scalar`. You can specify explicit tiers:
 //!
-//! - `_v4(...)` — inside `#[cfg(feature = "avx512")]`
-//! - `_v3(...)` — inside `#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]`
-//! - `_neon(...)` — inside `#[cfg(target_arch = "aarch64")]`
-//! - `_wasm128(...)` — inside `#[cfg(target_arch = "wasm32")]`
-//! - `_scalar(...)` — no gate, always compiled
+//! ```rust,ignore
+//! incant!(func(data), [v1, v3, neon])  // only these tiers + scalar
+//! ```
 //!
-//! On x86_64 without `avx512`, the compiler never sees `_neon` or `_wasm128`
-//! references because those `#[cfg]` blocks are eliminated. You only need to
-//! define `_v3` and `_scalar`.
+//! Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`,
+//! `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
 //!
-//! **Required variants per platform:**
+//! **Required variants per platform (default tiers):**
 //!
 //! | Platform | Required | Optional |
 //! |----------|----------|----------|
