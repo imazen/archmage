@@ -20,7 +20,7 @@ avx512 = ["archmage/avx512"]
 
 [dependencies]
 # Core tokens and macros
-archmage = { version = "0.6.0", path = "..", default-features = false }
+archmage = { version = "0.7.0", path = "..", default-features = false }
 
 # proptest depends on wait-timeout which doesn't compile on WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

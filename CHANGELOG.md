@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.7.0 — 2026-02-13
+
+New token, explicit dispatch control, and docs refresh.
+
+- **`X64V1Token` / `Sse2Token`** — baseline x86_64 token covering SSE + SSE2. Rust 1.85+ made intrinsics safe inside `#[target_feature]` functions, but that means even `_mm_add_ps` requires a `#[target_feature(enable = "sse2")]` context. Without a token to enter that context, `#![forbid(unsafe_code)]` crates couldn't call baseline SIMD intrinsics at all. `X64V1Token::summon()` succeeds on every x86_64 CPU (SSE2 is mandatory for the architecture), so it compiles down to nothing — but it gives you the `#[target_feature]` gate you need.
+
+- **Explicit tier lists for `incant!`** — control which dispatch tiers are attempted:
+
+  ```rust
+  // Only dispatch to V1, V3, and NEON (plus implicit scalar fallback)
+  pub fn sum(data: &[f32]) -> f32 {
+      incant!(sum(data), [v1, v3, neon])
+  }
+  ```
+
+  Without a tier list, `incant!` tries all tiers and you need `_v2`, `_v3`, `_v4`, `_neon`, `_wasm128`, and `_scalar` variants. With a tier list, you only write the variants you care about. Scalar is always implicit.
+
+- **Explicit tier lists for `#[magetypes]`** — same idea, applied to code generation:
+
+  ```rust
+  #[magetypes([v3, neon])]
+  fn process(token: Token, data: &[f32]) -> f32 { ... }
+  // Generates: process_v3, process_neon, process_scalar
+  ```
+
+- **Documentation refresh** — updated safety model docs, token reference, and README to cover V1 token, tier lists, and the `dangerously_disable_tokens_except_wasm` API.
+
 ## 0.6.1 — 2026-02-12
 
 - **`archmage::testing` module** — `for_each_token_permutation()` runs a closure for every unique combination of SIMD tokens disabled, testing all dispatch fallback tiers on native hardware. Handles cascade hierarchy, mutex serialization, panic-safe re-enable, and deduplication of equivalent effective states. On an AVX-512 machine this produces 5–7 permutations; on Haswell-era, 3.
