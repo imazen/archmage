@@ -983,6 +983,179 @@ fn magetypes_impl(input_fn: ItemFn) -> TokenStream {
 // incant! macro - dispatch to platform-specific variants
 // =============================================================================
 
+// =============================================================================
+// Tier descriptors for incant! and #[magetypes]
+// =============================================================================
+
+/// Describes a dispatch tier for incant! and #[magetypes].
+struct TierDescriptor {
+    /// Tier name as written in user code (e.g., "v3", "neon")
+    name: &'static str,
+    /// Function suffix (e.g., "v3", "neon", "scalar")
+    suffix: &'static str,
+    /// Token type path (e.g., "archmage::X64V3Token")
+    token_path: &'static str,
+    /// IntoConcreteToken method name (e.g., "as_x64v3")
+    as_method: &'static str,
+    /// Target architecture for cfg guard (None = no guard)
+    target_arch: Option<&'static str>,
+    /// Required cargo feature (None = no feature guard)
+    cargo_feature: Option<&'static str>,
+    /// Dispatch priority (higher = tried first within same arch)
+    priority: u32,
+}
+
+/// All known tiers in dispatch-priority order (highest first within arch).
+const ALL_TIERS: &[TierDescriptor] = &[
+    // x86: highest to lowest
+    TierDescriptor {
+        name: "modern",
+        suffix: "modern",
+        token_path: "archmage::Avx512ModernToken",
+        as_method: "as_avx512_modern",
+        target_arch: Some("x86_64"),
+        cargo_feature: Some("avx512"),
+        priority: 50,
+    },
+    TierDescriptor {
+        name: "v4",
+        suffix: "v4",
+        token_path: "archmage::X64V4Token",
+        as_method: "as_x64v4",
+        target_arch: Some("x86_64"),
+        cargo_feature: Some("avx512"),
+        priority: 40,
+    },
+    TierDescriptor {
+        name: "v3",
+        suffix: "v3",
+        token_path: "archmage::X64V3Token",
+        as_method: "as_x64v3",
+        target_arch: Some("x86_64"),
+        cargo_feature: None,
+        priority: 30,
+    },
+    TierDescriptor {
+        name: "v2",
+        suffix: "v2",
+        token_path: "archmage::X64V2Token",
+        as_method: "as_x64v2",
+        target_arch: Some("x86_64"),
+        cargo_feature: None,
+        priority: 20,
+    },
+    TierDescriptor {
+        name: "v1",
+        suffix: "v1",
+        token_path: "archmage::X64V1Token",
+        as_method: "as_x64v1",
+        target_arch: Some("x86_64"),
+        cargo_feature: None,
+        priority: 10,
+    },
+    // ARM
+    TierDescriptor {
+        name: "neon_aes",
+        suffix: "neon_aes",
+        token_path: "archmage::NeonAesToken",
+        as_method: "as_neon_aes",
+        target_arch: Some("aarch64"),
+        cargo_feature: None,
+        priority: 30,
+    },
+    TierDescriptor {
+        name: "neon_sha3",
+        suffix: "neon_sha3",
+        token_path: "archmage::NeonSha3Token",
+        as_method: "as_neon_sha3",
+        target_arch: Some("aarch64"),
+        cargo_feature: None,
+        priority: 30,
+    },
+    TierDescriptor {
+        name: "neon_crc",
+        suffix: "neon_crc",
+        token_path: "archmage::NeonCrcToken",
+        as_method: "as_neon_crc",
+        target_arch: Some("aarch64"),
+        cargo_feature: None,
+        priority: 30,
+    },
+    TierDescriptor {
+        name: "neon",
+        suffix: "neon",
+        token_path: "archmage::NeonToken",
+        as_method: "as_neon",
+        target_arch: Some("aarch64"),
+        cargo_feature: None,
+        priority: 20,
+    },
+    // WASM
+    TierDescriptor {
+        name: "wasm128",
+        suffix: "wasm128",
+        token_path: "archmage::Wasm128Token",
+        as_method: "as_wasm128",
+        target_arch: Some("wasm32"),
+        cargo_feature: None,
+        priority: 20,
+    },
+    // Scalar (always last)
+    TierDescriptor {
+        name: "scalar",
+        suffix: "scalar",
+        token_path: "archmage::ScalarToken",
+        as_method: "as_scalar",
+        target_arch: None,
+        cargo_feature: None,
+        priority: 0,
+    },
+];
+
+/// Default tiers (backwards-compatible with pre-explicit behavior).
+const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
+
+/// Look up a tier by name, returning an error on unknown names.
+fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
+    ALL_TIERS.iter().find(|t| t.name == name)
+}
+
+/// Resolve tier names to descriptors, sorted by dispatch priority (highest first).
+/// Always appends "scalar" if not already present.
+fn resolve_tiers(tier_names: &[String], error_span: proc_macro2::Span) -> syn::Result<Vec<&'static TierDescriptor>> {
+    let mut tiers = Vec::new();
+    for name in tier_names {
+        match find_tier(name) {
+            Some(tier) => tiers.push(tier),
+            None => {
+                let known: Vec<&str> = ALL_TIERS.iter().map(|t| t.name).collect();
+                return Err(syn::Error::new(
+                    error_span,
+                    format!(
+                        "unknown tier `{}`. Known tiers: {}",
+                        name,
+                        known.join(", ")
+                    ),
+                ));
+            }
+        }
+    }
+
+    // Always include scalar fallback
+    if !tiers.iter().any(|t| t.name == "scalar") {
+        tiers.push(find_tier("scalar").unwrap());
+    }
+
+    // Sort by priority (highest first) for correct dispatch order
+    tiers.sort_by(|a, b| b.priority.cmp(&a.priority));
+
+    Ok(tiers)
+}
+
+// =============================================================================
+// incant! macro - dispatch to platform-specific variants
+// =============================================================================
+
 /// Input for the incant! macro
 struct IncantInput {
     /// Function name to call
@@ -991,11 +1164,13 @@ struct IncantInput {
     args: Vec<syn::Expr>,
     /// Optional token variable for passthrough mode
     with_token: Option<syn::Expr>,
+    /// Optional explicit tier list (None = default tiers)
+    tiers: Option<(Vec<String>, proc_macro2::Span)>,
 }
 
 impl Parse for IncantInput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // Parse: function_name(arg1, arg2, ...) [with token_expr]
+        // Parse: function_name(arg1, arg2, ...) [with token_expr] [, [tier1, tier2, ...]]
         let func_name: Ident = input.parse()?;
 
         // Parse parenthesized arguments
@@ -1017,10 +1192,24 @@ impl Parse for IncantInput {
             None
         };
 
+        // Check for optional tier list: , [tier1, tier2, ...]
+        let tiers = if input.peek(Token![,]) {
+            let _: Token![,] = input.parse()?;
+            let bracket_content;
+            let bracket = syn::bracketed!(bracket_content in input);
+            let tier_idents = bracket_content
+                .parse_terminated(Ident::parse, Token![,])?;
+            let tier_names: Vec<String> = tier_idents.iter().map(|i| i.to_string()).collect();
+            Some((tier_names, bracket.span.join()))
+        } else {
+            None
+        };
+
         Ok(IncantInput {
             func_name,
             args,
             with_token,
+            tiers,
         })
     }
 }
@@ -1040,6 +1229,24 @@ impl Parse for IncantInput {
 /// Expands to runtime feature detection + dispatch to `dot_v3`, `dot_v4`,
 /// `dot_neon`, `dot_wasm128`, or `dot_scalar`.
 ///
+/// # Explicit Tiers
+///
+/// Specify which tiers to dispatch to:
+///
+/// ```rust,ignore
+/// // Only dispatch to v1, v3, neon, and scalar
+/// pub fn api(data: &[f32]) -> f32 {
+///     incant!(process(data), [v1, v3, neon])
+/// }
+/// ```
+///
+/// `scalar` is always included implicitly. Unknown tier names cause a
+/// compile error. Tiers are automatically sorted into correct dispatch
+/// order (highest priority first).
+///
+/// Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`,
+/// `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
+///
 /// # Passthrough Mode (already have token)
 ///
 /// Uses compile-time dispatch via `IntoConcreteToken`:
@@ -1051,14 +1258,28 @@ impl Parse for IncantInput {
 /// }
 /// ```
 ///
+/// Also supports explicit tiers:
+///
+/// ```rust,ignore
+/// fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
+///     incant!(process(data) with token, [v3, neon])
+/// }
+/// ```
+///
 /// The compiler monomorphizes the dispatch, eliminating non-matching branches.
 ///
 /// # Variant Naming
 ///
-/// Functions must have suffixed variants:
+/// Functions must have suffixed variants matching the selected tiers:
+/// - `_v1` for `X64V1Token`
+/// - `_v2` for `X64V2Token`
 /// - `_v3` for `X64V3Token`
 /// - `_v4` for `X64V4Token` (requires `avx512` feature)
+/// - `_modern` for `Avx512ModernToken` (requires `avx512` feature)
 /// - `_neon` for `NeonToken`
+/// - `_neon_aes` for `NeonAesToken`
+/// - `_neon_sha3` for `NeonSha3Token`
+/// - `_neon_crc` for `NeonCrcToken`
 /// - `_wasm128` for `Wasm128Token`
 /// - `_scalar` for `ScalarToken`
 #[proc_macro]
@@ -1078,84 +1299,179 @@ fn incant_impl(input: IncantInput) -> TokenStream {
     let func_name = &input.func_name;
     let args = &input.args;
 
-    // Create suffixed function names
-    let fn_v3 = format_ident!("{}_v3", func_name);
-    let fn_v4 = format_ident!("{}_v4", func_name);
-    let fn_neon = format_ident!("{}_neon", func_name);
-    let fn_wasm128 = format_ident!("{}_wasm128", func_name);
+    // Resolve tiers
+    let tier_names: Vec<String> = match &input.tiers {
+        Some((names, _)) => names.clone(),
+        None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
+    };
+    let error_span = input.tiers.as_ref()
+        .map(|(_, span)| *span)
+        .unwrap_or_else(|| func_name.span());
+
+    let tiers = match resolve_tiers(&tier_names, error_span) {
+        Ok(t) => t,
+        Err(e) => return e.to_compile_error().into(),
+    };
+
+    // Group tiers by architecture for cfg-guarded blocks
+    // Within each arch, tiers are already sorted by priority (highest first)
+    if let Some(token_expr) = &input.with_token {
+        gen_incant_passthrough(func_name, args, token_expr, &tiers)
+    } else {
+        gen_incant_entry(func_name, args, &tiers)
+    }
+}
+
+/// Generate incant! passthrough mode (already have a token).
+fn gen_incant_passthrough(
+    func_name: &Ident,
+    args: &[syn::Expr],
+    token_expr: &syn::Expr,
+    tiers: &[&TierDescriptor],
+) -> TokenStream {
+    let mut dispatch_arms = Vec::new();
+
+    // Group non-scalar tiers by (target_arch, cargo_feature) for nested cfg blocks
+    let mut arch_groups: Vec<(Option<&str>, Option<&str>, Vec<&TierDescriptor>)> = Vec::new();
+    for tier in tiers {
+        if tier.name == "scalar" {
+            continue; // Handle scalar separately at the end
+        }
+        let key = (tier.target_arch, tier.cargo_feature);
+        if let Some(group) = arch_groups.iter_mut().find(|(a, f, _)| (*a, *f) == key) {
+            group.2.push(tier);
+        } else {
+            arch_groups.push((tier.target_arch, tier.cargo_feature, vec![tier]));
+        }
+    }
+
+    for (target_arch, cargo_feature, group_tiers) in &arch_groups {
+        let mut tier_checks = Vec::new();
+        for tier in group_tiers {
+            let fn_suffixed = format_ident!("{}_{}", func_name, tier.suffix);
+            let as_method = format_ident!("{}", tier.as_method);
+            tier_checks.push(quote! {
+                if let Some(__t) = __incant_token.#as_method() {
+                    break '__incant #fn_suffixed(__t, #(#args),*);
+                }
+            });
+        }
+
+        let inner = quote! { #(#tier_checks)* };
+
+        let guarded = match (target_arch, cargo_feature) {
+            (Some(arch), Some(feat)) => quote! {
+                #[cfg(target_arch = #arch)]
+                {
+                    #[cfg(feature = #feat)]
+                    { #inner }
+                }
+            },
+            (Some(arch), None) => quote! {
+                #[cfg(target_arch = #arch)]
+                { #inner }
+            },
+            (None, Some(feat)) => quote! {
+                #[cfg(feature = #feat)]
+                { #inner }
+            },
+            (None, None) => inner,
+        };
+
+        dispatch_arms.push(guarded);
+    }
+
+    // Scalar fallback (always last)
+    let fn_scalar = format_ident!("{}_scalar", func_name);
+    let scalar_arm = if tiers.iter().any(|t| t.name == "scalar") {
+        quote! {
+            if let Some(__t) = __incant_token.as_scalar() {
+                break '__incant #fn_scalar(__t, #(#args),*);
+            }
+            unreachable!("Token did not match any known variant")
+        }
+    } else {
+        quote! { unreachable!("Token did not match any known variant") }
+    };
+
+    let expanded = quote! {
+        '__incant: {
+            use archmage::IntoConcreteToken;
+            let __incant_token = #token_expr;
+            #(#dispatch_arms)*
+            #scalar_arm
+        }
+    };
+    expanded.into()
+}
+
+/// Generate incant! entry point mode (summon tokens).
+fn gen_incant_entry(
+    func_name: &Ident,
+    args: &[syn::Expr],
+    tiers: &[&TierDescriptor],
+) -> TokenStream {
+    let mut dispatch_arms = Vec::new();
+
+    // Group non-scalar tiers by target_arch for cfg blocks.
+    // Within each arch group, further split by cargo_feature.
+    let mut arch_groups: Vec<(Option<&str>, Vec<&TierDescriptor>)> = Vec::new();
+    for tier in tiers {
+        if tier.name == "scalar" {
+            continue;
+        }
+        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == tier.target_arch) {
+            group.1.push(tier);
+        } else {
+            arch_groups.push((tier.target_arch, vec![tier]));
+        }
+    }
+
+    for (target_arch, group_tiers) in &arch_groups {
+        let mut tier_checks = Vec::new();
+        for tier in group_tiers {
+            let fn_suffixed = format_ident!("{}_{}", func_name, tier.suffix);
+            let token_path: syn::Path = syn::parse_str(tier.token_path).unwrap();
+
+            let check = quote! {
+                if let Some(__t) = #token_path::summon() {
+                    break '__incant #fn_suffixed(__t, #(#args),*);
+                }
+            };
+
+            if let Some(feat) = tier.cargo_feature {
+                tier_checks.push(quote! {
+                    #[cfg(feature = #feat)]
+                    { #check }
+                });
+            } else {
+                tier_checks.push(check);
+            }
+        }
+
+        let inner = quote! { #(#tier_checks)* };
+
+        if let Some(arch) = target_arch {
+            dispatch_arms.push(quote! {
+                #[cfg(target_arch = #arch)]
+                { #inner }
+            });
+        } else {
+            dispatch_arms.push(inner);
+        }
+    }
+
+    // Scalar fallback
     let fn_scalar = format_ident!("{}_scalar", func_name);
 
-    // Use labeled blocks instead of `return` so incant! can be chained.
-    // Labeled blocks are stable since Rust 1.65.
-    if let Some(token_expr) = &input.with_token {
-        // Passthrough mode: use IntoConcreteToken for compile-time dispatch
-        let expanded = quote! {
-            '__incant: {
-                use archmage::IntoConcreteToken;
-                let __incant_token = #token_expr;
-
-                #[cfg(target_arch = "x86_64")]
-                {
-                    #[cfg(feature = "avx512")]
-                    if let Some(__t) = __incant_token.as_x64v4() {
-                        break '__incant #fn_v4(__t, #(#args),*);
-                    }
-                    if let Some(__t) = __incant_token.as_x64v3() {
-                        break '__incant #fn_v3(__t, #(#args),*);
-                    }
-                }
-
-                #[cfg(target_arch = "aarch64")]
-                if let Some(__t) = __incant_token.as_neon() {
-                    break '__incant #fn_neon(__t, #(#args),*);
-                }
-
-                #[cfg(target_arch = "wasm32")]
-                if let Some(__t) = __incant_token.as_wasm128() {
-                    break '__incant #fn_wasm128(__t, #(#args),*);
-                }
-
-                if let Some(__t) = __incant_token.as_scalar() {
-                    break '__incant #fn_scalar(__t, #(#args),*);
-                }
-
-                unreachable!("Token did not match any known variant")
-            }
-        };
-        expanded.into()
-    } else {
-        // Entry point mode: summon tokens and dispatch
-        let expanded = quote! {
-            '__incant: {
-                use archmage::SimdToken;
-
-                #[cfg(target_arch = "x86_64")]
-                {
-                    #[cfg(feature = "avx512")]
-                    if let Some(__t) = archmage::X64V4Token::summon() {
-                        break '__incant #fn_v4(__t, #(#args),*);
-                    }
-                    if let Some(__t) = archmage::X64V3Token::summon() {
-                        break '__incant #fn_v3(__t, #(#args),*);
-                    }
-                }
-
-                #[cfg(target_arch = "aarch64")]
-                if let Some(__t) = archmage::NeonToken::summon() {
-                    break '__incant #fn_neon(__t, #(#args),*);
-                }
-
-                #[cfg(target_arch = "wasm32")]
-                if let Some(__t) = archmage::Wasm128Token::summon() {
-                    break '__incant #fn_wasm128(__t, #(#args),*);
-                }
-
-                // Scalar fallback
-                #fn_scalar(archmage::ScalarToken, #(#args),*)
-            }
-        };
-        expanded.into()
-    }
+    let expanded = quote! {
+        '__incant: {
+            use archmage::SimdToken;
+            #(#dispatch_arms)*
+            #fn_scalar(archmage::ScalarToken, #(#args),*)
+        }
+    };
+    expanded.into()
 }
 
 // =============================================================================
