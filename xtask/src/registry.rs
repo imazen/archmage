@@ -439,8 +439,7 @@ impl Registry {
             let pattern = Self::match_pattern(token);
 
             // All features including sse/sse2 — needed for #[target_feature] on X64V1Token
-            let macro_features: Vec<&str> =
-                token.features.iter().map(|s| s.as_str()).collect();
+            let macro_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
 
             out.push_str(&Self::format_feature_arm(&pattern, &macro_features));
         }

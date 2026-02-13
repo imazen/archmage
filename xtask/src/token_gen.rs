@@ -898,10 +898,7 @@ fn feature_flag_strings(token: &TokenDef) -> (&'static str, String, String, Stri
 /// Returns true if an x86 token's features are all baseline (sse/sse2 only).
 /// Such tokens are always available on x86_64 and don't need runtime detection.
 fn is_x86_baseline_only(token: &TokenDef) -> bool {
-    token
-        .features
-        .iter()
-        .all(|f| f == "sse" || f == "sse2")
+    token.features.iter().all(|f| f == "sse" || f == "sse2")
 }
 
 /// Determine which generated module file a token lives in.

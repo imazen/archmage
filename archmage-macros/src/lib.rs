@@ -866,9 +866,7 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     let tier_names: Vec<String> = if attr.is_empty() {
         DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect()
     } else {
-        let parser = |input: ParseStream| {
-            input.parse_terminated(Ident::parse, Token![,])
-        };
+        let parser = |input: ParseStream| input.parse_terminated(Ident::parse, Token![,]);
         let idents = match syn::parse::Parser::parse(parser, attr) {
             Ok(p) => p,
             Err(e) => return e.to_compile_error().into(),
@@ -1101,7 +1099,10 @@ fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
 
 /// Resolve tier names to descriptors, sorted by dispatch priority (highest first).
 /// Always appends "scalar" if not already present.
-fn resolve_tiers(tier_names: &[String], error_span: proc_macro2::Span) -> syn::Result<Vec<&'static TierDescriptor>> {
+fn resolve_tiers(
+    tier_names: &[String],
+    error_span: proc_macro2::Span,
+) -> syn::Result<Vec<&'static TierDescriptor>> {
     let mut tiers = Vec::new();
     for name in tier_names {
         match find_tier(name) {
@@ -1110,11 +1111,7 @@ fn resolve_tiers(tier_names: &[String], error_span: proc_macro2::Span) -> syn::R
                 let known: Vec<&str> = ALL_TIERS.iter().map(|t| t.name).collect();
                 return Err(syn::Error::new(
                     error_span,
-                    format!(
-                        "unknown tier `{}`. Known tiers: {}",
-                        name,
-                        known.join(", ")
-                    ),
+                    format!("unknown tier `{}`. Known tiers: {}", name, known.join(", ")),
                 ));
             }
         }
@@ -1176,8 +1173,7 @@ impl Parse for IncantInput {
             let _: Token![,] = input.parse()?;
             let bracket_content;
             let bracket = syn::bracketed!(bracket_content in input);
-            let tier_idents = bracket_content
-                .parse_terminated(Ident::parse, Token![,])?;
+            let tier_idents = bracket_content.parse_terminated(Ident::parse, Token![,])?;
             let tier_names: Vec<String> = tier_idents.iter().map(|i| i.to_string()).collect();
             Some((tier_names, bracket.span.join()))
         } else {
@@ -1283,7 +1279,9 @@ fn incant_impl(input: IncantInput) -> TokenStream {
         Some((names, _)) => names.clone(),
         None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
     };
-    let error_span = input.tiers.as_ref()
+    let error_span = input
+        .tiers
+        .as_ref()
         .map(|(_, span)| *span)
         .unwrap_or_else(|| func_name.span());
 
