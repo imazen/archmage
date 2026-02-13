@@ -804,89 +804,45 @@ fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
 // magetypes! macro - generate platform variants from generic function
 // =============================================================================
 
-/// Configuration for a magetypes variant
-struct MagetypesVariant {
-    suffix: &'static str,
-    token_type: &'static str,
-    target_arch: Option<&'static str>,
-    cargo_feature: Option<&'static str>,
-}
-
-const MAGETYPES_VARIANTS: &[MagetypesVariant] = &[
-    // x86_64 V3 (AVX2)
-    MagetypesVariant {
-        suffix: "v3",
-        token_type: "archmage::X64V3Token",
-        target_arch: Some("x86_64"),
-        cargo_feature: None,
-    },
-    // x86_64 V4 (AVX-512)
-    MagetypesVariant {
-        suffix: "v4",
-        token_type: "archmage::X64V4Token",
-        target_arch: Some("x86_64"),
-        cargo_feature: Some("avx512"),
-    },
-    // aarch64 NEON
-    MagetypesVariant {
-        suffix: "neon",
-        token_type: "archmage::NeonToken",
-        target_arch: Some("aarch64"),
-        cargo_feature: None,
-    },
-    // wasm32 SIMD128
-    MagetypesVariant {
-        suffix: "wasm128",
-        token_type: "archmage::Wasm128Token",
-        target_arch: Some("wasm32"),
-        cargo_feature: None,
-    },
-    // Scalar fallback
-    MagetypesVariant {
-        suffix: "scalar",
-        token_type: "archmage::ScalarToken",
-        target_arch: None, // Always available
-        cargo_feature: None,
-    },
-];
-
 /// Generate platform-specific variants from a function by replacing `Token`.
 ///
 /// Use `Token` as a placeholder for the token type. The macro generates
-/// suffixed variants (`_v3`, `_v4`, `_neon`, `_wasm128`, `_scalar`) with
-/// `Token` replaced by the concrete token type, and each variant wrapped
-/// in the appropriate `#[cfg(target_arch = ...)]` guard.
+/// suffixed variants with `Token` replaced by the concrete token type, and
+/// each variant wrapped in the appropriate `#[cfg(target_arch = ...)]` guard.
+///
+/// # Default tiers
+///
+/// Without arguments, generates `_v3`, `_v4`, `_neon`, `_wasm128`, `_scalar`:
+///
+/// ```rust,ignore
+/// #[magetypes]
+/// fn process(token: Token, data: &[f32]) -> f32 {
+///     inner_simd_work(token, data)
+/// }
+/// ```
+///
+/// # Explicit tiers
+///
+/// Specify which tiers to generate:
+///
+/// ```rust,ignore
+/// #[magetypes(v1, v3, neon)]
+/// fn process(token: Token, data: &[f32]) -> f32 {
+///     inner_simd_work(token, data)
+/// }
+/// // Generates: process_v1, process_v3, process_neon, process_scalar
+/// ```
+///
+/// `scalar` is always included implicitly.
+///
+/// Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`,
+/// `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
 ///
 /// # What gets replaced
 ///
 /// **Only `Token`** is replaced — with the concrete token type for each variant
 /// (e.g., `archmage::X64V3Token`, `archmage::ScalarToken`). SIMD types like
 /// `f32x8` and constants like `LANES` are **not** replaced by this macro.
-///
-/// This means `#[magetypes]` works well for functions that only need the token
-/// (e.g., to pass to other functions), but not for functions that use
-/// platform-specific SIMD types directly. For those, write `_v3` and `_scalar`
-/// variants manually and use `incant!` for dispatch.
-///
-/// # Example
-///
-/// ```rust,ignore
-/// use archmage::magetypes;
-///
-/// // Works: function only uses Token, no SIMD types
-/// #[magetypes]
-/// fn process(token: Token, data: &[f32]) -> f32 {
-///     // delegates to other functions that handle SIMD internally
-///     inner_simd_work(token, data)
-/// }
-///
-/// // Generates:
-/// // - process_v3(token: X64V3Token, ...) — #[cfg(target_arch = "x86_64")]
-/// // - process_v4(token: X64V4Token, ...) — #[cfg(target_arch = "x86_64", feature = "avx512")]
-/// // - process_neon(token: NeonToken, ...) — #[cfg(target_arch = "aarch64")]
-/// // - process_wasm128(token: Wasm128Token, ...) — #[cfg(target_arch = "wasm32")]
-/// // - process_scalar(token: ScalarToken, ...) — always available
-/// ```
 ///
 /// # Usage with incant!
 ///
@@ -896,16 +852,39 @@ const MAGETYPES_VARIANTS: &[MagetypesVariant] = &[
 /// pub fn process_api(data: &[f32]) -> f32 {
 ///     incant!(process(data))
 /// }
+///
+/// // Or with matching explicit tiers:
+/// pub fn process_api(data: &[f32]) -> f32 {
+///     incant!(process(data), [v1, v3, neon])
+/// }
 /// ```
 #[proc_macro_attribute]
 pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // Ignore attributes for now (could add variant selection later)
-    let _ = attr;
     let input_fn = parse_macro_input!(item as ItemFn);
-    magetypes_impl(input_fn)
+
+    // Parse optional tier list from attribute args
+    let tier_names: Vec<String> = if attr.is_empty() {
+        DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect()
+    } else {
+        let parser = |input: ParseStream| {
+            input.parse_terminated(Ident::parse, Token![,])
+        };
+        let idents = match syn::parse::Parser::parse(parser, attr) {
+            Ok(p) => p,
+            Err(e) => return e.to_compile_error().into(),
+        };
+        idents.iter().map(|i| i.to_string()).collect()
+    };
+
+    let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span()) {
+        Ok(t) => t,
+        Err(e) => return e.to_compile_error().into(),
+    };
+
+    magetypes_impl(input_fn, &tiers)
 }
 
-fn magetypes_impl(input_fn: ItemFn) -> TokenStream {
+fn magetypes_impl(input_fn: ItemFn, tiers: &[&TierDescriptor]) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
     let fn_attrs = &input_fn.attrs;
 
@@ -914,9 +893,9 @@ fn magetypes_impl(input_fn: ItemFn) -> TokenStream {
 
     let mut variants = Vec::new();
 
-    for variant in MAGETYPES_VARIANTS {
+    for tier in tiers {
         // Create suffixed function name
-        let suffixed_name = format!("{}_{}", fn_name, variant.suffix);
+        let suffixed_name = format!("{}_{}", fn_name, tier.suffix);
 
         // Do text substitution
         let mut variant_str = fn_str.clone();
@@ -925,7 +904,7 @@ fn magetypes_impl(input_fn: ItemFn) -> TokenStream {
         variant_str = variant_str.replacen(&fn_name.to_string(), &suffixed_name, 1);
 
         // Replace Token type with concrete token
-        variant_str = variant_str.replace("Token", variant.token_type);
+        variant_str = variant_str.replace("Token", tier.token_path);
 
         // Parse back to tokens
         let variant_tokens: proc_macro2::TokenStream = match variant_str.parse() {
@@ -944,7 +923,7 @@ fn magetypes_impl(input_fn: ItemFn) -> TokenStream {
         };
 
         // Add cfg guards
-        let cfg_guard = match (variant.target_arch, variant.cargo_feature) {
+        let cfg_guard = match (tier.target_arch, tier.cargo_feature) {
             (Some(arch), Some(feature)) => {
                 quote! { #[cfg(all(target_arch = #arch, feature = #feature))] }
             }
