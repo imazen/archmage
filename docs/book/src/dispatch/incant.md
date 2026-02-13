@@ -25,7 +25,7 @@ flowchart TD
     style PS fill:#1a4a6e,color:#fff
 ```
 
-Missing variants are skipped at compile time. You only need to implement the platforms you care about plus `_scalar`.
+Variants for other architectures are excluded by `#[cfg(target_arch)]` at compile time — you don't need `_neon` when compiling for x86-64, for example. You must define every variant that your target architecture and feature flags require, plus `_scalar`.
 
 ### Passthrough Mode
 
@@ -115,14 +115,13 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 
 | Suffix | Token | Platform |
 |--------|-------|----------|
-| `_v4` | `X64V4Token` | x86-64 AVX-512 |
+| `_v4` | `X64V4Token` | x86-64 AVX-512 (requires `avx512` feature) |
 | `_v3` | `X64V3Token` | x86-64 AVX2+FMA |
-| `_v2` | `X64V2Token` | x86-64 SSE4.2 |
 | `_neon` | `NeonToken` | AArch64 |
 | `_wasm128` | `Wasm128Token` | WASM |
-| `_scalar` | — | Fallback |
+| `_scalar` | `ScalarToken` | Always required |
 
-You don't need all variants—`incant!` skips missing ones.
+Cross-architecture variants are excluded by `#[cfg]` — on x86-64, you need `_v3`, `_scalar`, and `_v4` if `avx512` is enabled. You don't need `_neon` or `_wasm128`.
 
 ## Passthrough Mode
 

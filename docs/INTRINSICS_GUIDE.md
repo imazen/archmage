@@ -1,5 +1,7 @@
 # Intrinsics Guide for archmage/magetypes Implementers
 
+> **For users**: Use `#[arcane]`/`#[rite]` instead of manual `#[target_feature]`. This guide is an implementer reference for raw intrinsics.
+
 This guide covers platform differences, naming conventions, and performance pitfalls when implementing SIMD types using raw intrinsics.
 
 ## Naming Conventions
@@ -288,7 +290,7 @@ fn reduce_add_f32x4(v: float32x4_t) -> f32 {
 ## WASM: Considerations
 
 - **Relaxed SIMD**: Behavior varies by runtime (browser/engine). Use for performance, not correctness.
-- **No runtime detection**: Features are compile-time. Use `#[cfg(target_feature = "simd128")]`.
+- **Runtime detection**: `Wasm128Token::summon()` works like other tokens. Also available via compile-time `#[cfg(target_feature = "simd128")]`.
 - **Alignment**: Less penalty than native, but aligned access still preferred.
 
 ## General: Memory Performance

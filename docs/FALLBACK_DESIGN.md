@@ -129,15 +129,24 @@ pub fn exp2_lowp(self) -> Self {
 - Has _mm512_reduce_min_ps, _mm512_reduce_max_ps
 - Use these when available, polyfill with extract + 256-bit otherwise
 
-### ARM NEON (w128)
+### ARM NEON (w128) — Implemented
 - Has vaddvq_f32 for float horizontal add (single instruction)
 - Has vaddvq_s32 for integer horizontal add
 - Has native FMA (vfmaq_f32)
 
-### ARM NEON Polyfill (256-bit)
+### ARM NEON Polyfill (256-bit) — Implemented
 - Uses two 128-bit NEON vectors
 - Delegates to efficient 128-bit intrinsics
 - compose with scalar: `lo.reduce_add() + hi.reduce_add()`
+
+### WASM SIMD128 (w128) — Implemented
+- Uses `v128` type for all element types
+- Has `f32x4_add`, `i32x4_add`, etc.
+- Relaxed SIMD for FMA (`f32x4_relaxed_madd`)
+
+### WASM SIMD128 Polyfill (256-bit) — Implemented
+- Uses two 128-bit WASM vectors
+- Same polyfill pattern as ARM/SSE
 
 ## Generator Strategy
 
@@ -192,114 +201,46 @@ For hot loops, prefer:
 - Using lower precision if acceptable
 - Batching reductions across multiple vectors
 
-## archmage vs wide: Design Tradeoffs
+## Performance: `#[arcane]` and `#[rite]`
 
-### CRITICAL: Use `#[arcane]` for Performance-Critical Code
-
-**archmage operators inline properly when called from `#[target_feature]` contexts.**
+### Use `#[arcane]` at the entry point, `#[rite]` for everything inside
 
 The `#[arcane]` macro generates functions with `#[target_feature]` attributes.
-When you use operators like `a + b` INSIDE an `#[arcane]` function, the intrinsics
-inline properly into AVX/NEON instructions.
+Operators like `a + b` inside `#[arcane]` or `#[rite]` compile to single SIMD instructions.
+
+**The cost is the `#[target_feature]` boundary**, not the wrapper itself. Each `#[arcane]` call
+from non-SIMD code creates an optimization boundary LLVM can't inline across.
+
+Measured overhead (see [PERFORMANCE.md](PERFORMANCE.md)):
+- Simple vector add: 4x slower per-iteration `#[arcane]` vs loop-inside-`#[arcane]`
+- DCT-8: 6.2x slower per-row `#[arcane]` vs loop-inside-`#[arcane]`
+- `#[rite]` inside `#[arcane]`: 0x overhead (fully inlined)
 
 ```rust
-use archmage::{arcane, X64V3Token, SimdToken};
-use archmage::simd::f32x8;
+use archmage::{arcane, rite, X64V3Token, SimdToken};
+use magetypes::simd::f32x8;
 
-// CORRECT - operators inline properly inside #[arcane]
+// Entry point — called from non-SIMD code
 #[arcane]
 fn process_vectors(token: X64V3Token, input: &[[f32; 8]]) -> f32 {
     let mut sum = f32x8::zero(token);
     for arr in input {
-        let v: f32x8 = (*arr).into();
-        sum = sum + v;  // This + compiles to a single vaddps instruction!
+        sum = add_chunk(token, sum, arr);  // #[rite] inlines here
     }
     sum.reduce_add()
 }
+
+// Internal helper — inlines into #[arcane] caller
+#[rite]
+fn add_chunk(token: X64V3Token, acc: f32x8, arr: &[f32; 8]) -> f32x8 {
+    let v: f32x8 = (*arr).into();
+    acc + v  // Compiles to a single vaddps
+}
 ```
 
-**Without `#[arcane]` or `#[target_feature]`:** Operators still work correctly, but
-intrinsics are called as separate functions rather than being inlined. This is ~1.3x
-slower but still uses proper SIMD instructions.
+### Note on `unsafe` in intrinsic examples
 
-**Alternative: Use `-C target-cpu=native`** for benchmarking or when you can't use
-`#[arcane]` everywhere:
-
-```bash
-# For benchmarking
-RUSTFLAGS="-C target-cpu=native" cargo bench
-just bench  # Automatically sets the flag
-```
-
-### Benchmark Results
-
-**Scenario 1: Using `#[arcane]` / `#[target_feature]` (recommended)**
-
-Without `-C target-cpu=native`, but using proper `#[target_feature]` contexts:
-
-| Operation | archmage | wide | Winner |
-|-----------|----------|------|--------|
-| batch add (1024 elements) | 83ns | 65ns | wide 1.28x |
-| batch fma (1024 elements) | 10ns | varies | competitive |
-
-This is the expected use case - archmage with runtime detection inside `#[arcane]` functions.
-Wide is slightly faster because it uses compile-time feature detection (`#[cfg(target_feature)]`).
-
-**Scenario 2: With `-C target-cpu=native` (all code benefits)**
-
-With compile-time CPU targeting, both archmage and wide compile optimally:
-
-| Operation | archmage | wide | Winner |
-|-----------|----------|------|--------|
-| f32x8 add | 788ps | 1002ps | **archmage 1.27x** |
-| f32x8 mul | 796ps | 1070ps | **archmage 1.34x** |
-| f32x8 div | 3.9ns | 3.9ns | tie |
-| f32x8 fma | 998ps | 1264ps | **archmage 1.27x** |
-| f32x8 sqrt | 2.0ns | 2.0ns | tie |
-| f32x8 floor | 622ps | 718ps | **archmage 1.15x** |
-| f32x8 ceil | 622ps | 718ps | **archmage 1.15x** |
-| f32x8 round | 622ps | 722ps | **archmage 1.16x** |
-| f32x8 min | 787ps | 1004ps | **archmage 1.28x** |
-| f32x8 max | 785ps | 1003ps | **archmage 1.28x** |
-| f32x8 abs | 626ps | 720ps | **archmage 1.15x** |
-| f32x8 reduce_add | 1.6ns | 1.4ns | wide 1.14x |
-| f32x8 load | 619ps | 713ps | **archmage 1.15x** |
-| f32x8 store | 779ps | 1.3ns | **archmage 1.67x** |
-| batch add (128) | 118ns | 131ns | **archmage 1.11x** |
-
-**Summary:** With `#[arcane]` alone, archmage is ~1.3x slower than wide.
-With `-C target-cpu=native`, archmage is 15-35% faster than wide on most operations.
-
-### Design Approaches
-
-**wide's approach:**
-- Compile-time feature detection (`#[cfg(target_feature="avx")]`)
-- Zero-cost transmutes via bytemuck (`Pod` trait)
-- Direct struct initialization from arrays
-- No runtime checks
-
-**archmage's approach:**
-- Runtime token verification (safe construction at program start)
-- Zero-cost `From<[T; N]>` via bytemuck (same as wide, as of recent changes)
-- Token parameter passing (zero-size, no runtime cost)
-- `#[target_feature]` enables safe intrinsic calls within function bodies
-
-### Why archmage is Faster
-
-1. **Direct intrinsic access**: archmage types wrap raw `__m256` directly with minimal abstraction
-2. **Native floor/ceil/round**: Uses SSE4.1/AVX instructions directly
-3. **Efficient min/max**: Direct `_mm256_min_ps`/`_mm256_max_ps`
-4. **Zero-copy conversions**: `from_array()` uses `transmute`, matching wide
-
-### When wide Might Win
-
-1. **Horizontal reductions**: wide's `reduce_add` is slightly faster (~14%)
-2. **Very old code**: Code written before archmage added bytemuck support
-
-### Recommendations
-
-For maximum performance with archmage:
-1. **Always compile with `-C target-cpu=native`** (or at least `-C target-cpu=haswell` for AVX2)
-2. Use `just bench` for benchmarking (automatically sets correct flags)
-3. For production, ensure your build system passes appropriate RUSTFLAGS
-4. Both archmage and wide can coexist - archmage tokens can gate code sections
+As of Rust 1.85+, value-based intrinsics (arithmetic, comparison, shuffle, etc.) are safe
+inside `#[target_feature]` functions. The `unsafe` blocks in the examples above (Category C)
+reflect the pre-1.85 style. Inside `#[arcane]`/`#[rite]` functions, only memory operations
+(raw pointers) still require `unsafe`. Use `safe_unaligned_simd` for memory ops.

@@ -20,6 +20,7 @@
 
 - [Manual Dispatch](./dispatch/manual.md)
 - [incant! Macro](./dispatch/incant.md)
+- [#\[magetypes\] Macro](./dispatch/magetypes-macro.md)
 - [IntoConcreteToken Trait](./dispatch/into-concrete.md)
 - [Tiered Fallback](./dispatch/tiered-fallback.md)
 
@@ -38,8 +39,13 @@
 - [AVX-512 Patterns](./advanced/avx512.md)
 - [WASM SIMD](./advanced/wasm.md)
 
+# Testing
+
+- [Testing SIMD Dispatch](./testing.md)
+
 # Reference
 
 - [Token Reference](./reference/tokens.md)
 - [Trait Reference](./reference/traits.md)
 - [Feature Flags](./reference/features.md)
+- [Prelude](./reference/prelude.md)

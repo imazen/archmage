@@ -380,11 +380,11 @@ Benchmarked using `examples/sleef_comparison.rs` (requires nightly for `portable
 
 **CRITICAL: Use `#[arcane]` for proper inlining**
 
-archmage SIMD types **must** be used within functions annotated with the `#[arcane]` macro. Without this, intrinsics are called as functions instead of inlined, causing 50-100x slowdowns.
+archmage SIMD types **must** be used within functions annotated with `#[arcane]` (at the entry point) or `#[rite]` (for internal helpers). Without this, each call crosses a `#[target_feature]` boundary, costing 4-6x (see [PERFORMANCE.md](PERFORMANCE.md)).
 
 ```rust
 use archmage::{arcane, X64V3Token, SimdToken};
-use archmage::simd::f32x8;
+use magetypes::simd::f32x8;
 
 // WRONG - intrinsics won't inline
 fn slow_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {

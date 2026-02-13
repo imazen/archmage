@@ -18,7 +18,7 @@ if let Some(token) = X64V2Token::summon() {
 }
 ```
 
-### X64V3Token / Desktop64 / Avx2FmaToken
+### X64V3Token / Desktop64
 
 **Features**: All V2 + AVX, AVX2, FMA, BMI1, BMI2, F16C, MOVBE
 
@@ -32,9 +32,7 @@ let t1: Option<X64V3Token> = X64V3Token::summon();
 let t2: Option<Desktop64> = Desktop64::summon();
 ```
 
-**Aliases**:
-- `Desktop64` — Friendly name for typical desktop/laptop CPUs
-- `Avx2FmaToken` — Legacy name (deprecated)
+**Alias**: `Desktop64` — Friendly name for typical desktop/laptop CPUs
 
 ### X64V4Token / Server64 / Avx512Token
 
@@ -190,12 +188,6 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
 
     /// Alias for summon()
     fn attempt() -> Option<Self>;
-
-    /// Legacy alias (deprecated)
-    fn try_new() -> Option<Self>;
-
-    /// Unsafe construction (deprecated)
-    unsafe fn forge_token_dangerously() -> Self;
 }
 ```
 

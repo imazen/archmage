@@ -27,23 +27,21 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 
 1. `_v4` — `X64V4Token` (x86-64, requires `avx512` feature)
 2. `_v3` — `X64V3Token` (x86-64)
-3. `_v2` — `X64V2Token` (x86-64)
-4. `_neon` — `NeonToken` (AArch64)
-5. `_wasm128` — `Wasm128Token` (WASM)
-6. `_scalar` — No token (fallback)
+3. `_neon` — `NeonToken` (AArch64)
+4. `_wasm128` — `Wasm128Token` (WASM)
+5. `_scalar` — `ScalarToken` (fallback, always required)
 
-Missing variants are skipped at compile time. You only need `_scalar` plus whatever platforms you support.
+Cross-architecture variants are excluded by `#[cfg(target_arch)]` at compile time. On x86-64, you need `_v3` and `_scalar` (plus `_v4` if the `avx512` feature is enabled). You don't need `_neon` or `_wasm128`.
 
 ### Suffix conventions
 
 | Suffix | Token | Platform |
 |--------|-------|----------|
-| `_v4` | `X64V4Token` | x86-64 AVX-512 |
+| `_v4` | `X64V4Token` | x86-64 AVX-512 (requires `avx512` feature) |
 | `_v3` | `X64V3Token` | x86-64 AVX2+FMA |
-| `_v2` | `X64V2Token` | x86-64 SSE4.2 |
 | `_neon` | `NeonToken` | AArch64 |
 | `_wasm128` | `Wasm128Token` | WASM |
-| `_scalar` | — | Fallback |
+| `_scalar` | `ScalarToken` | Always required |
 
 ### Passthrough mode
 

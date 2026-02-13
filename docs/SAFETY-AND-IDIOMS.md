@@ -217,11 +217,11 @@ if let Some(token) = X64V3Token::summon() {
 
 ## Open Design Questions
 
-1. **Should magetypes root export SSE2 types on x86-64?** SSE2 is baseline. Currently the root exports all widths. Should w128 be the "default" with higher tiers in submodules?
+1. **Should magetypes root export SSE2 types on x86-64?** SSE2 is baseline. Currently the root exports all widths. No change yet.
 
-2. **Implicit token downcasting:** Should `impl From<X64V4Token> for X64V3Token` exist?
+2. **Implicit token downcasting:** Should `impl From<X64V4Token> for X64V3Token` exist? Not implemented — pass concrete tokens and downcast manually.
 
-3. **Implicit vector downcasting:** Should `f32x8` offer extract-low-half to `f32x4`?
+3. **Implicit vector downcasting:** Should `f32x8` offer extract-low-half to `f32x4`? Not implemented.
 
 ## Missing Methods
 
