@@ -1336,7 +1336,6 @@ mod tests {
     fn no_nonexistent_tokens_are_recognized() {
         // These tokens don't exist and should NOT be recognized
         let fake = [
-            "Sse2Token",
             "SveToken",
             "Sve2Token",
             "Avx512VnniToken",

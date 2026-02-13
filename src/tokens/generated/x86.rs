@@ -7,6 +7,10 @@ use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasX64V2, HasX6
 use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 // Cache statics: 0 = unknown, 1 = unavailable, 2 = available
+#[allow(dead_code)]
+pub(super) static X64_V1_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
+pub(super) static X64_V1_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static X64_V2_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static X64_V2_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static X64_V3_CACHE: AtomicU8 = AtomicU8::new(0);
@@ -17,6 +21,128 @@ pub(super) static AVX512_MODERN_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static AVX512_MODERN_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static AVX512_FP16_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static AVX512_FP16_DISABLED: AtomicBool = AtomicBool::new(false);
+
+/// Proof that SSE + SSE2 are available (x86-64-v1 baseline level).
+///
+/// SSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust
+/// still requires #[target_feature(enable = "sse2")] for SSE2 intrinsics to
+/// be safe. This token provides that via #[arcane].
+///
+/// On x86_64, summon() always returns Some.
+#[derive(Clone, Copy, Debug)]
+pub struct X64V1Token {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for X64V1Token {}
+
+impl SimdToken for X64V1Token {
+    const NAME: &'static str = "x86-64-v1";
+    const TARGET_FEATURES: &'static str = "sse,sse2";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        Some(true)
+    }
+
+    #[allow(deprecated)]
+    #[inline]
+    fn summon() -> Option<Self> {
+        Some(unsafe { Self::forge_token_dangerously() })
+    }
+
+    #[inline(always)]
+    #[allow(deprecated)]
+    unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V1Token {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    ///
+    /// **Cascading:** Also affects descendants:
+    /// - `X64V2Token`
+    /// - `X64V3Token`
+    /// - `X64V4Token`
+    /// - `Avx512ModernToken`
+    /// - `Avx512Fp16Token`
+    #[allow(clippy::needless_return)]
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            not(feature = "disable_compile_time_tokens")
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            not(feature = "disable_compile_time_tokens")
+        )))]
+        {
+            X64_V1_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            X64_V1_CACHE.store(v, Ordering::Relaxed);
+            X64_V2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V2_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_CACHE.store(v, Ordering::Relaxed);
+            X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V4_CACHE.store(v, Ordering::Relaxed);
+            AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
+            AVX512_MODERN_CACHE.store(v, Ordering::Relaxed);
+            AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
+            AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            not(feature = "disable_compile_time_tokens")
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            not(feature = "disable_compile_time_tokens")
+        )))]
+        {
+            Ok(X64_V1_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
 
 /// Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).
 ///
@@ -31,11 +157,11 @@ impl crate::tokens::Sealed for X64V2Token {}
 
 impl SimdToken for X64V2Token {
     const NAME: &'static str = "x86-64-v2";
-    const TARGET_FEATURES: &'static str = "sse3,ssse3,sse4.1,sse4.2,popcnt";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt";
     const ENABLE_TARGET_FEATURES: &'static str =
-        "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt";
+        "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt";
     const DISABLE_TARGET_FEATURES: &'static str =
-        "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt";
+        "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -117,6 +243,15 @@ impl SimdToken for X64V2Token {
 }
 
 impl X64V2Token {
+    /// Get a X64V1Token (x86-64-v2 implies x86-64-v1)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn v1(self) -> X64V1Token {
+        unsafe { X64V1Token::forge_token_dangerously() }
+    }
+}
+
+impl X64V2Token {
     /// Disable this token process-wide for testing and benchmarking.
     ///
     /// When disabled, `summon()` will return `None` even if the CPU supports
@@ -131,6 +266,7 @@ impl X64V2Token {
     /// - `X64V4Token`
     /// - `Avx512ModernToken`
     /// - `Avx512Fp16Token`
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -181,6 +317,7 @@ impl X64V2Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
             target_feature = "sse",
@@ -231,9 +368,9 @@ impl crate::tokens::Sealed for X64V3Token {}
 impl SimdToken for X64V3Token {
     const NAME: &'static str = "x86-64-v3";
     const TARGET_FEATURES: &'static str =
-        "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt";
+        "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -356,6 +493,12 @@ impl X64V3Token {
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
+    /// Get a X64V1Token (x86-64-v3 implies x86-64-v1)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn v1(self) -> X64V1Token {
+        unsafe { X64V1Token::forge_token_dangerously() }
+    }
 }
 
 impl X64V3Token {
@@ -372,6 +515,7 @@ impl X64V3Token {
     /// - `X64V4Token`
     /// - `Avx512ModernToken`
     /// - `Avx512Fp16Token`
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -434,6 +578,7 @@ impl X64V3Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
             target_feature = "sse",
@@ -498,9 +643,9 @@ impl crate::tokens::Sealed for X64V4Token {}
 
 impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
-    const TARGET_FEATURES: &'static str = "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -654,6 +799,12 @@ impl X64V4Token {
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
+    /// Get a X64V1Token (AVX-512 implies x86-64-v1)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn v1(self) -> X64V1Token {
+        unsafe { X64V1Token::forge_token_dangerously() }
+    }
 }
 
 impl X64V4Token {
@@ -669,6 +820,7 @@ impl X64V4Token {
     /// **Cascading:** Also affects descendants:
     /// - `Avx512ModernToken`
     /// - `Avx512Fp16Token`
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -739,6 +891,7 @@ impl X64V4Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
             target_feature = "sse",
@@ -814,9 +967,9 @@ impl crate::tokens::Sealed for Avx512ModernToken {}
 
 impl SimdToken for Avx512ModernToken {
     const NAME: &'static str = "AVX-512Modern";
-    const TARGET_FEATURES: &'static str = "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,avx512bf16,vpclmulqdq,gfni,vaes";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+avx512bf16,+vpclmulqdq,+gfni,+vaes";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-avx512bf16,-vpclmulqdq,-gfni,-vaes";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,avx512bf16,vpclmulqdq,gfni,vaes";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+avx512bf16,+vpclmulqdq,+gfni,+vaes";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-avx512bf16,-vpclmulqdq,-gfni,-vaes";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -1033,6 +1186,12 @@ impl Avx512ModernToken {
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
+    /// Get a X64V1Token (AVX-512Modern implies x86-64-v1)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn v1(self) -> X64V1Token {
+        unsafe { X64V1Token::forge_token_dangerously() }
+    }
 }
 
 impl Avx512ModernToken {
@@ -1044,6 +1203,7 @@ impl Avx512ModernToken {
     /// Returns `Err` when all required features are compile-time enabled
     /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
     /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -1130,6 +1290,7 @@ impl Avx512ModernToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
             target_feature = "sse",
@@ -1224,9 +1385,9 @@ impl crate::tokens::Sealed for Avx512Fp16Token {}
 
 impl SimdToken for Avx512Fp16Token {
     const NAME: &'static str = "AVX-512FP16";
-    const TARGET_FEATURES: &'static str = "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512fp16";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512fp16";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512fp16";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512fp16";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -1398,6 +1559,12 @@ impl Avx512Fp16Token {
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
+    /// Get a X64V1Token (AVX-512FP16 implies x86-64-v1)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn v1(self) -> X64V1Token {
+        unsafe { X64V1Token::forge_token_dangerously() }
+    }
 }
 
 impl Avx512Fp16Token {
@@ -1409,6 +1576,7 @@ impl Avx512Fp16Token {
     /// Returns `Err` when all required features are compile-time enabled
     /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
     /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -1477,6 +1645,7 @@ impl Avx512Fp16Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
             target_feature = "sse",
@@ -1537,6 +1706,9 @@ impl Avx512Fp16Token {
     }
 }
 
+/// Type alias for [`X64V1Token`].
+pub type Sse2Token = X64V1Token;
+
 /// Type alias for [`X64V3Token`].
 pub type Desktop64 = X64V3Token;
 
@@ -1549,6 +1721,7 @@ pub type Avx512Token = X64V4Token;
 /// Type alias for [`X64V4Token`].
 pub type Server64 = X64V4Token;
 
+impl Has128BitSimd for X64V1Token {}
 impl Has128BitSimd for X64V2Token {}
 impl Has128BitSimd for X64V3Token {}
 impl Has128BitSimd for X64V4Token {}

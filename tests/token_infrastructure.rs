@@ -20,9 +20,11 @@ use archmage::{
     NeonToken,
     ScalarToken,
     SimdToken,
+    Sse2Token,
     // WASM tokens (stubs on x86_64)
     Wasm128Token,
     // x86 tokens
+    X64V1Token,
     X64V2Token,
     X64V3Token,
 };
@@ -653,9 +655,18 @@ fn scalar_feature_strings_are_empty() {
 }
 
 #[test]
+fn x64v1_target_features_content() {
+    let features = X64V1Token::TARGET_FEATURES;
+    assert!(features.contains("sse"), "V1 features should contain sse");
+    assert!(features.contains("sse2"), "V1 features should contain sse2");
+}
+
+#[test]
 fn x64v2_target_features_content() {
     let features = X64V2Token::TARGET_FEATURES;
-    // Must contain the v2-specific features (NOT sse/sse2 — those are baseline)
+    // Must contain sse/sse2 (baseline) and v2-specific features
+    assert!(features.contains("sse,"), "V2 features should contain sse");
+    assert!(features.contains("sse2"), "V2 features should contain sse2");
     assert!(features.contains("sse3"), "V2 features should contain sse3");
     assert!(
         features.contains("ssse3"),
@@ -672,11 +683,6 @@ fn x64v2_target_features_content() {
     assert!(
         features.contains("popcnt"),
         "V2 features should contain popcnt"
-    );
-    // Must NOT contain sse/sse2 (baseline, excluded)
-    assert!(
-        !features.starts_with("sse,"),
-        "V2 features should not start with bare sse"
     );
 }
 

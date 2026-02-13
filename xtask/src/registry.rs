@@ -438,13 +438,9 @@ impl Registry {
         for token in &self.token {
             let pattern = Self::match_pattern(token);
 
-            // Features for macro crate: exclude sse/sse2 (x86_64 baseline, not in #[target_feature])
-            let macro_features: Vec<&str> = token
-                .features
-                .iter()
-                .filter(|f| *f != "sse" && *f != "sse2")
-                .map(|s| s.as_str())
-                .collect();
+            // All features including sse/sse2 — needed for #[target_feature] on X64V1Token
+            let macro_features: Vec<&str> =
+                token.features.iter().map(|s| s.as_str()).collect();
 
             out.push_str(&Self::format_feature_arm(&pattern, &macro_features));
         }
@@ -478,27 +474,12 @@ impl Registry {
         }
 
         out.push('\n');
-        out.push_str("        // Token types used as bounds — full feature sets WITH baselines\n");
-        out.push_str(
-            "        // (unlike token_to_features which strips sse/sse2 for #[target_feature])\n",
-        );
+        out.push_str("        // Token types used as bounds — full feature sets\n");
 
-        // Token types as bounds — include sse/sse2 baselines for x86 tokens
+        // Token types as bounds — full feature lists
         for token in &self.token {
             let pattern = Self::match_pattern(token);
-
-            let features: Vec<&str> = if token.arch == "x86" {
-                let mut f = vec!["sse", "sse2"];
-                for feat in &token.features {
-                    if feat != "sse" && feat != "sse2" {
-                        f.push(feat);
-                    }
-                }
-                f
-            } else {
-                token.features.iter().map(|s| s.as_str()).collect()
-            };
-
+            let features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
             out.push_str(&Self::format_feature_arm(&pattern, &features));
         }
 
@@ -601,7 +582,7 @@ mod tests {
         let registry = Registry::load(&path).expect("Failed to load token-registry.toml");
 
         // Basic counts
-        assert_eq!(registry.token.len(), 10, "Expected 10 tokens");
+        assert_eq!(registry.token.len(), 11, "Expected 11 tokens");
         assert_eq!(registry.traits.len(), 8, "Expected 8 traits");
         assert_eq!(
             registry.width_namespace.len(),

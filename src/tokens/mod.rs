@@ -68,11 +68,10 @@ pub trait SimdToken: sealed::Sealed + Copy + Clone + Send + Sync + 'static {
     /// Human-readable name for diagnostics and error messages.
     const NAME: &'static str;
 
-    /// Comma-delimited target features (e.g., `"avx2,fma,bmi1,bmi2,f16c,lzcnt"`).
+    /// Comma-delimited target features (e.g., `"sse,sse2,avx2,fma,bmi1,bmi2,f16c,lzcnt"`).
     ///
-    /// For x86 tokens, SSE/SSE2 are excluded (they are the x86_64 baseline and
-    /// cannot be meaningfully disabled). For AArch64 tokens, all features including
-    /// NEON are listed. For WASM, this is `"simd128"`.
+    /// All features are listed, including baseline features like SSE/SSE2 for
+    /// x86 tokens. For WASM, this is `"simd128"`.
     ///
     /// Empty for [`ScalarToken`].
     const TARGET_FEATURES: &'static str;
@@ -398,6 +397,12 @@ pub fn dangerously_disable_tokens_except_wasm(disabled: bool) -> Result<(), Disa
 /// assert_eq!(result, 6.0);
 /// ```
 pub trait IntoConcreteToken: SimdToken + Sized {
+    /// Try to cast to X64V1Token.
+    #[inline(always)]
+    fn as_x64v1(self) -> Option<X64V1Token> {
+        None
+    }
+
     /// Try to cast to X64V2Token.
     #[inline(always)]
     fn as_x64v2(self) -> Option<X64V2Token> {
@@ -469,6 +474,14 @@ pub trait IntoConcreteToken: SimdToken + Sized {
 impl IntoConcreteToken for ScalarToken {
     #[inline(always)]
     fn as_scalar(self) -> Option<ScalarToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for X64V1Token
+impl IntoConcreteToken for X64V1Token {
+    #[inline(always)]
+    fn as_x64v1(self) -> Option<X64V1Token> {
         Some(self)
     }
 }

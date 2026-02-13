@@ -154,7 +154,7 @@ pub use crate::tokens::ScalarToken;
 pub use crate::tokens::Wasm128Token;
 pub use crate::tokens::{Arm64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken};
 pub use crate::tokens::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};
-pub use crate::tokens::{Desktop64, X64V2Token, X64V3Token};
+pub use crate::tokens::{Desktop64, Sse2Token, X64V1Token, X64V2Token, X64V3Token};
 
 // -- Macros --
 #[cfg(feature = "macros")]

@@ -7,16 +7,20 @@
 /// Generated from token-registry.toml. One complete feature list per token.
 pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static str]> {
     match token_name {
-        "X64V2Token" => Some(&["sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
+        "X64V1Token" | "Sse2Token" => Some(&["sse", "sse2"]),
+        "X64V2Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(&[
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma", "bmi1", "bmi2",
-            "f16c", "lzcnt",
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
+            "bmi1", "bmi2", "f16c", "lzcnt",
         ]),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
-            "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma", "bmi1", "bmi2",
-            "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
+            "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
+            "bmi1", "bmi2", "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq",
+            "avx512vl",
         ]),
         "Avx512ModernToken" => Some(&[
+            "sse",
+            "sse2",
             "sse3",
             "ssse3",
             "sse4.1",
@@ -46,6 +50,8 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
             "vaes",
         ]),
         "Avx512Fp16Token" => Some(&[
+            "sse",
+            "sse2",
             "sse3",
             "ssse3",
             "sse4.1",
@@ -93,8 +99,8 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
         "HasNeonAes" => Some(&["neon", "aes"]),
         "HasNeonSha3" => Some(&["neon", "sha3"]),
 
-        // Token types used as bounds — full feature sets WITH baselines
-        // (unlike token_to_features which strips sse/sse2 for #[target_feature])
+        // Token types used as bounds — full feature sets
+        "X64V1Token" | "Sse2Token" => Some(&["sse", "sse2"]),
         "X64V2Token" => Some(&["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(&[
             "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2", "fma",
@@ -173,6 +179,7 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
 /// Returns the `target_arch` value (e.g., "x86_64", "aarch64", "wasm32").
 pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
     match token_name {
+        "X64V1Token" | "Sse2Token" => Some("x86_64"),
         "X64V2Token" => Some("x86_64"),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("x86_64"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("x86_64"),
@@ -190,6 +197,8 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
 /// All concrete token names that exist in the runtime crate.
 #[cfg(test)]
 pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
+    "X64V1Token",
+    "Sse2Token",
     "X64V2Token",
     "X64V3Token",
     "Desktop64",

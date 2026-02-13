@@ -25,6 +25,16 @@
 # ──── x86_64 ────
 
 [[token]]
+name = "X64V1Token"
+arch = "x86"
+aliases = ["Sse2Token"]
+features = ["sse", "sse2"]
+traits = ["Has128BitSimd"]
+display_name = "x86-64-v1"
+short_name = "v1"
+doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust\nstill requires #[target_feature(enable = \"sse2\")] for SSE2 intrinsics to\nbe safe. This token provides that via #[arcane].\n\nOn x86_64, summon() always returns Some."
+
+[[token]]
 name = "X64V2Token"
 arch = "x86"
 features = [
@@ -32,6 +42,7 @@ features = [
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
 ]
 traits = ["HasX64V2", "Has128BitSimd"]
+parent = "X64V1Token"
 display_name = "x86-64-v2"
 short_name = "v2"
 doc = "Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).\n\nx86-64-v2 implies: SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CX16, SAHF.\nThis is the Nehalem (2008) / Bulldozer (2011) baseline."

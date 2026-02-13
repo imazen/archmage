@@ -94,6 +94,7 @@ impl NeonToken {
     /// - `NeonAesToken`
     /// - `NeonSha3Token`
     /// - `NeonCrcToken`
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -124,6 +125,7 @@ impl NeonToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(target_feature = "neon", not(feature = "disable_compile_time_tokens")))]
         {
@@ -238,6 +240,7 @@ impl NeonAesToken {
     /// Returns `Err` when all required features are compile-time enabled
     /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
     /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -270,6 +273,7 @@ impl NeonAesToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
             target_feature = "neon",
@@ -392,6 +396,7 @@ impl NeonSha3Token {
     /// Returns `Err` when all required features are compile-time enabled
     /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
     /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -424,6 +429,7 @@ impl NeonSha3Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
             target_feature = "neon",
@@ -547,6 +553,7 @@ impl NeonCrcToken {
     /// Returns `Err` when all required features are compile-time enabled
     /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
     /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
     ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
@@ -579,6 +586,7 @@ impl NeonCrcToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
             target_feature = "neon",

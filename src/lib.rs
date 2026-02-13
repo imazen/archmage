@@ -144,8 +144,10 @@ pub use tokens::{
     NeonToken,
     // Scalar fallback (always available)
     ScalarToken,
+    Sse2Token,
     // WASM tokens
     Wasm128Token,
+    X64V1Token,
     X64V2Token,
     X64V3Token,
 };

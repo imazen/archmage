@@ -134,9 +134,20 @@ fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
         for token in tokens {
             let cache_name = cache_var_name(&token.name);
             let disabled_name = disabled_var_name(&token.name);
+
+            // Tokens whose features are all x86_64 baseline (sse/sse2 only) have
+            // their cache/disabled statics only used when `disable_compile_time_tokens`
+            // is enabled. Suppress dead_code warnings for the default case.
+            let needs_allow = arch == "x86" && is_x86_baseline_only(token);
+            let allow_attr = if needs_allow {
+                "#[allow(dead_code)]\n"
+            } else {
+                ""
+            };
+
             out.push_str(&formatdoc! {"
-                pub(super) static {cache_name}: AtomicU8 = AtomicU8::new(0);
-                pub(super) static {disabled_name}: AtomicBool = AtomicBool::new(false);
+                {allow_attr}pub(super) static {cache_name}: AtomicU8 = AtomicU8::new(0);
+                {allow_attr}pub(super) static {disabled_name}: AtomicBool = AtomicBool::new(false);
             "});
         }
         out.push('\n');
@@ -504,7 +515,8 @@ fn gen_disable_methods(
             /// Returns `Err` when all required features are compile-time enabled
             /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
             /// elided the runtime checks.
-        {descendant_docs}    pub fn dangerously_disable_token_process_wide(disabled: bool) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {{
+        {descendant_docs}    #[allow(clippy::needless_return)]
+            pub fn dangerously_disable_token_process_wide(disabled: bool) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {{
                 #[cfg(all({all_conditions}))]
                 {{
                     let _ = disabled;
@@ -522,6 +534,7 @@ fn gen_disable_methods(
             /// Check if this token has been manually disabled process-wide.
             ///
             /// Returns `Err` when all required features are compile-time enabled.
+            #[allow(clippy::needless_return)]
             pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {{
                 #[cfg(all({all_conditions}))]
                 {{
@@ -845,17 +858,12 @@ const INDENT: &str = "    ";
 /// Compute the feature flag strings for a token:
 /// (target_features, enable_flags, disable_flags).
 ///
-/// For x86: excludes sse/sse2 (baseline, can't be meaningfully disabled).
+/// All features are included (sse/sse2 are NOT stripped for x86).
 /// For aarch64: includes all features (neon is NOT baseline).
 /// For wasm: uses "simd128".
 fn feature_flag_strings(token: &TokenDef) -> (&'static str, String, String, String) {
     let filtered: Vec<&str> = match token.arch.as_str() {
-        "x86" => token
-            .features
-            .iter()
-            .filter(|f| *f != "sse" && *f != "sse2")
-            .map(|s| s.as_str())
-            .collect(),
+        "x86" => token.features.iter().map(|s| s.as_str()).collect(),
         "aarch64" => token.features.iter().map(|s| s.as_str()).collect(),
         "wasm" => vec!["simd128"],
         _ => vec![],
@@ -885,6 +893,15 @@ fn feature_flag_strings(token: &TokenDef) -> (&'static str, String, String, Stri
 
     // We return a &'static str "" placeholder — caller must use the Strings
     ("", target_features, enable, disable)
+}
+
+/// Returns true if an x86 token's features are all baseline (sse/sse2 only).
+/// Such tokens are always available on x86_64 and don't need runtime detection.
+fn is_x86_baseline_only(token: &TokenDef) -> bool {
+    token
+        .features
+        .iter()
+        .all(|f| f == "sse" || f == "sse2")
 }
 
 /// Determine which generated module file a token lives in.
