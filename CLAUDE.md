@@ -28,6 +28,12 @@
 
 **Tokens exist everywhere.** `Desktop64`, `Arm64`, etc. compile on all platforms—`summon()` just returns `None` on unsupported architectures. This means **you rarely need `#[cfg(target_arch)]` guards** in user code. The stubs handle cross-compilation cleanly.
 
+### CRITICAL: How the Macros Choose Features
+
+`#[arcane]` and `#[rite]` parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. A function taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
+
+Passing the same token type through your call hierarchy keeps every function compiled with matching features. LLVM sees one optimization region and inlines freely. Mismatched token types — or generic bounds instead of concrete types — create a target-feature boundary LLVM can't optimize across.
+
 ### CRITICAL: Target-Feature Boundaries (4x Performance Impact)
 
 **Enter `#[arcane]` once at the top, use `#[rite]` for everything inside.**

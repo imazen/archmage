@@ -63,8 +63,16 @@
 //! **Capability Tokens** are zero-sized proof types created via `summon()`, which
 //! checks CPUID at runtime (elided if compiled with target features enabled).
 //!
-//! **The `#[arcane]` macro** generates an inner function with `#[target_feature]`,
-//! making intrinsics safe inside. The token parameter proves CPU support was verified.
+//! **The `#[arcane]` and `#[rite]` macros** read the token type from your function
+//! signature to determine which `#[target_feature]` attributes to emit. A function
+//! taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function
+//! taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
+//!
+//! This means passing the same token through your call hierarchy keeps every function
+//! compiled with matching target features. LLVM sees one optimization region and
+//! inlines freely. When token types mismatch — or you use generic bounds instead of
+//! concrete types — LLVM hits a target-feature boundary and can't optimize across it
+//! (4-6x slower; see `docs/PERFORMANCE.md` for benchmarks).
 //!
 //! Use concrete tokens like `Desktop64` (AVX2+FMA) or `X64V4Token` (AVX-512).
 //! For generic code, use tier traits like `HasX64V2` or `HasX64V4`.

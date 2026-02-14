@@ -19,13 +19,15 @@ The 4x penalty comes from LLVM, not archmage. Read on.
 
 ## The target-feature boundary
 
-`#[target_feature(enable = "avx2,fma")]` tells LLVM to compile a function as if the CPU has those features. But LLVM won't inline that function into a caller compiled without them. The feature mismatch creates an optimization boundary: no load hoisting, no store sinking, no cross-iteration vectorization.
+`#[arcane]` and `#[rite]` read the token type from your function signature to decide which `#[target_feature]` to emit. A function taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
 
-This has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. Archmage just makes the safe wrapper; the boundary is LLVM's.
+This matters because LLVM won't inline across mismatched `#[target_feature]` attributes. When caller and callee have different features, LLVM creates an optimization boundary: no load hoisting, no store sinking, no cross-iteration vectorization.
 
-**The fix:** enter `#[arcane]` once at your API boundary, put loops inside it, use `#[rite]` for helpers.
+The boundary has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. Archmage just makes the safe wrapper; the boundary is LLVM's.
 
-The boundary only exists when caller and callee have *different* `#[target_feature]` strings. If both functions take the same token type — say, `Desktop64` — archmage generates the same `#[target_feature(enable = "avx2,fma,...")]` on both. LLVM sees matching targets, inlines freely, and there's no boundary at all. `#[rite]` makes this the default by adding `#[target_feature]` + `#[inline]` directly to your function. As long as the token parameter types match, you'll never pay the transition cost.
+**The fix:** pass the same token type through your call hierarchy. When every function takes the same token — say, `Desktop64` — the macros emit the same `#[target_feature]` on all of them. LLVM sees matching targets, inlines freely, and there's no boundary. `#[rite]` makes this the default by adding `#[target_feature]` + `#[inline]` directly. As long as the token types match, you'll never pay the transition cost.
+
+Enter `#[arcane]` once at your API boundary, put loops inside it, use `#[rite]` for helpers.
 
 ```rust
 // WRONG: boundary every iteration (4x slower)

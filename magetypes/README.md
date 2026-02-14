@@ -149,7 +149,9 @@ This works with `#![forbid(unsafe_code)]` — magetypes methods handle unsafe in
 
 ## Using with #[arcane] and #[rite]
 
-For entry points that need `#[target_feature]`, use `#[arcane]`. For internal helpers called from `#[arcane]` functions, use `#[rite]`. Both are compatible with `#![forbid(unsafe_code)]` — the macros generate `#[allow(unsafe_code)]` internally.
+Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `Desktop64` → `avx2,fma,...`. `X64V4Token` → `avx512f,...`. The token type is the feature selector — passing the same token through your call hierarchy keeps all functions compiled with matching features, so LLVM inlines freely.
+
+Use `#[arcane]` at entry points (called from non-SIMD code). Use `#[rite]` for internal helpers (called from `#[arcane]` or other `#[rite]` functions). Both are compatible with `#![forbid(unsafe_code)]`.
 
 ```rust
 use archmage::prelude::*;

@@ -73,11 +73,13 @@ fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
 }
 ```
 
-`#[rite]` adds `#[target_feature]` + `#[inline]` without a wrapper function. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe—no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
+Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `Desktop64` → `avx2,fma,...`. `X64V4Token` → `avx512f,avx512bw,...`. The token type *is* the feature selector.
 
-**Performance rule:** Never call `#[arcane]` from `#[arcane]`. Use `#[rite]` for any function called exclusively from SIMD code.
+`#[rite]` adds `#[target_feature]` + `#[inline]` without a wrapper function. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe — no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
 
-### Why this matters
+Passing the same token type through your call hierarchy keeps every function compiled with matching target features. LLVM sees one optimization region and inlines freely. Mismatched features — from calling `#[arcane]` per iteration, using different token types, or generic bounds — create an optimization boundary LLVM can't cross.
+
+### The cost of mismatched features
 
 Processing 1000 8-float vector additions ([full benchmark details](docs/PERFORMANCE.md)):
 
@@ -87,7 +89,9 @@ Processing 1000 8-float vector additions ([full benchmark details](docs/PERFORMA
 | `#[arcane]` per iteration | 2209 ns (4x) | Target-feature boundary per call |
 | Bare `#[target_feature]` (no archmage) | 2222 ns (4x) | Same boundary — archmage adds nothing |
 
-The 4x penalty comes from LLVM's `#[target_feature]` optimization boundary, not from archmage. Bare `#[target_feature]` has the same cost. With real workloads (DCT-8), the boundary costs up to 6.2x. Use `#[rite]` for helpers called from SIMD code — it inlines into callers with matching features, eliminating the boundary.
+The 4x penalty comes from LLVM's `#[target_feature]` optimization boundary, not from archmage. Bare `#[target_feature]` has the same cost. With real workloads (DCT-8), the boundary costs up to 6.2x.
+
+Use `#[rite]` for helpers called from SIMD code. When the token type matches, `#[rite]` emits the same `#[target_feature]` as the caller, so LLVM inlines freely — no boundary. The token flows through your call tree, keeping features consistent everywhere it goes.
 
 ## SIMD types with `magetypes`
 

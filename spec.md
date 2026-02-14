@@ -145,7 +145,11 @@ Only pointer-based operations remain unsafe:
 
 For safe memory access, use `safe_unaligned_simd` (accepts `&[T]`/`&mut [T]` instead of raw pointers).
 
-### 2.3 How `#[arcane]` Works
+### 2.3 How `#[arcane]` and `#[rite]` Work
+
+Both macros parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. The token type *is* the feature selector — `Desktop64` maps to `avx2,fma,...`, `X64V4Token` maps to `avx512f,avx512bw,...`, and so on. This mapping is maintained in `token-registry.toml` and compiled into the proc macro via `token_to_features()`.
+
+Passing the same token type through a call hierarchy means every function gets the same `#[target_feature]` attributes. LLVM sees matching targets and inlines freely — no optimization boundary. When token types mismatch (or generic bounds prevent monomorphization to a concrete type), LLVM hits a target-feature boundary and can't optimize across it, costing 4-6x (see `docs/PERFORMANCE.md`).
 
 ```rust
 // Input:
@@ -173,6 +177,8 @@ The macro:
 3. Generates an inner function with `#[target_feature(enable = "...")]`
 4. Calls it unsafely (the token proves safety)
 5. Drops the token parameter from the inner function signature
+
+`#[rite]` works the same way but adds `#[inline]` and omits the wrapper — the function itself gets `#[target_feature]` directly. Use `#[arcane]` at entry points (called from non-SIMD code) and `#[rite]` for helpers (called from SIMD code).
 
 This also works with `impl Trait` bounds, generic parameters, and `_self` for trait methods.
 
