@@ -178,7 +178,9 @@ The macro:
 4. Calls it unsafely (the token proves safety)
 5. Drops the token parameter from the inner function signature
 
-`#[rite]` works the same way but adds `#[inline]` and omits the wrapper — the function itself gets `#[target_feature]` directly. Use `#[arcane]` at entry points (called from non-SIMD code) and `#[rite]` for helpers (called from SIMD code).
+`#[arcane]`'s wrapper is how you cross into SIMD code without writing `unsafe` yourself — but the wrapper also creates an LLVM optimization boundary. LLVM won't inline across mismatched `#[target_feature]` attributes, so each `#[arcane]` call from non-SIMD code pays a 4-6x penalty.
+
+`#[rite]` avoids this: it applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features, LLVM inlines freely — no boundary. **`#[rite]` should be the default.** Use `#[arcane]` only at entry points (the first call from non-SIMD code), and `#[rite]` for everything called from within SIMD code.
 
 This also works with `impl Trait` bounds, generic parameters, and `_self` for trait methods.
 

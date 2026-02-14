@@ -21,13 +21,13 @@ The 4x penalty comes from LLVM, not archmage. Read on.
 
 `#[arcane]` and `#[rite]` read the token type from your function signature to decide which `#[target_feature]` to emit. A function taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
 
-This matters because LLVM won't inline across mismatched `#[target_feature]` attributes. When caller and callee have different features, LLVM creates an optimization boundary: no load hoisting, no store sinking, no cross-iteration vectorization.
+`#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This is how you cross into SIMD code without writing `unsafe` yourself — but the wrapper creates an LLVM optimization boundary. LLVM won't inline across mismatched `#[target_feature]` attributes: no load hoisting, no store sinking, no cross-iteration vectorization.
 
-The boundary has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. Archmage just makes the safe wrapper; the boundary is LLVM's.
+`#[rite]` applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features (from its own `#[arcane]` or `#[rite]`), LLVM inlines freely — no boundary.
 
-**The fix:** pass the same token type through your call hierarchy. When every function takes the same token — say, `Desktop64` — the macros emit the same `#[target_feature]` on all of them. LLVM sees matching targets, inlines freely, and there's no boundary. `#[rite]` makes this the default by adding `#[target_feature]` + `#[inline]` directly. As long as the token types match, you'll never pay the transition cost.
+The boundary has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. `#[arcane]` just makes the wrapper safe; the boundary is LLVM's.
 
-Enter `#[arcane]` once at your API boundary, put loops inside it, use `#[rite]` for helpers.
+**The fix:** use `#[arcane]` once at your API entry point, and `#[rite]` for everything called from within SIMD code. Pass the same token type through your call hierarchy — the macros emit the same `#[target_feature]` on every function that takes it. LLVM sees matching targets, inlines freely, and there's no boundary.
 
 ```rust
 // WRONG: boundary every iteration (4x slower)

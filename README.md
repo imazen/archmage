@@ -75,9 +75,9 @@ fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
 
 Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `Desktop64` → `avx2,fma,...`. `X64V4Token` → `avx512f,avx512bw,...`. The token type *is* the feature selector.
 
-`#[rite]` adds `#[target_feature]` + `#[inline]` without a wrapper function. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe — no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
+`#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This is how you cross into SIMD code without writing `unsafe` yourself — but the wrapper creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe — no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
 
-Passing the same token type through your call hierarchy keeps every function compiled with matching target features. LLVM sees one optimization region and inlines freely. Mismatched features — from calling `#[arcane]` per iteration, using different token types, or generic bounds — create an optimization boundary LLVM can't cross.
+**`#[rite]` should be your default.** Use `#[arcane]` only at the entry point (the first call from non-SIMD code), and `#[rite]` for everything inside. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
 
 ### The cost of mismatched features
 

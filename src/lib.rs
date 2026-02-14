@@ -68,11 +68,17 @@
 //! taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function
 //! taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
 //!
-//! This means passing the same token through your call hierarchy keeps every function
-//! compiled with matching target features. LLVM sees one optimization region and
-//! inlines freely. When token types mismatch — or you use generic bounds instead of
-//! concrete types — LLVM hits a target-feature boundary and can't optimize across it
-//! (4-6x slower; see `docs/PERFORMANCE.md` for benchmarks).
+//! `#[arcane]` generates a wrapper: an outer function that calls an inner
+//! `#[target_feature]` function via `unsafe`. This wrapper is how you cross into
+//! SIMD code without writing `unsafe` yourself — but it also creates an LLVM
+//! optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]`
+//! directly to the function, with no wrapper and no boundary, but can only be
+//! called from code that already has matching features.
+//!
+//! **`#[rite]` should be your default.** Use `#[arcane]` only at entry points
+//! (the first call from non-SIMD code), and `#[rite]` for everything called from
+//! within SIMD code. Passing the same token type through your call hierarchy keeps
+//! every function compiled with matching features, so LLVM inlines freely.
 //!
 //! Use concrete tokens like `Desktop64` (AVX2+FMA) or `X64V4Token` (AVX-512).
 //! For generic code, use tier traits like `HasX64V2` or `HasX64V4`.
