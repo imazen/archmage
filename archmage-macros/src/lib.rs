@@ -882,7 +882,13 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     magetypes_impl(input_fn, &tiers)
 }
 
-fn magetypes_impl(input_fn: ItemFn, tiers: &[&TierDescriptor]) -> TokenStream {
+fn magetypes_impl(mut input_fn: ItemFn, tiers: &[&TierDescriptor]) -> TokenStream {
+    // Strip user-provided #[arcane] / #[rite] to prevent double-wrapping
+    // (magetypes auto-adds #[arcane] on non-scalar variants)
+    input_fn.attrs.retain(|attr| {
+        !attr.path().is_ident("arcane") && !attr.path().is_ident("rite")
+    });
+
     let fn_name = &input_fn.sig.ident;
     let fn_attrs = &input_fn.attrs;
 
@@ -936,9 +942,18 @@ fn magetypes_impl(input_fn: ItemFn, tiers: &[&TierDescriptor]) -> TokenStream {
             }
         };
 
-        variants.push(quote! {
-            #cfg_guard
-            #variant_tokens
+        variants.push(if tier.name != "scalar" {
+            // Non-scalar variants get #[arcane] so target_feature is applied
+            quote! {
+                #cfg_guard
+                #[archmage::arcane]
+                #variant_tokens
+            }
+        } else {
+            quote! {
+                #cfg_guard
+                #variant_tokens
+            }
         });
     }
 
