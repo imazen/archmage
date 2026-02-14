@@ -596,16 +596,16 @@ mod into_concrete_token_tests {
 
     // Test that generic dispatch works via monomorphization
     fn dispatch_sum<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-        if let Some(_) = token.as_scalar() {
+        if token.as_scalar().is_some() {
             return data.iter().sum();
         }
         #[cfg(target_arch = "x86_64")]
-        if let Some(_) = token.as_x64v3() {
+        if token.as_x64v3().is_some() {
             // In real code, use SIMD here
             return data.iter().sum();
         }
         #[cfg(target_arch = "x86_64")]
-        if let Some(_) = token.as_x64v2() {
+        if token.as_x64v2().is_some() {
             return data.iter().sum();
         }
         // Fallback

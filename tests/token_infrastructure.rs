@@ -20,7 +20,6 @@ use archmage::{
     NeonToken,
     ScalarToken,
     SimdToken,
-    Sse2Token,
     // WASM tokens (stubs on x86_64)
     Wasm128Token,
     // x86 tokens
@@ -163,18 +162,16 @@ fn disable_v3_makes_summon_return_none() {
     );
 
     // manually_disabled() should reflect the state
-    assert_eq!(
+    assert!(
         X64V3Token::manually_disabled().unwrap(),
-        true,
         "manually_disabled should be true"
     );
 
     // Re-enable
     let result = X64V3Token::dangerously_disable_token_process_wide(false);
     assert!(result.is_ok());
-    assert_eq!(
-        X64V3Token::manually_disabled().unwrap(),
-        false,
+    assert!(
+        !X64V3Token::manually_disabled().unwrap(),
         "manually_disabled should be false after re-enable"
     );
 
@@ -200,11 +197,11 @@ fn disable_v2_makes_summon_return_none() {
     let result = X64V2Token::dangerously_disable_token_process_wide(true);
     assert!(result.is_ok());
     assert!(X64V2Token::summon().is_none());
-    assert_eq!(X64V2Token::manually_disabled().unwrap(), true);
+    assert!(X64V2Token::manually_disabled().unwrap());
 
     // Re-enable
     X64V2Token::dangerously_disable_token_process_wide(false).unwrap();
-    assert_eq!(X64V2Token::manually_disabled().unwrap(), false);
+    assert!(!X64V2Token::manually_disabled().unwrap());
 
     if was_available {
         assert!(X64V2Token::summon().is_some());
@@ -214,13 +211,11 @@ fn disable_v2_makes_summon_return_none() {
 #[test]
 fn default_is_not_disabled() {
     // Fresh process: manually_disabled() should be false (or Err for stubs/compiled)
-    match X64V2Token::manually_disabled() {
-        Ok(disabled) => assert!(!disabled, "default should not be disabled"),
-        Err(_) => {} // compiled_with or stub — that's fine
-    }
-    match X64V3Token::manually_disabled() {
-        Ok(disabled) => assert!(!disabled),
-        Err(_) => {}
+    if let Ok(disabled) = X64V2Token::manually_disabled() {
+        assert!(!disabled, "default should not be disabled");
+    } // compiled_with or stub — that's fine
+    if let Ok(disabled) = X64V3Token::manually_disabled() {
+        assert!(!disabled);
     }
 }
 
@@ -999,10 +994,10 @@ fn avx512modern_disable_and_manually_disabled() {
     }
     let result = Avx512ModernToken::dangerously_disable_token_process_wide(true);
     assert!(result.is_ok());
-    assert_eq!(Avx512ModernToken::manually_disabled().unwrap(), true);
+    assert!(Avx512ModernToken::manually_disabled().unwrap());
 
     Avx512ModernToken::dangerously_disable_token_process_wide(false).unwrap();
-    assert_eq!(Avx512ModernToken::manually_disabled().unwrap(), false);
+    assert!(!Avx512ModernToken::manually_disabled().unwrap());
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -1013,19 +1008,18 @@ fn avx512fp16_disable_and_manually_disabled() {
     }
     let result = Avx512Fp16Token::dangerously_disable_token_process_wide(true);
     assert!(result.is_ok());
-    assert_eq!(Avx512Fp16Token::manually_disabled().unwrap(), true);
+    assert!(Avx512Fp16Token::manually_disabled().unwrap());
 
     Avx512Fp16Token::dangerously_disable_token_process_wide(false).unwrap();
-    assert_eq!(Avx512Fp16Token::manually_disabled().unwrap(), false);
+    assert!(!Avx512Fp16Token::manually_disabled().unwrap());
 }
 
 #[cfg(feature = "avx512")]
 #[test]
 fn v4_manually_disabled_default() {
-    match X64V4Token::manually_disabled() {
-        Ok(disabled) => assert!(!disabled, "default should not be disabled"),
-        Err(_) => {} // compiled_with — that's fine
-    }
+    if let Ok(disabled) = X64V4Token::manually_disabled() {
+        assert!(!disabled, "default should not be disabled");
+    } // compiled_with — that's fine
 }
 
 // ============================================================================

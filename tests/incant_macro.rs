@@ -263,8 +263,8 @@ mod return_type_tests {
 
     #[test]
     fn returns_array() {
-        let result = make_array_api(3.14);
-        assert_eq!(result, [3.14, 3.14, 3.14, 3.14]);
+        let result = make_array_api(3.125);
+        assert_eq!(result, [3.125, 3.125, 3.125, 3.125]);
     }
 }
 

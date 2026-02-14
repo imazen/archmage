@@ -47,7 +47,7 @@ mod pattern_concrete_token {
         let low = _mm256_castps256_ps128(sum2);
         let high = _mm256_extractf128_ps::<1>(sum2);
         let final_sum = _mm_add_ss(low, high);
-        unsafe { _mm_cvtss_f32(final_sum) }
+        _mm_cvtss_f32(final_sum)
     }
 
     /// Using Desktop64 alias (same as X64V3Token)
@@ -125,7 +125,7 @@ mod pattern_feature_traits {
         let v = unsafe { _mm_loadu_ps(data.as_ptr()) };
         let sum1 = _mm_hadd_ps(v, v);
         let sum2 = _mm_hadd_ps(sum1, sum1);
-        unsafe { _mm_cvtss_f32(sum2) }
+        _mm_cvtss_f32(sum2)
     }
 
     /// Generic with where clause
@@ -138,7 +138,7 @@ mod pattern_feature_traits {
         let vb = unsafe { _mm_loadu_ps(b.as_ptr()) };
         // SSE4.1 dot product
         let dp = _mm_dp_ps::<0xFF>(va, vb);
-        unsafe { _mm_cvtss_f32(dp) }
+        _mm_cvtss_f32(dp)
     }
 
     #[test]
@@ -364,7 +364,7 @@ mod pattern_token_passthrough {
         let low = _mm256_castps256_ps128(sum2);
         let high = _mm256_extractf128_ps::<1>(sum2);
         let final_sum = _mm_add_ss(low, high);
-        unsafe { _mm_cvtss_f32(final_sum) }
+        _mm_cvtss_f32(final_sum)
     }
 
     /// Another example: composing multiple helpers
@@ -441,7 +441,7 @@ mod pattern_manual_dispatch_x86 {
         let sum2 = _mm256_hadd_ps(sum1, sum1);
         let low = _mm256_castps256_ps128(sum2);
         let high = _mm256_extractf128_ps::<1>(sum2);
-        let mut result = unsafe { _mm_cvtss_f32(_mm_add_ss(low, high)) };
+        let mut result = _mm_cvtss_f32(_mm_add_ss(low, high));
 
         // Handle remainder
         for &val in remainder {
@@ -627,7 +627,7 @@ mod pattern_token_extraction {
         let v = unsafe { _mm_loadu_ps(data.as_ptr()) };
         let sum = _mm_hadd_ps(v, v);
         let sum = _mm_hadd_ps(sum, sum);
-        unsafe { _mm_cvtss_f32(sum) }
+        _mm_cvtss_f32(sum)
     }
 
     /// Uses AVX2 but can fall back to SSE

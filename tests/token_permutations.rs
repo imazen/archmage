@@ -106,8 +106,7 @@ fn cascade_disabling_works() {
     let _ = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
         if perm
             .disabled
-            .iter()
-            .any(|&n| n == archmage::X64V3Token::NAME)
+            .contains(&archmage::X64V3Token::NAME)
         {
             // V3 disabled → V4 must also be None (cascade)
             assert!(

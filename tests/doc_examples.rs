@@ -152,7 +152,7 @@ mod mistake5_correct {
         let mut sum = f32x8::zero(token);
         for chunk in data.chunks_exact(8) {
             let v = f32x8::from_array(token, chunk.try_into().unwrap());
-            sum = sum + v;
+            sum += v;
         }
         sum.reduce_add()
     }
@@ -192,7 +192,7 @@ mod explicit_dispatch {
         let mut sum = f32x8::zero(token);
         for chunk in data.chunks_exact(8) {
             let v = f32x8::from_array(token, chunk.try_into().unwrap());
-            sum = sum + v;
+            sum += v;
         }
         sum.reduce_add() + data.chunks_exact(8).remainder().iter().sum::<f32>()
     }
@@ -202,7 +202,7 @@ mod explicit_dispatch {
         let mut sum = f32x4::zero(token);
         for chunk in data.chunks_exact(4) {
             let v = f32x4::from_array(token, chunk.try_into().unwrap());
-            sum = sum + v;
+            sum += v;
         }
         sum.reduce_add() + data.chunks_exact(4).remainder().iter().sum::<f32>()
     }
@@ -355,7 +355,7 @@ mod softmax {
             let v = f32x8::from_array(token, chunk.as_ref().try_into().unwrap());
             let e = (v - max_v).exp_lowp();
             e.store(chunk.try_into().unwrap());
-            sum_vec = sum_vec + e;
+            sum_vec += e;
         }
 
         let mut sum = sum_vec.reduce_add();

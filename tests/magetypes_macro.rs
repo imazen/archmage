@@ -124,7 +124,7 @@ mod slice_args {
 // =============================================================================
 
 mod incant_integration {
-    use archmage::{ScalarToken, SimdToken, incant, magetypes};
+    use archmage::{incant, magetypes};
 
     #[magetypes]
     pub fn double(token: Token, x: f32) -> f32 {
@@ -175,8 +175,8 @@ mod mut_ref_args {
     #[test]
     fn scalar_fill() {
         let mut data = [0.0f32; 4];
-        fill_array_scalar(ScalarToken, &mut data, 3.14);
-        assert_eq!(data, [3.14, 3.14, 3.14, 3.14]);
+        fill_array_scalar(ScalarToken, &mut data, 3.125);
+        assert_eq!(data, [3.125, 3.125, 3.125, 3.125]);
     }
 
     #[cfg(target_arch = "x86_64")]

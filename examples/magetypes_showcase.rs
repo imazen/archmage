@@ -5,6 +5,8 @@
 //!
 //! Run with: cargo run --example magetypes_showcase
 
+#![allow(dead_code)]
+
 // This example is x86_64-only (uses AVX2 intrinsics + magetypes).
 // On other architectures it compiles but does nothing.
 
@@ -30,7 +32,7 @@ mod comparison {
 
     /// Raw intrinsics: verbose, error-prone, hard to read
     #[arcane]
-    pub fn dot_product_raw(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    pub fn dot_product_raw(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
         let va = _mm256_loadu_ps(a);
         let vb = _mm256_loadu_ps(b);
         let prod = _mm256_mul_ps(va, vb);
@@ -54,7 +56,7 @@ mod comparison {
 
     /// FMA with raw intrinsics
     #[arcane]
-    pub fn fma_raw(token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    pub fn fma_raw(_token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
         let va = _mm256_loadu_ps(a);
         let vb = _mm256_loadu_ps(b);
         let vc = _mm256_loadu_ps(c);
@@ -386,7 +388,7 @@ mod layer_norm {
         let mut sum = f32x8::zero(token);
         for chunk in data.chunks_exact(8) {
             let v = f32x8::from_array(token, chunk.try_into().unwrap());
-            sum = sum + v;
+            sum += v;
         }
         let mut total = sum.reduce_add();
         for &x in data.chunks_exact(8).remainder() {
@@ -517,7 +519,7 @@ mod softmax {
             let v = f32x8::from_array(token, chunk.as_ref().try_into().unwrap());
             let e = (v - max_v).exp_lowp();
             e.store(chunk.try_into().unwrap());
-            sum_vec = sum_vec + e;
+            sum_vec += e;
         }
 
         let mut sum = sum_vec.reduce_add();

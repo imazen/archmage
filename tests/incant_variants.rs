@@ -153,7 +153,7 @@ mod passthrough_partial {
 
 #[cfg(target_arch = "x86_64")]
 mod chained_incant {
-    use archmage::{ScalarToken, SimdToken, X64V3Token, arcane, incant};
+    use archmage::{ScalarToken, X64V3Token, arcane, incant};
 
     #[arcane]
     fn step_a_v3(_t: X64V3Token, x: f32) -> f32 {

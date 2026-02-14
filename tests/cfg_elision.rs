@@ -12,9 +12,7 @@
 //!
 //! This is different from runtime checks like `if cfg!(...)` or `Token::summon()`.
 
-#![allow(dead_code, unused_variables)]
-
-use archmage::SimdToken;
+#![allow(dead_code, unused_variables, clippy::assertions_on_constants)]
 
 // =============================================================================
 // TEST: Cross-platform token stubs return None
@@ -537,7 +535,7 @@ mod compiletime_dispatch_elision {
             if let Some(token) = X64V3Token::summon() {
                 return sum_avx2(token, data);
             }
-            return sum_scalar(data);
+            sum_scalar(data)
         }
     }
 
