@@ -26,7 +26,7 @@ pub(super) static AVX512_FP16_DISABLED: AtomicBool = AtomicBool::new(false);
 ///
 /// SSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust
 /// still requires #[target_feature(enable = "sse2")] for SSE2 intrinsics to
-/// be safe. This token provides that via #[arcane].
+/// be safe. This token provides that via `#[arcane]`.
 ///
 /// On x86_64, summon() always returns Some.
 #[derive(Clone, Copy, Debug)]

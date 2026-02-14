@@ -32,7 +32,7 @@ features = ["sse", "sse2"]
 traits = ["Has128BitSimd"]
 display_name = "x86-64-v1"
 short_name = "v1"
-doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust\nstill requires #[target_feature(enable = \"sse2\")] for SSE2 intrinsics to\nbe safe. This token provides that via #[arcane].\n\nOn x86_64, summon() always returns Some."
+doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust\nstill requires #[target_feature(enable = \"sse2\")] for SSE2 intrinsics to\nbe safe. This token provides that via `#[arcane]`.\n\nOn x86_64, summon() always returns Some."
 
 [[token]]
 name = "X64V2Token"
