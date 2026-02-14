@@ -6,7 +6,7 @@
 
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashSet};
 use std::path::Path;
 
 // ============================================================================
@@ -39,6 +39,7 @@ pub struct TokenDef {
     #[serde(default)]
     pub cargo_feature: Option<String>,
     #[serde(default)]
+    #[allow(dead_code)]
     pub always_available: bool,
     /// SimdToken::NAME const value (human-readable).
     #[serde(default)]
@@ -78,10 +79,13 @@ pub struct TraitDef {
 #[derive(Debug, Deserialize)]
 pub struct WidthNamespace {
     pub name: String,
+    #[allow(dead_code)]
     pub arch: String,
+    #[allow(dead_code)]
     pub width: u32,
     pub token: String,
     #[serde(default)]
+    #[allow(dead_code)]
     pub cargo_feature: Option<String>,
 }
 
@@ -97,8 +101,10 @@ pub struct MagetypesFile {
 #[derive(Debug, Deserialize)]
 pub struct PolyfillW256 {
     pub mod_name: String,
+    #[allow(dead_code)]
     pub cfg: String,
     pub token: String,
+    #[allow(dead_code)]
     pub w128_import: String,
 }
 
@@ -106,8 +112,10 @@ pub struct PolyfillW256 {
 #[derive(Debug, Deserialize)]
 pub struct PolyfillW512 {
     pub mod_name: String,
+    #[allow(dead_code)]
     pub cfg: String,
     pub token: String,
+    #[allow(dead_code)]
     pub w256_import: String,
 }
 
@@ -155,6 +163,7 @@ impl Registry {
     }
 
     /// All token names including aliases.
+    #[allow(dead_code)]
     pub fn all_token_names(&self) -> Vec<&str> {
         let mut names = Vec::new();
         for t in &self.token {
@@ -167,6 +176,7 @@ impl Registry {
     }
 
     /// All trait names.
+    #[allow(dead_code)]
     pub fn all_trait_names(&self) -> Vec<&str> {
         self.traits.iter().map(|t| t.name.as_str()).collect()
     }

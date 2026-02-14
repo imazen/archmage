@@ -303,6 +303,7 @@ pub fn gen_scalar_method(doc: &str, name: &str, return_type: &str, body: &str) -
 ///     "let neg_b = unsafe { vnegq_f32(b.0) };\nSelf(unsafe { vfmaq_f32(neg_b, self.0, a.0) })"
 /// )
 /// ```
+#[allow(dead_code)]
 pub fn gen_method(doc: &str, signature: &str, body: &str) -> String {
     let body = indent_continuation(body, 8);
     indent(
@@ -318,6 +319,7 @@ pub fn gen_method(doc: &str, signature: &str, body: &str) -> String {
 }
 
 /// Generate a method with multi-line doc comment
+#[allow(dead_code)]
 pub fn gen_method_docs(docs: &[&str], signature: &str, body: &str) -> String {
     let mut result = String::new();
     for doc in docs {
@@ -334,6 +336,7 @@ pub fn gen_method_docs(docs: &[&str], signature: &str, body: &str) -> String {
 }
 
 /// Generate a ternary method (self + 2 args) returning Self
+#[allow(dead_code)]
 pub fn gen_ternary_method(doc: &str, name: &str, arg1: &str, arg2: &str, body: &str) -> String {
     let body = indent_continuation(body, 8);
     indent(
@@ -349,6 +352,7 @@ pub fn gen_ternary_method(doc: &str, name: &str, arg1: &str, arg2: &str, body: &
 }
 
 /// Generate a const generic method
+#[allow(dead_code)]
 pub fn gen_const_generic_method(
     doc: &str,
     name: &str,
@@ -371,6 +375,7 @@ pub fn gen_const_generic_method(
 }
 
 /// Section header comment
+#[allow(dead_code)]
 pub fn section_header(title: &str) -> String {
     format!("    // ========== {} ==========\n\n", title)
 }

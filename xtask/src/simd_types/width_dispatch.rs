@@ -231,7 +231,7 @@ fn generate_trait_def() -> String {
 }
 
 /// Generate a constructor body based on strategy.
-fn gen_splat(strat: &Strategy, tc: &TokenConfig, tn: &str, scalar: &str) -> String {
+fn gen_splat(strat: &Strategy, _tc: &TokenConfig, tn: &str, scalar: &str) -> String {
     match strat {
         Strategy::Native => format!("{tn}::splat(self, v)"),
         Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::splat(self, v)"),

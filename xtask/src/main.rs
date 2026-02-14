@@ -108,6 +108,7 @@ fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
 /// Every intrinsic found in generated code MUST exist in complete_intrinsics.csv.
 /// If an intrinsic is missing from the CSV, that's an error — the CSV must be
 /// regenerated with `python3 xtask/extract_intrinsics.py`.
+#[allow(dead_code)]
 fn validate_magetypes() -> Result<()> {
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
     validate_magetypes_with_registry(&reg)
@@ -1428,6 +1429,7 @@ pub(crate) use registry::*;
 #[derive(Debug, Clone)]
 struct ParsedMethod {
     name: String,
+    #[allow(dead_code)]
     signature: String,
     has_doc: bool,
 }
