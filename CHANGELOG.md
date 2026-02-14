@@ -25,6 +25,8 @@ New token, explicit dispatch control, and docs refresh.
   // Generates: process_v3, process_neon, process_scalar
   ```
 
+- **`testable_dispatch` feature** — renamed from `disable_compile_time_tokens`. The old name described the mechanism; the new name says what it's for. Enable it in dev-dependencies so `for_each_token_permutation()` and `dangerously_disable_token_process_wide()` work even when compiled with `-Ctarget-cpu=native`.
+
 - **Documentation refresh** — updated safety model docs, token reference, and README to cover V1 token, tier lists, and the `dangerously_disable_tokens_except_wasm` API.
 
 ## 0.6.1 — 2026-02-12

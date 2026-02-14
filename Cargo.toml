@@ -20,11 +20,12 @@ macros = ["dep:archmage-macros"]
 safe_unaligned_simd = ["dep:safe_unaligned_simd"]
 # AVX-512 token support (Avx512Token, Avx512ModernToken, X64V4Token, etc.)
 avx512 = []
-# Override compile-time target_feature detection so that
-# dangerously_disable_token_process_wide() works even when compiled with
-# -Ctarget-cpu=native. compiled_with() will return None instead of Some(true).
-# summon() will use runtime detection + cache instead of returning unconditionally.
-disable_compile_time_tokens = []
+# Make token disabling work even when compiled with -Ctarget-cpu=native.
+# Without this, the compiler bakes summon() into a no-op and tokens can't be
+# disabled at runtime. With this, compiled_with() returns None and summon()
+# uses runtime detection + cache, so dangerously_disable_token_process_wide()
+# and for_each_token_permutation() always work.
+testable_dispatch = []
 
 [dependencies]
 # Proc-macro crate for #[arcane] attribute

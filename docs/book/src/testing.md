@@ -44,12 +44,12 @@ The `CompileTimePolicy` enum controls what happens when `for_each_token_permutat
 - **`WarnStderr`** — Same, but also prints each warning to stderr with actionable fix instructions.
 - **`Fail`** — Panic with the exact compiler flags needed to fix it.
 
-For full coverage in CI, use the `disable_compile_time_tokens` feature. This makes `compiled_with()` return `None` even when features are baked in, so `summon()` uses runtime detection and tokens can be disabled:
+For full coverage in CI, use the `testable_dispatch` feature. This makes `compiled_with()` return `None` even when features are baked in, so `summon()` uses runtime detection and tokens can be disabled:
 
 ```toml
 # In your CI test configuration
 [dev-dependencies]
-archmage = { version = "0.6", features = ["disable_compile_time_tokens"] }
+archmage = { version = "0.7", features = ["testable_dispatch"] }
 ```
 
 ## Enforcing Full Coverage via Env Var
@@ -77,7 +77,7 @@ fn my_dispatch_works_at_all_tiers() {
 }
 ```
 
-Then in CI (with `disable_compile_time_tokens` enabled):
+Then in CI (with `testable_dispatch` enabled):
 
 ```sh
 ARCHMAGE_FULL_PERMUTATIONS=1 cargo test -- --test-threads=1
@@ -87,7 +87,7 @@ If a token is still compile-time guaranteed (you forgot the feature or have stal
 
 ```
 x86-64-v3: compile-time guaranteed, excluded from permutations. To include it, either:
-  1. Add `disable_compile_time_tokens` to archmage features in Cargo.toml
+  1. Add `testable_dispatch` to archmage features in Cargo.toml
   2. Remove `-Ctarget-cpu` from RUSTFLAGS
   3. Compile with RUSTFLAGS="-Ctarget-feature=-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt"
 ```

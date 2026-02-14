@@ -36,7 +36,7 @@
 //! - [`Warn`](CompileTimePolicy::Warn): exclude those tokens silently (warnings in report)
 //! - [`WarnStderr`](CompileTimePolicy::WarnStderr): same, but also prints to stderr
 //! - [`Fail`](CompileTimePolicy::Fail): panic — use in CI with the
-//!   `disable_compile_time_tokens` feature enabled for full coverage
+//!   `testable_dispatch` feature enabled for full coverage
 
 use alloc::{format, string::String, vec::Vec};
 use std::sync::Mutex;
@@ -53,7 +53,7 @@ pub enum CompileTimePolicy {
     Warn,
     /// Same as [`Warn`](Self::Warn), but also prints each warning to stderr.
     WarnStderr,
-    /// Panic. Use in CI with the `disable_compile_time_tokens` feature
+    /// Panic. Use in CI with the `testable_dispatch` feature
     /// enabled, where full permutation coverage is expected.
     Fail,
 }
@@ -255,7 +255,7 @@ pub fn for_each_token_permutation(
             let msg = format!(
                 "{}: compile-time guaranteed, excluded from permutations. \
                  To include it, either:\n\
-                 \x20 1. Add `disable_compile_time_tokens` to archmage features in Cargo.toml\n\
+                 \x20 1. Add `testable_dispatch` to archmage features in Cargo.toml\n\
                  \x20 2. Remove `-Ctarget-cpu` from RUSTFLAGS\n\
                  \x20 3. Compile with RUSTFLAGS=\"{}\"",
                 slot.name, slot.disable_flags,

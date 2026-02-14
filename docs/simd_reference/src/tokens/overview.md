@@ -142,7 +142,7 @@ For V3 (the recommended baseline), use `X64V3Token` directly — no trait needed
 For testing, tokens can be disabled process-wide:
 
 ```rust
-// Requires `disable_compile_time_tokens` feature
+// Requires `testable_dispatch` feature
 Desktop64::dangerously_disable_token_process_wide();
 assert!(Desktop64::summon().is_none());
 

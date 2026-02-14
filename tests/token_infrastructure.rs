@@ -777,34 +777,34 @@ fn avx512_feature_strings() {
 
 #[test]
 // ============================================================================
-// disable_compile_time_tokens feature flag
+// testable_dispatch feature flag
 // ============================================================================
-#[cfg(feature = "disable_compile_time_tokens")]
+#[cfg(feature = "testable_dispatch")]
 #[test]
 fn dct_compiled_with_returns_none() {
-    // With disable_compile_time_tokens, compiled_with() should return None
+    // With testable_dispatch, compiled_with() should return None
     // even though we're on x86_64 and these features ARE compile-time available.
     assert_eq!(
         X64V2Token::compiled_with(),
         None,
-        "V2 compiled_with() should be None with disable_compile_time_tokens"
+        "V2 compiled_with() should be None with testable_dispatch"
     );
     assert_eq!(
         X64V3Token::compiled_with(),
         None,
-        "V3 compiled_with() should be None with disable_compile_time_tokens"
+        "V3 compiled_with() should be None with testable_dispatch"
     );
 }
 
-#[cfg(feature = "disable_compile_time_tokens")]
+#[cfg(feature = "testable_dispatch")]
 #[test]
 fn dct_disable_returns_ok() {
-    // With disable_compile_time_tokens, disable should succeed even when
+    // With testable_dispatch, disable should succeed even when
     // compiled with -Ctarget-cpu=native.
     let result = X64V3Token::dangerously_disable_token_process_wide(true);
     assert!(
         result.is_ok(),
-        "disable should succeed with disable_compile_time_tokens"
+        "disable should succeed with testable_dispatch"
     );
     assert!(
         X64V3Token::summon().is_none(),
@@ -834,7 +834,7 @@ fn disable_all_tokens_except_wasm() {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            not(feature = "disable_compile_time_tokens")
+            not(feature = "testable_dispatch")
         ))
     ))]
     {
@@ -869,7 +869,7 @@ fn disable_all_tokens_except_wasm() {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            not(feature = "disable_compile_time_tokens")
+            not(feature = "testable_dispatch")
         )
     ))]
     {

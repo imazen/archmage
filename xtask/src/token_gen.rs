@@ -136,7 +136,7 @@ fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
             let disabled_name = disabled_var_name(&token.name);
 
             // Tokens whose features are all x86_64 baseline (sse/sse2 only) have
-            // their cache/disabled statics only used when `disable_compile_time_tokens`
+            // their cache/disabled statics only used when `testable_dispatch`
             // is enabled. Suppress dead_code warnings for the default case.
             let needs_allow = arch == "x86" && is_x86_baseline_only(token);
             let allow_attr = if needs_allow {
@@ -233,12 +233,12 @@ fn gen_real_token_struct(
 
 /// Generate the `compiled_with()` method for a real token.
 ///
-/// When the `disable_compile_time_tokens` feature is active, compile-time
+/// When the `testable_dispatch` feature is active, compile-time
 /// detection always returns `None` so that runtime disable can work.
 fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
-    // The "disable_compile_time_tokens" feature suppresses the compile-time fast path:
+    // The "testable_dispatch" feature suppresses the compile-time fast path:
     // compiled_with() returns None instead of Some(true), forcing runtime detection.
-    let dct_guard = ", not(feature = \"disable_compile_time_tokens\")";
+    let dct_guard = ", not(feature = \"testable_dispatch\")";
 
     match arch {
         "x86" => {
@@ -310,7 +310,7 @@ fn gen_summon(token: &TokenDef, arch: &str) -> String {
 }
 
 fn gen_summon_x86(token: &TokenDef) -> String {
-    let dct_guard = ", not(feature = \"disable_compile_time_tokens\")";
+    let dct_guard = ", not(feature = \"testable_dispatch\")";
 
     // Filter out sse/sse2 (x86_64 baseline, always available)
     let check_features: Vec<&str> = token
@@ -338,7 +338,7 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         {INDENT}#[allow(deprecated)]
         {INDENT}#[inline(always)]
         {INDENT}fn summon() -> Option<Self> {{
-        {INDENT}    // Compile-time fast path (suppressed by disable_compile_time_tokens)
+        {INDENT}    // Compile-time fast path (suppressed by testable_dispatch)
         {INDENT}    #[cfg(all({all_features}{dct_guard}))]
         {INDENT}    {{
         {INDENT}        return Some(unsafe {{ Self::forge_token_dangerously() }});
@@ -366,7 +366,7 @@ fn gen_summon_x86(token: &TokenDef) -> String {
 }
 
 fn gen_summon_aarch64(token: &TokenDef) -> String {
-    let dct_guard = ", not(feature = \"disable_compile_time_tokens\")";
+    let dct_guard = ", not(feature = \"testable_dispatch\")";
 
     // Check ALL features including neon — neon is NOT assumed baseline
     let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
@@ -379,7 +379,7 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
         {INDENT}#[allow(deprecated)]
         {INDENT}#[inline(always)]
         {INDENT}fn summon() -> Option<Self> {{
-        {INDENT}    // Compile-time fast path (suppressed by disable_compile_time_tokens)
+        {INDENT}    // Compile-time fast path (suppressed by testable_dispatch)
         {INDENT}    #[cfg(all({all_features}{dct_guard}))]
         {INDENT}    {{
         {INDENT}        return Some(unsafe {{ Self::forge_token_dangerously() }});
@@ -407,7 +407,7 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
 }
 
 fn gen_summon_wasm() -> String {
-    let dct_guard = ", not(feature = \"disable_compile_time_tokens\")";
+    let dct_guard = ", not(feature = \"testable_dispatch\")";
 
     formatdoc! {"
         {INDENT}#[allow(deprecated)]
@@ -482,10 +482,9 @@ fn gen_disable_methods(
     let disabled_name = disabled_var_name(&token.name);
 
     // For the compile-time guard, use the FULL unfiltered feature list.
-    // The disable_compile_time_tokens feature suppresses the guard.
+    // The testable_dispatch feature suppresses the guard.
     let base_conditions = cfg_all_features_full(&token.features);
-    let all_conditions =
-        format!("{base_conditions}, not(feature = \"disable_compile_time_tokens\")");
+    let all_conditions = format!("{base_conditions}, not(feature = \"testable_dispatch\")");
 
     // Collect descendants (tokens that have this token in their ancestor chain)
     let descendants = collect_descendants(reg, token);
