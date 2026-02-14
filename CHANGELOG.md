@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.1 — 2026-02-14
+
+Docs, warnings, and magetypes 0.7.0.
+
+- **Documentation: token type is the feature selector** — all docs (lib.rs, README, PERFORMANCE.md, spec.md, magetypes README) now explain that `#[arcane]` and `#[rite]` parse the token type from your function signature to determine which `#[target_feature]` to emit. Passing the same token through your call hierarchy keeps features consistent; mismatched types create optimization boundaries.
+
+- **Documentation: `#[arcane]` wrapper vs `#[rite]` direct** — clarified that `#[arcane]` generates a wrapper function to cross the `#[target_feature]` boundary without `unsafe` at the call site, but that wrapper *is* the optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly with no wrapper. `#[rite]` should be the default; `#[arcane]` only at entry points.
+
+- **Zero compiler warnings** — fixed all warnings across xtask (14), tests, and examples. Removed unused imports, unnecessary `unsafe` blocks (safe since Rust 1.85), and minor clippy lints.
+
+- **Fixed rustdoc warning** — escaped `#[arcane]` doc link in X64V1Token.
+
+- **`magetypes` 0.7.0** — version aligned with archmage 0.7.0 dependency.
+
 ## 0.7.0 — 2026-02-13
 
 New token, explicit dispatch control, and docs refresh.
