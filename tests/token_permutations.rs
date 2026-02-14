@@ -104,10 +104,7 @@ fn tokens_reenabled_between_permutations() {
 #[test]
 fn cascade_disabling_works() {
     let _ = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
-        if perm
-            .disabled
-            .contains(&archmage::X64V3Token::NAME)
-        {
+        if perm.disabled.contains(&archmage::X64V3Token::NAME) {
             // V3 disabled → V4 must also be None (cascade)
             assert!(
                 archmage::X64V4Token::summon().is_none(),
