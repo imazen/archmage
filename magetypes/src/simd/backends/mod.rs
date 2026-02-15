@@ -18,6 +18,15 @@ pub use f64x2::F64x2Backend;
 mod f64x4;
 pub use f64x4::F64x4Backend;
 
+mod i32x4;
+pub use i32x4::I32x4Backend;
+
+mod i32x8;
+pub use i32x8::I32x8Backend;
+
+mod convert;
+pub use convert::{F32x4Convert, F32x8Convert};
+
 /// x86-64 baseline (SSE2).
 pub type x64v1 = archmage::X64V1Token;
 /// x86-64 v2 (SSE4.2 + POPCNT).

@@ -358,6 +358,7 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
 
     let mut errors: Vec<String> = Vec::new();
     let mut verified = 0usize;
+    let impl_re = Regex::new(r"impl\s+SimdToken\s+for\s+(\w+)").expect("invalid impl regex");
 
     for (file_path, arch) in &token_files {
         let path = PathBuf::from(file_path);
@@ -368,7 +369,6 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
             fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
 
         // Find each "impl SimdToken for <TokenName>" block and extract its summon() features
-        let impl_re = Regex::new(r"impl\s+SimdToken\s+for\s+(\w+)").expect("invalid impl regex");
 
         for cap in impl_re.captures_iter(&content) {
             let token_name = cap[1].to_string();
@@ -1402,10 +1402,7 @@ pub(crate) use registry::*;
     );
 
     // Run rustfmt on all generated .rs files for idempotent output
-    let mut fmt_paths: Vec<PathBuf> = simd_files
-        .iter()
-        .map(|(rel, _)| simd_dir.join(rel))
-        .collect();
+    let mut fmt_paths: Vec<PathBuf> = simd_files.keys().map(|rel| simd_dir.join(rel)).collect();
     fmt_paths.push(simd_test_path.clone());
     for (filename, _) in &parity_tests {
         fmt_paths.push(PathBuf::from("magetypes/tests").join(filename));

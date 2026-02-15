@@ -6,8 +6,8 @@
 //! - Backend implementations for each token × type in `impls/`
 //! - Module routing files (`backends/mod.rs`, `impls/mod.rs`)
 //!
-//! Currently supports float types (f32, f64) at all widths.
-//! Integer types will be added in a future expansion.
+//! Currently supports float types (f32, f64) at all widths and
+//! signed 32-bit integer types (i32x4, i32x8) with conversion traits.
 
 use std::collections::BTreeMap;
 
@@ -178,6 +178,93 @@ fn all_float_types() -> Vec<FloatVecType> {
     ]
 }
 
+/// A signed 32-bit integer vector type for backend generation.
+#[derive(Clone, Debug)]
+struct I32VecType {
+    /// Number of lanes
+    lanes: usize,
+    /// Width in bits (128, 256)
+    width_bits: usize,
+}
+
+impl I32VecType {
+    /// Type name: "i32x4", "i32x8"
+    fn name(&self) -> String {
+        format!("i32x{}", self.lanes)
+    }
+
+    /// Trait name: "I32x4Backend", "I32x8Backend"
+    fn trait_name(&self) -> String {
+        format!("I32x{}Backend", self.lanes)
+    }
+
+    /// Array type: "[i32; 4]", "[i32; 8]"
+    fn array_type(&self) -> String {
+        format!("[i32; {}]", self.lanes)
+    }
+
+    /// x86 intrinsic prefix: "_mm", "_mm256"
+    fn x86_prefix(&self) -> &'static str {
+        match self.width_bits {
+            128 => "_mm",
+            256 => "_mm256",
+            _ => unreachable!(),
+        }
+    }
+
+    /// x86 inner type: "__m128i", "__m256i"
+    fn x86_inner_type(&self) -> &'static str {
+        match self.width_bits {
+            128 => "__m128i",
+            256 => "__m256i",
+            _ => unreachable!(),
+        }
+    }
+
+    /// Whether this type is native on NEON (128-bit only)
+    fn native_on_neon(&self) -> bool {
+        self.width_bits == 128
+    }
+
+    /// Whether this type is native on WASM (128-bit only)
+    fn native_on_wasm(&self) -> bool {
+        self.width_bits == 128
+    }
+
+    /// NEON repr type
+    fn neon_repr(&self) -> String {
+        if self.native_on_neon() {
+            "int32x4_t".to_string()
+        } else {
+            let count = self.width_bits / 128;
+            format!("[int32x4_t; {count}]")
+        }
+    }
+
+    /// WASM repr type
+    fn wasm_repr(&self) -> String {
+        if self.native_on_wasm() {
+            "v128".to_string()
+        } else {
+            let count = self.width_bits / 128;
+            format!("[v128; {count}]")
+        }
+    }
+
+    /// Number of 128-bit sub-vectors for polyfill
+    fn sub_count(&self) -> usize {
+        self.width_bits / 128
+    }
+}
+
+/// All i32 vector types to generate backends for.
+fn all_i32_types() -> Vec<I32VecType> {
+    vec![
+        I32VecType { lanes: 4, width_bits: 128 },
+        I32VecType { lanes: 8, width_bits: 256 },
+    ]
+}
+
 // ============================================================================
 // Public Entry Point
 // ============================================================================
@@ -187,12 +274,13 @@ fn all_float_types() -> Vec<FloatVecType> {
 /// Returns a map of relative paths (under `magetypes/src/simd/`) to file contents.
 pub fn generate_backend_files() -> BTreeMap<String, String> {
     let types = all_float_types();
+    let i32_types = all_i32_types();
     let mut files = BTreeMap::new();
 
     // 1. sealed.rs
     files.insert("backends/sealed.rs".to_string(), generate_sealed());
 
-    // 2. Backend trait definitions
+    // 2. Backend trait definitions (float)
     for ty in &types {
         files.insert(
             format!("backends/{}.rs", ty.name()),
@@ -200,16 +288,53 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         );
     }
 
-    // 3. backends/mod.rs
-    files.insert("backends/mod.rs".to_string(), generate_backends_mod(&types));
+    // 3. Backend trait definitions (i32)
+    for ty in &i32_types {
+        files.insert(
+            format!("backends/{}.rs", ty.name()),
+            generate_i32_backend_trait(ty),
+        );
+    }
 
-    // 4. Implementation files
-    files.insert("impls/x86_v3.rs".to_string(), generate_x86_impls(&types, "X64V3Token", 256));
-    files.insert("impls/scalar.rs".to_string(), generate_scalar_impls(&types));
-    files.insert("impls/arm_neon.rs".to_string(), generate_neon_impls(&types));
-    files.insert("impls/wasm128.rs".to_string(), generate_wasm_impls(&types));
+    // 4. Conversion trait definitions
+    files.insert(
+        "backends/convert.rs".to_string(),
+        generate_convert_traits(),
+    );
 
-    // 5. impls/mod.rs
+    // 5. backends/mod.rs
+    files.insert(
+        "backends/mod.rs".to_string(),
+        generate_backends_mod(&types, &i32_types),
+    );
+
+    // 6. Implementation files
+    files.insert(
+        "impls/x86_v3.rs".to_string(),
+        generate_x86_impls(&types, "X64V3Token", 256)
+            + &generate_x86_i32_impls(&i32_types, "X64V3Token", 256)
+            + &generate_x86_convert_impls("X64V3Token"),
+    );
+    files.insert(
+        "impls/scalar.rs".to_string(),
+        generate_scalar_impls(&types)
+            + &generate_scalar_i32_impls(&i32_types)
+            + &generate_scalar_convert_impls(),
+    );
+    files.insert(
+        "impls/arm_neon.rs".to_string(),
+        generate_neon_impls(&types)
+            + &generate_neon_i32_impls(&i32_types)
+            + &generate_neon_convert_impls(),
+    );
+    files.insert(
+        "impls/wasm128.rs".to_string(),
+        generate_wasm_impls(&types)
+            + &generate_wasm_i32_impls(&i32_types)
+            + &generate_wasm_convert_impls(),
+    );
+
+    // 7. impls/mod.rs
     files.insert("impls/mod.rs".to_string(), generate_impls_mod());
 
     files
@@ -448,7 +573,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 // backends/mod.rs Generation
 // ============================================================================
 
-fn generate_backends_mod(types: &[FloatVecType]) -> String {
+fn generate_backends_mod(types: &[FloatVecType], i32_types: &[I32VecType]) -> String {
     let mut code = formatdoc! {r#"
         //! Backend traits for generic SIMD types.
         //!
@@ -460,12 +585,22 @@ fn generate_backends_mod(types: &[FloatVecType]) -> String {
 
     "#};
 
-    // Module declarations and re-exports
+    // Module declarations and re-exports (float)
     for ty in types {
         let name = ty.name();
         let trait_name = ty.trait_name();
         code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
     }
+
+    // Module declarations and re-exports (i32)
+    for ty in i32_types {
+        let name = ty.name();
+        let trait_name = ty.trait_name();
+        code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
+    }
+
+    // Conversion traits
+    code.push_str("mod convert;\npub use convert::{F32x4Convert, F32x8Convert};\n\n");
 
     // Type aliases for ergonomic use
     for (alias, full, doc) in [
@@ -2223,6 +2358,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 }
 
 /// Generate WASM impl for native 128-bit types (f32x4, f64x2).
+#[allow(clippy::too_many_lines)]
 fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
     let trait_name = ty.trait_name();
     let elem = ty.elem;
@@ -2351,4 +2487,1777 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
         reduce_min = reduce_minmax("min"),
         reduce_max = reduce_minmax("max"),
     }
+}
+
+// ============================================================================
+// I32 Backend Trait Definition Generation
+// ============================================================================
+
+fn generate_i32_backend_trait(ty: &I32VecType) -> String {
+    let trait_name = ty.trait_name();
+    let lanes = ty.lanes;
+    let array = ty.array_type();
+
+    formatdoc! {r#"
+        //! Backend trait for `{name}<T>` — {lanes}-lane i32 SIMD vector.
+        //!
+        //! Each token type implements this trait with its platform-native representation.
+        //! The generic wrapper `{name}<T>` delegates all operations to these trait methods.
+        //!
+        //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+
+        use super::sealed::Sealed;
+        use archmage::SimdToken;
+
+        /// Backend implementation for {lanes}-lane i32 SIMD vectors.
+        ///
+        /// Trait methods are **associated functions** (no `self`/token parameter).
+        /// The implementing type `Self` (a token type) determines which platform
+        /// intrinsics are used. All methods are `#[inline(always)]` in implementations.
+        ///
+        /// # Sealed
+        ///
+        /// This trait is sealed — only archmage token types can implement it.
+        /// The token proves CPU support was verified via `summon()`.
+        pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
+            /// Platform-native SIMD representation.
+            type Repr: Copy + Clone + Send + Sync;
+
+            // ====== Construction ======
+
+            /// Broadcast scalar to all {lanes} lanes.
+            fn splat(v: i32) -> Self::Repr;
+
+            /// All lanes zero.
+            fn zero() -> Self::Repr;
+
+            /// Load from an aligned array.
+            fn load(data: &{array}) -> Self::Repr;
+
+            /// Create from array (zero-cost transmute where possible).
+            fn from_array(arr: {array}) -> Self::Repr;
+
+            /// Store to array.
+            fn store(repr: Self::Repr, out: &mut {array});
+
+            /// Convert to array.
+            fn to_array(repr: Self::Repr) -> {array};
+
+            // ====== Arithmetic ======
+
+            /// Lane-wise addition.
+            fn add(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise subtraction.
+            fn sub(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise multiplication (low 32 bits of each 32x32 product).
+            fn mul(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise negation.
+            fn neg(a: Self::Repr) -> Self::Repr;
+
+            // ====== Math ======
+
+            /// Lane-wise minimum.
+            fn min(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise maximum.
+            fn max(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise absolute value.
+            fn abs(a: Self::Repr) -> Self::Repr;
+
+            // ====== Comparisons ======
+            // Return masks where each lane is all-1s (true) or all-0s (false).
+
+            /// Lane-wise equality.
+            fn simd_eq(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise inequality.
+            fn simd_ne(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise less-than.
+            fn simd_lt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise less-than-or-equal.
+            fn simd_le(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise greater-than.
+            fn simd_gt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise greater-than-or-equal.
+            fn simd_ge(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
+            fn blend(mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
+
+            // ====== Reductions ======
+
+            /// Sum all {lanes} lanes.
+            fn reduce_add(a: Self::Repr) -> i32;
+
+            // ====== Bitwise ======
+
+            /// Bitwise NOT.
+            fn not(a: Self::Repr) -> Self::Repr;
+
+            /// Bitwise AND.
+            fn bitand(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Bitwise OR.
+            fn bitor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Bitwise XOR.
+            fn bitxor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            // ====== Shifts ======
+
+            /// Shift left by constant.
+            fn shl_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+
+            /// Arithmetic shift right by constant (sign-extending).
+            fn shr_arithmetic_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+
+            /// Logical shift right by constant (zero-filling).
+            fn shr_logical_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+
+            // ====== Boolean ======
+
+            /// True if all lanes have their sign bit set (all-1s mask).
+            fn all_true(a: Self::Repr) -> bool;
+
+            /// True if any lane has its sign bit set (any all-1s mask lane).
+            fn any_true(a: Self::Repr) -> bool;
+
+            /// Extract the high bit of each 32-bit lane as a bitmask.
+            fn bitmask(a: Self::Repr) -> u32;
+
+            // ====== Default implementations ======
+
+            /// Clamp values between lo and hi.
+            #[inline(always)]
+            fn clamp(a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
+                Self::min(Self::max(a, lo), hi)
+            }}
+        }}
+    "#,
+        name = ty.name(),
+    }
+}
+
+// ============================================================================
+// Conversion Trait Generation
+// ============================================================================
+
+fn generate_convert_traits() -> String {
+    formatdoc! {r#"
+        //! Conversion traits between float and integer SIMD backends.
+        //!
+        //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+
+        use super::sealed::Sealed;
+        use super::F32x4Backend;
+        use super::F32x8Backend;
+        use super::I32x4Backend;
+        use super::I32x8Backend;
+        use archmage::SimdToken;
+
+        /// Conversions between f32x4 and i32x4 representations.
+        ///
+        /// Requires both `F32x4Backend` and `I32x4Backend` to be implemented.
+        pub trait F32x4Convert: F32x4Backend + I32x4Backend + SimdToken + Sealed + Copy + 'static {{
+            /// Bitcast f32x4 to i32x4 (reinterpret bits, no conversion).
+            fn bitcast_f32_to_i32(a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
+
+            /// Bitcast i32x4 to f32x4 (reinterpret bits, no conversion).
+            fn bitcast_i32_to_f32(a: <Self as I32x4Backend>::Repr) -> <Self as F32x4Backend>::Repr;
+
+            /// Convert f32x4 to i32x4 with truncation toward zero.
+            fn convert_f32_to_i32(a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
+
+            /// Convert f32x4 to i32x4 with rounding to nearest.
+            fn convert_f32_to_i32_round(a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
+
+            /// Convert i32x4 to f32x4.
+            fn convert_i32_to_f32(a: <Self as I32x4Backend>::Repr) -> <Self as F32x4Backend>::Repr;
+        }}
+
+        /// Conversions between f32x8 and i32x8 representations.
+        ///
+        /// Requires both `F32x8Backend` and `I32x8Backend` to be implemented.
+        pub trait F32x8Convert: F32x8Backend + I32x8Backend + SimdToken + Sealed + Copy + 'static {{
+            /// Bitcast f32x8 to i32x8 (reinterpret bits, no conversion).
+            fn bitcast_f32_to_i32(a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
+
+            /// Bitcast i32x8 to f32x8 (reinterpret bits, no conversion).
+            fn bitcast_i32_to_f32(a: <Self as I32x8Backend>::Repr) -> <Self as F32x8Backend>::Repr;
+
+            /// Convert f32x8 to i32x8 with truncation toward zero.
+            fn convert_f32_to_i32(a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
+
+            /// Convert f32x8 to i32x8 with rounding to nearest.
+            fn convert_f32_to_i32_round(a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
+
+            /// Convert i32x8 to f32x8.
+            fn convert_i32_to_f32(a: <Self as I32x8Backend>::Repr) -> <Self as F32x8Backend>::Repr;
+        }}
+    "#}
+}
+
+// ============================================================================
+// x86 I32 Implementation Generation
+// ============================================================================
+
+fn generate_x86_i32_impls(types: &[I32VecType], token: &str, max_width: usize) -> String {
+    let mut code = String::new();
+
+    for ty in types {
+        if ty.width_bits > max_width {
+            continue;
+        }
+        code.push_str("\n#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str(&generate_x86_i32_impl(ty, token));
+        code.push('\n');
+    }
+
+    code
+}
+
+fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
+    let trait_name = ty.trait_name();
+    let inner = ty.x86_inner_type();
+    let p = ty.x86_prefix();
+    let bits = ty.width_bits;
+    let array = ty.array_type();
+    let lanes = ty.lanes;
+
+    let reduce_add_body = generate_x86_i32_reduce_add(ty);
+
+    formatdoc! {r#"
+        impl {trait_name} for archmage::{token} {{
+            type Repr = {inner};
+
+            // ====== Construction ======
+
+            #[inline(always)]
+            fn splat(v: i32) -> {inner} {{
+                unsafe {{ {p}_set1_epi32(v) }}
+            }}
+
+            #[inline(always)]
+            fn zero() -> {inner} {{
+                unsafe {{ {p}_setzero_si{bits}() }}
+            }}
+
+            #[inline(always)]
+            fn load(data: &{array}) -> {inner} {{
+                unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
+            }}
+
+            #[inline(always)]
+            fn from_array(arr: {array}) -> {inner} {{
+                // SAFETY: {array} and {inner} have identical size and layout.
+                unsafe {{ core::mem::transmute(arr) }}
+            }}
+
+            #[inline(always)]
+            fn store(repr: {inner}, out: &mut {array}) {{
+                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
+            }}
+
+            #[inline(always)]
+            fn to_array(repr: {inner}) -> {array} {{
+                let mut out = [0i32; {lanes}];
+                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
+                out
+            }}
+
+            // ====== Arithmetic ======
+
+            #[inline(always)]
+            fn add(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_add_epi32(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn sub(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_sub_epi32(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn mul(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_mullo_epi32(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn neg(a: {inner}) -> {inner} {{
+                unsafe {{ {p}_sub_epi32({p}_setzero_si{bits}(), a) }}
+            }}
+
+            // ====== Math ======
+
+            #[inline(always)]
+            fn min(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_min_epi32(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn max(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_max_epi32(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn abs(a: {inner}) -> {inner} {{
+                unsafe {{ {p}_abs_epi32(a) }}
+            }}
+
+            // ====== Comparisons ======
+
+            #[inline(always)]
+            fn simd_eq(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_cmpeq_epi32(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn simd_ne(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let eq = {p}_cmpeq_epi32(a, b);
+                    {p}_andnot_si{bits}(eq, {p}_set1_epi32(-1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_lt(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_cmpgt_epi32(b, a) }}
+            }}
+
+            #[inline(always)]
+            fn simd_le(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let gt = {p}_cmpgt_epi32(a, b);
+                    {p}_andnot_si{bits}(gt, {p}_set1_epi32(-1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_gt(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_cmpgt_epi32(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn simd_ge(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let lt = {p}_cmpgt_epi32(b, a);
+                    {p}_andnot_si{bits}(lt, {p}_set1_epi32(-1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn blend(mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
+                unsafe {{ {p}_blendv_epi8(if_false, if_true, mask) }}
+            }}
+
+            // ====== Reductions ======
+
+            #[inline(always)]
+            fn reduce_add(a: {inner}) -> i32 {{
+        {reduce_add_body}
+            }}
+
+            // ====== Bitwise ======
+
+            #[inline(always)]
+            fn not(a: {inner}) -> {inner} {{
+                unsafe {{ {p}_andnot_si{bits}(a, {p}_set1_epi32(-1)) }}
+            }}
+
+            #[inline(always)]
+            fn bitand(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_and_si{bits}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn bitor(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_or_si{bits}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn bitxor(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_xor_si{bits}(a, b) }}
+            }}
+
+            // ====== Shifts ======
+
+            #[inline(always)]
+            fn shl_const<const N: i32>(a: {inner}) -> {inner} {{
+                unsafe {{ {p}_slli_epi32::<N>(a) }}
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: {inner}) -> {inner} {{
+                unsafe {{ {p}_srai_epi32::<N>(a) }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(a: {inner}) -> {inner} {{
+                unsafe {{ {p}_srli_epi32::<N>(a) }}
+            }}
+
+            // ====== Boolean ======
+
+            #[inline(always)]
+            fn all_true(a: {inner}) -> bool {{
+                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) == {all_mask} }}
+            }}
+
+            #[inline(always)]
+            fn any_true(a: {inner}) -> bool {{
+                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) != 0 }}
+            }}
+
+            #[inline(always)]
+            fn bitmask(a: {inner}) -> u32 {{
+                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) as u32 }}
+            }}
+        }}
+    "#,
+        all_mask = if lanes == 4 { "0xF" } else { "0xFF" },
+    }
+}
+
+fn generate_x86_i32_reduce_add(ty: &I32VecType) -> String {
+    match ty.width_bits {
+        128 => formatdoc! {"
+                unsafe {{
+                    let hi = _mm_shuffle_epi32::<0b01_00_11_10>(a);
+                    let sum = _mm_add_epi32(a, hi);
+                    let hi2 = _mm_shuffle_epi32::<0b00_00_00_01>(sum);
+                    let sum2 = _mm_add_epi32(sum, hi2);
+                    _mm_cvtsi128_si32(sum2)
+                }}"},
+        256 => formatdoc! {"
+                unsafe {{
+                    let lo = _mm256_castsi256_si128(a);
+                    let hi = _mm256_extracti128_si256::<1>(a);
+                    let sum = _mm_add_epi32(lo, hi);
+                    let hi2 = _mm_shuffle_epi32::<0b01_00_11_10>(sum);
+                    let sum2 = _mm_add_epi32(sum, hi2);
+                    let hi3 = _mm_shuffle_epi32::<0b00_00_00_01>(sum2);
+                    let sum3 = _mm_add_epi32(sum2, hi3);
+                    _mm_cvtsi128_si32(sum3)
+                }}"},
+        _ => unreachable!(),
+    }
+}
+
+// ============================================================================
+// x86 Conversion Implementation Generation
+// ============================================================================
+
+fn generate_x86_convert_impls(token: &str) -> String {
+    formatdoc! {r#"
+
+        #[cfg(target_arch = "x86_64")]
+        impl F32x4Convert for archmage::{token} {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: __m128) -> __m128i {{
+                unsafe {{ _mm_castps_si128(a) }}
+            }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: __m128i) -> __m128 {{
+                unsafe {{ _mm_castsi128_ps(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: __m128) -> __m128i {{
+                unsafe {{ _mm_cvttps_epi32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: __m128) -> __m128i {{
+                unsafe {{ _mm_cvtps_epi32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: __m128i) -> __m128 {{
+                unsafe {{ _mm_cvtepi32_ps(a) }}
+            }}
+        }}
+
+        #[cfg(target_arch = "x86_64")]
+        impl F32x8Convert for archmage::{token} {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: __m256) -> __m256i {{
+                unsafe {{ _mm256_castps_si256(a) }}
+            }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: __m256i) -> __m256 {{
+                unsafe {{ _mm256_castsi256_ps(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: __m256) -> __m256i {{
+                unsafe {{ _mm256_cvttps_epi32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: __m256) -> __m256i {{
+                unsafe {{ _mm256_cvtps_epi32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: __m256i) -> __m256 {{
+                unsafe {{ _mm256_cvtepi32_ps(a) }}
+            }}
+        }}
+    "#}
+}
+
+// ============================================================================
+// Scalar I32 Implementation Generation
+// ============================================================================
+
+fn generate_scalar_i32_impls(types: &[I32VecType]) -> String {
+    let mut code = String::new();
+
+    for ty in types {
+        code.push_str(&generate_scalar_i32_impl(ty));
+        code.push('\n');
+    }
+
+    code
+}
+
+fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
+    let trait_name = ty.trait_name();
+    let lanes = ty.lanes;
+    let array = ty.array_type();
+
+    // For infix operators like &, |, ^
+    let binary_infix = |op: &str| -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] {op} b[{i}]")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    // For method-style ops like .wrapping_add(b)
+    let binary_method = |method: &str| -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}].{method}(b[{i}])")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let min_lanes = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("if a[{i}] < b[{i}] {{ a[{i}] }} else {{ b[{i}] }}")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let max_lanes = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("if a[{i}] > b[{i}] {{ a[{i}] }} else {{ b[{i}] }}")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let neg_lanes = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}].wrapping_neg()")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let abs_lanes = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}].wrapping_abs()")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let reduce_add = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}]")).collect();
+        items.join(".wrapping_add(") + &")".repeat(lanes - 1)
+    };
+
+    let shl_lanes = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] << N")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let shr_arithmetic_lanes = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] >> N")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let shr_logical_lanes = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("((a[{i}] as u32) >> N) as i32")).collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let bitmask_expr = || -> String {
+        let items: Vec<String> = (0..lanes)
+            .map(|i| {
+                if i == 0 {
+                    "((a[0] as u32) >> 31)".to_string()
+                } else {
+                    format!("(((a[{i}] as u32) >> 31) << {i})")
+                }
+            })
+            .collect();
+        items.join(" | ")
+    };
+
+    let all_true_expr = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] != 0")).collect();
+        items.join(" && ")
+    };
+
+    let any_true_expr = || -> String {
+        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] != 0")).collect();
+        items.join(" || ")
+    };
+
+    formatdoc! {r#"
+        impl {trait_name} for archmage::ScalarToken {{
+            type Repr = {array};
+
+            // ====== Construction ======
+
+            #[inline(always)]
+            fn splat(v: i32) -> {array} {{
+                [v; {lanes}]
+            }}
+
+            #[inline(always)]
+            fn zero() -> {array} {{
+                [0i32; {lanes}]
+            }}
+
+            #[inline(always)]
+            fn load(data: &{array}) -> {array} {{
+                *data
+            }}
+
+            #[inline(always)]
+            fn from_array(arr: {array}) -> {array} {{
+                arr
+            }}
+
+            #[inline(always)]
+            fn store(repr: {array}, out: &mut {array}) {{
+                *out = repr;
+            }}
+
+            #[inline(always)]
+            fn to_array(repr: {array}) -> {array} {{
+                repr
+            }}
+
+            // ====== Arithmetic ======
+
+            #[inline(always)]
+            fn add(a: {array}, b: {array}) -> {array} {{
+                {add_lanes}
+            }}
+
+            #[inline(always)]
+            fn sub(a: {array}, b: {array}) -> {array} {{
+                {sub_lanes}
+            }}
+
+            #[inline(always)]
+            fn mul(a: {array}, b: {array}) -> {array} {{
+                {mul_lanes}
+            }}
+
+            #[inline(always)]
+            fn neg(a: {array}) -> {array} {{
+                {neg}
+            }}
+
+            // ====== Math ======
+
+            #[inline(always)]
+            fn min(a: {array}, b: {array}) -> {array} {{
+                {min_lanes}
+            }}
+
+            #[inline(always)]
+            fn max(a: {array}, b: {array}) -> {array} {{
+                {max_lanes}
+            }}
+
+            #[inline(always)]
+            fn abs(a: {array}) -> {array} {{
+                {abs}
+            }}
+
+            // ====== Comparisons ======
+
+            #[inline(always)]
+            fn simd_eq(a: {array}, b: {array}) -> {array} {{
+                let mut r = [0i32; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if a[i] == b[i] {{ -1 }} else {{ 0 }};
+                }}
+                r
+            }}
+
+            #[inline(always)]
+            fn simd_ne(a: {array}, b: {array}) -> {array} {{
+                let mut r = [0i32; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if a[i] != b[i] {{ -1 }} else {{ 0 }};
+                }}
+                r
+            }}
+
+            #[inline(always)]
+            fn simd_lt(a: {array}, b: {array}) -> {array} {{
+                let mut r = [0i32; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if a[i] < b[i] {{ -1 }} else {{ 0 }};
+                }}
+                r
+            }}
+
+            #[inline(always)]
+            fn simd_le(a: {array}, b: {array}) -> {array} {{
+                let mut r = [0i32; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if a[i] <= b[i] {{ -1 }} else {{ 0 }};
+                }}
+                r
+            }}
+
+            #[inline(always)]
+            fn simd_gt(a: {array}, b: {array}) -> {array} {{
+                let mut r = [0i32; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if a[i] > b[i] {{ -1 }} else {{ 0 }};
+                }}
+                r
+            }}
+
+            #[inline(always)]
+            fn simd_ge(a: {array}, b: {array}) -> {array} {{
+                let mut r = [0i32; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if a[i] >= b[i] {{ -1 }} else {{ 0 }};
+                }}
+                r
+            }}
+
+            #[inline(always)]
+            fn blend(mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
+                let mut r = [0i32; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if mask[i] != 0 {{ if_true[i] }} else {{ if_false[i] }};
+                }}
+                r
+            }}
+
+            // ====== Reductions ======
+
+            #[inline(always)]
+            fn reduce_add(a: {array}) -> i32 {{
+                {reduce_add}
+            }}
+
+            // ====== Bitwise ======
+
+            #[inline(always)]
+            fn not(a: {array}) -> {array} {{
+                {not_lanes}
+            }}
+
+            #[inline(always)]
+            fn bitand(a: {array}, b: {array}) -> {array} {{
+                {and_lanes}
+            }}
+
+            #[inline(always)]
+            fn bitor(a: {array}, b: {array}) -> {array} {{
+                {or_lanes}
+            }}
+
+            #[inline(always)]
+            fn bitxor(a: {array}, b: {array}) -> {array} {{
+                {xor_lanes}
+            }}
+
+            // ====== Shifts ======
+
+            #[inline(always)]
+            fn shl_const<const N: i32>(a: {array}) -> {array} {{
+                {shl}
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: {array}) -> {array} {{
+                {shr_arithmetic}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(a: {array}) -> {array} {{
+                {shr_logical}
+            }}
+
+            // ====== Boolean ======
+
+            #[inline(always)]
+            fn all_true(a: {array}) -> bool {{
+                {all_true}
+            }}
+
+            #[inline(always)]
+            fn any_true(a: {array}) -> bool {{
+                {any_true}
+            }}
+
+            #[inline(always)]
+            fn bitmask(a: {array}) -> u32 {{
+                {bitmask}
+            }}
+        }}
+    "#,
+        add_lanes = binary_method("wrapping_add"),
+        sub_lanes = binary_method("wrapping_sub"),
+        mul_lanes = binary_method("wrapping_mul"),
+        neg = neg_lanes(),
+        min_lanes = min_lanes(),
+        max_lanes = max_lanes(),
+        abs = abs_lanes(),
+        reduce_add = reduce_add(),
+        not_lanes = {
+            let items: Vec<String> = (0..lanes).map(|i| format!("!a[{i}]")).collect();
+            format!("[{}]", items.join(", "))
+        },
+        and_lanes = binary_infix("&"),
+        or_lanes = binary_infix("|"),
+        xor_lanes = binary_infix("^"),
+        shl = shl_lanes(),
+        shr_arithmetic = shr_arithmetic_lanes(),
+        shr_logical = shr_logical_lanes(),
+        all_true = all_true_expr(),
+        any_true = any_true_expr(),
+        bitmask = bitmask_expr(),
+    }
+}
+
+// ============================================================================
+// Scalar Conversion Implementation Generation
+// ============================================================================
+
+fn generate_scalar_convert_impls() -> String {
+    let mut code = String::new();
+
+    for lanes in [4, 8] {
+        let f_array = format!("[f32; {lanes}]");
+        let i_array = format!("[i32; {lanes}]");
+        let trait_name = format!("F32x{lanes}Convert");
+
+        let bitcast_f2i = (0..lanes)
+            .map(|i| format!("a[{i}].to_bits() as i32"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let bitcast_i2f = (0..lanes)
+            .map(|i| format!("f32::from_bits(a[{i}] as u32)"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let cvt_f2i = (0..lanes)
+            .map(|i| format!("a[{i}] as i32"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let cvt_f2i_round = (0..lanes)
+            .map(|i| format!("f32_round(a[{i}]) as i32"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let cvt_i2f = (0..lanes)
+            .map(|i| format!("a[{i}] as f32"))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        code.push_str(&formatdoc! {r#"
+            impl {trait_name} for archmage::ScalarToken {{
+                #[inline(always)]
+                fn bitcast_f32_to_i32(a: {f_array}) -> {i_array} {{
+                    [{bitcast_f2i}]
+                }}
+
+                #[inline(always)]
+                fn bitcast_i32_to_f32(a: {i_array}) -> {f_array} {{
+                    [{bitcast_i2f}]
+                }}
+
+                #[inline(always)]
+                fn convert_f32_to_i32(a: {f_array}) -> {i_array} {{
+                    [{cvt_f2i}]
+                }}
+
+                #[inline(always)]
+                fn convert_f32_to_i32_round(a: {f_array}) -> {i_array} {{
+                    [{cvt_f2i_round}]
+                }}
+
+                #[inline(always)]
+                fn convert_i32_to_f32(a: {i_array}) -> {f_array} {{
+                    [{cvt_i2f}]
+                }}
+            }}
+
+        "#});
+    }
+
+    code
+}
+
+// ============================================================================
+// NEON I32 Implementation Generation
+// ============================================================================
+
+fn generate_neon_i32_impls(types: &[I32VecType]) -> String {
+    let mut code = String::new();
+
+    for ty in types {
+        code.push_str("\n#[cfg(target_arch = \"aarch64\")]\n");
+        if ty.native_on_neon() {
+            code.push_str(&generate_neon_native_i32_impl(ty));
+        } else {
+            code.push_str(&generate_neon_polyfill_i32_impl(ty));
+        }
+        code.push('\n');
+    }
+
+    code
+}
+
+fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
+    let trait_name = ty.trait_name();
+    let array = ty.array_type();
+    let lanes = ty.lanes;
+
+    formatdoc! {r#"
+        impl {trait_name} for archmage::NeonToken {{
+            type Repr = int32x4_t;
+
+            #[inline(always)]
+            fn splat(v: i32) -> int32x4_t {{
+                unsafe {{ vdupq_n_s32(v) }}
+            }}
+
+            #[inline(always)]
+            fn zero() -> int32x4_t {{
+                unsafe {{ vdupq_n_s32(0) }}
+            }}
+
+            #[inline(always)]
+            fn load(data: &{array}) -> int32x4_t {{
+                unsafe {{ vld1q_s32(data.as_ptr()) }}
+            }}
+
+            #[inline(always)]
+            fn from_array(arr: {array}) -> int32x4_t {{
+                unsafe {{ vld1q_s32(arr.as_ptr()) }}
+            }}
+
+            #[inline(always)]
+            fn store(repr: int32x4_t, out: &mut {array}) {{
+                unsafe {{ vst1q_s32(out.as_mut_ptr(), repr) }};
+            }}
+
+            #[inline(always)]
+            fn to_array(repr: int32x4_t) -> {array} {{
+                let mut out = [0i32; {lanes}];
+                unsafe {{ vst1q_s32(out.as_mut_ptr(), repr) }};
+                out
+            }}
+
+            #[inline(always)]
+            fn add(a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vaddq_s32(a, b) }} }}
+            #[inline(always)]
+            fn sub(a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vsubq_s32(a, b) }} }}
+            #[inline(always)]
+            fn mul(a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vmulq_s32(a, b) }} }}
+            #[inline(always)]
+            fn neg(a: int32x4_t) -> int32x4_t {{ unsafe {{ vnegq_s32(a) }} }}
+            #[inline(always)]
+            fn min(a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vminq_s32(a, b) }} }}
+            #[inline(always)]
+            fn max(a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vmaxq_s32(a, b) }} }}
+            #[inline(always)]
+            fn abs(a: int32x4_t) -> int32x4_t {{ unsafe {{ vabsq_s32(a) }} }}
+
+            #[inline(always)]
+            fn simd_eq(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ vreinterpretq_s32_u32(vceqq_s32(a, b)) }}
+            }}
+            #[inline(always)]
+            fn simd_ne(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a, b))) }}
+            }}
+            #[inline(always)]
+            fn simd_lt(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ vreinterpretq_s32_u32(vcltq_s32(a, b)) }}
+            }}
+            #[inline(always)]
+            fn simd_le(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ vreinterpretq_s32_u32(vcleq_s32(a, b)) }}
+            }}
+            #[inline(always)]
+            fn simd_gt(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ vreinterpretq_s32_u32(vcgtq_s32(a, b)) }}
+            }}
+            #[inline(always)]
+            fn simd_ge(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ vreinterpretq_s32_u32(vcgeq_s32(a, b)) }}
+            }}
+
+            #[inline(always)]
+            fn blend(mask: int32x4_t, if_true: int32x4_t, if_false: int32x4_t) -> int32x4_t {{
+                unsafe {{ vbslq_s32(vreinterpretq_u32_s32(mask), if_true, if_false) }}
+            }}
+
+            #[inline(always)]
+            fn reduce_add(a: int32x4_t) -> i32 {{
+                unsafe {{ vaddvq_s32(a) }}
+            }}
+
+            #[inline(always)]
+            fn not(a: int32x4_t) -> int32x4_t {{
+                unsafe {{ vmvnq_s32(a) }}
+            }}
+            #[inline(always)]
+            fn bitand(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ vandq_s32(a, b) }}
+            }}
+            #[inline(always)]
+            fn bitor(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ vorrq_s32(a, b) }}
+            }}
+            #[inline(always)]
+            fn bitxor(a: int32x4_t, b: int32x4_t) -> int32x4_t {{
+                unsafe {{ veorq_s32(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn shl_const<const N: i32>(a: int32x4_t) -> int32x4_t {{
+                unsafe {{ vshlq_n_s32::<N>(a) }}
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: int32x4_t) -> int32x4_t {{
+                unsafe {{ vshrq_n_s32::<N>(a) }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(a: int32x4_t) -> int32x4_t {{
+                unsafe {{ vreinterpretq_s32_u32(vshrq_n_u32::<N>(vreinterpretq_u32_s32(a))) }}
+            }}
+
+            #[inline(always)]
+            fn all_true(a: int32x4_t) -> bool {{
+                unsafe {{ vminvq_u32(vreinterpretq_u32_s32(a)) != 0 }}
+            }}
+
+            #[inline(always)]
+            fn any_true(a: int32x4_t) -> bool {{
+                unsafe {{ vmaxvq_u32(vreinterpretq_u32_s32(a)) != 0 }}
+            }}
+
+            #[inline(always)]
+            fn bitmask(a: int32x4_t) -> u32 {{
+                unsafe {{
+                    // Extract sign bit of each 32-bit lane
+                    let shift = vreinterpretq_u32_s32(vshrq_n_s32::<31>(a));
+                    // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
+                    let lane0 = vgetq_lane_u32::<0>(shift);
+                    let lane1 = vgetq_lane_u32::<1>(shift);
+                    let lane2 = vgetq_lane_u32::<2>(shift);
+                    let lane3 = vgetq_lane_u32::<3>(shift);
+                    lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
+                }}
+            }}
+        }}
+    "#}
+}
+
+fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
+    let trait_name = ty.trait_name();
+    let repr = ty.neon_repr();
+    let array = ty.array_type();
+    let lanes = ty.lanes;
+    let sub_count = ty.sub_count();
+
+    let binary_op = |intrinsic: &str| -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
+            .collect();
+        format!("unsafe {{ [{}] }}", items.join(", "))
+    };
+
+    let unary_op = |intrinsic: &str| -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| format!("{intrinsic}(a[{i}])"))
+            .collect();
+        format!("unsafe {{ [{}] }}", items.join(", "))
+    };
+
+    let cmp_op = |intrinsic: &str| -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| format!("vreinterpretq_s32_u32({intrinsic}(a[{i}], b[{i}]))"))
+            .collect();
+        format!("unsafe {{ [{}] }}", items.join(", "))
+    };
+
+    let ne_op = || -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| format!("vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a[{i}], b[{i}])))"))
+            .collect();
+        format!("unsafe {{ [{}] }}", items.join(", "))
+    };
+
+    formatdoc! {r#"
+        impl {trait_name} for archmage::NeonToken {{
+            type Repr = {repr};
+
+            #[inline(always)]
+            fn splat(v: i32) -> {repr} {{
+                unsafe {{
+                    let v4 = vdupq_n_s32(v);
+                    [{v4_copies}]
+                }}
+            }}
+
+            #[inline(always)]
+            fn zero() -> {repr} {{
+                unsafe {{
+                    let z = vdupq_n_s32(0);
+                    [{z_copies}]
+                }}
+            }}
+
+            #[inline(always)]
+            fn load(data: &{array}) -> {repr} {{
+                unsafe {{
+                    [{load_lanes}]
+                }}
+            }}
+
+            #[inline(always)]
+            fn from_array(arr: {array}) -> {repr} {{
+                Self::load(&arr)
+            }}
+
+            #[inline(always)]
+            fn store(repr: {repr}, out: &mut {array}) {{
+                unsafe {{
+                    {store_lanes}
+                }}
+            }}
+
+            #[inline(always)]
+            fn to_array(repr: {repr}) -> {array} {{
+                let mut out = [0i32; {lanes}];
+                Self::store(repr, &mut out);
+                out
+            }}
+
+            #[inline(always)]
+            fn add(a: {repr}, b: {repr}) -> {repr} {{ {add} }}
+            #[inline(always)]
+            fn sub(a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
+            #[inline(always)]
+            fn mul(a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
+            #[inline(always)]
+            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            #[inline(always)]
+            fn min(a: {repr}, b: {repr}) -> {repr} {{ {min} }}
+            #[inline(always)]
+            fn max(a: {repr}, b: {repr}) -> {repr} {{ {max} }}
+            #[inline(always)]
+            fn abs(a: {repr}) -> {repr} {{ {abs} }}
+
+            #[inline(always)]
+            fn simd_eq(a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
+            #[inline(always)]
+            fn simd_ne(a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
+            #[inline(always)]
+            fn simd_lt(a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
+            #[inline(always)]
+            fn simd_le(a: {repr}, b: {repr}) -> {repr} {{ {le} }}
+            #[inline(always)]
+            fn simd_gt(a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
+            #[inline(always)]
+            fn simd_ge(a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
+
+            #[inline(always)]
+            fn blend(mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
+                {blend}
+            }}
+
+            #[inline(always)]
+            fn reduce_add(a: {repr}) -> i32 {{
+                {reduce_add}
+            }}
+
+            #[inline(always)]
+            fn not(a: {repr}) -> {repr} {{ {not} }}
+            #[inline(always)]
+            fn bitand(a: {repr}, b: {repr}) -> {repr} {{ {bitand} }}
+            #[inline(always)]
+            fn bitor(a: {repr}, b: {repr}) -> {repr} {{ {bitor} }}
+            #[inline(always)]
+            fn bitxor(a: {repr}, b: {repr}) -> {repr} {{ {bitxor} }}
+
+            #[inline(always)]
+            fn shl_const<const N: i32>(a: {repr}) -> {repr} {{
+                {shl}
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: {repr}) -> {repr} {{
+                {shr_arith}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(a: {repr}) -> {repr} {{
+                {shr_logic}
+            }}
+
+            #[inline(always)]
+            fn all_true(a: {repr}) -> bool {{
+                {all_true}
+            }}
+
+            #[inline(always)]
+            fn any_true(a: {repr}) -> bool {{
+                {any_true}
+            }}
+
+            #[inline(always)]
+            fn bitmask(a: {repr}) -> u32 {{
+                {bitmask}
+            }}
+        }}
+    "#,
+        v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
+        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
+        load_lanes = (0..sub_count)
+            .map(|i| format!("vld1q_s32(data.as_ptr().add({}))", i * 4))
+            .collect::<Vec<_>>().join(", "),
+        store_lanes = (0..sub_count)
+            .map(|i| format!("vst1q_s32(out.as_mut_ptr().add({}), repr[{i}]);", i * 4))
+            .collect::<Vec<_>>().join("\n            "),
+        add = binary_op("vaddq_s32"),
+        sub = binary_op("vsubq_s32"),
+        mul = binary_op("vmulq_s32"),
+        neg = unary_op("vnegq_s32"),
+        min = binary_op("vminq_s32"),
+        max = binary_op("vmaxq_s32"),
+        abs = unary_op("vabsq_s32"),
+        eq = cmp_op("vceqq_s32"),
+        ne = ne_op(),
+        lt = cmp_op("vcltq_s32"),
+        le = cmp_op("vcleq_s32"),
+        gt = cmp_op("vcgtq_s32"),
+        ge = cmp_op("vcgeq_s32"),
+        blend = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("vbslq_s32(vreinterpretq_u32_s32(mask[{i}]), if_true[{i}], if_false[{i}])"))
+                .collect();
+            format!("unsafe {{ [{}] }}", items.join(", "))
+        },
+        reduce_add = {
+            let mut body = "unsafe {\n".to_string();
+            body.push_str("            let m = vaddq_s32(a[0], a[1]);\n");
+            for i in 2..sub_count {
+                body.push_str(&format!("            let m = vaddq_s32(m, a[{i}]);\n"));
+            }
+            body.push_str("            vaddvq_s32(m)\n");
+            body.push_str("        }");
+            body
+        },
+        not = unary_op("vmvnq_s32"),
+        bitand = binary_op("vandq_s32"),
+        bitor = binary_op("vorrq_s32"),
+        bitxor = binary_op("veorq_s32"),
+        shl = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("vshlq_n_s32::<N>(a[{i}])"))
+                .collect();
+            format!("unsafe {{ [{}] }}", items.join(", "))
+        },
+        shr_arith = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("vshrq_n_s32::<N>(a[{i}])"))
+                .collect();
+            format!("unsafe {{ [{}] }}", items.join(", "))
+        },
+        shr_logic = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("vreinterpretq_s32_u32(vshrq_n_u32::<N>(vreinterpretq_u32_s32(a[{i}])))"))
+                .collect();
+            format!("unsafe {{ [{}] }}", items.join(", "))
+        },
+        all_true = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("vminvq_u32(vreinterpretq_u32_s32(a[{i}])) != 0"))
+                .collect();
+            format!("unsafe {{ {} }}", items.join(" && "))
+        },
+        any_true = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("vmaxvq_u32(vreinterpretq_u32_s32(a[{i}])) != 0"))
+                .collect();
+            format!("unsafe {{ {} }}", items.join(" || "))
+        },
+        bitmask = {
+            let mut body = "unsafe {\n".to_string();
+            body.push_str("            let mut bits = 0u32;\n");
+            for i in 0..sub_count {
+                let base = i * 4;
+                body.push_str(&format!("            let s{i} = vreinterpretq_u32_s32(vshrq_n_s32::<31>(a[{i}]));\n"));
+                body.push_str(&format!("            bits |= vgetq_lane_u32::<0>(s{i}) << {base};\n"));
+                body.push_str(&format!("            bits |= (vgetq_lane_u32::<1>(s{i})) << {};\n", base + 1));
+                body.push_str(&format!("            bits |= (vgetq_lane_u32::<2>(s{i})) << {};\n", base + 2));
+                body.push_str(&format!("            bits |= (vgetq_lane_u32::<3>(s{i})) << {};\n", base + 3));
+            }
+            body.push_str("            bits\n");
+            body.push_str("        }");
+            body
+        },
+    }
+}
+
+// ============================================================================
+// NEON Conversion Implementation Generation
+// ============================================================================
+
+fn generate_neon_convert_impls() -> String {
+    formatdoc! {r#"
+
+        #[cfg(target_arch = "aarch64")]
+        impl F32x4Convert for archmage::NeonToken {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: float32x4_t) -> int32x4_t {{
+                unsafe {{ vreinterpretq_s32_f32(a) }}
+            }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: int32x4_t) -> float32x4_t {{
+                unsafe {{ vreinterpretq_f32_s32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: float32x4_t) -> int32x4_t {{
+                unsafe {{ vcvtq_s32_f32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: float32x4_t) -> int32x4_t {{
+                unsafe {{ vcvtnq_s32_f32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: int32x4_t) -> float32x4_t {{
+                unsafe {{ vcvtq_f32_s32(a) }}
+            }}
+        }}
+
+        #[cfg(target_arch = "aarch64")]
+        impl F32x8Convert for archmage::NeonToken {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: [float32x4_t; 2]) -> [int32x4_t; 2] {{
+                unsafe {{ [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: [int32x4_t; 2]) -> [float32x4_t; 2] {{
+                unsafe {{ [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: [float32x4_t; 2]) -> [int32x4_t; 2] {{
+                unsafe {{ [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: [float32x4_t; 2]) -> [int32x4_t; 2] {{
+                unsafe {{ [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: [int32x4_t; 2]) -> [float32x4_t; 2] {{
+                unsafe {{ [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1])] }}
+            }}
+        }}
+    "#}
+}
+
+// ============================================================================
+// WASM I32 Implementation Generation
+// ============================================================================
+
+fn generate_wasm_i32_impls(types: &[I32VecType]) -> String {
+    let mut code = String::new();
+
+    for ty in types {
+        code.push_str("\n#[cfg(target_arch = \"wasm32\")]\n");
+        if ty.native_on_wasm() {
+            code.push_str(&generate_wasm_native_i32_impl(ty));
+        } else {
+            code.push_str(&generate_wasm_polyfill_i32_impl(ty));
+        }
+        code.push('\n');
+    }
+
+    code
+}
+
+fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
+    let trait_name = ty.trait_name();
+    let array = ty.array_type();
+    let lanes = ty.lanes;
+
+    let reduce_add_body = (0..lanes)
+        .map(|j| format!("i32x4_extract_lane::<{j}>(a)"))
+        .collect::<Vec<_>>()
+        .join(" + ");
+
+    formatdoc! {r#"
+        impl {trait_name} for archmage::Wasm128Token {{
+            type Repr = v128;
+
+            #[inline(always)]
+            fn splat(v: i32) -> v128 {{ i32x4_splat(v) }}
+            #[inline(always)]
+            fn zero() -> v128 {{ i32x4_splat(0) }}
+            #[inline(always)]
+            fn load(data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            #[inline(always)]
+            fn from_array(arr: {array}) -> v128 {{ Self::load(&arr) }}
+            #[inline(always)]
+            fn store(repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
+            #[inline(always)]
+            fn to_array(repr: v128) -> {array} {{
+                let mut out = [0i32; {lanes}];
+                Self::store(repr, &mut out);
+                out
+            }}
+
+            #[inline(always)]
+            fn add(a: v128, b: v128) -> v128 {{ i32x4_add(a, b) }}
+            #[inline(always)]
+            fn sub(a: v128, b: v128) -> v128 {{ i32x4_sub(a, b) }}
+            #[inline(always)]
+            fn mul(a: v128, b: v128) -> v128 {{ i32x4_mul(a, b) }}
+            #[inline(always)]
+            fn neg(a: v128) -> v128 {{ i32x4_neg(a) }}
+            #[inline(always)]
+            fn min(a: v128, b: v128) -> v128 {{ i32x4_min(a, b) }}
+            #[inline(always)]
+            fn max(a: v128, b: v128) -> v128 {{ i32x4_max(a, b) }}
+            #[inline(always)]
+            fn abs(a: v128) -> v128 {{ i32x4_abs(a) }}
+
+            #[inline(always)]
+            fn simd_eq(a: v128, b: v128) -> v128 {{ i32x4_eq(a, b) }}
+            #[inline(always)]
+            fn simd_ne(a: v128, b: v128) -> v128 {{ i32x4_ne(a, b) }}
+            #[inline(always)]
+            fn simd_lt(a: v128, b: v128) -> v128 {{ i32x4_lt(a, b) }}
+            #[inline(always)]
+            fn simd_le(a: v128, b: v128) -> v128 {{ i32x4_le(a, b) }}
+            #[inline(always)]
+            fn simd_gt(a: v128, b: v128) -> v128 {{ i32x4_gt(a, b) }}
+            #[inline(always)]
+            fn simd_ge(a: v128, b: v128) -> v128 {{ i32x4_ge(a, b) }}
+            #[inline(always)]
+            fn blend(mask: v128, if_true: v128, if_false: v128) -> v128 {{
+                v128_bitselect(if_true, if_false, mask)
+            }}
+
+            #[inline(always)]
+            fn reduce_add(a: v128) -> i32 {{ {reduce_add_body} }}
+
+            #[inline(always)]
+            fn not(a: v128) -> v128 {{ v128_not(a) }}
+            #[inline(always)]
+            fn bitand(a: v128, b: v128) -> v128 {{ v128_and(a, b) }}
+            #[inline(always)]
+            fn bitor(a: v128, b: v128) -> v128 {{ v128_or(a, b) }}
+            #[inline(always)]
+            fn bitxor(a: v128, b: v128) -> v128 {{ v128_xor(a, b) }}
+
+            #[inline(always)]
+            fn shl_const<const N: i32>(a: v128) -> v128 {{ i32x4_shl(a, N as u32) }}
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: v128) -> v128 {{ i32x4_shr(a, N as u32) }}
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(a: v128) -> v128 {{ u32x4_shr(a, N as u32) }}
+
+            #[inline(always)]
+            fn all_true(a: v128) -> bool {{ i32x4_all_true(a) }}
+            #[inline(always)]
+            fn any_true(a: v128) -> bool {{ v128_any_true(a) }}
+            #[inline(always)]
+            fn bitmask(a: v128) -> u32 {{ i32x4_bitmask(a) as u32 }}
+        }}
+    "#}
+}
+
+fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
+    let trait_name = ty.trait_name();
+    let repr = ty.wasm_repr();
+    let array = ty.array_type();
+    let lanes = ty.lanes;
+    let sub_count = ty.sub_count();
+
+    let binary_op = |func: &str| -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| format!("{func}(a[{i}], b[{i}])"))
+            .collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let unary_op = |func: &str| -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| format!("{func}(a[{i}])"))
+            .collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let reduce_add_body = || -> String {
+        let mut items = Vec::new();
+        for i in 0..sub_count {
+            for j in 0..4usize {
+                items.push(format!("i32x4_extract_lane::<{j}>(a[{i}])"));
+            }
+        }
+        items.join(" + ")
+    };
+
+    formatdoc! {r#"
+        impl {trait_name} for archmage::Wasm128Token {{
+            type Repr = {repr};
+
+            #[inline(always)]
+            fn splat(v: i32) -> {repr} {{
+                let v4 = i32x4_splat(v);
+                [{v4_copies}]
+            }}
+
+            #[inline(always)]
+            fn zero() -> {repr} {{
+                let z = i32x4_splat(0);
+                [{z_copies}]
+            }}
+
+            #[inline(always)]
+            fn load(data: &{array}) -> {repr} {{
+                unsafe {{
+                    [{load_lanes}]
+                }}
+            }}
+
+            #[inline(always)]
+            fn from_array(arr: {array}) -> {repr} {{
+                Self::load(&arr)
+            }}
+
+            #[inline(always)]
+            fn store(repr: {repr}, out: &mut {array}) {{
+                unsafe {{
+                    {store_lanes}
+                }}
+            }}
+
+            #[inline(always)]
+            fn to_array(repr: {repr}) -> {array} {{
+                let mut out = [0i32; {lanes}];
+                Self::store(repr, &mut out);
+                out
+            }}
+
+            #[inline(always)]
+            fn add(a: {repr}, b: {repr}) -> {repr} {{ {add} }}
+            #[inline(always)]
+            fn sub(a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
+            #[inline(always)]
+            fn mul(a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
+            #[inline(always)]
+            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            #[inline(always)]
+            fn min(a: {repr}, b: {repr}) -> {repr} {{ {min} }}
+            #[inline(always)]
+            fn max(a: {repr}, b: {repr}) -> {repr} {{ {max} }}
+            #[inline(always)]
+            fn abs(a: {repr}) -> {repr} {{ {abs} }}
+
+            #[inline(always)]
+            fn simd_eq(a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
+            #[inline(always)]
+            fn simd_ne(a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
+            #[inline(always)]
+            fn simd_lt(a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
+            #[inline(always)]
+            fn simd_le(a: {repr}, b: {repr}) -> {repr} {{ {le} }}
+            #[inline(always)]
+            fn simd_gt(a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
+            #[inline(always)]
+            fn simd_ge(a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
+            #[inline(always)]
+            fn blend(mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
+                [{blend_lanes}]
+            }}
+
+            #[inline(always)]
+            fn reduce_add(a: {repr}) -> i32 {{ {reduce_add} }}
+
+            #[inline(always)]
+            fn not(a: {repr}) -> {repr} {{ {not} }}
+            #[inline(always)]
+            fn bitand(a: {repr}, b: {repr}) -> {repr} {{ {and} }}
+            #[inline(always)]
+            fn bitor(a: {repr}, b: {repr}) -> {repr} {{ {or} }}
+            #[inline(always)]
+            fn bitxor(a: {repr}, b: {repr}) -> {repr} {{ {xor} }}
+
+            #[inline(always)]
+            fn shl_const<const N: i32>(a: {repr}) -> {repr} {{
+                [{shl_lanes}]
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: {repr}) -> {repr} {{
+                [{shr_arith_lanes}]
+            }}
+
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(a: {repr}) -> {repr} {{
+                [{shr_logic_lanes}]
+            }}
+
+            #[inline(always)]
+            fn all_true(a: {repr}) -> bool {{
+                {all_true}
+            }}
+
+            #[inline(always)]
+            fn any_true(a: {repr}) -> bool {{
+                {any_true}
+            }}
+
+            #[inline(always)]
+            fn bitmask(a: {repr}) -> u32 {{
+                {bitmask}
+            }}
+        }}
+    "#,
+        v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
+        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
+        load_lanes = (0..sub_count)
+            .map(|i| format!("v128_load(data.as_ptr().add({}).cast())", i * 4))
+            .collect::<Vec<_>>().join(", "),
+        store_lanes = (0..sub_count)
+            .map(|i| format!("v128_store(out.as_mut_ptr().add({}).cast(), repr[{i}]);", i * 4))
+            .collect::<Vec<_>>().join("\n            "),
+        add = binary_op("i32x4_add"),
+        sub = binary_op("i32x4_sub"),
+        mul = binary_op("i32x4_mul"),
+        neg = unary_op("i32x4_neg"),
+        min = binary_op("i32x4_min"),
+        max = binary_op("i32x4_max"),
+        abs = unary_op("i32x4_abs"),
+        eq = binary_op("i32x4_eq"),
+        ne = binary_op("i32x4_ne"),
+        lt = binary_op("i32x4_lt"),
+        le = binary_op("i32x4_le"),
+        gt = binary_op("i32x4_gt"),
+        ge = binary_op("i32x4_ge"),
+        blend_lanes = (0..sub_count)
+            .map(|i| format!("v128_bitselect(if_true[{i}], if_false[{i}], mask[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        reduce_add = reduce_add_body(),
+        not = unary_op("v128_not"),
+        and = binary_op("v128_and"),
+        or = binary_op("v128_or"),
+        xor = binary_op("v128_xor"),
+        shl_lanes = (0..sub_count)
+            .map(|i| format!("i32x4_shl(a[{i}], N as u32)"))
+            .collect::<Vec<_>>().join(", "),
+        shr_arith_lanes = (0..sub_count)
+            .map(|i| format!("i32x4_shr(a[{i}], N as u32)"))
+            .collect::<Vec<_>>().join(", "),
+        shr_logic_lanes = (0..sub_count)
+            .map(|i| format!("u32x4_shr(a[{i}], N as u32)"))
+            .collect::<Vec<_>>().join(", "),
+        all_true = (0..sub_count)
+            .map(|i| format!("i32x4_all_true(a[{i}])"))
+            .collect::<Vec<_>>().join(" && "),
+        any_true = (0..sub_count)
+            .map(|i| format!("v128_any_true(a[{i}])"))
+            .collect::<Vec<_>>().join(" || "),
+        bitmask = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("((i32x4_bitmask(a[{i}]) as u32) << {})", i * 4))
+                .collect();
+            items.join(" | ")
+        },
+    }
+}
+
+// ============================================================================
+// WASM Conversion Implementation Generation
+// ============================================================================
+
+fn generate_wasm_convert_impls() -> String {
+    formatdoc! {r#"
+
+        #[cfg(target_arch = "wasm32")]
+        impl F32x4Convert for archmage::Wasm128Token {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: v128) -> v128 {{ a }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: v128) -> v128 {{ a }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: v128) -> v128 {{
+                i32x4_trunc_sat_f32x4(a)
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: v128) -> v128 {{
+                i32x4_trunc_sat_f32x4(f32x4_nearest(a))
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: v128) -> v128 {{
+                f32x4_convert_i32x4(a)
+            }}
+        }}
+
+        #[cfg(target_arch = "wasm32")]
+        impl F32x8Convert for archmage::Wasm128Token {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: [v128; 2]) -> [v128; 2] {{ a }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: [v128; 2]) -> [v128; 2] {{ a }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: [v128; 2]) -> [v128; 2] {{
+                [i32x4_trunc_sat_f32x4(a[0]), i32x4_trunc_sat_f32x4(a[1])]
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: [v128; 2]) -> [v128; 2] {{
+                [
+                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[0])),
+                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[1])),
+                ]
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: [v128; 2]) -> [v128; 2] {{
+                [f32x4_convert_i32x4(a[0]), f32x4_convert_i32x4(a[1])]
+            }}
+        }}
+    "#}
 }
