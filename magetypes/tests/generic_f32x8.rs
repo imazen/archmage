@@ -5,7 +5,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{SimdToken, X64V3Token};
+use archmage::{ScalarToken, SimdToken, X64V3Token};
 use magetypes::simd::backends::F32x8Backend;
 use magetypes::simd::generic::f32x8;
 
@@ -391,5 +391,110 @@ fn repr_roundtrip() {
         let repr = v.into_repr();
         let v2 = f32x8::<X64V3Token>::from_repr(token, repr);
         assert_eq!(v2.to_array(), [7.0; 8]);
+    }
+}
+
+// ============================================================================
+// ScalarToken backend tests
+// ============================================================================
+
+#[test]
+fn scalar_basic_arithmetic() {
+    let token = ScalarToken;
+    let a = f32x8::<ScalarToken>::splat(token, 3.0);
+    let b = f32x8::<ScalarToken>::splat(token, 2.0);
+
+    assert_eq!((a + b).to_array(), [5.0; 8]);
+    assert_eq!((a - b).to_array(), [1.0; 8]);
+    assert_eq!((a * b).to_array(), [6.0; 8]);
+    assert_eq!((a / b).to_array(), [1.5; 8]);
+    assert_eq!((-a).to_array(), [-3.0; 8]);
+}
+
+#[test]
+fn scalar_math() {
+    let token = ScalarToken;
+
+    let v = f32x8::<ScalarToken>::splat(token, 4.0);
+    assert_eq!(v.sqrt().to_array(), [2.0; 8]);
+    assert_eq!(v.abs().to_array(), [4.0; 8]);
+    assert_eq!((-v).abs().to_array(), [4.0; 8]);
+
+    let v = f32x8::<ScalarToken>::splat(token, 2.7);
+    assert_eq!(v.floor().to_array(), [2.0; 8]);
+    assert_eq!(v.ceil().to_array(), [3.0; 8]);
+
+    let a = f32x8::<ScalarToken>::splat(token, 2.0);
+    let b = f32x8::<ScalarToken>::splat(token, 3.0);
+    let c = f32x8::<ScalarToken>::splat(token, 1.0);
+    assert_eq!(a.mul_add(b, c).to_array(), [7.0; 8]);
+    assert_eq!(a.mul_sub(b, c).to_array(), [5.0; 8]);
+}
+
+#[test]
+fn scalar_reductions() {
+    let token = ScalarToken;
+    let v = f32x8::<ScalarToken>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+    assert_eq!(v.reduce_add(), 36.0);
+    assert_eq!(v.reduce_min(), 1.0);
+    assert_eq!(v.reduce_max(), 8.0);
+}
+
+#[test]
+fn scalar_comparisons() {
+    let token = ScalarToken;
+    let a = f32x8::<ScalarToken>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+    let b = f32x8::<ScalarToken>::splat(token, 4.0);
+    let mask = a.simd_lt(b);
+    let selected = f32x8::<ScalarToken>::blend(
+        mask,
+        f32x8::<ScalarToken>::splat(token, 10.0),
+        f32x8::<ScalarToken>::splat(token, 20.0),
+    );
+    let result = selected.to_array();
+    assert_eq!(result[0], 10.0); // 1 < 4 → true
+    assert_eq!(result[2], 10.0); // 3 < 4 → true
+    assert_eq!(result[3], 20.0); // 4 < 4 → false
+    assert_eq!(result[7], 20.0); // 8 < 4 → false
+}
+
+#[test]
+fn scalar_size() {
+    // ScalarToken repr is [f32; 8] = 32 bytes, same as SIMD
+    assert_eq!(core::mem::size_of::<f32x8<ScalarToken>>(), 32);
+}
+
+// ============================================================================
+// Cross-backend: same generic function, both backends produce same results
+// ============================================================================
+
+#[test]
+fn cross_backend_sum() {
+    let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+
+    let scalar_result = generic_sum(ScalarToken, &data);
+
+    if let Some(token) = X64V3Token::summon() {
+        let simd_result = generic_sum(token, &data);
+        assert_eq!(
+            scalar_result, simd_result,
+            "Scalar and AVX2 backends should produce identical results"
+        );
+    }
+}
+
+#[test]
+fn cross_backend_dot() {
+    let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let b = [8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
+
+    let scalar_result = generic_dot(ScalarToken, &a, &b);
+
+    if let Some(token) = X64V3Token::summon() {
+        let simd_result = generic_dot(token, &a, &b);
+        assert_eq!(
+            scalar_result, simd_result,
+            "Scalar and AVX2 backends should produce identical results"
+        );
     }
 }
