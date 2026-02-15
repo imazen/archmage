@@ -1352,6 +1352,24 @@ pub(crate) use registry::*;
         total_bytes
     );
 
+    // Generate backend traits + implementations (generic SIMD strategy pattern)
+    println!("\n=== Generating Backend Traits ===");
+    fs::create_dir_all(simd_dir.join("backends"))?;
+    fs::create_dir_all(simd_dir.join("impls"))?;
+    let backend_files = simd_types::backend_gen::generate_backend_files();
+    let mut backend_total_bytes = 0;
+    for (rel_path, content) in &backend_files {
+        let full_path = simd_dir.join(rel_path);
+        fs::write(&full_path, content)?;
+        backend_total_bytes += content.len();
+        println!("  Wrote {} ({} bytes)", full_path.display(), content.len());
+    }
+    println!(
+        "Total backend files: {} files, {} bytes",
+        backend_files.len(),
+        backend_total_bytes
+    );
+
     // Generate SIMD type tests
     let simd_tests = simd_types::generate_simd_tests();
     let simd_test_path = PathBuf::from("magetypes/tests/generated_simd_types.rs");
@@ -1393,6 +1411,9 @@ pub(crate) use registry::*;
         fmt_paths.push(PathBuf::from("magetypes/tests").join(filename));
     }
     fmt_paths.push(width_path);
+    for rel in backend_files.keys() {
+        fmt_paths.push(simd_dir.join(rel));
+    }
     for path in &fmt_paths {
         let _ = std::process::Command::new("rustfmt")
             .arg("--edition")

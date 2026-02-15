@@ -1,12 +1,10 @@
-//! Sealed trait preventing external implementations of backend traits.
+//! Sealed trait to prevent external implementations of backend traits.
 //!
-//! Only archmage token types can implement `F32x8Backend`, etc.
-//! This is enforced at the type level via this sealed supertrait.
+//! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
-/// Sealed trait — cannot be implemented outside magetypes.
+/// Sealed trait — only archmage token types can implement backend traits.
 pub trait Sealed {}
 
-// Implement for all token types that can have SIMD backends.
 impl Sealed for archmage::X64V1Token {}
 impl Sealed for archmage::X64V2Token {}
 impl Sealed for archmage::X64V3Token {}

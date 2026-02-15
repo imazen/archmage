@@ -1,14 +1,14 @@
-//! Backend trait for `f32x8<T>` — 8-lane f32 SIMD vector.
+//! Backend trait for `f32x4<T>` — 4-lane f32 SIMD vector.
 //!
 //! Each token type implements this trait with its platform-native representation.
-//! The generic wrapper `f32x8<T>` delegates all operations to these trait methods.
+//! The generic wrapper `f32x4<T>` delegates all operations to these trait methods.
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
 use super::sealed::Sealed;
 use archmage::SimdToken;
 
-/// Backend implementation for 8-lane f32 SIMD vectors.
+/// Backend implementation for 4-lane f32 SIMD vectors.
 ///
 /// Trait methods are **associated functions** (no `self`/token parameter).
 /// The implementing type `Self` (a token type) determines which platform
@@ -18,29 +18,29 @@ use archmage::SimdToken;
 ///
 /// This trait is sealed — only archmage token types can implement it.
 /// The token proves CPU support was verified via `summon()`.
-pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
+pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
     /// Platform-native SIMD representation.
     type Repr: Copy + Clone + Send + Sync;
 
     // ====== Construction ======
 
-    /// Broadcast scalar to all 8 lanes.
+    /// Broadcast scalar to all 4 lanes.
     fn splat(v: f32) -> Self::Repr;
 
     /// All lanes zero.
     fn zero() -> Self::Repr;
 
     /// Load from an aligned array.
-    fn load(data: &[f32; 8]) -> Self::Repr;
+    fn load(data: &[f32; 4]) -> Self::Repr;
 
     /// Create from array (zero-cost transmute where possible).
-    fn from_array(arr: [f32; 8]) -> Self::Repr;
+    fn from_array(arr: [f32; 4]) -> Self::Repr;
 
     /// Store to array.
-    fn store(repr: Self::Repr, out: &mut [f32; 8]);
+    fn store(repr: Self::Repr, out: &mut [f32; 4]);
 
     /// Convert to array.
-    fn to_array(repr: Self::Repr) -> [f32; 8];
+    fn to_array(repr: Self::Repr) -> [f32; 4];
 
     // ====== Arithmetic ======
 
@@ -114,13 +114,13 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Reductions ======
 
-    /// Sum all 8 lanes.
+    /// Sum all 4 lanes.
     fn reduce_add(a: Self::Repr) -> f32;
 
-    /// Minimum across all 8 lanes.
+    /// Minimum across all 4 lanes.
     fn reduce_min(a: Self::Repr) -> f32;
 
-    /// Maximum across all 8 lanes.
+    /// Maximum across all 4 lanes.
     fn reduce_max(a: Self::Repr) -> f32;
 
     // ====== Approximations ======

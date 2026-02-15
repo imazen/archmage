@@ -15,6 +15,7 @@
 //! - `transcendental` - Transcendental functions (log, exp, pow, cbrt)
 
 pub mod arch;
+pub mod backend_gen;
 mod block_ops;
 pub mod block_ops_arm;
 pub mod block_ops_wasm;

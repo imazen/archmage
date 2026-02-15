@@ -2,6 +2,8 @@
 //!
 //! Each file implements the backend traits (e.g., `F32x8Backend`) for one
 //! token, using that platform's native intrinsics.
+//!
+//! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
 #[cfg(target_arch = "x86_64")]
 mod x86_v3;
