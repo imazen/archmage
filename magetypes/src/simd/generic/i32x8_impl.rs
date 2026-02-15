@@ -1,39 +1,39 @@
-//! Generic `f32x4<T>` — 4-lane f32 SIMD vector parameterized by backend.
+//! Generic `i32x8<T>` — 8-lane i32 SIMD vector parameterized by backend.
 //!
 //! `T` is a token type (e.g., `X64V3Token`, `NeonToken`, `ScalarToken`)
 //! that determines the platform-native representation and intrinsics used.
-//! The struct delegates all operations to the [`F32x4Backend`] trait.
+//! The struct delegates all operations to the [`I32x8Backend`] trait.
 
 #![allow(clippy::should_implement_trait)]
 
 use core::marker::PhantomData;
 use core::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
-    Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index,
+    IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-use crate::simd::backends::F32x4Backend;
+use crate::simd::backends::I32x8Backend;
 
-/// 4-lane f32 SIMD vector, generic over backend `T`.
+/// 8-lane i32 SIMD vector, generic over backend `T`.
 ///
 /// `T` is a token type that proves CPU support for the required SIMD features.
-/// The inner representation is `T::Repr` (e.g., `__m128` on x86, `float32x4_t` on ARM).
+/// The inner representation is `T::Repr` (e.g., `__m256i` on AVX2, `[i32; 8]` on scalar).
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 /// After construction, operations don't need the token — it's baked into the type.
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct f32x4<T: F32x4Backend>(T::Repr, PhantomData<T>);
+pub struct i32x8<T: I32x8Backend>(T::Repr, PhantomData<T>);
 
-impl<T: F32x4Backend> f32x4<T> {
-    /// Number of f32 lanes.
-    pub const LANES: usize = 4;
+impl<T: I32x8Backend> i32x8<T> {
+    /// Number of i32 lanes.
+    pub const LANES: usize = 8;
 
     // ====== Construction (token-gated) ======
 
-    /// Broadcast scalar to all 4 lanes.
+    /// Broadcast scalar to all 8 lanes.
     #[inline(always)]
-    pub fn splat(_: T, v: f32) -> Self {
+    pub fn splat(_: T, v: i32) -> Self {
         Self(T::splat(v), PhantomData)
     }
 
@@ -43,22 +43,22 @@ impl<T: F32x4Backend> f32x4<T> {
         Self(T::zero(), PhantomData)
     }
 
-    /// Load from a `[f32; 4]` array.
+    /// Load from a `[i32; 8]` array.
     #[inline(always)]
-    pub fn load(_: T, data: &[f32; 4]) -> Self {
+    pub fn load(_: T, data: &[i32; 8]) -> Self {
         Self(T::load(data), PhantomData)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub fn from_array(_: T, arr: [f32; 4]) -> Self {
+    pub fn from_array(_: T, arr: [i32; 8]) -> Self {
         Self(T::from_array(arr), PhantomData)
     }
 
-    /// Create from slice. Panics if `slice.len() < 4`.
+    /// Create from slice. Panics if `slice.len() < 8`.
     #[inline(always)]
-    pub fn from_slice(_: T, slice: &[f32]) -> Self {
-        let arr: [f32; 4] = slice[..4].try_into().unwrap();
+    pub fn from_slice(_: T, slice: &[i32]) -> Self {
+        let arr: [i32; 8] = slice[..8].try_into().unwrap();
         Self(T::from_array(arr), PhantomData)
     }
 
@@ -66,13 +66,13 @@ impl<T: F32x4Backend> f32x4<T> {
 
     /// Store to array.
     #[inline(always)]
-    pub fn store(self, out: &mut [f32; 4]) {
+    pub fn store(self, out: &mut [i32; 8]) {
         T::store(self.0, out);
     }
 
     /// Convert to array.
     #[inline(always)]
-    pub fn to_array(self) -> [f32; 4] {
+    pub fn to_array(self) -> [i32; 8] {
         T::to_array(self.0)
     }
 
@@ -109,52 +109,16 @@ impl<T: F32x4Backend> f32x4<T> {
         Self(T::max(self.0, other.0), PhantomData)
     }
 
-    /// Clamp between lo and hi.
-    #[inline(always)]
-    pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
-    }
-
-    /// Square root.
-    #[inline(always)]
-    pub fn sqrt(self) -> Self {
-        Self(T::sqrt(self.0), PhantomData)
-    }
-
-    /// Absolute value.
+    /// Lane-wise absolute value.
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(T::abs(self.0), PhantomData)
     }
 
-    /// Round toward negative infinity.
+    /// Clamp between lo and hi.
     #[inline(always)]
-    pub fn floor(self) -> Self {
-        Self(T::floor(self.0), PhantomData)
-    }
-
-    /// Round toward positive infinity.
-    #[inline(always)]
-    pub fn ceil(self) -> Self {
-        Self(T::ceil(self.0), PhantomData)
-    }
-
-    /// Round to nearest integer.
-    #[inline(always)]
-    pub fn round(self) -> Self {
-        Self(T::round(self.0), PhantomData)
-    }
-
-    /// Fused multiply-add: `self * a + b`.
-    #[inline(always)]
-    pub fn mul_add(self, a: Self, b: Self) -> Self {
-        Self(T::mul_add(self.0, a.0, b.0), PhantomData)
-    }
-
-    /// Fused multiply-sub: `self * a - b`.
-    #[inline(always)]
-    pub fn mul_sub(self, a: Self, b: Self) -> Self {
-        Self(T::mul_sub(self.0, a.0, b.0), PhantomData)
+    pub fn clamp(self, lo: Self, hi: Self) -> Self {
+        Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
     }
 
     // ====== Comparisons ======
@@ -203,48 +167,30 @@ impl<T: F32x4Backend> f32x4<T> {
 
     // ====== Reductions ======
 
-    /// Sum all 4 lanes.
+    /// Sum all 8 lanes.
     #[inline(always)]
-    pub fn reduce_add(self) -> f32 {
+    pub fn reduce_add(self) -> i32 {
         T::reduce_add(self.0)
     }
 
-    /// Minimum across all 4 lanes.
+    // ====== Shifts ======
+
+    /// Shift left by constant.
     #[inline(always)]
-    pub fn reduce_min(self) -> f32 {
-        T::reduce_min(self.0)
+    pub fn shl_const<const N: i32>(self) -> Self {
+        Self(T::shl_const::<N>(self.0), PhantomData)
     }
 
-    /// Maximum across all 4 lanes.
+    /// Arithmetic shift right by constant (sign-extending).
     #[inline(always)]
-    pub fn reduce_max(self) -> f32 {
-        T::reduce_max(self.0)
+    pub fn shr_arithmetic_const<const N: i32>(self) -> Self {
+        Self(T::shr_arithmetic_const::<N>(self.0), PhantomData)
     }
 
-    // ====== Approximations ======
-
-    /// Fast reciprocal approximation (~12-bit precision).
+    /// Logical shift right by constant (zero-filling).
     #[inline(always)]
-    pub fn rcp_approx(self) -> Self {
-        Self(T::rcp_approx(self.0), PhantomData)
-    }
-
-    /// Precise reciprocal (Newton-Raphson refined).
-    #[inline(always)]
-    pub fn recip(self) -> Self {
-        Self(T::recip(self.0), PhantomData)
-    }
-
-    /// Fast reciprocal square root approximation (~12-bit precision).
-    #[inline(always)]
-    pub fn rsqrt_approx(self) -> Self {
-        Self(T::rsqrt_approx(self.0), PhantomData)
-    }
-
-    /// Precise reciprocal square root (Newton-Raphson refined).
-    #[inline(always)]
-    pub fn rsqrt(self) -> Self {
-        Self(T::rsqrt(self.0), PhantomData)
+    pub fn shr_logical_const<const N: i32>(self) -> Self {
+        Self(T::shr_logical_const::<N>(self.0), PhantomData)
     }
 
     // ====== Bitwise ======
@@ -254,13 +200,33 @@ impl<T: F32x4Backend> f32x4<T> {
     pub fn not(self) -> Self {
         Self(T::not(self.0), PhantomData)
     }
+
+    // ====== Boolean ======
+
+    /// True if all lanes have their sign bit set (all-1s mask).
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        T::all_true(self.0)
+    }
+
+    /// True if any lane has its sign bit set.
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        T::any_true(self.0)
+    }
+
+    /// Extract the high bit of each 32-bit lane as a bitmask.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        T::bitmask(self.0)
+    }
 }
 
 // ============================================================================
 // Operator implementations
 // ============================================================================
 
-impl<T: F32x4Backend> Add for f32x4<T> {
+impl<T: I32x8Backend> Add for i32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
@@ -268,7 +234,7 @@ impl<T: F32x4Backend> Add for f32x4<T> {
     }
 }
 
-impl<T: F32x4Backend> Sub for f32x4<T> {
+impl<T: I32x8Backend> Sub for i32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
@@ -276,7 +242,7 @@ impl<T: F32x4Backend> Sub for f32x4<T> {
     }
 }
 
-impl<T: F32x4Backend> Mul for f32x4<T> {
+impl<T: I32x8Backend> Mul for i32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
@@ -284,15 +250,7 @@ impl<T: F32x4Backend> Mul for f32x4<T> {
     }
 }
 
-impl<T: F32x4Backend> Div for f32x4<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn div(self, rhs: Self) -> Self {
-        Self(T::div(self.0, rhs.0), PhantomData)
-    }
-}
-
-impl<T: F32x4Backend> Neg for f32x4<T> {
+impl<T: I32x8Backend> Neg for i32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
@@ -300,7 +258,7 @@ impl<T: F32x4Backend> Neg for f32x4<T> {
     }
 }
 
-impl<T: F32x4Backend> BitAnd for f32x4<T> {
+impl<T: I32x8Backend> BitAnd for i32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self {
@@ -308,7 +266,7 @@ impl<T: F32x4Backend> BitAnd for f32x4<T> {
     }
 }
 
-impl<T: F32x4Backend> BitOr for f32x4<T> {
+impl<T: I32x8Backend> BitOr for i32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self {
@@ -316,7 +274,7 @@ impl<T: F32x4Backend> BitOr for f32x4<T> {
     }
 }
 
-impl<T: F32x4Backend> BitXor for f32x4<T> {
+impl<T: I32x8Backend> BitXor for i32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self {
@@ -328,49 +286,42 @@ impl<T: F32x4Backend> BitXor for f32x4<T> {
 // Assign operators
 // ============================================================================
 
-impl<T: F32x4Backend> AddAssign for f32x4<T> {
+impl<T: I32x8Backend> AddAssign for i32x8<T> {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl<T: F32x4Backend> SubAssign for f32x4<T> {
+impl<T: I32x8Backend> SubAssign for i32x8<T> {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl<T: F32x4Backend> MulAssign for f32x4<T> {
+impl<T: I32x8Backend> MulAssign for i32x8<T> {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl<T: F32x4Backend> DivAssign for f32x4<T> {
-    #[inline(always)]
-    fn div_assign(&mut self, rhs: Self) {
-        *self = *self / rhs;
-    }
-}
-
-impl<T: F32x4Backend> BitAndAssign for f32x4<T> {
+impl<T: I32x8Backend> BitAndAssign for i32x8<T> {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: Self) {
         *self = *self & rhs;
     }
 }
 
-impl<T: F32x4Backend> BitOrAssign for f32x4<T> {
+impl<T: I32x8Backend> BitOrAssign for i32x8<T> {
     #[inline(always)]
     fn bitor_assign(&mut self, rhs: Self) {
         *self = *self | rhs;
     }
 }
 
-impl<T: F32x4Backend> BitXorAssign for f32x4<T> {
+impl<T: I32x8Backend> BitXorAssign for i32x8<T> {
     #[inline(always)]
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = *self ^ rhs;
@@ -378,38 +329,30 @@ impl<T: F32x4Backend> BitXorAssign for f32x4<T> {
 }
 
 // ============================================================================
-// Scalar broadcast operators (v + 2.0, v * 0.5, etc.)
+// Scalar broadcast operators (v + 2, v * 3, etc.)
 // ============================================================================
 
-impl<T: F32x4Backend> Add<f32> for f32x4<T> {
+impl<T: I32x8Backend> Add<i32> for i32x8<T> {
     type Output = Self;
     #[inline(always)]
-    fn add(self, rhs: f32) -> Self {
+    fn add(self, rhs: i32) -> Self {
         Self(T::add(self.0, T::splat(rhs)), PhantomData)
     }
 }
 
-impl<T: F32x4Backend> Sub<f32> for f32x4<T> {
+impl<T: I32x8Backend> Sub<i32> for i32x8<T> {
     type Output = Self;
     #[inline(always)]
-    fn sub(self, rhs: f32) -> Self {
+    fn sub(self, rhs: i32) -> Self {
         Self(T::sub(self.0, T::splat(rhs)), PhantomData)
     }
 }
 
-impl<T: F32x4Backend> Mul<f32> for f32x4<T> {
+impl<T: I32x8Backend> Mul<i32> for i32x8<T> {
     type Output = Self;
     #[inline(always)]
-    fn mul(self, rhs: f32) -> Self {
+    fn mul(self, rhs: i32) -> Self {
         Self(T::mul(self.0, T::splat(rhs)), PhantomData)
-    }
-}
-
-impl<T: F32x4Backend> Div<f32> for f32x4<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn div(self, rhs: f32) -> Self {
-        Self(T::div(self.0, T::splat(rhs)), PhantomData)
     }
 }
 
@@ -417,22 +360,22 @@ impl<T: F32x4Backend> Div<f32> for f32x4<T> {
 // Index
 // ============================================================================
 
-impl<T: F32x4Backend> Index<usize> for f32x4<T> {
-    type Output = f32;
+impl<T: I32x8Backend> Index<usize> for i32x8<T> {
+    type Output = i32;
     #[inline(always)]
-    fn index(&self, i: usize) -> &f32 {
-        assert!(i < 4, "f32x4 index out of bounds: {i}");
-        // SAFETY: f32x4's repr is layout-compatible with [f32; 4], and i < 4.
-        unsafe { &*(core::ptr::from_ref(self).cast::<f32>()).add(i) }
+    fn index(&self, i: usize) -> &i32 {
+        assert!(i < 8, "i32x8 index out of bounds: {i}");
+        // SAFETY: i32x8's repr is layout-compatible with [i32; 8], and i < 8.
+        unsafe { &*(core::ptr::from_ref(self).cast::<i32>()).add(i) }
     }
 }
 
-impl<T: F32x4Backend> IndexMut<usize> for f32x4<T> {
+impl<T: I32x8Backend> IndexMut<usize> for i32x8<T> {
     #[inline(always)]
-    fn index_mut(&mut self, i: usize) -> &mut f32 {
-        assert!(i < 4, "f32x4 index out of bounds: {i}");
-        // SAFETY: f32x4's repr is layout-compatible with [f32; 4], and i < 4.
-        unsafe { &mut *(core::ptr::from_mut(self).cast::<f32>()).add(i) }
+    fn index_mut(&mut self, i: usize) -> &mut i32 {
+        assert!(i < 8, "i32x8 index out of bounds: {i}");
+        // SAFETY: i32x8's repr is layout-compatible with [i32; 8], and i < 8.
+        unsafe { &mut *(core::ptr::from_mut(self).cast::<i32>()).add(i) }
     }
 }
 
@@ -440,9 +383,9 @@ impl<T: F32x4Backend> IndexMut<usize> for f32x4<T> {
 // Conversions
 // ============================================================================
 
-impl<T: F32x4Backend> From<f32x4<T>> for [f32; 4] {
+impl<T: I32x8Backend> From<i32x8<T>> for [i32; 8] {
     #[inline(always)]
-    fn from(v: f32x4<T>) -> [f32; 4] {
+    fn from(v: i32x8<T>) -> [i32; 8] {
         T::to_array(v.0)
     }
 }
@@ -451,10 +394,10 @@ impl<T: F32x4Backend> From<f32x4<T>> for [f32; 4] {
 // Debug
 // ============================================================================
 
-impl<T: F32x4Backend> core::fmt::Debug for f32x4<T> {
+impl<T: I32x8Backend> core::fmt::Debug for i32x8<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let arr = T::to_array(self.0);
-        f.debug_tuple("f32x4").field(&arr).finish()
+        f.debug_tuple("i32x8").field(&arr).finish()
     }
 }
 
@@ -462,35 +405,17 @@ impl<T: F32x4Backend> core::fmt::Debug for f32x4<T> {
 // Cross-type conversions (available when T implements conversion traits)
 // ============================================================================
 
-impl<T: crate::simd::backends::F32x4Convert> f32x4<T> {
-    /// Bitcast to i32x4 (reinterpret bits, no conversion).
+impl<T: crate::simd::backends::F32x8Convert> i32x8<T> {
+    /// Bitcast to f32x8 (reinterpret bits, no conversion).
     #[inline(always)]
-    pub fn bitcast_to_i32(self) -> super::i32x4<T> {
-        super::i32x4::from_repr_unchecked(T::bitcast_f32_to_i32(self.0))
+    pub fn bitcast_to_f32(self) -> super::f32x8<T> {
+        super::f32x8::from_repr_unchecked(T::bitcast_i32_to_f32(self.0))
     }
 
-    /// Create from i32x4 via bitcast (reinterpret bits, no conversion).
+    /// Convert to f32x8 (numeric conversion).
     #[inline(always)]
-    pub fn from_i32_bitcast(_: T, v: super::i32x4<T>) -> Self {
-        Self(T::bitcast_i32_to_f32(v.into_repr()), PhantomData)
-    }
-
-    /// Convert to i32x4 with truncation toward zero.
-    #[inline(always)]
-    pub fn to_i32(self) -> super::i32x4<T> {
-        super::i32x4::from_repr_unchecked(T::convert_f32_to_i32(self.0))
-    }
-
-    /// Convert to i32x4 with rounding to nearest.
-    #[inline(always)]
-    pub fn to_i32_round(self) -> super::i32x4<T> {
-        super::i32x4::from_repr_unchecked(T::convert_f32_to_i32_round(self.0))
-    }
-
-    /// Create from i32x4 via numeric conversion.
-    #[inline(always)]
-    pub fn from_i32(_: T, v: super::i32x4<T>) -> Self {
-        Self(T::convert_i32_to_f32(v.into_repr()), PhantomData)
+    pub fn to_f32(self) -> super::f32x8<T> {
+        super::f32x8::from_repr_unchecked(T::convert_i32_to_f32(self.0))
     }
 }
 
@@ -499,16 +424,16 @@ impl<T: crate::simd::backends::F32x4Convert> f32x4<T> {
 // ============================================================================
 
 #[cfg(target_arch = "x86_64")]
-impl f32x4<archmage::X64V3Token> {
-    /// Get the raw `__m128` value.
+impl i32x8<archmage::X64V3Token> {
+    /// Get the raw `__m256i` value.
     #[inline(always)]
-    pub fn raw(self) -> core::arch::x86_64::__m128 {
+    pub fn raw(self) -> core::arch::x86_64::__m256i {
         self.0
     }
 
-    /// Create from a raw `__m128` (token-gated, zero-cost).
+    /// Create from a raw `__m256i` (token-gated, zero-cost).
     #[inline(always)]
-    pub fn from_m128(_: archmage::X64V3Token, v: core::arch::x86_64::__m128) -> Self {
+    pub fn from_m256i(_: archmage::X64V3Token, v: core::arch::x86_64::__m256i) -> Self {
         Self(v, PhantomData)
     }
 }

@@ -23,8 +23,12 @@ mod f32x4_impl;
 mod f32x8_impl;
 mod f64x2_impl;
 mod f64x4_impl;
+mod i32x4_impl;
+mod i32x8_impl;
 
 pub use f32x4_impl::f32x4;
 pub use f32x8_impl::f32x8;
 pub use f64x2_impl::f64x2;
 pub use f64x4_impl::f64x4;
+pub use i32x4_impl::i32x4;
+pub use i32x8_impl::i32x8;

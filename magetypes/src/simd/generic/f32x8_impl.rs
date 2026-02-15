@@ -105,6 +105,13 @@ impl<T: F32x8Backend> f32x8<T> {
         Self(repr, PhantomData)
     }
 
+    /// Wrap a repr without requiring a token value.
+    /// Only usable within the `generic` module (for cross-type conversions).
+    #[inline(always)]
+    pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
+        Self(repr, PhantomData)
+    }
+
     // ====== Math ======
 
     /// Lane-wise minimum.
@@ -465,6 +472,42 @@ impl<T: F32x8Backend> core::fmt::Debug for f32x8<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let arr = T::to_array(self.0);
         f.debug_tuple("f32x8").field(&arr).finish()
+    }
+}
+
+// ============================================================================
+// Cross-type conversions (available when T implements conversion traits)
+// ============================================================================
+
+impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
+    /// Bitcast to i32x8 (reinterpret bits, no conversion).
+    #[inline(always)]
+    pub fn bitcast_to_i32(self) -> super::i32x8<T> {
+        super::i32x8::from_repr_unchecked(T::bitcast_f32_to_i32(self.0))
+    }
+
+    /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
+    #[inline(always)]
+    pub fn from_i32_bitcast(_: T, v: super::i32x8<T>) -> Self {
+        Self::from_repr_unchecked(T::bitcast_i32_to_f32(v.into_repr()))
+    }
+
+    /// Convert to i32x8 with truncation toward zero.
+    #[inline(always)]
+    pub fn to_i32(self) -> super::i32x8<T> {
+        super::i32x8::from_repr_unchecked(T::convert_f32_to_i32(self.0))
+    }
+
+    /// Convert to i32x8 with rounding to nearest.
+    #[inline(always)]
+    pub fn to_i32_round(self) -> super::i32x8<T> {
+        super::i32x8::from_repr_unchecked(T::convert_f32_to_i32_round(self.0))
+    }
+
+    /// Create from i32x8 via numeric conversion.
+    #[inline(always)]
+    pub fn from_i32(_: T, v: super::i32x8<T>) -> Self {
+        Self::from_repr_unchecked(T::convert_i32_to_f32(v.into_repr()))
     }
 }
 
