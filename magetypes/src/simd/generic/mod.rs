@@ -25,6 +25,8 @@ mod f64x2_impl;
 mod f64x4_impl;
 mod i32x4_impl;
 mod i32x8_impl;
+mod transcendentals_f32x4;
+mod transcendentals_f32x8;
 
 pub use f32x4_impl::f32x4;
 pub use f32x8_impl::f32x8;
