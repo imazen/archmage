@@ -19,5 +19,12 @@
 
 #![allow(non_camel_case_types)]
 
+mod f32x4_impl;
 mod f32x8_impl;
+mod f64x2_impl;
+mod f64x4_impl;
+
+pub use f32x4_impl::f32x4;
 pub use f32x8_impl::f32x8;
+pub use f64x2_impl::f64x2;
+pub use f64x4_impl::f64x4;
