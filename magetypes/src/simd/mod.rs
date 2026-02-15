@@ -27,3 +27,19 @@ pub use generated::*;
 
 // Re-export scalar types
 pub use scalar::*;
+
+// ============================================================================
+// Strategy-pattern generic SIMD types (Phase 1)
+//
+// These coexist with the old per-platform types above. The generic types
+// live in `backends`, `impls`, and `generic` submodules.
+// ============================================================================
+
+/// Backend traits that define SIMD operations per token type.
+pub mod backends;
+
+/// Backend trait implementations for each token type.
+mod impls;
+
+/// Generic SIMD types parameterized by backend (e.g., `generic::f32x8<x64v3>`).
+pub mod generic;

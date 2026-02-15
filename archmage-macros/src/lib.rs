@@ -885,9 +885,9 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
 fn magetypes_impl(mut input_fn: ItemFn, tiers: &[&TierDescriptor]) -> TokenStream {
     // Strip user-provided #[arcane] / #[rite] to prevent double-wrapping
     // (magetypes auto-adds #[arcane] on non-scalar variants)
-    input_fn.attrs.retain(|attr| {
-        !attr.path().is_ident("arcane") && !attr.path().is_ident("rite")
-    });
+    input_fn
+        .attrs
+        .retain(|attr| !attr.path().is_ident("arcane") && !attr.path().is_ident("rite"));
 
     let fn_name = &input_fn.sig.ident;
     let fn_attrs = &input_fn.attrs;
