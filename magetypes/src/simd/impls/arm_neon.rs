@@ -1403,6 +1403,744 @@ impl I32x8Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
+impl U32x4Backend for archmage::NeonToken {
+    type Repr = uint32x4_t;
+
+    #[inline(always)]
+    fn splat(v: u32) -> uint32x4_t {
+        unsafe { vdupq_n_u32(v) }
+    }
+
+    #[inline(always)]
+    fn zero() -> uint32x4_t {
+        unsafe { vdupq_n_u32(0) }
+    }
+
+    #[inline(always)]
+    fn load(data: &[u32; 4]) -> uint32x4_t {
+        unsafe { vld1q_u32(data.as_ptr()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u32; 4]) -> uint32x4_t {
+        unsafe { vld1q_u32(arr.as_ptr()) }
+    }
+
+    #[inline(always)]
+    fn store(repr: uint32x4_t, out: &mut [u32; 4]) {
+        unsafe { vst1q_u32(out.as_mut_ptr(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: uint32x4_t) -> [u32; 4] {
+        let mut out = [0u32; 4];
+        unsafe { vst1q_u32(out.as_mut_ptr(), repr) };
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vaddq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn sub(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vsubq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn mul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vmulq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn min(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vminq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn max(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vmaxq_u32(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vceqq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn simd_ne(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vmvnq_u32(vceqq_u32(a, b)) }
+    }
+    #[inline(always)]
+    fn simd_lt(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vcltq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn simd_le(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vcleq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn simd_gt(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vcgtq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn simd_ge(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vcgeq_u32(a, b) }
+    }
+
+    #[inline(always)]
+    fn blend(mask: uint32x4_t, if_true: uint32x4_t, if_false: uint32x4_t) -> uint32x4_t {
+        unsafe { vbslq_u32(mask, if_true, if_false) }
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: uint32x4_t) -> u32 {
+        unsafe { vaddvq_u32(a) }
+    }
+
+    #[inline(always)]
+    fn not(a: uint32x4_t) -> uint32x4_t {
+        unsafe { vmvnq_u32(a) }
+    }
+    #[inline(always)]
+    fn bitand(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vandq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn bitor(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { vorrq_u32(a, b) }
+    }
+    #[inline(always)]
+    fn bitxor(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
+        unsafe { veorq_u32(a, b) }
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: uint32x4_t) -> uint32x4_t {
+        unsafe { vshlq_n_u32::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: uint32x4_t) -> uint32x4_t {
+        unsafe { vshrq_n_u32::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn all_true(a: uint32x4_t) -> bool {
+        unsafe { vminvq_u32(a) == u32::MAX }
+    }
+
+    #[inline(always)]
+    fn any_true(a: uint32x4_t) -> bool {
+        unsafe { vmaxvq_u32(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: uint32x4_t) -> u32 {
+        unsafe {
+            // Extract sign bit of each 32-bit lane
+            let shift = vshrq_n_u32::<31>(a);
+            // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
+            let lane0 = vgetq_lane_u32::<0>(shift);
+            let lane1 = vgetq_lane_u32::<1>(shift);
+            let lane2 = vgetq_lane_u32::<2>(shift);
+            let lane3 = vgetq_lane_u32::<3>(shift);
+            lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
+        }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl U32x8Backend for archmage::NeonToken {
+    type Repr = [uint32x4_t; 2];
+
+    #[inline(always)]
+    fn splat(v: u32) -> [uint32x4_t; 2] {
+        unsafe {
+            let v4 = vdupq_n_u32(v);
+            [v4, v4]
+        }
+    }
+
+    #[inline(always)]
+    fn zero() -> [uint32x4_t; 2] {
+        unsafe {
+            let z = vdupq_n_u32(0);
+            [z, z]
+        }
+    }
+
+    #[inline(always)]
+    fn load(data: &[u32; 8]) -> [uint32x4_t; 2] {
+        unsafe {
+            [
+                vld1q_u32(data.as_ptr().add(0)),
+                vld1q_u32(data.as_ptr().add(4)),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u32; 8]) -> [uint32x4_t; 2] {
+        Self::load(&arr)
+    }
+
+    #[inline(always)]
+    fn store(repr: [uint32x4_t; 2], out: &mut [u32; 8]) {
+        unsafe {
+            vst1q_u32(out.as_mut_ptr().add(0), repr[0]);
+            vst1q_u32(out.as_mut_ptr().add(4), repr[1]);
+        }
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [uint32x4_t; 2]) -> [u32; 8] {
+        let mut out = [0u32; 8];
+        Self::store(repr, &mut out);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vaddq_u32(a[0], b[0]), vaddq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn sub(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vsubq_u32(a[0], b[0]), vsubq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn mul(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vmulq_u32(a[0], b[0]), vmulq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn min(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vminq_u32(a[0], b[0]), vminq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn max(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vmaxq_u32(a[0], b[0]), vmaxq_u32(a[1], b[1])] }
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vceqq_u32(a[0], b[0]), vceqq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn simd_ne(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe {
+            [
+                vmvnq_u32(vceqq_u32(a[0], b[0])),
+                vmvnq_u32(vceqq_u32(a[1], b[1])),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn simd_lt(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vcltq_u32(a[0], b[0]), vcltq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn simd_le(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vcleq_u32(a[0], b[0]), vcleq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn simd_gt(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vcgtq_u32(a[0], b[0]), vcgtq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn simd_ge(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vcgeq_u32(a[0], b[0]), vcgeq_u32(a[1], b[1])] }
+    }
+
+    #[inline(always)]
+    fn blend(
+        mask: [uint32x4_t; 2],
+        if_true: [uint32x4_t; 2],
+        if_false: [uint32x4_t; 2],
+    ) -> [uint32x4_t; 2] {
+        unsafe {
+            [
+                vbslq_u32(mask[0], if_true[0], if_false[0]),
+                vbslq_u32(mask[1], if_true[1], if_false[1]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [uint32x4_t; 2]) -> u32 {
+        unsafe {
+            let m = vaddq_u32(a[0], a[1]);
+            vaddvq_u32(m)
+        }
+    }
+
+    #[inline(always)]
+    fn not(a: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vmvnq_u32(a[0]), vmvnq_u32(a[1])] }
+    }
+    #[inline(always)]
+    fn bitand(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vandq_u32(a[0], b[0]), vandq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn bitor(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vorrq_u32(a[0], b[0]), vorrq_u32(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn bitxor(a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [veorq_u32(a[0], b[0]), veorq_u32(a[1], b[1])] }
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vshlq_n_u32::<N>(a[0]), vshlq_n_u32::<N>(a[1])] }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vshrq_n_u32::<N>(a[0]), vshrq_n_u32::<N>(a[1])] }
+    }
+
+    #[inline(always)]
+    fn all_true(a: [uint32x4_t; 2]) -> bool {
+        unsafe { vminvq_u32(a[0]) == u32::MAX && vminvq_u32(a[1]) == u32::MAX }
+    }
+
+    #[inline(always)]
+    fn any_true(a: [uint32x4_t; 2]) -> bool {
+        unsafe { vmaxvq_u32(a[0]) != 0 || vmaxvq_u32(a[1]) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [uint32x4_t; 2]) -> u32 {
+        unsafe {
+            let mut bits = 0u32;
+            let s0 = vshrq_n_u32::<31>(a[0]);
+            bits |= vgetq_lane_u32::<0>(s0) << 0;
+            bits |= (vgetq_lane_u32::<1>(s0)) << 1;
+            bits |= (vgetq_lane_u32::<2>(s0)) << 2;
+            bits |= (vgetq_lane_u32::<3>(s0)) << 3;
+            let s1 = vshrq_n_u32::<31>(a[1]);
+            bits |= vgetq_lane_u32::<0>(s1) << 4;
+            bits |= (vgetq_lane_u32::<1>(s1)) << 5;
+            bits |= (vgetq_lane_u32::<2>(s1)) << 6;
+            bits |= (vgetq_lane_u32::<3>(s1)) << 7;
+            bits
+        }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I64x2Backend for archmage::NeonToken {
+    type Repr = int64x2_t;
+
+    #[inline(always)]
+    fn splat(v: i64) -> int64x2_t {
+        unsafe { vdupq_n_s64(v) }
+    }
+
+    #[inline(always)]
+    fn zero() -> int64x2_t {
+        unsafe { vdupq_n_s64(0i64) }
+    }
+
+    #[inline(always)]
+    fn load(data: &[i64; 2]) -> int64x2_t {
+        unsafe { vld1q_s64(data.as_ptr()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i64; 2]) -> int64x2_t {
+        unsafe { vld1q_s64(arr.as_ptr()) }
+    }
+
+    #[inline(always)]
+    fn store(repr: int64x2_t, out: &mut [i64; 2]) {
+        unsafe { vst1q_s64(out.as_mut_ptr(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: int64x2_t) -> [i64; 2] {
+        let mut out = [0i64; 2];
+        unsafe { vst1q_s64(out.as_mut_ptr(), repr) };
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vaddq_s64(a, b) }
+    }
+    #[inline(always)]
+    fn sub(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vsubq_s64(a, b) }
+    }
+    #[inline(always)]
+    fn neg(a: int64x2_t) -> int64x2_t {
+        unsafe { vnegq_s64(a) }
+    }
+    #[inline(always)]
+    fn min(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        // NEON lacks native i64 min; polyfill via compare+select
+        unsafe {
+            let mask = vcltq_s64(a, b);
+            vbslq_s64(mask, a, b)
+        }
+    }
+    #[inline(always)]
+    fn max(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        // NEON lacks native i64 max; polyfill via compare+select
+        unsafe {
+            let mask = vcgtq_s64(a, b);
+            vbslq_s64(mask, a, b)
+        }
+    }
+    #[inline(always)]
+    fn abs(a: int64x2_t) -> int64x2_t {
+        unsafe { vabsq_s64(a) }
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vreinterpretq_s64_u64(vceqq_s64(a, b)) }
+    }
+    #[inline(always)]
+    fn simd_ne(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe {
+            let eq = vceqq_s64(a, b);
+            // NOT via XOR with all-ones
+            vreinterpretq_s64_u64(veorq_u64(eq, vdupq_n_u64(u64::MAX)))
+        }
+    }
+    #[inline(always)]
+    fn simd_lt(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vreinterpretq_s64_u64(vcltq_s64(a, b)) }
+    }
+    #[inline(always)]
+    fn simd_le(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vreinterpretq_s64_u64(vcleq_s64(a, b)) }
+    }
+    #[inline(always)]
+    fn simd_gt(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vreinterpretq_s64_u64(vcgtq_s64(a, b)) }
+    }
+    #[inline(always)]
+    fn simd_ge(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vreinterpretq_s64_u64(vcgeq_s64(a, b)) }
+    }
+
+    #[inline(always)]
+    fn blend(mask: int64x2_t, if_true: int64x2_t, if_false: int64x2_t) -> int64x2_t {
+        unsafe { vbslq_s64(vreinterpretq_u64_s64(mask), if_true, if_false) }
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: int64x2_t) -> i64 {
+        unsafe {
+            let sum = vpaddq_s64(a, a);
+            vgetq_lane_s64::<0>(sum)
+        }
+    }
+
+    #[inline(always)]
+    fn not(a: int64x2_t) -> int64x2_t {
+        unsafe {
+            let ones = vdupq_n_s64(-1i64);
+            veorq_s64(a, ones)
+        }
+    }
+    #[inline(always)]
+    fn bitand(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vandq_s64(a, b) }
+    }
+    #[inline(always)]
+    fn bitor(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { vorrq_s64(a, b) }
+    }
+    #[inline(always)]
+    fn bitxor(a: int64x2_t, b: int64x2_t) -> int64x2_t {
+        unsafe { veorq_s64(a, b) }
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: int64x2_t) -> int64x2_t {
+        unsafe { vshlq_n_s64::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: int64x2_t) -> int64x2_t {
+        unsafe { vshrq_n_s64::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: int64x2_t) -> int64x2_t {
+        unsafe { vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(a))) }
+    }
+
+    #[inline(always)]
+    fn all_true(a: int64x2_t) -> bool {
+        unsafe {
+            let as_u64 = vreinterpretq_u64_s64(a);
+            vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0
+        }
+    }
+
+    #[inline(always)]
+    fn any_true(a: int64x2_t) -> bool {
+        unsafe {
+            let as_u64 = vreinterpretq_u64_s64(a);
+            (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0
+        }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: int64x2_t) -> u32 {
+        unsafe {
+            let signs = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a));
+            ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
+        }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I64x4Backend for archmage::NeonToken {
+    type Repr = [int64x2_t; 2];
+
+    #[inline(always)]
+    fn splat(v: i64) -> [int64x2_t; 2] {
+        unsafe {
+            let v2 = vdupq_n_s64(v);
+            [v2, v2]
+        }
+    }
+
+    #[inline(always)]
+    fn zero() -> [int64x2_t; 2] {
+        unsafe {
+            let z = vdupq_n_s64(0i64);
+            [z, z]
+        }
+    }
+
+    #[inline(always)]
+    fn load(data: &[i64; 4]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vld1q_s64(data.as_ptr().add(0)),
+                vld1q_s64(data.as_ptr().add(2)),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i64; 4]) -> [int64x2_t; 2] {
+        Self::load(&arr)
+    }
+
+    #[inline(always)]
+    fn store(repr: [int64x2_t; 2], out: &mut [i64; 4]) {
+        unsafe {
+            vst1q_s64(out.as_mut_ptr().add(0), repr[0]);
+            vst1q_s64(out.as_mut_ptr().add(2), repr[1]);
+        }
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [int64x2_t; 2]) -> [i64; 4] {
+        let mut out = [0i64; 4];
+        Self::store(repr, &mut out);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vaddq_s64(a[0], b[0]), vaddq_s64(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn sub(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vsubq_s64(a[0], b[0]), vsubq_s64(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn neg(a: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vnegq_s64(a[0]), vnegq_s64(a[1])] }
+    }
+    #[inline(always)]
+    fn min(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        // NEON lacks native i64 min; polyfill via compare+select per sub-vector
+        unsafe {
+            [
+                vbslq_s64(vcltq_s64(a[0], b[0]), a[0], b[0]),
+                vbslq_s64(vcltq_s64(a[1], b[1]), a[1], b[1]),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn max(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        // NEON lacks native i64 max; polyfill via compare+select per sub-vector
+        unsafe {
+            [
+                vbslq_s64(vcgtq_s64(a[0], b[0]), a[0], b[0]),
+                vbslq_s64(vcgtq_s64(a[1], b[1]), a[1], b[1]),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn abs(a: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vabsq_s64(a[0]), vabsq_s64(a[1])] }
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vreinterpretq_s64_u64(vceqq_s64(a[0], b[0])),
+                vreinterpretq_s64_u64(vceqq_s64(a[1], b[1])),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn simd_ne(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vreinterpretq_s64_u64(veorq_u64(vceqq_s64(a[0], b[0]), vdupq_n_u64(u64::MAX))),
+                vreinterpretq_s64_u64(veorq_u64(vceqq_s64(a[1], b[1]), vdupq_n_u64(u64::MAX))),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn simd_lt(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vreinterpretq_s64_u64(vcltq_s64(a[0], b[0])),
+                vreinterpretq_s64_u64(vcltq_s64(a[1], b[1])),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn simd_le(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vreinterpretq_s64_u64(vcleq_s64(a[0], b[0])),
+                vreinterpretq_s64_u64(vcleq_s64(a[1], b[1])),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn simd_gt(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vreinterpretq_s64_u64(vcgtq_s64(a[0], b[0])),
+                vreinterpretq_s64_u64(vcgtq_s64(a[1], b[1])),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn simd_ge(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vreinterpretq_s64_u64(vcgeq_s64(a[0], b[0])),
+                vreinterpretq_s64_u64(vcgeq_s64(a[1], b[1])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn blend(
+        mask: [int64x2_t; 2],
+        if_true: [int64x2_t; 2],
+        if_false: [int64x2_t; 2],
+    ) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vbslq_s64(vreinterpretq_u64_s64(mask[0]), if_true[0], if_false[0]),
+                vbslq_s64(vreinterpretq_u64_s64(mask[1]), if_true[1], if_false[1]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [int64x2_t; 2]) -> i64 {
+        unsafe {
+            let m = vaddq_s64(a[0], a[1]);
+            let sum = vpaddq_s64(m, m);
+            vgetq_lane_s64::<0>(sum)
+        }
+    }
+
+    #[inline(always)]
+    fn not(a: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                veorq_s64(a[0], vdupq_n_s64(-1i64)),
+                veorq_s64(a[1], vdupq_n_s64(-1i64)),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn bitand(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vandq_s64(a[0], b[0]), vandq_s64(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn bitor(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vorrq_s64(a[0], b[0]), vorrq_s64(a[1], b[1])] }
+    }
+    #[inline(always)]
+    fn bitxor(a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [veorq_s64(a[0], b[0]), veorq_s64(a[1], b[1])] }
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vshlq_n_s64::<N>(a[0]), vshlq_n_s64::<N>(a[1])] }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vshrq_n_s64::<N>(a[0]), vshrq_n_s64::<N>(a[1])] }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe {
+            [
+                vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(a[0]))),
+                vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(a[1]))),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn all_true(a: [int64x2_t; 2]) -> bool {
+        unsafe {
+            (vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[0])) != 0
+                && vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[0])) != 0)
+                && (vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[1])) != 0
+                    && vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[1])) != 0)
+        }
+    }
+
+    #[inline(always)]
+    fn any_true(a: [int64x2_t; 2]) -> bool {
+        unsafe {
+            ((vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[0]))
+                | vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[0])))
+                != 0)
+                || ((vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[1]))
+                    | vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[1])))
+                    != 0)
+        }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [int64x2_t; 2]) -> u32 {
+        unsafe {
+            let mut bits = 0u32;
+            let s0 = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a[0]));
+            bits |= (vgetq_lane_u64::<0>(s0) as u32) << 0;
+            bits |= (vgetq_lane_u64::<1>(s0) as u32) << 1;
+            let s1 = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a[1]));
+            bits |= (vgetq_lane_u64::<0>(s1) as u32) << 2;
+            bits |= (vgetq_lane_u64::<1>(s1) as u32) << 3;
+            bits
+        }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
 impl F32x4Convert for archmage::NeonToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: float32x4_t) -> int32x4_t {
@@ -1455,5 +2193,57 @@ impl F32x8Convert for archmage::NeonToken {
     #[inline(always)]
     fn convert_i32_to_f32(a: [int32x4_t; 2]) -> [float32x4_t; 2] {
         unsafe { [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1])] }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl U32x4Bitcast for archmage::NeonToken {
+    #[inline(always)]
+    fn bitcast_u32_to_i32(a: uint32x4_t) -> int32x4_t {
+        unsafe { vreinterpretq_s32_u32(a) }
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_u32(a: int32x4_t) -> uint32x4_t {
+        unsafe { vreinterpretq_u32_s32(a) }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl U32x8Bitcast for archmage::NeonToken {
+    #[inline(always)]
+    fn bitcast_u32_to_i32(a: [uint32x4_t; 2]) -> [int32x4_t; 2] {
+        unsafe { [vreinterpretq_s32_u32(a[0]), vreinterpretq_s32_u32(a[1])] }
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_u32(a: [int32x4_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vreinterpretq_u32_s32(a[0]), vreinterpretq_u32_s32(a[1])] }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I64x2Bitcast for archmage::NeonToken {
+    #[inline(always)]
+    fn bitcast_i64_to_f64(a: int64x2_t) -> float64x2_t {
+        unsafe { vreinterpretq_f64_s64(a) }
+    }
+
+    #[inline(always)]
+    fn bitcast_f64_to_i64(a: float64x2_t) -> int64x2_t {
+        unsafe { vreinterpretq_s64_f64(a) }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I64x4Bitcast for archmage::NeonToken {
+    #[inline(always)]
+    fn bitcast_i64_to_f64(a: [int64x2_t; 2]) -> [float64x2_t; 2] {
+        unsafe { [vreinterpretq_f64_s64(a[0]), vreinterpretq_f64_s64(a[1])] }
+    }
+
+    #[inline(always)]
+    fn bitcast_f64_to_i64(a: [float64x2_t; 2]) -> [int64x2_t; 2] {
+        unsafe { [vreinterpretq_s64_f64(a[0]), vreinterpretq_s64_f64(a[1])] }
     }
 }

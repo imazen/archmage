@@ -172,7 +172,7 @@ mod x86_impl {
 
     /// Transpose 8x8 matrix stored as 8 f32x8 vectors
     #[arcane]
-    fn transpose_8x8_vecs(_token: X64V3Token, rows: &[f32x8; 8]) -> [f32x8; 8] {
+    fn transpose_8x8_vecs(token: X64V3Token, rows: &[f32x8; 8]) -> [f32x8; 8] {
         use core::arch::x86_64::*;
 
         // Extract raw __m256 from our f32x8 wrappers
@@ -215,19 +215,16 @@ mod x86_impl {
         let c6 = _mm256_permute2f128_ps::<0x31>(s2, s6);
         let c7 = _mm256_permute2f128_ps::<0x31>(s3, s7);
 
-        // SAFETY: We're inside #[arcane] which guarantees AVX2 support
-        unsafe {
-            [
-                f32x8::from_raw(c0),
-                f32x8::from_raw(c1),
-                f32x8::from_raw(c2),
-                f32x8::from_raw(c3),
-                f32x8::from_raw(c4),
-                f32x8::from_raw(c5),
-                f32x8::from_raw(c6),
-                f32x8::from_raw(c7),
-            ]
-        }
+        [
+            f32x8::from_m256(token, c0),
+            f32x8::from_m256(token, c1),
+            f32x8::from_m256(token, c2),
+            f32x8::from_m256(token, c3),
+            f32x8::from_m256(token, c4),
+            f32x8::from_m256(token, c5),
+            f32x8::from_m256(token, c6),
+            f32x8::from_m256(token, c7),
+        ]
     }
 
     /// Load 8x8 block from memory into 8 f32x8 vectors (one per row)
@@ -247,7 +244,7 @@ mod x86_impl {
 
     /// Store 8 f32x8 vectors back to 8x8 block
     #[arcane]
-    fn store_block(_token: X64V3Token, vecs: &[f32x8; 8], block: &mut [f32; 64]) {
+    fn store_block(token: X64V3Token, vecs: &[f32x8; 8], block: &mut [f32; 64]) {
         vecs[0].store((&mut block[0..8]).try_into().unwrap());
         vecs[1].store((&mut block[8..16]).try_into().unwrap());
         vecs[2].store((&mut block[16..24]).try_into().unwrap());

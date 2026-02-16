@@ -1093,6 +1093,632 @@ impl I32x8Backend for archmage::Wasm128Token {
 }
 
 #[cfg(target_arch = "wasm32")]
+impl U32x4Backend for archmage::Wasm128Token {
+    type Repr = v128;
+
+    #[inline(always)]
+    fn splat(v: u32) -> v128 {
+        u32x4_splat(v)
+    }
+    #[inline(always)]
+    fn zero() -> v128 {
+        u32x4_splat(0)
+    }
+    #[inline(always)]
+    fn load(data: &[u32; 4]) -> v128 {
+        unsafe { v128_load(data.as_ptr().cast()) }
+    }
+    #[inline(always)]
+    fn from_array(arr: [u32; 4]) -> v128 {
+        Self::load(&arr)
+    }
+    #[inline(always)]
+    fn store(repr: v128, out: &mut [u32; 4]) {
+        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+    }
+    #[inline(always)]
+    fn to_array(repr: v128) -> [u32; 4] {
+        let mut out = [0u32; 4];
+        Self::store(repr, &mut out);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: v128, b: v128) -> v128 {
+        i32x4_add(a, b)
+    }
+    #[inline(always)]
+    fn sub(a: v128, b: v128) -> v128 {
+        i32x4_sub(a, b)
+    }
+    #[inline(always)]
+    fn mul(a: v128, b: v128) -> v128 {
+        i32x4_mul(a, b)
+    }
+    #[inline(always)]
+    fn min(a: v128, b: v128) -> v128 {
+        u32x4_min(a, b)
+    }
+    #[inline(always)]
+    fn max(a: v128, b: v128) -> v128 {
+        u32x4_max(a, b)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: v128, b: v128) -> v128 {
+        i32x4_eq(a, b)
+    }
+    #[inline(always)]
+    fn simd_ne(a: v128, b: v128) -> v128 {
+        i32x4_ne(a, b)
+    }
+    #[inline(always)]
+    fn simd_lt(a: v128, b: v128) -> v128 {
+        u32x4_lt(a, b)
+    }
+    #[inline(always)]
+    fn simd_le(a: v128, b: v128) -> v128 {
+        u32x4_le(a, b)
+    }
+    #[inline(always)]
+    fn simd_gt(a: v128, b: v128) -> v128 {
+        u32x4_gt(a, b)
+    }
+    #[inline(always)]
+    fn simd_ge(a: v128, b: v128) -> v128 {
+        u32x4_ge(a, b)
+    }
+    #[inline(always)]
+    fn blend(mask: v128, if_true: v128, if_false: v128) -> v128 {
+        v128_bitselect(if_true, if_false, mask)
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: v128) -> u32 {
+        (i32x4_extract_lane::<0>(a) as u32).wrapping_add(
+            (i32x4_extract_lane::<1>(a) as u32).wrapping_add(
+                (i32x4_extract_lane::<2>(a) as u32)
+                    .wrapping_add((i32x4_extract_lane::<3>(a) as u32)),
+            ),
+        )
+    }
+
+    #[inline(always)]
+    fn not(a: v128) -> v128 {
+        v128_not(a)
+    }
+    #[inline(always)]
+    fn bitand(a: v128, b: v128) -> v128 {
+        v128_and(a, b)
+    }
+    #[inline(always)]
+    fn bitor(a: v128, b: v128) -> v128 {
+        v128_or(a, b)
+    }
+    #[inline(always)]
+    fn bitxor(a: v128, b: v128) -> v128 {
+        v128_xor(a, b)
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: v128) -> v128 {
+        u32x4_shl(a, N as u32)
+    }
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: v128) -> v128 {
+        u32x4_shr(a, N as u32)
+    }
+
+    #[inline(always)]
+    fn all_true(a: v128) -> bool {
+        i32x4_all_true(a)
+    }
+    #[inline(always)]
+    fn any_true(a: v128) -> bool {
+        v128_any_true(a)
+    }
+    #[inline(always)]
+    fn bitmask(a: v128) -> u32 {
+        i32x4_bitmask(a) as u32
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U32x8Backend for archmage::Wasm128Token {
+    type Repr = [v128; 2];
+
+    #[inline(always)]
+    fn splat(v: u32) -> [v128; 2] {
+        let v4 = u32x4_splat(v);
+        [v4, v4]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 2] {
+        let z = u32x4_splat(0);
+        [z, z]
+    }
+
+    #[inline(always)]
+    fn load(data: &[u32; 8]) -> [v128; 2] {
+        unsafe {
+            [
+                v128_load(data.as_ptr().add(0).cast()),
+                v128_load(data.as_ptr().add(4).cast()),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u32; 8]) -> [v128; 2] {
+        Self::load(&arr)
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 2], out: &mut [u32; 8]) {
+        unsafe {
+            v128_store(out.as_mut_ptr().add(0).cast(), repr[0]);
+            v128_store(out.as_mut_ptr().add(4).cast(), repr[1]);
+        }
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 2]) -> [u32; 8] {
+        let mut out = [0u32; 8];
+        Self::store(repr, &mut out);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i32x4_add(a[0], b[0]), i32x4_add(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn sub(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i32x4_sub(a[0], b[0]), i32x4_sub(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn mul(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i32x4_mul(a[0], b[0]), i32x4_mul(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn min(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [u32x4_min(a[0], b[0]), u32x4_min(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn max(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [u32x4_max(a[0], b[0]), u32x4_max(a[1], b[1])]
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i32x4_eq(a[0], b[0]), i32x4_eq(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_ne(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i32x4_ne(a[0], b[0]), i32x4_ne(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_lt(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [u32x4_lt(a[0], b[0]), u32x4_lt(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_le(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [u32x4_le(a[0], b[0]), u32x4_le(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_gt(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [u32x4_gt(a[0], b[0]), u32x4_gt(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_ge(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [u32x4_ge(a[0], b[0]), u32x4_ge(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn blend(mask: [v128; 2], if_true: [v128; 2], if_false: [v128; 2]) -> [v128; 2] {
+        [
+            v128_bitselect(if_true[0], if_false[0], mask[0]),
+            v128_bitselect(if_true[1], if_false[1], mask[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 2]) -> u32 {
+        (i32x4_extract_lane::<0>(a[0]) as u32).wrapping_add(
+            (i32x4_extract_lane::<1>(a[0]) as u32).wrapping_add(
+                (i32x4_extract_lane::<2>(a[0]) as u32).wrapping_add(
+                    (i32x4_extract_lane::<3>(a[0]) as u32).wrapping_add(
+                        (i32x4_extract_lane::<0>(a[1]) as u32).wrapping_add(
+                            (i32x4_extract_lane::<1>(a[1]) as u32).wrapping_add(
+                                (i32x4_extract_lane::<2>(a[1]) as u32)
+                                    .wrapping_add((i32x4_extract_lane::<3>(a[1]) as u32)),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 2]) -> [v128; 2] {
+        [v128_not(a[0]), v128_not(a[1])]
+    }
+    #[inline(always)]
+    fn bitand(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [v128_and(a[0], b[0]), v128_and(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn bitor(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [v128_or(a[0], b[0]), v128_or(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn bitxor(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [v128_xor(a[0], b[0]), v128_xor(a[1], b[1])]
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 2]) -> [v128; 2] {
+        [u32x4_shl(a[0], N as u32), u32x4_shl(a[1], N as u32)]
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 2]) -> [v128; 2] {
+        [u32x4_shr(a[0], N as u32), u32x4_shr(a[1], N as u32)]
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 2]) -> bool {
+        i32x4_all_true(a[0]) && i32x4_all_true(a[1])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 2]) -> bool {
+        v128_any_true(a[0]) || v128_any_true(a[1])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 2]) -> u32 {
+        ((i32x4_bitmask(a[0]) as u32) << 0) | ((i32x4_bitmask(a[1]) as u32) << 4)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I64x2Backend for archmage::Wasm128Token {
+    type Repr = v128;
+
+    #[inline(always)]
+    fn splat(v: i64) -> v128 {
+        i64x2_splat(v)
+    }
+    #[inline(always)]
+    fn zero() -> v128 {
+        i64x2_splat(0i64)
+    }
+    #[inline(always)]
+    fn load(data: &[i64; 2]) -> v128 {
+        unsafe { v128_load(data.as_ptr().cast()) }
+    }
+    #[inline(always)]
+    fn from_array(arr: [i64; 2]) -> v128 {
+        Self::load(&arr)
+    }
+    #[inline(always)]
+    fn store(repr: v128, out: &mut [i64; 2]) {
+        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+    }
+    #[inline(always)]
+    fn to_array(repr: v128) -> [i64; 2] {
+        let mut out = [0i64; 2];
+        Self::store(repr, &mut out);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: v128, b: v128) -> v128 {
+        i64x2_add(a, b)
+    }
+    #[inline(always)]
+    fn sub(a: v128, b: v128) -> v128 {
+        i64x2_sub(a, b)
+    }
+    #[inline(always)]
+    fn neg(a: v128) -> v128 {
+        i64x2_neg(a)
+    }
+    #[inline(always)]
+    fn min(a: v128, b: v128) -> v128 {
+        // WASM SIMD lacks native i64 min; polyfill via compare+select
+        let mask = i64x2_gt(a, b);
+        v128_bitselect(b, a, mask)
+    }
+    #[inline(always)]
+    fn max(a: v128, b: v128) -> v128 {
+        // WASM SIMD lacks native i64 max; polyfill via compare+select
+        let mask = i64x2_gt(a, b);
+        v128_bitselect(a, b, mask)
+    }
+    #[inline(always)]
+    fn abs(a: v128) -> v128 {
+        // Polyfill: negate negative values
+        let negated = i64x2_neg(a);
+        let zero = i64x2_splat(0i64);
+        let mask = i64x2_lt(a, zero);
+        v128_bitselect(negated, a, mask)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: v128, b: v128) -> v128 {
+        i64x2_eq(a, b)
+    }
+    #[inline(always)]
+    fn simd_ne(a: v128, b: v128) -> v128 {
+        i64x2_ne(a, b)
+    }
+    #[inline(always)]
+    fn simd_lt(a: v128, b: v128) -> v128 {
+        i64x2_lt(a, b)
+    }
+    #[inline(always)]
+    fn simd_le(a: v128, b: v128) -> v128 {
+        i64x2_le(a, b)
+    }
+    #[inline(always)]
+    fn simd_gt(a: v128, b: v128) -> v128 {
+        i64x2_gt(a, b)
+    }
+    #[inline(always)]
+    fn simd_ge(a: v128, b: v128) -> v128 {
+        i64x2_ge(a, b)
+    }
+    #[inline(always)]
+    fn blend(mask: v128, if_true: v128, if_false: v128) -> v128 {
+        v128_bitselect(if_true, if_false, mask)
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: v128) -> i64 {
+        i64x2_extract_lane::<0>(a) + i64x2_extract_lane::<1>(a)
+    }
+
+    #[inline(always)]
+    fn not(a: v128) -> v128 {
+        v128_not(a)
+    }
+    #[inline(always)]
+    fn bitand(a: v128, b: v128) -> v128 {
+        v128_and(a, b)
+    }
+    #[inline(always)]
+    fn bitor(a: v128, b: v128) -> v128 {
+        v128_or(a, b)
+    }
+    #[inline(always)]
+    fn bitxor(a: v128, b: v128) -> v128 {
+        v128_xor(a, b)
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: v128) -> v128 {
+        i64x2_shl(a, N as u32)
+    }
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: v128) -> v128 {
+        i64x2_shr(a, N as u32)
+    }
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: v128) -> v128 {
+        u64x2_shr(a, N as u32)
+    }
+
+    #[inline(always)]
+    fn all_true(a: v128) -> bool {
+        i64x2_all_true(a)
+    }
+    #[inline(always)]
+    fn any_true(a: v128) -> bool {
+        v128_any_true(a)
+    }
+    #[inline(always)]
+    fn bitmask(a: v128) -> u32 {
+        i64x2_bitmask(a) as u32
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I64x4Backend for archmage::Wasm128Token {
+    type Repr = [v128; 2];
+
+    #[inline(always)]
+    fn splat(v: i64) -> [v128; 2] {
+        let v2 = i64x2_splat(v);
+        [v2, v2]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 2] {
+        let z = i64x2_splat(0i64);
+        [z, z]
+    }
+
+    #[inline(always)]
+    fn load(data: &[i64; 4]) -> [v128; 2] {
+        unsafe {
+            [
+                v128_load(data.as_ptr().add(0).cast()),
+                v128_load(data.as_ptr().add(2).cast()),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i64; 4]) -> [v128; 2] {
+        Self::load(&arr)
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 2], out: &mut [i64; 4]) {
+        unsafe {
+            v128_store(out.as_mut_ptr().add(0).cast(), repr[0]);
+            v128_store(out.as_mut_ptr().add(2).cast(), repr[1]);
+        }
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 2]) -> [i64; 4] {
+        let mut out = [0i64; 4];
+        Self::store(repr, &mut out);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i64x2_add(a[0], b[0]), i64x2_add(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn sub(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i64x2_sub(a[0], b[0]), i64x2_sub(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn neg(a: [v128; 2]) -> [v128; 2] {
+        [i64x2_neg(a[0]), i64x2_neg(a[1])]
+    }
+    #[inline(always)]
+    fn min(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        // WASM SIMD lacks native i64 min; polyfill via compare+select per sub-vector
+        [
+            {
+                let mask = i64x2_gt(a[0], b[0]);
+                v128_bitselect(b[0], a[0], mask)
+            },
+            {
+                let mask = i64x2_gt(a[1], b[1]);
+                v128_bitselect(b[1], a[1], mask)
+            },
+        ]
+    }
+    #[inline(always)]
+    fn max(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        // WASM SIMD lacks native i64 max; polyfill via compare+select per sub-vector
+        [
+            {
+                let mask = i64x2_gt(a[0], b[0]);
+                v128_bitselect(a[0], b[0], mask)
+            },
+            {
+                let mask = i64x2_gt(a[1], b[1]);
+                v128_bitselect(a[1], b[1], mask)
+            },
+        ]
+    }
+    #[inline(always)]
+    fn abs(a: [v128; 2]) -> [v128; 2] {
+        // Polyfill: negate negative values per sub-vector
+        [
+            {
+                let neg = i64x2_neg(a[0]);
+                let zero = i64x2_splat(0i64);
+                let mask = i64x2_lt(a[0], zero);
+                v128_bitselect(neg, a[0], mask)
+            },
+            {
+                let neg = i64x2_neg(a[1]);
+                let zero = i64x2_splat(0i64);
+                let mask = i64x2_lt(a[1], zero);
+                v128_bitselect(neg, a[1], mask)
+            },
+        ]
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i64x2_eq(a[0], b[0]), i64x2_eq(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_ne(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i64x2_ne(a[0], b[0]), i64x2_ne(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_lt(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i64x2_lt(a[0], b[0]), i64x2_lt(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_le(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i64x2_le(a[0], b[0]), i64x2_le(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_gt(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i64x2_gt(a[0], b[0]), i64x2_gt(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn simd_ge(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i64x2_ge(a[0], b[0]), i64x2_ge(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn blend(mask: [v128; 2], if_true: [v128; 2], if_false: [v128; 2]) -> [v128; 2] {
+        [
+            v128_bitselect(if_true[0], if_false[0], mask[0]),
+            v128_bitselect(if_true[1], if_false[1], mask[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 2]) -> i64 {
+        i64x2_extract_lane::<0>(a[0])
+            + i64x2_extract_lane::<1>(a[0])
+            + i64x2_extract_lane::<0>(a[1])
+            + i64x2_extract_lane::<1>(a[1])
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 2]) -> [v128; 2] {
+        [v128_not(a[0]), v128_not(a[1])]
+    }
+    #[inline(always)]
+    fn bitand(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [v128_and(a[0], b[0]), v128_and(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn bitor(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [v128_or(a[0], b[0]), v128_or(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn bitxor(a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [v128_xor(a[0], b[0]), v128_xor(a[1], b[1])]
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 2]) -> [v128; 2] {
+        [i64x2_shl(a[0], N as u32), i64x2_shl(a[1], N as u32)]
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 2]) -> [v128; 2] {
+        [i64x2_shr(a[0], N as u32), i64x2_shr(a[1], N as u32)]
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 2]) -> [v128; 2] {
+        [u64x2_shr(a[0], N as u32), u64x2_shr(a[1], N as u32)]
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 2]) -> bool {
+        i64x2_all_true(a[0]) && i64x2_all_true(a[1])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 2]) -> bool {
+        v128_any_true(a[0]) || v128_any_true(a[1])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 2]) -> u32 {
+        ((i64x2_bitmask(a[0]) as u32) << 0) | ((i64x2_bitmask(a[1]) as u32) << 2)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
 impl F32x4Convert for archmage::Wasm128Token {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: v128) -> v128 {
@@ -1148,5 +1774,57 @@ impl F32x8Convert for archmage::Wasm128Token {
     #[inline(always)]
     fn convert_i32_to_f32(a: [v128; 2]) -> [v128; 2] {
         [f32x4_convert_i32x4(a[0]), f32x4_convert_i32x4(a[1])]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U32x4Bitcast for archmage::Wasm128Token {
+    #[inline(always)]
+    fn bitcast_u32_to_i32(a: v128) -> v128 {
+        a
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_u32(a: v128) -> v128 {
+        a
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U32x8Bitcast for archmage::Wasm128Token {
+    #[inline(always)]
+    fn bitcast_u32_to_i32(a: [v128; 2]) -> [v128; 2] {
+        a
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_u32(a: [v128; 2]) -> [v128; 2] {
+        a
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I64x2Bitcast for archmage::Wasm128Token {
+    #[inline(always)]
+    fn bitcast_i64_to_f64(a: v128) -> v128 {
+        a
+    }
+
+    #[inline(always)]
+    fn bitcast_f64_to_i64(a: v128) -> v128 {
+        a
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I64x4Bitcast for archmage::Wasm128Token {
+    #[inline(always)]
+    fn bitcast_i64_to_f64(a: [v128; 2]) -> [v128; 2] {
+        a
+    }
+
+    #[inline(always)]
+    fn bitcast_f64_to_i64(a: [v128; 2]) -> [v128; 2] {
+        a
     }
 }

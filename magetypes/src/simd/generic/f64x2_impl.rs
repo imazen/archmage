@@ -88,6 +88,13 @@ impl<T: F64x2Backend> f64x2<T> {
         Self(repr, PhantomData)
     }
 
+    /// Wrap a repr without requiring a token value.
+    /// Only usable within the `generic` module (for cross-type conversions).
+    #[inline(always)]
+    pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
+        Self(repr, PhantomData)
+    }
+
     // ====== Math ======
 
     /// Lane-wise minimum.

@@ -320,7 +320,7 @@ mod x86_impl {
         // Select based on threshold
         let mask = srgb.simd_le(threshold);
         let result_raw = _mm256_blendv_ps(gamma_result.raw(), linear_result.raw(), mask.raw());
-        unsafe { f32x8::from_raw(result_raw) }
+        f32x8::from_m256(token, result_raw)
     }
 
     /// Linear to sRGB conversion
@@ -350,7 +350,7 @@ mod x86_impl {
         // Select based on threshold
         let mask = linear.simd_le(threshold);
         let result_raw = _mm256_blendv_ps(gamma_result.raw(), linear_result.raw(), mask.raw());
-        unsafe { f32x8::from_raw(result_raw) }
+        f32x8::from_m256(token, result_raw)
     }
 
     // ============================================================================
@@ -359,13 +359,13 @@ mod x86_impl {
 
     /// Multiply blend: out = src * dst (per channel)
     #[arcane]
-    pub fn blend_multiply_2px(_token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
+    pub fn blend_multiply_2px(token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
         let result = src * dst;
 
         // Preserve alpha (indices 3 and 7) from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result.raw(), src.raw(), blend_mask);
-        unsafe { f32x8::from_raw(result_raw) }
+        f32x8::from_m256(token, result_raw)
     }
 
     /// Screen blend: out = 1 - (1-src) * (1-dst)
@@ -381,7 +381,7 @@ mod x86_impl {
         // Preserve alpha from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result.raw(), src.raw(), blend_mask);
-        unsafe { f32x8::from_raw(result_raw) }
+        f32x8::from_m256(token, result_raw)
     }
 
     /// Overlay blend: if dst < 0.5: 2*src*dst, else: 1-2*(1-src)*(1-dst)
@@ -406,7 +406,7 @@ mod x86_impl {
         // Preserve alpha from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result_raw, src.raw(), blend_mask);
-        unsafe { f32x8::from_raw(result_raw) }
+        f32x8::from_m256(token, result_raw)
     }
 
     // ============================================================================
@@ -418,7 +418,7 @@ mod x86_impl {
     /// Each output is a weighted sum of `n_points` inputs spaced `stride` apart.
     #[arcane]
     pub fn reduce_horizontal_f32(
-        _token: X64V3Token,
+        token: X64V3Token,
         input: &[f32],
         output: &mut [f32],
         weights: &[f32],

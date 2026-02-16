@@ -18,9 +18,9 @@
 
 // All generated code lives in the generated/ subfolder.
 // The old per-platform types are being replaced by generic strategy-pattern types.
-// During migration, both systems coexist: the 6 migrated types (f32x4, f32x8,
-// f64x2, f64x4, i32x4, i32x8) are generic type aliases below, while remaining
-// integer types still use old generated code.
+// During migration, both systems coexist: the 10 migrated types (f32x4, f32x8,
+// f64x2, f64x4, i32x4, i32x8, u32x4, u32x8, i64x2, i64x4) are generic type
+// aliases below, while remaining integer types still use old generated code.
 mod generated;
 
 // Scalar polyfill types (f32x1, i32x1, etc.) for #[magetypes] fallback
@@ -50,7 +50,7 @@ mod impls;
 pub mod generic;
 
 // ============================================================================
-// Type aliases: map the 6 migrated type names to their generic versions.
+// Type aliases: map the 10 migrated type names to their generic versions.
 //
 // On x86_64, `f32x8` = `generic::f32x8<X64V3Token>` (backed by __m256).
 // On x86_64, `f32x4` = `generic::f32x4<X64V3Token>` (backed by __m128).
@@ -88,5 +88,21 @@ mod _type_aliases {
     /// 8-lane i32 SIMD vector (generic, backed by native intrinsics).
     #[cfg(target_arch = "x86_64")]
     pub type i32x8 = super::generic::i32x8<archmage::X64V3Token>;
+
+    /// 4-lane u32 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type u32x4 = super::generic::u32x4<archmage::X64V3Token>;
+
+    /// 8-lane u32 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type u32x8 = super::generic::u32x8<archmage::X64V3Token>;
+
+    /// 2-lane i64 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type i64x2 = super::generic::i64x2<archmage::X64V3Token>;
+
+    /// 4-lane i64 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type i64x4 = super::generic::i64x4<archmage::X64V3Token>;
 }
 pub use _type_aliases::*;

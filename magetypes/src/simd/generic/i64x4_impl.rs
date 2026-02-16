@@ -1,39 +1,45 @@
-//! Generic `f64x4<T>` — 4-lane f64 SIMD vector parameterized by backend.
+//! Generic `i64x4<T>` — 4-lane i64 SIMD vector parameterized by backend.
 //!
 //! `T` is a token type (e.g., `X64V3Token`, `NeonToken`, `ScalarToken`)
 //! that determines the platform-native representation and intrinsics used.
-//! The struct delegates all operations to the [`F64x4Backend`] trait.
+//! The struct delegates all operations to the [`I64x4Backend`] trait.
 
 #![allow(clippy::should_implement_trait)]
 
 use core::marker::PhantomData;
 use core::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
-    Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index,
+    IndexMut, Neg, Sub, SubAssign,
 };
 
-use crate::simd::backends::F64x4Backend;
+use crate::simd::backends::I64x4Backend;
 
-/// 4-lane f64 SIMD vector, generic over backend `T`.
+/// 4-lane i64 SIMD vector, generic over backend `T`.
 ///
 /// `T` is a token type that proves CPU support for the required SIMD features.
-/// The inner representation is `T::Repr` (e.g., `__m256d` on AVX2, `[f64; 4]` on scalar).
+/// The inner representation is `T::Repr` (e.g., `__m256i` on AVX2, `[i64; 4]` on scalar).
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 /// After construction, operations don't need the token — it's baked into the type.
+///
+/// # Note
+///
+/// 64-bit integer SIMD has limited native support: no hardware multiply on
+/// AVX2/NEON/WASM, and arithmetic right shift requires AVX-512 on x86.
+/// Operations like `min`, `max`, and `abs` are polyfilled where needed.
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct f64x4<T: F64x4Backend>(T::Repr, PhantomData<T>);
+pub struct i64x4<T: I64x4Backend>(T::Repr, PhantomData<T>);
 
-impl<T: F64x4Backend> f64x4<T> {
-    /// Number of f64 lanes.
+impl<T: I64x4Backend> i64x4<T> {
+    /// Number of i64 lanes.
     pub const LANES: usize = 4;
 
     // ====== Construction (token-gated) ======
 
     /// Broadcast scalar to all 4 lanes.
     #[inline(always)]
-    pub fn splat(_: T, v: f64) -> Self {
+    pub fn splat(_: T, v: i64) -> Self {
         Self(T::splat(v), PhantomData)
     }
 
@@ -43,22 +49,22 @@ impl<T: F64x4Backend> f64x4<T> {
         Self(T::zero(), PhantomData)
     }
 
-    /// Load from a `[f64; 4]` array.
+    /// Load from a `[i64; 4]` array.
     #[inline(always)]
-    pub fn load(_: T, data: &[f64; 4]) -> Self {
+    pub fn load(_: T, data: &[i64; 4]) -> Self {
         Self(T::load(data), PhantomData)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub fn from_array(_: T, arr: [f64; 4]) -> Self {
+    pub fn from_array(_: T, arr: [i64; 4]) -> Self {
         Self(T::from_array(arr), PhantomData)
     }
 
     /// Create from slice. Panics if `slice.len() < 4`.
     #[inline(always)]
-    pub fn from_slice(_: T, slice: &[f64]) -> Self {
-        let arr: [f64; 4] = slice[..4].try_into().unwrap();
+    pub fn from_slice(_: T, slice: &[i64]) -> Self {
+        let arr: [i64; 4] = slice[..4].try_into().unwrap();
         Self(T::from_array(arr), PhantomData)
     }
 
@@ -66,13 +72,13 @@ impl<T: F64x4Backend> f64x4<T> {
 
     /// Store to array.
     #[inline(always)]
-    pub fn store(self, out: &mut [f64; 4]) {
+    pub fn store(self, out: &mut [i64; 4]) {
         T::store(self.0, out);
     }
 
     /// Convert to array.
     #[inline(always)]
-    pub fn to_array(self) -> [f64; 4] {
+    pub fn to_array(self) -> [i64; 4] {
         T::to_array(self.0)
     }
 
@@ -109,52 +115,16 @@ impl<T: F64x4Backend> f64x4<T> {
         Self(T::max(self.0, other.0), PhantomData)
     }
 
-    /// Clamp between lo and hi.
-    #[inline(always)]
-    pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
-    }
-
-    /// Square root.
-    #[inline(always)]
-    pub fn sqrt(self) -> Self {
-        Self(T::sqrt(self.0), PhantomData)
-    }
-
-    /// Absolute value.
+    /// Lane-wise absolute value.
     #[inline(always)]
     pub fn abs(self) -> Self {
         Self(T::abs(self.0), PhantomData)
     }
 
-    /// Round toward negative infinity.
+    /// Clamp between lo and hi.
     #[inline(always)]
-    pub fn floor(self) -> Self {
-        Self(T::floor(self.0), PhantomData)
-    }
-
-    /// Round toward positive infinity.
-    #[inline(always)]
-    pub fn ceil(self) -> Self {
-        Self(T::ceil(self.0), PhantomData)
-    }
-
-    /// Round to nearest integer.
-    #[inline(always)]
-    pub fn round(self) -> Self {
-        Self(T::round(self.0), PhantomData)
-    }
-
-    /// Fused multiply-add: `self * a + b`.
-    #[inline(always)]
-    pub fn mul_add(self, a: Self, b: Self) -> Self {
-        Self(T::mul_add(self.0, a.0, b.0), PhantomData)
-    }
-
-    /// Fused multiply-sub: `self * a - b`.
-    #[inline(always)]
-    pub fn mul_sub(self, a: Self, b: Self) -> Self {
-        Self(T::mul_sub(self.0, a.0, b.0), PhantomData)
+    pub fn clamp(self, lo: Self, hi: Self) -> Self {
+        Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
     }
 
     // ====== Comparisons ======
@@ -205,46 +175,34 @@ impl<T: F64x4Backend> f64x4<T> {
 
     /// Sum all 4 lanes.
     #[inline(always)]
-    pub fn reduce_add(self) -> f64 {
+    pub fn reduce_add(self) -> i64 {
         T::reduce_add(self.0)
     }
 
-    /// Minimum across all 4 lanes.
+    // ====== Shifts ======
+
+    /// Shift left by constant.
     #[inline(always)]
-    pub fn reduce_min(self) -> f64 {
-        T::reduce_min(self.0)
+    pub fn shl_const<const N: i32>(self) -> Self {
+        Self(T::shl_const::<N>(self.0), PhantomData)
     }
 
-    /// Maximum across all 4 lanes.
+    /// Logical shift right by constant (zero-filling).
     #[inline(always)]
-    pub fn reduce_max(self) -> f64 {
-        T::reduce_max(self.0)
+    pub fn shr_logical_const<const N: i32>(self) -> Self {
+        Self(T::shr_logical_const::<N>(self.0), PhantomData)
     }
 
-    // ====== Approximations ======
-
-    /// Reciprocal approximation.
+    /// Alias for [`shl_const`](Self::shl_const).
     #[inline(always)]
-    pub fn rcp_approx(self) -> Self {
-        Self(T::rcp_approx(self.0), PhantomData)
+    pub fn shl<const N: i32>(self) -> Self {
+        self.shl_const::<N>()
     }
 
-    /// Precise reciprocal (Newton-Raphson refined).
+    /// Alias for [`shr_logical_const`](Self::shr_logical_const).
     #[inline(always)]
-    pub fn recip(self) -> Self {
-        Self(T::recip(self.0), PhantomData)
-    }
-
-    /// Reciprocal square root approximation.
-    #[inline(always)]
-    pub fn rsqrt_approx(self) -> Self {
-        Self(T::rsqrt_approx(self.0), PhantomData)
-    }
-
-    /// Precise reciprocal square root (Newton-Raphson refined).
-    #[inline(always)]
-    pub fn rsqrt(self) -> Self {
-        Self(T::rsqrt(self.0), PhantomData)
+    pub fn shr_logical<const N: i32>(self) -> Self {
+        self.shr_logical_const::<N>()
     }
 
     // ====== Bitwise ======
@@ -254,13 +212,33 @@ impl<T: F64x4Backend> f64x4<T> {
     pub fn not(self) -> Self {
         Self(T::not(self.0), PhantomData)
     }
+
+    // ====== Boolean ======
+
+    /// True if all lanes have their sign bit set (all-1s mask).
+    #[inline(always)]
+    pub fn all_true(self) -> bool {
+        T::all_true(self.0)
+    }
+
+    /// True if any lane has its sign bit set.
+    #[inline(always)]
+    pub fn any_true(self) -> bool {
+        T::any_true(self.0)
+    }
+
+    /// Extract the high bit of each 64-bit lane as a bitmask.
+    #[inline(always)]
+    pub fn bitmask(self) -> u32 {
+        T::bitmask(self.0)
+    }
 }
 
 // ============================================================================
 // Operator implementations
 // ============================================================================
 
-impl<T: F64x4Backend> Add for f64x4<T> {
+impl<T: I64x4Backend> Add for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
@@ -268,7 +246,7 @@ impl<T: F64x4Backend> Add for f64x4<T> {
     }
 }
 
-impl<T: F64x4Backend> Sub for f64x4<T> {
+impl<T: I64x4Backend> Sub for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
@@ -276,23 +254,7 @@ impl<T: F64x4Backend> Sub for f64x4<T> {
     }
 }
 
-impl<T: F64x4Backend> Mul for f64x4<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn mul(self, rhs: Self) -> Self {
-        Self(T::mul(self.0, rhs.0), PhantomData)
-    }
-}
-
-impl<T: F64x4Backend> Div for f64x4<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn div(self, rhs: Self) -> Self {
-        Self(T::div(self.0, rhs.0), PhantomData)
-    }
-}
-
-impl<T: F64x4Backend> Neg for f64x4<T> {
+impl<T: I64x4Backend> Neg for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
@@ -300,7 +262,7 @@ impl<T: F64x4Backend> Neg for f64x4<T> {
     }
 }
 
-impl<T: F64x4Backend> BitAnd for f64x4<T> {
+impl<T: I64x4Backend> BitAnd for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self {
@@ -308,7 +270,7 @@ impl<T: F64x4Backend> BitAnd for f64x4<T> {
     }
 }
 
-impl<T: F64x4Backend> BitOr for f64x4<T> {
+impl<T: I64x4Backend> BitOr for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self {
@@ -316,7 +278,7 @@ impl<T: F64x4Backend> BitOr for f64x4<T> {
     }
 }
 
-impl<T: F64x4Backend> BitXor for f64x4<T> {
+impl<T: I64x4Backend> BitXor for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self {
@@ -328,49 +290,35 @@ impl<T: F64x4Backend> BitXor for f64x4<T> {
 // Assign operators
 // ============================================================================
 
-impl<T: F64x4Backend> AddAssign for f64x4<T> {
+impl<T: I64x4Backend> AddAssign for i64x4<T> {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl<T: F64x4Backend> SubAssign for f64x4<T> {
+impl<T: I64x4Backend> SubAssign for i64x4<T> {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl<T: F64x4Backend> MulAssign for f64x4<T> {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: Self) {
-        *self = *self * rhs;
-    }
-}
-
-impl<T: F64x4Backend> DivAssign for f64x4<T> {
-    #[inline(always)]
-    fn div_assign(&mut self, rhs: Self) {
-        *self = *self / rhs;
-    }
-}
-
-impl<T: F64x4Backend> BitAndAssign for f64x4<T> {
+impl<T: I64x4Backend> BitAndAssign for i64x4<T> {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: Self) {
         *self = *self & rhs;
     }
 }
 
-impl<T: F64x4Backend> BitOrAssign for f64x4<T> {
+impl<T: I64x4Backend> BitOrAssign for i64x4<T> {
     #[inline(always)]
     fn bitor_assign(&mut self, rhs: Self) {
         *self = *self | rhs;
     }
 }
 
-impl<T: F64x4Backend> BitXorAssign for f64x4<T> {
+impl<T: I64x4Backend> BitXorAssign for i64x4<T> {
     #[inline(always)]
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = *self ^ rhs;
@@ -378,38 +326,22 @@ impl<T: F64x4Backend> BitXorAssign for f64x4<T> {
 }
 
 // ============================================================================
-// Scalar broadcast operators (v + 2.0, v * 0.5, etc.)
+// Scalar broadcast operators (v + 2, etc.)
 // ============================================================================
 
-impl<T: F64x4Backend> Add<f64> for f64x4<T> {
+impl<T: I64x4Backend> Add<i64> for i64x4<T> {
     type Output = Self;
     #[inline(always)]
-    fn add(self, rhs: f64) -> Self {
+    fn add(self, rhs: i64) -> Self {
         Self(T::add(self.0, T::splat(rhs)), PhantomData)
     }
 }
 
-impl<T: F64x4Backend> Sub<f64> for f64x4<T> {
+impl<T: I64x4Backend> Sub<i64> for i64x4<T> {
     type Output = Self;
     #[inline(always)]
-    fn sub(self, rhs: f64) -> Self {
+    fn sub(self, rhs: i64) -> Self {
         Self(T::sub(self.0, T::splat(rhs)), PhantomData)
-    }
-}
-
-impl<T: F64x4Backend> Mul<f64> for f64x4<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn mul(self, rhs: f64) -> Self {
-        Self(T::mul(self.0, T::splat(rhs)), PhantomData)
-    }
-}
-
-impl<T: F64x4Backend> Div<f64> for f64x4<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn div(self, rhs: f64) -> Self {
-        Self(T::div(self.0, T::splat(rhs)), PhantomData)
     }
 }
 
@@ -417,22 +349,22 @@ impl<T: F64x4Backend> Div<f64> for f64x4<T> {
 // Index
 // ============================================================================
 
-impl<T: F64x4Backend> Index<usize> for f64x4<T> {
-    type Output = f64;
+impl<T: I64x4Backend> Index<usize> for i64x4<T> {
+    type Output = i64;
     #[inline(always)]
-    fn index(&self, i: usize) -> &f64 {
-        assert!(i < 4, "f64x4 index out of bounds: {i}");
-        // SAFETY: f64x4's repr is layout-compatible with [f64; 4], and i < 4.
-        unsafe { &*(core::ptr::from_ref(self).cast::<f64>()).add(i) }
+    fn index(&self, i: usize) -> &i64 {
+        assert!(i < 4, "i64x4 index out of bounds: {i}");
+        // SAFETY: i64x4's repr is layout-compatible with [i64; 4], and i < 4.
+        unsafe { &*(core::ptr::from_ref(self).cast::<i64>()).add(i) }
     }
 }
 
-impl<T: F64x4Backend> IndexMut<usize> for f64x4<T> {
+impl<T: I64x4Backend> IndexMut<usize> for i64x4<T> {
     #[inline(always)]
-    fn index_mut(&mut self, i: usize) -> &mut f64 {
-        assert!(i < 4, "f64x4 index out of bounds: {i}");
-        // SAFETY: f64x4's repr is layout-compatible with [f64; 4], and i < 4.
-        unsafe { &mut *(core::ptr::from_mut(self).cast::<f64>()).add(i) }
+    fn index_mut(&mut self, i: usize) -> &mut i64 {
+        assert!(i < 4, "i64x4 index out of bounds: {i}");
+        // SAFETY: i64x4's repr is layout-compatible with [i64; 4], and i < 4.
+        unsafe { &mut *(core::ptr::from_mut(self).cast::<i64>()).add(i) }
     }
 }
 
@@ -440,9 +372,9 @@ impl<T: F64x4Backend> IndexMut<usize> for f64x4<T> {
 // Conversions
 // ============================================================================
 
-impl<T: F64x4Backend> From<f64x4<T>> for [f64; 4] {
+impl<T: I64x4Backend> From<i64x4<T>> for [i64; 4] {
     #[inline(always)]
-    fn from(v: f64x4<T>) -> [f64; 4] {
+    fn from(v: i64x4<T>) -> [i64; 4] {
         T::to_array(v.0)
     }
 }
@@ -451,10 +383,44 @@ impl<T: F64x4Backend> From<f64x4<T>> for [f64; 4] {
 // Debug
 // ============================================================================
 
-impl<T: F64x4Backend> core::fmt::Debug for f64x4<T> {
+impl<T: I64x4Backend> core::fmt::Debug for i64x4<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let arr = T::to_array(self.0);
-        f.debug_tuple("f64x4").field(&arr).finish()
+        f.debug_tuple("i64x4").field(&arr).finish()
+    }
+}
+
+// ============================================================================
+// Cross-type conversions (i64 ↔ f64 bitcast)
+// ============================================================================
+
+impl<T: crate::simd::backends::I64x4Bitcast> i64x4<T> {
+    /// Bitcast to f64x4 (reinterpret bits, no conversion).
+    #[inline(always)]
+    pub fn bitcast_to_f64(self) -> super::f64x4<T> {
+        super::f64x4::from_repr_unchecked(T::bitcast_i64_to_f64(self.0))
+    }
+
+    /// Bitcast to f64x4 by reference (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x4(&self) -> &super::f64x4<T> {
+        // SAFETY: i64x4 and f64x4 share the same repr (__m256i/__m256d / [i64;4] / etc.)
+        unsafe { &*(core::ptr::from_ref(self).cast()) }
+    }
+
+    /// Bitcast to f64x4 by mutable reference (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x4(&mut self) -> &mut super::f64x4<T> {
+        // SAFETY: i64x4 and f64x4 share the same repr
+        unsafe { &mut *(core::ptr::from_mut(self).cast()) }
+    }
+
+    // ====== Backward-compatible aliases ======
+
+    /// Alias for [`bitcast_to_f64`](Self::bitcast_to_f64).
+    #[inline(always)]
+    pub fn bitcast_f64x4(self) -> super::f64x4<T> {
+        self.bitcast_to_f64()
     }
 }
 
@@ -463,21 +429,21 @@ impl<T: F64x4Backend> core::fmt::Debug for f64x4<T> {
 // ============================================================================
 
 #[cfg(target_arch = "x86_64")]
-impl f64x4<archmage::X64V3Token> {
+impl i64x4<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
-        "x86::v3::f64x4"
+        "x86::v3::i64x4"
     }
 
-    /// Get the raw `__m256d` value.
+    /// Get the raw `__m256i` value.
     #[inline(always)]
-    pub fn raw(self) -> core::arch::x86_64::__m256d {
+    pub fn raw(self) -> core::arch::x86_64::__m256i {
         self.0
     }
 
-    /// Create from a raw `__m256d` (token-gated, zero-cost).
+    /// Create from a raw `__m256i` (token-gated, zero-cost).
     #[inline(always)]
-    pub fn from_m256d(_: archmage::X64V3Token, v: core::arch::x86_64::__m256d) -> Self {
+    pub fn from_m256i(_: archmage::X64V3Token, v: core::arch::x86_64::__m256i) -> Self {
         Self(v, PhantomData)
     }
 }

@@ -24,8 +24,22 @@ pub use i32x4::I32x4Backend;
 mod i32x8;
 pub use i32x8::I32x8Backend;
 
+mod u32x4;
+pub use u32x4::U32x4Backend;
+
+mod u32x8;
+pub use u32x8::U32x8Backend;
+
+mod i64x2;
+pub use i64x2::I64x2Backend;
+
+mod i64x4;
+pub use i64x4::I64x4Backend;
+
 mod convert;
-pub use convert::{F32x4Convert, F32x8Convert};
+pub use convert::{
+    F32x4Convert, F32x8Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast, U32x8Bitcast,
+};
 
 /// x86-64 baseline (SSE2).
 pub type x64v1 = archmage::X64V1Token;

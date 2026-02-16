@@ -2054,6 +2054,976 @@ impl I32x8Backend for archmage::ScalarToken {
     }
 }
 
+impl U32x4Backend for archmage::ScalarToken {
+    type Repr = [u32; 4];
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: u32) -> [u32; 4] {
+        [v; 4]
+    }
+
+    #[inline(always)]
+    fn zero() -> [u32; 4] {
+        [0u32; 4]
+    }
+
+    #[inline(always)]
+    fn load(data: &[u32; 4]) -> [u32; 4] {
+        *data
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u32; 4]) -> [u32; 4] {
+        arr
+    }
+
+    #[inline(always)]
+    fn store(repr: [u32; 4], out: &mut [u32; 4]) {
+        *out = repr;
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [u32; 4]) -> [u32; 4] {
+        repr
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        [
+            a[0].wrapping_add(b[0]),
+            a[1].wrapping_add(b[1]),
+            a[2].wrapping_add(b[2]),
+            a[3].wrapping_add(b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn sub(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        [
+            a[0].wrapping_sub(b[0]),
+            a[1].wrapping_sub(b[1]),
+            a[2].wrapping_sub(b[2]),
+            a[3].wrapping_sub(b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        [
+            a[0].wrapping_mul(b[0]),
+            a[1].wrapping_mul(b[1]),
+            a[2].wrapping_mul(b[2]),
+            a[3].wrapping_mul(b[3]),
+        ]
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        [
+            if a[0] < b[0] { a[0] } else { b[0] },
+            if a[1] < b[1] { a[1] } else { b[1] },
+            if a[2] < b[2] { a[2] } else { b[2] },
+            if a[3] < b[3] { a[3] } else { b[3] },
+        ]
+    }
+
+    #[inline(always)]
+    fn max(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        [
+            if a[0] > b[0] { a[0] } else { b[0] },
+            if a[1] > b[1] { a[1] } else { b[1] },
+            if a[2] > b[2] { a[2] } else { b[2] },
+            if a[3] > b[3] { a[3] } else { b[3] },
+        ]
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        let mut r = [0u32; 4];
+        for i in 0..4 {
+            r[i] = if a[i] == b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        let mut r = [0u32; 4];
+        for i in 0..4 {
+            r[i] = if a[i] != b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        let mut r = [0u32; 4];
+        for i in 0..4 {
+            r[i] = if a[i] < b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        let mut r = [0u32; 4];
+        for i in 0..4 {
+            r[i] = if a[i] <= b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        let mut r = [0u32; 4];
+        for i in 0..4 {
+            r[i] = if a[i] > b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        let mut r = [0u32; 4];
+        for i in 0..4 {
+            r[i] = if a[i] >= b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn blend(mask: [u32; 4], if_true: [u32; 4], if_false: [u32; 4]) -> [u32; 4] {
+        let mut r = [0u32; 4];
+        for i in 0..4 {
+            r[i] = if mask[i] != 0 {
+                if_true[i]
+            } else {
+                if_false[i]
+            };
+        }
+        r
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: [u32; 4]) -> u32 {
+        a[0].wrapping_add(a[1].wrapping_add(a[2].wrapping_add(a[3])))
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: [u32; 4]) -> [u32; 4] {
+        [!a[0], !a[1], !a[2], !a[3]]
+    }
+
+    #[inline(always)]
+    fn bitand(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        [a[0] & b[0], a[1] & b[1], a[2] & b[2], a[3] & b[3]]
+    }
+
+    #[inline(always)]
+    fn bitor(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        [a[0] | b[0], a[1] | b[1], a[2] | b[2], a[3] | b[3]]
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
+        [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [u32; 4]) -> [u32; 4] {
+        [a[0] << N, a[1] << N, a[2] << N, a[3] << N]
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [u32; 4]) -> [u32; 4] {
+        [a[0] >> N, a[1] >> N, a[2] >> N, a[3] >> N]
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: [u32; 4]) -> bool {
+        a[0] != 0 && a[1] != 0 && a[2] != 0 && a[3] != 0
+    }
+
+    #[inline(always)]
+    fn any_true(a: [u32; 4]) -> bool {
+        a[0] != 0 || a[1] != 0 || a[2] != 0 || a[3] != 0
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [u32; 4]) -> u32 {
+        (a[0] >> 31) | ((a[1] >> 31) << 1) | ((a[2] >> 31) << 2) | ((a[3] >> 31) << 3)
+    }
+}
+
+impl U32x8Backend for archmage::ScalarToken {
+    type Repr = [u32; 8];
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: u32) -> [u32; 8] {
+        [v; 8]
+    }
+
+    #[inline(always)]
+    fn zero() -> [u32; 8] {
+        [0u32; 8]
+    }
+
+    #[inline(always)]
+    fn load(data: &[u32; 8]) -> [u32; 8] {
+        *data
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u32; 8]) -> [u32; 8] {
+        arr
+    }
+
+    #[inline(always)]
+    fn store(repr: [u32; 8], out: &mut [u32; 8]) {
+        *out = repr;
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [u32; 8]) -> [u32; 8] {
+        repr
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        [
+            a[0].wrapping_add(b[0]),
+            a[1].wrapping_add(b[1]),
+            a[2].wrapping_add(b[2]),
+            a[3].wrapping_add(b[3]),
+            a[4].wrapping_add(b[4]),
+            a[5].wrapping_add(b[5]),
+            a[6].wrapping_add(b[6]),
+            a[7].wrapping_add(b[7]),
+        ]
+    }
+
+    #[inline(always)]
+    fn sub(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        [
+            a[0].wrapping_sub(b[0]),
+            a[1].wrapping_sub(b[1]),
+            a[2].wrapping_sub(b[2]),
+            a[3].wrapping_sub(b[3]),
+            a[4].wrapping_sub(b[4]),
+            a[5].wrapping_sub(b[5]),
+            a[6].wrapping_sub(b[6]),
+            a[7].wrapping_sub(b[7]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        [
+            a[0].wrapping_mul(b[0]),
+            a[1].wrapping_mul(b[1]),
+            a[2].wrapping_mul(b[2]),
+            a[3].wrapping_mul(b[3]),
+            a[4].wrapping_mul(b[4]),
+            a[5].wrapping_mul(b[5]),
+            a[6].wrapping_mul(b[6]),
+            a[7].wrapping_mul(b[7]),
+        ]
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        [
+            if a[0] < b[0] { a[0] } else { b[0] },
+            if a[1] < b[1] { a[1] } else { b[1] },
+            if a[2] < b[2] { a[2] } else { b[2] },
+            if a[3] < b[3] { a[3] } else { b[3] },
+            if a[4] < b[4] { a[4] } else { b[4] },
+            if a[5] < b[5] { a[5] } else { b[5] },
+            if a[6] < b[6] { a[6] } else { b[6] },
+            if a[7] < b[7] { a[7] } else { b[7] },
+        ]
+    }
+
+    #[inline(always)]
+    fn max(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        [
+            if a[0] > b[0] { a[0] } else { b[0] },
+            if a[1] > b[1] { a[1] } else { b[1] },
+            if a[2] > b[2] { a[2] } else { b[2] },
+            if a[3] > b[3] { a[3] } else { b[3] },
+            if a[4] > b[4] { a[4] } else { b[4] },
+            if a[5] > b[5] { a[5] } else { b[5] },
+            if a[6] > b[6] { a[6] } else { b[6] },
+            if a[7] > b[7] { a[7] } else { b[7] },
+        ]
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        let mut r = [0u32; 8];
+        for i in 0..8 {
+            r[i] = if a[i] == b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        let mut r = [0u32; 8];
+        for i in 0..8 {
+            r[i] = if a[i] != b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        let mut r = [0u32; 8];
+        for i in 0..8 {
+            r[i] = if a[i] < b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        let mut r = [0u32; 8];
+        for i in 0..8 {
+            r[i] = if a[i] <= b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        let mut r = [0u32; 8];
+        for i in 0..8 {
+            r[i] = if a[i] > b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        let mut r = [0u32; 8];
+        for i in 0..8 {
+            r[i] = if a[i] >= b[i] { u32::MAX } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn blend(mask: [u32; 8], if_true: [u32; 8], if_false: [u32; 8]) -> [u32; 8] {
+        let mut r = [0u32; 8];
+        for i in 0..8 {
+            r[i] = if mask[i] != 0 {
+                if_true[i]
+            } else {
+                if_false[i]
+            };
+        }
+        r
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: [u32; 8]) -> u32 {
+        a[0].wrapping_add(a[1].wrapping_add(a[2].wrapping_add(
+            a[3].wrapping_add(a[4].wrapping_add(a[5].wrapping_add(a[6].wrapping_add(a[7])))),
+        )))
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: [u32; 8]) -> [u32; 8] {
+        [!a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7]]
+    }
+
+    #[inline(always)]
+    fn bitand(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        [
+            a[0] & b[0],
+            a[1] & b[1],
+            a[2] & b[2],
+            a[3] & b[3],
+            a[4] & b[4],
+            a[5] & b[5],
+            a[6] & b[6],
+            a[7] & b[7],
+        ]
+    }
+
+    #[inline(always)]
+    fn bitor(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        [
+            a[0] | b[0],
+            a[1] | b[1],
+            a[2] | b[2],
+            a[3] | b[3],
+            a[4] | b[4],
+            a[5] | b[5],
+            a[6] | b[6],
+            a[7] | b[7],
+        ]
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [u32; 8], b: [u32; 8]) -> [u32; 8] {
+        [
+            a[0] ^ b[0],
+            a[1] ^ b[1],
+            a[2] ^ b[2],
+            a[3] ^ b[3],
+            a[4] ^ b[4],
+            a[5] ^ b[5],
+            a[6] ^ b[6],
+            a[7] ^ b[7],
+        ]
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [u32; 8]) -> [u32; 8] {
+        [
+            a[0] << N,
+            a[1] << N,
+            a[2] << N,
+            a[3] << N,
+            a[4] << N,
+            a[5] << N,
+            a[6] << N,
+            a[7] << N,
+        ]
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [u32; 8]) -> [u32; 8] {
+        [
+            a[0] >> N,
+            a[1] >> N,
+            a[2] >> N,
+            a[3] >> N,
+            a[4] >> N,
+            a[5] >> N,
+            a[6] >> N,
+            a[7] >> N,
+        ]
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: [u32; 8]) -> bool {
+        a[0] != 0
+            && a[1] != 0
+            && a[2] != 0
+            && a[3] != 0
+            && a[4] != 0
+            && a[5] != 0
+            && a[6] != 0
+            && a[7] != 0
+    }
+
+    #[inline(always)]
+    fn any_true(a: [u32; 8]) -> bool {
+        a[0] != 0
+            || a[1] != 0
+            || a[2] != 0
+            || a[3] != 0
+            || a[4] != 0
+            || a[5] != 0
+            || a[6] != 0
+            || a[7] != 0
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [u32; 8]) -> u32 {
+        (a[0] >> 31)
+            | ((a[1] >> 31) << 1)
+            | ((a[2] >> 31) << 2)
+            | ((a[3] >> 31) << 3)
+            | ((a[4] >> 31) << 4)
+            | ((a[5] >> 31) << 5)
+            | ((a[6] >> 31) << 6)
+            | ((a[7] >> 31) << 7)
+    }
+}
+
+impl I64x2Backend for archmage::ScalarToken {
+    type Repr = [i64; 2];
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: i64) -> [i64; 2] {
+        [v; 2]
+    }
+
+    #[inline(always)]
+    fn zero() -> [i64; 2] {
+        [0i64; 2]
+    }
+
+    #[inline(always)]
+    fn load(data: &[i64; 2]) -> [i64; 2] {
+        *data
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i64; 2]) -> [i64; 2] {
+        arr
+    }
+
+    #[inline(always)]
+    fn store(repr: [i64; 2], out: &mut [i64; 2]) {
+        *out = repr;
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [i64; 2]) -> [i64; 2] {
+        repr
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        [a[0].wrapping_add(b[0]), a[1].wrapping_add(b[1])]
+    }
+
+    #[inline(always)]
+    fn sub(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        [a[0].wrapping_sub(b[0]), a[1].wrapping_sub(b[1])]
+    }
+
+    #[inline(always)]
+    fn neg(a: [i64; 2]) -> [i64; 2] {
+        [a[0].wrapping_neg(), a[1].wrapping_neg()]
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        [
+            if a[0] < b[0] { a[0] } else { b[0] },
+            if a[1] < b[1] { a[1] } else { b[1] },
+        ]
+    }
+
+    #[inline(always)]
+    fn max(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        [
+            if a[0] > b[0] { a[0] } else { b[0] },
+            if a[1] > b[1] { a[1] } else { b[1] },
+        ]
+    }
+
+    #[inline(always)]
+    fn abs(a: [i64; 2]) -> [i64; 2] {
+        [a[0].wrapping_abs(), a[1].wrapping_abs()]
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        let mut r = [0i64; 2];
+        for i in 0..2 {
+            r[i] = if a[i] == b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        let mut r = [0i64; 2];
+        for i in 0..2 {
+            r[i] = if a[i] != b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        let mut r = [0i64; 2];
+        for i in 0..2 {
+            r[i] = if a[i] < b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        let mut r = [0i64; 2];
+        for i in 0..2 {
+            r[i] = if a[i] <= b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        let mut r = [0i64; 2];
+        for i in 0..2 {
+            r[i] = if a[i] > b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        let mut r = [0i64; 2];
+        for i in 0..2 {
+            r[i] = if a[i] >= b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn blend(mask: [i64; 2], if_true: [i64; 2], if_false: [i64; 2]) -> [i64; 2] {
+        let mut r = [0i64; 2];
+        for i in 0..2 {
+            r[i] = if mask[i] != 0 {
+                if_true[i]
+            } else {
+                if_false[i]
+            };
+        }
+        r
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: [i64; 2]) -> i64 {
+        a[0].wrapping_add(a[1])
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: [i64; 2]) -> [i64; 2] {
+        [!a[0], !a[1]]
+    }
+
+    #[inline(always)]
+    fn bitand(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        [a[0] & b[0], a[1] & b[1]]
+    }
+
+    #[inline(always)]
+    fn bitor(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        [a[0] | b[0], a[1] | b[1]]
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [i64; 2], b: [i64; 2]) -> [i64; 2] {
+        [a[0] ^ b[0], a[1] ^ b[1]]
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [i64; 2]) -> [i64; 2] {
+        [a[0] << N, a[1] << N]
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [i64; 2]) -> [i64; 2] {
+        [a[0] >> N, a[1] >> N]
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [i64; 2]) -> [i64; 2] {
+        [((a[0] as u64) >> N) as i64, ((a[1] as u64) >> N) as i64]
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: [i64; 2]) -> bool {
+        a[0] != 0 && a[1] != 0
+    }
+
+    #[inline(always)]
+    fn any_true(a: [i64; 2]) -> bool {
+        a[0] != 0 || a[1] != 0
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [i64; 2]) -> u32 {
+        ((a[0] as u64) >> 63) as u32 | ((((a[1] as u64) >> 63) as u32) << 1)
+    }
+}
+
+impl I64x4Backend for archmage::ScalarToken {
+    type Repr = [i64; 4];
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: i64) -> [i64; 4] {
+        [v; 4]
+    }
+
+    #[inline(always)]
+    fn zero() -> [i64; 4] {
+        [0i64; 4]
+    }
+
+    #[inline(always)]
+    fn load(data: &[i64; 4]) -> [i64; 4] {
+        *data
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i64; 4]) -> [i64; 4] {
+        arr
+    }
+
+    #[inline(always)]
+    fn store(repr: [i64; 4], out: &mut [i64; 4]) {
+        *out = repr;
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [i64; 4]) -> [i64; 4] {
+        repr
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        [
+            a[0].wrapping_add(b[0]),
+            a[1].wrapping_add(b[1]),
+            a[2].wrapping_add(b[2]),
+            a[3].wrapping_add(b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn sub(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        [
+            a[0].wrapping_sub(b[0]),
+            a[1].wrapping_sub(b[1]),
+            a[2].wrapping_sub(b[2]),
+            a[3].wrapping_sub(b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn neg(a: [i64; 4]) -> [i64; 4] {
+        [
+            a[0].wrapping_neg(),
+            a[1].wrapping_neg(),
+            a[2].wrapping_neg(),
+            a[3].wrapping_neg(),
+        ]
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        [
+            if a[0] < b[0] { a[0] } else { b[0] },
+            if a[1] < b[1] { a[1] } else { b[1] },
+            if a[2] < b[2] { a[2] } else { b[2] },
+            if a[3] < b[3] { a[3] } else { b[3] },
+        ]
+    }
+
+    #[inline(always)]
+    fn max(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        [
+            if a[0] > b[0] { a[0] } else { b[0] },
+            if a[1] > b[1] { a[1] } else { b[1] },
+            if a[2] > b[2] { a[2] } else { b[2] },
+            if a[3] > b[3] { a[3] } else { b[3] },
+        ]
+    }
+
+    #[inline(always)]
+    fn abs(a: [i64; 4]) -> [i64; 4] {
+        [
+            a[0].wrapping_abs(),
+            a[1].wrapping_abs(),
+            a[2].wrapping_abs(),
+            a[3].wrapping_abs(),
+        ]
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        let mut r = [0i64; 4];
+        for i in 0..4 {
+            r[i] = if a[i] == b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        let mut r = [0i64; 4];
+        for i in 0..4 {
+            r[i] = if a[i] != b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        let mut r = [0i64; 4];
+        for i in 0..4 {
+            r[i] = if a[i] < b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        let mut r = [0i64; 4];
+        for i in 0..4 {
+            r[i] = if a[i] <= b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        let mut r = [0i64; 4];
+        for i in 0..4 {
+            r[i] = if a[i] > b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        let mut r = [0i64; 4];
+        for i in 0..4 {
+            r[i] = if a[i] >= b[i] { -1 } else { 0 };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn blend(mask: [i64; 4], if_true: [i64; 4], if_false: [i64; 4]) -> [i64; 4] {
+        let mut r = [0i64; 4];
+        for i in 0..4 {
+            r[i] = if mask[i] != 0 {
+                if_true[i]
+            } else {
+                if_false[i]
+            };
+        }
+        r
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: [i64; 4]) -> i64 {
+        a[0].wrapping_add(a[1].wrapping_add(a[2].wrapping_add(a[3])))
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: [i64; 4]) -> [i64; 4] {
+        [!a[0], !a[1], !a[2], !a[3]]
+    }
+
+    #[inline(always)]
+    fn bitand(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        [a[0] & b[0], a[1] & b[1], a[2] & b[2], a[3] & b[3]]
+    }
+
+    #[inline(always)]
+    fn bitor(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        [a[0] | b[0], a[1] | b[1], a[2] | b[2], a[3] | b[3]]
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [i64; 4], b: [i64; 4]) -> [i64; 4] {
+        [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [i64; 4]) -> [i64; 4] {
+        [a[0] << N, a[1] << N, a[2] << N, a[3] << N]
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [i64; 4]) -> [i64; 4] {
+        [a[0] >> N, a[1] >> N, a[2] >> N, a[3] >> N]
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [i64; 4]) -> [i64; 4] {
+        [
+            ((a[0] as u64) >> N) as i64,
+            ((a[1] as u64) >> N) as i64,
+            ((a[2] as u64) >> N) as i64,
+            ((a[3] as u64) >> N) as i64,
+        ]
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: [i64; 4]) -> bool {
+        a[0] != 0 && a[1] != 0 && a[2] != 0 && a[3] != 0
+    }
+
+    #[inline(always)]
+    fn any_true(a: [i64; 4]) -> bool {
+        a[0] != 0 || a[1] != 0 || a[2] != 0 || a[3] != 0
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [i64; 4]) -> u32 {
+        ((a[0] as u64) >> 63) as u32
+            | ((((a[1] as u64) >> 63) as u32) << 1)
+            | ((((a[2] as u64) >> 63) as u32) << 2)
+            | ((((a[3] as u64) >> 63) as u32) << 3)
+    }
+}
+
 impl F32x4Convert for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: [f32; 4]) -> [i32; 4] {
@@ -2164,6 +3134,82 @@ impl F32x8Convert for archmage::ScalarToken {
             a[5] as f32,
             a[6] as f32,
             a[7] as f32,
+        ]
+    }
+}
+
+impl U32x4Bitcast for archmage::ScalarToken {
+    #[inline(always)]
+    fn bitcast_u32_to_i32(a: [u32; 4]) -> [i32; 4] {
+        [a[0] as i32, a[1] as i32, a[2] as i32, a[3] as i32]
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_u32(a: [i32; 4]) -> [u32; 4] {
+        [a[0] as u32, a[1] as u32, a[2] as u32, a[3] as u32]
+    }
+}
+
+impl U32x8Bitcast for archmage::ScalarToken {
+    #[inline(always)]
+    fn bitcast_u32_to_i32(a: [u32; 8]) -> [i32; 8] {
+        [
+            a[0] as i32,
+            a[1] as i32,
+            a[2] as i32,
+            a[3] as i32,
+            a[4] as i32,
+            a[5] as i32,
+            a[6] as i32,
+            a[7] as i32,
+        ]
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_u32(a: [i32; 8]) -> [u32; 8] {
+        [
+            a[0] as u32,
+            a[1] as u32,
+            a[2] as u32,
+            a[3] as u32,
+            a[4] as u32,
+            a[5] as u32,
+            a[6] as u32,
+            a[7] as u32,
+        ]
+    }
+}
+
+impl I64x2Bitcast for archmage::ScalarToken {
+    #[inline(always)]
+    fn bitcast_i64_to_f64(a: [i64; 2]) -> [f64; 2] {
+        [f64::from_bits(a[0] as u64), f64::from_bits(a[1] as u64)]
+    }
+
+    #[inline(always)]
+    fn bitcast_f64_to_i64(a: [f64; 2]) -> [i64; 2] {
+        [a[0].to_bits() as i64, a[1].to_bits() as i64]
+    }
+}
+
+impl I64x4Bitcast for archmage::ScalarToken {
+    #[inline(always)]
+    fn bitcast_i64_to_f64(a: [i64; 4]) -> [f64; 4] {
+        [
+            f64::from_bits(a[0] as u64),
+            f64::from_bits(a[1] as u64),
+            f64::from_bits(a[2] as u64),
+            f64::from_bits(a[3] as u64),
+        ]
+    }
+
+    #[inline(always)]
+    fn bitcast_f64_to_i64(a: [f64; 4]) -> [i64; 4] {
+        [
+            a[0].to_bits() as i64,
+            a[1].to_bits() as i64,
+            a[2].to_bits() as i64,
+            a[3].to_bits() as i64,
         ]
     }
 }
