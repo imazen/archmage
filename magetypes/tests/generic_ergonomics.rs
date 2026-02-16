@@ -15,11 +15,6 @@ use magetypes::simd::generic::{f32x4, f32x8, i32x8};
 #[cfg(target_arch = "x86_64")]
 use archmage::X64V3Token;
 
-#[cfg(target_arch = "x86_64")]
-fn get_x86() -> X64V3Token {
-    X64V3Token::summon().expect("tests require AVX2+FMA")
-}
-
 // ============================================================================
 // Example 1: Basic vector math — one function, any backend
 // ============================================================================
@@ -54,18 +49,22 @@ fn example_sum_scalar() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn example_sum_x86() {
-    let data: Vec<f32> = (1..=100).map(|i| i as f32).collect();
-    let result = sum_f32x8(get_x86(), &data);
-    assert!((result - 5050.0).abs() < 0.01);
+    if let Some(token) = X64V3Token::summon() {
+        let data: Vec<f32> = (1..=100).map(|i| i as f32).collect();
+        let result = sum_f32x8(token, &data);
+        assert!((result - 5050.0).abs() < 0.01);
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn example_sum_cross_backend() {
-    let data: Vec<f32> = (1..=100).map(|i| i as f32).collect();
-    let x86 = sum_f32x8(get_x86(), &data);
-    let scalar = sum_f32x8(ScalarToken, &data);
-    assert!((x86 - scalar).abs() < 0.01, "backends must agree");
+    if let Some(token) = X64V3Token::summon() {
+        let data: Vec<f32> = (1..=100).map(|i| i as f32).collect();
+        let x86 = sum_f32x8(token, &data);
+        let scalar = sum_f32x8(ScalarToken, &data);
+        assert!((x86 - scalar).abs() < 0.01, "backends must agree");
+    }
 }
 
 // ============================================================================
@@ -101,8 +100,8 @@ fn example_dot_product() {
     assert!((result - expected).abs() < 1.0, "{result} vs {expected}");
 
     #[cfg(target_arch = "x86_64")]
-    {
-        let result = dot_product(get_x86(), &a, &b);
+    if let Some(token) = X64V3Token::summon() {
+        let result = dot_product(token, &a, &b);
         assert!((result - expected).abs() < 1.0, "{result} vs {expected}");
     }
 }
@@ -236,8 +235,8 @@ fn example_clamp_negatives() {
     assert_eq!(result, [0.0, 2.0, 0.0, 4.0, 0.0, 6.0, 0.0, 8.0]);
 
     #[cfg(target_arch = "x86_64")]
-    {
-        let result = clamp_negatives_to_zero(get_x86(), &data);
+    if let Some(token) = X64V3Token::summon() {
+        let result = clamp_negatives_to_zero(token, &data);
         assert_eq!(result, [0.0, 2.0, 0.0, 4.0, 0.0, 6.0, 0.0, 8.0]);
     }
 }
@@ -361,15 +360,16 @@ fn example_dispatch() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn example_raw_access() {
-    let t = get_x86();
-    let v = f32x8::<X64V3Token>::splat(t, 42.0);
+    if let Some(t) = X64V3Token::summon() {
+        let v = f32x8::<X64V3Token>::splat(t, 42.0);
 
-    // Get the raw __m256 for manual intrinsic use
-    let raw: core::arch::x86_64::__m256 = v.raw();
+        // Get the raw __m256 for manual intrinsic use
+        let raw: core::arch::x86_64::__m256 = v.raw();
 
-    // Create from raw __m256
-    let back = f32x8::from_m256(t, raw);
-    assert_eq!(back.to_array(), [42.0; 8]);
+        // Create from raw __m256
+        let back = f32x8::from_m256(t, raw);
+        assert_eq!(back.to_array(), [42.0; 8]);
+    }
 }
 
 // ============================================================================
