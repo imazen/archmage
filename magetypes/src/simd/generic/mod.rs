@@ -25,6 +25,8 @@ mod block_ops_f64x2;
 mod block_ops_f64x4;
 mod block_ops_i32x4;
 mod block_ops_i32x8;
+mod block_ops_i8x16;
+mod block_ops_u32x4;
 mod f32x4_impl;
 mod f32x8_impl;
 mod f64x2_impl;
