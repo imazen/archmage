@@ -132,17 +132,17 @@ fn adjust_brightness<T: F32x8Backend>(token: T, pixels: &mut [f32], amount: f32)
 fn example_brightness() {
     let mut pixels = vec![100.0_f32, 200.0, 50.0, 250.0, 10.0, 128.0, 0.0, 255.0];
     adjust_brightness(ScalarToken, &mut pixels, 30.0);
-    assert_eq!(pixels, [130.0, 230.0, 80.0, 255.0, 40.0, 158.0, 30.0, 255.0]);
+    assert_eq!(
+        pixels,
+        [130.0, 230.0, 80.0, 255.0, 40.0, 158.0, 30.0, 255.0]
+    );
 }
 
 // ============================================================================
 // Example 4: SoA color processing — deinterleave + process + reinterleave
 // ============================================================================
 
-fn apply_gamma_correction<T: F32x8Backend + F32x8Convert>(
-    token: T,
-    rgba_pixels: &mut [u8; 32],
-) {
+fn apply_gamma_correction<T: F32x8Backend + F32x8Convert>(token: T, rgba_pixels: &mut [u8; 32]) {
     let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8(rgba_pixels);
 
     // Normalize to [0, 1]
@@ -299,13 +299,8 @@ fn example_normalize() {
 // Example 9: Interleave — AoS ↔ SoA conversion
 // ============================================================================
 
-fn separate_channels<T: F32x8Backend>(
-    token: T,
-    interleaved: &[[f32; 8]; 4],
-) -> [[f32; 8]; 4] {
-    let vecs: [f32x8<T>; 4] = core::array::from_fn(|i| {
-        f32x8::<T>::load(token, &interleaved[i])
-    });
+fn separate_channels<T: F32x8Backend>(token: T, interleaved: &[[f32; 8]; 4]) -> [[f32; 8]; 4] {
+    let vecs: [f32x8<T>; 4] = core::array::from_fn(|i| f32x8::<T>::load(token, &interleaved[i]));
     let channels = f32x8::<T>::deinterleave_4ch(vecs);
     core::array::from_fn(|i| channels[i].to_array())
 }
@@ -390,12 +385,18 @@ fn float_sign_bits<T: F32x8Convert>(token: T, values: &[f32; 8]) -> [bool; 8] {
 
 #[test]
 fn example_bitcast() {
-    let values = [1.0, -2.0, 3.0, -4.0, 0.0, -0.0, f32::INFINITY, f32::NEG_INFINITY];
+    let values = [
+        1.0,
+        -2.0,
+        3.0,
+        -4.0,
+        0.0,
+        -0.0,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+    ];
     let signs = float_sign_bits(ScalarToken, &values);
-    assert_eq!(
-        signs,
-        [false, true, false, true, false, true, false, true]
-    );
+    assert_eq!(signs, [false, true, false, true, false, true, false, true]);
 }
 
 // ============================================================================
@@ -431,8 +432,14 @@ fn example_cast_slice() {
     // Try to cast the slice as a slice of f32x8 vectors
     if let Some(vectors) = f32x8::<ScalarToken>::cast_slice(ScalarToken, &data) {
         assert_eq!(vectors.len(), 8); // 64 / 8 = 8 vectors
-        assert_eq!(vectors[0].to_array(), [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
-        assert_eq!(vectors[7].to_array(), [56.0, 57.0, 58.0, 59.0, 60.0, 61.0, 62.0, 63.0]);
+        assert_eq!(
+            vectors[0].to_array(),
+            [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+        );
+        assert_eq!(
+            vectors[7].to_array(),
+            [56.0, 57.0, 58.0, 59.0, 60.0, 61.0, 62.0, 63.0]
+        );
     }
     // Note: cast_slice returns None if alignment is wrong or length not multiple of 8
 }
@@ -514,7 +521,10 @@ fn example_softmax() {
 
     // Sum should be ~1.0
     let sum: f32 = probs.iter().sum();
-    assert!((sum - 1.0).abs() < 0.01, "probabilities must sum to 1, got {sum}");
+    assert!(
+        (sum - 1.0).abs() < 0.01,
+        "probabilities must sum to 1, got {sum}"
+    );
 
     // Symmetric: first 4 == last 4
     for i in 0..4 {
@@ -547,7 +557,8 @@ fn example_invert_pixels() {
 #[test]
 fn example_indexing() {
     let t = ScalarToken;
-    let mut v = f32x8::<ScalarToken>::from_array(t, [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]);
+    let mut v =
+        f32x8::<ScalarToken>::from_array(t, [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]);
 
     // Read individual lanes
     assert_eq!(v[0], 10.0);
@@ -556,7 +567,10 @@ fn example_indexing() {
     // Write individual lanes
     v[3] = 999.0;
     assert_eq!(v[3], 999.0);
-    assert_eq!(v.to_array(), [10.0, 20.0, 30.0, 999.0, 50.0, 60.0, 70.0, 80.0]);
+    assert_eq!(
+        v.to_array(),
+        [10.0, 20.0, 30.0, 999.0, 50.0, 60.0, 70.0, 80.0]
+    );
 }
 
 // ============================================================================
@@ -578,7 +592,8 @@ fn example_debug() {
 
 #[test]
 fn example_as_array() {
-    let mut v = f32x8::<ScalarToken>::from_array(ScalarToken, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+    let mut v =
+        f32x8::<ScalarToken>::from_array(ScalarToken, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 
     // Borrow as slice — no copy
     let arr: &[f32; 8] = v.as_array();

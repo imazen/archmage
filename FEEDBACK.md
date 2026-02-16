@@ -23,3 +23,11 @@
   - Removed `__experiments`, `__wide`, `wide` features and `wide` dependency from Cargo.toml
   - Updated CLAUDE.md: directory structure, CI feature lists, codegen style rules
   - Added rule: ban `writeln!` chains in codegen, use `r#` raw strings + `formatdoc!`
+
+## 2026-02-15
+
+- User requested adding i32 backend trait generation to backend_gen.rs
+  - I32VecType model + I32x4Backend/I32x8Backend traits
+  - F32x4Convert/F32x8Convert conversion traits
+  - Implementations for x86 V3, scalar, NEON, WASM platforms
+  - Update generate_backend_files() and generate_backends_mod()
