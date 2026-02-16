@@ -596,6 +596,24 @@ fn test_implementation_names() {
             // Also verify the non-aliased types are accessible
             assert_eq!(simd::v4::f32x16::implementation_name(), "x86::v4::f32x16");
         }
+
+        // simd::modern - maps to 512-bit types (Avx512ModernToken, superset of V4)
+        // Same widths as V4, but types get extension methods like .popcnt()
+        #[cfg(feature = "avx512")]
+        {
+            assert_eq!(simd::modern::f32xN::implementation_name(), "x86::modern::f32x16");
+            assert_eq!(simd::modern::f64xN::implementation_name(), "x86::modern::f64x8");
+            assert_eq!(simd::modern::i8xN::implementation_name(), "x86::modern::i8x64");
+            assert_eq!(simd::modern::u8xN::implementation_name(), "x86::modern::u8x64");
+            assert_eq!(simd::modern::i16xN::implementation_name(), "x86::modern::i16x32");
+            assert_eq!(simd::modern::u16xN::implementation_name(), "x86::modern::u16x32");
+            assert_eq!(simd::modern::i32xN::implementation_name(), "x86::modern::i32x16");
+            assert_eq!(simd::modern::u32xN::implementation_name(), "x86::modern::u32x16");
+            assert_eq!(simd::modern::i64xN::implementation_name(), "x86::modern::i64x8");
+            assert_eq!(simd::modern::u64xN::implementation_name(), "x86::modern::u64x8");
+            // Also verify the non-aliased types are accessible
+            assert_eq!(simd::modern::f32x16::implementation_name(), "x86::modern::f32x16");
+        }
     }
 
     // ========== aarch64 width-aliased namespaces ==========

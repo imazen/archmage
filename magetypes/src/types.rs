@@ -110,6 +110,24 @@ impl SimdTypes for archmage::X64V4Token {
     const I32_LANES: usize = 16;
 }
 
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl SimdTypes for archmage::Avx512ModernToken {
+    type F32 = crate::simd::generic::f32x16<archmage::Avx512ModernToken>;
+    type F64 = crate::simd::generic::f64x8<archmage::Avx512ModernToken>;
+    type I8 = crate::simd::generic::i8x64<archmage::Avx512ModernToken>;
+    type I16 = crate::simd::generic::i16x32<archmage::Avx512ModernToken>;
+    type I32 = crate::simd::generic::i32x16<archmage::Avx512ModernToken>;
+    type I64 = crate::simd::generic::i64x8<archmage::Avx512ModernToken>;
+    type U8 = crate::simd::generic::u8x64<archmage::Avx512ModernToken>;
+    type U16 = crate::simd::generic::u16x32<archmage::Avx512ModernToken>;
+    type U32 = crate::simd::generic::u32x16<archmage::Avx512ModernToken>;
+    type U64 = crate::simd::generic::u64x8<archmage::Avx512ModernToken>;
+
+    const F32_LANES: usize = 16;
+    const F64_LANES: usize = 8;
+    const I32_LANES: usize = 16;
+}
+
 // =============================================================================
 // aarch64 implementations
 // =============================================================================

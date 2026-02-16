@@ -402,8 +402,9 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_x86_additional_convert_impls, generate_x86_int_impls,
     };
     use super::backend_gen_w512::{
-        all_w512_types, generate_neon_w512_impls, generate_scalar_w512_impls,
-        generate_w512_backend_trait, generate_wasm_w512_impls, generate_x86_v3_w512_impls,
+        all_w512_types, generate_neon_w512_impls, generate_popcnt_backend_traits,
+        generate_scalar_w512_impls, generate_w512_backend_trait, generate_wasm_w512_impls,
+        generate_x86_v3_w512_impls,
     };
 
     let types = all_float_types();
@@ -464,6 +465,12 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             generate_w512_backend_trait(ty),
         );
     }
+
+    // 6c. Extension backend traits (popcnt for Modern token)
+    files.insert(
+        "backends/popcnt.rs".to_string(),
+        generate_popcnt_backend_traits(&w512_types),
+    );
 
     // 7. Conversion trait definitions (float/i32/u32/i64)
     files.insert("backends/convert.rs".to_string(), generate_convert_traits());
@@ -839,6 +846,12 @@ fn generate_backends_mod(
         code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
     }
 
+    // Extension traits (popcnt for Modern token)
+    code.push_str("#[cfg(feature = \"avx512\")]\n");
+    code.push_str("mod popcnt;\n");
+    code.push_str("#[cfg(feature = \"avx512\")]\n");
+    code.push_str("pub use popcnt::*;\n\n");
+
     // Conversion and bitcast traits (float/i32/u32/i64)
     code.push_str("mod convert;\npub use convert::{F32x4Convert, F32x8Convert, U32x4Bitcast, U32x8Bitcast, I64x2Bitcast, I64x4Bitcast};\n\n");
 
@@ -901,15 +914,22 @@ fn generate_impls_mod() -> String {
 
 /// Generate the x86 V4 (native AVX-512) implementation file.
 ///
-/// Only contains W512 backend impls for X64V4Token — W128 and W256 types
-/// use X64V3Token (V4 token downcasts to V3 for narrower widths).
+/// Contains W512 backend impls for both X64V4Token and Avx512ModernToken,
+/// plus Modern-specific extension impls (popcnt).
+/// W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
 fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) -> String {
-    use super::backend_gen_w512::generate_x86_v4_w512_impls;
+    use super::backend_gen_w512::{
+        generate_popcnt_impls, generate_x86_modern_w512_impls, generate_x86_v4_w512_impls,
+    };
 
     let mut code = formatdoc! {r#"
-        //! Backend implementations for X64V4Token (native AVX-512).
+        //! Backend implementations for X64V4Token and Avx512ModernToken (native AVX-512).
         //!
-        //! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics.
+        //! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics
+        //! for both X64V4Token (base AVX-512) and Avx512ModernToken (+ VPOPCNTDQ, BITALG, etc.).
+        //!
+        //! Avx512ModernToken also gets extension trait impls (popcnt) for Modern-only features.
+        //!
         //! W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
@@ -921,7 +941,36 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
 
     "#};
 
+    // Base backend impls for X64V4Token
+    code.push_str(
+        "// ============================================================================\n",
+    );
+    code.push_str("// X64V4Token — base AVX-512 (F/BW/CD/DQ/VL)\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
     code.push_str(&generate_x86_v4_w512_impls(w512_types));
+
+    // Base backend impls for Avx512ModernToken (identical intrinsics, different token)
+    code.push_str(
+        "\n// ============================================================================\n",
+    );
+    code.push_str("// Avx512ModernToken — base AVX-512 (same intrinsics as V4)\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
+    code.push_str(&generate_x86_modern_w512_impls(w512_types));
+
+    // Extension impls: popcnt (Avx512ModernToken only)
+    code.push_str(
+        "\n// ============================================================================\n",
+    );
+    code.push_str("// Avx512ModernToken — extension: popcnt (VPOPCNTDQ + BITALG)\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
+    code.push_str(&generate_popcnt_impls(w512_types));
+
     code
 }
 

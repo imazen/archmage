@@ -96,6 +96,11 @@ pub use i64x8::I64x8Backend;
 mod u64x8;
 pub use u64x8::U64x8Backend;
 
+#[cfg(feature = "avx512")]
+mod popcnt;
+#[cfg(feature = "avx512")]
+pub use popcnt::*;
+
 mod convert;
 pub use convert::{
     F32x4Convert, F32x8Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast, U32x8Bitcast,

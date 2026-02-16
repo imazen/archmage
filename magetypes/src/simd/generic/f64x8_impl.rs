@@ -494,3 +494,11 @@ impl f64x8<archmage::X64V4Token> {
         "x86::v4::f64x8"
     }
 }
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl f64x8<archmage::Avx512ModernToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "x86::modern::f64x8"
+    }
+}

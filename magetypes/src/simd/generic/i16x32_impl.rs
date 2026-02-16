@@ -438,3 +438,29 @@ impl i16x32<archmage::X64V4Token> {
         "x86::v4::i16x32"
     }
 }
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl i16x32<archmage::Avx512ModernToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "x86::modern::i16x32"
+    }
+}
+
+// ============================================================================
+// Extension: popcnt (requires Modern token)
+// ============================================================================
+
+#[cfg(feature = "avx512")]
+impl<T: crate::simd::backends::i16x32PopcntBackend> i16x32<T> {
+    /// Count set bits in each lane (popcnt).
+    ///
+    /// Returns a vector where each lane contains the number of 1-bits
+    /// in the corresponding lane of `self`.
+    ///
+    /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
+    #[inline(always)]
+    pub fn popcnt(self) -> Self {
+        Self(T::popcnt(self.0), core::marker::PhantomData)
+    }
+}

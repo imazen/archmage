@@ -394,3 +394,29 @@ impl u64x8<archmage::X64V4Token> {
         "x86::v4::u64x8"
     }
 }
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl u64x8<archmage::Avx512ModernToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "x86::modern::u64x8"
+    }
+}
+
+// ============================================================================
+// Extension: popcnt (requires Modern token)
+// ============================================================================
+
+#[cfg(feature = "avx512")]
+impl<T: crate::simd::backends::u64x8PopcntBackend> u64x8<T> {
+    /// Count set bits in each lane (popcnt).
+    ///
+    /// Returns a vector where each lane contains the number of 1-bits
+    /// in the corresponding lane of `self`.
+    ///
+    /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
+    #[inline(always)]
+    pub fn popcnt(self) -> Self {
+        Self(T::popcnt(self.0), core::marker::PhantomData)
+    }
+}

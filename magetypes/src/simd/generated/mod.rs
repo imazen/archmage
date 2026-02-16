@@ -421,6 +421,75 @@ pub mod v4 {
     pub const LANES_8: usize = 64;
 }
 
+pub mod modern {
+    //! All SIMD types available with `Avx512ModernToken`.
+    //!
+    //! Natural width: 512-bit (AVX-512 + modern extensions). `f32xN` = `f32x16`.
+    //!
+    //! Superset of V4 — integer types gain `.popcnt()` and other
+    //! extension methods. Also includes 128-bit and 256-bit native types.
+    //! Use `token.v3()` to downcast for narrower types.
+
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[allow(non_camel_case_types)]
+    mod _w512_aliases {
+        pub type f32x16 = crate::simd::generic::f32x16<archmage::Avx512ModernToken>;
+        pub type f64x8 = crate::simd::generic::f64x8<archmage::Avx512ModernToken>;
+        pub type i8x64 = crate::simd::generic::i8x64<archmage::Avx512ModernToken>;
+        pub type u8x64 = crate::simd::generic::u8x64<archmage::Avx512ModernToken>;
+        pub type i16x32 = crate::simd::generic::i16x32<archmage::Avx512ModernToken>;
+        pub type u16x32 = crate::simd::generic::u16x32<archmage::Avx512ModernToken>;
+        pub type i32x16 = crate::simd::generic::i32x16<archmage::Avx512ModernToken>;
+        pub type u32x16 = crate::simd::generic::u32x16<archmage::Avx512ModernToken>;
+        pub type i64x8 = crate::simd::generic::i64x8<archmage::Avx512ModernToken>;
+        pub type u64x8 = crate::simd::generic::u64x8<archmage::Avx512ModernToken>;
+    }
+    #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+    #[allow(non_camel_case_types)]
+    mod _w512_aliases {
+        pub type f32x16 = crate::simd::generic::f32x16<archmage::X64V3Token>;
+        pub type f64x8 = crate::simd::generic::f64x8<archmage::X64V3Token>;
+        pub type i8x64 = crate::simd::generic::i8x64<archmage::X64V3Token>;
+        pub type u8x64 = crate::simd::generic::u8x64<archmage::X64V3Token>;
+        pub type i16x32 = crate::simd::generic::i16x32<archmage::X64V3Token>;
+        pub type u16x32 = crate::simd::generic::u16x32<archmage::X64V3Token>;
+        pub type i32x16 = crate::simd::generic::i32x16<archmage::X64V3Token>;
+        pub type u32x16 = crate::simd::generic::u32x16<archmage::X64V3Token>;
+        pub type i64x8 = crate::simd::generic::i64x8<archmage::X64V3Token>;
+        pub type u64x8 = crate::simd::generic::u64x8<archmage::X64V3Token>;
+    }
+    #[cfg(target_arch = "x86_64")]
+    pub use _w512_aliases::*;
+
+    #[cfg(target_arch = "x86_64")]
+    pub use _w512_aliases::{
+        f32x16 as f32xN, f64x8 as f64xN, i8x64 as i8xN, i16x32 as i16xN, i32x16 as i32xN,
+        i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
+    };
+
+    // 128-bit native types (use token.v3() to downcast)
+    #[cfg(target_arch = "x86_64")]
+    pub use super::x86::w128::{
+        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
+    };
+
+    // 256-bit native types (use token.v3() to downcast)
+    #[cfg(target_arch = "x86_64")]
+    pub use super::x86::w256::{
+        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
+    };
+
+    /// Token type for this width level
+    #[cfg(feature = "avx512")]
+    pub type Token = archmage::Avx512ModernToken;
+
+    pub const LANES_F32: usize = 16;
+    pub const LANES_F64: usize = 8;
+    pub const LANES_32: usize = 16;
+    pub const LANES_16: usize = 32;
+    pub const LANES_8: usize = 64;
+}
+
 pub mod neon {
     //! All SIMD types available with `NeonToken`.
     //!

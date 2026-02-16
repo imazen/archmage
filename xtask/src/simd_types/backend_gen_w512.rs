@@ -1968,7 +1968,7 @@ pub(super) fn generate_wasm_w512_impls(types: &[W512Type]) -> String {
 // ============================================================================
 
 /// Generate V4 native implementation for a W512 float type (f32x16, f64x8).
-fn generate_x86_v4_float_impl(ty: &W512Type) -> String {
+fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     let trait_name = ty.trait_name();
     let inner = ty.x86_v4_inner();
     let s = ty.x86_float_suffix();
@@ -1983,7 +1983,7 @@ fn generate_x86_v4_float_impl(ty: &W512Type) -> String {
 
     formatdoc! {r#"
         #[cfg(target_arch = "x86_64")]
-        impl {trait_name} for archmage::X64V4Token {{
+        impl {trait_name} for archmage::{token} {{
             type Repr = {inner};
 
             #[inline(always)]
@@ -2212,7 +2212,7 @@ fn generate_x86_v4_float_impl(ty: &W512Type) -> String {
 }
 
 /// Generate V4 native implementation for a W512 integer type.
-fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
+fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -2333,7 +2333,7 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
 
     formatdoc! {r#"
         #[cfg(target_arch = "x86_64")]
-        impl {trait_name} for archmage::X64V4Token {{
+        impl {trait_name} for archmage::{token} {{
             type Repr = __m512i;
 
             #[inline(always)]
@@ -2574,16 +2574,101 @@ fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
     "#}
 }
 
-/// Generate all V4 native AVX-512 W512 implementations.
-pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
+/// Generate V4 native AVX-512 W512 implementations for a specific token.
+fn generate_x86_v4_w512_impls_for_token(types: &[W512Type], token: &str) -> String {
     let mut code = String::new();
     for ty in types {
         if ty.is_float() {
-            code.push_str(&generate_x86_v4_float_impl(ty));
+            code.push_str(&generate_x86_v4_float_impl_for_token(ty, token));
         } else {
-            code.push_str(&generate_x86_v4_int_impl(ty));
+            code.push_str(&generate_x86_v4_int_impl_for_token(ty, token));
         }
         code.push('\n');
+    }
+    code
+}
+
+/// Generate all V4 native AVX-512 W512 implementations (X64V4Token only).
+pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
+    generate_x86_v4_w512_impls_for_token(types, "X64V4Token")
+}
+
+/// Generate all Modern native AVX-512 W512 implementations (Avx512ModernToken).
+pub(super) fn generate_x86_modern_w512_impls(types: &[W512Type]) -> String {
+    generate_x86_v4_w512_impls_for_token(types, "Avx512ModernToken")
+}
+
+// ============================================================================
+// Extension Traits for Modern Token
+// ============================================================================
+
+/// Generate popcnt extension backend trait for a W512 integer type.
+fn generate_popcnt_backend_trait(ty: &W512Type) -> String {
+    let trait_name = ty.trait_name();
+    let name = ty.name();
+    let elem = ty.elem;
+
+    formatdoc! {r#"
+        /// Population count (popcnt) extension for {name}.
+        ///
+        /// Returns a vector where each lane contains the number of set bits
+        /// in the corresponding lane of the input.
+        ///
+        /// Requires AVX-512 VPOPCNTDQ (32/64-bit) or BITALG (8/16-bit).
+        pub trait {name}PopcntBackend: {trait_name} {{
+            /// Count set bits in each lane.
+            fn popcnt(a: Self::Repr) -> Self::Repr;
+        }}
+    "#}
+}
+
+/// Generate popcnt extension backend traits for all integer W512 types.
+pub(super) fn generate_popcnt_backend_traits(types: &[W512Type]) -> String {
+    let mut code = formatdoc! {r#"
+        //! Popcnt extension backend traits for W512 integer types.
+        //!
+        //! These traits extend the base integer backends with population count
+        //! operations, available on AVX-512 Modern (VPOPCNTDQ + BITALG).
+        //!
+        //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+
+        use super::*;
+
+    "#};
+
+    for ty in types {
+        if !ty.is_float() {
+            code.push_str(&generate_popcnt_backend_trait(ty));
+            code.push('\n');
+        }
+    }
+    code
+}
+
+/// Generate popcnt extension impl for Avx512ModernToken.
+fn generate_popcnt_impl(ty: &W512Type) -> String {
+    let name = ty.name();
+    let epi = ty.x86_arith_suffix();
+
+    formatdoc! {r#"
+        #[cfg(target_arch = "x86_64")]
+        impl {name}PopcntBackend for archmage::Avx512ModernToken {{
+            #[inline(always)]
+            fn popcnt(a: __m512i) -> __m512i {{
+                unsafe {{ _mm512_popcnt_{epi}(a) }}
+            }}
+        }}
+    "#}
+}
+
+/// Generate all popcnt extension impls for Modern token.
+pub(super) fn generate_popcnt_impls(types: &[W512Type]) -> String {
+    let mut code = String::new();
+    for ty in types {
+        if !ty.is_float() {
+            code.push_str(&generate_popcnt_impl(ty));
+            code.push('\n');
+        }
     }
     code
 }
