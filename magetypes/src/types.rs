@@ -58,11 +58,11 @@ pub trait SimdTypes: SimdToken {
 
 #[cfg(target_arch = "x86_64")]
 impl SimdTypes for archmage::X64V3Token {
-    type F32 = crate::simd::x86::w256::f32x8;
-    type F64 = crate::simd::x86::w256::f64x4;
+    type F32 = crate::simd::generic::f32x8<archmage::X64V3Token>;
+    type F64 = crate::simd::generic::f64x4<archmage::X64V3Token>;
     type I8 = crate::simd::x86::w256::i8x32;
     type I16 = crate::simd::x86::w256::i16x16;
-    type I32 = crate::simd::x86::w256::i32x8;
+    type I32 = crate::simd::generic::i32x8<archmage::X64V3Token>;
     type I64 = crate::simd::x86::w256::i64x4;
     type U8 = crate::simd::x86::w256::u8x32;
     type U16 = crate::simd::x86::w256::u16x16;
@@ -76,11 +76,11 @@ impl SimdTypes for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl SimdTypes for archmage::X64V2Token {
-    type F32 = crate::simd::x86::w128::f32x4;
-    type F64 = crate::simd::x86::w128::f64x2;
+    type F32 = crate::simd::generic::f32x4<archmage::X64V3Token>;
+    type F64 = crate::simd::generic::f64x2<archmage::X64V3Token>;
     type I8 = crate::simd::x86::w128::i8x16;
     type I16 = crate::simd::x86::w128::i16x8;
-    type I32 = crate::simd::x86::w128::i32x4;
+    type I32 = crate::simd::generic::i32x4<archmage::X64V3Token>;
     type I64 = crate::simd::x86::w128::i64x2;
     type U8 = crate::simd::x86::w128::u8x16;
     type U16 = crate::simd::x86::w128::u16x8;

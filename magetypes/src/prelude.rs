@@ -78,8 +78,12 @@ pub use archmage::SimdToken;
 // ============================================================================
 
 #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+pub use crate::simd::{
+    f32x8 as F32Vec, f64x4 as F64Vec, i32x8 as I32Vec,
+};
+#[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
 pub use crate::simd::x86::w256::{
-    f32x8 as F32Vec, f64x4 as F64Vec, i8x32 as I8Vec, i16x16 as I16Vec, i32x8 as I32Vec,
+    i8x32 as I8Vec, i16x16 as I16Vec,
     i64x4 as I64Vec, u8x32 as U8Vec, u16x16 as U16Vec, u32x8 as U32Vec, u64x4 as U64Vec,
 };
 
