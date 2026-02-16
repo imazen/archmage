@@ -18,7 +18,7 @@ default = ["std", "macros", "safe_unaligned_simd"]
 std = []
 macros = ["dep:archmage-macros"]
 safe_unaligned_simd = ["dep:safe_unaligned_simd"]
-# AVX-512 token support (Avx512Token, Avx512ModernToken, X64V4Token, etc.)
+# AVX-512 token support (Avx512Token, X64V4xToken, X64V4Token, etc.)
 avx512 = []
 # Make token disabling work even when compiled with -Ctarget-cpu=native.
 # Without this, the compiler bakes summon() into a no-op and tokens can't be

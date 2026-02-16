@@ -75,7 +75,7 @@ fn just_one_std_detection() -> bool {
     std::arch::is_x86_feature_detected!("avx2")
 }
 
-// Test with more features (like AVX-512 modern would need)
+// Test with more features (like X64V4x would need)
 fn std_many_features() -> bool {
     std::arch::is_x86_feature_detected!("avx512f")
         && std::arch::is_x86_feature_detected!("avx512bw")
@@ -88,8 +88,8 @@ fn std_many_features() -> bool {
         && std::arch::is_x86_feature_detected!("avx512vnni")
 }
 
-// Test with Avx512ModernToken-like features (27 features)
-fn std_avx512_modern_features() -> bool {
+// Test with X64V4xToken-like features (27 features)
+fn std_x64v4x_features() -> bool {
     std::arch::is_x86_feature_detected!("sse3")
         && std::arch::is_x86_feature_detected!("ssse3")
         && std::arch::is_x86_feature_detected!("sse4.1")
@@ -147,7 +147,7 @@ fn bench_summon(c: &mut Criterion) {
     });
 
     group.bench_function("std_27_features", |b| {
-        b.iter(|| black_box(std_avx512_modern_features()))
+        b.iter(|| black_box(std_x64v4x_features()))
     });
 
     group.finish();

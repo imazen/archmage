@@ -2593,9 +2593,9 @@ pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
     generate_x86_v4_w512_impls_for_token(types, "X64V4Token")
 }
 
-/// Generate all Modern native AVX-512 W512 implementations (Avx512ModernToken).
+/// Generate all Modern native AVX-512 W512 implementations (X64V4xToken).
 pub(super) fn generate_x86_modern_w512_impls(types: &[W512Type]) -> String {
-    generate_x86_v4_w512_impls_for_token(types, "Avx512ModernToken")
+    generate_x86_v4_w512_impls_for_token(types, "X64V4xToken")
 }
 
 // ============================================================================
@@ -2645,14 +2645,14 @@ pub(super) fn generate_popcnt_backend_traits(types: &[W512Type]) -> String {
     code
 }
 
-/// Generate popcnt extension impl for Avx512ModernToken.
+/// Generate popcnt extension impl for X64V4xToken.
 fn generate_popcnt_impl(ty: &W512Type) -> String {
     let name = ty.name();
     let epi = ty.x86_arith_suffix();
 
     formatdoc! {r#"
         #[cfg(target_arch = "x86_64")]
-        impl {name}PopcntBackend for archmage::Avx512ModernToken {{
+        impl {name}PopcntBackend for archmage::X64V4xToken {{
             #[inline(always)]
             fn popcnt(a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_popcnt_{epi}(a) }}

@@ -11,7 +11,7 @@ Tokens are the core of archmage's safety model. They're zero-sized proof types t
 | `X64V2Token` | — | SSE4.2, POPCNT | Nehalem 2008+ |
 | `X64V3Token` | `Desktop64` | + AVX2, FMA, BMI1, BMI2 | Haswell 2013+, Zen 1+ |
 | `X64V4Token` | `Server64`, `Avx512Token` | + AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4+ |
-| `Avx512ModernToken` | — | + VNNI, VBMI, etc. | Ice Lake 2019+, Zen 4+ |
+| `X64V4xToken` | — | + VNNI, VBMI, etc. | Ice Lake 2019+, Zen 4+ |
 
 ### AArch64 Tokens
 

@@ -38,12 +38,12 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
 | `X64V2Token` | — | SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | Nehalem 2008+, Bulldozer 2011+ |
 | `X64V3Token` | `Desktop64`, `Avx2FmaToken` | + AVX, AVX2, FMA, BMI1, BMI2, F16C, MOVBE | Haswell 2013+, Zen 1 2017+ |
 | `X64V4Token` | `Server64`, `Avx512Token` | + AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4 2022+ |
-| `Avx512ModernToken` | — | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | Ice Lake 2019+, Zen 4 2022+ |
+| `X64V4xToken` | — | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | AVX-512 FP16 | Sapphire Rapids 2023+ |
 
 Each higher tier is a superset. If you have `X64V4Token`, you can pass it to any function expecting `X64V3Token` or `X64V2Token` (downcast is free).
 
-**Requires `avx512` feature:** `X64V4Token`, `Avx512ModernToken`, `Avx512Fp16Token`.
+**Requires `avx512` feature:** `X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`.
 
 ### AArch64
 
@@ -129,7 +129,7 @@ Two tier traits exist for generic bounds:
 
 ```rust
 fn needs_v2(token: impl HasX64V2) { ... }  // X64V2Token, X64V3Token, X64V4Token, ...
-fn needs_v4(token: impl HasX64V4) { ... }  // X64V4Token, Avx512ModernToken, ...
+fn needs_v4(token: impl HasX64V4) { ... }  // X64V4Token, X64V4xToken, ...
 fn needs_neon(token: impl HasNeon) { ... } // NeonToken, NeonAesToken, ...
 ```
 

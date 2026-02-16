@@ -373,7 +373,7 @@ mod avx512_into_concrete {
     fn x64v4_into_concrete() {
         if let Some(t) = archmage::X64V4Token::summon() {
             assert!(t.as_x64v4().is_some());
-            assert!(t.as_avx512_modern().is_none());
+            assert!(t.as_x64v4x().is_none());
             assert!(t.as_avx512_fp16().is_none());
             assert!(t.as_x64v2().is_none());
             assert!(t.as_x64v3().is_none());
@@ -383,9 +383,9 @@ mod avx512_into_concrete {
     }
 
     #[test]
-    fn avx512_modern_into_concrete() {
-        if let Some(t) = archmage::Avx512ModernToken::summon() {
-            assert!(t.as_avx512_modern().is_some());
+    fn x64v4x_into_concrete() {
+        if let Some(t) = archmage::X64V4xToken::summon() {
+            assert!(t.as_x64v4x().is_some());
             assert!(t.as_x64v4().is_none());
             assert!(t.as_avx512_fp16().is_none());
             assert!(t.as_x64v2().is_none());
@@ -398,7 +398,7 @@ mod avx512_into_concrete {
     fn avx512_fp16_into_concrete() {
         if let Some(t) = archmage::Avx512Fp16Token::summon() {
             assert!(t.as_avx512_fp16().is_some());
-            assert!(t.as_avx512_modern().is_none());
+            assert!(t.as_x64v4x().is_none());
             assert!(t.as_x64v4().is_none());
             assert!(t.as_x64v2().is_none());
             assert!(t.as_x64v3().is_none());

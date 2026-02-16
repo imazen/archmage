@@ -138,7 +138,7 @@ fn build_token_slots() -> Vec<TokenSlot> {
         slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5]));
         slots.push(token_slot!(crate::X64V3Token, &[3, 4, 5]));
         slots.push(token_slot!(crate::X64V4Token, &[4, 5]));
-        slots.push(token_slot!(crate::Avx512ModernToken, &[]));
+        slots.push(token_slot!(crate::X64V4xToken, &[]));
         slots.push(token_slot!(crate::Avx512Fp16Token, &[]));
     }
 

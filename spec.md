@@ -24,7 +24,7 @@ Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the ty
 | `X64V2Token` | — | sse3, ssse3, sse4.1, sse4.2, popcnt | Nehalem 2008+, Bulldozer 2011+ |
 | `X64V3Token` | `Desktop64` | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt | Haswell 2013+, Zen 1 2017+ |
 | `X64V4Token` | `Avx512Token`, `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl | Skylake-X 2017+, Zen 4 2022+ |
-| `Avx512ModernToken` | — | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, avx512bf16, vpclmulqdq, gfni, vaes | Ice Lake 2019+, Zen 4 2022+ |
+| `X64V4xToken` | — | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, avx512bf16, vpclmulqdq, gfni, vaes | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | v4 + avx512fp16 | Sapphire Rapids 2023+ |
 
 Features are cumulative — each token lists ALL features it enables, not just the delta from the previous tier. This eliminates the class of bugs where "minimal" lists diverge from "cumulative" lists. LLVM deduplicates redundant features in `#[target_feature]`.
@@ -54,7 +54,7 @@ Tokens form a subsumption hierarchy. Higher-tier tokens can produce lower-tier t
 
 ```
 x86_64:
-  Avx512ModernToken → Avx512Token (v4) → X64V3Token (v3) → X64V2Token (v2)
+  X64V4xToken → Avx512Token (v4) → X64V3Token (v3) → X64V2Token (v2)
   Avx512Fp16Token   → Avx512Token (v4) → X64V3Token (v3) → X64V2Token (v2)
 
 AArch64:
@@ -94,7 +94,7 @@ HasNeonSha3 → HasNeon
 | X64V2Token | x | | | x | | | | |
 | X64V3Token | x | x | | x | | | | |
 | X64V4Token | x | x | x | x | x | | | |
-| Avx512ModernToken | x | x | x | x | x | | | |
+| X64V4xToken | x | x | x | x | x | | | |
 | Avx512Fp16Token | x | x | x | x | x | | | |
 | NeonToken | x | | | | | x | | |
 | NeonAesToken | x | | | | | x | x | |

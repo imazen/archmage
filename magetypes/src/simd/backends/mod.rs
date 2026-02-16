@@ -119,8 +119,8 @@ pub type x64v2 = archmage::X64V2Token;
 pub type x64v3 = archmage::X64V3Token;
 /// x86-64 v4 (AVX-512).
 pub type x64v4 = archmage::X64V4Token;
-/// AVX-512 with modern extensions.
-pub type avx512_modern = archmage::Avx512ModernToken;
+/// AVX-512 with v4x extensions.
+pub type x86_v4x = archmage::X64V4xToken;
 /// AArch64 NEON.
 pub type neon = archmage::NeonToken;
 /// WASM SIMD128.

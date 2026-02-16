@@ -4738,8 +4738,8 @@ Token: `X64V4Token / Server64`
 - `_mm_storeu_epi64`
 - `_mm_storeu_epi8`
 
-## Avx512ModernToken (Modern Extensions) (351 intrinsics)
-Token: `Avx512ModernToken`
+## X64V4xToken (Modern Extensions) (351 intrinsics)
+Token: `X64V4xToken`
 
 ### Compress/Expand
 

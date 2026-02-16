@@ -5,40 +5,6 @@ organized by the archmage token required to use them inside `#[arcane]` function
 
 Regenerate: `cargo xtask generate`
 
-## Avx512ModernToken (4 functions)
-
-### `_mm256_maskz_expandloadu_epi8`
-
-```rust
-fn _mm256_maskz_expandloadu_epi8<T: Is256BitsUnaligned>(k: __mmask32, mem_addr: &T) -> __m256i
-```
-
-Features: `avx512vbmi2,avx512vl`
-
-### `_mm512_maskz_expandloadu_epi8`
-
-```rust
-fn _mm512_maskz_expandloadu_epi8<T: Is512BitsUnaligned>(k: __mmask64, mem_addr: &T) -> __m512i
-```
-
-Features: `avx512vbmi2`
-
-### `_mm_maskz_expandloadu_epi16`
-
-```rust
-fn _mm_maskz_expandloadu_epi16<T: Is128BitsUnaligned>(k: __mmask8, mem_addr: &T) -> __m128i
-```
-
-Features: `avx512vbmi2,avx512vl`
-
-### `_mm_maskz_expandloadu_epi8`
-
-```rust
-fn _mm_maskz_expandloadu_epi8<T: Is128BitsUnaligned>(k: __mmask16, mem_addr: &T) -> __m128i
-```
-
-Features: `avx512vbmi2,avx512vl`
-
 ## Baseline (always available) (26 functions)
 
 ### `_mm_load1_pd`
@@ -1320,4 +1286,38 @@ fn _mm_storeu_epi8<T: Is128BitsUnaligned>(mem_addr: &mut T, a: __m128i) -> ()
 ```
 
 Features: `avx512bw,avx512vl`
+
+## X64V4xToken (4 functions)
+
+### `_mm256_maskz_expandloadu_epi8`
+
+```rust
+fn _mm256_maskz_expandloadu_epi8<T: Is256BitsUnaligned>(k: __mmask32, mem_addr: &T) -> __m256i
+```
+
+Features: `avx512vbmi2,avx512vl`
+
+### `_mm512_maskz_expandloadu_epi8`
+
+```rust
+fn _mm512_maskz_expandloadu_epi8<T: Is512BitsUnaligned>(k: __mmask64, mem_addr: &T) -> __m512i
+```
+
+Features: `avx512vbmi2`
+
+### `_mm_maskz_expandloadu_epi16`
+
+```rust
+fn _mm_maskz_expandloadu_epi16<T: Is128BitsUnaligned>(k: __mmask8, mem_addr: &T) -> __m128i
+```
+
+Features: `avx512vbmi2,avx512vl`
+
+### `_mm_maskz_expandloadu_epi8`
+
+```rust
+fn _mm_maskz_expandloadu_epi8<T: Is128BitsUnaligned>(k: __mmask16, mem_addr: &T) -> __m128i
+```
+
+Features: `avx512vbmi2,avx512vl`
 

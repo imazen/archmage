@@ -68,7 +68,7 @@ mod x86_stub_tests {
 #[cfg(target_arch = "aarch64")]
 mod arm_stub_tests {
     #[cfg(feature = "avx512")]
-    use archmage::{Avx512Fp16Token, Avx512ModernToken, X64V4Token};
+    use archmage::{Avx512Fp16Token, X64V4xToken, X64V4Token};
     use archmage::{SimdToken, X64V2Token, X64V3Token};
 
     #[test]
@@ -122,13 +122,13 @@ mod arm_real_tests {
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod avx512_feature_tests {
-    use archmage::{Avx512Fp16Token, Avx512ModernToken, SimdToken, X64V4Token};
+    use archmage::{Avx512Fp16Token, X64V4xToken, SimdToken, X64V4Token};
 
     #[test]
     fn avx512_tokens_exist_with_feature() {
         // These should compile — tokens exist when feature is enabled
         let _v4: Option<X64V4Token> = X64V4Token::summon();
-        let _modern: Option<Avx512ModernToken> = Avx512ModernToken::summon();
+        let _v4x: Option<X64V4xToken> = X64V4xToken::summon();
         let _fp16: Option<Avx512Fp16Token> = Avx512Fp16Token::summon();
 
         // Whether they return Some depends on the actual CPU

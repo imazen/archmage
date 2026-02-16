@@ -135,7 +135,7 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
 
     // Regex to detect function signatures with token parameters
     let fn_sig_re = Regex::new(
-        r"pub fn \w+[^{]*\b(X64V4Token|Avx512Token|Avx512ModernToken|Avx512Fp16Token)\b",
+        r"pub fn \w+[^{]*\b(X64V4Token|Avx512Token|X64V4xToken|Avx512Fp16Token)\b",
     )
     .expect("invalid fn sig regex");
 
@@ -639,8 +639,8 @@ fn map_features_to_token(features: &str, arch: &str) -> String {
             "avx512f,avx512vl" => "X64V4Token".to_string(),
             "avx512bw" => "X64V4Token".to_string(),
             "avx512bw,avx512vl" => "X64V4Token".to_string(),
-            "avx512vbmi2" => "Avx512ModernToken".to_string(),
-            "avx512vbmi2,avx512vl" => "Avx512ModernToken".to_string(),
+            "avx512vbmi2" => "X64V4xToken".to_string(),
+            "avx512vbmi2,avx512vl" => "X64V4xToken".to_string(),
             _ => format!("({})", features),
         },
         "aarch64" => "NeonToken / Arm64".to_string(),
@@ -693,8 +693,8 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             intrinsics: BTreeMap::new(),
         },
         TierInfo {
-            name: "Avx512ModernToken (Modern Extensions)",
-            token: "Avx512ModernToken",
+            name: "X64V4xToken (Modern Extensions)",
+            token: "X64V4xToken",
             features: &[
                 "avx512vpopcntdq",
                 "avx512ifma",
@@ -987,7 +987,7 @@ fn verify_intrinsic_soundness() -> Result<()> {
     // Regex to detect method-level token parameters (higher-level tokens used as function args)
     // Handles both `X64V4Token` and `archmage::X64V4Token` patterns
     let method_token_re = Regex::new(
-        r"pub fn \w+[^{]*(?:archmage::)?(X64V4Token|Avx512Token|Avx512ModernToken|Avx512Fp16Token|Server64)\b"
+        r"pub fn \w+[^{]*(?:archmage::)?(X64V4Token|Avx512Token|X64V4xToken|Avx512Fp16Token|Server64)\b"
     ).expect("invalid method token regex");
 
     let simd_dir = PathBuf::from("magetypes/src/simd");

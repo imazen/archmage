@@ -126,7 +126,7 @@ fn no_duplicate_effective_states() {
             archmage::X64V2Token::summon().is_some(),
             archmage::X64V3Token::summon().is_some(),
             archmage::X64V4Token::summon().is_some(),
-            archmage::Avx512ModernToken::summon().is_some(),
+            archmage::X64V4xToken::summon().is_some(),
             archmage::Avx512Fp16Token::summon().is_some(),
         );
         assert!(

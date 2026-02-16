@@ -1,9 +1,9 @@
-//! Backend implementations for X64V4Token and Avx512ModernToken (native AVX-512).
+//! Backend implementations for X64V4Token and X64V4xToken (native AVX-512).
 //!
 //! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics
-//! for both X64V4Token (base AVX-512) and Avx512ModernToken (+ VPOPCNTDQ, BITALG, etc.).
+//! for both X64V4Token (base AVX-512) and X64V4xToken (+ VPOPCNTDQ, BITALG, etc.).
 //!
-//! Avx512ModernToken also gets extension trait impls (popcnt) for Modern-only features.
+//! X64V4xToken also gets extension trait impls (popcnt) for Modern-only features.
 //!
 //! W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
 //!
@@ -2053,11 +2053,11 @@ impl U64x8Backend for archmage::X64V4Token {
 }
 
 // ============================================================================
-// Avx512ModernToken — base AVX-512 (same intrinsics as V4)
+// X64V4xToken — base AVX-512 (same intrinsics as V4)
 // ============================================================================
 
 #[cfg(target_arch = "x86_64")]
-impl F32x16Backend for archmage::Avx512ModernToken {
+impl F32x16Backend for archmage::X64V4xToken {
     type Repr = __m512;
 
     #[inline(always)]
@@ -2284,7 +2284,7 @@ impl F32x16Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl F64x8Backend for archmage::Avx512ModernToken {
+impl F64x8Backend for archmage::X64V4xToken {
     type Repr = __m512d;
 
     #[inline(always)]
@@ -2511,7 +2511,7 @@ impl F64x8Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl I8x64Backend for archmage::Avx512ModernToken {
+impl I8x64Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
@@ -2725,7 +2725,7 @@ impl I8x64Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl U8x64Backend for archmage::Avx512ModernToken {
+impl U8x64Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
@@ -2928,7 +2928,7 @@ impl U8x64Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl I16x32Backend for archmage::Avx512ModernToken {
+impl I16x32Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
@@ -3126,7 +3126,7 @@ impl I16x32Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl U16x32Backend for archmage::Avx512ModernToken {
+impl U16x32Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
@@ -3319,7 +3319,7 @@ impl U16x32Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl I32x16Backend for archmage::Avx512ModernToken {
+impl I32x16Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
@@ -3517,7 +3517,7 @@ impl I32x16Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl U32x16Backend for archmage::Avx512ModernToken {
+impl U32x16Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
@@ -3710,7 +3710,7 @@ impl U32x16Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl I64x8Backend for archmage::Avx512ModernToken {
+impl I64x8Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
@@ -3903,7 +3903,7 @@ impl I64x8Backend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl U64x8Backend for archmage::Avx512ModernToken {
+impl U64x8Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
@@ -4091,11 +4091,11 @@ impl U64x8Backend for archmage::Avx512ModernToken {
 }
 
 // ============================================================================
-// Avx512ModernToken — extension: popcnt (VPOPCNTDQ + BITALG)
+// X64V4xToken — extension: popcnt (VPOPCNTDQ + BITALG)
 // ============================================================================
 
 #[cfg(target_arch = "x86_64")]
-impl i8x64PopcntBackend for archmage::Avx512ModernToken {
+impl i8x64PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(a: __m512i) -> __m512i {
         unsafe { _mm512_popcnt_epi8(a) }
@@ -4103,7 +4103,7 @@ impl i8x64PopcntBackend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl u8x64PopcntBackend for archmage::Avx512ModernToken {
+impl u8x64PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(a: __m512i) -> __m512i {
         unsafe { _mm512_popcnt_epi8(a) }
@@ -4111,7 +4111,7 @@ impl u8x64PopcntBackend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl i16x32PopcntBackend for archmage::Avx512ModernToken {
+impl i16x32PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(a: __m512i) -> __m512i {
         unsafe { _mm512_popcnt_epi16(a) }
@@ -4119,7 +4119,7 @@ impl i16x32PopcntBackend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl u16x32PopcntBackend for archmage::Avx512ModernToken {
+impl u16x32PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(a: __m512i) -> __m512i {
         unsafe { _mm512_popcnt_epi16(a) }
@@ -4127,7 +4127,7 @@ impl u16x32PopcntBackend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl i32x16PopcntBackend for archmage::Avx512ModernToken {
+impl i32x16PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(a: __m512i) -> __m512i {
         unsafe { _mm512_popcnt_epi32(a) }
@@ -4135,7 +4135,7 @@ impl i32x16PopcntBackend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl u32x16PopcntBackend for archmage::Avx512ModernToken {
+impl u32x16PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(a: __m512i) -> __m512i {
         unsafe { _mm512_popcnt_epi32(a) }
@@ -4143,7 +4143,7 @@ impl u32x16PopcntBackend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl i64x8PopcntBackend for archmage::Avx512ModernToken {
+impl i64x8PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(a: __m512i) -> __m512i {
         unsafe { _mm512_popcnt_epi64(a) }
@@ -4151,7 +4151,7 @@ impl i64x8PopcntBackend for archmage::Avx512ModernToken {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl u64x8PopcntBackend for archmage::Avx512ModernToken {
+impl u64x8PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(a: __m512i) -> __m512i {
         unsafe { _mm512_popcnt_epi64(a) }

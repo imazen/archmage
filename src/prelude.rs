@@ -34,7 +34,7 @@
 //!
 //! Also includes: [`ScalarToken`] (always available), [`X64V2Token`],
 //! [`Wasm128Token`], [`NeonAesToken`], [`NeonSha3Token`], [`NeonCrcToken`],
-//! and the AVX-512 tokens ([`Avx512Token`], [`Avx512ModernToken`],
+//! and the AVX-512 tokens ([`Avx512Token`], [`X64V4xToken`],
 //! [`Avx512Fp16Token`]) when the `avx512` feature is enabled.
 //!
 //! ## 3. Macros
@@ -149,7 +149,7 @@ pub use crate::tokens::{HasNeon, HasNeonAes, HasNeonSha3};
 pub use crate::tokens::ScalarToken;
 pub use crate::tokens::Wasm128Token;
 pub use crate::tokens::{Arm64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken};
-pub use crate::tokens::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};
+pub use crate::tokens::{Avx512Fp16Token, X64V4xToken, Avx512Token, Server64, X64V4Token};
 pub use crate::tokens::{Desktop64, Sse2Token, X64V1Token, X64V2Token, X64V3Token};
 
 // -- Macros --

@@ -8,7 +8,7 @@
 
 `Desktop64`, `Arm64`, `ScalarToken`, `X64V2Token`, `X64V3Token`, `NeonToken`, `Wasm128Token`
 
-With `avx512` feature: `X64V4Token`, `Server64`, `Avx512Token`, `Avx512ModernToken`, `Avx512Fp16Token`
+With `avx512` feature: `X64V4Token`, `Server64`, `Avx512Token`, `X64V4xToken`, `Avx512Fp16Token`
 
 ### Traits
 

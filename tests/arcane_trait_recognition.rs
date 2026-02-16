@@ -80,7 +80,7 @@ mod x86_concrete_tokens {
 
     #[cfg(feature = "avx512")]
     #[arcane]
-    fn with_avx512modern(token: archmage::Avx512ModernToken) -> f32 {
+    fn with_x64v4x(token: archmage::X64V4xToken) -> f32 {
         let v = _mm512_set1_ps(7.0);
         unsafe { _mm_cvtss_f32(_mm512_castps512_ps128(v)) }
     }

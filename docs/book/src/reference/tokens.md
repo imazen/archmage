@@ -55,7 +55,7 @@ if let Some(token) = X64V4Token::summon() {
 - `Server64` — Friendly name for server CPUs
 - `Avx512Token` — Direct alias
 
-### Avx512ModernToken
+### X64V4xToken
 
 **Features**: All V4 + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES
 
@@ -65,7 +65,7 @@ if let Some(token) = X64V4Token::summon() {
 
 ```rust
 #[cfg(feature = "avx512")]
-if let Some(token) = Avx512ModernToken::summon() {
+if let Some(token) = X64V4xToken::summon() {
     // Modern AVX-512 extensions
 }
 ```

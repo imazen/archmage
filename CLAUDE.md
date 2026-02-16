@@ -252,7 +252,7 @@ pub fn sum(data: &[f32]) -> f32 {
 // Requires: sum_v1, sum_v3, sum_neon, sum_scalar
 ```
 
-Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`,
+Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
 `neon_sha3`, `neon_crc`, `wasm128`, `scalar`. Scalar is always implicit.
 
 **Passthrough mode** (already have token):
@@ -302,7 +302,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 | **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | `X64V2Token` | `HasX64V2` |
 | **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` / `Desktop64` | Use token directly |
 | **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` | `HasX64V4` |
-| **Modern** | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | `Avx512ModernToken` | Use token directly |
+| **V4x** | + VPOPCNTDQ, IFMA, VBMI, VNNI, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | `X64V4xToken` | Use token directly |
 | **FP16** | AVX512FP16 (independent) | `Avx512Fp16Token` | Use token directly |
 
 ### AArch64 Tokens
@@ -319,7 +319,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 ### Rules
 
 1. **NO granular x86 traits** - No `HasSse`, `HasSse2`, `HasAvx`, `HasAvx2`, `HasFma`, `HasAvx512f`, `HasAvx512bw`, etc.
-2. **Use tier tokens** - `X64V2Token`, `X64V3Token`, `X64V4Token`, `Avx512ModernToken`
+2. **Use tier tokens** - `X64V2Token`, `X64V3Token`, `X64V4Token`, `X64V4xToken`
 3. **Single trait per tier** - `HasX64V2`, `HasX64V4` only
 4. **NEON includes fp16** - They always appear together on AArch64
 5. **NO SVE** - `SveToken`, `Sve2Token`, `HasSve`, `HasSve2` are PROHIBITED (Rust stable lacks SVE support)
@@ -545,7 +545,7 @@ archmage/                    # Main crate: tokens, macros, detect
 │   │       ├── mod.rs      # cfg-gated module routing + re-exports
 │   │       ├── traits.rs   # Marker traits (Has128BitSimd, HasX64V2, etc.)
 │   │       ├── x86.rs      # x86 tokens (v2, v3) + detection
-│   │       ├── x86_avx512.rs  # AVX-512 tokens (v4, modern, fp16)
+│   │       ├── x86_avx512.rs  # AVX-512 tokens (v4, v4x, fp16)
 │   │       ├── arm.rs      # ARM tokens + detection
 │   │       ├── wasm.rs     # WASM tokens + detection
 │   │       ├── x86_stubs.rs   # x86 stubs (summon → None)
@@ -687,7 +687,7 @@ When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
 - `X64V3Token` / `Desktop64` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
 - `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
-- `Avx512ModernToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
+- `X64V4xToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
 - `Avx512Fp16Token` - + FP16 (Sapphire Rapids 2023+)
 
 **ARM:**
@@ -785,7 +785,7 @@ These are documented semantic differences between architectures. Tests must acco
 
 - ~~**summon() caching**~~: **Implemented!** See `benches/summon_overhead.rs`. Results after adding atomic caching:
   - `Desktop64::summon()` (cached): ~1.3 ns (was 2.6 ns — **2x faster**)
-  - `Avx512ModernToken::summon()` (cached): ~1.3 ns (was 7.2 ns — **6x faster**)
+  - `X64V4xToken::summon()` (cached): ~1.3 ns (was 7.2 ns — **6x faster**)
   - With `-Ctarget-cpu=haswell`: 0 ns (compiles away entirely)
 
   Implementation: Each token has a static `AtomicU8` cache (0=unknown, 1=unavailable, 2=available). Compile-time `#[cfg(target_feature)]` guard skips the cache entirely when features are guaranteed.

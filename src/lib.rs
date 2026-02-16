@@ -167,4 +167,4 @@ pub use tokens::{
 };
 
 // AVX-512 tokens (always available; summon() returns None on unsupported CPUs)
-pub use tokens::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};
+pub use tokens::{Avx512Fp16Token, X64V4xToken, Avx512Token, Server64, X64V4Token};

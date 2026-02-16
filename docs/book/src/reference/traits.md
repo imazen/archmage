@@ -26,7 +26,7 @@ pub trait IntoConcreteToken: SimdToken {
     fn as_x64v2(self) -> Option<X64V2Token> { None }
     fn as_x64v3(self) -> Option<X64V3Token> { None }
     fn as_x64v4(self) -> Option<X64V4Token> { None }
-    fn as_avx512_modern(self) -> Option<Avx512ModernToken> { None }
+    fn as_x64_v4x(self) -> Option<X64V4xToken> { None }
     fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> { None }
     fn as_neon(self) -> Option<NeonToken> { None }
     fn as_neon_aes(self) -> Option<NeonAesToken> { None }
@@ -63,7 +63,7 @@ Marker trait for tokens that provide x86-64-v2 features (SSE4.2+).
 pub trait HasX64V2: SimdToken {}
 ```
 
-**Implementors**: `X64V2Token`, `X64V3Token`, `X64V4Token`, `Avx512ModernToken`, `Avx512Fp16Token`
+**Implementors**: `X64V2Token`, `X64V3Token`, `X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`
 
 **Usage**:
 
@@ -82,7 +82,7 @@ Marker trait for tokens that provide x86-64-v4 features (AVX-512).
 pub trait HasX64V4: SimdToken {}
 ```
 
-**Implementors**: `X64V4Token`, `Avx512ModernToken`, `Avx512Fp16Token`
+**Implementors**: `X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`
 
 **Requires**: `avx512` feature
 

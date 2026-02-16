@@ -31,7 +31,7 @@ pub trait IntoConcreteToken: SimdToken {
     fn as_x64v2(self) -> Option<X64V2Token> { None }
     fn as_x64v3(self) -> Option<X64V3Token> { None }
     fn as_x64v4(self) -> Option<X64V4Token> { None }      // requires avx512
-    fn as_avx512_modern(self) -> Option<Avx512ModernToken> { None }
+    fn as_x64_v4x(self) -> Option<X64V4xToken> { None }
     fn as_neon(self) -> Option<NeonToken> { None }
     fn as_neon_aes(self) -> Option<NeonAesToken> { None }
     fn as_neon_sha3(self) -> Option<NeonSha3Token> { None }

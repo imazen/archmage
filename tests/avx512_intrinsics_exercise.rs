@@ -1,25 +1,25 @@
-//! Comprehensive AVX-512 intrinsic exercise tests for Avx512ModernToken.
+//! Comprehensive AVX-512 intrinsic exercise tests for X64V4xToken.
 //!
-//! This file exercises intrinsics available with Avx512ModernToken (Ice Lake / Zen 4)
+//! This file exercises intrinsics available with X64V4xToken (Ice Lake / Zen 4)
 //! to verify they compile and execute correctly with archmage tokens.
 //!
-//! Avx512ModernToken requires: AVX-512F, CD, VL, DQ, BW, VPOPCNTDQ, IFMA, VBMI,
-//! VBMI2, BITALG, VNNI, BF16, VPCLMULQDQ, GFNI, VAES + x86-64-v3 baseline
+//! X64V4xToken requires: AVX-512F, CD, VL, DQ, BW, VPOPCNTDQ, IFMA, VBMI,
+//! VBMI2, BITALG, VNNI, VPCLMULQDQ, GFNI, VAES + x86-64-v3 baseline
 
 #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #![allow(unused_imports, unused_variables, dead_code, unused_mut)]
 #![allow(clippy::needless_return, clippy::identity_op, clippy::unnecessary_cast)]
 #![allow(clippy::eq_op)]
 
-use archmage::Avx512ModernToken;
+use archmage::X64V4xToken;
 use archmage::{SimdToken, arcane};
 use core::arch::x86_64::*;
 use core::hint::black_box;
 
-/// Run all AVX-512 Modern intrinsic tests.
+/// Run all X64V4x intrinsic tests.
 #[test]
-fn test_avx512_modern_intrinsics() {
-    if let Some(token) = Avx512ModernToken::summon() {
+fn test_x64v4x_intrinsics() {
+    if let Some(token) = X64V4xToken::summon() {
         exercise_avx512f(token);
         exercise_avx512f_vl(token);
         exercise_avx512bw(token);
@@ -32,14 +32,13 @@ fn test_avx512_modern_intrinsics() {
         exercise_avx512vbmi2(token);
         exercise_avx512vnni(token);
         exercise_avx512bitalg(token);
-        exercise_avx512bf16(token);
         exercise_avx512ifma(token);
         exercise_gfni(token);
         exercise_vaes(token);
         exercise_vpclmulqdq(token);
-        println!("All AVX-512 Modern intrinsic tests passed!");
+        println!("All X64V4x intrinsic tests passed!");
     } else {
-        println!("Avx512ModernToken not available - skipping tests");
+        println!("X64V4xToken not available - skipping tests");
     }
 }
 
@@ -48,7 +47,7 @@ fn test_avx512_modern_intrinsics() {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512f(token: Avx512ModernToken) {
+fn exercise_avx512f(token: X64V4xToken) {
     // Initialization
     let zero_ps = _mm512_setzero_ps();
     let zero_pd = _mm512_setzero_pd();
@@ -261,7 +260,7 @@ fn exercise_avx512f(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512f_vl(token: Avx512ModernToken) {
+fn exercise_avx512f_vl(token: X64V4xToken) {
     // 256-bit vectors
     let v256_ps = _mm256_set1_ps(1.0);
     let v256_pd = _mm256_set1_pd(1.0);
@@ -325,7 +324,7 @@ fn exercise_avx512f_vl(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512bw(token: Avx512ModernToken) {
+fn exercise_avx512bw(token: X64V4xToken) {
     let zero_i = _mm512_setzero_si512();
     let ones_i8 = _mm512_set1_epi8(1);
     let ones_i16 = _mm512_set1_epi16(1);
@@ -428,7 +427,7 @@ fn exercise_avx512bw(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512bw_vl(token: Avx512ModernToken) {
+fn exercise_avx512bw_vl(token: X64V4xToken) {
     let v256_i8 = _mm256_set1_epi8(1);
     let v256_i16 = _mm256_set1_epi16(1);
     let v128_i8 = _mm_set1_epi8(1);
@@ -457,7 +456,7 @@ fn exercise_avx512bw_vl(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512dq(token: Avx512ModernToken) {
+fn exercise_avx512dq(token: X64V4xToken) {
     let ones_ps = _mm512_set1_ps(1.0);
     let ones_pd = _mm512_set1_pd(1.0);
     let ones_i64 = _mm512_set1_epi64(1);
@@ -530,7 +529,7 @@ fn exercise_avx512dq(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512dq_vl(token: Avx512ModernToken) {
+fn exercise_avx512dq_vl(token: X64V4xToken) {
     let v256_ps = _mm256_set1_ps(1.0);
     let v256_pd = _mm256_set1_pd(1.0);
     let v256_i64 = _mm256_set1_epi64x(1);
@@ -567,7 +566,7 @@ fn exercise_avx512dq_vl(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512cd(token: Avx512ModernToken) {
+fn exercise_avx512cd(token: X64V4xToken) {
     let ones_i32 = _mm512_set1_epi32(1);
     let ones_i64 = _mm512_set1_epi64(1);
     let mask8: __mmask8 = 0xFF;
@@ -603,7 +602,7 @@ fn exercise_avx512cd(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512cd_vl(token: Avx512ModernToken) {
+fn exercise_avx512cd_vl(token: X64V4xToken) {
     let v256_i32 = _mm256_set1_epi32(1);
     let v256_i64 = _mm256_set1_epi64x(1);
     let v128_i32 = _mm_set1_epi32(1);
@@ -639,7 +638,7 @@ fn exercise_avx512cd_vl(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512vbmi(token: Avx512ModernToken) {
+fn exercise_avx512vbmi(token: X64V4xToken) {
     let ones_i8 = _mm512_set1_epi8(1);
     let zero_i = _mm512_setzero_si512();
     let mask64: __mmask64 = 0xFFFFFFFFFFFFFFFF;
@@ -673,7 +672,7 @@ fn exercise_avx512vbmi(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512vbmi2(token: Avx512ModernToken) {
+fn exercise_avx512vbmi2(token: X64V4xToken) {
     let ones_i8 = _mm512_set1_epi8(1);
     let ones_i16 = _mm512_set1_epi16(1);
     let ones_i32 = _mm512_set1_epi32(1);
@@ -718,7 +717,7 @@ fn exercise_avx512vbmi2(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512vnni(token: Avx512ModernToken) {
+fn exercise_avx512vnni(token: X64V4xToken) {
     let ones_i32 = _mm512_set1_epi32(1);
     let ones_i8_as_i32 = _mm512_set1_epi8(1);
     let mask16: __mmask16 = 0xFFFF;
@@ -804,7 +803,7 @@ fn exercise_avx512vnni(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512bitalg(token: Avx512ModernToken) {
+fn exercise_avx512bitalg(token: X64V4xToken) {
     let ones_i8 = _mm512_set1_epi8(1);
     let ones_i16 = _mm512_set1_epi16(1);
     let mask32: __mmask32 = 0xFFFFFFFF;
@@ -826,52 +825,11 @@ fn exercise_avx512bitalg(token: Avx512ModernToken) {
 }
 
 // =============================================================================
-// AVX-512BF16 - BFloat16 operations
-// =============================================================================
-
-#[arcane]
-fn exercise_avx512bf16(token: Avx512ModernToken) {
-    let ones_ps = _mm512_set1_ps(1.0);
-    let ones_ps_256 = _mm256_set1_ps(1.0);
-    let mask16: __mmask16 = 0xFFFF;
-
-    // Convert float to BF16 - returns __m256bh
-    let bf16_256: __m256bh = _mm512_cvtneps_pbh(ones_ps);
-    black_box(bf16_256);
-
-    let bf16_128: __m128bh = _mm256_cvtneps_pbh(ones_ps_256);
-    black_box(bf16_128);
-
-    // Convert BF16 to float - takes __m256bh returns __m512
-    black_box(_mm512_cvtpbh_ps(bf16_256));
-
-    // BF16 dot product - creates zero bf16 vectors properly
-    let zero_bf16_512: __m512bh = _mm512_cvtne2ps_pbh(ones_ps, ones_ps);
-    black_box(_mm512_dpbf16_ps(ones_ps, zero_bf16_512, zero_bf16_512));
-
-    // Masked operations
-    black_box(_mm512_mask_cvtneps_pbh(bf16_256, mask16, ones_ps));
-    black_box(_mm512_maskz_cvtneps_pbh(mask16, ones_ps));
-    black_box(_mm512_mask_dpbf16_ps(
-        ones_ps,
-        mask16,
-        zero_bf16_512,
-        zero_bf16_512,
-    ));
-    black_box(_mm512_maskz_dpbf16_ps(
-        mask16,
-        ones_ps,
-        zero_bf16_512,
-        zero_bf16_512,
-    ));
-}
-
-// =============================================================================
 // AVX-512IFMA - Integer FMA
 // =============================================================================
 
 #[arcane]
-fn exercise_avx512ifma(token: Avx512ModernToken) {
+fn exercise_avx512ifma(token: X64V4xToken) {
     let ones_i64 = _mm512_set1_epi64(1);
     let mask8: __mmask8 = 0xFF;
 
@@ -921,7 +879,7 @@ fn exercise_avx512ifma(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_gfni(token: Avx512ModernToken) {
+fn exercise_gfni(token: X64V4xToken) {
     let ones_i8 = _mm512_set1_epi8(1);
     let v256_i8 = _mm256_set1_epi8(1);
     let v128_i8 = _mm_set1_epi8(1);
@@ -976,7 +934,7 @@ fn exercise_gfni(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_vaes(token: Avx512ModernToken) {
+fn exercise_vaes(token: X64V4xToken) {
     let key_512 = _mm512_setzero_si512();
     let data_512 = _mm512_set1_epi8(0x42);
     let key_256 = _mm256_setzero_si256();
@@ -1000,7 +958,7 @@ fn exercise_vaes(token: Avx512ModernToken) {
 // =============================================================================
 
 #[arcane]
-fn exercise_vpclmulqdq(token: Avx512ModernToken) {
+fn exercise_vpclmulqdq(token: X64V4xToken) {
     let data_512 = _mm512_set1_epi64(0x0123456789ABCDEF);
     let data_256 = _mm256_set1_epi64x(0x0123456789ABCDEF);
 

@@ -17,8 +17,8 @@ pub(super) static X64_V3_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static X64_V3_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static X64_V4_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static X64_V4_DISABLED: AtomicBool = AtomicBool::new(false);
-pub(super) static AVX512_MODERN_CACHE: AtomicU8 = AtomicU8::new(0);
-pub(super) static AVX512_MODERN_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static X64_V4X_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static X64_V4X_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static AVX512_FP16_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static AVX512_FP16_DISABLED: AtomicBool = AtomicBool::new(false);
 
@@ -74,7 +74,7 @@ impl X64V1Token {
     /// - `X64V2Token`
     /// - `X64V3Token`
     /// - `X64V4Token`
-    /// - `Avx512ModernToken`
+    /// - `X64V4xToken`
     /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
@@ -108,8 +108,8 @@ impl X64V1Token {
             X64_V3_CACHE.store(v, Ordering::Relaxed);
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4_CACHE.store(v, Ordering::Relaxed);
-            AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
-            AVX512_MODERN_CACHE.store(v, Ordering::Relaxed);
+            X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V4X_CACHE.store(v, Ordering::Relaxed);
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
             AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
             Ok(())
@@ -264,7 +264,7 @@ impl X64V2Token {
     /// **Cascading:** Also affects descendants:
     /// - `X64V3Token`
     /// - `X64V4Token`
-    /// - `Avx512ModernToken`
+    /// - `X64V4xToken`
     /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
@@ -306,8 +306,8 @@ impl X64V2Token {
             X64_V3_CACHE.store(v, Ordering::Relaxed);
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4_CACHE.store(v, Ordering::Relaxed);
-            AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
-            AVX512_MODERN_CACHE.store(v, Ordering::Relaxed);
+            X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V4X_CACHE.store(v, Ordering::Relaxed);
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
             AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
             Ok(())
@@ -513,7 +513,7 @@ impl X64V3Token {
     ///
     /// **Cascading:** Also affects descendants:
     /// - `X64V4Token`
-    /// - `Avx512ModernToken`
+    /// - `X64V4xToken`
     /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
@@ -567,8 +567,8 @@ impl X64V3Token {
             X64_V3_CACHE.store(v, Ordering::Relaxed);
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4_CACHE.store(v, Ordering::Relaxed);
-            AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
-            AVX512_MODERN_CACHE.store(v, Ordering::Relaxed);
+            X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V4X_CACHE.store(v, Ordering::Relaxed);
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
             AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
             Ok(())
@@ -818,7 +818,7 @@ impl X64V4Token {
     /// elided the runtime checks.
     ///
     /// **Cascading:** Also affects descendants:
-    /// - `Avx512ModernToken`
+    /// - `X64V4xToken`
     /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
@@ -880,8 +880,8 @@ impl X64V4Token {
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
             X64_V4_CACHE.store(v, Ordering::Relaxed);
-            AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
-            AVX512_MODERN_CACHE.store(v, Ordering::Relaxed);
+            X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V4X_CACHE.store(v, Ordering::Relaxed);
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
             AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
             Ok(())
@@ -950,26 +950,26 @@ impl X64V4Token {
     }
 }
 
-/// Proof that modern AVX-512 features are available (Ice Lake / Zen 4 level).
+/// Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake / Zen 4 level).
 ///
 /// This includes all of `X64V4Token` (F+CD+VL+DQ+BW) plus:
-/// - VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI, BF16
+/// - VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI
 /// - VPCLMULQDQ, GFNI, VAES
 ///
 /// Available on Intel Ice Lake (2019+), Sapphire Rapids, AMD Zen 4+.
-/// NOT available on Skylake-X (lacks VBMI2, VNNI, BF16, etc.).
+/// NOT available on Skylake-X (lacks VBMI2, VNNI, etc.).
 #[derive(Clone, Copy, Debug)]
-pub struct Avx512ModernToken {
+pub struct X64V4xToken {
     _private: (),
 }
 
-impl crate::tokens::Sealed for Avx512ModernToken {}
+impl crate::tokens::Sealed for X64V4xToken {}
 
-impl SimdToken for Avx512ModernToken {
-    const NAME: &'static str = "AVX-512Modern";
-    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,avx512bf16,vpclmulqdq,gfni,vaes";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+avx512bf16,+vpclmulqdq,+gfni,+vaes";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-avx512bf16,-vpclmulqdq,-gfni,-vaes";
+impl SimdToken for X64V4xToken {
+    const NAME: &'static str = "x86-64-v4x";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+vpclmulqdq,+gfni,+vaes";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-vpclmulqdq,-gfni,-vaes";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -997,7 +997,6 @@ impl SimdToken for Avx512ModernToken {
             target_feature = "avx512vbmi2",
             target_feature = "avx512bitalg",
             target_feature = "avx512vnni",
-            target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
             target_feature = "vaes",
@@ -1030,7 +1029,6 @@ impl SimdToken for Avx512ModernToken {
             target_feature = "avx512vbmi2",
             target_feature = "avx512bitalg",
             target_feature = "avx512vnni",
-            target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
             target_feature = "vaes",
@@ -1069,7 +1067,6 @@ impl SimdToken for Avx512ModernToken {
             target_feature = "avx512vbmi2",
             target_feature = "avx512bitalg",
             target_feature = "avx512vnni",
-            target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
             target_feature = "vaes",
@@ -1104,14 +1101,13 @@ impl SimdToken for Avx512ModernToken {
             target_feature = "avx512vbmi2",
             target_feature = "avx512bitalg",
             target_feature = "avx512vnni",
-            target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
             target_feature = "vaes",
             not(feature = "testable_dispatch")
         )))]
         {
-            match AVX512_MODERN_CACHE.load(Ordering::Relaxed) {
+            match X64_V4X_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => {
@@ -1138,11 +1134,10 @@ impl SimdToken for Avx512ModernToken {
                         && crate::is_x86_feature_available!("avx512vbmi2")
                         && crate::is_x86_feature_available!("avx512bitalg")
                         && crate::is_x86_feature_available!("avx512vnni")
-                        && crate::is_x86_feature_available!("avx512bf16")
                         && crate::is_x86_feature_available!("vpclmulqdq")
                         && crate::is_x86_feature_available!("gfni")
                         && crate::is_x86_feature_available!("vaes");
-                    AVX512_MODERN_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    X64_V4X_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
                     if available {
                         Some(unsafe { Self::forge_token_dangerously() })
                     } else {
@@ -1160,8 +1155,8 @@ impl SimdToken for Avx512ModernToken {
     }
 }
 
-impl Avx512ModernToken {
-    /// Get a X64V4Token (AVX-512Modern implies AVX-512)
+impl X64V4xToken {
+    /// Get a X64V4Token (x86-64-v4x implies AVX-512)
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
@@ -1174,19 +1169,19 @@ impl Avx512ModernToken {
     pub fn avx512(self) -> X64V4Token {
         unsafe { X64V4Token::forge_token_dangerously() }
     }
-    /// Get a X64V3Token (AVX-512Modern implies x86-64-v3)
+    /// Get a X64V3Token (x86-64-v4x implies x86-64-v3)
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
-    /// Get a X64V2Token (AVX-512Modern implies x86-64-v2)
+    /// Get a X64V2Token (x86-64-v4x implies x86-64-v2)
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
-    /// Get a X64V1Token (AVX-512Modern implies x86-64-v1)
+    /// Get a X64V1Token (x86-64-v4x implies x86-64-v1)
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
@@ -1194,7 +1189,7 @@ impl Avx512ModernToken {
     }
 }
 
-impl Avx512ModernToken {
+impl X64V4xToken {
     /// Disable this token process-wide for testing and benchmarking.
     ///
     /// When disabled, `summon()` will return `None` even if the CPU supports
@@ -1233,7 +1228,6 @@ impl Avx512ModernToken {
             target_feature = "avx512vbmi2",
             target_feature = "avx512bitalg",
             target_feature = "avx512vnni",
-            target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
             target_feature = "vaes",
@@ -1273,16 +1267,15 @@ impl Avx512ModernToken {
             target_feature = "avx512vbmi2",
             target_feature = "avx512bitalg",
             target_feature = "avx512vnni",
-            target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
             target_feature = "vaes",
             not(feature = "testable_dispatch")
         )))]
         {
-            AVX512_MODERN_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
-            AVX512_MODERN_CACHE.store(v, Ordering::Relaxed);
+            X64_V4X_CACHE.store(v, Ordering::Relaxed);
             Ok(())
         }
     }
@@ -1318,7 +1311,6 @@ impl Avx512ModernToken {
             target_feature = "avx512vbmi2",
             target_feature = "avx512bitalg",
             target_feature = "avx512vnni",
-            target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
             target_feature = "vaes",
@@ -1357,14 +1349,13 @@ impl Avx512ModernToken {
             target_feature = "avx512vbmi2",
             target_feature = "avx512bitalg",
             target_feature = "avx512vnni",
-            target_feature = "avx512bf16",
             target_feature = "vpclmulqdq",
             target_feature = "gfni",
             target_feature = "vaes",
             not(feature = "testable_dispatch")
         )))]
         {
-            Ok(AVX512_MODERN_DISABLED.load(Ordering::Relaxed))
+            Ok(X64_V4X_DISABLED.load(Ordering::Relaxed))
         }
     }
 }
@@ -1721,24 +1712,27 @@ pub type Avx512Token = X64V4Token;
 /// Type alias for [`X64V4Token`].
 pub type Server64 = X64V4Token;
 
+/// Type alias for [`X64V4xToken`].
+pub type Avx512ModernToken = X64V4xToken;
+
 impl Has128BitSimd for X64V1Token {}
 impl Has128BitSimd for X64V2Token {}
 impl Has128BitSimd for X64V3Token {}
 impl Has128BitSimd for X64V4Token {}
-impl Has128BitSimd for Avx512ModernToken {}
+impl Has128BitSimd for X64V4xToken {}
 impl Has128BitSimd for Avx512Fp16Token {}
 impl Has256BitSimd for X64V3Token {}
 impl Has256BitSimd for X64V4Token {}
-impl Has256BitSimd for Avx512ModernToken {}
+impl Has256BitSimd for X64V4xToken {}
 impl Has256BitSimd for Avx512Fp16Token {}
 impl Has512BitSimd for X64V4Token {}
-impl Has512BitSimd for Avx512ModernToken {}
+impl Has512BitSimd for X64V4xToken {}
 impl Has512BitSimd for Avx512Fp16Token {}
 impl HasX64V2 for X64V2Token {}
 impl HasX64V2 for X64V3Token {}
 impl HasX64V2 for X64V4Token {}
-impl HasX64V2 for Avx512ModernToken {}
+impl HasX64V2 for X64V4xToken {}
 impl HasX64V2 for Avx512Fp16Token {}
 impl HasX64V4 for X64V4Token {}
-impl HasX64V4 for Avx512ModernToken {}
+impl HasX64V4 for X64V4xToken {}
 impl HasX64V4 for Avx512Fp16Token {}

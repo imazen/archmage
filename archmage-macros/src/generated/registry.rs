@@ -18,7 +18,7 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
             "bmi1", "bmi2", "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq",
             "avx512vl",
         ]),
-        "Avx512ModernToken" => Some(&[
+        "X64V4xToken" | "Avx512ModernToken" => Some(&[
             "sse",
             "sse2",
             "sse3",
@@ -44,7 +44,6 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
             "avx512vbmi2",
             "avx512bitalg",
             "avx512vnni",
-            "avx512bf16",
             "vpclmulqdq",
             "gfni",
             "vaes",
@@ -111,7 +110,7 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
             "bmi1", "bmi2", "f16c", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq",
             "avx512vl",
         ]),
-        "Avx512ModernToken" => Some(&[
+        "X64V4xToken" | "Avx512ModernToken" => Some(&[
             "sse",
             "sse2",
             "sse3",
@@ -137,7 +136,6 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
             "avx512vbmi2",
             "avx512bitalg",
             "avx512vnni",
-            "avx512bf16",
             "vpclmulqdq",
             "gfni",
             "vaes",
@@ -183,7 +181,7 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
         "X64V2Token" => Some("x86_64"),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("x86_64"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("x86_64"),
-        "Avx512ModernToken" => Some("x86_64"),
+        "X64V4xToken" | "Avx512ModernToken" => Some("x86_64"),
         "Avx512Fp16Token" => Some("x86_64"),
         "NeonToken" | "Arm64" => Some("aarch64"),
         "NeonAesToken" => Some("aarch64"),
@@ -206,6 +204,7 @@ pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
     "X64V4Token",
     "Avx512Token",
     "Server64",
+    "X64V4xToken",
     "Avx512ModernToken",
     "Avx512Fp16Token",
     "NeonToken",

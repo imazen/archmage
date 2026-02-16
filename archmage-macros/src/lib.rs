@@ -603,7 +603,7 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 /// # Supported Tokens
 ///
 /// - **x86_64 tiers**: `X64V2Token`, `X64V3Token` / `Desktop64` / `Avx2FmaToken`,
-///   `X64V4Token` / `Avx512Token` / `Server64`, `Avx512ModernToken`, `Avx512Fp16Token`
+///   `X64V4Token` / `Avx512Token` / `Server64`, `X64V4xToken`, `Avx512Fp16Token`
 /// - **ARM**: `NeonToken` / `Arm64`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
 /// - **WASM**: `Wasm128Token`
 ///
@@ -835,7 +835,7 @@ fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
 ///
 /// `scalar` is always included implicitly.
 ///
-/// Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`,
+/// Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
 /// `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
 ///
 /// # What gets replaced
@@ -1001,10 +1001,10 @@ struct TierDescriptor {
 const ALL_TIERS: &[TierDescriptor] = &[
     // x86: highest to lowest
     TierDescriptor {
-        name: "modern",
-        suffix: "modern",
-        token_path: "archmage::Avx512ModernToken",
-        as_method: "as_avx512_modern",
+        name: "v4x",
+        suffix: "v4x",
+        token_path: "archmage::X64V4xToken",
+        as_method: "as_x64v4x",
         target_arch: Some("x86_64"),
         cargo_feature: Some("avx512"),
         priority: 50,
@@ -1234,7 +1234,7 @@ impl Parse for IncantInput {
 /// compile error. Tiers are automatically sorted into correct dispatch
 /// order (highest priority first).
 ///
-/// Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`,
+/// Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
 /// `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
 ///
 /// # Passthrough Mode (already have token)
@@ -1265,7 +1265,7 @@ impl Parse for IncantInput {
 /// - `_v2` for `X64V2Token`
 /// - `_v3` for `X64V3Token`
 /// - `_v4` for `X64V4Token` (requires `avx512` feature)
-/// - `_modern` for `Avx512ModernToken` (requires `avx512` feature)
+/// - `_v4x` for `X64V4xToken` (requires `avx512` feature)
 /// - `_neon` for `NeonToken`
 /// - `_neon_aes` for `NeonAesToken`
 /// - `_neon_sha3` for `NeonSha3Token`
@@ -1542,7 +1542,7 @@ mod tests {
             "X64V4Token",
             "Avx512Token",
             "Server64",
-            "Avx512ModernToken",
+            "X64V4xToken",
             "Avx512Fp16Token",
             "NeonToken",
             "Arm64",

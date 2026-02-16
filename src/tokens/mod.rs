@@ -421,9 +421,9 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
-    /// Try to cast to Avx512ModernToken.
+    /// Try to cast to X64V4xToken.
     #[inline(always)]
-    fn as_avx512_modern(self) -> Option<Avx512ModernToken> {
+    fn as_x64v4x(self) -> Option<X64V4xToken> {
         None
     }
 
@@ -510,10 +510,10 @@ impl IntoConcreteToken for X64V4Token {
     }
 }
 
-// Implement IntoConcreteToken for Avx512ModernToken
-impl IntoConcreteToken for Avx512ModernToken {
+// Implement IntoConcreteToken for X64V4xToken
+impl IntoConcreteToken for X64V4xToken {
     #[inline(always)]
-    fn as_avx512_modern(self) -> Option<Avx512ModernToken> {
+    fn as_x64v4x(self) -> Option<X64V4xToken> {
         Some(self)
     }
 }

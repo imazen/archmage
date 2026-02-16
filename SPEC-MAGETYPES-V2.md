@@ -36,7 +36,7 @@ Tokens are zero-sized types that prove CPU features are available.
 | `X64V2Token` | x86_64 | SSE4.2, POPCNT |
 | `X64V3Token` / `Desktop64` | x86_64 | AVX2, FMA, BMI2 |
 | `X64V4Token` / `Server64` | x86_64 | AVX-512 F/BW/CD/DQ/VL |
-| `Avx512ModernToken` | x86_64 | + VNNI, VBMI2, etc. |
+| `X64V4xToken` | x86_64 | + VNNI, VBMI2, etc. |
 | `NeonToken` / `Arm64` | aarch64 | NEON (always available) |
 | `NeonAesToken` | aarch64 | + AES |
 | `Wasm128Token` | wasm32 | WASM SIMD |

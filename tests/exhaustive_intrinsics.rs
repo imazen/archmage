@@ -221,8 +221,8 @@ fn print_all_token_names() {
         println!("    Avx512Token:       {}", archmage::Avx512Token::NAME);
         println!("    Server64:          {}", archmage::Server64::NAME);
         println!(
-            "    Avx512ModernToken: {}",
-            archmage::Avx512ModernToken::NAME
+            "    X64V4xToken: {}",
+            archmage::X64V4xToken::NAME
         );
         println!("    Avx512Fp16Token:   {}", archmage::Avx512Fp16Token::NAME);
     }
@@ -597,54 +597,54 @@ fn test_implementation_names() {
             assert_eq!(simd::v4::f32x16::implementation_name(), "x86::v4::f32x16");
         }
 
-        // simd::modern - maps to 512-bit types (Avx512ModernToken, superset of V4)
+        // simd::v4x - maps to 512-bit types (X64V4xToken, superset of V4)
         // Same widths as V4, but types get extension methods like .popcnt()
         #[cfg(feature = "avx512")]
         {
             assert_eq!(
-                simd::modern::f32xN::implementation_name(),
-                "x86::modern::f32x16"
+                simd::v4x::f32xN::implementation_name(),
+                "x86::v4x::f32x16"
             );
             assert_eq!(
-                simd::modern::f64xN::implementation_name(),
-                "x86::modern::f64x8"
+                simd::v4x::f64xN::implementation_name(),
+                "x86::v4x::f64x8"
             );
             assert_eq!(
-                simd::modern::i8xN::implementation_name(),
-                "x86::modern::i8x64"
+                simd::v4x::i8xN::implementation_name(),
+                "x86::v4x::i8x64"
             );
             assert_eq!(
-                simd::modern::u8xN::implementation_name(),
-                "x86::modern::u8x64"
+                simd::v4x::u8xN::implementation_name(),
+                "x86::v4x::u8x64"
             );
             assert_eq!(
-                simd::modern::i16xN::implementation_name(),
-                "x86::modern::i16x32"
+                simd::v4x::i16xN::implementation_name(),
+                "x86::v4x::i16x32"
             );
             assert_eq!(
-                simd::modern::u16xN::implementation_name(),
-                "x86::modern::u16x32"
+                simd::v4x::u16xN::implementation_name(),
+                "x86::v4x::u16x32"
             );
             assert_eq!(
-                simd::modern::i32xN::implementation_name(),
-                "x86::modern::i32x16"
+                simd::v4x::i32xN::implementation_name(),
+                "x86::v4x::i32x16"
             );
             assert_eq!(
-                simd::modern::u32xN::implementation_name(),
-                "x86::modern::u32x16"
+                simd::v4x::u32xN::implementation_name(),
+                "x86::v4x::u32x16"
             );
             assert_eq!(
-                simd::modern::i64xN::implementation_name(),
-                "x86::modern::i64x8"
+                simd::v4x::i64xN::implementation_name(),
+                "x86::v4x::i64x8"
             );
             assert_eq!(
-                simd::modern::u64xN::implementation_name(),
-                "x86::modern::u64x8"
+                simd::v4x::u64xN::implementation_name(),
+                "x86::v4x::u64x8"
             );
             // Also verify the non-aliased types are accessible
             assert_eq!(
-                simd::modern::f32x16::implementation_name(),
-                "x86::modern::f32x16"
+                simd::v4x::f32x16::implementation_name(),
+                "x86::v4x::f32x16"
             );
         }
     }

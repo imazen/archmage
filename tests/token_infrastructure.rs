@@ -29,7 +29,7 @@ use archmage::{
 };
 
 #[cfg(feature = "avx512")]
-use archmage::{Avx512Fp16Token, Avx512ModernToken, Avx512Token, Server64, X64V4Token};
+use archmage::{Avx512Fp16Token, X64V4xToken, Avx512Token, Server64, X64V4Token};
 
 // ============================================================================
 // ScalarToken: always available
@@ -233,7 +233,7 @@ fn disable_v3_cascades_to_v4() {
     // Record whether V4 was available before
     let v4_was_available = X64V4Token::summon().is_some();
 
-    // Disable V3 — should cascade to V4, Modern, Fp16
+    // Disable V3 — should cascade to V4, V4x, Fp16
     X64V3Token::dangerously_disable_token_process_wide(true).unwrap();
 
     assert!(X64V3Token::summon().is_none(), "V3 should be disabled");
@@ -242,8 +242,8 @@ fn disable_v3_cascades_to_v4() {
         "V4 should be disabled (cascade from V3)"
     );
     assert!(
-        Avx512ModernToken::summon().is_none(),
-        "Modern should be disabled (cascade from V3)"
+        X64V4xToken::summon().is_none(),
+        "V4x should be disabled (cascade from V3)"
     );
     assert!(
         Avx512Fp16Token::summon().is_none(),
@@ -505,8 +505,8 @@ fn v4_extracts_to_v3_and_v2() {
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
-fn avx512modern_extracts_to_v4_v3_v2() {
-    if let Some(token) = Avx512ModernToken::summon() {
+fn x64v4x_extracts_to_v4_v3_v2() {
+    if let Some(token) = X64V4xToken::summon() {
         let _v4: X64V4Token = token.v4();
         let _avx512: X64V4Token = token.avx512();
         let _v3: X64V3Token = token.v3();
@@ -585,7 +585,7 @@ fn token_names_are_nonempty() {
 #[test]
 fn avx512_token_names_are_nonempty() {
     assert!(!X64V4Token::NAME.is_empty());
-    assert!(!Avx512ModernToken::NAME.is_empty());
+    assert!(!X64V4xToken::NAME.is_empty());
     assert!(!Avx512Fp16Token::NAME.is_empty());
 }
 
@@ -613,7 +613,7 @@ fn avx512_tokens_are_copy_clone_send_sync() {
     fn assert_token_traits<T: Copy + Clone + Send + Sync + 'static>() {}
 
     assert_token_traits::<X64V4Token>();
-    assert_token_traits::<Avx512ModernToken>();
+    assert_token_traits::<X64V4xToken>();
     assert_token_traits::<Avx512Fp16Token>();
 }
 
@@ -764,10 +764,10 @@ fn avx512_feature_strings() {
     assert!(features.contains("avx512dq"));
     assert!(features.contains("avx512vl"));
 
-    let modern_features = Avx512ModernToken::TARGET_FEATURES;
-    assert!(modern_features.contains("avx512vpopcntdq"));
-    assert!(modern_features.contains("gfni"));
-    assert!(modern_features.contains("vaes"));
+    let v4x_features = X64V4xToken::TARGET_FEATURES;
+    assert!(v4x_features.contains("avx512vpopcntdq"));
+    assert!(v4x_features.contains("gfni"));
+    assert!(v4x_features.contains("vaes"));
 }
 
 #[test]
@@ -983,21 +983,21 @@ fn disable_all_simd_error_display() {
 }
 
 // ============================================================================
-// Coverage: Avx512ModernToken + Avx512Fp16Token disable/manually_disabled
+// Coverage: X64V4xToken + Avx512Fp16Token disable/manually_disabled
 // ============================================================================
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
-fn avx512modern_disable_and_manually_disabled() {
-    if Avx512ModernToken::compiled_with() == Some(true) {
+fn x64v4x_disable_and_manually_disabled() {
+    if X64V4xToken::compiled_with() == Some(true) {
         return;
     }
-    let result = Avx512ModernToken::dangerously_disable_token_process_wide(true);
+    let result = X64V4xToken::dangerously_disable_token_process_wide(true);
     assert!(result.is_ok());
-    assert!(Avx512ModernToken::manually_disabled().unwrap());
+    assert!(X64V4xToken::manually_disabled().unwrap());
 
-    Avx512ModernToken::dangerously_disable_token_process_wide(false).unwrap();
-    assert!(!Avx512ModernToken::manually_disabled().unwrap());
+    X64V4xToken::dangerously_disable_token_process_wide(false).unwrap();
+    assert!(!X64V4xToken::manually_disabled().unwrap());
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]

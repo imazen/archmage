@@ -39,7 +39,7 @@ archmage = { version = "0.6", features = ["avx512"] }
 
 **Unlocks**:
 - `X64V4Token` / `Server64` / `Avx512Token`
-- `Avx512ModernToken`
+- `X64V4xToken`
 - `Avx512Fp16Token`
 - `HasX64V4` trait
 

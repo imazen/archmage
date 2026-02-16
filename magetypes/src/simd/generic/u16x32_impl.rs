@@ -414,10 +414,10 @@ impl u16x32<archmage::X64V4Token> {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl u16x32<archmage::Avx512ModernToken> {
+impl u16x32<archmage::X64V4xToken> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
-        "x86::modern::u16x32"
+        "x86::v4x::u16x32"
     }
 }
 

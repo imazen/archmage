@@ -228,19 +228,19 @@ impl X64V4Token {
     }
 }
 
-/// Stub for AVX-512Modern token (not available on this architecture).
+/// Stub for x86-64-v4x token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
-pub struct Avx512ModernToken {
+pub struct X64V4xToken {
     _private: (),
 }
 
-impl crate::tokens::Sealed for Avx512ModernToken {}
+impl crate::tokens::Sealed for X64V4xToken {}
 
-impl SimdToken for Avx512ModernToken {
-    const NAME: &'static str = "AVX-512Modern";
-    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,avx512bf16,vpclmulqdq,gfni,vaes";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+avx512bf16,+vpclmulqdq,+gfni,+vaes";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-avx512bf16,-vpclmulqdq,-gfni,-vaes";
+impl SimdToken for X64V4xToken {
+    const NAME: &'static str = "x86-64-v4x";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+vpclmulqdq,+gfni,+vaes";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-vpclmulqdq,-gfni,-vaes";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -261,7 +261,7 @@ impl SimdToken for Avx512ModernToken {
     }
 }
 
-impl Avx512ModernToken {
+impl X64V4xToken {
     /// This token is not available on this architecture.
     pub fn dangerously_disable_token_process_wide(
         _disabled: bool,
@@ -353,24 +353,27 @@ pub type Avx512Token = X64V4Token;
 /// Type alias for [`X64V4Token`].
 pub type Server64 = X64V4Token;
 
+/// Type alias for [`X64V4xToken`].
+pub type Avx512ModernToken = X64V4xToken;
+
 impl Has128BitSimd for X64V1Token {}
 impl Has128BitSimd for X64V2Token {}
 impl Has128BitSimd for X64V3Token {}
 impl Has128BitSimd for X64V4Token {}
-impl Has128BitSimd for Avx512ModernToken {}
+impl Has128BitSimd for X64V4xToken {}
 impl Has128BitSimd for Avx512Fp16Token {}
 impl Has256BitSimd for X64V3Token {}
 impl Has256BitSimd for X64V4Token {}
-impl Has256BitSimd for Avx512ModernToken {}
+impl Has256BitSimd for X64V4xToken {}
 impl Has256BitSimd for Avx512Fp16Token {}
 impl Has512BitSimd for X64V4Token {}
-impl Has512BitSimd for Avx512ModernToken {}
+impl Has512BitSimd for X64V4xToken {}
 impl Has512BitSimd for Avx512Fp16Token {}
 impl HasX64V2 for X64V2Token {}
 impl HasX64V2 for X64V3Token {}
 impl HasX64V2 for X64V4Token {}
-impl HasX64V2 for Avx512ModernToken {}
+impl HasX64V2 for X64V4xToken {}
 impl HasX64V2 for Avx512Fp16Token {}
 impl HasX64V4 for X64V4Token {}
-impl HasX64V4 for Avx512ModernToken {}
+impl HasX64V4 for X64V4xToken {}
 impl HasX64V4 for Avx512Fp16Token {}

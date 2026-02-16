@@ -569,7 +569,7 @@ fn generate_sealed() -> String {
         impl Sealed for archmage::X64V2Token {{}}
         impl Sealed for archmage::X64V3Token {{}}
         impl Sealed for archmage::X64V4Token {{}}
-        impl Sealed for archmage::Avx512ModernToken {{}}
+        impl Sealed for archmage::X64V4xToken {{}}
         impl Sealed for archmage::Avx512Fp16Token {{}}
         impl Sealed for archmage::NeonToken {{}}
         impl Sealed for archmage::NeonAesToken {{}}
@@ -869,9 +869,9 @@ fn generate_backends_mod(
         ("x64v3", "archmage::X64V3Token", "x86-64 v3 (AVX2 + FMA)."),
         ("x64v4", "archmage::X64V4Token", "x86-64 v4 (AVX-512)."),
         (
-            "avx512_modern",
-            "archmage::Avx512ModernToken",
-            "AVX-512 with modern extensions.",
+            "x86_v4x",
+            "archmage::X64V4xToken",
+            "AVX-512 with v4x extensions.",
         ),
         ("neon", "archmage::NeonToken", "AArch64 NEON."),
         ("wasm128", "archmage::Wasm128Token", "WASM SIMD128."),
@@ -914,7 +914,7 @@ fn generate_impls_mod() -> String {
 
 /// Generate the x86 V4 (native AVX-512) implementation file.
 ///
-/// Contains W512 backend impls for both X64V4Token and Avx512ModernToken,
+/// Contains W512 backend impls for both X64V4Token and X64V4xToken,
 /// plus Modern-specific extension impls (popcnt).
 /// W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
 fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) -> String {
@@ -923,12 +923,12 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     };
 
     let mut code = formatdoc! {r#"
-        //! Backend implementations for X64V4Token and Avx512ModernToken (native AVX-512).
+        //! Backend implementations for X64V4Token and X64V4xToken (native AVX-512).
         //!
         //! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics
-        //! for both X64V4Token (base AVX-512) and Avx512ModernToken (+ VPOPCNTDQ, BITALG, etc.).
+        //! for both X64V4Token (base AVX-512) and X64V4xToken (+ VPOPCNTDQ, BITALG, etc.).
         //!
-        //! Avx512ModernToken also gets extension trait impls (popcnt) for Modern-only features.
+        //! X64V4xToken also gets extension trait impls (popcnt) for Modern-only features.
         //!
         //! W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
         //!
@@ -951,21 +951,21 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     );
     code.push_str(&generate_x86_v4_w512_impls(w512_types));
 
-    // Base backend impls for Avx512ModernToken (identical intrinsics, different token)
+    // Base backend impls for X64V4xToken (identical intrinsics, different token)
     code.push_str(
         "\n// ============================================================================\n",
     );
-    code.push_str("// Avx512ModernToken — base AVX-512 (same intrinsics as V4)\n");
+    code.push_str("// X64V4xToken — base AVX-512 (same intrinsics as V4)\n");
     code.push_str(
         "// ============================================================================\n\n",
     );
     code.push_str(&generate_x86_modern_w512_impls(w512_types));
 
-    // Extension impls: popcnt (Avx512ModernToken only)
+    // Extension impls: popcnt (X64V4xToken only)
     code.push_str(
         "\n// ============================================================================\n",
     );
-    code.push_str("// Avx512ModernToken — extension: popcnt (VPOPCNTDQ + BITALG)\n");
+    code.push_str("// X64V4xToken — extension: popcnt (VPOPCNTDQ + BITALG)\n");
     code.push_str(
         "// ============================================================================\n\n",
     );

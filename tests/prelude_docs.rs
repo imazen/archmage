@@ -96,7 +96,7 @@ fn avx512_tokens_accessible_from_prelude() {
     use archmage::prelude::*;
     let _ = X64V4Token::compiled_with();
     let _ = Avx512Token::compiled_with();
-    let _ = Avx512ModernToken::compiled_with();
+    let _ = X64V4xToken::compiled_with();
     let _ = Avx512Fp16Token::compiled_with();
     let _ = Server64::compiled_with();
 }

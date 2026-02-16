@@ -38,7 +38,7 @@ Create `tests/arcane_trait_recognition.rs` that tests every form the macro shoul
 - `Avx512fToken`, `Avx512bwToken`, `Avx512fVlToken`, `Avx512bwVlToken`
 - `Avx512Vbmi2Token`, `Avx512Vbmi2VlToken`
 - `X64V4Token`, `Avx512Token`, `Server64`
-- `Avx512ModernToken`, `X64V4ModernToken`
+- `X64V4xToken`, `X64V4ModernToken`
 - `Avx512Fp16Token`
 - `NeonToken`, `Arm64`, `NeonAesToken`, `NeonSha3Token`
 - `ArmCryptoToken`, `ArmCrypto3Token`
