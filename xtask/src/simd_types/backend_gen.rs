@@ -533,6 +533,12 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_wasm_w512_impls(&w512_types),
     );
 
+    // 10b. x86 V4 native AVX-512 implementation (W512 types only)
+    files.insert(
+        "impls/x86_v4.rs".to_string(),
+        generate_x86_v4_impls_file(&w512_types),
+    );
+
     // 11. impls/mod.rs
     files.insert("impls/mod.rs".to_string(), generate_impls_mod());
 
@@ -880,6 +886,9 @@ fn generate_impls_mod() -> String {
         #[cfg(target_arch = "x86_64")]
         mod x86_v3;
 
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        mod x86_v4;
+
         #[cfg(target_arch = "aarch64")]
         mod arm_neon;
 
@@ -888,6 +897,32 @@ fn generate_impls_mod() -> String {
 
         mod scalar;
     "#}
+}
+
+/// Generate the x86 V4 (native AVX-512) implementation file.
+///
+/// Only contains W512 backend impls for X64V4Token — W128 and W256 types
+/// use X64V3Token (V4 token downcasts to V3 for narrower widths).
+fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) -> String {
+    use super::backend_gen_w512::generate_x86_v4_w512_impls;
+
+    let mut code = formatdoc! {r#"
+        //! Backend implementations for X64V4Token (native AVX-512).
+        //!
+        //! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics.
+        //! W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
+        //!
+        //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::*;
+
+        use crate::simd::backends::*;
+
+    "#};
+
+    code.push_str(&generate_x86_v4_w512_impls(w512_types));
+    code
 }
 
 // ============================================================================

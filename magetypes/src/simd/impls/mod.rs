@@ -8,6 +8,9 @@
 #[cfg(target_arch = "x86_64")]
 mod x86_v3;
 
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+mod x86_v4;
+
 #[cfg(target_arch = "aarch64")]
 mod arm_neon;
 

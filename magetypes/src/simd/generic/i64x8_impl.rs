@@ -413,3 +413,11 @@ impl i64x8<archmage::X64V3Token> {
         "polyfill::v3_512::i64x8"
     }
 }
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl i64x8<archmage::X64V4Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "x86::v4::i64x8"
+    }
+}

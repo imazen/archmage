@@ -72,9 +72,6 @@ impl W512Type {
         matches!(self.kind, W512Kind::Float | W512Kind::SignedInt)
     }
 
-    // The following methods are for native AVX-512 (V4) backend generation,
-    // which is deferred. Keep them for future use.
-    #[allow(dead_code)]
     /// x86 AVX-512 inner type
     fn x86_v4_inner(&self) -> &'static str {
         match self.kind {
@@ -131,7 +128,6 @@ impl W512Type {
         format!("{upper}x{half_lanes}Backend")
     }
 
-    #[allow(dead_code)]
     /// Scalar repr type
     fn scalar_repr(&self) -> String {
         self.array_type()
@@ -184,7 +180,6 @@ impl W512Type {
         format!("{upper}x{quarter_lanes}Backend")
     }
 
-    #[allow(dead_code)]
     /// x86 AVX-512 intrinsic suffix for float ops: "ps" or "pd"
     fn x86_float_suffix(&self) -> &'static str {
         match self.elem {
@@ -194,7 +189,6 @@ impl W512Type {
         }
     }
 
-    #[allow(dead_code)]
     /// x86 intrinsic suffix for integer set1
     fn x86_set1_suffix(&self) -> &'static str {
         match self.elem_bits {
@@ -206,7 +200,6 @@ impl W512Type {
         }
     }
 
-    #[allow(dead_code)]
     /// x86 intrinsic suffix for integer arithmetic
     fn x86_arith_suffix(&self) -> &'static str {
         match self.elem_bits {
@@ -218,7 +211,6 @@ impl W512Type {
         }
     }
 
-    #[allow(dead_code)]
     /// x86 AVX-512 suffix for signed min/max/comparison
     fn x86_minmax_suffix(&self) -> &'static str {
         match (self.is_signed(), self.elem_bits) {
@@ -234,19 +226,16 @@ impl W512Type {
         }
     }
 
-    #[allow(dead_code)]
     /// Whether this integer type has native AVX-512 multiply (16-bit, 32-bit)
     fn has_native_avx512_mul(&self) -> bool {
         matches!(self.elem_bits, 16 | 32)
     }
 
-    #[allow(dead_code)]
     /// AVX-512 mask type for comparisons
     fn avx512_mask_type(&self) -> String {
         format!("__mmask{}", self.lanes)
     }
 
-    #[allow(dead_code)]
     /// Lanes per 128-bit sub-vector
     fn lanes_per_128(&self) -> usize {
         128 / self.elem_bits
@@ -1968,6 +1957,632 @@ pub(super) fn generate_wasm_w512_impls(types: &[W512Type]) -> String {
     let mut code = String::new();
     for ty in types {
         code.push_str(&generate_wasm_polyfill_impl(ty));
+        code.push('\n');
+    }
+    code
+}
+
+// ============================================================================
+// x86 V4 Native AVX-512 Implementation
+// Uses __m512/__m512d/__m512i directly with AVX-512 intrinsics.
+// ============================================================================
+
+/// Generate V4 native implementation for a W512 float type (f32x16, f64x8).
+fn generate_x86_v4_float_impl(ty: &W512Type) -> String {
+    let trait_name = ty.trait_name();
+    let inner = ty.x86_v4_inner();
+    let s = ty.x86_float_suffix();
+    let elem = ty.elem;
+    let array = ty.array_type();
+    let epi = if elem == "f32" { "epi32" } else { "epi64" };
+    let abs_mask = if elem == "f32" {
+        "0x7FFF_FFFFu32 as i32"
+    } else {
+        "0x7FFF_FFFF_FFFF_FFFFu64 as i64"
+    };
+
+    formatdoc! {r#"
+        #[cfg(target_arch = "x86_64")]
+        impl {trait_name} for archmage::X64V4Token {{
+            type Repr = {inner};
+
+            #[inline(always)]
+            fn splat(v: {elem}) -> {inner} {{
+                unsafe {{ _mm512_set1_{s}(v) }}
+            }}
+
+            #[inline(always)]
+            fn zero() -> {inner} {{
+                unsafe {{ _mm512_setzero_{s}() }}
+            }}
+
+            #[inline(always)]
+            fn load(data: &{array}) -> {inner} {{
+                unsafe {{ _mm512_loadu_{s}(data.as_ptr()) }}
+            }}
+
+            #[inline(always)]
+            fn from_array(arr: {array}) -> {inner} {{
+                unsafe {{ core::mem::transmute(arr) }}
+            }}
+
+            #[inline(always)]
+            fn store(repr: {inner}, out: &mut {array}) {{
+                unsafe {{ _mm512_storeu_{s}(out.as_mut_ptr(), repr) }}
+            }}
+
+            #[inline(always)]
+            fn to_array(repr: {inner}) -> {array} {{
+                unsafe {{ core::mem::transmute(repr) }}
+            }}
+
+            #[inline(always)]
+            fn add(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_add_{s}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn sub(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_sub_{s}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn mul(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_mul_{s}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn div(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_div_{s}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn neg(a: {inner}) -> {inner} {{
+                unsafe {{ _mm512_sub_{s}(_mm512_setzero_{s}(), a) }}
+            }}
+
+            #[inline(always)]
+            fn min(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_min_{s}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn max(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_max_{s}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn sqrt(a: {inner}) -> {inner} {{
+                unsafe {{ _mm512_sqrt_{s}(a) }}
+            }}
+
+            #[inline(always)]
+            fn abs(a: {inner}) -> {inner} {{
+                unsafe {{
+                    let mask = _mm512_castsi512_{s}(_mm512_set1_{epi}({abs_mask}));
+                    _mm512_and_{s}(a, mask)
+                }}
+            }}
+
+            #[inline(always)]
+            fn floor(a: {inner}) -> {inner} {{
+                unsafe {{ _mm512_roundscale_{s}::<0x01>(a) }}
+            }}
+
+            #[inline(always)]
+            fn ceil(a: {inner}) -> {inner} {{
+                unsafe {{ _mm512_roundscale_{s}::<0x02>(a) }}
+            }}
+
+            #[inline(always)]
+            fn round(a: {inner}) -> {inner} {{
+                unsafe {{ _mm512_roundscale_{s}::<0x00>(a) }}
+            }}
+
+            #[inline(always)]
+            fn mul_add(a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+                unsafe {{ _mm512_fmadd_{s}(a, b, c) }}
+            }}
+
+            #[inline(always)]
+            fn mul_sub(a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+                unsafe {{ _mm512_fmsub_{s}(a, b, c) }}
+            }}
+
+            #[inline(always)]
+            fn simd_eq(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let mask = _mm512_cmp_{s}_mask::<_CMP_EQ_OQ>(a, b);
+                    _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_ne(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let mask = _mm512_cmp_{s}_mask::<_CMP_NEQ_UQ>(a, b);
+                    _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_lt(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let mask = _mm512_cmp_{s}_mask::<_CMP_LT_OQ>(a, b);
+                    _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_le(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let mask = _mm512_cmp_{s}_mask::<_CMP_LE_OQ>(a, b);
+                    _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_gt(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let mask = _mm512_cmp_{s}_mask::<_CMP_GT_OQ>(a, b);
+                    _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_ge(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{
+                    let mask = _mm512_cmp_{s}_mask::<_CMP_GE_OQ>(a, b);
+                    _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
+                }}
+            }}
+
+            #[inline(always)]
+            fn blend(mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
+                unsafe {{
+                    let mask_i = _mm512_cast{s}_si512(mask);
+                    let k = _mm512_cmpneq_{epi}_mask(mask_i, _mm512_setzero_si512());
+                    _mm512_mask_blend_{s}(k, if_false, if_true)
+                }}
+            }}
+
+            #[inline(always)]
+            fn reduce_add(a: {inner}) -> {elem} {{
+                unsafe {{ _mm512_reduce_add_{s}(a) }}
+            }}
+
+            #[inline(always)]
+            fn reduce_min(a: {inner}) -> {elem} {{
+                unsafe {{ _mm512_reduce_min_{s}(a) }}
+            }}
+
+            #[inline(always)]
+            fn reduce_max(a: {inner}) -> {elem} {{
+                unsafe {{ _mm512_reduce_max_{s}(a) }}
+            }}
+
+            #[inline(always)]
+            fn rcp_approx(a: {inner}) -> {inner} {{
+                unsafe {{
+                    let approx = _mm512_rcp14_{s}(a);
+                    // One Newton-Raphson iteration: x' = x * (2 - a*x)
+                    let two = _mm512_set1_{s}(2.0);
+                    _mm512_mul_{s}(approx, _mm512_sub_{s}(two, _mm512_mul_{s}(a, approx)))
+                }}
+            }}
+
+            #[inline(always)]
+            fn rsqrt_approx(a: {inner}) -> {inner} {{
+                unsafe {{
+                    let approx = _mm512_rsqrt14_{s}(a);
+                    // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
+                    let half = _mm512_set1_{s}(0.5);
+                    let three = _mm512_set1_{s}(3.0);
+                    _mm512_mul_{s}(
+                        _mm512_mul_{s}(half, approx),
+                        _mm512_sub_{s}(three, _mm512_mul_{s}(a, _mm512_mul_{s}(approx, approx)))
+                    )
+                }}
+            }}
+
+            #[inline(always)]
+            fn not(a: {inner}) -> {inner} {{
+                unsafe {{
+                    let all_ones = _mm512_castsi512_{s}(_mm512_set1_{epi}(-1));
+                    _mm512_xor_{s}(a, all_ones)
+                }}
+            }}
+
+            #[inline(always)]
+            fn bitand(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_and_{s}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn bitor(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_or_{s}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn bitxor(a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ _mm512_xor_{s}(a, b) }}
+            }}
+        }}
+    "#}
+}
+
+/// Generate V4 native implementation for a W512 integer type.
+fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
+    let trait_name = ty.trait_name();
+    let elem = ty.elem;
+    let lanes = ty.lanes;
+    let elem_bits = ty.elem_bits;
+    let array = ty.array_type();
+    let epi = ty.x86_arith_suffix();
+    let mm = ty.x86_minmax_suffix();
+    let set1 = ty.x86_set1_suffix();
+
+    // set1 cast for unsigned types: we need to cast -1 to the unsigned element type
+    // then to the signed type that _mm512_set1_epiN expects
+    let set1_neg1 = match elem {
+        "i8" | "i16" | "i32" | "i64" => "-1".to_string(),
+        "u8" => "-1i8".to_string(),
+        "u16" => "-1i16".to_string(),
+        "u32" => "-1i32".to_string(),
+        "u64" => "-1i64".to_string(),
+        _ => unreachable!(),
+    };
+
+    // For maskz_set1, we always use the signed version
+    let set1_signed = match elem_bits {
+        8 => "epi8",
+        16 => "epi16",
+        32 => "epi32",
+        64 => "epi64",
+        _ => unreachable!(),
+    };
+
+    // Comparison intrinsic prefix: epi for signed, epu for unsigned
+    let cmp_suffix = if ty.is_signed() {
+        format!("epi{elem_bits}")
+    } else {
+        format!("epu{elem_bits}")
+    };
+
+    // blend suffix: epi8, epi16, epi32, epi64
+    let blend_suffix = format!("epi{elem_bits}");
+
+    // Mask type
+    let full_mask = match lanes {
+        64 => "0xFFFF_FFFF_FFFF_FFFFu64",
+        32 => "0xFFFF_FFFFu64",
+        16 => "0xFFFFu64",
+        8 => "0xFFu64",
+        _ => unreachable!(),
+    };
+
+    // mul
+    let mul_impl = if ty.has_native_avx512_mul() {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn mul(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{ _mm512_mullo_{epi}(a, b) }}
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    // abs (signed only)
+    let abs_impl = if ty.is_signed() {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn abs(a: __m512i) -> __m512i {{
+                unsafe {{ _mm512_abs_{epi}(a) }}
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    // neg: sub(zero, a) works for both signed and unsigned
+    let neg_impl = formatdoc! {r#"
+            #[inline(always)]
+            fn neg(a: __m512i) -> __m512i {{
+                unsafe {{ _mm512_sub_{epi}(_mm512_setzero_si512(), a) }}
+            }}
+    "#};
+
+    // Shifts: 8-bit shifts need polyfill via 16-bit, others use native
+    let shift_impls = if elem_bits == 8 {
+        generate_8bit_shift_polyfill(ty)
+    } else {
+        let shr_arith = if ty.kind == W512Kind::UnsignedInt {
+            // Unsigned: arithmetic right shift = logical right shift
+            // Inline the shift body to avoid Self:: ambiguity (multiple backend traits)
+            formatdoc! {r#"
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: __m512i) -> __m512i {{
+                unsafe {{ _mm512_srl_{epi}(a, _mm_cvtsi32_si128(N)) }}
+            }}
+            "#}
+        } else {
+            formatdoc! {r#"
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: __m512i) -> __m512i {{
+                unsafe {{ _mm512_sra_{epi}(a, _mm_cvtsi32_si128(N)) }}
+            }}
+            "#}
+        };
+
+        formatdoc! {r#"
+            #[inline(always)]
+            fn shl_const<const N: i32>(a: __m512i) -> __m512i {{
+                unsafe {{ _mm512_sll_{epi}(a, _mm_cvtsi32_si128(N)) }}
+            }}
+
+            {shr_arith}
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(a: __m512i) -> __m512i {{
+                unsafe {{ _mm512_srl_{epi}(a, _mm_cvtsi32_si128(N)) }}
+            }}
+        "#}
+    };
+
+    formatdoc! {r#"
+        #[cfg(target_arch = "x86_64")]
+        impl {trait_name} for archmage::X64V4Token {{
+            type Repr = __m512i;
+
+            #[inline(always)]
+            fn splat(v: {elem}) -> __m512i {{
+                unsafe {{ _mm512_set1_{set1}(v as _) }}
+            }}
+
+            #[inline(always)]
+            fn zero() -> __m512i {{
+                unsafe {{ _mm512_setzero_si512() }}
+            }}
+
+            #[inline(always)]
+            fn load(data: &{array}) -> __m512i {{
+                unsafe {{ _mm512_loadu_si512(data.as_ptr().cast()) }}
+            }}
+
+            #[inline(always)]
+            fn from_array(arr: {array}) -> __m512i {{
+                unsafe {{ core::mem::transmute(arr) }}
+            }}
+
+            #[inline(always)]
+            fn store(repr: __m512i, out: &mut {array}) {{
+                unsafe {{ _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }}
+            }}
+
+            #[inline(always)]
+            fn to_array(repr: __m512i) -> {array} {{
+                unsafe {{ core::mem::transmute(repr) }}
+            }}
+
+            #[inline(always)]
+            fn add(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{ _mm512_add_{epi}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn sub(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{ _mm512_sub_{epi}(a, b) }}
+            }}
+            {mul_impl}
+            {neg_impl}
+            #[inline(always)]
+            fn min(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{ _mm512_min_{mm}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn max(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{ _mm512_max_{mm}(a, b) }}
+            }}
+            {abs_impl}
+            #[inline(always)]
+            fn simd_eq(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{
+                    let mask = _mm512_cmpeq_{cmp_suffix}_mask(a, b);
+                    _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_ne(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{
+                    let mask = _mm512_cmpneq_{cmp_suffix}_mask(a, b);
+                    _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_lt(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{
+                    let mask = _mm512_cmplt_{cmp_suffix}_mask(a, b);
+                    _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_le(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{
+                    let mask = _mm512_cmple_{cmp_suffix}_mask(a, b);
+                    _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_gt(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{
+                    // GT = LT with swapped args
+                    let mask = _mm512_cmplt_{cmp_suffix}_mask(b, a);
+                    _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                }}
+            }}
+
+            #[inline(always)]
+            fn simd_ge(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{
+                    // GE = LE with swapped args
+                    let mask = _mm512_cmple_{cmp_suffix}_mask(b, a);
+                    _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                }}
+            }}
+
+            #[inline(always)]
+            fn blend(mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {{
+                unsafe {{
+                    let k = _mm512_cmpneq_{blend_suffix}_mask(mask, _mm512_setzero_si512());
+                    _mm512_mask_blend_{blend_suffix}(k, if_false, if_true)
+                }}
+            }}
+
+            #[inline(always)]
+            fn reduce_add(a: __m512i) -> {elem} {{
+                // No native integer reduce_add in AVX-512; use transmute to array
+                let arr: {array} = unsafe {{ core::mem::transmute(a) }};
+                arr.iter().copied().fold(0{elem}, {elem}::wrapping_add)
+            }}
+
+            #[inline(always)]
+            fn not(a: __m512i) -> __m512i {{
+                unsafe {{ _mm512_xor_si512(a, _mm512_set1_{set1_signed}({set1_neg1})) }}
+            }}
+
+            #[inline(always)]
+            fn bitand(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{ _mm512_and_si512(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn bitor(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{ _mm512_or_si512(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn bitxor(a: __m512i, b: __m512i) -> __m512i {{
+                unsafe {{ _mm512_xor_si512(a, b) }}
+            }}
+
+            {shift_impls}
+            #[inline(always)]
+            fn all_true(a: __m512i) -> bool {{
+                unsafe {{
+                    let mask = _mm512_cmpneq_{blend_suffix}_mask(a, _mm512_setzero_si512());
+                    mask as u64 == {full_mask}
+                }}
+            }}
+
+            #[inline(always)]
+            fn any_true(a: __m512i) -> bool {{
+                unsafe {{
+                    let mask = _mm512_cmpneq_{blend_suffix}_mask(a, _mm512_setzero_si512());
+                    mask as u64 != 0
+                }}
+            }}
+
+            #[inline(always)]
+            fn bitmask(a: __m512i) -> u64 {{
+                unsafe {{
+                    // Extract high bit of each lane: compare < 0 for signed interpretation
+                    let zero = _mm512_setzero_si512();
+                    _mm512_cmpneq_{blend_suffix}_mask(
+                        _mm512_and_si512(a, _mm512_set1_{set1_signed}(1 << ({elem_bits} - 1) as {sign_type})),
+                        zero
+                    ) as u64
+                }}
+            }}
+        }}
+    "#,
+        sign_type = match elem_bits {
+            8 => "i8",
+            16 => "i16",
+            32 => "i32",
+            64 => "i64",
+            _ => unreachable!(),
+        },
+    }
+}
+
+/// Generate 8-bit shift polyfill via 16-bit operations for AVX-512.
+fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
+    let is_unsigned = ty.kind == W512Kind::UnsignedInt;
+
+    let shr_arith = if is_unsigned {
+        // Unsigned: arithmetic right shift = logical right shift
+        // Inline the shift body to avoid Self:: ambiguity (multiple backend traits)
+        formatdoc! {r#"
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: __m512i) -> __m512i {{
+                unsafe {{
+                    let count = _mm_cvtsi32_si128(N);
+                    let shifted = _mm512_srl_epi16(a, count);
+                    let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                    _mm512_and_si512(shifted, mask)
+                }}
+            }}
+        "#}
+    } else {
+        formatdoc! {r#"
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(a: __m512i) -> __m512i {{
+                unsafe {{
+                    let count = _mm_cvtsi32_si128(N);
+                    // Sign-extend bytes to 16-bit, shift, mask back to 8-bit
+                    let lo = _mm512_sra_epi16(_mm512_slli_epi16::<8>(a), count);
+                    let hi = _mm512_sra_epi16(a, count);
+                    // Combine: take low byte from lo, high byte from hi
+                    let mask = _mm512_set1_epi16(0x00FFu16 as i16);
+                    _mm512_or_si512(
+                        _mm512_and_si512(_mm512_srli_epi16::<8>(lo), mask),
+                        _mm512_andnot_si512(mask, hi)
+                    )
+                }}
+            }}
+        "#}
+    };
+
+    formatdoc! {r#"
+            #[inline(always)]
+            fn shl_const<const N: i32>(a: __m512i) -> __m512i {{
+                unsafe {{
+                    let count = _mm_cvtsi32_si128(N);
+                    let shifted = _mm512_sll_epi16(a, count);
+                    let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
+                    _mm512_and_si512(shifted, mask)
+                }}
+            }}
+
+            {shr_arith}
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(a: __m512i) -> __m512i {{
+                unsafe {{
+                    let count = _mm_cvtsi32_si128(N);
+                    let shifted = _mm512_srl_epi16(a, count);
+                    let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                    _mm512_and_si512(shifted, mask)
+                }}
+            }}
+    "#}
+}
+
+/// Generate all V4 native AVX-512 W512 implementations.
+pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
+    let mut code = String::new();
+    for ty in types {
+        if ty.is_float() {
+            code.push_str(&generate_x86_v4_float_impl(ty));
+        } else {
+            code.push_str(&generate_x86_v4_int_impl(ty));
+        }
         code.push('\n');
     }
     code

@@ -279,8 +279,20 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    //! Also includes 128-bit and 256-bit native types. These accept\n");
     code.push_str("    //! `X64V3Token` — use `token.v3()` to downcast your `X64V4Token`.\n\n");
 
-    // 512-bit generic types as type aliases (use V3 polyfill for now)
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    // 512-bit generic types as type aliases
+    // With avx512 feature: use native X64V4Token backend
+    // Without: use V3 polyfill (2×256-bit)
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
+    code.push_str("    #[allow(non_camel_case_types)]\n");
+    code.push_str("    mod _w512_aliases {\n");
+    for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
+        let name = ty.name();
+        code.push_str(&format!(
+            "        pub type {name} = crate::simd::generic::{name}<archmage::X64V4Token>;\n"
+        ));
+    }
+    code.push_str("    }\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", not(feature = \"avx512\")))]\n");
     code.push_str("    #[allow(non_camel_case_types)]\n");
     code.push_str("    mod _w512_aliases {\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {

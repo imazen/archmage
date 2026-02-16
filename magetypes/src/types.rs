@@ -92,19 +92,18 @@ impl SimdTypes for archmage::X64V2Token {
     const I32_LANES: usize = 4;
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl SimdTypes for archmage::X64V4Token {
-    // Uses V3 polyfill (2×256-bit) for now; native AVX-512 backend can be added later
-    type F32 = crate::simd::generic::f32x16<archmage::X64V3Token>;
-    type F64 = crate::simd::generic::f64x8<archmage::X64V3Token>;
-    type I8 = crate::simd::generic::i8x64<archmage::X64V3Token>;
-    type I16 = crate::simd::generic::i16x32<archmage::X64V3Token>;
-    type I32 = crate::simd::generic::i32x16<archmage::X64V3Token>;
-    type I64 = crate::simd::generic::i64x8<archmage::X64V3Token>;
-    type U8 = crate::simd::generic::u8x64<archmage::X64V3Token>;
-    type U16 = crate::simd::generic::u16x32<archmage::X64V3Token>;
-    type U32 = crate::simd::generic::u32x16<archmage::X64V3Token>;
-    type U64 = crate::simd::generic::u64x8<archmage::X64V3Token>;
+    type F32 = crate::simd::generic::f32x16<archmage::X64V4Token>;
+    type F64 = crate::simd::generic::f64x8<archmage::X64V4Token>;
+    type I8 = crate::simd::generic::i8x64<archmage::X64V4Token>;
+    type I16 = crate::simd::generic::i16x32<archmage::X64V4Token>;
+    type I32 = crate::simd::generic::i32x16<archmage::X64V4Token>;
+    type I64 = crate::simd::generic::i64x8<archmage::X64V4Token>;
+    type U8 = crate::simd::generic::u8x64<archmage::X64V4Token>;
+    type U16 = crate::simd::generic::u16x32<archmage::X64V4Token>;
+    type U32 = crate::simd::generic::u32x16<archmage::X64V4Token>;
+    type U64 = crate::simd::generic::u64x8<archmage::X64V4Token>;
 
     const F32_LANES: usize = 16;
     const F64_LANES: usize = 8;

@@ -361,7 +361,21 @@ pub mod v4 {
     //! Also includes 128-bit and 256-bit native types. These accept
     //! `X64V3Token` — use `token.v3()` to downcast your `X64V4Token`.
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[allow(non_camel_case_types)]
+    mod _w512_aliases {
+        pub type f32x16 = crate::simd::generic::f32x16<archmage::X64V4Token>;
+        pub type f64x8 = crate::simd::generic::f64x8<archmage::X64V4Token>;
+        pub type i8x64 = crate::simd::generic::i8x64<archmage::X64V4Token>;
+        pub type u8x64 = crate::simd::generic::u8x64<archmage::X64V4Token>;
+        pub type i16x32 = crate::simd::generic::i16x32<archmage::X64V4Token>;
+        pub type u16x32 = crate::simd::generic::u16x32<archmage::X64V4Token>;
+        pub type i32x16 = crate::simd::generic::i32x16<archmage::X64V4Token>;
+        pub type u32x16 = crate::simd::generic::u32x16<archmage::X64V4Token>;
+        pub type i64x8 = crate::simd::generic::i64x8<archmage::X64V4Token>;
+        pub type u64x8 = crate::simd::generic::u64x8<archmage::X64V4Token>;
+    }
+    #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
     #[allow(non_camel_case_types)]
     mod _w512_aliases {
         pub type f32x16 = crate::simd::generic::f32x16<archmage::X64V3Token>;
