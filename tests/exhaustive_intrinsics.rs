@@ -551,9 +551,9 @@ fn test_implementation_names() {
         assert_eq!(f32x4::implementation_name(), "x86::v3::f32x4");
         // Top-level f32x8 should be native x86::w256::f32x8
         assert_eq!(f32x8::implementation_name(), "x86::v3::f32x8");
-        // With avx512 feature, top-level f32x16 should be native x86::w512::f32x16
+        // Top-level f32x16 is the V3 polyfill (2×256-bit)
         #[cfg(feature = "avx512")]
-        assert_eq!(f32x16::implementation_name(), "x86::v4::f32x16");
+        assert_eq!(f32x16::implementation_name(), "polyfill::v3_512::f32x16");
     }
 
     // ========== x86_64 width-aliased namespaces ==========
@@ -579,22 +579,55 @@ fn test_implementation_names() {
         // Also verify the non-aliased types are accessible
         assert_eq!(simd::v3::f32x8::implementation_name(), "x86::v3::f32x8");
 
-        // simd::v4 - maps to x86::w512 (512-bit SIMD)
+        // simd::v4 - maps to 512-bit types (V3 polyfill: 2×256-bit)
         // f32xN = f32x16, i32xN = i32x16, etc.
         #[cfg(feature = "avx512")]
         {
-            assert_eq!(simd::v4::f32xN::implementation_name(), "x86::v4::f32x16");
-            assert_eq!(simd::v4::f64xN::implementation_name(), "x86::v4::f64x8");
-            assert_eq!(simd::v4::i8xN::implementation_name(), "x86::v4::i8x64");
-            assert_eq!(simd::v4::u8xN::implementation_name(), "x86::v4::u8x64");
-            assert_eq!(simd::v4::i16xN::implementation_name(), "x86::v4::i16x32");
-            assert_eq!(simd::v4::u16xN::implementation_name(), "x86::v4::u16x32");
-            assert_eq!(simd::v4::i32xN::implementation_name(), "x86::v4::i32x16");
-            assert_eq!(simd::v4::u32xN::implementation_name(), "x86::v4::u32x16");
-            assert_eq!(simd::v4::i64xN::implementation_name(), "x86::v4::i64x8");
-            assert_eq!(simd::v4::u64xN::implementation_name(), "x86::v4::u64x8");
+            assert_eq!(
+                simd::v4::f32xN::implementation_name(),
+                "polyfill::v3_512::f32x16"
+            );
+            assert_eq!(
+                simd::v4::f64xN::implementation_name(),
+                "polyfill::v3_512::f64x8"
+            );
+            assert_eq!(
+                simd::v4::i8xN::implementation_name(),
+                "polyfill::v3_512::i8x64"
+            );
+            assert_eq!(
+                simd::v4::u8xN::implementation_name(),
+                "polyfill::v3_512::u8x64"
+            );
+            assert_eq!(
+                simd::v4::i16xN::implementation_name(),
+                "polyfill::v3_512::i16x32"
+            );
+            assert_eq!(
+                simd::v4::u16xN::implementation_name(),
+                "polyfill::v3_512::u16x32"
+            );
+            assert_eq!(
+                simd::v4::i32xN::implementation_name(),
+                "polyfill::v3_512::i32x16"
+            );
+            assert_eq!(
+                simd::v4::u32xN::implementation_name(),
+                "polyfill::v3_512::u32x16"
+            );
+            assert_eq!(
+                simd::v4::i64xN::implementation_name(),
+                "polyfill::v3_512::i64x8"
+            );
+            assert_eq!(
+                simd::v4::u64xN::implementation_name(),
+                "polyfill::v3_512::u64x8"
+            );
             // Also verify the non-aliased types are accessible
-            assert_eq!(simd::v4::f32x16::implementation_name(), "x86::v4::f32x16");
+            assert_eq!(
+                simd::v4::f32x16::implementation_name(),
+                "polyfill::v3_512::f32x16"
+            );
         }
     }
 

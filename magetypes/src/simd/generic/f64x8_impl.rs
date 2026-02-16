@@ -474,3 +474,15 @@ impl<T: F64x8Backend> core::fmt::Debug for f64x8<T> {
         f.debug_tuple("f64x8").field(&arr).finish()
     }
 }
+
+// ============================================================================
+// Platform-specific implementation info
+// ============================================================================
+
+#[cfg(target_arch = "x86_64")]
+impl f64x8<archmage::X64V3Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::v3_512::f64x8"
+    }
+}

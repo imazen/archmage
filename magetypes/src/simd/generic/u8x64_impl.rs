@@ -369,3 +369,15 @@ impl<T: U8x64Backend> core::fmt::Debug for u8x64<T> {
         f.debug_tuple("u8x64").field(&arr).finish()
     }
 }
+
+// ============================================================================
+// Platform-specific implementation info
+// ============================================================================
+
+#[cfg(target_arch = "x86_64")]
+impl u8x64<archmage::X64V3Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::v3_512::u8x64"
+    }
+}

@@ -418,3 +418,15 @@ impl<T: I32x16Backend> core::fmt::Debug for i32x16<T> {
         f.debug_tuple("i32x16").field(&arr).finish()
     }
 }
+
+// ============================================================================
+// Platform-specific implementation info
+// ============================================================================
+
+#[cfg(target_arch = "x86_64")]
+impl i32x16<archmage::X64V3Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::v3_512::i32x16"
+    }
+}
