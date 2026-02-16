@@ -2088,6 +2088,1872 @@ impl I64x4Backend for archmage::X64V3Token {
 }
 
 #[cfg(target_arch = "x86_64")]
+impl I8x16Backend for archmage::X64V3Token {
+    type Repr = __m128i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: i8) -> __m128i {
+        unsafe { _mm_set1_epi8(v) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m128i {
+        unsafe { _mm_setzero_si128() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[i8; 16]) -> __m128i {
+        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i8; 16]) -> __m128i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m128i, out: &mut [i8; 16]) {
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m128i) -> [i8; 16] {
+        let mut out = [0i8; 16];
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_add_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_sub_epi8(a, b) }
+    }
+    #[inline(always)]
+    fn neg(a: __m128i) -> __m128i {
+        unsafe { _mm_sub_epi8(_mm_setzero_si128(), a) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_min_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn max(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_max_epi8(a, b) }
+    }
+    #[inline(always)]
+    fn abs(a: __m128i) -> __m128i {
+        unsafe { _mm_abs_epi8(a) }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpeq_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let eq = _mm_cmpeq_epi8(a, b);
+            _mm_andnot_si128(eq, _mm_set1_epi8(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpgt_epi8(b, a) }
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let gt = _mm_cmpgt_epi8(a, b);
+            _mm_andnot_si128(gt, _mm_set1_epi8(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpgt_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let lt = _mm_cmpgt_epi8(b, a);
+            _mm_andnot_si128(lt, _mm_set1_epi8(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+        unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m128i) -> i8 {
+        let arr = <Self as I8x16Backend>::to_array(a);
+        arr.iter().copied().fold(0i8, i8::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m128i) -> __m128i {
+        unsafe { _mm_andnot_si128(a, _mm_set1_epi8(-1)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_and_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_or_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_xor_si128(a, b) }
+    }
+
+    // ====== Shifts (polyfill via 16-bit) ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe {
+            let shifted = _mm_slli_epi16::<N>(a);
+            let mask = _mm_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
+            _mm_and_si128(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe {
+            let shifted = _mm_srli_epi16::<N>(a);
+            let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            _mm_and_si128(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe {
+            let shifted = _mm_srli_epi16::<N>(a);
+            let byte_mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            let logical = _mm_and_si128(shifted, byte_mask);
+            let zero = _mm_setzero_si128();
+            let sign = _mm_cmpgt_epi8(zero, a);
+            let fill = _mm_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub(N as u32))) as i8);
+            _mm_or_si128(logical, _mm_and_si128(sign, fill))
+        }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_epi8(a) == 0xFFFF_u32 as i32 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_epi8(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m128i) -> u32 {
+        unsafe { _mm_movemask_epi8(a) as u32 }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I8x32Backend for archmage::X64V3Token {
+    type Repr = __m256i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: i8) -> __m256i {
+        unsafe { _mm256_set1_epi8(v) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m256i {
+        unsafe { _mm256_setzero_si256() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[i8; 32]) -> __m256i {
+        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i8; 32]) -> __m256i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m256i, out: &mut [i8; 32]) {
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m256i) -> [i8; 32] {
+        let mut out = [0i8; 32];
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_add_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_sub_epi8(a, b) }
+    }
+    #[inline(always)]
+    fn neg(a: __m256i) -> __m256i {
+        unsafe { _mm256_sub_epi8(_mm256_setzero_si256(), a) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_min_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn max(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_max_epi8(a, b) }
+    }
+    #[inline(always)]
+    fn abs(a: __m256i) -> __m256i {
+        unsafe { _mm256_abs_epi8(a) }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpeq_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let eq = _mm256_cmpeq_epi8(a, b);
+            _mm256_andnot_si256(eq, _mm256_set1_epi8(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpgt_epi8(b, a) }
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let gt = _mm256_cmpgt_epi8(a, b);
+            _mm256_andnot_si256(gt, _mm256_set1_epi8(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpgt_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let lt = _mm256_cmpgt_epi8(b, a);
+            _mm256_andnot_si256(lt, _mm256_set1_epi8(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+        unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m256i) -> i8 {
+        let arr = <Self as I8x32Backend>::to_array(a);
+        arr.iter().copied().fold(0i8, i8::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m256i) -> __m256i {
+        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi8(-1)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_and_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_or_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_xor_si256(a, b) }
+    }
+
+    // ====== Shifts (polyfill via 16-bit) ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe {
+            let shifted = _mm256_slli_epi16::<N>(a);
+            let mask = _mm256_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
+            _mm256_and_si256(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe {
+            let shifted = _mm256_srli_epi16::<N>(a);
+            let mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            _mm256_and_si256(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe {
+            let shifted = _mm256_srli_epi16::<N>(a);
+            let byte_mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            let logical = _mm256_and_si256(shifted, byte_mask);
+            let zero = _mm256_setzero_si256();
+            let sign = _mm256_cmpgt_epi8(zero, a);
+            let fill = _mm256_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub(N as u32))) as i8);
+            _mm256_or_si256(logical, _mm256_and_si256(sign, fill))
+        }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_epi8(a) == -1_i32 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_epi8(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m256i) -> u32 {
+        unsafe { _mm256_movemask_epi8(a) as u32 }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U8x16Backend for archmage::X64V3Token {
+    type Repr = __m128i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: u8) -> __m128i {
+        unsafe { _mm_set1_epi8(v as i8) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m128i {
+        unsafe { _mm_setzero_si128() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[u8; 16]) -> __m128i {
+        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u8; 16]) -> __m128i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m128i, out: &mut [u8; 16]) {
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m128i) -> [u8; 16] {
+        let mut out = [0u8; 16];
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_add_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_sub_epi8(a, b) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_min_epu8(a, b) }
+    }
+
+    #[inline(always)]
+    fn max(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_max_epu8(a, b) }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpeq_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let eq = _mm_cmpeq_epi8(a, b);
+            _mm_andnot_si128(eq, _mm_set1_epi8(-1 as i8))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let bias = _mm_set1_epi8(0x80u8 as i8);
+            let sa = _mm_xor_si128(a, bias);
+            let sb = _mm_xor_si128(b, bias);
+            _mm_cmpgt_epi8(sa, sb)
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+        <Self as U8x16Backend>::simd_gt(b, a)
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let gt = <Self as U8x16Backend>::simd_gt(a, b);
+            _mm_andnot_si128(gt, _mm_set1_epi8(-1 as i8))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let lt = <Self as U8x16Backend>::simd_gt(b, a);
+            _mm_andnot_si128(lt, _mm_set1_epi8(-1 as i8))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+        unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m128i) -> u8 {
+        let arr = <Self as U8x16Backend>::to_array(a);
+        arr.iter().copied().fold(0u8, u8::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m128i) -> __m128i {
+        unsafe { _mm_andnot_si128(a, _mm_set1_epi8(-1 as i8)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_and_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_or_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_xor_si128(a, b) }
+    }
+
+    // ====== Shifts (polyfill via 16-bit) ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe {
+            let shifted = _mm_slli_epi16::<N>(a);
+            let mask = _mm_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
+            _mm_and_si128(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe {
+            let shifted = _mm_srli_epi16::<N>(a);
+            let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            _mm_and_si128(shifted, mask)
+        }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_epi8(a) == 0xFFFF_u32 as i32 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_epi8(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m128i) -> u32 {
+        unsafe { _mm_movemask_epi8(a) as u32 }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U8x32Backend for archmage::X64V3Token {
+    type Repr = __m256i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: u8) -> __m256i {
+        unsafe { _mm256_set1_epi8(v as i8) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m256i {
+        unsafe { _mm256_setzero_si256() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[u8; 32]) -> __m256i {
+        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u8; 32]) -> __m256i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m256i, out: &mut [u8; 32]) {
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m256i) -> [u8; 32] {
+        let mut out = [0u8; 32];
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_add_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_sub_epi8(a, b) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_min_epu8(a, b) }
+    }
+
+    #[inline(always)]
+    fn max(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_max_epu8(a, b) }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpeq_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let eq = _mm256_cmpeq_epi8(a, b);
+            _mm256_andnot_si256(eq, _mm256_set1_epi8(-1 as i8))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let bias = _mm256_set1_epi8(0x80u8 as i8);
+            let sa = _mm256_xor_si256(a, bias);
+            let sb = _mm256_xor_si256(b, bias);
+            _mm256_cmpgt_epi8(sa, sb)
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+        <Self as U8x32Backend>::simd_gt(b, a)
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let gt = <Self as U8x32Backend>::simd_gt(a, b);
+            _mm256_andnot_si256(gt, _mm256_set1_epi8(-1 as i8))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let lt = <Self as U8x32Backend>::simd_gt(b, a);
+            _mm256_andnot_si256(lt, _mm256_set1_epi8(-1 as i8))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+        unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m256i) -> u8 {
+        let arr = <Self as U8x32Backend>::to_array(a);
+        arr.iter().copied().fold(0u8, u8::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m256i) -> __m256i {
+        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi8(-1 as i8)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_and_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_or_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_xor_si256(a, b) }
+    }
+
+    // ====== Shifts (polyfill via 16-bit) ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe {
+            let shifted = _mm256_slli_epi16::<N>(a);
+            let mask = _mm256_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
+            _mm256_and_si256(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe {
+            let shifted = _mm256_srli_epi16::<N>(a);
+            let mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+            _mm256_and_si256(shifted, mask)
+        }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_epi8(a) == -1_i32 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_epi8(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m256i) -> u32 {
+        unsafe { _mm256_movemask_epi8(a) as u32 }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I16x8Backend for archmage::X64V3Token {
+    type Repr = __m128i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: i16) -> __m128i {
+        unsafe { _mm_set1_epi16(v) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m128i {
+        unsafe { _mm_setzero_si128() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[i16; 8]) -> __m128i {
+        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i16; 8]) -> __m128i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m128i, out: &mut [i16; 8]) {
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m128i) -> [i16; 8] {
+        let mut out = [0i16; 8];
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_add_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_sub_epi16(a, b) }
+    }
+    #[inline(always)]
+    fn mul(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_mullo_epi16(a, b) }
+    }
+    #[inline(always)]
+    fn neg(a: __m128i) -> __m128i {
+        unsafe { _mm_sub_epi16(_mm_setzero_si128(), a) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_min_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn max(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_max_epi16(a, b) }
+    }
+    #[inline(always)]
+    fn abs(a: __m128i) -> __m128i {
+        unsafe { _mm_abs_epi16(a) }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpeq_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let eq = _mm_cmpeq_epi16(a, b);
+            _mm_andnot_si128(eq, _mm_set1_epi16(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpgt_epi16(b, a) }
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let gt = _mm_cmpgt_epi16(a, b);
+            _mm_andnot_si128(gt, _mm_set1_epi16(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpgt_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let lt = _mm_cmpgt_epi16(b, a);
+            _mm_andnot_si128(lt, _mm_set1_epi16(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+        unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m128i) -> i16 {
+        let arr = <Self as I16x8Backend>::to_array(a);
+        arr.iter().copied().fold(0i16, i16::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m128i) -> __m128i {
+        unsafe { _mm_andnot_si128(a, _mm_set1_epi16(-1)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_and_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_or_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_xor_si128(a, b) }
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe { _mm_slli_epi16::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe { _mm_srli_epi16::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe { _mm_srai_epi16::<N>(a) }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_epi8(a) == 0xFFFF_u32 as i32 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_epi8(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m128i) -> u32 {
+        unsafe {
+            let shifted = _mm_srai_epi16::<15>(a);
+            let packed = _mm_packs_epi16(shifted, shifted);
+            (_mm_movemask_epi8(packed) & 0xFF) as u32
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I16x16Backend for archmage::X64V3Token {
+    type Repr = __m256i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: i16) -> __m256i {
+        unsafe { _mm256_set1_epi16(v) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m256i {
+        unsafe { _mm256_setzero_si256() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[i16; 16]) -> __m256i {
+        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i16; 16]) -> __m256i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m256i, out: &mut [i16; 16]) {
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m256i) -> [i16; 16] {
+        let mut out = [0i16; 16];
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_add_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_sub_epi16(a, b) }
+    }
+    #[inline(always)]
+    fn mul(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_mullo_epi16(a, b) }
+    }
+    #[inline(always)]
+    fn neg(a: __m256i) -> __m256i {
+        unsafe { _mm256_sub_epi16(_mm256_setzero_si256(), a) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_min_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn max(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_max_epi16(a, b) }
+    }
+    #[inline(always)]
+    fn abs(a: __m256i) -> __m256i {
+        unsafe { _mm256_abs_epi16(a) }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpeq_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let eq = _mm256_cmpeq_epi16(a, b);
+            _mm256_andnot_si256(eq, _mm256_set1_epi16(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpgt_epi16(b, a) }
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let gt = _mm256_cmpgt_epi16(a, b);
+            _mm256_andnot_si256(gt, _mm256_set1_epi16(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpgt_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let lt = _mm256_cmpgt_epi16(b, a);
+            _mm256_andnot_si256(lt, _mm256_set1_epi16(-1))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+        unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m256i) -> i16 {
+        let arr = <Self as I16x16Backend>::to_array(a);
+        arr.iter().copied().fold(0i16, i16::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m256i) -> __m256i {
+        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi16(-1)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_and_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_or_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_xor_si256(a, b) }
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe { _mm256_slli_epi16::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe { _mm256_srli_epi16::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe { _mm256_srai_epi16::<N>(a) }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_epi8(a) == -1_i32 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_epi8(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m256i) -> u32 {
+        unsafe {
+            let shifted = _mm256_srai_epi16::<15>(a);
+            let packed = _mm256_packs_epi16(shifted, shifted);
+            (_mm256_movemask_epi8(packed) & 0xFFFF) as u32
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U16x8Backend for archmage::X64V3Token {
+    type Repr = __m128i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: u16) -> __m128i {
+        unsafe { _mm_set1_epi16(v as i16) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m128i {
+        unsafe { _mm_setzero_si128() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[u16; 8]) -> __m128i {
+        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u16; 8]) -> __m128i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m128i, out: &mut [u16; 8]) {
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m128i) -> [u16; 8] {
+        let mut out = [0u16; 8];
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_add_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_sub_epi16(a, b) }
+    }
+    #[inline(always)]
+    fn mul(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_mullo_epi16(a, b) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_min_epu16(a, b) }
+    }
+
+    #[inline(always)]
+    fn max(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_max_epu16(a, b) }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpeq_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let eq = _mm_cmpeq_epi16(a, b);
+            _mm_andnot_si128(eq, _mm_set1_epi16(-1 as i16))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let bias = _mm_set1_epi16(i16::MIN);
+            let sa = _mm_xor_si128(a, bias);
+            let sb = _mm_xor_si128(b, bias);
+            _mm_cmpgt_epi16(sa, sb)
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+        <Self as U16x8Backend>::simd_gt(b, a)
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let gt = <Self as U16x8Backend>::simd_gt(a, b);
+            _mm_andnot_si128(gt, _mm_set1_epi16(-1 as i16))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let lt = <Self as U16x8Backend>::simd_gt(b, a);
+            _mm_andnot_si128(lt, _mm_set1_epi16(-1 as i16))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+        unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m128i) -> u16 {
+        let arr = <Self as U16x8Backend>::to_array(a);
+        arr.iter().copied().fold(0u16, u16::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m128i) -> __m128i {
+        unsafe { _mm_andnot_si128(a, _mm_set1_epi16(-1 as i16)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_and_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_or_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_xor_si128(a, b) }
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe { _mm_slli_epi16::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe { _mm_srli_epi16::<N>(a) }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_epi8(a) == 0xFFFF_u32 as i32 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_epi8(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m128i) -> u32 {
+        unsafe {
+            let shifted = _mm_srai_epi16::<15>(a);
+            let packed = _mm_packs_epi16(shifted, shifted);
+            (_mm_movemask_epi8(packed) & 0xFF) as u32
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U16x16Backend for archmage::X64V3Token {
+    type Repr = __m256i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: u16) -> __m256i {
+        unsafe { _mm256_set1_epi16(v as i16) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m256i {
+        unsafe { _mm256_setzero_si256() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[u16; 16]) -> __m256i {
+        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u16; 16]) -> __m256i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m256i, out: &mut [u16; 16]) {
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m256i) -> [u16; 16] {
+        let mut out = [0u16; 16];
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_add_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_sub_epi16(a, b) }
+    }
+    #[inline(always)]
+    fn mul(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_mullo_epi16(a, b) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_min_epu16(a, b) }
+    }
+
+    #[inline(always)]
+    fn max(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_max_epu16(a, b) }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpeq_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let eq = _mm256_cmpeq_epi16(a, b);
+            _mm256_andnot_si256(eq, _mm256_set1_epi16(-1 as i16))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let bias = _mm256_set1_epi16(i16::MIN);
+            let sa = _mm256_xor_si256(a, bias);
+            let sb = _mm256_xor_si256(b, bias);
+            _mm256_cmpgt_epi16(sa, sb)
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+        <Self as U16x16Backend>::simd_gt(b, a)
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let gt = <Self as U16x16Backend>::simd_gt(a, b);
+            _mm256_andnot_si256(gt, _mm256_set1_epi16(-1 as i16))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let lt = <Self as U16x16Backend>::simd_gt(b, a);
+            _mm256_andnot_si256(lt, _mm256_set1_epi16(-1 as i16))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+        unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m256i) -> u16 {
+        let arr = <Self as U16x16Backend>::to_array(a);
+        arr.iter().copied().fold(0u16, u16::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m256i) -> __m256i {
+        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi16(-1 as i16)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_and_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_or_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_xor_si256(a, b) }
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe { _mm256_slli_epi16::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe { _mm256_srli_epi16::<N>(a) }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_epi8(a) == -1_i32 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_epi8(a) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m256i) -> u32 {
+        unsafe {
+            let shifted = _mm256_srai_epi16::<15>(a);
+            let packed = _mm256_packs_epi16(shifted, shifted);
+            (_mm256_movemask_epi8(packed) & 0xFFFF) as u32
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U64x2Backend for archmage::X64V3Token {
+    type Repr = __m128i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: u64) -> __m128i {
+        unsafe { _mm_set1_epi64x(v as i64) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m128i {
+        unsafe { _mm_setzero_si128() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[u64; 2]) -> __m128i {
+        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u64; 2]) -> __m128i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m128i, out: &mut [u64; 2]) {
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m128i) -> [u64; 2] {
+        let mut out = [0u64; 2];
+        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_add_epi64(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_sub_epi64(a, b) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let bias = _mm_set1_epi64x(i64::MIN);
+            let a_biased = _mm_xor_si128(a, bias);
+            let b_biased = _mm_xor_si128(b, bias);
+            let mask = _mm_cmpgt_epi64(a_biased, b_biased);
+            _mm_blendv_epi8(a, b, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn max(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let bias = _mm_set1_epi64x(i64::MIN);
+            let a_biased = _mm_xor_si128(a, bias);
+            let b_biased = _mm_xor_si128(b, bias);
+            let mask = _mm_cmpgt_epi64(a_biased, b_biased);
+            _mm_blendv_epi8(b, a, mask)
+        }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_cmpeq_epi64(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let eq = _mm_cmpeq_epi64(a, b);
+            _mm_andnot_si128(eq, _mm_set1_epi64x(-1 as i64))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let bias = _mm_set1_epi64x(i64::MIN);
+            let sa = _mm_xor_si128(a, bias);
+            let sb = _mm_xor_si128(b, bias);
+            _mm_cmpgt_epi64(sa, sb)
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+        <Self as U64x2Backend>::simd_gt(b, a)
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let gt = <Self as U64x2Backend>::simd_gt(a, b);
+            _mm_andnot_si128(gt, _mm_set1_epi64x(-1 as i64))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+        unsafe {
+            let lt = <Self as U64x2Backend>::simd_gt(b, a);
+            _mm_andnot_si128(lt, _mm_set1_epi64x(-1 as i64))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+        unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m128i) -> u64 {
+        let arr = <Self as U64x2Backend>::to_array(a);
+        arr.iter().copied().fold(0u64, u64::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m128i) -> __m128i {
+        unsafe { _mm_andnot_si128(a, _mm_set1_epi64x(-1 as i64)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_and_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_or_si128(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_xor_si128(a, b) }
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe { _mm_slli_epi64::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+        unsafe { _mm_srli_epi64::<N>(a) }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) == 0x3 }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m128i) -> bool {
+        unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m128i) -> u32 {
+        unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) as u32 }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U64x4Backend for archmage::X64V3Token {
+    type Repr = __m256i;
+
+    // ====== Construction ======
+
+    #[inline(always)]
+    fn splat(v: u64) -> __m256i {
+        unsafe { _mm256_set1_epi64x(v as i64) }
+    }
+
+    #[inline(always)]
+    fn zero() -> __m256i {
+        unsafe { _mm256_setzero_si256() }
+    }
+
+    #[inline(always)]
+    fn load(data: &[u64; 4]) -> __m256i {
+        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u64; 4]) -> __m256i {
+        unsafe { core::mem::transmute(arr) }
+    }
+
+    #[inline(always)]
+    fn store(repr: __m256i, out: &mut [u64; 4]) {
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+    }
+
+    #[inline(always)]
+    fn to_array(repr: __m256i) -> [u64; 4] {
+        let mut out = [0u64; 4];
+        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        out
+    }
+
+    // ====== Arithmetic ======
+
+    #[inline(always)]
+    fn add(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_add_epi64(a, b) }
+    }
+
+    #[inline(always)]
+    fn sub(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_sub_epi64(a, b) }
+    }
+
+    // ====== Math ======
+
+    #[inline(always)]
+    fn min(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let bias = _mm256_set1_epi64x(i64::MIN);
+            let a_biased = _mm256_xor_si256(a, bias);
+            let b_biased = _mm256_xor_si256(b, bias);
+            let mask = _mm256_cmpgt_epi64(a_biased, b_biased);
+            _mm256_blendv_epi8(a, b, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn max(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let bias = _mm256_set1_epi64x(i64::MIN);
+            let a_biased = _mm256_xor_si256(a, bias);
+            let b_biased = _mm256_xor_si256(b, bias);
+            let mask = _mm256_cmpgt_epi64(a_biased, b_biased);
+            _mm256_blendv_epi8(b, a, mask)
+        }
+    }
+
+    // ====== Comparisons ======
+
+    #[inline(always)]
+    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_cmpeq_epi64(a, b) }
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let eq = _mm256_cmpeq_epi64(a, b);
+            _mm256_andnot_si256(eq, _mm256_set1_epi64x(-1 as i64))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let bias = _mm256_set1_epi64x(i64::MIN);
+            let sa = _mm256_xor_si256(a, bias);
+            let sb = _mm256_xor_si256(b, bias);
+            _mm256_cmpgt_epi64(sa, sb)
+        }
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+        <Self as U64x4Backend>::simd_gt(b, a)
+    }
+
+    #[inline(always)]
+    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let gt = <Self as U64x4Backend>::simd_gt(a, b);
+            _mm256_andnot_si256(gt, _mm256_set1_epi64x(-1 as i64))
+        }
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+        unsafe {
+            let lt = <Self as U64x4Backend>::simd_gt(b, a);
+            _mm256_andnot_si256(lt, _mm256_set1_epi64x(-1 as i64))
+        }
+    }
+
+    #[inline(always)]
+    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+        unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
+    }
+
+    // ====== Reductions ======
+
+    #[inline(always)]
+    fn reduce_add(a: __m256i) -> u64 {
+        let arr = <Self as U64x4Backend>::to_array(a);
+        arr.iter().copied().fold(0u64, u64::wrapping_add)
+    }
+
+    // ====== Bitwise ======
+
+    #[inline(always)]
+    fn not(a: __m256i) -> __m256i {
+        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi64x(-1 as i64)) }
+    }
+
+    #[inline(always)]
+    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_and_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_or_si256(a, b) }
+    }
+
+    #[inline(always)]
+    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_xor_si256(a, b) }
+    }
+
+    // ====== Shifts ======
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe { _mm256_slli_epi64::<N>(a) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+        unsafe { _mm256_srli_epi64::<N>(a) }
+    }
+
+    // ====== Boolean ======
+
+    #[inline(always)]
+    fn all_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) == 0xF }
+    }
+
+    #[inline(always)]
+    fn any_true(a: __m256i) -> bool {
+        unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) != 0 }
+    }
+
+    #[inline(always)]
+    fn bitmask(a: __m256i) -> u32 {
+        unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) as u32 }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
 impl F32x4Convert for archmage::X64V3Token {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: __m128) -> __m128i {
@@ -2192,5 +4058,77 @@ impl I64x4Bitcast for archmage::X64V3Token {
     #[inline(always)]
     fn bitcast_f64_to_i64(a: __m256d) -> __m256i {
         unsafe { _mm256_castpd_si256(a) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I8x16Bitcast for archmage::X64V3Token {
+    #[inline(always)]
+    fn bitcast_i8_to_u8(a: __m128i) -> __m128i {
+        a
+    }
+    #[inline(always)]
+    fn bitcast_u8_to_i8(a: __m128i) -> __m128i {
+        a
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I8x32Bitcast for archmage::X64V3Token {
+    #[inline(always)]
+    fn bitcast_i8_to_u8(a: __m256i) -> __m256i {
+        a
+    }
+    #[inline(always)]
+    fn bitcast_u8_to_i8(a: __m256i) -> __m256i {
+        a
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I16x8Bitcast for archmage::X64V3Token {
+    #[inline(always)]
+    fn bitcast_i16_to_u16(a: __m128i) -> __m128i {
+        a
+    }
+    #[inline(always)]
+    fn bitcast_u16_to_i16(a: __m128i) -> __m128i {
+        a
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I16x16Bitcast for archmage::X64V3Token {
+    #[inline(always)]
+    fn bitcast_i16_to_u16(a: __m256i) -> __m256i {
+        a
+    }
+    #[inline(always)]
+    fn bitcast_u16_to_i16(a: __m256i) -> __m256i {
+        a
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U64x2Bitcast for archmage::X64V3Token {
+    #[inline(always)]
+    fn bitcast_u64_to_i64(a: __m128i) -> __m128i {
+        a
+    }
+    #[inline(always)]
+    fn bitcast_i64_to_u64(a: __m128i) -> __m128i {
+        a
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U64x4Bitcast for archmage::X64V3Token {
+    #[inline(always)]
+    fn bitcast_u64_to_i64(a: __m256i) -> __m256i {
+        a
+    }
+    #[inline(always)]
+    fn bitcast_i64_to_u64(a: __m256i) -> __m256i {
+        a
     }
 }

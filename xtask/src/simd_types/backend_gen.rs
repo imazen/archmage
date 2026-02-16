@@ -394,11 +394,19 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         all_i64_types, generate_i64_backend_trait, generate_neon_i64_impls,
         generate_scalar_i64_impls, generate_wasm_i64_impls, generate_x86_i64_impls,
     };
+    use super::backend_gen_remaining_int::{
+        all_remaining_int_types, generate_additional_convert_traits, generate_int_backend_trait,
+        generate_neon_additional_convert_impls, generate_neon_int_impls,
+        generate_scalar_additional_convert_impls, generate_scalar_int_impls,
+        generate_wasm_additional_convert_impls, generate_wasm_int_impls,
+        generate_x86_additional_convert_impls, generate_x86_int_impls,
+    };
 
     let types = all_float_types();
     let i32_types = all_i32_types();
     let u32_types = all_u32_types();
     let i64_types = all_i64_types();
+    let remaining_int_types = all_remaining_int_types();
     let mut files = BTreeMap::new();
 
     // 1. sealed.rs
@@ -436,23 +444,45 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         );
     }
 
-    // 6. Conversion trait definitions
+    // 6. Backend trait definitions (remaining int: i8, u8, i16, u16, u64)
+    for ty in &remaining_int_types {
+        files.insert(
+            format!("backends/{}.rs", ty.name()),
+            generate_int_backend_trait(ty),
+        );
+    }
+
+    // 7. Conversion trait definitions (float/i32/u32/i64)
     files.insert("backends/convert.rs".to_string(), generate_convert_traits());
 
-    // 7. backends/mod.rs
+    // 8. Additional conversion traits (i8↔u8, i16↔u16, u64↔i64 bitcasts)
     files.insert(
-        "backends/mod.rs".to_string(),
-        generate_backends_mod(&types, &i32_types, &u32_types, &i64_types),
+        "backends/convert_int.rs".to_string(),
+        generate_additional_convert_traits(),
     );
 
-    // 8. Implementation files
+    // 9. backends/mod.rs
+    files.insert(
+        "backends/mod.rs".to_string(),
+        generate_backends_mod(
+            &types,
+            &i32_types,
+            &u32_types,
+            &i64_types,
+            &remaining_int_types,
+        ),
+    );
+
+    // 10. Implementation files
     files.insert(
         "impls/x86_v3.rs".to_string(),
         generate_x86_impls(&types, "X64V3Token", 256)
             + &generate_x86_i32_impls(&i32_types, "X64V3Token", 256)
             + &generate_x86_u32_impls(&u32_types, "X64V3Token", 256)
             + &generate_x86_i64_impls(&i64_types, "X64V3Token", 256)
-            + &generate_x86_convert_impls("X64V3Token"),
+            + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
+            + &generate_x86_convert_impls("X64V3Token")
+            + &generate_x86_additional_convert_impls("X64V3Token"),
     );
     files.insert(
         "impls/scalar.rs".to_string(),
@@ -460,7 +490,9 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_scalar_i32_impls(&i32_types)
             + &generate_scalar_u32_impls(&u32_types)
             + &generate_scalar_i64_impls(&i64_types)
-            + &generate_scalar_convert_impls(),
+            + &generate_scalar_int_impls(&remaining_int_types)
+            + &generate_scalar_convert_impls()
+            + &generate_scalar_additional_convert_impls(),
     );
     files.insert(
         "impls/arm_neon.rs".to_string(),
@@ -468,7 +500,9 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_neon_i32_impls(&i32_types)
             + &generate_neon_u32_impls(&u32_types)
             + &generate_neon_i64_impls(&i64_types)
-            + &generate_neon_convert_impls(),
+            + &generate_neon_int_impls(&remaining_int_types)
+            + &generate_neon_convert_impls()
+            + &generate_neon_additional_convert_impls(),
     );
     files.insert(
         "impls/wasm128.rs".to_string(),
@@ -476,10 +510,12 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_wasm_i32_impls(&i32_types)
             + &generate_wasm_u32_impls(&u32_types)
             + &generate_wasm_i64_impls(&i64_types)
-            + &generate_wasm_convert_impls(),
+            + &generate_wasm_int_impls(&remaining_int_types)
+            + &generate_wasm_convert_impls()
+            + &generate_wasm_additional_convert_impls(),
     );
 
-    // 9. impls/mod.rs
+    // 11. impls/mod.rs
     files.insert("impls/mod.rs".to_string(), generate_impls_mod());
 
     files
@@ -723,6 +759,7 @@ fn generate_backends_mod(
     i32_types: &[I32VecType],
     u32_types: &[U32VecType],
     i64_types: &[super::backend_gen_i64::I64VecType],
+    remaining_int_types: &[super::backend_gen_remaining_int::IntVecType],
 ) -> String {
     let mut code = formatdoc! {r#"
         //! Backend traits for generic SIMD types.
@@ -763,8 +800,18 @@ fn generate_backends_mod(
         code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
     }
 
-    // Conversion and bitcast traits
+    // Module declarations and re-exports (remaining int: i8, u8, i16, u16, u64)
+    for ty in remaining_int_types {
+        let name = ty.name();
+        let trait_name = ty.trait_name();
+        code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
+    }
+
+    // Conversion and bitcast traits (float/i32/u32/i64)
     code.push_str("mod convert;\npub use convert::{F32x4Convert, F32x8Convert, U32x4Bitcast, U32x8Bitcast, I64x2Bitcast, I64x4Bitcast};\n\n");
+
+    // Additional conversion traits (i8↔u8, i16↔u16, u64↔i64 bitcasts)
+    code.push_str("mod convert_int;\npub use convert_int::{I8x16Bitcast, I8x32Bitcast, I16x8Bitcast, I16x16Bitcast, U64x2Bitcast, U64x4Bitcast};\n\n");
 
     // Type aliases for ergonomic use
     for (alias, full, doc) in [

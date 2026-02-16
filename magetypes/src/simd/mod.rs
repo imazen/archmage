@@ -17,10 +17,11 @@
 //! ```
 
 // All generated code lives in the generated/ subfolder.
-// The old per-platform types are being replaced by generic strategy-pattern types.
-// During migration, both systems coexist: the 10 migrated types (f32x4, f32x8,
-// f64x2, f64x4, i32x4, i32x8, u32x4, u32x8, i64x2, i64x4) are generic type
-// aliases below, while remaining integer types still use old generated code.
+// The old per-platform types have been replaced by generic strategy-pattern types.
+// All 20 types (f32x4, f32x8, f64x2, f64x4, i8x16, i8x32, u8x16, u8x32,
+// i16x8, i16x16, u16x8, u16x16, i32x4, i32x8, u32x4, u32x8, i64x2, i64x4,
+// u64x2, u64x4) are generic type aliases below. Only W512 types (avx512)
+// still use old generated code.
 mod generated;
 
 // Scalar polyfill types (f32x1, i32x1, etc.) for #[magetypes] fallback
@@ -104,5 +105,45 @@ mod _type_aliases {
     /// 4-lane i64 SIMD vector (generic, backed by native intrinsics).
     #[cfg(target_arch = "x86_64")]
     pub type i64x4 = super::generic::i64x4<archmage::X64V3Token>;
+
+    /// 16-lane i8 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type i8x16 = super::generic::i8x16<archmage::X64V3Token>;
+
+    /// 32-lane i8 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type i8x32 = super::generic::i8x32<archmage::X64V3Token>;
+
+    /// 16-lane u8 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type u8x16 = super::generic::u8x16<archmage::X64V3Token>;
+
+    /// 32-lane u8 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type u8x32 = super::generic::u8x32<archmage::X64V3Token>;
+
+    /// 8-lane i16 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type i16x8 = super::generic::i16x8<archmage::X64V3Token>;
+
+    /// 16-lane i16 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type i16x16 = super::generic::i16x16<archmage::X64V3Token>;
+
+    /// 8-lane u16 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type u16x8 = super::generic::u16x8<archmage::X64V3Token>;
+
+    /// 16-lane u16 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type u16x16 = super::generic::u16x16<archmage::X64V3Token>;
+
+    /// 2-lane u64 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type u64x2 = super::generic::u64x2<archmage::X64V3Token>;
+
+    /// 4-lane u64 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type u64x4 = super::generic::u64x4<archmage::X64V3Token>;
 }
 pub use _type_aliases::*;

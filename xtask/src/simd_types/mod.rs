@@ -17,6 +17,7 @@
 pub mod arch;
 pub mod backend_gen;
 pub mod backend_gen_i64;
+pub mod backend_gen_remaining_int;
 mod block_ops;
 pub mod block_ops_arm;
 pub mod block_ops_wasm;
@@ -125,22 +126,10 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
     // re-exports. They are re-exported as type aliases from simd/mod.rs pointing
     // to generic::<T> versions. Old concrete types remain accessible at their
     // original paths (e.g., simd::x86::w256::f32x8) for migration.
-    code.push_str(
-        "// Re-export types (excluding those migrated to generic strategy-pattern types).\n",
-    );
-    code.push_str(
-        "// The 10 migrated types (f32x4, f32x8, f64x2, f64x4, i32x4, i32x8, u32x4, u32x8,\n",
-    );
-    code.push_str(
-        "// i64x2, i64x4) are re-exported as type aliases from simd/mod.rs pointing to\n",
-    );
-    code.push_str(
-        "// generic::<T> versions instead. Old concrete types remain at original paths.\n",
-    );
-    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("pub use x86::w128::{i8x16, i16x8, u8x16, u16x8, u64x2};\n");
-    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("pub use x86::w256::{i8x32, i16x16, u8x32, u16x16, u64x4};\n");
+    code.push_str("// All W128 and W256 types are migrated to generic strategy-pattern types.\n");
+    code.push_str("// They are re-exported as type aliases from simd/mod.rs pointing to\n");
+    code.push_str("// generic::<T> versions. Old concrete types remain at original paths\n");
+    code.push_str("// (e.g., simd::generated::x86::w128::i8x16) for migration.\n");
     code.push_str("#[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
     code.push_str("pub use x86::w512::*;\n\n");
 

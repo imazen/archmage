@@ -60,14 +60,14 @@ pub trait SimdTypes: SimdToken {
 impl SimdTypes for archmage::X64V3Token {
     type F32 = crate::simd::generic::f32x8<archmage::X64V3Token>;
     type F64 = crate::simd::generic::f64x4<archmage::X64V3Token>;
-    type I8 = crate::simd::x86::w256::i8x32;
-    type I16 = crate::simd::x86::w256::i16x16;
+    type I8 = crate::simd::generic::i8x32<archmage::X64V3Token>;
+    type I16 = crate::simd::generic::i16x16<archmage::X64V3Token>;
     type I32 = crate::simd::generic::i32x8<archmage::X64V3Token>;
     type I64 = crate::simd::generic::i64x4<archmage::X64V3Token>;
-    type U8 = crate::simd::x86::w256::u8x32;
-    type U16 = crate::simd::x86::w256::u16x16;
+    type U8 = crate::simd::generic::u8x32<archmage::X64V3Token>;
+    type U16 = crate::simd::generic::u16x16<archmage::X64V3Token>;
     type U32 = crate::simd::generic::u32x8<archmage::X64V3Token>;
-    type U64 = crate::simd::x86::w256::u64x4;
+    type U64 = crate::simd::generic::u64x4<archmage::X64V3Token>;
 
     const F32_LANES: usize = 8;
     const F64_LANES: usize = 4;
@@ -78,14 +78,14 @@ impl SimdTypes for archmage::X64V3Token {
 impl SimdTypes for archmage::X64V2Token {
     type F32 = crate::simd::generic::f32x4<archmage::X64V3Token>;
     type F64 = crate::simd::generic::f64x2<archmage::X64V3Token>;
-    type I8 = crate::simd::x86::w128::i8x16;
-    type I16 = crate::simd::x86::w128::i16x8;
+    type I8 = crate::simd::generic::i8x16<archmage::X64V3Token>;
+    type I16 = crate::simd::generic::i16x8<archmage::X64V3Token>;
     type I32 = crate::simd::generic::i32x4<archmage::X64V3Token>;
     type I64 = crate::simd::generic::i64x2<archmage::X64V3Token>;
-    type U8 = crate::simd::x86::w128::u8x16;
-    type U16 = crate::simd::x86::w128::u16x8;
+    type U8 = crate::simd::generic::u8x16<archmage::X64V3Token>;
+    type U16 = crate::simd::generic::u16x8<archmage::X64V3Token>;
     type U32 = crate::simd::generic::u32x4<archmage::X64V3Token>;
-    type U64 = crate::simd::x86::w128::u64x2;
+    type U64 = crate::simd::generic::u64x2<archmage::X64V3Token>;
 
     const F32_LANES: usize = 4;
     const F64_LANES: usize = 2;

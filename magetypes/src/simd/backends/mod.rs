@@ -36,9 +36,44 @@ pub use i64x2::I64x2Backend;
 mod i64x4;
 pub use i64x4::I64x4Backend;
 
+mod i8x16;
+pub use i8x16::I8x16Backend;
+
+mod i8x32;
+pub use i8x32::I8x32Backend;
+
+mod u8x16;
+pub use u8x16::U8x16Backend;
+
+mod u8x32;
+pub use u8x32::U8x32Backend;
+
+mod i16x8;
+pub use i16x8::I16x8Backend;
+
+mod i16x16;
+pub use i16x16::I16x16Backend;
+
+mod u16x8;
+pub use u16x8::U16x8Backend;
+
+mod u16x16;
+pub use u16x16::U16x16Backend;
+
+mod u64x2;
+pub use u64x2::U64x2Backend;
+
+mod u64x4;
+pub use u64x4::U64x4Backend;
+
 mod convert;
 pub use convert::{
     F32x4Convert, F32x8Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast, U32x8Bitcast,
+};
+
+mod convert_int;
+pub use convert_int::{
+    I8x16Bitcast, I8x32Bitcast, I16x8Bitcast, I16x16Bitcast, U64x2Bitcast, U64x4Bitcast,
 };
 
 /// x86-64 baseline (SSE2).
