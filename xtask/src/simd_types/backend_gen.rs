@@ -401,12 +401,17 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_wasm_additional_convert_impls, generate_wasm_int_impls,
         generate_x86_additional_convert_impls, generate_x86_int_impls,
     };
+    use super::backend_gen_w512::{
+        all_w512_types, generate_neon_w512_impls, generate_scalar_w512_impls,
+        generate_w512_backend_trait, generate_wasm_w512_impls, generate_x86_v3_w512_impls,
+    };
 
     let types = all_float_types();
     let i32_types = all_i32_types();
     let u32_types = all_u32_types();
     let i64_types = all_i64_types();
     let remaining_int_types = all_remaining_int_types();
+    let w512_types = all_w512_types();
     let mut files = BTreeMap::new();
 
     // 1. sealed.rs
@@ -452,6 +457,14 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         );
     }
 
+    // 6b. Backend trait definitions (W512: f32x16, f64x8, i8x64, etc.)
+    for ty in &w512_types {
+        files.insert(
+            format!("backends/{}.rs", ty.name()),
+            generate_w512_backend_trait(ty),
+        );
+    }
+
     // 7. Conversion trait definitions (float/i32/u32/i64)
     files.insert("backends/convert.rs".to_string(), generate_convert_traits());
 
@@ -470,6 +483,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             &u32_types,
             &i64_types,
             &remaining_int_types,
+            &w512_types,
         ),
     );
 
@@ -482,7 +496,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_x86_i64_impls(&i64_types, "X64V3Token", 256)
             + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
             + &generate_x86_convert_impls("X64V3Token")
-            + &generate_x86_additional_convert_impls("X64V3Token"),
+            + &generate_x86_additional_convert_impls("X64V3Token")
+            + &generate_x86_v3_w512_impls(&w512_types),
     );
     files.insert(
         "impls/scalar.rs".to_string(),
@@ -492,7 +507,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_scalar_i64_impls(&i64_types)
             + &generate_scalar_int_impls(&remaining_int_types)
             + &generate_scalar_convert_impls()
-            + &generate_scalar_additional_convert_impls(),
+            + &generate_scalar_additional_convert_impls()
+            + &generate_scalar_w512_impls(&w512_types),
     );
     files.insert(
         "impls/arm_neon.rs".to_string(),
@@ -502,7 +518,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_neon_i64_impls(&i64_types)
             + &generate_neon_int_impls(&remaining_int_types)
             + &generate_neon_convert_impls()
-            + &generate_neon_additional_convert_impls(),
+            + &generate_neon_additional_convert_impls()
+            + &generate_neon_w512_impls(&w512_types),
     );
     files.insert(
         "impls/wasm128.rs".to_string(),
@@ -512,7 +529,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_wasm_i64_impls(&i64_types)
             + &generate_wasm_int_impls(&remaining_int_types)
             + &generate_wasm_convert_impls()
-            + &generate_wasm_additional_convert_impls(),
+            + &generate_wasm_additional_convert_impls()
+            + &generate_wasm_w512_impls(&w512_types),
     );
 
     // 11. impls/mod.rs
@@ -760,6 +778,7 @@ fn generate_backends_mod(
     u32_types: &[U32VecType],
     i64_types: &[super::backend_gen_i64::I64VecType],
     remaining_int_types: &[super::backend_gen_remaining_int::IntVecType],
+    w512_types: &[super::backend_gen_w512::W512Type],
 ) -> String {
     let mut code = formatdoc! {r#"
         //! Backend traits for generic SIMD types.
@@ -802,6 +821,13 @@ fn generate_backends_mod(
 
     // Module declarations and re-exports (remaining int: i8, u8, i16, u16, u64)
     for ty in remaining_int_types {
+        let name = ty.name();
+        let trait_name = ty.trait_name();
+        code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
+    }
+
+    // Module declarations and re-exports (W512: f32x16, f64x8, i8x64, etc.)
+    for ty in w512_types {
         let name = ty.name();
         let trait_name = ty.trait_name();
         code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
