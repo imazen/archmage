@@ -120,11 +120,18 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
     code.push_str("}\n\n");
 
     // Re-exports for x86
-    code.push_str("// Re-export all types\n");
+    // Types migrated to generic strategy-pattern types are excluded from glob
+    // re-exports. They are re-exported as type aliases from simd/mod.rs pointing
+    // to generic::<T> versions. Old concrete types remain accessible at their
+    // original paths (e.g., simd::x86::w256::f32x8) for migration.
+    code.push_str("// Re-export types (excluding those migrated to generic strategy-pattern types).\n");
+    code.push_str("// The 6 migrated types (f32x4, f32x8, f64x2, f64x4, i32x4, i32x8) are re-exported\n");
+    code.push_str("// as type aliases from simd/mod.rs pointing to generic::<T> versions instead.\n");
+    code.push_str("// Old concrete types remain accessible at e.g. simd::x86::w256::f32x8 for migration.\n");
     code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("pub use x86::w128::*;\n");
+    code.push_str("pub use x86::w128::{i8x16, i16x8, i64x2, u8x16, u16x8, u32x4, u64x2};\n");
     code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("pub use x86::w256::*;\n");
+    code.push_str("pub use x86::w256::{i8x32, i16x16, i64x4, u8x32, u16x16, u32x8, u64x4};\n");
     code.push_str("#[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
     code.push_str("pub use x86::w512::*;\n\n");
 
@@ -1049,8 +1056,11 @@ fn test_f32x4_bitcast_i32x4_roundtrip() {
 
 #[test]
 fn test_i32x8_bitcast_u32x8() {
+    // Uses old concrete type — generic i32x8<T> doesn't have u32x8 bitcast yet
+    // (blocked on generic u32x8 type, task #12)
+    use magetypes::simd::x86::w256::i32x8 as old_i32x8;
     if let Some(token) = X64V3Token::summon() {
-        let i = i32x8::splat(token, -1);
+        let i = old_i32x8::splat(token, -1);
         let u = i.bitcast_u32x8();
         assert_eq!(u[0], u32::MAX);
         let i2 = u.bitcast_i32x8();
@@ -1080,8 +1090,11 @@ fn test_f32x8_bitcast_mut() {
 
 #[test]
 fn test_f64x4_bitcast_i64x4_roundtrip() {
+    // Uses old concrete type — generic f64x4<T> doesn't have i64x4 bitcast yet
+    // (blocked on generic i64x4 type, task #12)
+    use magetypes::simd::x86::w256::f64x4 as old_f64x4;
     if let Some(token) = X64V3Token::summon() {
-        let f = f64x4::splat(token, 1.0f64);
+        let f = old_f64x4::splat(token, 1.0f64);
         let i = f.bitcast_i64x4();
         // IEEE 754: 1.0f64 = 0x3FF0000000000000
         assert_eq!(i[0], 0x3FF0_0000_0000_0000_i64);
