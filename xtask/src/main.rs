@@ -134,10 +134,9 @@ fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
     .expect("invalid wasm regex");
 
     // Regex to detect function signatures with token parameters
-    let fn_sig_re = Regex::new(
-        r"pub fn \w+[^{]*\b(X64V4Token|Avx512Token|X64V4xToken|Avx512Fp16Token)\b",
-    )
-    .expect("invalid fn sig regex");
+    let fn_sig_re =
+        Regex::new(r"pub fn \w+[^{]*\b(X64V4Token|Avx512Token|X64V4xToken|Avx512Fp16Token)\b")
+            .expect("invalid fn sig regex");
 
     let simd_dir = PathBuf::from("magetypes/src/simd");
     let mut errors: Vec<String> = Vec::new();

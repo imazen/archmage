@@ -151,10 +151,7 @@ fn print_detected_features() {
             "  x86-64-v4: {} (Avx512Token/Server64)",
             X64V4Token::summon().is_some()
         );
-        println!(
-            "  AVX-512 Modern: {}",
-            X64V4xToken::summon().is_some()
-        );
+        println!("  AVX-512 Modern: {}", X64V4xToken::summon().is_some());
         println!("  AVX-512 FP16:   {}", Avx512Fp16Token::summon().is_some());
     }
 }

@@ -68,7 +68,7 @@ mod x86_stub_tests {
 #[cfg(target_arch = "aarch64")]
 mod arm_stub_tests {
     #[cfg(feature = "avx512")]
-    use archmage::{Avx512Fp16Token, X64V4xToken, X64V4Token};
+    use archmage::{Avx512Fp16Token, X64V4Token, X64V4xToken};
     use archmage::{SimdToken, X64V2Token, X64V3Token};
 
     #[test]
@@ -122,7 +122,7 @@ mod arm_real_tests {
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod avx512_feature_tests {
-    use archmage::{Avx512Fp16Token, X64V4xToken, SimdToken, X64V4Token};
+    use archmage::{Avx512Fp16Token, SimdToken, X64V4Token, X64V4xToken};
 
     #[test]
     fn avx512_tokens_exist_with_feature() {

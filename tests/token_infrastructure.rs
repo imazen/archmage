@@ -29,7 +29,7 @@ use archmage::{
 };
 
 #[cfg(feature = "avx512")]
-use archmage::{Avx512Fp16Token, X64V4xToken, Avx512Token, Server64, X64V4Token};
+use archmage::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
 
 // ============================================================================
 // ScalarToken: always available
