@@ -529,16 +529,15 @@ fn test_256bit_cast_slice_boundaries() {
 // 512-bit types (AVX-512)
 // =============================================================================
 
-#[cfg(feature = "avx512")]
-mod avx512_tests {
-    use archmage::{SimdToken, X64V4Token};
+mod w512_tests {
+    use archmage::{SimdToken, X64V3Token};
 
-    /// Test 512-bit load/store boundaries.
+    /// Test 512-bit load/store boundaries (V3 polyfill: 2×256-bit).
     #[test]
     fn test_512bit_load_store() {
         use magetypes::simd::{f32x16, i32x16};
 
-        if let Some(token) = X64V4Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             // f32x16
             let data_f32: [f32; 16] = [
                 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
@@ -572,35 +571,6 @@ mod avx512_tests {
             let mut out = [0i32; 16];
             v.store(&mut out);
             assert_eq!(out, data_i32);
-        }
-    }
-
-    /// Test 512-bit cast_slice length boundaries.
-    /// Note: Vec<f32> isn't guaranteed 64-byte aligned, so we test length logic.
-    #[test]
-    fn test_512bit_cast_slice_boundaries() {
-        use magetypes::simd::f32x16;
-
-        if let Some(token) = X64V4Token::summon() {
-            // Test length boundary logic via to_array roundtrip
-            let arr: [f32; 16] = [1.0; 16];
-            let v = f32x16::load(token, &arr);
-            let out = v.to_array();
-            assert_eq!(out, arr);
-
-            // Test that incorrect lengths fail for f32x16 (16 elements per vector)
-            let data: Vec<f32> = vec![1.0; 256];
-            for len in 1..16 {
-                // Lengths not multiple of 16 must fail regardless of alignment
-                assert!(
-                    f32x16::cast_slice(token, &data[..len]).is_none(),
-                    "len {} should fail (not multiple of 16)",
-                    len
-                );
-            }
-
-            // 0, 16, 32 etc. may succeed or fail depending on alignment
-            let _ = f32x16::cast_slice(token, &data[..16]); // result depends on alignment
         }
     }
 }

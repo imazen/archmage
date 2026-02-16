@@ -66,6 +66,36 @@ pub use u64x2::U64x2Backend;
 mod u64x4;
 pub use u64x4::U64x4Backend;
 
+mod f32x16;
+pub use f32x16::F32x16Backend;
+
+mod f64x8;
+pub use f64x8::F64x8Backend;
+
+mod i8x64;
+pub use i8x64::I8x64Backend;
+
+mod u8x64;
+pub use u8x64::U8x64Backend;
+
+mod i16x32;
+pub use i16x32::I16x32Backend;
+
+mod u16x32;
+pub use u16x32::U16x32Backend;
+
+mod i32x16;
+pub use i32x16::I32x16Backend;
+
+mod u32x16;
+pub use u32x16::U32x16Backend;
+
+mod i64x8;
+pub use i64x8::I64x8Backend;
+
+mod u64x8;
+pub use u64x8::U64x8Backend;
+
 mod convert;
 pub use convert::{
     F32x4Convert, F32x8Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast, U32x8Bitcast,

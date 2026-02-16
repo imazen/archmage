@@ -70,3 +70,26 @@ pub use u32x4_impl::u32x4;
 pub use u32x8_impl::u32x8;
 pub use u64x2_impl::u64x2;
 pub use u64x4_impl::u64x4;
+
+// 512-bit generic wrapper types
+mod f32x16_impl;
+mod f64x8_impl;
+mod i16x32_impl;
+mod i32x16_impl;
+mod i64x8_impl;
+mod i8x64_impl;
+mod u16x32_impl;
+mod u32x16_impl;
+mod u64x8_impl;
+mod u8x64_impl;
+
+pub use f32x16_impl::f32x16;
+pub use f64x8_impl::f64x8;
+pub use i8x64_impl::i8x64;
+pub use i16x32_impl::i16x32;
+pub use i32x16_impl::i32x16;
+pub use i64x8_impl::i64x8;
+pub use u8x64_impl::u8x64;
+pub use u16x32_impl::u16x32;
+pub use u32x16_impl::u32x16;
+pub use u64x8_impl::u64x8;

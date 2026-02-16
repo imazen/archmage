@@ -256,16 +256,66 @@ impl W512Type {
 /// All 10 512-bit vector types.
 pub(super) fn all_w512_types() -> Vec<W512Type> {
     vec![
-        W512Type { elem: "f32", lanes: 16, elem_bits: 32, kind: W512Kind::Float },
-        W512Type { elem: "f64", lanes: 8, elem_bits: 64, kind: W512Kind::Float },
-        W512Type { elem: "i8", lanes: 64, elem_bits: 8, kind: W512Kind::SignedInt },
-        W512Type { elem: "u8", lanes: 64, elem_bits: 8, kind: W512Kind::UnsignedInt },
-        W512Type { elem: "i16", lanes: 32, elem_bits: 16, kind: W512Kind::SignedInt },
-        W512Type { elem: "u16", lanes: 32, elem_bits: 16, kind: W512Kind::UnsignedInt },
-        W512Type { elem: "i32", lanes: 16, elem_bits: 32, kind: W512Kind::SignedInt },
-        W512Type { elem: "u32", lanes: 16, elem_bits: 32, kind: W512Kind::UnsignedInt },
-        W512Type { elem: "i64", lanes: 8, elem_bits: 64, kind: W512Kind::SignedInt },
-        W512Type { elem: "u64", lanes: 8, elem_bits: 64, kind: W512Kind::UnsignedInt },
+        W512Type {
+            elem: "f32",
+            lanes: 16,
+            elem_bits: 32,
+            kind: W512Kind::Float,
+        },
+        W512Type {
+            elem: "f64",
+            lanes: 8,
+            elem_bits: 64,
+            kind: W512Kind::Float,
+        },
+        W512Type {
+            elem: "i8",
+            lanes: 64,
+            elem_bits: 8,
+            kind: W512Kind::SignedInt,
+        },
+        W512Type {
+            elem: "u8",
+            lanes: 64,
+            elem_bits: 8,
+            kind: W512Kind::UnsignedInt,
+        },
+        W512Type {
+            elem: "i16",
+            lanes: 32,
+            elem_bits: 16,
+            kind: W512Kind::SignedInt,
+        },
+        W512Type {
+            elem: "u16",
+            lanes: 32,
+            elem_bits: 16,
+            kind: W512Kind::UnsignedInt,
+        },
+        W512Type {
+            elem: "i32",
+            lanes: 16,
+            elem_bits: 32,
+            kind: W512Kind::SignedInt,
+        },
+        W512Type {
+            elem: "u32",
+            lanes: 16,
+            elem_bits: 32,
+            kind: W512Kind::UnsignedInt,
+        },
+        W512Type {
+            elem: "i64",
+            lanes: 8,
+            elem_bits: 64,
+            kind: W512Kind::SignedInt,
+        },
+        W512Type {
+            elem: "u64",
+            lanes: 8,
+            elem_bits: 64,
+            kind: W512Kind::UnsignedInt,
+        },
     ]
 }
 
@@ -845,7 +895,7 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
         format!("core::array::from_fn(|i| a[i].wrapping_neg())")
     } else {
         // For unsigned: negate via wrapping
-        format!("core::array::from_fn(|i| 0{elem}::wrapping_sub(a[i]))")
+        format!("core::array::from_fn(|i| (0{elem}).wrapping_sub(a[i]))")
     };
 
     let cmp_signed = if ty.is_signed() { "" } else { "" };
@@ -853,36 +903,68 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
 
     // For shifts of byte types, N could exceed bit width, so use wrapping
     let shl_body = match ty.elem_bits {
-        8 => format!("core::array::from_fn(|i| if N < 8 {{ (a[i] as u8).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"),
-        16 => format!("core::array::from_fn(|i| if N < 16 {{ (a[i] as u16).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"),
-        32 => format!("core::array::from_fn(|i| if N < 32 {{ (a[i] as u32).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"),
-        64 => format!("core::array::from_fn(|i| if N < 64 {{ (a[i] as u64).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"),
+        8 => format!(
+            "core::array::from_fn(|i| if N < 8 {{ (a[i] as u8).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"
+        ),
+        16 => format!(
+            "core::array::from_fn(|i| if N < 16 {{ (a[i] as u16).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"
+        ),
+        32 => format!(
+            "core::array::from_fn(|i| if N < 32 {{ (a[i] as u32).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"
+        ),
+        64 => format!(
+            "core::array::from_fn(|i| if N < 64 {{ (a[i] as u64).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"
+        ),
         _ => unreachable!(),
     };
 
     let shr_arith_body = if ty.is_signed() {
         match ty.elem_bits {
-            8 => format!("core::array::from_fn(|i| if N < 8 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"),
-            16 => format!("core::array::from_fn(|i| if N < 16 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"),
-            32 => format!("core::array::from_fn(|i| if N < 32 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"),
-            64 => format!("core::array::from_fn(|i| if N < 64 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"),
+            8 => format!(
+                "core::array::from_fn(|i| if N < 8 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"
+            ),
+            16 => format!(
+                "core::array::from_fn(|i| if N < 16 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"
+            ),
+            32 => format!(
+                "core::array::from_fn(|i| if N < 32 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"
+            ),
+            64 => format!(
+                "core::array::from_fn(|i| if N < 64 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"
+            ),
             _ => unreachable!(),
         }
     } else {
         match ty.elem_bits {
-            8 => format!("core::array::from_fn(|i| if N < 8 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"),
-            16 => format!("core::array::from_fn(|i| if N < 16 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"),
-            32 => format!("core::array::from_fn(|i| if N < 32 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"),
-            64 => format!("core::array::from_fn(|i| if N < 64 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"),
+            8 => format!(
+                "core::array::from_fn(|i| if N < 8 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"
+            ),
+            16 => format!(
+                "core::array::from_fn(|i| if N < 16 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"
+            ),
+            32 => format!(
+                "core::array::from_fn(|i| if N < 32 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"
+            ),
+            64 => format!(
+                "core::array::from_fn(|i| if N < 64 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"
+            ),
             _ => unreachable!(),
         }
     };
 
     let shr_logical_body = match ty.elem_bits {
-        8 => format!("core::array::from_fn(|i| if N < 8 {{ (a[i] as u8).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"),
-        16 => format!("core::array::from_fn(|i| if N < 16 {{ (a[i] as u16).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"),
-        32 => format!("core::array::from_fn(|i| if N < 32 {{ (a[i] as u32).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"),
-        64 => format!("core::array::from_fn(|i| if N < 64 {{ (a[i] as u64).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"),
+        8 => format!(
+            "core::array::from_fn(|i| if N < 8 {{ (a[i] as u8).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"
+        ),
+        16 => format!(
+            "core::array::from_fn(|i| if N < 16 {{ (a[i] as u16).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"
+        ),
+        32 => format!(
+            "core::array::from_fn(|i| if N < 32 {{ (a[i] as u32).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"
+        ),
+        64 => format!(
+            "core::array::from_fn(|i| if N < 64 {{ (a[i] as u64).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"
+        ),
         _ => unreachable!(),
     };
 
@@ -890,8 +972,11 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
     let reduce_add = format!("a.iter().copied().fold(0{elem}, {elem}::wrapping_add)");
 
     // Bitmask: extract high bit of each element lane
-    let bitmask_body = format!("let mut mask = 0u64; for i in 0..{lanes} {{ if (a[i] as {sign_cast}) < 0 {{ mask |= 1u64 << i; }} }} mask",
-        sign_cast = if ty.is_signed() { elem.to_string() } else {
+    let bitmask_body = format!(
+        "let mut mask = 0u64; for i in 0..{lanes} {{ if (a[i] as {sign_cast}) < 0 {{ mask |= 1u64 << i; }} }} mask",
+        sign_cast = if ty.is_signed() {
+            elem.to_string()
+        } else {
             // For unsigned, interpret as signed for sign bit check
             match ty.elem_bits {
                 8 => "i8".to_string(),
@@ -1137,7 +1222,9 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         "#});
     }
 
-    code.push_str(&formatdoc! {r#"
+    // neg: signed delegates to half backend, unsigned uses sub(zero, a)
+    if ty.kind != W512Kind::UnsignedInt {
+        code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn neg(a: {v3_repr}) -> {v3_repr} {{
@@ -1146,6 +1233,22 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
                     <archmage::X64V3Token as {half_trait}>::neg(a[1]),
                 ]
             }}
+        "#});
+    } else {
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn neg(a: {v3_repr}) -> {v3_repr} {{
+                let z = <archmage::X64V3Token as {half_trait}>::zero();
+                [
+                    <archmage::X64V3Token as {half_trait}>::sub(z, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::sub(z, a[1]),
+                ]
+            }}
+        "#});
+    }
+
+    code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn min(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
@@ -1275,6 +1378,14 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             "#});
         }
 
+        // For unsigned types, 256-bit backends don't have shr_arithmetic_const,
+        // so delegate to shr_logical_const (identical for unsigned).
+        let shr_arith_delegate = if ty.kind == W512Kind::UnsignedInt {
+            "shr_logical_const"
+        } else {
+            "shr_arithmetic_const"
+        };
+
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
@@ -1294,8 +1405,8 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::shr_arithmetic_const::<N>(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::shr_arithmetic_const::<N>(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::{shr_arith_delegate}::<N>(a[0]),
+                    <archmage::X64V3Token as {half_trait}>::{shr_arith_delegate}::<N>(a[1]),
                 ]
             }}
 
@@ -1584,12 +1695,27 @@ fn generate_4way_polyfill_impl(
         "#});
     }
 
-    code.push_str(&formatdoc! {r#"
+    // neg: signed delegates to quarter backend, unsigned uses sub(zero, a)
+    if ty.kind != W512Kind::UnsignedInt {
+        code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn neg(a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::neg(a[i]))
             }}
+        "#});
+    } else {
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn neg(a: {repr}) -> {repr} {{
+                let z = <archmage::{token} as {quarter_trait}>::zero();
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(z, a[i]))
+            }}
+        "#});
+    }
+
+    code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{
@@ -1690,6 +1816,14 @@ fn generate_4way_polyfill_impl(
             "#});
         }
 
+        // For unsigned types, shr_arithmetic_const delegates to shr_logical_const
+        // (identical behavior for unsigned, and the quarter backends don't have shr_arithmetic_const)
+        let shr_arith_delegate = if ty.kind == W512Kind::UnsignedInt {
+            "shr_logical_const"
+        } else {
+            "shr_arithmetic_const"
+        };
+
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
@@ -1707,7 +1841,7 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::shr_arithmetic_const::<N>(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::{shr_arith_delegate}::<N>(a[i]))
             }}
 
             #[inline(always)]

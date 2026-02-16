@@ -3356,3 +3356,2156 @@ impl U64x4Bitcast for archmage::Wasm128Token {
         a
     }
 }
+#[cfg(target_arch = "wasm32")]
+impl F32x16Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: f32) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as F32x4Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as F32x4Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[f32; 16]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as F32x4Backend>::load(data[0..4].try_into().unwrap()),
+            <archmage::Wasm128Token as F32x4Backend>::load(data[4..8].try_into().unwrap()),
+            <archmage::Wasm128Token as F32x4Backend>::load(data[8..12].try_into().unwrap()),
+            <archmage::Wasm128Token as F32x4Backend>::load(data[12..16].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [f32; 16]) -> [v128; 4] {
+        let mut q0 = [0.0f32; 4];
+        let mut q1 = [0.0f32; 4];
+        let mut q2 = [0.0f32; 4];
+        let mut q3 = [0.0f32; 4];
+        q0.copy_from_slice(&arr[0..4]);
+        q1.copy_from_slice(&arr[4..8]);
+        q2.copy_from_slice(&arr[8..12]);
+        q3.copy_from_slice(&arr[12..16]);
+        [
+            <archmage::Wasm128Token as F32x4Backend>::from_array(q0),
+            <archmage::Wasm128Token as F32x4Backend>::from_array(q1),
+            <archmage::Wasm128Token as F32x4Backend>::from_array(q2),
+            <archmage::Wasm128Token as F32x4Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [f32; 16]) {
+        let (o01, o23) = out.split_at_mut(8);
+        let (o0, o1) = o01.split_at_mut(4);
+        let (o2, o3) = o23.split_at_mut(4);
+        <archmage::Wasm128Token as F32x4Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as F32x4Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as F32x4Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as F32x4Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [f32; 16] {
+        let a0 = <archmage::Wasm128Token as F32x4Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as F32x4Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as F32x4Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as F32x4Backend>::to_array(repr[3]);
+        let mut out = [0.0f32; 16];
+        out[0..4].copy_from_slice(&a0);
+        out[4..8].copy_from_slice(&a1);
+        out[8..12].copy_from_slice(&a2);
+        out[12..16].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::mul(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn div(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::div(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::neg(a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sqrt(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::sqrt(a[i]))
+    }
+
+    #[inline(always)]
+    fn abs(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::abs(a[i]))
+    }
+
+    #[inline(always)]
+    fn floor(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::floor(a[i]))
+    }
+
+    #[inline(always)]
+    fn ceil(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::ceil(a[i]))
+    }
+
+    #[inline(always)]
+    fn round(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::round(a[i]))
+    }
+
+    #[inline(always)]
+    fn mul_add(a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::mul_add(a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_sub(a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::mul_sub(a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> f32 {
+        <archmage::Wasm128Token as F32x4Backend>::reduce_add(a[0])
+            + <archmage::Wasm128Token as F32x4Backend>::reduce_add(a[1])
+            + <archmage::Wasm128Token as F32x4Backend>::reduce_add(a[2])
+            + <archmage::Wasm128Token as F32x4Backend>::reduce_add(a[3])
+    }
+
+    #[inline(always)]
+    fn reduce_min(a: [v128; 4]) -> f32 {
+        let m01 = {
+            let l = <archmage::Wasm128Token as F32x4Backend>::reduce_min(a[0]);
+            let r = <archmage::Wasm128Token as F32x4Backend>::reduce_min(a[1]);
+            if l < r { l } else { r }
+        };
+        let m23 = {
+            let l = <archmage::Wasm128Token as F32x4Backend>::reduce_min(a[2]);
+            let r = <archmage::Wasm128Token as F32x4Backend>::reduce_min(a[3]);
+            if l < r { l } else { r }
+        };
+        if m01 < m23 { m01 } else { m23 }
+    }
+
+    #[inline(always)]
+    fn reduce_max(a: [v128; 4]) -> f32 {
+        let m01 = {
+            let l = <archmage::Wasm128Token as F32x4Backend>::reduce_max(a[0]);
+            let r = <archmage::Wasm128Token as F32x4Backend>::reduce_max(a[1]);
+            if l > r { l } else { r }
+        };
+        let m23 = {
+            let l = <archmage::Wasm128Token as F32x4Backend>::reduce_max(a[2]);
+            let r = <archmage::Wasm128Token as F32x4Backend>::reduce_max(a[3]);
+            if l > r { l } else { r }
+        };
+        if m01 > m23 { m01 } else { m23 }
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl F64x8Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: f64) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as F64x2Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as F64x2Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[f64; 8]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as F64x2Backend>::load(data[0..2].try_into().unwrap()),
+            <archmage::Wasm128Token as F64x2Backend>::load(data[2..4].try_into().unwrap()),
+            <archmage::Wasm128Token as F64x2Backend>::load(data[4..6].try_into().unwrap()),
+            <archmage::Wasm128Token as F64x2Backend>::load(data[6..8].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [f64; 8]) -> [v128; 4] {
+        let mut q0 = [0.0f64; 2];
+        let mut q1 = [0.0f64; 2];
+        let mut q2 = [0.0f64; 2];
+        let mut q3 = [0.0f64; 2];
+        q0.copy_from_slice(&arr[0..2]);
+        q1.copy_from_slice(&arr[2..4]);
+        q2.copy_from_slice(&arr[4..6]);
+        q3.copy_from_slice(&arr[6..8]);
+        [
+            <archmage::Wasm128Token as F64x2Backend>::from_array(q0),
+            <archmage::Wasm128Token as F64x2Backend>::from_array(q1),
+            <archmage::Wasm128Token as F64x2Backend>::from_array(q2),
+            <archmage::Wasm128Token as F64x2Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [f64; 8]) {
+        let (o01, o23) = out.split_at_mut(4);
+        let (o0, o1) = o01.split_at_mut(2);
+        let (o2, o3) = o23.split_at_mut(2);
+        <archmage::Wasm128Token as F64x2Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as F64x2Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as F64x2Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as F64x2Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [f64; 8] {
+        let a0 = <archmage::Wasm128Token as F64x2Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as F64x2Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as F64x2Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as F64x2Backend>::to_array(repr[3]);
+        let mut out = [0.0f64; 8];
+        out[0..2].copy_from_slice(&a0);
+        out[2..4].copy_from_slice(&a1);
+        out[4..6].copy_from_slice(&a2);
+        out[6..8].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::mul(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn div(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::div(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::neg(a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sqrt(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::sqrt(a[i]))
+    }
+
+    #[inline(always)]
+    fn abs(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::abs(a[i]))
+    }
+
+    #[inline(always)]
+    fn floor(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::floor(a[i]))
+    }
+
+    #[inline(always)]
+    fn ceil(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::ceil(a[i]))
+    }
+
+    #[inline(always)]
+    fn round(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::round(a[i]))
+    }
+
+    #[inline(always)]
+    fn mul_add(a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::mul_add(a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_sub(a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::mul_sub(a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> f64 {
+        <archmage::Wasm128Token as F64x2Backend>::reduce_add(a[0])
+            + <archmage::Wasm128Token as F64x2Backend>::reduce_add(a[1])
+            + <archmage::Wasm128Token as F64x2Backend>::reduce_add(a[2])
+            + <archmage::Wasm128Token as F64x2Backend>::reduce_add(a[3])
+    }
+
+    #[inline(always)]
+    fn reduce_min(a: [v128; 4]) -> f64 {
+        let m01 = {
+            let l = <archmage::Wasm128Token as F64x2Backend>::reduce_min(a[0]);
+            let r = <archmage::Wasm128Token as F64x2Backend>::reduce_min(a[1]);
+            if l < r { l } else { r }
+        };
+        let m23 = {
+            let l = <archmage::Wasm128Token as F64x2Backend>::reduce_min(a[2]);
+            let r = <archmage::Wasm128Token as F64x2Backend>::reduce_min(a[3]);
+            if l < r { l } else { r }
+        };
+        if m01 < m23 { m01 } else { m23 }
+    }
+
+    #[inline(always)]
+    fn reduce_max(a: [v128; 4]) -> f64 {
+        let m01 = {
+            let l = <archmage::Wasm128Token as F64x2Backend>::reduce_max(a[0]);
+            let r = <archmage::Wasm128Token as F64x2Backend>::reduce_max(a[1]);
+            if l > r { l } else { r }
+        };
+        let m23 = {
+            let l = <archmage::Wasm128Token as F64x2Backend>::reduce_max(a[2]);
+            let r = <archmage::Wasm128Token as F64x2Backend>::reduce_max(a[3]);
+            if l > r { l } else { r }
+        };
+        if m01 > m23 { m01 } else { m23 }
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I8x64Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: i8) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as I8x16Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as I8x16Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[i8; 64]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as I8x16Backend>::load(data[0..16].try_into().unwrap()),
+            <archmage::Wasm128Token as I8x16Backend>::load(data[16..32].try_into().unwrap()),
+            <archmage::Wasm128Token as I8x16Backend>::load(data[32..48].try_into().unwrap()),
+            <archmage::Wasm128Token as I8x16Backend>::load(data[48..64].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i8; 64]) -> [v128; 4] {
+        let mut q0 = [0; 16];
+        let mut q1 = [0; 16];
+        let mut q2 = [0; 16];
+        let mut q3 = [0; 16];
+        q0.copy_from_slice(&arr[0..16]);
+        q1.copy_from_slice(&arr[16..32]);
+        q2.copy_from_slice(&arr[32..48]);
+        q3.copy_from_slice(&arr[48..64]);
+        [
+            <archmage::Wasm128Token as I8x16Backend>::from_array(q0),
+            <archmage::Wasm128Token as I8x16Backend>::from_array(q1),
+            <archmage::Wasm128Token as I8x16Backend>::from_array(q2),
+            <archmage::Wasm128Token as I8x16Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [i8; 64]) {
+        let (o01, o23) = out.split_at_mut(32);
+        let (o0, o1) = o01.split_at_mut(16);
+        let (o2, o3) = o23.split_at_mut(16);
+        <archmage::Wasm128Token as I8x16Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as I8x16Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as I8x16Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as I8x16Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [i8; 64] {
+        let a0 = <archmage::Wasm128Token as I8x16Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as I8x16Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as I8x16Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as I8x16Backend>::to_array(repr[3]);
+        let mut out = [0; 64];
+        out[0..16].copy_from_slice(&a0);
+        out[16..32].copy_from_slice(&a1);
+        out[32..48].copy_from_slice(&a2);
+        out[48..64].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::neg(a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn abs(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::abs(a[i]))
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> i8 {
+        <archmage::Wasm128Token as I8x16Backend>::reduce_add(a[0])
+            .wrapping_add(<archmage::Wasm128Token as I8x16Backend>::reduce_add(a[1]))
+            .wrapping_add(<archmage::Wasm128Token as I8x16Backend>::reduce_add(a[2]))
+            .wrapping_add(<archmage::Wasm128Token as I8x16Backend>::reduce_add(a[3]))
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::shl_const::<N>(a[i]))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I8x16Backend>::shr_arithmetic_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I8x16Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as I8x16Backend>::all_true(a[0])
+            && <archmage::Wasm128Token as I8x16Backend>::all_true(a[1])
+            && <archmage::Wasm128Token as I8x16Backend>::all_true(a[2])
+            && <archmage::Wasm128Token as I8x16Backend>::all_true(a[3])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as I8x16Backend>::any_true(a[0])
+            || <archmage::Wasm128Token as I8x16Backend>::any_true(a[1])
+            || <archmage::Wasm128Token as I8x16Backend>::any_true(a[2])
+            || <archmage::Wasm128Token as I8x16Backend>::any_true(a[3])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 4]) -> u64 {
+        let q0 = <archmage::Wasm128Token as I8x16Backend>::bitmask(a[0]) as u64;
+        let q1 = <archmage::Wasm128Token as I8x16Backend>::bitmask(a[1]) as u64;
+        let q2 = <archmage::Wasm128Token as I8x16Backend>::bitmask(a[2]) as u64;
+        let q3 = <archmage::Wasm128Token as I8x16Backend>::bitmask(a[3]) as u64;
+        q0 | (q1 << 16) | (q2 << 32) | (q3 << 48)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I8x16Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U8x64Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: u8) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as U8x16Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as U8x16Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[u8; 64]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as U8x16Backend>::load(data[0..16].try_into().unwrap()),
+            <archmage::Wasm128Token as U8x16Backend>::load(data[16..32].try_into().unwrap()),
+            <archmage::Wasm128Token as U8x16Backend>::load(data[32..48].try_into().unwrap()),
+            <archmage::Wasm128Token as U8x16Backend>::load(data[48..64].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u8; 64]) -> [v128; 4] {
+        let mut q0 = [0; 16];
+        let mut q1 = [0; 16];
+        let mut q2 = [0; 16];
+        let mut q3 = [0; 16];
+        q0.copy_from_slice(&arr[0..16]);
+        q1.copy_from_slice(&arr[16..32]);
+        q2.copy_from_slice(&arr[32..48]);
+        q3.copy_from_slice(&arr[48..64]);
+        [
+            <archmage::Wasm128Token as U8x16Backend>::from_array(q0),
+            <archmage::Wasm128Token as U8x16Backend>::from_array(q1),
+            <archmage::Wasm128Token as U8x16Backend>::from_array(q2),
+            <archmage::Wasm128Token as U8x16Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [u8; 64]) {
+        let (o01, o23) = out.split_at_mut(32);
+        let (o0, o1) = o01.split_at_mut(16);
+        let (o2, o3) = o23.split_at_mut(16);
+        <archmage::Wasm128Token as U8x16Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as U8x16Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as U8x16Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as U8x16Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [u8; 64] {
+        let a0 = <archmage::Wasm128Token as U8x16Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as U8x16Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as U8x16Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as U8x16Backend>::to_array(repr[3]);
+        let mut out = [0; 64];
+        out[0..16].copy_from_slice(&a0);
+        out[16..32].copy_from_slice(&a1);
+        out[32..48].copy_from_slice(&a2);
+        out[48..64].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        let z = <archmage::Wasm128Token as U8x16Backend>::zero();
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::sub(z, a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> u8 {
+        <archmage::Wasm128Token as U8x16Backend>::reduce_add(a[0])
+            .wrapping_add(<archmage::Wasm128Token as U8x16Backend>::reduce_add(a[1]))
+            .wrapping_add(<archmage::Wasm128Token as U8x16Backend>::reduce_add(a[2]))
+            .wrapping_add(<archmage::Wasm128Token as U8x16Backend>::reduce_add(a[3]))
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::shl_const::<N>(a[i]))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U8x16Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U8x16Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as U8x16Backend>::all_true(a[0])
+            && <archmage::Wasm128Token as U8x16Backend>::all_true(a[1])
+            && <archmage::Wasm128Token as U8x16Backend>::all_true(a[2])
+            && <archmage::Wasm128Token as U8x16Backend>::all_true(a[3])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as U8x16Backend>::any_true(a[0])
+            || <archmage::Wasm128Token as U8x16Backend>::any_true(a[1])
+            || <archmage::Wasm128Token as U8x16Backend>::any_true(a[2])
+            || <archmage::Wasm128Token as U8x16Backend>::any_true(a[3])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 4]) -> u64 {
+        let q0 = <archmage::Wasm128Token as U8x16Backend>::bitmask(a[0]) as u64;
+        let q1 = <archmage::Wasm128Token as U8x16Backend>::bitmask(a[1]) as u64;
+        let q2 = <archmage::Wasm128Token as U8x16Backend>::bitmask(a[2]) as u64;
+        let q3 = <archmage::Wasm128Token as U8x16Backend>::bitmask(a[3]) as u64;
+        q0 | (q1 << 16) | (q2 << 32) | (q3 << 48)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U8x16Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I16x32Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: i16) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as I16x8Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as I16x8Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[i16; 32]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as I16x8Backend>::load(data[0..8].try_into().unwrap()),
+            <archmage::Wasm128Token as I16x8Backend>::load(data[8..16].try_into().unwrap()),
+            <archmage::Wasm128Token as I16x8Backend>::load(data[16..24].try_into().unwrap()),
+            <archmage::Wasm128Token as I16x8Backend>::load(data[24..32].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i16; 32]) -> [v128; 4] {
+        let mut q0 = [0; 8];
+        let mut q1 = [0; 8];
+        let mut q2 = [0; 8];
+        let mut q3 = [0; 8];
+        q0.copy_from_slice(&arr[0..8]);
+        q1.copy_from_slice(&arr[8..16]);
+        q2.copy_from_slice(&arr[16..24]);
+        q3.copy_from_slice(&arr[24..32]);
+        [
+            <archmage::Wasm128Token as I16x8Backend>::from_array(q0),
+            <archmage::Wasm128Token as I16x8Backend>::from_array(q1),
+            <archmage::Wasm128Token as I16x8Backend>::from_array(q2),
+            <archmage::Wasm128Token as I16x8Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [i16; 32]) {
+        let (o01, o23) = out.split_at_mut(16);
+        let (o0, o1) = o01.split_at_mut(8);
+        let (o2, o3) = o23.split_at_mut(8);
+        <archmage::Wasm128Token as I16x8Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as I16x8Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as I16x8Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as I16x8Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [i16; 32] {
+        let a0 = <archmage::Wasm128Token as I16x8Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as I16x8Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as I16x8Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as I16x8Backend>::to_array(repr[3]);
+        let mut out = [0; 32];
+        out[0..8].copy_from_slice(&a0);
+        out[8..16].copy_from_slice(&a1);
+        out[16..24].copy_from_slice(&a2);
+        out[24..32].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::mul(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::neg(a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn abs(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::abs(a[i]))
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> i16 {
+        <archmage::Wasm128Token as I16x8Backend>::reduce_add(a[0])
+            .wrapping_add(<archmage::Wasm128Token as I16x8Backend>::reduce_add(a[1]))
+            .wrapping_add(<archmage::Wasm128Token as I16x8Backend>::reduce_add(a[2]))
+            .wrapping_add(<archmage::Wasm128Token as I16x8Backend>::reduce_add(a[3]))
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::shl_const::<N>(a[i]))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I16x8Backend>::shr_arithmetic_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I16x8Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as I16x8Backend>::all_true(a[0])
+            && <archmage::Wasm128Token as I16x8Backend>::all_true(a[1])
+            && <archmage::Wasm128Token as I16x8Backend>::all_true(a[2])
+            && <archmage::Wasm128Token as I16x8Backend>::all_true(a[3])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as I16x8Backend>::any_true(a[0])
+            || <archmage::Wasm128Token as I16x8Backend>::any_true(a[1])
+            || <archmage::Wasm128Token as I16x8Backend>::any_true(a[2])
+            || <archmage::Wasm128Token as I16x8Backend>::any_true(a[3])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 4]) -> u64 {
+        let q0 = <archmage::Wasm128Token as I16x8Backend>::bitmask(a[0]) as u64;
+        let q1 = <archmage::Wasm128Token as I16x8Backend>::bitmask(a[1]) as u64;
+        let q2 = <archmage::Wasm128Token as I16x8Backend>::bitmask(a[2]) as u64;
+        let q3 = <archmage::Wasm128Token as I16x8Backend>::bitmask(a[3]) as u64;
+        q0 | (q1 << 8) | (q2 << 16) | (q3 << 24)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I16x8Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U16x32Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: u16) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as U16x8Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as U16x8Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[u16; 32]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as U16x8Backend>::load(data[0..8].try_into().unwrap()),
+            <archmage::Wasm128Token as U16x8Backend>::load(data[8..16].try_into().unwrap()),
+            <archmage::Wasm128Token as U16x8Backend>::load(data[16..24].try_into().unwrap()),
+            <archmage::Wasm128Token as U16x8Backend>::load(data[24..32].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u16; 32]) -> [v128; 4] {
+        let mut q0 = [0; 8];
+        let mut q1 = [0; 8];
+        let mut q2 = [0; 8];
+        let mut q3 = [0; 8];
+        q0.copy_from_slice(&arr[0..8]);
+        q1.copy_from_slice(&arr[8..16]);
+        q2.copy_from_slice(&arr[16..24]);
+        q3.copy_from_slice(&arr[24..32]);
+        [
+            <archmage::Wasm128Token as U16x8Backend>::from_array(q0),
+            <archmage::Wasm128Token as U16x8Backend>::from_array(q1),
+            <archmage::Wasm128Token as U16x8Backend>::from_array(q2),
+            <archmage::Wasm128Token as U16x8Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [u16; 32]) {
+        let (o01, o23) = out.split_at_mut(16);
+        let (o0, o1) = o01.split_at_mut(8);
+        let (o2, o3) = o23.split_at_mut(8);
+        <archmage::Wasm128Token as U16x8Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as U16x8Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as U16x8Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as U16x8Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [u16; 32] {
+        let a0 = <archmage::Wasm128Token as U16x8Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as U16x8Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as U16x8Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as U16x8Backend>::to_array(repr[3]);
+        let mut out = [0; 32];
+        out[0..8].copy_from_slice(&a0);
+        out[8..16].copy_from_slice(&a1);
+        out[16..24].copy_from_slice(&a2);
+        out[24..32].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::mul(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        let z = <archmage::Wasm128Token as U16x8Backend>::zero();
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::sub(z, a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> u16 {
+        <archmage::Wasm128Token as U16x8Backend>::reduce_add(a[0])
+            .wrapping_add(<archmage::Wasm128Token as U16x8Backend>::reduce_add(a[1]))
+            .wrapping_add(<archmage::Wasm128Token as U16x8Backend>::reduce_add(a[2]))
+            .wrapping_add(<archmage::Wasm128Token as U16x8Backend>::reduce_add(a[3]))
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::shl_const::<N>(a[i]))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U16x8Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U16x8Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as U16x8Backend>::all_true(a[0])
+            && <archmage::Wasm128Token as U16x8Backend>::all_true(a[1])
+            && <archmage::Wasm128Token as U16x8Backend>::all_true(a[2])
+            && <archmage::Wasm128Token as U16x8Backend>::all_true(a[3])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as U16x8Backend>::any_true(a[0])
+            || <archmage::Wasm128Token as U16x8Backend>::any_true(a[1])
+            || <archmage::Wasm128Token as U16x8Backend>::any_true(a[2])
+            || <archmage::Wasm128Token as U16x8Backend>::any_true(a[3])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 4]) -> u64 {
+        let q0 = <archmage::Wasm128Token as U16x8Backend>::bitmask(a[0]) as u64;
+        let q1 = <archmage::Wasm128Token as U16x8Backend>::bitmask(a[1]) as u64;
+        let q2 = <archmage::Wasm128Token as U16x8Backend>::bitmask(a[2]) as u64;
+        let q3 = <archmage::Wasm128Token as U16x8Backend>::bitmask(a[3]) as u64;
+        q0 | (q1 << 8) | (q2 << 16) | (q3 << 24)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U16x8Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I32x16Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: i32) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as I32x4Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as I32x4Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[i32; 16]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as I32x4Backend>::load(data[0..4].try_into().unwrap()),
+            <archmage::Wasm128Token as I32x4Backend>::load(data[4..8].try_into().unwrap()),
+            <archmage::Wasm128Token as I32x4Backend>::load(data[8..12].try_into().unwrap()),
+            <archmage::Wasm128Token as I32x4Backend>::load(data[12..16].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i32; 16]) -> [v128; 4] {
+        let mut q0 = [0; 4];
+        let mut q1 = [0; 4];
+        let mut q2 = [0; 4];
+        let mut q3 = [0; 4];
+        q0.copy_from_slice(&arr[0..4]);
+        q1.copy_from_slice(&arr[4..8]);
+        q2.copy_from_slice(&arr[8..12]);
+        q3.copy_from_slice(&arr[12..16]);
+        [
+            <archmage::Wasm128Token as I32x4Backend>::from_array(q0),
+            <archmage::Wasm128Token as I32x4Backend>::from_array(q1),
+            <archmage::Wasm128Token as I32x4Backend>::from_array(q2),
+            <archmage::Wasm128Token as I32x4Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [i32; 16]) {
+        let (o01, o23) = out.split_at_mut(8);
+        let (o0, o1) = o01.split_at_mut(4);
+        let (o2, o3) = o23.split_at_mut(4);
+        <archmage::Wasm128Token as I32x4Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as I32x4Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as I32x4Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as I32x4Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [i32; 16] {
+        let a0 = <archmage::Wasm128Token as I32x4Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as I32x4Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as I32x4Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as I32x4Backend>::to_array(repr[3]);
+        let mut out = [0; 16];
+        out[0..4].copy_from_slice(&a0);
+        out[4..8].copy_from_slice(&a1);
+        out[8..12].copy_from_slice(&a2);
+        out[12..16].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::mul(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::neg(a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn abs(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::abs(a[i]))
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> i32 {
+        <archmage::Wasm128Token as I32x4Backend>::reduce_add(a[0])
+            .wrapping_add(<archmage::Wasm128Token as I32x4Backend>::reduce_add(a[1]))
+            .wrapping_add(<archmage::Wasm128Token as I32x4Backend>::reduce_add(a[2]))
+            .wrapping_add(<archmage::Wasm128Token as I32x4Backend>::reduce_add(a[3]))
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::shl_const::<N>(a[i]))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I32x4Backend>::shr_arithmetic_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I32x4Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as I32x4Backend>::all_true(a[0])
+            && <archmage::Wasm128Token as I32x4Backend>::all_true(a[1])
+            && <archmage::Wasm128Token as I32x4Backend>::all_true(a[2])
+            && <archmage::Wasm128Token as I32x4Backend>::all_true(a[3])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as I32x4Backend>::any_true(a[0])
+            || <archmage::Wasm128Token as I32x4Backend>::any_true(a[1])
+            || <archmage::Wasm128Token as I32x4Backend>::any_true(a[2])
+            || <archmage::Wasm128Token as I32x4Backend>::any_true(a[3])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 4]) -> u64 {
+        let q0 = <archmage::Wasm128Token as I32x4Backend>::bitmask(a[0]) as u64;
+        let q1 = <archmage::Wasm128Token as I32x4Backend>::bitmask(a[1]) as u64;
+        let q2 = <archmage::Wasm128Token as I32x4Backend>::bitmask(a[2]) as u64;
+        let q3 = <archmage::Wasm128Token as I32x4Backend>::bitmask(a[3]) as u64;
+        q0 | (q1 << 4) | (q2 << 8) | (q3 << 12)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I32x4Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U32x16Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: u32) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as U32x4Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as U32x4Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[u32; 16]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as U32x4Backend>::load(data[0..4].try_into().unwrap()),
+            <archmage::Wasm128Token as U32x4Backend>::load(data[4..8].try_into().unwrap()),
+            <archmage::Wasm128Token as U32x4Backend>::load(data[8..12].try_into().unwrap()),
+            <archmage::Wasm128Token as U32x4Backend>::load(data[12..16].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u32; 16]) -> [v128; 4] {
+        let mut q0 = [0; 4];
+        let mut q1 = [0; 4];
+        let mut q2 = [0; 4];
+        let mut q3 = [0; 4];
+        q0.copy_from_slice(&arr[0..4]);
+        q1.copy_from_slice(&arr[4..8]);
+        q2.copy_from_slice(&arr[8..12]);
+        q3.copy_from_slice(&arr[12..16]);
+        [
+            <archmage::Wasm128Token as U32x4Backend>::from_array(q0),
+            <archmage::Wasm128Token as U32x4Backend>::from_array(q1),
+            <archmage::Wasm128Token as U32x4Backend>::from_array(q2),
+            <archmage::Wasm128Token as U32x4Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [u32; 16]) {
+        let (o01, o23) = out.split_at_mut(8);
+        let (o0, o1) = o01.split_at_mut(4);
+        let (o2, o3) = o23.split_at_mut(4);
+        <archmage::Wasm128Token as U32x4Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as U32x4Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as U32x4Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as U32x4Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [u32; 16] {
+        let a0 = <archmage::Wasm128Token as U32x4Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as U32x4Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as U32x4Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as U32x4Backend>::to_array(repr[3]);
+        let mut out = [0; 16];
+        out[0..4].copy_from_slice(&a0);
+        out[4..8].copy_from_slice(&a1);
+        out[8..12].copy_from_slice(&a2);
+        out[12..16].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::mul(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        let z = <archmage::Wasm128Token as U32x4Backend>::zero();
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::sub(z, a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> u32 {
+        <archmage::Wasm128Token as U32x4Backend>::reduce_add(a[0])
+            .wrapping_add(<archmage::Wasm128Token as U32x4Backend>::reduce_add(a[1]))
+            .wrapping_add(<archmage::Wasm128Token as U32x4Backend>::reduce_add(a[2]))
+            .wrapping_add(<archmage::Wasm128Token as U32x4Backend>::reduce_add(a[3]))
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::shl_const::<N>(a[i]))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U32x4Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U32x4Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as U32x4Backend>::all_true(a[0])
+            && <archmage::Wasm128Token as U32x4Backend>::all_true(a[1])
+            && <archmage::Wasm128Token as U32x4Backend>::all_true(a[2])
+            && <archmage::Wasm128Token as U32x4Backend>::all_true(a[3])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as U32x4Backend>::any_true(a[0])
+            || <archmage::Wasm128Token as U32x4Backend>::any_true(a[1])
+            || <archmage::Wasm128Token as U32x4Backend>::any_true(a[2])
+            || <archmage::Wasm128Token as U32x4Backend>::any_true(a[3])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 4]) -> u64 {
+        let q0 = <archmage::Wasm128Token as U32x4Backend>::bitmask(a[0]) as u64;
+        let q1 = <archmage::Wasm128Token as U32x4Backend>::bitmask(a[1]) as u64;
+        let q2 = <archmage::Wasm128Token as U32x4Backend>::bitmask(a[2]) as u64;
+        let q3 = <archmage::Wasm128Token as U32x4Backend>::bitmask(a[3]) as u64;
+        q0 | (q1 << 4) | (q2 << 8) | (q3 << 12)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U32x4Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I64x8Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: i64) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as I64x2Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as I64x2Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[i64; 8]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as I64x2Backend>::load(data[0..2].try_into().unwrap()),
+            <archmage::Wasm128Token as I64x2Backend>::load(data[2..4].try_into().unwrap()),
+            <archmage::Wasm128Token as I64x2Backend>::load(data[4..6].try_into().unwrap()),
+            <archmage::Wasm128Token as I64x2Backend>::load(data[6..8].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [i64; 8]) -> [v128; 4] {
+        let mut q0 = [0; 2];
+        let mut q1 = [0; 2];
+        let mut q2 = [0; 2];
+        let mut q3 = [0; 2];
+        q0.copy_from_slice(&arr[0..2]);
+        q1.copy_from_slice(&arr[2..4]);
+        q2.copy_from_slice(&arr[4..6]);
+        q3.copy_from_slice(&arr[6..8]);
+        [
+            <archmage::Wasm128Token as I64x2Backend>::from_array(q0),
+            <archmage::Wasm128Token as I64x2Backend>::from_array(q1),
+            <archmage::Wasm128Token as I64x2Backend>::from_array(q2),
+            <archmage::Wasm128Token as I64x2Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [i64; 8]) {
+        let (o01, o23) = out.split_at_mut(4);
+        let (o0, o1) = o01.split_at_mut(2);
+        let (o2, o3) = o23.split_at_mut(2);
+        <archmage::Wasm128Token as I64x2Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as I64x2Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as I64x2Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as I64x2Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [i64; 8] {
+        let a0 = <archmage::Wasm128Token as I64x2Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as I64x2Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as I64x2Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as I64x2Backend>::to_array(repr[3]);
+        let mut out = [0; 8];
+        out[0..2].copy_from_slice(&a0);
+        out[2..4].copy_from_slice(&a1);
+        out[4..6].copy_from_slice(&a2);
+        out[6..8].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::neg(a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn abs(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::abs(a[i]))
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> i64 {
+        <archmage::Wasm128Token as I64x2Backend>::reduce_add(a[0])
+            .wrapping_add(<archmage::Wasm128Token as I64x2Backend>::reduce_add(a[1]))
+            .wrapping_add(<archmage::Wasm128Token as I64x2Backend>::reduce_add(a[2]))
+            .wrapping_add(<archmage::Wasm128Token as I64x2Backend>::reduce_add(a[3]))
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::shl_const::<N>(a[i]))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I64x2Backend>::shr_arithmetic_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I64x2Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as I64x2Backend>::all_true(a[0])
+            && <archmage::Wasm128Token as I64x2Backend>::all_true(a[1])
+            && <archmage::Wasm128Token as I64x2Backend>::all_true(a[2])
+            && <archmage::Wasm128Token as I64x2Backend>::all_true(a[3])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as I64x2Backend>::any_true(a[0])
+            || <archmage::Wasm128Token as I64x2Backend>::any_true(a[1])
+            || <archmage::Wasm128Token as I64x2Backend>::any_true(a[2])
+            || <archmage::Wasm128Token as I64x2Backend>::any_true(a[3])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 4]) -> u64 {
+        let q0 = <archmage::Wasm128Token as I64x2Backend>::bitmask(a[0]) as u64;
+        let q1 = <archmage::Wasm128Token as I64x2Backend>::bitmask(a[1]) as u64;
+        let q2 = <archmage::Wasm128Token as I64x2Backend>::bitmask(a[2]) as u64;
+        let q3 = <archmage::Wasm128Token as I64x2Backend>::bitmask(a[3]) as u64;
+        q0 | (q1 << 2) | (q2 << 4) | (q3 << 6)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I64x2Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::bitxor(a[i], b[i]))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U64x8Backend for archmage::Wasm128Token {
+    type Repr = [v128; 4];
+
+    #[inline(always)]
+    fn splat(v: u64) -> [v128; 4] {
+        let q = <archmage::Wasm128Token as U64x2Backend>::splat(v);
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn zero() -> [v128; 4] {
+        let q = <archmage::Wasm128Token as U64x2Backend>::zero();
+        [q, q, q, q]
+    }
+
+    #[inline(always)]
+    fn load(data: &[u64; 8]) -> [v128; 4] {
+        [
+            <archmage::Wasm128Token as U64x2Backend>::load(data[0..2].try_into().unwrap()),
+            <archmage::Wasm128Token as U64x2Backend>::load(data[2..4].try_into().unwrap()),
+            <archmage::Wasm128Token as U64x2Backend>::load(data[4..6].try_into().unwrap()),
+            <archmage::Wasm128Token as U64x2Backend>::load(data[6..8].try_into().unwrap()),
+        ]
+    }
+
+    #[inline(always)]
+    fn from_array(arr: [u64; 8]) -> [v128; 4] {
+        let mut q0 = [0; 2];
+        let mut q1 = [0; 2];
+        let mut q2 = [0; 2];
+        let mut q3 = [0; 2];
+        q0.copy_from_slice(&arr[0..2]);
+        q1.copy_from_slice(&arr[2..4]);
+        q2.copy_from_slice(&arr[4..6]);
+        q3.copy_from_slice(&arr[6..8]);
+        [
+            <archmage::Wasm128Token as U64x2Backend>::from_array(q0),
+            <archmage::Wasm128Token as U64x2Backend>::from_array(q1),
+            <archmage::Wasm128Token as U64x2Backend>::from_array(q2),
+            <archmage::Wasm128Token as U64x2Backend>::from_array(q3),
+        ]
+    }
+
+    #[inline(always)]
+    fn store(repr: [v128; 4], out: &mut [u64; 8]) {
+        let (o01, o23) = out.split_at_mut(4);
+        let (o0, o1) = o01.split_at_mut(2);
+        let (o2, o3) = o23.split_at_mut(2);
+        <archmage::Wasm128Token as U64x2Backend>::store(repr[0], o0.try_into().unwrap());
+        <archmage::Wasm128Token as U64x2Backend>::store(repr[1], o1.try_into().unwrap());
+        <archmage::Wasm128Token as U64x2Backend>::store(repr[2], o2.try_into().unwrap());
+        <archmage::Wasm128Token as U64x2Backend>::store(repr[3], o3.try_into().unwrap());
+    }
+
+    #[inline(always)]
+    fn to_array(repr: [v128; 4]) -> [u64; 8] {
+        let a0 = <archmage::Wasm128Token as U64x2Backend>::to_array(repr[0]);
+        let a1 = <archmage::Wasm128Token as U64x2Backend>::to_array(repr[1]);
+        let a2 = <archmage::Wasm128Token as U64x2Backend>::to_array(repr[2]);
+        let a3 = <archmage::Wasm128Token as U64x2Backend>::to_array(repr[3]);
+        let mut out = [0; 8];
+        out[0..2].copy_from_slice(&a0);
+        out[2..4].copy_from_slice(&a1);
+        out[4..6].copy_from_slice(&a2);
+        out[6..8].copy_from_slice(&a3);
+        out
+    }
+
+    #[inline(always)]
+    fn add(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::add(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn sub(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::sub(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn neg(a: [v128; 4]) -> [v128; 4] {
+        let z = <archmage::Wasm128Token as U64x2Backend>::zero();
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::sub(z, a[i]))
+    }
+
+    #[inline(always)]
+    fn min(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::min(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::max(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn reduce_add(a: [v128; 4]) -> u64 {
+        <archmage::Wasm128Token as U64x2Backend>::reduce_add(a[0])
+            .wrapping_add(<archmage::Wasm128Token as U64x2Backend>::reduce_add(a[1]))
+            .wrapping_add(<archmage::Wasm128Token as U64x2Backend>::reduce_add(a[2]))
+            .wrapping_add(<archmage::Wasm128Token as U64x2Backend>::reduce_add(a[3]))
+    }
+
+    #[inline(always)]
+    fn shl_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::shl_const::<N>(a[i]))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U64x2Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_const<const N: i32>(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U64x2Backend>::shr_logical_const::<N>(a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn all_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as U64x2Backend>::all_true(a[0])
+            && <archmage::Wasm128Token as U64x2Backend>::all_true(a[1])
+            && <archmage::Wasm128Token as U64x2Backend>::all_true(a[2])
+            && <archmage::Wasm128Token as U64x2Backend>::all_true(a[3])
+    }
+
+    #[inline(always)]
+    fn any_true(a: [v128; 4]) -> bool {
+        <archmage::Wasm128Token as U64x2Backend>::any_true(a[0])
+            || <archmage::Wasm128Token as U64x2Backend>::any_true(a[1])
+            || <archmage::Wasm128Token as U64x2Backend>::any_true(a[2])
+            || <archmage::Wasm128Token as U64x2Backend>::any_true(a[3])
+    }
+
+    #[inline(always)]
+    fn bitmask(a: [v128; 4]) -> u64 {
+        let q0 = <archmage::Wasm128Token as U64x2Backend>::bitmask(a[0]) as u64;
+        let q1 = <archmage::Wasm128Token as U64x2Backend>::bitmask(a[1]) as u64;
+        let q2 = <archmage::Wasm128Token as U64x2Backend>::bitmask(a[2]) as u64;
+        let q3 = <archmage::Wasm128Token as U64x2Backend>::bitmask(a[3]) as u64;
+        q0 | (q1 << 2) | (q2 << 4) | (q3 << 6)
+    }
+
+    #[inline(always)]
+    fn simd_eq(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::simd_eq(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ne(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::simd_ne(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_lt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::simd_lt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_le(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::simd_le(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_gt(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::simd_gt(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn simd_ge(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::simd_ge(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn blend(mask: [v128; 4], if_true: [v128; 4], if_false: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U64x2Backend>::blend(mask[i], if_true[i], if_false[i])
+        })
+    }
+
+    #[inline(always)]
+    fn not(a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::not(a[i]))
+    }
+
+    #[inline(always)]
+    fn bitand(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::bitand(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::bitor(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn bitxor(a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::bitxor(a[i], b[i]))
+    }
+}

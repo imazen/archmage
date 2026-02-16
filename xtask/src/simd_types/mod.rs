@@ -127,12 +127,12 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
     // re-exports. They are re-exported as type aliases from simd/mod.rs pointing
     // to generic::<T> versions. Old concrete types remain accessible at their
     // original paths (e.g., simd::x86::w256::f32x8) for migration.
-    code.push_str("// All W128 and W256 types are migrated to generic strategy-pattern types.\n");
+    code.push_str(
+        "// All SIMD types (W128, W256, W512) are migrated to generic strategy-pattern types.\n",
+    );
     code.push_str("// They are re-exported as type aliases from simd/mod.rs pointing to\n");
     code.push_str("// generic::<T> versions. Old concrete types remain at original paths\n");
-    code.push_str("// (e.g., simd::generated::x86::w128::i8x16) for migration.\n");
-    code.push_str("#[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
-    code.push_str("pub use x86::w512::*;\n\n");
+    code.push_str("// (e.g., simd::generated::x86::w128::i8x16) for migration.\n\n");
 
     // Re-exports for ARM
     code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
@@ -230,12 +230,31 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str(&format!("        {},\n", w128_types.join(", ")));
     code.push_str("    };\n\n");
 
-    // Polyfilled 512-bit (wider, same token) — cfg-gated
-    code.push_str("    // 512-bit polyfilled types (2×256-bit, same X64V3Token)\n");
+    // 512-bit generic types (2×256-bit polyfill via V3 backend, same X64V3Token)
+    code.push_str("    // 512-bit generic types (2×256-bit polyfill, same X64V3Token)\n");
     code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("    pub use super::polyfill::v3_512::{\n");
-    code.push_str(&format!("        {},\n", w512_types.join(", ")));
-    code.push_str("    };\n\n");
+    code.push_str("    #[allow(non_camel_case_types)]\n");
+    code.push_str("    mod _w512_aliases {\n");
+    for w512_name in &w512_types {
+        let trait_upper = match w512_name.as_str() {
+            "f32x16" => "F32x16Backend",
+            "f64x8" => "F64x8Backend",
+            "i8x64" => "I8x64Backend",
+            "u8x64" => "U8x64Backend",
+            "i16x32" => "I16x32Backend",
+            "u16x32" => "U16x32Backend",
+            "i32x16" => "I32x16Backend",
+            "u32x16" => "U32x16Backend",
+            "i64x8" => "I64x8Backend",
+            "u64x8" => "U64x8Backend",
+            _ => panic!("unknown W512 type: {}", w512_name),
+        };
+        let _ = trait_upper;
+        code.push_str(&format!("        pub type {w512_name} = crate::simd::generic::{w512_name}<archmage::X64V3Token>;\n"));
+    }
+    code.push_str("    }\n");
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    pub use _w512_aliases::*;\n\n");
 
     // Token and LANES constants — always available
     code.push_str("    /// Token type for this width level\n");
@@ -260,18 +279,28 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    //! Also includes 128-bit and 256-bit native types. These accept\n");
     code.push_str("    //! `X64V3Token` — use `token.v3()` to downcast your `X64V4Token`.\n\n");
 
-    // xN aliases (natural width = 512-bit) — cfg-gated
-    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
-    code.push_str("    pub use super::x86::w512::{\n");
+    // 512-bit generic types as type aliases (use V3 polyfill for now)
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    #[allow(non_camel_case_types)]\n");
+    code.push_str("    mod _w512_aliases {\n");
+    for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
+        let name = ty.name();
+        code.push_str(&format!(
+            "        pub type {name} = crate::simd::generic::{name}<archmage::X64V3Token>;\n"
+        ));
+    }
+    code.push_str("    }\n");
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    pub use _w512_aliases::*;\n\n");
+
+    // xN aliases (natural width = 512-bit)
+    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    pub use _w512_aliases::{\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
         let name = ty.name();
         code.push_str(&format!("        {name} as {}xN,\n", ty.elem.name()));
     }
     code.push_str("    };\n\n");
-
-    // Native 512-bit (natural width) — cfg-gated
-    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]\n");
-    code.push_str("    pub use super::x86::w512::*;\n\n");
 
     // Native 128-bit (narrower, needs token.v3()) — cfg-gated
     code.push_str("    // 128-bit native types (use token.v3() to downcast)\n");
@@ -749,21 +778,21 @@ fn test_f32x8_load_store_rgba_u8() {
 "#,
     );
 
-    // Add AVX-512 tests
+    // Add 512-bit tests (use V3 polyfill — always available on x86_64)
     code.push_str(
         r#"
 // ============================================================================
-// AVX-512 Tests (require avx512 feature)
+// 512-bit Tests (V3 polyfill: 2×256-bit)
 // ============================================================================
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-mod avx512_tests {
+#[cfg(target_arch = "x86_64")]
+mod w512_tests {
     use magetypes::simd::*;
-    use archmage::{SimdToken, Avx512Token};
+    use archmage::{SimdToken, X64V3Token};
 
     #[test]
     fn test_f32x16_basic() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = f32x16::splat(token, 1.0);
             let b = f32x16::splat(token, 2.0);
             let c = a + b;
@@ -776,7 +805,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_load_store() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let data: [f32; 16] = core::array::from_fn(|i| i as f32);
             let v = f32x16::load(token, &data);
             let mut out = [0.0f32; 16];
@@ -787,7 +816,7 @@ mod avx512_tests {
 
     #[test]
     fn test_i32x16_basic() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = i32x16::splat(token, 10);
             let b = i32x16::splat(token, 20);
             let c = a + b;
@@ -800,7 +829,7 @@ mod avx512_tests {
 
     #[test]
     fn test_i32x16_load_store() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let data: [i32; 16] = core::array::from_fn(|i| i as i32);
             let v = i32x16::load(token, &data);
             let mut out = [0i32; 16];
@@ -811,7 +840,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f64x8_basic() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = f64x8::splat(token, 2.5);
             let b = f64x8::splat(token, 1.5);
             let sum = a + b;
@@ -821,7 +850,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_math_ops() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let v = f32x16::from_array(token, [
                 1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0,
                 81.0, 100.0, 121.0, 144.0, 169.0, 196.0, 225.0, 256.0
@@ -835,7 +864,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_fma() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = f32x16::splat(token, 2.0);
             let b = f32x16::splat(token, 3.0);
             let c = f32x16::splat(token, 1.0);
@@ -847,14 +876,41 @@ mod avx512_tests {
     }
 
     #[test]
-    fn test_cast_slice_512() {
-        if let Some(token) = Avx512Token::summon() {
-            let data: [f32; 32] = core::array::from_fn(|i| i as f32);
+    fn test_u8x64_basic() {
+        if let Some(token) = X64V3Token::summon() {
+            let a = u8x64::splat(token, 100);
+            let b = u8x64::splat(token, 50);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 150);
+            }
+        }
+    }
 
-            let vectors = f32x16::cast_slice(token, &data).unwrap();
-            assert_eq!(vectors.len(), 2);
-            assert_eq!(vectors[0].to_array()[0], 0.0);
-            assert_eq!(vectors[1].to_array()[0], 16.0);
+    #[test]
+    fn test_i16x32_basic() {
+        if let Some(token) = X64V3Token::summon() {
+            let a = i16x32::splat(token, 1000);
+            let b = i16x32::splat(token, 2000);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 3000);
+            }
+        }
+    }
+
+    #[test]
+    fn test_u64x8_basic() {
+        if let Some(token) = X64V3Token::summon() {
+            let a = u64x8::splat(token, 42);
+            let b = u64x8::splat(token, 58);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 100);
+            }
         }
     }
 }

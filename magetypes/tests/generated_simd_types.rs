@@ -207,17 +207,17 @@ fn test_f32x8_load_store_rgba_u8() {
 }
 
 // ============================================================================
-// AVX-512 Tests (require avx512 feature)
+// 512-bit Tests (V3 polyfill: 2×256-bit)
 // ============================================================================
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-mod avx512_tests {
-    use archmage::{Avx512Token, SimdToken};
+#[cfg(target_arch = "x86_64")]
+mod w512_tests {
+    use archmage::{SimdToken, X64V3Token};
     use magetypes::simd::*;
 
     #[test]
     fn test_f32x16_basic() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = f32x16::splat(token, 1.0);
             let b = f32x16::splat(token, 2.0);
             let c = a + b;
@@ -230,7 +230,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_load_store() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let data: [f32; 16] = core::array::from_fn(|i| i as f32);
             let v = f32x16::load(token, &data);
             let mut out = [0.0f32; 16];
@@ -241,7 +241,7 @@ mod avx512_tests {
 
     #[test]
     fn test_i32x16_basic() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = i32x16::splat(token, 10);
             let b = i32x16::splat(token, 20);
             let c = a + b;
@@ -254,7 +254,7 @@ mod avx512_tests {
 
     #[test]
     fn test_i32x16_load_store() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let data: [i32; 16] = core::array::from_fn(|i| i as i32);
             let v = i32x16::load(token, &data);
             let mut out = [0i32; 16];
@@ -265,7 +265,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f64x8_basic() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = f64x8::splat(token, 2.5);
             let b = f64x8::splat(token, 1.5);
             let sum = a + b;
@@ -275,7 +275,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_math_ops() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let v = f32x16::from_array(
                 token,
                 [
@@ -294,7 +294,7 @@ mod avx512_tests {
 
     #[test]
     fn test_f32x16_fma() {
-        if let Some(token) = Avx512Token::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = f32x16::splat(token, 2.0);
             let b = f32x16::splat(token, 3.0);
             let c = f32x16::splat(token, 1.0);
@@ -306,14 +306,41 @@ mod avx512_tests {
     }
 
     #[test]
-    fn test_cast_slice_512() {
-        if let Some(token) = Avx512Token::summon() {
-            let data: [f32; 32] = core::array::from_fn(|i| i as f32);
+    fn test_u8x64_basic() {
+        if let Some(token) = X64V3Token::summon() {
+            let a = u8x64::splat(token, 100);
+            let b = u8x64::splat(token, 50);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 150);
+            }
+        }
+    }
 
-            let vectors = f32x16::cast_slice(token, &data).unwrap();
-            assert_eq!(vectors.len(), 2);
-            assert_eq!(vectors[0].to_array()[0], 0.0);
-            assert_eq!(vectors[1].to_array()[0], 16.0);
+    #[test]
+    fn test_i16x32_basic() {
+        if let Some(token) = X64V3Token::summon() {
+            let a = i16x32::splat(token, 1000);
+            let b = i16x32::splat(token, 2000);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 3000);
+            }
+        }
+    }
+
+    #[test]
+    fn test_u64x8_basic() {
+        if let Some(token) = X64V3Token::summon() {
+            let a = u64x8::splat(token, 42);
+            let b = u64x8::splat(token, 58);
+            let c = a + b;
+            let arr = c.to_array();
+            for &v in &arr {
+                assert_eq!(v, 100);
+            }
         }
     }
 }
