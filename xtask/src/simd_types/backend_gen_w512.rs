@@ -72,6 +72,9 @@ impl W512Type {
         matches!(self.kind, W512Kind::Float | W512Kind::SignedInt)
     }
 
+    // The following methods are for native AVX-512 (V4) backend generation,
+    // which is deferred. Keep them for future use.
+    #[allow(dead_code)]
     /// x86 AVX-512 inner type
     fn x86_v4_inner(&self) -> &'static str {
         match self.kind {
@@ -128,6 +131,7 @@ impl W512Type {
         format!("{upper}x{half_lanes}Backend")
     }
 
+    #[allow(dead_code)]
     /// Scalar repr type
     fn scalar_repr(&self) -> String {
         self.array_type()
@@ -180,6 +184,7 @@ impl W512Type {
         format!("{upper}x{quarter_lanes}Backend")
     }
 
+    #[allow(dead_code)]
     /// x86 AVX-512 intrinsic suffix for float ops: "ps" or "pd"
     fn x86_float_suffix(&self) -> &'static str {
         match self.elem {
@@ -189,6 +194,7 @@ impl W512Type {
         }
     }
 
+    #[allow(dead_code)]
     /// x86 intrinsic suffix for integer set1
     fn x86_set1_suffix(&self) -> &'static str {
         match self.elem_bits {
@@ -200,6 +206,7 @@ impl W512Type {
         }
     }
 
+    #[allow(dead_code)]
     /// x86 intrinsic suffix for integer arithmetic
     fn x86_arith_suffix(&self) -> &'static str {
         match self.elem_bits {
@@ -211,6 +218,7 @@ impl W512Type {
         }
     }
 
+    #[allow(dead_code)]
     /// x86 AVX-512 suffix for signed min/max/comparison
     fn x86_minmax_suffix(&self) -> &'static str {
         match (self.is_signed(), self.elem_bits) {
@@ -226,16 +234,19 @@ impl W512Type {
         }
     }
 
+    #[allow(dead_code)]
     /// Whether this integer type has native AVX-512 multiply (16-bit, 32-bit)
     fn has_native_avx512_mul(&self) -> bool {
         matches!(self.elem_bits, 16 | 32)
     }
 
+    #[allow(dead_code)]
     /// AVX-512 mask type for comparisons
     fn avx512_mask_type(&self) -> String {
         format!("__mmask{}", self.lanes)
     }
 
+    #[allow(dead_code)]
     /// Lanes per 128-bit sub-vector
     fn lanes_per_128(&self) -> usize {
         128 / self.elem_bits
@@ -1109,7 +1120,7 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
     let trait_name = ty.trait_name();
     let half_trait = ty.half_backend_trait();
     let v3_repr = ty.x86_v3_repr();
-    let half = ty.x86_v3_half();
+    let _half = ty.x86_v3_half();
     let elem = ty.elem;
     let lanes = ty.lanes;
     let half_lanes = lanes / 2;
@@ -1579,7 +1590,7 @@ fn generate_4way_polyfill_impl(
     } else {
         ty.wasm_repr().to_string()
     };
-    let q_type = if token == "NeonToken" {
+    let _q_type = if token == "NeonToken" {
         ty.neon_128_type().to_string()
     } else {
         "v128".to_string()
