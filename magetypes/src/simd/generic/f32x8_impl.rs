@@ -509,6 +509,44 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
     pub fn from_i32(_: T, v: super::i32x8<T>) -> Self {
         Self::from_repr_unchecked(T::convert_i32_to_f32(v.into_repr()))
     }
+
+    // ====== Backward-compatible aliases (old generated API names) ======
+
+    /// Alias for [`bitcast_to_i32`](Self::bitcast_to_i32).
+    #[inline(always)]
+    pub fn bitcast_i32x8(self) -> super::i32x8<T> {
+        self.bitcast_to_i32()
+    }
+
+    /// Alias for [`to_i32`](Self::to_i32).
+    #[inline(always)]
+    pub fn to_i32x8(self) -> super::i32x8<T> {
+        self.to_i32()
+    }
+
+    /// Alias for [`to_i32_round`](Self::to_i32_round).
+    #[inline(always)]
+    pub fn to_i32x8_round(self) -> super::i32x8<T> {
+        self.to_i32_round()
+    }
+
+    /// Alias for [`from_i32`](Self::from_i32).
+    #[inline(always)]
+    pub fn from_i32x8(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32(token, v)
+    }
+
+    /// Alias for [`bitcast_ref_i32`](Self::bitcast_ref_i32) (from block_ops).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x8(&self) -> &super::i32x8<T> {
+        self.bitcast_ref_i32()
+    }
+
+    /// Alias for [`bitcast_mut_i32`](Self::bitcast_mut_i32) (from block_ops).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x8(&mut self) -> &mut super::i32x8<T> {
+        self.bitcast_mut_i32()
+    }
 }
 
 // ============================================================================
@@ -517,6 +555,11 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
 
 #[cfg(target_arch = "x86_64")]
 impl f32x8<archmage::X64V3Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "x86::v3::f32x8"
+    }
+
     /// Get the raw `__m256` value.
     #[inline(always)]
     pub fn raw(self) -> core::arch::x86_64::__m256 {

@@ -504,8 +504,11 @@ fn test_f32x4_bitcast_i32x4_roundtrip() {
 
 #[test]
 fn test_i32x8_bitcast_u32x8() {
+    // Uses old concrete type — generic i32x8<T> doesn't have u32x8 bitcast yet
+    // (blocked on generic u32x8 type, task #12)
+    use magetypes::simd::x86::w256::i32x8 as old_i32x8;
     if let Some(token) = X64V3Token::summon() {
-        let i = i32x8::splat(token, -1);
+        let i = old_i32x8::splat(token, -1);
         let u = i.bitcast_u32x8();
         assert_eq!(u[0], u32::MAX);
         let i2 = u.bitcast_i32x8();
@@ -535,8 +538,11 @@ fn test_f32x8_bitcast_mut() {
 
 #[test]
 fn test_f64x4_bitcast_i64x4_roundtrip() {
+    // Uses old concrete type — generic f64x4<T> doesn't have i64x4 bitcast yet
+    // (blocked on generic i64x4 type, task #12)
+    use magetypes::simd::x86::w256::f64x4 as old_f64x4;
     if let Some(token) = X64V3Token::summon() {
-        let f = f64x4::splat(token, 1.0f64);
+        let f = old_f64x4::splat(token, 1.0f64);
         let i = f.bitcast_i64x4();
         // IEEE 754: 1.0f64 = 0x3FF0000000000000
         assert_eq!(i[0], 0x3FF0_0000_0000_0000_i64);

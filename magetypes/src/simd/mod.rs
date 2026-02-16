@@ -16,23 +16,28 @@
 //! }
 //! ```
 
-// All generated code lives in the generated/ subfolder
+// All generated code lives in the generated/ subfolder.
+// The old per-platform types are being replaced by generic strategy-pattern types.
+// During migration, both systems coexist: the 6 migrated types (f32x4, f32x8,
+// f64x2, f64x4, i32x4, i32x8) are generic type aliases below, while remaining
+// integer types still use old generated code.
 mod generated;
 
 // Scalar polyfill types (f32x1, i32x1, etc.) for #[magetypes] fallback
 pub mod scalar;
 
-// Re-export everything from generated module
+// Re-export non-migrated types from generated module
 pub use generated::*;
 
 // Re-export scalar types
 pub use scalar::*;
 
 // ============================================================================
-// Strategy-pattern generic SIMD types (Phase 1)
+// Strategy-pattern generic SIMD types
 //
-// These coexist with the old per-platform types above. The generic types
-// live in `backends`, `impls`, and `generic` submodules.
+// The generic types use `f32x8<T>` where `T` is a backend token type
+// (X64V3Token, NeonToken, ScalarToken, etc.). Write one function generic
+// over `T: F32x8Backend`, get monomorphized per backend at dispatch time.
 // ============================================================================
 
 /// Backend traits that define SIMD operations per token type.
@@ -43,3 +48,45 @@ mod impls;
 
 /// Generic SIMD types parameterized by backend (e.g., `generic::f32x8<x64v3>`).
 pub mod generic;
+
+// ============================================================================
+// Type aliases: map the 6 migrated type names to their generic versions.
+//
+// On x86_64, `f32x8` = `generic::f32x8<X64V3Token>` (backed by __m256).
+// On x86_64, `f32x4` = `generic::f32x4<X64V3Token>` (backed by __m128).
+//
+// These aliases ensure existing code using `simd::f32x8::splat(token, 1.0)`
+// continues to work unchanged, while gaining the ability to write generic
+// functions over `T: F32x8Backend`.
+//
+// Old concrete types remain accessible at their full paths:
+//   `simd::x86::w256::f32x8` (old per-platform type)
+// ============================================================================
+
+#[allow(non_camel_case_types)]
+mod _type_aliases {
+    /// 4-lane f32 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type f32x4 = super::generic::f32x4<archmage::X64V3Token>;
+
+    /// 8-lane f32 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type f32x8 = super::generic::f32x8<archmage::X64V3Token>;
+
+    /// 2-lane f64 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type f64x2 = super::generic::f64x2<archmage::X64V3Token>;
+
+    /// 4-lane f64 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type f64x4 = super::generic::f64x4<archmage::X64V3Token>;
+
+    /// 4-lane i32 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type i32x4 = super::generic::i32x4<archmage::X64V3Token>;
+
+    /// 8-lane i32 SIMD vector (generic, backed by native intrinsics).
+    #[cfg(target_arch = "x86_64")]
+    pub type i32x8 = super::generic::i32x8<archmage::X64V3Token>;
+}
+pub use _type_aliases::*;

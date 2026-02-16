@@ -457,6 +457,11 @@ impl<T: F64x4Backend> core::fmt::Debug for f64x4<T> {
 
 #[cfg(target_arch = "x86_64")]
 impl f64x4<archmage::X64V3Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "x86::v3::f64x4"
+    }
+
     /// Get the raw `__m256d` value.
     #[inline(always)]
     pub fn raw(self) -> core::arch::x86_64::__m256d {

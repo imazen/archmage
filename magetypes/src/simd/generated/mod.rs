@@ -273,11 +273,14 @@ pub mod wasm {
     pub mod w128;
 }
 
-// Re-export all types
+// Re-export types (excluding those migrated to generic strategy-pattern types).
+// The 6 migrated types (f32x4, f32x8, f64x2, f64x4, i32x4, i32x8) are re-exported
+// as type aliases from simd/mod.rs pointing to generic::<T> versions instead.
+// Old concrete types remain accessible at e.g. simd::x86::w256::f32x8 for migration.
 #[cfg(target_arch = "x86_64")]
-pub use x86::w128::*;
+pub use x86::w128::{i8x16, i16x8, i64x2, u8x16, u16x8, u32x4, u64x2};
 #[cfg(target_arch = "x86_64")]
-pub use x86::w256::*;
+pub use x86::w256::{i8x32, i16x16, i64x4, u8x32, u16x16, u32x8, u64x4};
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 pub use x86::w512::*;
 

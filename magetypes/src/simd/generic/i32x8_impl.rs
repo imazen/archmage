@@ -193,6 +193,24 @@ impl<T: I32x8Backend> i32x8<T> {
         Self(T::shr_logical_const::<N>(self.0), PhantomData)
     }
 
+    /// Alias for [`shl_const`](Self::shl_const).
+    #[inline(always)]
+    pub fn shl<const N: i32>(self) -> Self {
+        self.shl_const::<N>()
+    }
+
+    /// Alias for [`shr_arithmetic_const`](Self::shr_arithmetic_const).
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        self.shr_arithmetic_const::<N>()
+    }
+
+    /// Alias for [`shr_logical_const`](Self::shr_logical_const).
+    #[inline(always)]
+    pub fn shr_logical<const N: i32>(self) -> Self {
+        self.shr_logical_const::<N>()
+    }
+
     // ====== Bitwise ======
 
     /// Bitwise NOT.
@@ -417,6 +435,20 @@ impl<T: crate::simd::backends::F32x8Convert> i32x8<T> {
     pub fn to_f32(self) -> super::f32x8<T> {
         super::f32x8::from_repr_unchecked(T::convert_i32_to_f32(self.0))
     }
+
+    // ====== Backward-compatible aliases (old generated API names) ======
+
+    /// Alias for [`bitcast_to_f32`](Self::bitcast_to_f32).
+    #[inline(always)]
+    pub fn bitcast_f32x8(self) -> super::f32x8<T> {
+        self.bitcast_to_f32()
+    }
+
+    /// Alias for [`to_f32`](Self::to_f32).
+    #[inline(always)]
+    pub fn to_f32x8(self) -> super::f32x8<T> {
+        self.to_f32()
+    }
 }
 
 // ============================================================================
@@ -425,6 +457,11 @@ impl<T: crate::simd::backends::F32x8Convert> i32x8<T> {
 
 #[cfg(target_arch = "x86_64")]
 impl i32x8<archmage::X64V3Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "x86::v3::i32x8"
+    }
+
     /// Get the raw `__m256i` value.
     #[inline(always)]
     pub fn raw(self) -> core::arch::x86_64::__m256i {
