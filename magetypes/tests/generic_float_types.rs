@@ -340,7 +340,10 @@ fn f64x4_scalar_ops() {
     let b = f64x4::splat(ScalarToken, 10.0);
     assert_eq!((a + b).to_array(), [11.0, 12.0, 13.0, 14.0]);
     assert_eq!(a.reduce_add(), 10.0);
-    assert_eq!(a.sqrt().to_array(), [1.0, f64::sqrt(2.0), f64::sqrt(3.0), 2.0]);
+    assert_eq!(
+        a.sqrt().to_array(),
+        [1.0, f64::sqrt(2.0), f64::sqrt(3.0), 2.0]
+    );
 }
 
 #[test]

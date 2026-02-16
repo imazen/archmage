@@ -64,9 +64,8 @@ mod tests {
         let t = get_x64v3();
         let input = f32x8::from_array(t, [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0]);
         let result = input.log2_lowp().to_array();
-        let expected: [f32; 8] = core::array::from_fn(|i| {
-            [1.5_f32, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0][i].log2()
-        });
+        let expected: [f32; 8] =
+            core::array::from_fn(|i| [1.5_f32, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0][i].log2());
         assert_close_8(result, expected, 0.02, "log2_lowp general");
     }
 
@@ -84,9 +83,8 @@ mod tests {
         let t = get_x64v3();
         let input = f32x8::from_array(t, [0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0]);
         let result = input.exp2_lowp().to_array();
-        let expected: [f32; 8] = core::array::from_fn(|i| {
-            [0.5_f32, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0][i].exp2()
-        });
+        let expected: [f32; 8] =
+            core::array::from_fn(|i| [0.5_f32, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0][i].exp2());
         assert_close_8(result, expected, 0.02, "exp2_lowp fractional");
     }
 
@@ -158,8 +156,14 @@ mod tests {
         let result = input.log2_midp().to_array();
 
         // 0 → -inf
-        assert!(result[0].is_infinite() && result[0].is_sign_negative(), "log2(0) = -inf");
-        assert!(result[4].is_infinite() && result[4].is_sign_negative(), "log2(0) = -inf");
+        assert!(
+            result[0].is_infinite() && result[0].is_sign_negative(),
+            "log2(0) = -inf"
+        );
+        assert!(
+            result[4].is_infinite() && result[4].is_sign_negative(),
+            "log2(0) = -inf"
+        );
 
         // negative → NaN
         assert!(result[1].is_nan(), "log2(-1) = NaN");
@@ -192,7 +196,16 @@ mod tests {
     #[test]
     fn f32x8_ln_midp() {
         let t = get_x64v3();
-        let vals = [1.0, core::f32::consts::E, 10.0, 0.5, 100.0, 0.1, 7.389, 20.0];
+        let vals = [
+            1.0,
+            core::f32::consts::E,
+            10.0,
+            0.5,
+            100.0,
+            0.1,
+            7.389,
+            20.0,
+        ];
         let input = f32x8::from_array(t, vals);
         let result = input.ln_midp().to_array();
         let expected: [f32; 8] = core::array::from_fn(|i| vals[i].ln());
@@ -316,13 +329,19 @@ mod tests {
         // _unchecked and normal should agree on valid inputs
         let log2_normal = input.log2_lowp().to_array();
         let log2_unchecked = input.log2_lowp_unchecked().to_array();
-        assert_eq!(log2_normal, log2_unchecked, "log2_lowp == log2_lowp_unchecked on valid input");
+        assert_eq!(
+            log2_normal, log2_unchecked,
+            "log2_lowp == log2_lowp_unchecked on valid input"
+        );
 
         let exp_vals = [0.0, 1.0, 2.0, -1.0, 0.5, -0.5, 3.0, -2.0];
         let exp_input = f32x8::from_array(t, exp_vals);
         let exp_normal = exp_input.exp2_lowp().to_array();
         let exp_unchecked = exp_input.exp2_lowp_unchecked().to_array();
-        assert_eq!(exp_normal, exp_unchecked, "exp2_lowp == exp2_lowp_unchecked on valid input");
+        assert_eq!(
+            exp_normal, exp_unchecked,
+            "exp2_lowp == exp2_lowp_unchecked on valid input"
+        );
     }
 
     // ====== f32x4 Tests (X64V3Token) ======
@@ -491,8 +510,12 @@ mod tests {
         let scalar_t = ScalarToken;
         let vals = [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0];
 
-        let x86_result = f32x8::from_array(x86_t, vals).log2_midp_unchecked().to_array();
-        let scalar_result = f32x8::from_array(scalar_t, vals).log2_midp_unchecked().to_array();
+        let x86_result = f32x8::from_array(x86_t, vals)
+            .log2_midp_unchecked()
+            .to_array();
+        let scalar_result = f32x8::from_array(scalar_t, vals)
+            .log2_midp_unchecked()
+            .to_array();
 
         // Both should be close to std::f32::log2 (may differ by a few ULP due to FMA)
         let expected: [f32; 8] = core::array::from_fn(|i| vals[i].log2());

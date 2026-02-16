@@ -294,8 +294,14 @@ fn i32x4_x86_scalar_agree() {
 
     assert_eq!(x86.abs().to_array(), scalar.abs().to_array());
     assert_eq!(x86.reduce_add(), scalar.reduce_add());
-    assert_eq!(x86.shl_const::<3>().to_array(), scalar.shl_const::<3>().to_array());
-    assert_eq!(x86.shr_arithmetic_const::<2>().to_array(), scalar.shr_arithmetic_const::<2>().to_array());
+    assert_eq!(
+        x86.shl_const::<3>().to_array(),
+        scalar.shl_const::<3>().to_array()
+    );
+    assert_eq!(
+        x86.shr_arithmetic_const::<2>().to_array(),
+        scalar.shr_arithmetic_const::<2>().to_array()
+    );
 }
 
 // ============================================================================

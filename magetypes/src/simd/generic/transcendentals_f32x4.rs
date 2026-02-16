@@ -76,9 +76,7 @@ impl<T: F32x4Convert> f32x4<T> {
         const C2: f32 = 0.240_226_5;
         const C3: f32 = 0.055_504_11;
 
-        let x = self
-            .max(splat_f32::<T>(-126.0))
-            .min(splat_f32::<T>(126.0));
+        let x = self.max(splat_f32::<T>(-126.0)).min(splat_f32::<T>(126.0));
         let xi = x.floor();
         let xf = x - xi;
 
@@ -124,8 +122,7 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Low-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
-        self.log2_lowp()
-            * splat_f32::<T>(core::f32::consts::LN_2 / core::f32::consts::LN_10)
+        self.log2_lowp() * splat_f32::<T>(core::f32::consts::LN_2 / core::f32::consts::LN_10)
     }
 
     /// Low-precision base-10 logarithm, no edge case handling.
@@ -192,8 +189,11 @@ impl<T: F32x4Convert> f32x4<T> {
     pub fn log2_midp(self) -> Self {
         let result = self.log2_midp_unchecked();
         let zero = splat_f32::<T>(0.0);
-        let result =
-            Self::blend(self.simd_eq(zero), splat_f32::<T>(f32::NEG_INFINITY), result);
+        let result = Self::blend(
+            self.simd_eq(zero),
+            splat_f32::<T>(f32::NEG_INFINITY),
+            result,
+        );
         Self::blend(self.simd_lt(zero), splat_f32::<T>(f32::NAN), result)
     }
 
@@ -282,8 +282,7 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Mid-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_midp(self) -> Self {
-        self.log2_midp()
-            * splat_f32::<T>(core::f32::consts::LN_2 / core::f32::consts::LN_10)
+        self.log2_midp() * splat_f32::<T>(core::f32::consts::LN_2 / core::f32::consts::LN_10)
     }
 
     /// Mid-precision base-10 logarithm, no edge case handling.
@@ -331,12 +330,9 @@ impl<T: F32x4Convert> f32x4<T> {
         let abs_x = self.abs();
 
         let abs_arr = abs_x.to_array();
-        let approx_arr: [f32; 4] = core::array::from_fn(|i| {
-            f32::from_bits((abs_arr[i].to_bits() / 3) + MAGIC)
-        });
-        let mut y = f32x4::from_repr_unchecked(
-            <T as F32x4Backend>::from_array(approx_arr),
-        );
+        let approx_arr: [f32; 4] =
+            core::array::from_fn(|i| f32::from_bits((abs_arr[i].to_bits() / 3) + MAGIC));
+        let mut y = f32x4::from_repr_unchecked(<T as F32x4Backend>::from_array(approx_arr));
 
         let three = splat_f32::<T>(3.0);
         let two_thirds = splat_f32::<T>(TWO_THIRDS);
