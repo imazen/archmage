@@ -21,19 +21,11 @@ impl SimdToken for Wasm128Token {
 
     #[inline]
     fn compiled_with() -> Option<bool> {
-        #[cfg(all(
-            target_arch = "wasm32",
-            target_feature = "simd128",
-            not(feature = "testable_dispatch")
-        ))]
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         {
             Some(true)
         }
-        #[cfg(not(all(
-            target_arch = "wasm32",
-            target_feature = "simd128",
-            not(feature = "testable_dispatch")
-        )))]
+        #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
         {
             None
         }
@@ -42,19 +34,11 @@ impl SimdToken for Wasm128Token {
     #[allow(deprecated)]
     #[inline]
     fn summon() -> Option<Self> {
-        #[cfg(all(
-            target_arch = "wasm32",
-            target_feature = "simd128",
-            not(feature = "testable_dispatch")
-        ))]
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         {
             Some(unsafe { Self::forge_token_dangerously() })
         }
-        #[cfg(not(all(
-            target_arch = "wasm32",
-            target_feature = "simd128",
-            not(feature = "testable_dispatch")
-        )))]
+        #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
         {
             None
         }

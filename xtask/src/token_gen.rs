@@ -286,12 +286,14 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
             "}
         }
         "wasm" => {
+            // No testable_dispatch guard for WASM — simd128 is a compile-time
+            // decision with no runtime detection to toggle.
             formatdoc! {"
                 {INDENT}#[inline]
                 {INDENT}fn compiled_with() -> Option<bool> {{
-                {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"{dct_guard}))]
+                {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
                 {INDENT}    {{ Some(true) }}
-                {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\"{dct_guard})))]
+                {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]
                 {INDENT}    {{ None }}
                 {INDENT}}}
             "}
@@ -407,17 +409,19 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
 }
 
 fn gen_summon_wasm() -> String {
-    let dct_guard = ", not(feature = \"testable_dispatch\")";
-
+    // No testable_dispatch guard for WASM — simd128 is a compile-time
+    // decision with no runtime detection to toggle. The testable_dispatch
+    // feature only makes sense for x86/aarch64 where runtime CPUID checks
+    // can be bypassed.
     formatdoc! {"
         {INDENT}#[allow(deprecated)]
         {INDENT}#[inline]
         {INDENT}fn summon() -> Option<Self> {{
-        {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"{dct_guard}))]
+        {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
         {INDENT}    {{
         {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
         {INDENT}    }}
-        {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\"{dct_guard})))]
+        {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]
         {INDENT}    {{
         {INDENT}        None
         {INDENT}    }}
