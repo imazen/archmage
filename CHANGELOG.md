@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.3 — 2026-02-19
+
+Complete `X64CryptoToken` integration with `incant!` dispatch.
+
+- **`x64_crypto` tier in `incant!`** — dispatch to `X64CryptoToken` via explicit tier lists: `incant!(func(data), [v4x, x64_crypto, arm_v2, neon_aes])`. Priority 25 (between v3=30 and v2=20), so crypto is tried before plain v2.
+
+- **`IntoConcreteToken::as_x64_crypto()`** — safe downcasting to `X64CryptoToken` for passthrough dispatch.
+
+- **Prelude** — `X64CryptoToken` now re-exported from `archmage::prelude::*`.
+
 ## 0.8.2 — 2026-02-19
 
 New `X64CryptoToken` for PCLMULQDQ + AES-NI.
