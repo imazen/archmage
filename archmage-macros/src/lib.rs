@@ -197,6 +197,58 @@ fn traits_to_features(trait_names: &[String]) -> Option<Vec<&'static str>> {
     }
 }
 
+/// Trait names that don't map to any CPU features. These are valid in the type
+/// system but cannot be used as token bounds in `#[arcane]`/`#[rite]` because
+/// the macros need concrete features to generate `#[target_feature]` attributes.
+const FEATURELESS_TRAIT_NAMES: &[&str] = &["SimdToken", "IntoConcreteToken"];
+
+/// Check if any trait names are featureless (no CPU feature mapping).
+/// Returns the first featureless trait name found.
+fn find_featureless_trait(trait_names: &[String]) -> Option<&'static str> {
+    for name in trait_names {
+        for &featureless in FEATURELESS_TRAIT_NAMES {
+            if name == featureless {
+                return Some(featureless);
+            }
+        }
+    }
+    None
+}
+
+/// Diagnose why `find_token_param` failed. Returns the name of a featureless
+/// trait if the signature has a parameter bounded by one (e.g., `SimdToken`).
+fn diagnose_featureless_token(sig: &Signature) -> Option<&'static str> {
+    for arg in &sig.inputs {
+        if let FnArg::Typed(PatType { ty, .. }) = arg {
+            if let Some(info) = extract_token_type_info(ty) {
+                match &info {
+                    TokenTypeInfo::ImplTrait(names) => {
+                        if let Some(name) = find_featureless_trait(names) {
+                            return Some(name);
+                        }
+                    }
+                    TokenTypeInfo::Generic(type_name) => {
+                        // Check if the type name itself is a featureless trait
+                        // (e.g., `token: SimdToken` used as a bare path)
+                        let as_vec = vec![type_name.clone()];
+                        if let Some(name) = find_featureless_trait(&as_vec) {
+                            return Some(name);
+                        }
+                        // Check generic bounds (e.g., `T: SimdToken`)
+                        if let Some(bounds) = find_generic_bounds(sig, type_name) {
+                            if let Some(name) = find_featureless_trait(&bounds) {
+                                return Some(name);
+                            }
+                        }
+                    }
+                    TokenTypeInfo::Concrete(_) => {}
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Result of finding a token parameter in a function signature.
 struct TokenParamInfo {
     /// The parameter identifier (e.g., `token`)
@@ -300,10 +352,26 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
     } = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
+            // Check for specific misuse: featureless traits like SimdToken
+            if let Some(trait_name) = diagnose_featureless_token(&input_fn.sig) {
+                let msg = format!(
+                    "`{trait_name}` cannot be used as a token bound in #[{macro_name}] \
+                     because it doesn't specify any CPU features.\n\
+                     \n\
+                     #[{macro_name}] needs concrete features to generate #[target_feature]. \
+                     Use a concrete token or a feature trait:\n\
+                     \n\
+                     Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...\n\
+                     Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ..."
+                );
+                return syn::Error::new_spanned(&input_fn.sig, msg)
+                    .to_compile_error()
+                    .into();
+            }
             let msg = format!(
                 "{} requires a token parameter. Supported forms:\n\
                  - Concrete: `token: X64V3Token`\n\
-                 - impl Trait: `token: impl Has256BitSimd`\n\
+                 - impl Trait: `token: impl HasX64V2`\n\
                  - Generic: `fn foo<T: HasX64V2>(token: T, ...)`\n\
                  - With self: `#[{}(_self = Type)] fn method(&self, token: impl HasNeon, ...)`",
                 macro_name, macro_name
@@ -604,16 +672,21 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
 ///
 /// - **x86_64 tiers**: `X64V2Token`, `X64V3Token` / `Desktop64` / `Avx2FmaToken`,
 ///   `X64V4Token` / `Avx512Token` / `Server64`, `X64V4xToken`, `Avx512Fp16Token`
-/// - **ARM**: `NeonToken` / `Arm64`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
+/// - **ARM**: `NeonToken` / `Arm64`, `Arm64V2Token`, `Arm64V3Token`,
+///   `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
 /// - **WASM**: `Wasm128Token`
 ///
 /// # Supported Trait Bounds
 ///
 /// - **x86_64 tiers**: `HasX64V2`, `HasX64V4`
-/// - **ARM**: `HasNeon`, `HasNeonAes`, `HasNeonSha3`
+/// - **ARM**: `HasNeon`, `HasNeonAes`, `HasNeonSha3`, `HasArm64V2`, `HasArm64V3`
 ///
 /// **Preferred:** Use concrete tokens (`X64V3Token`, `Desktop64`, `NeonToken`) directly.
 /// Concrete token types also work as trait bounds (e.g., `impl X64V3Token`).
+///
+/// **Not supported:** `SimdToken` and `IntoConcreteToken` cannot be used as token
+/// bounds because they don't map to any CPU features. The macro needs concrete
+/// features to generate `#[target_feature]` attributes.
 ///
 /// # Options
 ///
@@ -745,6 +818,22 @@ fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
     } = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
+            // Check for specific misuse: featureless traits like SimdToken
+            if let Some(trait_name) = diagnose_featureless_token(&input_fn.sig) {
+                let msg = format!(
+                    "`{trait_name}` cannot be used as a token bound in #[rite] \
+                     because it doesn't specify any CPU features.\n\
+                     \n\
+                     #[rite] needs concrete features to generate #[target_feature]. \
+                     Use a concrete token or a feature trait:\n\
+                     \n\
+                     Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...\n\
+                     Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ..."
+                );
+                return syn::Error::new_spanned(&input_fn.sig, msg)
+                    .to_compile_error()
+                    .into();
+            }
             let msg = "rite requires a token parameter. Supported forms:\n\
                  - Concrete: `token: X64V3Token`\n\
                  - impl Trait: `token: impl HasX64V2`\n\
@@ -1567,6 +1656,8 @@ mod tests {
             "NeonAesToken",
             "NeonSha3Token",
             "NeonCrcToken",
+            "Arm64V2Token",
+            "Arm64V3Token",
         ];
 
         for &name in &tier_tokens {
@@ -1676,5 +1767,62 @@ mod tests {
                 name
             );
         }
+    }
+
+    #[test]
+    fn featureless_traits_are_not_in_registries() {
+        // SimdToken and IntoConcreteToken should NOT be in any feature registry
+        // because they don't map to CPU features
+        for &name in FEATURELESS_TRAIT_NAMES {
+            assert!(
+                token_to_features(name).is_none(),
+                "`{}` should NOT be in token_to_features() — it has no CPU features",
+                name
+            );
+            assert!(
+                trait_to_features(name).is_none(),
+                "`{}` should NOT be in trait_to_features() — it has no CPU features",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn find_featureless_trait_detects_simdtoken() {
+        let names = vec!["SimdToken".to_string()];
+        assert_eq!(find_featureless_trait(&names), Some("SimdToken"));
+
+        let names = vec!["IntoConcreteToken".to_string()];
+        assert_eq!(find_featureless_trait(&names), Some("IntoConcreteToken"));
+
+        // Feature-bearing traits should NOT be detected
+        let names = vec!["HasX64V2".to_string()];
+        assert_eq!(find_featureless_trait(&names), None);
+
+        let names = vec!["HasNeon".to_string()];
+        assert_eq!(find_featureless_trait(&names), None);
+
+        // Mixed: if SimdToken is among real traits, still detected
+        let names = vec!["SimdToken".to_string(), "HasX64V2".to_string()];
+        assert_eq!(find_featureless_trait(&names), Some("SimdToken"));
+    }
+
+    #[test]
+    fn arm64_v2_v3_traits_are_cumulative() {
+        let v2_features = trait_to_features("HasArm64V2").unwrap();
+        let v3_features = trait_to_features("HasArm64V3").unwrap();
+
+        for &f in v2_features {
+            assert!(
+                v3_features.contains(&f),
+                "HasArm64V3 should include v2 feature `{}` but doesn't",
+                f
+            );
+        }
+
+        assert!(
+            v3_features.len() > v2_features.len(),
+            "HasArm64V3 should have more features than HasArm64V2"
+        );
     }
 }

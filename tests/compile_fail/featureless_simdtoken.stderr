@@ -1,0 +1,10 @@
+error: `SimdToken` cannot be used as a token bound in #[arcane] because it doesn't specify any CPU features.
+
+       #[arcane] needs concrete features to generate #[target_feature]. Use a concrete token or a feature trait:
+
+       Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...
+       Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ...
+ --> tests/compile_fail/featureless_simdtoken.rs:9:1
+  |
+9 | fn bad_simdtoken(token: impl archmage::SimdToken, data: &[f32]) -> f32 {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
