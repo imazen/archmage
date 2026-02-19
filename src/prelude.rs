@@ -185,6 +185,7 @@ pub use safe_unaligned_simd::x86::*;
     feature = "safe_unaligned_simd",
     any(target_arch = "aarch64", target_arch = "arm64ec")
 ))]
+#[allow(unused_imports)] // All names overlap with core::arch — users import explicitly
 pub use safe_unaligned_simd::aarch64::*;
 
 #[cfg(all(feature = "safe_unaligned_simd", target_arch = "wasm32"))]

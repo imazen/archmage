@@ -7,7 +7,9 @@ use crate::tokens::{Has128BitSimd, HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, 
 use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 // Cache statics: 0 = unknown, 1 = unavailable, 2 = available
+#[allow(dead_code)]
 pub(super) static NEON_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static NEON_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static NEON_AES_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static NEON_AES_DISABLED: AtomicBool = AtomicBool::new(false);

@@ -135,10 +135,13 @@ fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
             let cache_name = cache_var_name(&token.name);
             let disabled_name = disabled_var_name(&token.name);
 
-            // Tokens whose features are all x86_64 baseline (sse/sse2 only) have
+            // Tokens whose features are all baseline for their architecture have
             // their cache/disabled statics only used when `testable_dispatch`
             // is enabled. Suppress dead_code warnings for the default case.
-            let needs_allow = arch == "x86" && is_x86_baseline_only(token);
+            // - x86: SSE/SSE2 are always available on x86_64
+            // - aarch64: NEON is always available (part of the AArch64 spec)
+            let needs_allow = (arch == "x86" && is_x86_baseline_only(token))
+                || (arch == "aarch64" && is_arm_baseline_only(token));
             let allow_attr = if needs_allow {
                 "#[allow(dead_code)]\n"
             } else {
@@ -902,6 +905,10 @@ fn feature_flag_strings(token: &TokenDef) -> (&'static str, String, String, Stri
 /// Such tokens are always available on x86_64 and don't need runtime detection.
 fn is_x86_baseline_only(token: &TokenDef) -> bool {
     token.features.iter().all(|f| f == "sse" || f == "sse2")
+}
+
+fn is_arm_baseline_only(token: &TokenDef) -> bool {
+    token.features.iter().all(|f| f == "neon")
 }
 
 /// Determine which generated module file a token lives in.
