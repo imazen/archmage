@@ -163,6 +163,7 @@ pub use tokens::{
     Sse2Token,
     // WASM tokens
     Wasm128Token,
+    X64CryptoToken,
     X64V1Token,
     X64V2Token,
     X64V3Token,

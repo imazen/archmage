@@ -33,6 +33,7 @@
 //! - [`Arm64`] = [`NeonToken`] — NEON (all 64-bit ARM)
 //!
 //! Also includes: [`ScalarToken`] (always available), [`X64V2Token`],
+//! [`X64CryptoToken`] (V2 + PCLMULQDQ + AES-NI),
 //! [`Wasm128Token`], [`NeonAesToken`], [`NeonSha3Token`], [`NeonCrcToken`],
 //! and the AVX-512 tokens ([`Avx512Token`], [`X64V4xToken`],
 //! [`Avx512Fp16Token`]) when the `avx512` feature is enabled.
@@ -110,8 +111,8 @@
 //! incant!(func(data), [v1, v3, neon])  // only these tiers + scalar
 //! ```
 //!
-//! Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`,
-//! `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
+//! Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
+//! `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`, `scalar`.
 //!
 //! **Required variants per platform (default tiers):**
 //!
@@ -152,7 +153,7 @@ pub use crate::tokens::{
     Arm64, Arm64V2Token, Arm64V3Token, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken,
 };
 pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
-pub use crate::tokens::{Desktop64, Sse2Token, X64V1Token, X64V2Token, X64V3Token};
+pub use crate::tokens::{Desktop64, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3Token};
 
 // -- Macros --
 #[cfg(feature = "macros")]

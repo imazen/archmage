@@ -1116,6 +1116,15 @@ const ALL_TIERS: &[TierDescriptor] = &[
         priority: 30,
     },
     TierDescriptor {
+        name: "x64_crypto",
+        suffix: "x64_crypto",
+        token_path: "archmage::X64CryptoToken",
+        as_method: "as_x64_crypto",
+        target_arch: Some("x86_64"),
+        cargo_feature: None,
+        priority: 25,
+    },
+    TierDescriptor {
         name: "v2",
         suffix: "v2",
         token_path: "archmage::X64V2Token",
@@ -1642,6 +1651,7 @@ mod tests {
         // the macro processes AST before type checking)
         let tier_tokens = [
             "X64V2Token",
+            "X64CryptoToken",
             "X64V3Token",
             "Desktop64",
             "Avx2FmaToken",
