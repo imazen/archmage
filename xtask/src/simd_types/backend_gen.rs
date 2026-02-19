@@ -2566,7 +2566,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -2579,7 +2579,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [{zero_lit}; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 
@@ -2777,13 +2777,13 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn load(data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
             #[inline(always)]
-            fn from_array(arr: {array}) -> v128 {{ Self::load(&arr) }}
+            fn from_array(arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
             #[inline(always)]
             fn store(repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
             #[inline(always)]
             fn to_array(repr: v128) -> {array} {{
                 let mut out = [{zero_lit}; {lanes}];
-                Self::store(repr, &mut out);
+                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
                 out
             }}
 
@@ -4537,13 +4537,13 @@ fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn load(data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
             #[inline(always)]
-            fn from_array(arr: {array}) -> v128 {{ Self::load(&arr) }}
+            fn from_array(arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
             #[inline(always)]
             fn store(repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
             #[inline(always)]
             fn to_array(repr: v128) -> {array} {{
                 let mut out = [0i32; {lanes}];
-                Self::store(repr, &mut out);
+                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
                 out
             }}
 
@@ -4662,7 +4662,7 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -4675,7 +4675,7 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [0i32; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 
@@ -6020,13 +6020,13 @@ fn generate_wasm_native_u32_impl(ty: &U32VecType) -> String {
             #[inline(always)]
             fn load(data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
             #[inline(always)]
-            fn from_array(arr: {array}) -> v128 {{ Self::load(&arr) }}
+            fn from_array(arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
             #[inline(always)]
             fn store(repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
             #[inline(always)]
             fn to_array(repr: v128) -> {array} {{
                 let mut out = [0u32; {lanes}];
-                Self::store(repr, &mut out);
+                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
                 out
             }}
 
@@ -6139,7 +6139,7 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -6152,7 +6152,7 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [0u32; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 

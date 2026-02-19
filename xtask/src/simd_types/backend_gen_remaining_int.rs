@@ -2257,7 +2257,7 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn reduce_add(a: v128) -> {elem} {{
-                let arr = Self::to_array(a);
+                let arr = <Self as {trait_name}>::to_array(a);
                 arr.iter().copied().fold(0{elem}, {elem}::wrapping_add)
             }}
     "#});
@@ -2307,16 +2307,15 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
     // Boolean
     let bitmask_fn = format!("{signed_wp}_bitmask");
     let all_true_fn = format!("{signed_wp}_all_true");
-    let any_true_fn = format!("{signed_wp}_any_true");
 
     body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn all_true(a: v128) -> bool {{ {all_true_fn}(a) }}
             #[inline(always)]
-            fn any_true(a: v128) -> bool {{ {any_true_fn}(a) }}
+            fn any_true(a: v128) -> bool {{ v128_any_true(a) }}
             #[inline(always)]
-            fn bitmask(a: v128) -> u32 {{ {bitmask_fn}(a) }}
+            fn bitmask(a: v128) -> u32 {{ {bitmask_fn}(a) as u32 }}
         }}
     "#});
 
@@ -2388,6 +2387,24 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
         .collect();
     let shr_logical_body = format!("[{}]", shr_logical_items.join(", "));
 
+    // For u64 polyfill, min/max/comparisons don't exist as WASM intrinsics.
+    // Delegate to the native W128 backend trait methods (which have bias-trick polyfills).
+    let native_trait = ty.trait_name().replace(
+        &format!("x{}", ty.lanes),
+        &format!("x{}", ty.lanes_per_128()),
+    );
+
+    let trait_binary_op = |method: &str| -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| {
+                format!(
+                    "<archmage::Wasm128Token as {native_trait}>::{method}(a[{i}], b[{i}])"
+                )
+            })
+            .collect();
+        format!("[{}]", items.join(", "))
+    };
+
     let min_fn = if ty.signed {
         format!("{signed_wp}_min")
     } else {
@@ -2444,7 +2461,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -2457,7 +2474,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [0{elem}; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 
@@ -2484,15 +2501,28 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
         "#, neg = unary_op(&format!("{signed_wp}_neg"))});
     }
 
-    code.push_str(&formatdoc! {r#"
+    // u64 min/max don't exist as WASM intrinsics — delegate to native backend
+    if ty.elem_bits == 64 {
+        code.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{ {min} }}
             #[inline(always)]
             fn max(a: {repr}, b: {repr}) -> {repr} {{ {max} }}
-    "#,
-        min = binary_op(&min_fn),
-        max = binary_op(&max_fn),
-    });
+        "#,
+            min = trait_binary_op("min"),
+            max = trait_binary_op("max"),
+        });
+    } else {
+        code.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn min(a: {repr}, b: {repr}) -> {repr} {{ {min} }}
+            #[inline(always)]
+            fn max(a: {repr}, b: {repr}) -> {repr} {{ {max} }}
+        "#,
+            min = binary_op(&min_fn),
+            max = binary_op(&max_fn),
+        });
+    }
 
     if ty.signed && ty.elem_bits <= 16 {
         code.push_str(&formatdoc! {r#"
@@ -2501,7 +2531,9 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
         "#, abs = unary_op(&format!("{signed_wp}_abs"))});
     }
 
-    code.push_str(&formatdoc! {r#"
+    // u64 unsigned comparisons don't exist as WASM intrinsics — delegate to native backend
+    if ty.elem_bits == 64 {
+        code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn simd_eq(a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
@@ -2515,6 +2547,40 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
             fn simd_gt(a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
             #[inline(always)]
             fn simd_ge(a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
+        "#,
+            eq = binary_op(&eq_fn),
+            ne = binary_op(&ne_fn),
+            lt = trait_binary_op("simd_lt"),
+            le = trait_binary_op("simd_le"),
+            gt = trait_binary_op("simd_gt"),
+            ge = trait_binary_op("simd_ge"),
+        });
+    } else {
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn simd_eq(a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
+            #[inline(always)]
+            fn simd_ne(a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
+            #[inline(always)]
+            fn simd_lt(a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
+            #[inline(always)]
+            fn simd_le(a: {repr}, b: {repr}) -> {repr} {{ {le} }}
+            #[inline(always)]
+            fn simd_gt(a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
+            #[inline(always)]
+            fn simd_ge(a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
+        "#,
+            eq = binary_op(&eq_fn),
+            ne = binary_op(&ne_fn),
+            lt = binary_op(&lt_fn),
+            le = binary_op(&le_fn),
+            gt = binary_op(&gt_fn),
+            ge = binary_op(&ge_fn),
+        });
+    }
+
+    code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn blend(mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
@@ -2523,7 +2589,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn reduce_add(a: {repr}) -> {elem} {{
-                let arr = Self::to_array(a);
+                let arr = <Self as {trait_name}>::to_array(a);
                 arr.iter().copied().fold(0{elem}, {elem}::wrapping_add)
             }}
 
@@ -2541,12 +2607,6 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(a: {repr}) -> {repr} {{ {shr_logical_body} }}
     "#,
-        eq = binary_op(&eq_fn),
-        ne = binary_op(&ne_fn),
-        lt = binary_op(&lt_fn),
-        le = binary_op(&le_fn),
-        gt = binary_op(&gt_fn),
-        ge = binary_op(&ge_fn),
         not = unary_op("v128_not"),
         bitand = binary_op("v128_and"),
         bitor = binary_op("v128_or"),
@@ -2568,14 +2628,13 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
 
     // Boolean
     let all_true_fn = format!("{signed_wp}_all_true");
-    let any_true_fn = format!("{signed_wp}_any_true");
     let bitmask_fn = format!("{signed_wp}_bitmask");
 
     let all_true_items: Vec<String> = (0..sub_count)
         .map(|i| format!("{all_true_fn}(a[{i}])"))
         .collect();
     let any_true_items: Vec<String> = (0..sub_count)
-        .map(|i| format!("{any_true_fn}(a[{i}])"))
+        .map(|i| format!("v128_any_true(a[{i}])"))
         .collect();
 
     code.push_str(&formatdoc! {r#"
