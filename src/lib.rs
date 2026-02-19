@@ -143,12 +143,14 @@ pub use tokens::HasX64V2;
 pub use tokens::HasX64V4;
 
 // AArch64 tier marker traits
-pub use tokens::{HasNeon, HasNeonAes, HasNeonSha3};
+pub use tokens::{HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3};
 
 // All tokens available on all architectures (summon() returns None on wrong arch)
 pub use tokens::{
     // ARM tokens
     Arm64,
+    Arm64V2Token,
+    Arm64V3Token,
     // x86 tier tokens
     Avx2FmaToken,
     Desktop64,

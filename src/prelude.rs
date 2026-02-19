@@ -143,12 +143,14 @@ pub use crate::tokens::HasX64V4;
 pub use crate::tokens::IntoConcreteToken;
 pub use crate::tokens::SimdToken;
 pub use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
-pub use crate::tokens::{HasNeon, HasNeonAes, HasNeonSha3};
+pub use crate::tokens::{HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3};
 
 // -- Tokens (all compile on all platforms; summon() returns None on wrong arch) --
 pub use crate::tokens::ScalarToken;
 pub use crate::tokens::Wasm128Token;
-pub use crate::tokens::{Arm64, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken};
+pub use crate::tokens::{
+    Arm64, Arm64V2Token, Arm64V3Token, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken,
+};
 pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
 pub use crate::tokens::{Desktop64, Sse2Token, X64V1Token, X64V2Token, X64V3Token};
 

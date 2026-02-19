@@ -1,0 +1,39 @@
+name: Detect AArch64 Features
+
+on:
+  workflow_dispatch:
+
+jobs:
+  detect:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04-arm, name: "Linux ARM64 (Cobalt 100 / Neoverse N2)" }
+          - { os: macos-14, name: "macOS 14 (Apple M1)" }
+          - { os: macos-15, name: "macOS 15 (Apple M-series)" }
+          - { os: windows-11-arm, name: "Windows ARM64 (Snapdragon X)" }
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: System info
+        shell: bash
+        run: |
+          echo "=== Runner: ${{ matrix.name }} ==="
+          echo "=== uname ==="
+          uname -a || true
+          echo "=== CPU info ==="
+          if [ -f /proc/cpuinfo ]; then
+            head -50 /proc/cpuinfo
+          elif command -v sysctl &>/dev/null; then
+            sysctl -a 2>/dev/null | grep -i "hw\.\(cpu\|optional\|machine\|model\)" | head -80 || true
+          fi
+
+      - name: Detect features
+        run: cargo run --example detect_features

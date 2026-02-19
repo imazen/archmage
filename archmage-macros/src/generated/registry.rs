@@ -74,6 +74,11 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
         "NeonAesToken" => Some(&["neon", "aes"]),
         "NeonSha3Token" => Some(&["neon", "sha3"]),
         "NeonCrcToken" => Some(&["neon", "crc"]),
+        "Arm64V2Token" => Some(&["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]),
+        "Arm64V3Token" => Some(&[
+            "neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm",
+            "bf16",
+        ]),
         "Wasm128Token" => Some(&["simd128"]),
         _ => None,
     }
@@ -97,6 +102,11 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
         "HasNeon" => Some(&["neon"]),
         "HasNeonAes" => Some(&["neon", "aes"]),
         "HasNeonSha3" => Some(&["neon", "sha3"]),
+        "HasArm64V2" => Some(&["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]),
+        "HasArm64V3" => Some(&[
+            "neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm",
+            "bf16",
+        ]),
 
         // Token types used as bounds — full feature sets
         "X64V1Token" | "Sse2Token" => Some(&["sse", "sse2"]),
@@ -166,6 +176,11 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
         "NeonAesToken" => Some(&["neon", "aes"]),
         "NeonSha3Token" => Some(&["neon", "sha3"]),
         "NeonCrcToken" => Some(&["neon", "crc"]),
+        "Arm64V2Token" => Some(&["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]),
+        "Arm64V3Token" => Some(&[
+            "neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm",
+            "bf16",
+        ]),
         "Wasm128Token" => Some(&["simd128"]),
 
         _ => None,
@@ -187,6 +202,8 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
         "NeonAesToken" => Some("aarch64"),
         "NeonSha3Token" => Some("aarch64"),
         "NeonCrcToken" => Some("aarch64"),
+        "Arm64V2Token" => Some("aarch64"),
+        "Arm64V3Token" => Some("aarch64"),
         "Wasm128Token" => Some("wasm32"),
         _ => None,
     }
@@ -212,6 +229,8 @@ pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
     "NeonAesToken",
     "NeonSha3Token",
     "NeonCrcToken",
+    "Arm64V2Token",
+    "Arm64V3Token",
     "Wasm128Token",
 ];
 
@@ -226,4 +245,6 @@ pub(crate) const ALL_TRAIT_NAMES: &[&str] = &[
     "HasNeon",
     "HasNeonAes",
     "HasNeonSha3",
+    "HasArm64V2",
+    "HasArm64V3",
 ];

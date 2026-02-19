@@ -457,6 +457,18 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
+    /// Try to cast to Arm64V2Token.
+    #[inline(always)]
+    fn as_arm_v2(self) -> Option<Arm64V2Token> {
+        None
+    }
+
+    /// Try to cast to Arm64V3Token.
+    #[inline(always)]
+    fn as_arm_v3(self) -> Option<Arm64V3Token> {
+        None
+    }
+
     /// Try to cast to Wasm128Token.
     #[inline(always)]
     fn as_wasm128(self) -> Option<Wasm128Token> {
@@ -554,6 +566,22 @@ impl IntoConcreteToken for NeonSha3Token {
 impl IntoConcreteToken for NeonCrcToken {
     #[inline(always)]
     fn as_neon_crc(self) -> Option<NeonCrcToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for Arm64V2Token
+impl IntoConcreteToken for Arm64V2Token {
+    #[inline(always)]
+    fn as_arm_v2(self) -> Option<Arm64V2Token> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for Arm64V3Token
+impl IntoConcreteToken for Arm64V3Token {
+    #[inline(always)]
+    fn as_arm_v3(self) -> Option<Arm64V3Token> {
         Some(self)
     }
 }

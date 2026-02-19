@@ -414,6 +414,17 @@ macro_rules! __impl_runtime_only_check {
 /// # Supported Features
 ///
 /// - `"neon"` - NEON (always available on AArch64)
+/// - `"dotprod"` - Dot product (ARMv8.2-A+)
+/// - `"rdm"` - Rounding doubling multiply (ARMv8.1-A+)
+/// - `"fp16"` - Half-precision floating point (ARMv8.2-A+)
+/// - `"fhm"` - FP16 multiply-accumulate (ARMv8.4-A+)
+/// - `"fcma"` - Complex number multiply-add (ARMv8.3-A+)
+/// - `"i8mm"` - Int8 matrix multiply (ARMv8.6-A+)
+/// - `"bf16"` - BFloat16 (ARMv8.6-A+)
+/// - `"aes"` - AES encryption
+/// - `"sha2"` - SHA-256
+/// - `"sha3"` - SHA-3 / SHA-512
+/// - `"crc"` - CRC32 (ARMv8.1-A+)
 /// - `"sve"` - Scalable Vector Extension
 /// - `"sve2"` - SVE2
 #[macro_export]
@@ -421,14 +432,19 @@ macro_rules! is_aarch64_feature_available {
     ("neon") => {{ $crate::__impl_aarch64_feature_check!("neon") }};
     ("sve") => {{ $crate::__impl_aarch64_feature_check!("sve") }};
     ("sve2") => {{ $crate::__impl_aarch64_feature_check!("sve2") }};
-    // Crypto features (stable intrinsics)
+    // Crypto features
     ("aes") => {{ $crate::__impl_aarch64_feature_check!("aes") }};
     ("sha2") => {{ $crate::__impl_aarch64_feature_check!("sha2") }};
     ("sha3") => {{ $crate::__impl_aarch64_feature_check!("sha3") }};
-    ("crc") => {{
-        // Note: std uses "crc" but target_feature uses "crc"
-        $crate::__impl_aarch64_feature_check!("crc")
-    }};
+    ("crc") => {{ $crate::__impl_aarch64_feature_check!("crc") }};
+    // Compute extensions (Arm64-v2 / Arm64-v3)
+    ("dotprod") => {{ $crate::__impl_aarch64_feature_check!("dotprod") }};
+    ("rdm") => {{ $crate::__impl_aarch64_feature_check!("rdm") }};
+    ("fp16") => {{ $crate::__impl_aarch64_feature_check!("fp16") }};
+    ("fhm") => {{ $crate::__impl_aarch64_feature_check!("fhm") }};
+    ("fcma") => {{ $crate::__impl_aarch64_feature_check!("fcma") }};
+    ("i8mm") => {{ $crate::__impl_aarch64_feature_check!("i8mm") }};
+    ("bf16") => {{ $crate::__impl_aarch64_feature_check!("bf16") }};
     // Fallback for other features - runtime only
     ($feature:tt) => {{ $crate::__impl_aarch64_runtime_only_check!($feature) }};
 }
@@ -506,6 +522,76 @@ macro_rules! __impl_aarch64_feature_check {
         #[cfg(not(target_feature = "crc"))]
         {
             $crate::__impl_aarch64_runtime_only_check!("crc")
+        }
+    }};
+    ("dotprod") => {{
+        #[cfg(target_feature = "dotprod")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "dotprod"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("dotprod")
+        }
+    }};
+    ("rdm") => {{
+        #[cfg(target_feature = "rdm")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "rdm"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("rdm")
+        }
+    }};
+    ("fp16") => {{
+        #[cfg(target_feature = "fp16")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "fp16"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("fp16")
+        }
+    }};
+    ("fhm") => {{
+        #[cfg(target_feature = "fhm")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "fhm"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("fhm")
+        }
+    }};
+    ("fcma") => {{
+        #[cfg(target_feature = "fcma")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "fcma"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("fcma")
+        }
+    }};
+    ("i8mm") => {{
+        #[cfg(target_feature = "i8mm")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "i8mm"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("i8mm")
+        }
+    }};
+    ("bf16") => {{
+        #[cfg(target_feature = "bf16")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "bf16"))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!("bf16")
         }
     }};
 }

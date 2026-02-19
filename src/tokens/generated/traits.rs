@@ -38,3 +38,15 @@ pub trait HasNeonAes: HasNeon {}
 ///
 /// SHA3 extension is available on ARMv8.2-A and later.
 pub trait HasNeonSha3: HasNeon {}
+
+/// Marker trait for Arm64-v2 level.
+///
+/// Arm64-v2 includes: NEON, CRC, RDM, DotProd, FP16, AES, SHA2.
+/// Available on Cortex-A55+, Apple M1+, Graviton 2+.
+pub trait HasArm64V2: HasNeon + HasNeonAes {}
+
+/// Marker trait for Arm64-v3 level.
+///
+/// Arm64-v3 adds FHM, FCMA, SHA3, I8MM, BF16 over Arm64-v2.
+/// Available on Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+.
+pub trait HasArm64V3: HasArm64V2 + HasNeonSha3 {}

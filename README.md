@@ -201,6 +201,8 @@ For functions that use platform-specific SIMD types (`f32x8`, `f32x4`, etc.), wr
 | `X64V3Token` | `Desktop64` | AVX2, FMA, BMI2 |
 | `X64V4Token` | `Server64` | AVX-512 (requires `avx512` feature) |
 | `NeonToken` | `Arm64` | NEON |
+| `Arm64V2Token` | | + CRC, RDM, DotProd, FP16, AES, SHA2 (A55+, M1+) |
+| `Arm64V3Token` | | + FHM, FCMA, SHA3, I8MM, BF16 (A510+, M2+, Snapdragon X) |
 | `Wasm128Token` | | WASM SIMD |
 | `ScalarToken` | | Always available |
 
@@ -210,7 +212,7 @@ All tokens compile on all platforms. `summon()` returns `None` on unsupported ar
 
 `use archmage::prelude::*` gives you:
 
-- Tokens: `Desktop64`, `Arm64`, `ScalarToken`, etc.
+- Tokens: `Desktop64`, `Arm64`, `Arm64V2Token`, `Arm64V3Token`, `ScalarToken`, etc.
 - Traits: `SimdToken`, `IntoConcreteToken`, `HasX64V2`, etc.
 - Macros: `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`
 - Intrinsics: `core::arch::*` for your platform

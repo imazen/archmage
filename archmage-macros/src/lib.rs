@@ -1045,7 +1045,25 @@ const ALL_TIERS: &[TierDescriptor] = &[
         cargo_feature: None,
         priority: 10,
     },
-    // ARM
+    // ARM: highest to lowest
+    TierDescriptor {
+        name: "arm_v3",
+        suffix: "arm_v3",
+        token_path: "archmage::Arm64V3Token",
+        as_method: "as_arm_v3",
+        target_arch: Some("aarch64"),
+        cargo_feature: None,
+        priority: 50,
+    },
+    TierDescriptor {
+        name: "arm_v2",
+        suffix: "arm_v2",
+        token_path: "archmage::Arm64V2Token",
+        as_method: "as_arm_v2",
+        target_arch: Some("aarch64"),
+        cargo_feature: None,
+        priority: 40,
+    },
     TierDescriptor {
         name: "neon_aes",
         suffix: "neon_aes",

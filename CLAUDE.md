@@ -252,8 +252,9 @@ pub fn sum(data: &[f32]) -> f32 {
 // Requires: sum_v1, sum_v3, sum_neon, sum_scalar
 ```
 
-Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
-`neon_sha3`, `neon_crc`, `wasm128`, `scalar`. Scalar is always implicit.
+Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `arm_v2`, `arm_v3`,
+`neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
+Scalar is always implicit.
 
 **Passthrough mode** (already have token):
 
@@ -310,9 +311,17 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 | Token | Features | Trait |
 |-------|----------|-------|
 | `NeonToken` / `Arm64` | neon | `HasNeon` |
-| `NeonAesToken` | + aes | `HasNeonAes` |
-| `NeonSha3Token` | + sha3 | `HasNeonSha3` |
-| `NeonCrcToken` | + crc | Use token directly |
+| `Arm64V2Token` | + crc, rdm, dotprod, fp16, aes, sha2 | `HasArm64V2` |
+| `Arm64V3Token` | + fhm, fcma, sha3, i8mm, bf16 | `HasArm64V3` |
+| `NeonAesToken` | neon + aes | `HasNeonAes` |
+| `NeonSha3Token` | neon + sha3 | `HasNeonSha3` |
+| `NeonCrcToken` | neon + crc | Use token directly |
+
+**Arm64 compute tiers** (archmage-defined, not ARM architecture versions):
+- **Arm64-v2**: Broadest modern ARM baseline. Cortex-A55+, Apple M1+, Graviton 2+, all post-2017 ARM chips.
+- **Arm64-v3**: Full modern feature set. Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+, Cobalt 100.
+
+The M1 is the notable chip that gets V2 but not V3 (lacks i8mm/bf16). Budget 2025 phones with Cortex-A55 LITTLE cores also max out at V2 (A55 lacks fhm/fcma/i8mm/bf16).
 
 **PROHIBITED:** NO SVE/SVE2 - Rust stable doesn't support SVE intrinsics yet.
 
@@ -320,10 +329,9 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 
 1. **NO granular x86 traits** - No `HasSse`, `HasSse2`, `HasAvx`, `HasAvx2`, `HasFma`, `HasAvx512f`, `HasAvx512bw`, etc.
 2. **Use tier tokens** - `X64V2Token`, `X64V3Token`, `X64V4Token`, `X64V4xToken`
-3. **Single trait per tier** - `HasX64V2`, `HasX64V4` only
-4. **NEON includes fp16** - They always appear together on AArch64
-5. **NO SVE** - `SveToken`, `Sve2Token`, `HasSve`, `HasSve2` are PROHIBITED (Rust stable lacks SVE support)
-6. **NO WIDTH TRAITS** - `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` are DEPRECATED and will be removed:
+3. **Single trait per tier** - `HasX64V2`, `HasX64V4`, `HasArm64V2`, `HasArm64V3` only
+4. **NO SVE** - `SveToken`, `Sve2Token`, `HasSve`, `HasSve2` are PROHIBITED (Rust stable lacks SVE support)
+5. **NO WIDTH TRAITS** - `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` are DEPRECATED and will be removed:
    - `Has256BitSimd` only enables AVX, **NOT AVX2 or FMA** — misleading and causes suboptimal codegen
    - Use concrete tokens (`X64V3Token`) or feature traits (`HasX64V2`, `HasX64V4`) instead
 
@@ -516,7 +524,7 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 | `Sse2Token` | `X64V1Token` | SSE + SSE2 (x86_64 baseline — always available) |
 | `Desktop64` | `X64V3Token` | AVX2 + FMA (Haswell 2013+, Zen 1+) |
 | `Server64` | `X64V4Token` | + AVX-512 (Xeon 2017+, Zen 4+) |
-| `Arm64` | `NeonToken` | NEON + FP16 (all 64-bit ARM) |
+| `Arm64` | `NeonToken` | NEON (all 64-bit ARM) |
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
@@ -690,23 +698,27 @@ When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the
 - `X64V4xToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
 - `Avx512Fp16Token` - + FP16 (Sapphire Rapids 2023+)
 
-**ARM:**
+**ARM (compute tiers):**
 - `NeonToken` / `Arm64` - NEON (virtually all AArch64, requires runtime detection)
-- `NeonAesToken` - + AES
-- `NeonSha3Token` - + SHA3
-- `NeonCrcToken` - + CRC
+- `Arm64V2Token` - + CRC, RDM, DotProd, FP16, AES, SHA2 (A55+, M1+, Graviton 2+)
+- `Arm64V3Token` - + FHM, FCMA, SHA3, I8MM, BF16 (A510+, M2+, Snapdragon X, Graviton 3+)
+
+**ARM (crypto leaves):**
+- `NeonAesToken` - neon + AES
+- `NeonSha3Token` - neon + SHA3
+- `NeonCrcToken` - neon + CRC
 
 ## Tier Traits
-
-Only two tier traits exist for generic bounds:
 
 ```rust
 fn requires_v2(token: impl HasX64V2) { ... }
 fn requires_v4(token: impl HasX64V4) { ... }
 fn requires_neon(token: impl HasNeon) { ... }
+fn requires_arm_v2(token: impl HasArm64V2) { ... }
+fn requires_arm_v3(token: impl HasArm64V3) { ... }
 ```
 
-For v3 (AVX2+FMA), use `X64V3Token` directly - it's the recommended baseline.
+For x86 v3 (AVX2+FMA), use `X64V3Token` directly - it's the recommended baseline.
 
 ## SIMD Types (magetypes crate)
 

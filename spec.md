@@ -31,16 +31,25 @@ Features are cumulative — each token lists ALL features it enables, not just t
 
 The v1 level (SSE, SSE2) has no token — it's the x86_64 baseline, always available.
 
-#### AArch64 (4 tokens)
+#### AArch64 (6 tokens)
 
-| Token | Aliases | Features | Notes |
-|-------|---------|----------|-------|
-| `NeonToken` | `Arm64` | neon | Baseline, always available on AArch64 |
-| `NeonAesToken` | — | neon, aes | ARMv8-A with Crypto |
-| `NeonSha3Token` | — | neon, sha3 | ARMv8.2-A+ |
-| `NeonCrcToken` | — | neon, crc | ARMv8.1-A+ (most AArch64 CPUs) |
+**Compute tiers** (archmage-defined, not ARM architecture versions):
 
-SVE/SVE2 tokens are prohibited — SVE hasn't shipped in consumer hardware.
+| Token | Features | Hardware |
+|-------|----------|----------|
+| `NeonToken` / `Arm64` | neon | Baseline, all AArch64 |
+| `Arm64V2Token` | + crc, rdm, dotprod, fp16, aes, sha2 | Cortex-A55+, Apple M1+, Graviton 2+ |
+| `Arm64V3Token` | + fhm, fcma, sha3, i8mm, bf16 | Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+ |
+
+**Crypto leaves** (independent, not part of compute hierarchy):
+
+| Token | Features | Notes |
+|-------|----------|-------|
+| `NeonAesToken` | neon, aes | ARMv8-A with Crypto |
+| `NeonSha3Token` | neon, sha3 | ARMv8.2-A+ |
+| `NeonCrcToken` | neon, crc | ARMv8.1-A+ (most AArch64 CPUs) |
+
+SVE/SVE2 tokens are prohibited — Rust stable doesn't support SVE intrinsics.
 
 #### WASM (1 token)
 
@@ -58,12 +67,13 @@ x86_64:
   Avx512Fp16Token   → Avx512Token (v4) → X64V3Token (v3) → X64V2Token (v2)
 
 AArch64:
+  Arm64V3Token → Arm64V2Token → NeonToken
   NeonAesToken → NeonToken
   NeonSha3Token → NeonToken
   NeonCrcToken → NeonToken
 ```
 
-Extraction methods: `.v3()`, `.v2()`, `.avx512()`, `.neon()`.
+Extraction methods: `.v3()`, `.v2()`, `.avx512()`, `.neon()`, `.arm_v2()`.
 
 ### 1.4 Trait Hierarchy
 
@@ -83,23 +93,27 @@ There is no `HasX64V3` trait. For v3 bounds, use `X64V3Token` directly — it's 
 
 **AArch64 traits:**
 ```
-HasNeonAes → HasNeon
+HasArm64V3 → HasArm64V2 → HasNeon
+                          → HasNeonAes
 HasNeonSha3 → HasNeon
+HasArm64V3 → HasNeonSha3
 ```
 
 **Trait implementations by token:**
 
-| Token | Has128Bit | Has256Bit | Has512Bit | HasX64V2 | HasX64V4 | HasNeon | HasNeonAes | HasNeonSha3 |
-|-------|-----------|-----------|-----------|----------|----------|---------|------------|-------------|
-| X64V2Token | x | | | x | | | | |
-| X64V3Token | x | x | | x | | | | |
-| X64V4Token | x | x | x | x | x | | | |
-| X64V4xToken | x | x | x | x | x | | | |
-| Avx512Fp16Token | x | x | x | x | x | | | |
-| NeonToken | x | | | | | x | | |
-| NeonAesToken | x | | | | | x | x | |
-| NeonSha3Token | x | | | | | x | | x |
-| NeonCrcToken | x | | | | | x | | |
+| Token | Has128Bit | HasX64V2 | HasX64V4 | HasNeon | HasNeonAes | HasNeonSha3 | HasArm64V2 | HasArm64V3 |
+|-------|-----------|----------|----------|---------|------------|-------------|------------|------------|
+| X64V2Token | x | x | | | | | | |
+| X64V3Token | x | x | | | | | | |
+| X64V4Token | x | x | x | | | | | |
+| X64V4xToken | x | x | x | | | | | |
+| Avx512Fp16Token | x | x | x | | | | | |
+| NeonToken | x | | | x | | | | |
+| Arm64V2Token | x | | | x | x | | x | |
+| Arm64V3Token | x | | | x | x | x | x | x |
+| NeonAesToken | x | | | x | x | | | |
+| NeonSha3Token | x | | | x | | x | | |
+| NeonCrcToken | x | | | x | | | | |
 | Wasm128Token | x | | | | | | | |
 
 ### 1.5 Cross-Platform Stubs

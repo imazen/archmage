@@ -156,6 +156,26 @@ short_name = "neon_crc"
 parent = "NeonToken"
 doc = "Proof that NEON + CRC is available.\n\nCRC32 extension is common on most AArch64 CPUs (part of ARMv8.1-A baseline).\nAvailable on: Cortex-A53+, Apple M1+, Graviton 1+, Snapdragon 8xx."
 
+[[token]]
+name = "Arm64V2Token"
+arch = "aarch64"
+features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]
+traits = ["HasNeon", "HasNeonAes", "HasArm64V2", "Has128BitSimd"]
+display_name = "Arm64-v2"
+short_name = "arm_v2"
+parent = "NeonToken"
+doc = "Proof that the Arm64-v2 feature set is available.\n\nArm64-v2 is archmage's second ARM tier, covering: NEON, CRC, RDM, DotProd,\nFP16, AES, SHA2. This targets the broadest modern ARM baseline.\n\nAvailable on: Cortex-A55+, Apple M1+, Graviton 2+, all post-2017 ARM chips."
+
+[[token]]
+name = "Arm64V3Token"
+arch = "aarch64"
+features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm", "bf16"]
+traits = ["HasNeon", "HasNeonAes", "HasNeonSha3", "HasArm64V2", "HasArm64V3", "Has128BitSimd"]
+display_name = "Arm64-v3"
+short_name = "arm_v3"
+parent = "Arm64V2Token"
+doc = "Proof that the full modern ARM SIMD feature set is available (Arm64-v3).\n\nArm64-v3 adds FHM, FCMA, SHA3, I8MM, and BF16 over Arm64-v2.\nAvailable on: Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+, Cobalt 100."
+
 # ──── WASM ────
 
 [[token]]
@@ -220,6 +240,18 @@ name = "HasNeonSha3"
 features = ["neon", "sha3"]
 parents = ["HasNeon"]
 doc = "Marker trait for NEON + SHA3.\n\nSHA3 extension is available on ARMv8.2-A and later."
+
+[[trait]]
+name = "HasArm64V2"
+features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]
+parents = ["HasNeon", "HasNeonAes"]
+doc = "Marker trait for Arm64-v2 level.\n\nArm64-v2 includes: NEON, CRC, RDM, DotProd, FP16, AES, SHA2.\nAvailable on Cortex-A55+, Apple M1+, Graviton 2+."
+
+[[trait]]
+name = "HasArm64V3"
+features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm", "bf16"]
+parents = ["HasArm64V2", "HasNeonSha3"]
+doc = "Marker trait for Arm64-v3 level.\n\nArm64-v3 adds FHM, FCMA, SHA3, I8MM, BF16 over Arm64-v2.\nAvailable on Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+."
 
 # ──── Width Namespaces (simd type re-exports) ────
 
