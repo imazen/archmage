@@ -13,6 +13,8 @@ pub(super) static X64_V1_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static X64_V1_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static X64_V2_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static X64_V2_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static X64_CRYPTO_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static X64_CRYPTO_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static X64_V3_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static X64_V3_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static X64_V4_CACHE: AtomicU8 = AtomicU8::new(0);
@@ -72,6 +74,7 @@ impl X64V1Token {
     ///
     /// **Cascading:** Also affects descendants:
     /// - `X64V2Token`
+    /// - `X64CryptoToken`
     /// - `X64V3Token`
     /// - `X64V4Token`
     /// - `X64V4xToken`
@@ -104,6 +107,8 @@ impl X64V1Token {
             X64_V1_CACHE.store(v, Ordering::Relaxed);
             X64_V2_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V2_CACHE.store(v, Ordering::Relaxed);
+            X64_CRYPTO_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_CRYPTO_CACHE.store(v, Ordering::Relaxed);
             X64_V3_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V3_CACHE.store(v, Ordering::Relaxed);
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
@@ -144,10 +149,10 @@ impl X64V1Token {
     }
 }
 
-/// Proof that SSE4.2 + POPCNT + PCLMULQDQ + AES are available (x86-64-v2 level).
+/// Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).
 ///
-/// x86-64-v2 implies: SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, PCLMULQDQ, AES-NI.
-/// This is the Westmere (2010) / Bulldozer (2011) baseline.
+/// x86-64-v2 implies: SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CX16, SAHF.
+/// This is the Nehalem (2008) / Bulldozer (2011) baseline.
 #[derive(Clone, Copy, Debug)]
 pub struct X64V2Token {
     _private: (),
@@ -157,6 +162,221 @@ impl crate::tokens::Sealed for X64V2Token {}
 
 impl SimdToken for X64V2Token {
     const NAME: &'static str = "x86-64-v2";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt";
+    const ENABLE_TARGET_FEATURES: &'static str =
+        "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt";
+    const DISABLE_TARGET_FEATURES: &'static str =
+        "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
+    #[inline(always)]
+    fn summon() -> Option<Self> {
+        // Compile-time fast path (suppressed by testable_dispatch)
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            return Some(unsafe { Self::forge_token_dangerously() });
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            match X64_V2_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => {
+                    let available = crate::is_x86_feature_available!("sse3")
+                        && crate::is_x86_feature_available!("ssse3")
+                        && crate::is_x86_feature_available!("sse4.1")
+                        && crate::is_x86_feature_available!("sse4.2")
+                        && crate::is_x86_feature_available!("popcnt");
+                    X64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    if available {
+                        Some(unsafe { Self::forge_token_dangerously() })
+                    } else {
+                        None
+                    }
+                }
+            }
+        }
+    }
+
+    #[inline(always)]
+    #[allow(deprecated)]
+    unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V2Token {
+    /// Get a X64V1Token (x86-64-v2 implies x86-64-v1)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn v1(self) -> X64V1Token {
+        unsafe { X64V1Token::forge_token_dangerously() }
+    }
+}
+
+impl X64V2Token {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    ///
+    /// **Cascading:** Also affects descendants:
+    /// - `X64CryptoToken`
+    /// - `X64V3Token`
+    /// - `X64V4Token`
+    /// - `X64V4xToken`
+    /// - `Avx512Fp16Token`
+    #[allow(clippy::needless_return)]
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            X64_V2_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            X64_V2_CACHE.store(v, Ordering::Relaxed);
+            X64_CRYPTO_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_CRYPTO_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_CACHE.store(v, Ordering::Relaxed);
+            X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V4_CACHE.store(v, Ordering::Relaxed);
+            X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V4X_CACHE.store(v, Ordering::Relaxed);
+            AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
+            AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            Ok(X64_V2_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+
+/// Proof that PCLMULQDQ + AES-NI are available (on top of x86-64-v2).
+///
+/// PCLMULQDQ and AES-NI are not part of the psABI v2 spec but ship on every
+/// x86-64 CPU since Westmere (2010). Original Nehalem (2008) and some VMs
+/// (QEMU x86-64-v2, VMware EVC Nehalem baseline) lack them.
+///
+/// Use this token for CRC-32 folding, AES encryption, and GF(2) polynomial
+/// arithmetic. Available on: Westmere+, Bulldozer+, Silvermont+, all Zen.
+#[derive(Clone, Copy, Debug)]
+pub struct X64CryptoToken {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for X64CryptoToken {}
+
+impl SimdToken for X64CryptoToken {
+    const NAME: &'static str = "x86-64 Crypto";
     const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,pclmulqdq,aes";
     const ENABLE_TARGET_FEATURES: &'static str =
         "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+pclmulqdq,+aes";
@@ -223,7 +443,7 @@ impl SimdToken for X64V2Token {
             not(feature = "testable_dispatch")
         )))]
         {
-            match X64_V2_CACHE.load(Ordering::Relaxed) {
+            match X64_CRYPTO_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => {
@@ -234,7 +454,7 @@ impl SimdToken for X64V2Token {
                         && crate::is_x86_feature_available!("popcnt")
                         && crate::is_x86_feature_available!("pclmulqdq")
                         && crate::is_x86_feature_available!("aes");
-                    X64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+                    X64_CRYPTO_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
                     if available {
                         Some(unsafe { Self::forge_token_dangerously() })
                     } else {
@@ -252,8 +472,14 @@ impl SimdToken for X64V2Token {
     }
 }
 
-impl X64V2Token {
-    /// Get a X64V1Token (x86-64-v2 implies x86-64-v1)
+impl X64CryptoToken {
+    /// Get a X64V2Token (x86-64 Crypto implies x86-64-v2)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn v2(self) -> X64V2Token {
+        unsafe { X64V2Token::forge_token_dangerously() }
+    }
+    /// Get a X64V1Token (x86-64 Crypto implies x86-64-v1)
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
@@ -261,7 +487,7 @@ impl X64V2Token {
     }
 }
 
-impl X64V2Token {
+impl X64CryptoToken {
     /// Disable this token process-wide for testing and benchmarking.
     ///
     /// When disabled, `summon()` will return `None` even if the CPU supports
@@ -270,12 +496,6 @@ impl X64V2Token {
     /// Returns `Err` when all required features are compile-time enabled
     /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
     /// elided the runtime checks.
-    ///
-    /// **Cascading:** Also affects descendants:
-    /// - `X64V3Token`
-    /// - `X64V4Token`
-    /// - `X64V4xToken`
-    /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
@@ -313,17 +533,9 @@ impl X64V2Token {
             not(feature = "testable_dispatch")
         )))]
         {
-            X64_V2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_CRYPTO_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
-            X64_V2_CACHE.store(v, Ordering::Relaxed);
-            X64_V3_DISABLED.store(disabled, Ordering::Relaxed);
-            X64_V3_CACHE.store(v, Ordering::Relaxed);
-            X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
-            X64_V4_CACHE.store(v, Ordering::Relaxed);
-            X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
-            X64_V4X_CACHE.store(v, Ordering::Relaxed);
-            AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
-            AVX512_FP16_CACHE.store(v, Ordering::Relaxed);
+            X64_CRYPTO_CACHE.store(v, Ordering::Relaxed);
             Ok(())
         }
     }
@@ -365,7 +577,7 @@ impl X64V2Token {
             not(feature = "testable_dispatch")
         )))]
         {
-            Ok(X64_V2_DISABLED.load(Ordering::Relaxed))
+            Ok(X64_CRYPTO_DISABLED.load(Ordering::Relaxed))
         }
     }
 }
@@ -386,9 +598,9 @@ impl crate::tokens::Sealed for X64V3Token {}
 impl SimdToken for X64V3Token {
     const NAME: &'static str = "x86-64-v3";
     const TARGET_FEATURES: &'static str =
-        "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,pclmulqdq,aes,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+pclmulqdq,+aes,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-pclmulqdq,-aes,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt";
+        "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -398,8 +610,6 @@ impl SimdToken for X64V3Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -418,8 +628,6 @@ impl SimdToken for X64V3Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -444,8 +652,6 @@ impl SimdToken for X64V3Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -466,8 +672,6 @@ impl SimdToken for X64V3Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -487,8 +691,6 @@ impl SimdToken for X64V3Token {
                         && crate::is_x86_feature_available!("sse4.1")
                         && crate::is_x86_feature_available!("sse4.2")
                         && crate::is_x86_feature_available!("popcnt")
-                        && crate::is_x86_feature_available!("pclmulqdq")
-                        && crate::is_x86_feature_available!("aes")
                         && crate::is_x86_feature_available!("avx")
                         && crate::is_x86_feature_available!("avx2")
                         && crate::is_x86_feature_available!("fma")
@@ -555,8 +757,6 @@ impl X64V3Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -582,8 +782,6 @@ impl X64V3Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -620,8 +818,6 @@ impl X64V3Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -646,8 +842,6 @@ impl X64V3Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -679,9 +873,9 @@ impl crate::tokens::Sealed for X64V4Token {}
 
 impl SimdToken for X64V4Token {
     const NAME: &'static str = "AVX-512";
-    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,pclmulqdq,aes,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+pclmulqdq,+aes,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-pclmulqdq,-aes,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -691,8 +885,6 @@ impl SimdToken for X64V4Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -716,8 +908,6 @@ impl SimdToken for X64V4Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -747,8 +937,6 @@ impl SimdToken for X64V4Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -774,8 +962,6 @@ impl SimdToken for X64V4Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -800,8 +986,6 @@ impl SimdToken for X64V4Token {
                         && crate::is_x86_feature_available!("sse4.1")
                         && crate::is_x86_feature_available!("sse4.2")
                         && crate::is_x86_feature_available!("popcnt")
-                        && crate::is_x86_feature_available!("pclmulqdq")
-                        && crate::is_x86_feature_available!("aes")
                         && crate::is_x86_feature_available!("avx")
                         && crate::is_x86_feature_available!("avx2")
                         && crate::is_x86_feature_available!("fma")
@@ -878,8 +1062,6 @@ impl X64V4Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -910,8 +1092,6 @@ impl X64V4Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -951,8 +1131,6 @@ impl X64V4Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -982,8 +1160,6 @@ impl X64V4Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1021,9 +1197,9 @@ impl crate::tokens::Sealed for X64V4xToken {}
 
 impl SimdToken for X64V4xToken {
     const NAME: &'static str = "x86-64-v4x";
-    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,pclmulqdq,aes,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+pclmulqdq,+aes,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+vpclmulqdq,+gfni,+vaes";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-pclmulqdq,-aes,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-vpclmulqdq,-gfni,-vaes";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512vpopcntdq,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512bitalg,+avx512vnni,+vpclmulqdq,+gfni,+vaes";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512vpopcntdq,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512bitalg,-avx512vnni,-vpclmulqdq,-gfni,-vaes";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -1033,8 +1209,6 @@ impl SimdToken for X64V4xToken {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1067,8 +1241,6 @@ impl SimdToken for X64V4xToken {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1107,8 +1279,6 @@ impl SimdToken for X64V4xToken {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1143,8 +1313,6 @@ impl SimdToken for X64V4xToken {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1178,8 +1346,6 @@ impl SimdToken for X64V4xToken {
                         && crate::is_x86_feature_available!("sse4.1")
                         && crate::is_x86_feature_available!("sse4.2")
                         && crate::is_x86_feature_available!("popcnt")
-                        && crate::is_x86_feature_available!("pclmulqdq")
-                        && crate::is_x86_feature_available!("aes")
                         && crate::is_x86_feature_available!("avx")
                         && crate::is_x86_feature_available!("avx2")
                         && crate::is_x86_feature_available!("fma")
@@ -1274,8 +1440,6 @@ impl X64V4xToken {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1315,8 +1479,6 @@ impl X64V4xToken {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1361,8 +1523,6 @@ impl X64V4xToken {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1401,8 +1561,6 @@ impl X64V4xToken {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1448,9 +1606,9 @@ impl crate::tokens::Sealed for Avx512Fp16Token {}
 
 impl SimdToken for Avx512Fp16Token {
     const NAME: &'static str = "AVX-512FP16";
-    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,pclmulqdq,aes,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+pclmulqdq,+aes,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512fp16";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-pclmulqdq,-aes,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512fp16";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl,+avx512fp16";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-avx512f,-avx512bw,-avx512cd,-avx512dq,-avx512vl,-avx512fp16";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -1460,8 +1618,6 @@ impl SimdToken for Avx512Fp16Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1486,8 +1642,6 @@ impl SimdToken for Avx512Fp16Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1518,8 +1672,6 @@ impl SimdToken for Avx512Fp16Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1546,8 +1698,6 @@ impl SimdToken for Avx512Fp16Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1573,8 +1723,6 @@ impl SimdToken for Avx512Fp16Token {
                         && crate::is_x86_feature_available!("sse4.1")
                         && crate::is_x86_feature_available!("sse4.2")
                         && crate::is_x86_feature_available!("popcnt")
-                        && crate::is_x86_feature_available!("pclmulqdq")
-                        && crate::is_x86_feature_available!("aes")
                         && crate::is_x86_feature_available!("avx")
                         && crate::is_x86_feature_available!("avx2")
                         && crate::is_x86_feature_available!("fma")
@@ -1661,8 +1809,6 @@ impl Avx512Fp16Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1694,8 +1840,6 @@ impl Avx512Fp16Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1732,8 +1876,6 @@ impl Avx512Fp16Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1764,8 +1906,6 @@ impl Avx512Fp16Token {
             target_feature = "sse4.1",
             target_feature = "sse4.2",
             target_feature = "popcnt",
-            target_feature = "pclmulqdq",
-            target_feature = "aes",
             target_feature = "avx",
             target_feature = "avx2",
             target_feature = "fma",
@@ -1807,6 +1947,7 @@ pub type Avx512ModernToken = X64V4xToken;
 
 impl Has128BitSimd for X64V1Token {}
 impl Has128BitSimd for X64V2Token {}
+impl Has128BitSimd for X64CryptoToken {}
 impl Has128BitSimd for X64V3Token {}
 impl Has128BitSimd for X64V4Token {}
 impl Has128BitSimd for X64V4xToken {}
@@ -1819,6 +1960,7 @@ impl Has512BitSimd for X64V4Token {}
 impl Has512BitSimd for X64V4xToken {}
 impl Has512BitSimd for Avx512Fp16Token {}
 impl HasX64V2 for X64V2Token {}
+impl HasX64V2 for X64CryptoToken {}
 impl HasX64V2 for X64V3Token {}
 impl HasX64V2 for X64V4Token {}
 impl HasX64V2 for X64V4xToken {}

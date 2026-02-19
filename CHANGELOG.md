@@ -1,10 +1,16 @@
 # Changelog
 
-## 0.8.1 — 2026-02-18
+## 0.8.2 — 2026-02-19
 
-PCLMULQDQ and AES-NI added to x86-64-v2 baseline.
+New `X64CryptoToken` for PCLMULQDQ + AES-NI.
 
-- **PCLMULQDQ + AES-NI in V2+** — `X64V2Token` now includes `pclmulqdq` and `aes` features, cascading to V3, V4, V4x, and FP16 tokens. These instructions shipped on every x86-64-v2 CPU since Westmere (2010); the only exception is original Nehalem (2008), which is effectively extinct. This means `#[arcane]` functions taking `X64V2Token` can now use `_mm_clmulepi64_si128` and `_mm_aesenc_si128` without needing a higher token. The `HasX64V2` and `HasX64V4` traits are updated accordingly.
+- **`X64CryptoToken`** — new leaf token off `X64V2Token` providing `pclmulqdq` and `aes` features. PCLMULQDQ and AES-NI are not part of the psABI v2 spec (Nehalem 2008 and some VMs lack them), so they belong in a dedicated token rather than in `X64V2Token`. Available on Westmere (2010)+, Bulldozer+, Silvermont+, all Zen. Use for CRC-32 folding, AES encryption, and GF(2) polynomial arithmetic. Dispatch tier name: `x64_crypto`.
+
+- **Reverts 0.8.1** — removed `pclmulqdq` and `aes` from `X64V2Token` and all higher tokens (V3, V4, V4x, FP16). V2 now matches the psABI spec exactly.
+
+## 0.8.1 — 2026-02-18 [YANKED]
+
+Incorrectly added PCLMULQDQ/AES-NI to V2 baseline. These are not in the psABI v2 spec — Nehalem (2008) and QEMU's x86-64-v2 CPU model lack them. Use 0.8.2's `X64CryptoToken` instead.
 
 ## 0.8.0 — 2026-02-18
 

@@ -40,13 +40,26 @@ arch = "x86"
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "pclmulqdq", "aes",
 ]
 traits = ["HasX64V2", "Has128BitSimd"]
 parent = "X64V1Token"
 display_name = "x86-64-v2"
 short_name = "v2"
-doc = "Proof that SSE4.2 + POPCNT + PCLMULQDQ + AES are available (x86-64-v2 level).\n\nx86-64-v2 implies: SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, PCLMULQDQ, AES-NI.\nThis is the Westmere (2010) / Bulldozer (2011) baseline."
+doc = "Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).\n\nx86-64-v2 implies: SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CX16, SAHF.\nThis is the Nehalem (2008) / Bulldozer (2011) baseline."
+
+[[token]]
+name = "X64CryptoToken"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
+    "pclmulqdq", "aes",
+]
+traits = ["HasX64V2", "Has128BitSimd"]
+parent = "X64V2Token"
+display_name = "x86-64 Crypto"
+short_name = "x64_crypto"
+doc = "Proof that PCLMULQDQ + AES-NI are available (on top of x86-64-v2).\n\nPCLMULQDQ and AES-NI are not part of the psABI v2 spec but ship on every\nx86-64 CPU since Westmere (2010). Original Nehalem (2008) and some VMs\n(QEMU x86-64-v2, VMware EVC Nehalem baseline) lack them.\n\nUse this token for CRC-32 folding, AES encryption, and GF(2) polynomial\narithmetic. Available on: Westmere+, Bulldozer+, Silvermont+, all Zen."
 
 [[token]]
 name = "X64V3Token"
@@ -55,7 +68,6 @@ aliases = ["Desktop64", "Avx2FmaToken"]
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "pclmulqdq", "aes",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
 ]
 traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
@@ -71,7 +83,6 @@ aliases = ["Avx512Token", "Server64"]
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "pclmulqdq", "aes",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
 ]
@@ -89,7 +100,6 @@ arch = "x86"
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "pclmulqdq", "aes",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
     "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
@@ -108,7 +118,6 @@ arch = "x86"
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "pclmulqdq", "aes",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
     "avx512fp16",
@@ -216,14 +225,13 @@ doc = "Marker trait for tokens that provide 512-bit SIMD."
 
 [[trait]]
 name = "HasX64V2"
-features = ["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "pclmulqdq", "aes"]
-doc = "Marker trait for x86-64-v2 level (Westmere 2010+).\n\nv2 includes: SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, PCLMULQDQ, AES-NI."
+features = ["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt"]
+doc = "Marker trait for x86-64-v2 level (Nehalem 2008+).\n\nv2 includes: SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B, LAHF-SAHF."
 
 [[trait]]
 name = "HasX64V4"
 features = [
     "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "pclmulqdq", "aes",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
 ]
