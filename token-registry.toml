@@ -68,7 +68,7 @@ aliases = ["Desktop64", "Avx2FmaToken"]
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
 ]
 traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
 display_name = "x86-64-v3"
@@ -83,7 +83,7 @@ aliases = ["Avx512Token", "Server64"]
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
 ]
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
@@ -100,7 +100,7 @@ arch = "x86"
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
     "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
     "avx512bitalg", "avx512vnni",
@@ -118,7 +118,7 @@ arch = "x86"
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
     "avx512fp16",
 ]
@@ -232,7 +232,7 @@ doc = "Marker trait for x86-64-v2 level (Nehalem 2008+).\n\nv2 includes: SSE3, S
 name = "HasX64V4"
 features = [
     "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt",
-    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
 ]
 parents = ["HasX64V2"]

@@ -612,7 +612,7 @@ mod tests {
         assert!(v3.features.contains(&"fma".to_string()));
         assert!(v3.features.contains(&"f16c".to_string()));
         assert!(v3.features.contains(&"lzcnt".to_string()));
-        assert_eq!(v3.features.len(), 14); // sse, sse2 + 12 v3 features
+        assert_eq!(v3.features.len(), 15); // sse, sse2 + 13 v3 features (incl movbe)
 
         // Spot-check aliases
         assert!(registry.find_token("Desktop64").is_some());
