@@ -4,12 +4,13 @@
 //! safe via token proof.
 
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, ToTokens};
+use quote::{ToTokens, format_ident, quote};
 use syn::{
+    Attribute, FnArg, GenericParam, Ident, ItemFn, PatType, ReturnType, Signature, Token, Type,
+    TypeParamBound,
     fold::Fold,
     parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote, Attribute, FnArg, GenericParam, Ident, ItemFn, PatType,
-    ReturnType, Signature, Token, Type, TypeParamBound,
+    parse_macro_input, parse_quote,
 };
 
 /// A Fold implementation that replaces `Self` with a concrete type.
@@ -60,7 +61,7 @@ impl Parse for ArcaneArgs {
                     return Err(syn::Error::new(
                         ident.span(),
                         format!("unknown arcane argument: `{}`", other),
-                    ))
+                    ));
                 }
             }
             // Consume optional comma
@@ -145,12 +146,12 @@ fn extract_trait_names_from_bounds(
 fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Vec<String>> {
     // Check inline bounds first (e.g., `fn foo<T: HasX64V2>(token: T)`)
     for param in &sig.generics.params {
-        if let GenericParam::Type(type_param) = param {
-            if type_param.ident == type_name {
-                let traits = extract_trait_names_from_bounds(&type_param.bounds);
-                if !traits.is_empty() {
-                    return Some(traits);
-                }
+        if let GenericParam::Type(type_param) = param
+            && type_param.ident == type_name
+        {
+            let traits = extract_trait_names_from_bounds(&type_param.bounds);
+            if !traits.is_empty() {
+                return Some(traits);
             }
         }
     }
@@ -158,16 +159,14 @@ fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Vec<String>> 
     // Check where clause (e.g., `fn foo<T>(token: T) where T: HasX64V2`)
     if let Some(where_clause) = &sig.generics.where_clause {
         for predicate in &where_clause.predicates {
-            if let syn::WherePredicate::Type(pred_type) = predicate {
-                if let Type::Path(type_path) = &pred_type.bounded_ty {
-                    if let Some(seg) = type_path.path.segments.last() {
-                        if seg.ident == type_name {
-                            let traits = extract_trait_names_from_bounds(&pred_type.bounds);
-                            if !traits.is_empty() {
-                                return Some(traits);
-                            }
-                        }
-                    }
+            if let syn::WherePredicate::Type(pred_type) = predicate
+                && let Type::Path(type_path) = &pred_type.bounded_ty
+                && let Some(seg) = type_path.path.segments.last()
+                && seg.ident == type_name
+            {
+                let traits = extract_trait_names_from_bounds(&pred_type.bounds);
+                if !traits.is_empty() {
+                    return Some(traits);
                 }
             }
         }
@@ -219,30 +218,30 @@ fn find_featureless_trait(trait_names: &[String]) -> Option<&'static str> {
 /// trait if the signature has a parameter bounded by one (e.g., `SimdToken`).
 fn diagnose_featureless_token(sig: &Signature) -> Option<&'static str> {
     for arg in &sig.inputs {
-        if let FnArg::Typed(PatType { ty, .. }) = arg {
-            if let Some(info) = extract_token_type_info(ty) {
-                match &info {
-                    TokenTypeInfo::ImplTrait(names) => {
-                        if let Some(name) = find_featureless_trait(names) {
-                            return Some(name);
-                        }
+        if let FnArg::Typed(PatType { ty, .. }) = arg
+            && let Some(info) = extract_token_type_info(ty)
+        {
+            match &info {
+                TokenTypeInfo::ImplTrait(names) => {
+                    if let Some(name) = find_featureless_trait(names) {
+                        return Some(name);
                     }
-                    TokenTypeInfo::Generic(type_name) => {
-                        // Check if the type name itself is a featureless trait
-                        // (e.g., `token: SimdToken` used as a bare path)
-                        let as_vec = vec![type_name.clone()];
-                        if let Some(name) = find_featureless_trait(&as_vec) {
-                            return Some(name);
-                        }
-                        // Check generic bounds (e.g., `T: SimdToken`)
-                        if let Some(bounds) = find_generic_bounds(sig, type_name) {
-                            if let Some(name) = find_featureless_trait(&bounds) {
-                                return Some(name);
-                            }
-                        }
-                    }
-                    TokenTypeInfo::Concrete(_) => {}
                 }
+                TokenTypeInfo::Generic(type_name) => {
+                    // Check if the type name itself is a featureless trait
+                    // (e.g., `token: SimdToken` used as a bare path)
+                    let as_vec = vec![type_name.clone()];
+                    if let Some(name) = find_featureless_trait(&as_vec) {
+                        return Some(name);
+                    }
+                    // Check generic bounds (e.g., `T: SimdToken`)
+                    if let Some(bounds) = find_generic_bounds(sig, type_name)
+                        && let Some(name) = find_featureless_trait(&bounds)
+                    {
+                        return Some(name);
+                    }
+                }
+                TokenTypeInfo::Concrete(_) => {}
             }
         }
     }

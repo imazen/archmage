@@ -13,8 +13,8 @@
 
 ```toml
 [dependencies]
-archmage = "0.7"
-magetypes = "0.7"
+archmage = "0.8"
+magetypes = "0.8"
 ```
 
 ## Raw intrinsics with `#[arcane]`
@@ -162,7 +162,7 @@ fn sum_squares(data: &[f32]) -> f32 {
 }
 ```
 
-Known tiers: `v1`, `v2`, `v3`, `v4`, `modern`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`. The `scalar` tier is always included implicitly.
+Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`. The `scalar` tier is always included implicitly.
 
 ### `#[magetypes]` for simple cases
 

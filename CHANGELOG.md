@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.0 — 2026-02-18
+
+ARM compute tiers, better macro diagnostics, edition 2024.
+
+- **`Arm64V2Token` and `Arm64V3Token`** — new compute-tier tokens for AArch64, analogous to x86's V2/V3/V4 hierarchy. V2 covers Cortex-A55+, Apple M1+, Graviton 2+ (adds CRC, RDM, DotProd, FP16, AES, SHA2 over baseline NEON). V3 covers Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+ (adds FHM, FCMA, SHA3, I8MM, BF16). Both tokens work with `#[arcane]`, `#[rite]`, `incant!`, and `#[magetypes]`.
+
+- **`HasArm64V2` and `HasArm64V3` traits** — tier traits for generic bounds over the new ARM compute tiers, matching the pattern of `HasX64V2`/`HasX64V4`.
+
+- **`incant!` tiers `arm_v2` and `arm_v3`** — dispatch to ARM compute tiers in explicit tier lists: `incant!(process(data), [v3, arm_v2, arm_v3, neon])`.
+
+- **`IntoConcreteToken` gains `as_arm_v2()` and `as_arm_v3()`** — safe downcasting to the new ARM tokens.
+
+- **Featureless trait rejection** — `#[arcane]` and `#[rite]` now give a specific error when you use `SimdToken` or `IntoConcreteToken` as a token bound. These traits carry no CPU features, so the macros can't emit `#[target_feature]`. The error message explains why and suggests concrete tokens or feature traits like `HasX64V2`.
+
+- **`detect_features` example** — new example (`cargo run --example detect_features`) that prints all detected SIMD capabilities on the current CPU.
+
+- **Edition 2024** — `archmage-macros` upgraded from Rust edition 2021 to 2024 (requires rustc 1.89+). `archmage` and `magetypes` were already on edition 2024.
+
 ## 0.7.1 — 2026-02-14
 
 Docs, warnings, and magetypes 0.7.0.

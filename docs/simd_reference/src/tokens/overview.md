@@ -50,11 +50,13 @@ Each higher tier is a superset. If you have `X64V4Token`, you can pass it to any
 | Token | Aliases | Features | CPUs |
 |-------|---------|----------|------|
 | `NeonToken` | `Arm64` | NEON (128-bit SIMD) | All 64-bit ARM |
-| `NeonAesToken` | — | + AES | Most ARMv8 with crypto |
-| `NeonSha3Token` | — | + SHA3 | ARMv8.2+ with SHA3 |
-| `NeonCrcToken` | — | + CRC | Most ARMv8 |
+| `Arm64V2Token` | — | + CRC, RDM, DotProd, FP16, AES, SHA2 | A55+, M1+, Graviton 2+ |
+| `Arm64V3Token` | — | + FHM, FCMA, SHA3, I8MM, BF16 | A510+, M2+, Snapdragon X, Graviton 3+ |
+| `NeonAesToken` | — | NEON + AES | Most ARMv8 with crypto |
+| `NeonSha3Token` | — | NEON + SHA3 | ARMv8.2+ with SHA3 |
+| `NeonCrcToken` | — | NEON + CRC | Most ARMv8 |
 
-NEON is baseline on AArch64 — `NeonToken::summon()` always succeeds.
+NEON is baseline on AArch64 — `NeonToken::summon()` always succeeds. Arm64V2/V3 are compute tiers (archmage-defined, not ARM architecture versions). The crypto tokens (AES, SHA3, CRC) are independent leaf tokens for single-feature checks.
 
 ### WASM
 
@@ -125,15 +127,17 @@ if let Some(token) = X64V3Token::summon() {
 
 ## Tier Traits
 
-Two tier traits exist for generic bounds:
+Tier traits provide generic bounds across token families:
 
 ```rust
-fn needs_v2(token: impl HasX64V2) { ... }  // X64V2Token, X64V3Token, X64V4Token, ...
-fn needs_v4(token: impl HasX64V4) { ... }  // X64V4Token, X64V4xToken, ...
-fn needs_neon(token: impl HasNeon) { ... } // NeonToken, NeonAesToken, ...
+fn needs_v2(token: impl HasX64V2) { ... }     // X64V2Token, X64V3Token, X64V4Token, ...
+fn needs_v4(token: impl HasX64V4) { ... }     // X64V4Token, X64V4xToken, ...
+fn needs_neon(token: impl HasNeon) { ... }     // NeonToken, Arm64V2Token, Arm64V3Token, ...
+fn needs_arm_v2(token: impl HasArm64V2) { ... } // Arm64V2Token, Arm64V3Token
+fn needs_arm_v3(token: impl HasArm64V3) { ... } // Arm64V3Token
 ```
 
-For V3 (the recommended baseline), use `X64V3Token` directly — no trait needed.
+For x86 V3 (the recommended baseline), use `X64V3Token` directly — no trait needed.
 
 **Warning:** Generic bounds create LLVM optimization barriers. Use concrete tokens for hot paths. See [Safety Model](../patterns/safety.md) for details.
 

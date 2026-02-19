@@ -49,7 +49,7 @@ For full coverage in CI, use the `testable_dispatch` feature. This makes `compil
 ```toml
 # In your CI test configuration
 [dev-dependencies]
-archmage = { version = "0.7", features = ["testable_dispatch"] }
+archmage = { version = "0.8", features = ["testable_dispatch"] }
 ```
 
 ## Enforcing Full Coverage via Env Var

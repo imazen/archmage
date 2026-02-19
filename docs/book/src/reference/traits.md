@@ -29,6 +29,8 @@ pub trait IntoConcreteToken: SimdToken {
     fn as_x64_v4x(self) -> Option<X64V4xToken> { None }
     fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> { None }
     fn as_neon(self) -> Option<NeonToken> { None }
+    fn as_arm_v2(self) -> Option<Arm64V2Token> { None }
+    fn as_arm_v3(self) -> Option<Arm64V3Token> { None }
     fn as_neon_aes(self) -> Option<NeonAesToken> { None }
     fn as_neon_sha3(self) -> Option<NeonSha3Token> { None }
     fn as_neon_crc(self) -> Option<NeonCrcToken> { None }
@@ -94,7 +96,7 @@ Marker trait for tokens that provide NEON features.
 pub trait HasNeon: SimdToken {}
 ```
 
-**Implementors**: `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
+**Implementors**: `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`, `Arm64V2Token`, `Arm64V3Token`
 
 ### HasNeonAes
 
@@ -104,7 +106,7 @@ Marker trait for tokens that provide NEON + AES features.
 pub trait HasNeonAes: HasNeon {}
 ```
 
-**Implementors**: `NeonAesToken`
+**Implementors**: `NeonAesToken`, `Arm64V2Token`, `Arm64V3Token`
 
 ### HasNeonSha3
 
@@ -114,7 +116,27 @@ Marker trait for tokens that provide NEON + SHA3 features.
 pub trait HasNeonSha3: HasNeon {}
 ```
 
-**Implementors**: `NeonSha3Token`
+**Implementors**: `NeonSha3Token`, `Arm64V3Token`
+
+### HasArm64V2
+
+Marker trait for tokens that provide Arm64-v2 features (NEON + CRC, RDM, DotProd, FP16, AES, SHA2).
+
+```rust
+pub trait HasArm64V2: HasNeon + HasNeonAes {}
+```
+
+**Implementors**: `Arm64V2Token`, `Arm64V3Token`
+
+### HasArm64V3
+
+Marker trait for tokens that provide Arm64-v3 features (all V2 + FHM, FCMA, SHA3, I8MM, BF16).
+
+```rust
+pub trait HasArm64V3: HasArm64V2 + HasNeonSha3 {}
+```
+
+**Implementors**: `Arm64V3Token`
 
 ## Width Traits (Deprecated)
 

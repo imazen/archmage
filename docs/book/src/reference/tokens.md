@@ -138,6 +138,38 @@ if let Some(token) = NeonCrcToken::summon() {
 }
 ```
 
+### Arm64V2Token
+
+**Features**: NEON + CRC, RDM, DotProd, FP16, AES, SHA2
+
+**CPUs**: Cortex-A55+, Apple M1+, Graviton 2+, Snapdragon 8 Gen 1+, all post-2017 ARM chips
+
+The broadest modern ARM compute tier. Covers everything except the oldest ARMv8.0 cores. The Apple M1 is the notable high-end chip that gets V2 but not V3 (lacks i8mm/bf16). Budget 2025 phones with Cortex-A55 LITTLE cores also max out at V2.
+
+```rust
+use archmage::{Arm64V2Token, SimdToken};
+
+if let Some(token) = Arm64V2Token::summon() {
+    // DotProd, FP16, CRC, AES, SHA2 — all available
+}
+```
+
+### Arm64V3Token
+
+**Features**: All V2 + FHM, FCMA, SHA3, I8MM, BF16
+
+**CPUs**: Cortex-A510+, Apple M2+, Snapdragon X Elite/Plus, Graviton 3+, Cobalt 100
+
+The full modern feature set. Requires A510+ LITTLE cores (not A55). All Apple Silicon from M2 onward, all Snapdragon X chips, and all recent server chips support this.
+
+```rust
+use archmage::{Arm64V3Token, SimdToken};
+
+if let Some(token) = Arm64V3Token::summon() {
+    // Full modern ARM: I8MM, BF16, SHA3, and everything from V2
+}
+```
+
 ## WASM Token
 
 ### Wasm128Token
