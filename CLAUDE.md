@@ -300,7 +300,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 | Level | Features | Token | Trait |
 |-------|----------|-------|-------|
 | **v1** | SSE, SSE2 (baseline) | `X64V1Token` / `Sse2Token` | None (always available on x86_64) |
-| **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | `X64V2Token` | `HasX64V2` |
+| **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, PCLMULQDQ, AES | `X64V2Token` | `HasX64V2` |
 | **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` / `Desktop64` | Use token directly |
 | **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` | `HasX64V4` |
 | **V4x** | + VPOPCNTDQ, IFMA, VBMI, VNNI, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | `X64V4xToken` | Use token directly |
@@ -692,7 +692,7 @@ When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the
 
 **x86:**
 - `X64V1Token` / `Sse2Token` - SSE + SSE2 (x86_64 baseline — always available)
-- `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
+- `X64V2Token` - SSE4.2 + POPCNT + PCLMULQDQ + AES (Westmere 2010+)
 - `X64V3Token` / `Desktop64` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
 - `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
 - `X64V4xToken` - + modern extensions (Ice Lake 2019+, Zen 4+)

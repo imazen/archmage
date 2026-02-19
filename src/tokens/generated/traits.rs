@@ -13,9 +13,9 @@ pub trait Has256BitSimd: Has128BitSimd {}
 /// Marker trait for tokens that provide 512-bit SIMD.
 pub trait Has512BitSimd: Has256BitSimd {}
 
-/// Marker trait for x86-64-v2 level (Nehalem 2008+).
+/// Marker trait for x86-64-v2 level (Westmere 2010+).
 ///
-/// v2 includes: SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B, LAHF-SAHF.
+/// v2 includes: SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, PCLMULQDQ, AES-NI.
 pub trait HasX64V2: SimdToken {}
 
 /// Marker trait for x86-64-v4 level (Skylake-X 2017+, Zen 4 2022+).

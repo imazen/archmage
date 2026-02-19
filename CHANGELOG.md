@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1 — 2026-02-18
+
+PCLMULQDQ and AES-NI added to x86-64-v2 baseline.
+
+- **PCLMULQDQ + AES-NI in V2+** — `X64V2Token` now includes `pclmulqdq` and `aes` features, cascading to V3, V4, V4x, and FP16 tokens. These instructions shipped on every x86-64-v2 CPU since Westmere (2010); the only exception is original Nehalem (2008), which is effectively extinct. This means `#[arcane]` functions taking `X64V2Token` can now use `_mm_clmulepi64_si128` and `_mm_aesenc_si128` without needing a higher token. The `HasX64V2` and `HasX64V4` traits are updated accordingly.
+
 ## 0.8.0 — 2026-02-18
 
 ARM compute tiers, better macro diagnostics, edition 2024.
