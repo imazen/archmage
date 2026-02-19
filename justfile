@@ -5,7 +5,7 @@ default: test
 
 # Run all tests (excludes sleef which requires nightly)
 test:
-    cargo test --features "std macros bytemuck avx512"
+    cargo test --features "std macros avx512"
 
 # Run tests with all features (requires nightly for sleef)
 test-nightly:
@@ -13,7 +13,7 @@ test-nightly:
 
 # Run clippy (excludes sleef which requires nightly)
 lint:
-    cargo clippy --features "std macros bytemuck avx512" -- -D warnings
+    cargo clippy --features "std macros avx512" -- -D warnings
 
 # Format code
 fmt:
