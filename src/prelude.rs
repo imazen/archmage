@@ -34,6 +34,7 @@
 //!
 //! Also includes: [`ScalarToken`] (always available), [`X64V2Token`],
 //! [`X64CryptoToken`] (V2 + PCLMULQDQ + AES-NI),
+//! [`X64V3CryptoToken`] (V3 + VPCLMULQDQ + VAES, Zen 3+/Alder Lake+),
 //! [`Wasm128Token`], [`NeonAesToken`], [`NeonSha3Token`], [`NeonCrcToken`],
 //! and the AVX-512 tokens ([`Avx512Token`], [`X64V4xToken`],
 //! [`Avx512Fp16Token`]) when the `avx512` feature is enabled.
@@ -153,7 +154,9 @@ pub use crate::tokens::{
     Arm64, Arm64V2Token, Arm64V3Token, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken,
 };
 pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
-pub use crate::tokens::{Desktop64, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3Token};
+pub use crate::tokens::{
+    Desktop64, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken, X64V3Token,
+};
 
 // -- Macros --
 #[cfg(feature = "macros")]

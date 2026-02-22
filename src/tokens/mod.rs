@@ -421,6 +421,12 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
+    /// Try to cast to X64V3CryptoToken.
+    #[inline(always)]
+    fn as_x64v3_crypto(self) -> Option<X64V3CryptoToken> {
+        None
+    }
+
     /// Try to cast to X64V4Token.
     #[inline(always)]
     fn as_x64v4(self) -> Option<X64V4Token> {
@@ -524,6 +530,14 @@ impl IntoConcreteToken for X64CryptoToken {
 impl IntoConcreteToken for X64V3Token {
     #[inline(always)]
     fn as_x64v3(self) -> Option<X64V3Token> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for X64V3CryptoToken
+impl IntoConcreteToken for X64V3CryptoToken {
+    #[inline(always)]
+    fn as_x64v3_crypto(self) -> Option<X64V3CryptoToken> {
         Some(self)
     }
 }

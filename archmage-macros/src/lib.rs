@@ -397,18 +397,18 @@ fn arcane_impl(mut input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> Toke
     // Rename wildcard patterns (`_: Type`) to named params so the inner call works
     let mut wild_rename_counter = 0u32;
     for arg in &mut input_fn.sig.inputs {
-        if let FnArg::Typed(pat_type) = arg {
-            if matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_)) {
-                let ident = format_ident!("__archmage_wild_{}", wild_rename_counter);
-                wild_rename_counter += 1;
-                pat_type.pat = Box::new(syn::Pat::Ident(syn::PatIdent {
-                    attrs: vec![],
-                    by_ref: None,
-                    mutability: None,
-                    ident,
-                    subpat: None,
-                }));
-            }
+        if let FnArg::Typed(pat_type) = arg
+            && matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_))
+        {
+            let ident = format_ident!("__archmage_wild_{}", wild_rename_counter);
+            wild_rename_counter += 1;
+            *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+                attrs: vec![],
+                by_ref: None,
+                mutability: None,
+                ident,
+                subpat: None,
+            });
         }
     }
 
@@ -1130,6 +1130,15 @@ const ALL_TIERS: &[TierDescriptor] = &[
         target_arch: Some("x86_64"),
         cargo_feature: Some("avx512"),
         priority: 40,
+    },
+    TierDescriptor {
+        name: "v3_crypto",
+        suffix: "v3_crypto",
+        token_path: "archmage::X64V3CryptoToken",
+        as_method: "as_x64v3_crypto",
+        target_arch: Some("x86_64"),
+        cargo_feature: None,
+        priority: 35,
     },
     TierDescriptor {
         name: "v3",

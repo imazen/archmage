@@ -77,6 +77,22 @@ parent = "X64V2Token"
 doc = "Proof that AVX2 + FMA + BMI1/2 + F16C + LZCNT are available (x86-64-v3 level).\n\nx86-64-v3 implies all of v2 plus: AVX, AVX2, FMA, BMI1, BMI2, F16C, LZCNT, MOVBE.\nThis is the Haswell (2013) / Zen 1 (2017) baseline.\n\nThis is the most commonly targeted level for high-performance SIMD code."
 
 [[token]]
+name = "X64V3CryptoToken"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
+    "pclmulqdq", "aes",
+    "vpclmulqdq", "vaes",
+]
+traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
+parent = "X64V3Token"
+display_name = "x86-64-v3 Crypto"
+short_name = "v3_crypto"
+doc = "Proof that AVX2 + VPCLMULQDQ + VAES are available.\n\nVPCLMULQDQ (256-bit carryless multiply) and VAES (256-bit AES) extend\nPCLMULQDQ/AES-NI to 256-bit vectors. Available without AVX-512 on:\nZen 3+ (2020), Alder Lake P-core (2021), Raptor Lake (2022).\n\nUse for 256-bit CRC-32 folding, AES-CTR/GCM, and GF(2) polynomial\narithmetic on CPUs that lack AVX-512."
+
+[[token]]
 name = "X64V4Token"
 arch = "x86"
 aliases = ["Avx512Token", "Server64"]

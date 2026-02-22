@@ -130,14 +130,16 @@ fn build_token_slots() -> Vec<TokenSlot> {
     let mut slots = Vec::new();
 
     // x86/x86_64 hierarchy:
-    //   V1(0) → V2(1) → V3(2) → V4(3) → Modern(4)
-    //                                   → Fp16(5)
+    //   V1(0) → V2(1) → V3(2) → V3Crypto(3)
+    //                          → V4(4) → V4x(5)
+    //                                  → Fp16(6)
     #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
     {
-        slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5]));
-        slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5]));
-        slots.push(token_slot!(crate::X64V3Token, &[3, 4, 5]));
-        slots.push(token_slot!(crate::X64V4Token, &[4, 5]));
+        slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5, 6]));
+        slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5, 6]));
+        slots.push(token_slot!(crate::X64V3Token, &[3, 4, 5, 6]));
+        slots.push(token_slot!(crate::X64V3CryptoToken, &[]));
+        slots.push(token_slot!(crate::X64V4Token, &[5, 6]));
         slots.push(token_slot!(crate::X64V4xToken, &[]));
         slots.push(token_slot!(crate::Avx512Fp16Token, &[]));
     }
