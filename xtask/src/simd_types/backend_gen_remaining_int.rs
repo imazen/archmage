@@ -2397,9 +2397,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
     let trait_binary_op = |method: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| {
-                format!(
-                    "<archmage::Wasm128Token as {native_trait}>::{method}(a[{i}], b[{i}])"
-                )
+                format!("<archmage::Wasm128Token as {native_trait}>::{method}(a[{i}], b[{i}])")
             })
             .collect();
         format!("[{}]", items.join(", "))
