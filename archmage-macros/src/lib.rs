@@ -747,6 +747,25 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
     arcane_impl(input_fn, "simd_fn", args)
 }
 
+/// Descriptive alias for [`arcane`].
+///
+/// Generates a safe wrapper around a `#[target_feature]` inner function.
+/// The token type in your signature determines which CPU features are enabled.
+/// Creates an LLVM optimization boundary — use [`token_target_features`]
+/// (alias for [`rite`]) for inner helpers to avoid this.
+///
+/// Since Rust 1.85, value-based SIMD intrinsics are safe inside
+/// `#[target_feature]` functions. This macro generates the `#[target_feature]`
+/// wrapper so you never need to write `unsafe` for SIMD code.
+///
+/// See [`arcane`] for full documentation and examples.
+#[proc_macro_attribute]
+pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as ArcaneArgs);
+    let input_fn = parse_macro_input!(item as ItemFn);
+    arcane_impl(input_fn, "token_target_features_boundary", args)
+}
+
 // ============================================================================
 // Rite macro for inner SIMD functions (inlines into matching #[target_feature] callers)
 // ============================================================================
@@ -802,6 +821,23 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse optional arguments (currently just inline_always)
+    let args = parse_macro_input!(attr as RiteArgs);
+    let input_fn = parse_macro_input!(item as ItemFn);
+    rite_impl(input_fn, args)
+}
+
+/// Descriptive alias for [`rite`].
+///
+/// Applies `#[target_feature]` + `#[inline]` based on the token type in your
+/// function signature. No wrapper, no optimization boundary. Use for functions
+/// called from within `#[arcane]`/`#[token_target_features_boundary]` code.
+///
+/// Since Rust 1.85, calling a `#[target_feature]` function from another function
+/// with matching features is safe — no `unsafe` needed.
+///
+/// See [`rite`] for full documentation and examples.
+#[proc_macro_attribute]
+pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as RiteArgs);
     let input_fn = parse_macro_input!(item as ItemFn);
     rite_impl(input_fn, args)
@@ -1440,6 +1476,19 @@ pub fn incant(input: TokenStream) -> TokenStream {
 /// Legacy alias for [`incant!`].
 #[proc_macro]
 pub fn simd_route(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as IncantInput);
+    incant_impl(input)
+}
+
+/// Descriptive alias for [`incant!`].
+///
+/// Dispatches to architecture-specific function variants at runtime.
+/// Looks for suffixed functions (`_v3`, `_v4`, `_neon`, `_wasm128`, `_scalar`)
+/// and calls the best one the CPU supports.
+///
+/// See [`incant!`] for full documentation and examples.
+#[proc_macro]
+pub fn dispatch_variant(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as IncantInput);
     incant_impl(input)
 }

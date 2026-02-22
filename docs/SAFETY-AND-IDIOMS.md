@@ -2,6 +2,12 @@
 
 Authoritative reference for understanding and teaching archmage. Read before writing docs or examples.
 
+> **`#![forbid(unsafe_code)]` compatible.** Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage tokens + `#[arcane]`/`#[rite]` macros + `safe_unaligned_simd` for memory operations. The `unsafe` lives inside archmage's generated code, not yours.
+
+> **Descriptive aliases.** `#[token_target_features_boundary]` = `#[arcane]`, `#[token_target_features]` = `#[rite]`, `dispatch_variant!` = `incant!`. These help AI tools and newcomers infer what the macros do from the name alone.
+
+> **Source of truth.** All token-to-feature mappings are defined in [`token-registry.toml`](../token-registry.toml). Everything else (generated code, macro registries, docs) is derived from it.
+
 ## Terminology
 
 | Term | Definition |

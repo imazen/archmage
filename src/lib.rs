@@ -62,11 +62,18 @@
 //!
 //! **Capability Tokens** are zero-sized proof types created via `summon()`, which
 //! checks CPUID at runtime (elided if compiled with target features enabled).
+//! See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml)
+//! for the complete mapping of tokens to CPU features.
 //!
 //! **The `#[arcane]` and `#[rite]` macros** read the token type from your function
 //! signature to determine which `#[target_feature]` attributes to emit. A function
 //! taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function
 //! taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
+//!
+//! Descriptive aliases are available for AI-assisted coding:
+//! `#[token_target_features_boundary]` = `#[arcane]`,
+//! `#[token_target_features]` = `#[rite]`,
+//! `dispatch_variant!` = `incant!`.
 //!
 //! `#[arcane]` generates a wrapper: an outer function that calls an inner
 //! `#[target_feature]` function via `unsafe`. This wrapper is how you cross into
@@ -82,6 +89,16 @@
 //!
 //! Use concrete tokens like `Desktop64` (AVX2+FMA) or `X64V4Token` (AVX-512).
 //! For generic code, use tier traits like `HasX64V2` or `HasX64V4`.
+//!
+//! ## Safety
+//!
+//! Since Rust 1.85, value-based SIMD intrinsics (arithmetic, shuffle, compare,
+//! bitwise) are safe inside `#[target_feature]` functions. Only pointer-based
+//! memory operations remain unsafe — use `safe_unaligned_simd` for those.
+//!
+//! Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage
+//! tokens + `#[arcane]`/`#[rite]` macros + `safe_unaligned_simd` for memory
+//! operations.
 //!
 //! ## Feature Flags
 //!
@@ -102,7 +119,10 @@ extern crate alloc;
 // Re-export macros from archmage-macros
 #[cfg(feature = "macros")]
 #[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
-pub use archmage_macros::{arcane, incant, magetypes, rite, simd_fn, simd_route};
+pub use archmage_macros::{
+    arcane, dispatch_variant, incant, magetypes, rite, simd_fn, simd_route, token_target_features,
+    token_target_features_boundary,
+};
 
 // Optimized feature detection
 #[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]

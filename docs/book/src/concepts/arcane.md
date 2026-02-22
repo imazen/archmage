@@ -1,8 +1,10 @@
-# The #[arcane] Macro
+# The #[arcane] Macro <sub>(alias: `#[token_target_features_boundary]`)</sub>
 
 `#[arcane]` creates a safe wrapper around SIMD code. Use it at **entry points**—functions called from non-SIMD code (after `summon()`, from tests, public APIs).
 
 For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
+
+> **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `safe_unaligned_simd` for those.
 
 ## How It Works
 
@@ -84,10 +86,14 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
 | Token | Enabled Features |
 |-------|------------------|
 | `X64V2Token` | sse3, ssse3, sse4.1, sse4.2, popcnt |
+| `X64CryptoToken` | V2 + pclmulqdq, aes |
 | `X64V3Token` / `Desktop64` | + avx, avx2, fma, bmi1, bmi2, f16c |
+| `X64V3CryptoToken` | V3 + vpclmulqdq, vaes |
 | `X64V4Token` / `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl |
 | `NeonToken` / `Arm64` | neon |
 | `Wasm128Token` | simd128 |
+
+See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete mapping.
 
 ## Nesting #[arcane] Functions
 

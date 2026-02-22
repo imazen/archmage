@@ -60,11 +60,15 @@ fn main() {
 
 ## Key Concepts
 
-1. **Tokens** are zero-sized proof types. `Desktop64::summon()` returns `Some(token)` only if the CPU supports AVX2+FMA.
+1. **Tokens** are zero-sized proof types. `Desktop64::summon()` returns `Some(token)` only if the CPU supports AVX2+FMA. See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete token-to-feature mapping.
 
-2. **`#[arcane]`** generates a `#[target_feature]` inner function. Inside, SIMD intrinsics are safe.
+2. **`#[arcane]`** generates a `#[target_feature]` inner function. Inside, SIMD intrinsics are safe (Rust 1.85+). Descriptive alias: `#[token_target_features_boundary]`.
 
-3. **Dispatch once, loop inside**: Call `summon()` at your API boundary, put loops inside `#[arcane]`, use `#[rite]` for helpers. Each `#[arcane]` call crosses a `#[target_feature]` boundary that LLVM can't optimize across.
+3. **`#[rite]`** adds `#[target_feature]` + `#[inline]` directly — no wrapper, no boundary. Descriptive alias: `#[token_target_features]`.
+
+4. **Dispatch once, loop inside**: Call `summon()` at your API boundary, put loops inside `#[arcane]`, use `#[rite]` for helpers. Each `#[arcane]` call crosses a `#[target_feature]` boundary that LLVM can't optimize across.
+
+5. **`#![forbid(unsafe_code)]` compatible**: Combine archmage tokens + `#[arcane]`/`#[rite]` + `safe_unaligned_simd` for memory operations, and your downstream crate needs zero `unsafe`.
 
 ## Supported Platforms
 

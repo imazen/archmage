@@ -160,7 +160,10 @@ pub use crate::tokens::{
 
 // -- Macros --
 #[cfg(feature = "macros")]
-pub use archmage_macros::{arcane, incant, magetypes, rite, simd_fn, simd_route};
+pub use archmage_macros::{
+    arcane, dispatch_variant, incant, magetypes, rite, simd_fn, simd_route, token_target_features,
+    token_target_features_boundary,
+};
 
 // -- core::arch intrinsics for the current platform --
 #[cfg(target_arch = "x86_64")]

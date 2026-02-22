@@ -84,5 +84,7 @@ The token parameter proves you checked CPU features. The macro enables those fea
 
 1. **`Desktop64`** = AVX2 + FMA + BMI1 + BMI2 (Haswell 2013+, Zen 1+)
 2. **`summon()`** does runtime CPU detection
-3. **`#[arcane]`** makes intrinsics safe inside the function
+3. **`#[arcane]`** makes intrinsics safe inside the function (since Rust 1.85)
 4. **Token is zero-sized** — no runtime overhead passing it around
+5. **`safe_unaligned_simd`** makes load/store safe — takes `&[f32; 8]` instead of `*const f32`
+6. **`#![forbid(unsafe_code)]` compatible** — combine archmage + `safe_unaligned_simd` and your crate needs zero `unsafe`

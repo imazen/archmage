@@ -1,4 +1,4 @@
-# The #[rite] Macro
+# The #[rite] Macro <sub>(alias: `#[token_target_features]`)</sub>
 
 `#[rite]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly to your function, so LLVM can inline it into any caller with matching features.
 
@@ -107,7 +107,7 @@ fn helper(_token: Desktop64, v: __m256) -> __m256 {
 
 ## Why This Works (Rust 1.85+)
 
-Since Rust 1.85, calling a `#[target_feature]` function from another function with matching or superset features is **safe**—no `unsafe` block needed:
+Since Rust 1.85, calling a `#[target_feature]` function from another function with matching or superset features is **safe** — no `unsafe` block needed. This is what makes `#[rite]` functions callable from `#[arcane]` or other `#[rite]` functions without `unsafe`:
 
 ```rust
 #[target_feature(enable = "avx2,fma")]

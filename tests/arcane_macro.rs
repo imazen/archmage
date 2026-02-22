@@ -649,3 +649,61 @@ mod into_concrete_token_tests {
         }
     }
 }
+
+/// Tests for descriptive aliases (`token_target_features_boundary`, `token_target_features`,
+/// `dispatch_variant!`).
+#[cfg(target_arch = "x86_64")]
+mod alias_tests {
+    use archmage::{
+        Desktop64, ScalarToken, SimdToken, X64V3Token, dispatch_variant, token_target_features,
+        token_target_features_boundary,
+    };
+    use std::arch::x86_64::*;
+
+    // token_target_features_boundary = arcane
+    #[token_target_features_boundary]
+    fn add_aliased(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+        let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
+        let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
+        let sum = _mm256_add_ps(va, vb);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), sum) };
+        out
+    }
+
+    // token_target_features = rite
+    #[token_target_features]
+    fn helper_aliased(_token: X64V3Token, v: __m256) -> __m256 {
+        _mm256_add_ps(v, v)
+    }
+
+    // dispatch_variant! = incant!
+    #[cfg(target_arch = "x86_64")]
+    fn sum_aliased_v3(token: X64V3Token, data: &[f32]) -> f32 {
+        data.iter().sum()
+    }
+
+    fn sum_aliased_scalar(_token: ScalarToken, data: &[f32]) -> f32 {
+        data.iter().sum()
+    }
+
+    fn sum_aliased(data: &[f32]) -> f32 {
+        dispatch_variant!(sum_aliased(data), [v3])
+    }
+
+    #[test]
+    fn test_token_target_features_boundary_alias() {
+        if let Some(token) = X64V3Token::summon() {
+            let a = [1.0f32; 8];
+            let b = [2.0f32; 8];
+            let out = add_aliased(token, &a, &b);
+            assert_eq!(out, [3.0; 8]);
+        }
+    }
+
+    #[test]
+    fn test_dispatch_variant_alias() {
+        let result = sum_aliased(&[1.0, 2.0, 3.0]);
+        assert_eq!(result, 6.0);
+    }
+}

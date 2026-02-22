@@ -1,6 +1,6 @@
 # Token Reference
 
-Complete reference for all archmage tokens.
+Complete reference for all archmage tokens. See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the authoritative source of truth for token-to-feature mappings.
 
 ## x86-64 Tokens
 

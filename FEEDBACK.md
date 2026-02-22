@@ -24,6 +24,17 @@
   - Updated CLAUDE.md: directory structure, CI feature lists, codegen style rules
   - Added rule: ban `writeln!` chains in codegen, use `r#` raw strings + `formatdoc!`
 
+## 2026-02-21
+
+- User requested adding descriptive aliases for proc macros and saturating docs with safety messaging
+  - Added `#[token_target_features_boundary]` (alias for `#[arcane]`)
+  - Added `#[token_target_features]` (alias for `#[rite]`)
+  - Added `dispatch_variant!` (alias for `incant!`)
+  - Added Safety Model section to README.md
+  - Added crypto tokens to README token table
+  - Updated 10+ doc files with alias notes, Rust 1.85 safety messaging, `#![forbid(unsafe_code)]` compatibility, registry links
+  - Added alias tests in tests/arcane_macro.rs
+
 ## 2026-02-15
 
 - User requested adding i32 backend trait generation to backend_gen.rs

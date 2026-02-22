@@ -1,6 +1,6 @@
 # Feature Flags
 
-Reference for Cargo feature flags in archmage and magetypes.
+Reference for Cargo feature flags in archmage and magetypes. For the mapping of tokens to CPU features, see [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml).
 
 ## archmage Features
 

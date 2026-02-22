@@ -13,6 +13,16 @@
 
 **We are mages, not bureaucrats.** Write `Token::summon()`, not `Token::try_new()`.
 
+### Descriptive Aliases (for AI-assisted coding)
+
+These aliases exist so AI tools can infer behavior from the name. **Prefer the thematic names** in hand-written code, but accept both in reviews and docs.
+
+| Thematic | Descriptive Alias | What it does |
+|----------|------------------|--------------|
+| `#[arcane]` | `#[token_target_features_boundary]` | Generates safe `#[target_feature]` wrapper (entry point) |
+| `#[rite]` | `#[token_target_features]` | Adds `#[target_feature]` + `#[inline]` directly (internal helper) |
+| `incant!` | `dispatch_variant!` | Runtime dispatch to architecture-specific variants |
+
 ## Reference: CPU Features, Detection, and Dispatch
 
 ### The Core Distinction: Compile-Time vs Runtime
@@ -493,6 +503,8 @@ This means we **don't need to wrap** arithmetic, shuffle, compare, bitwise, or o
 1. **Tokens** - Prove CPU features are available
 2. **`#[arcane]` macro** - Enable `#[target_feature]` via token proof
 3. **`safe_unaligned_simd`** - Reference-based memory operations (user adds as dependency)
+
+**`#![forbid(unsafe_code)]` compatible**: Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage tokens + `#[arcane]`/`#[rite]` macros + `safe_unaligned_simd` for memory operations.
 
 ## How `#[arcane]` Works
 

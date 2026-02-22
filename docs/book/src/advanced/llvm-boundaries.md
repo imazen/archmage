@@ -31,7 +31,7 @@ SIMD performance depends heavily on:
 
 All of these break at target feature boundaries.
 
-## Good: `#[rite]` Helpers Inside `#[arcane]`
+## Good: `#[rite]` Helpers Inside `#[arcane]` <sub>(`#[token_target_features]` inside `#[token_target_features_boundary]`)</sub>
 
 ```rust
 #[arcane]

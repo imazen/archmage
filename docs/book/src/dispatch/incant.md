@@ -1,4 +1,4 @@
-# incant! Macro
+# incant! Macro <sub>(alias: `dispatch_variant!`)</sub>
 
 `incant!` automates dispatch to suffixed function variants. Write one call, get automatic fallback through capability tiers.
 

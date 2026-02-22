@@ -1,6 +1,6 @@
 # Understanding Tokens
 
-Tokens are the core of archmage's safety model. They're zero-sized proof types that demonstrate CPU feature availability.
+Tokens are the core of archmage's safety model. They're zero-sized proof types that demonstrate CPU feature availability. See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete token-to-feature mapping.
 
 ## The Token Hierarchy
 
