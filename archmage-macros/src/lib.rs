@@ -1289,8 +1289,8 @@ fn resolve_tiers(
 
 /// Input for the incant! macro
 struct IncantInput {
-    /// Function name to call
-    func_name: Ident,
+    /// Function path to call (e.g. `func` or `module::func`)
+    func_path: syn::Path,
     /// Arguments to pass
     args: Vec<syn::Expr>,
     /// Optional token variable for passthrough mode
@@ -1299,10 +1299,20 @@ struct IncantInput {
     tiers: Option<(Vec<String>, proc_macro2::Span)>,
 }
 
+/// Create a suffixed version of a function path.
+/// e.g. `module::func` + `"v3"` → `module::func_v3`
+fn suffix_path(path: &syn::Path, suffix: &str) -> syn::Path {
+    let mut suffixed = path.clone();
+    if let Some(last) = suffixed.segments.last_mut() {
+        last.ident = format_ident!("{}_{}", last.ident, suffix);
+    }
+    suffixed
+}
+
 impl Parse for IncantInput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // Parse: function_name(arg1, arg2, ...) [with token_expr] [, [tier1, tier2, ...]]
-        let func_name: Ident = input.parse()?;
+        // Parse: function_path(arg1, arg2, ...) [with token_expr] [, [tier1, tier2, ...]]
+        let func_path: syn::Path = input.parse()?;
 
         // Parse parenthesized arguments
         let content;
@@ -1336,7 +1346,7 @@ impl Parse for IncantInput {
         };
 
         Ok(IncantInput {
-            func_name,
+            func_path,
             args,
             with_token,
             tiers,
@@ -1426,7 +1436,7 @@ pub fn simd_route(input: TokenStream) -> TokenStream {
 }
 
 fn incant_impl(input: IncantInput) -> TokenStream {
-    let func_name = &input.func_name;
+    let func_path = &input.func_path;
     let args = &input.args;
 
     // Resolve tiers
@@ -1434,11 +1444,16 @@ fn incant_impl(input: IncantInput) -> TokenStream {
         Some((names, _)) => names.clone(),
         None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
     };
+    let last_segment_span = func_path
+        .segments
+        .last()
+        .map(|s| s.ident.span())
+        .unwrap_or_else(proc_macro2::Span::call_site);
     let error_span = input
         .tiers
         .as_ref()
         .map(|(_, span)| *span)
-        .unwrap_or_else(|| func_name.span());
+        .unwrap_or(last_segment_span);
 
     let tiers = match resolve_tiers(&tier_names, error_span) {
         Ok(t) => t,
@@ -1448,15 +1463,15 @@ fn incant_impl(input: IncantInput) -> TokenStream {
     // Group tiers by architecture for cfg-guarded blocks
     // Within each arch, tiers are already sorted by priority (highest first)
     if let Some(token_expr) = &input.with_token {
-        gen_incant_passthrough(func_name, args, token_expr, &tiers)
+        gen_incant_passthrough(func_path, args, token_expr, &tiers)
     } else {
-        gen_incant_entry(func_name, args, &tiers)
+        gen_incant_entry(func_path, args, &tiers)
     }
 }
 
 /// Generate incant! passthrough mode (already have a token).
 fn gen_incant_passthrough(
-    func_name: &Ident,
+    func_path: &syn::Path,
     args: &[syn::Expr],
     token_expr: &syn::Expr,
     tiers: &[&TierDescriptor],
@@ -1480,7 +1495,7 @@ fn gen_incant_passthrough(
     for (target_arch, cargo_feature, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
         for tier in group_tiers {
-            let fn_suffixed = format_ident!("{}_{}", func_name, tier.suffix);
+            let fn_suffixed = suffix_path(func_path, tier.suffix);
             let as_method = format_ident!("{}", tier.as_method);
             tier_checks.push(quote! {
                 if let Some(__t) = __incant_token.#as_method() {
@@ -1514,7 +1529,7 @@ fn gen_incant_passthrough(
     }
 
     // Scalar fallback (always last)
-    let fn_scalar = format_ident!("{}_scalar", func_name);
+    let fn_scalar = suffix_path(func_path, "scalar");
     let scalar_arm = if tiers.iter().any(|t| t.name == "scalar") {
         quote! {
             if let Some(__t) = __incant_token.as_scalar() {
@@ -1539,7 +1554,7 @@ fn gen_incant_passthrough(
 
 /// Generate incant! entry point mode (summon tokens).
 fn gen_incant_entry(
-    func_name: &Ident,
+    func_path: &syn::Path,
     args: &[syn::Expr],
     tiers: &[&TierDescriptor],
 ) -> TokenStream {
@@ -1562,7 +1577,7 @@ fn gen_incant_entry(
     for (target_arch, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
         for tier in group_tiers {
-            let fn_suffixed = format_ident!("{}_{}", func_name, tier.suffix);
+            let fn_suffixed = suffix_path(func_path, tier.suffix);
             let token_path: syn::Path = syn::parse_str(tier.token_path).unwrap();
 
             let check = quote! {
@@ -1594,7 +1609,7 @@ fn gen_incant_entry(
     }
 
     // Scalar fallback
-    let fn_scalar = format_ident!("{}_scalar", func_name);
+    let fn_scalar = suffix_path(func_path, "scalar");
 
     let expanded = quote! {
         '__incant: {

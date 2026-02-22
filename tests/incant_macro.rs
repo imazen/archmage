@@ -315,6 +315,66 @@ mod alias_tests {
 // IntoConcreteToken direct usage tests
 // =============================================================================
 
+// =============================================================================
+// Module path tests (incant! with module::func syntax)
+// =============================================================================
+
+mod simd_impls {
+    use archmage::ScalarToken;
+
+    pub fn triple_scalar(_token: ScalarToken, x: i32) -> i32 {
+        x * 3
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    pub fn triple_v3(_token: archmage::X64V3Token, x: i32) -> i32 {
+        x * 3
+    }
+
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    pub fn triple_v4(_token: archmage::X64V4Token, x: i32) -> i32 {
+        x * 3
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    pub fn triple_neon(_token: archmage::NeonToken, x: i32) -> i32 {
+        x * 3
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn triple_wasm128(_token: archmage::Wasm128Token, x: i32) -> i32 {
+        x * 3
+    }
+}
+
+mod module_path_tests {
+    use archmage::incant;
+
+    pub fn triple_api(x: i32) -> i32 {
+        incant!(super::simd_impls::triple(x))
+    }
+
+    #[test]
+    fn module_path_entry_point() {
+        let result = triple_api(7);
+        assert_eq!(result, 21);
+    }
+
+    #[test]
+    fn module_path_passthrough() {
+        use archmage::{IntoConcreteToken, ScalarToken};
+        fn inner<T: IntoConcreteToken>(token: T, x: i32) -> i32 {
+            incant!(super::simd_impls::triple(x) with token)
+        }
+        let result = inner(ScalarToken, 14);
+        assert_eq!(result, 42);
+    }
+}
+
+// =============================================================================
+// IntoConcreteToken direct usage tests
+// =============================================================================
+
 mod into_concrete_token_tests {
     use super::*;
 
