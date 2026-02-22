@@ -292,10 +292,17 @@ fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                     };
 
                     if let Some(features) = features {
-                        // Extract parameter name
-                        if let syn::Pat::Ident(pat_ident) = pat.as_ref() {
+                        // Extract parameter name (or synthesize one for wildcard `_`)
+                        let ident = match pat.as_ref() {
+                            syn::Pat::Ident(pat_ident) => Some(pat_ident.ident.clone()),
+                            syn::Pat::Wild(w) => {
+                                Some(Ident::new("__archmage_token", w.underscore_token.span))
+                            }
+                            _ => None,
+                        };
+                        if let Some(ident) = ident {
                             return Some(TokenParamInfo {
-                                ident: pat_ident.ident.clone(),
+                                ident,
                                 features,
                                 target_arch: arch,
                                 token_type_name: token_name,
@@ -320,7 +327,7 @@ enum SelfReceiver {
 }
 
 /// Shared implementation for arcane/arcane macros.
-fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStream {
+fn arcane_impl(mut input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStream {
     // Check for self receiver
     let has_self_receiver = input_fn
         .sig
@@ -386,6 +393,24 @@ fn arcane_impl(input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStr
         .iter()
         .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
         .collect();
+
+    // Rename wildcard patterns (`_: Type`) to named params so the inner call works
+    let mut wild_rename_counter = 0u32;
+    for arg in &mut input_fn.sig.inputs {
+        if let FnArg::Typed(pat_type) = arg {
+            if matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_)) {
+                let ident = format_ident!("__archmage_wild_{}", wild_rename_counter);
+                wild_rename_counter += 1;
+                pat_type.pat = Box::new(syn::Pat::Ident(syn::PatIdent {
+                    attrs: vec![],
+                    by_ref: None,
+                    mutability: None,
+                    ident,
+                    subpat: None,
+                }));
+            }
+        }
+    }
 
     // Extract function components
     let vis = &input_fn.vis;

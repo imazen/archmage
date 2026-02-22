@@ -144,6 +144,28 @@ mod x86_tests {
     }
 
     // =====================================================================
+    // Test wildcard token parameter `_: TokenType`
+    // =====================================================================
+
+    #[arcane]
+    fn wildcard_negate(_: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+        let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+        let neg = _mm256_sub_ps(_mm256_setzero_ps(), v);
+        let mut out = [0.0f32; 8];
+        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), neg) };
+        out
+    }
+
+    #[test]
+    fn test_arcane_wildcard_token() {
+        if let Some(token) = X64V3Token::summon() {
+            let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let output = wildcard_negate(token, &input);
+            assert_eq!(output, [-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0]);
+        }
+    }
+
+    // =====================================================================
     // Tests for impl Trait and generic type parameters
     // =====================================================================
 

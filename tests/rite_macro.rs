@@ -115,6 +115,28 @@ fn test_rite_complex() {
     }
 }
 
+// Wildcard token parameter: `_: TokenType` should be accepted
+#[rite]
+fn scale_vector(_: X64V3Token, a: &[f32; 8], factor: f32) -> [f32; 8] {
+    unsafe {
+        let va = _mm256_loadu_ps(a.as_ptr());
+        let vf = _mm256_set1_ps(factor);
+        let result = _mm256_mul_ps(va, vf);
+        let mut out = [0.0f32; 8];
+        _mm256_storeu_ps(out.as_mut_ptr(), result);
+        out
+    }
+}
+
+#[test]
+fn test_rite_wildcard_token() {
+    if let Some(token) = X64V3Token::summon() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let result = unsafe { scale_vector(token, &a, 3.0) };
+        assert_eq!(result, [3.0, 6.0, 9.0, 12.0, 15.0, 18.0, 21.0, 24.0]);
+    }
+}
+
 #[test]
 fn test_rite_with_desktop64_alias() {
     if let Some(token) = Desktop64::summon() {
