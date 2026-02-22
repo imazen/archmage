@@ -496,6 +496,15 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         Self(v)
         }}
 
+        /// Create from raw intrinsic type (token-gated, zero-cost).
+        ///
+        /// Portable alias for [`from_{safe_inner}`](Self::from_{safe_inner}).
+        /// Use this when you want architecture-independent code.
+        #[inline(always)]
+        pub fn from_raw_checked(_: archmage::{token}, v: {inner}) -> Self {{
+        Self(v)
+        }}
+
         // ========== Token-gated bytemuck replacements ==========
 
         /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).

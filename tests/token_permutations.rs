@@ -119,12 +119,13 @@ fn cascade_disabling_works() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn no_duplicate_effective_states() {
-    let mut states: Vec<(bool, bool, bool, bool, bool)> = Vec::new();
+    let mut states: Vec<(bool, bool, bool, bool, bool, bool)> = Vec::new();
 
     let _ = for_each_token_permutation(CompileTimePolicy::Warn, |_perm| {
         let state = (
             archmage::X64V2Token::summon().is_some(),
             archmage::X64V3Token::summon().is_some(),
+            archmage::X64V3CryptoToken::summon().is_some(),
             archmage::X64V4Token::summon().is_some(),
             archmage::X64V4xToken::summon().is_some(),
             archmage::Avx512Fp16Token::summon().is_some(),

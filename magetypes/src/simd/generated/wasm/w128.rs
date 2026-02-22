@@ -104,6 +104,15 @@ impl f32x4 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -1416,6 +1425,15 @@ impl f64x2 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -2014,6 +2032,15 @@ impl i8x16 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -2470,6 +2497,15 @@ impl u8x16 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_v128(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
         Self(v)
     }
 
@@ -2948,6 +2984,15 @@ impl i16x8 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_v128(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
         Self(v)
     }
 
@@ -3473,6 +3518,15 @@ impl u16x8 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -3950,6 +4004,15 @@ impl i32x4 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_v128(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
         Self(v)
     }
 
@@ -4479,6 +4542,15 @@ impl u32x4 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -4947,6 +5019,15 @@ impl i64x2 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_v128(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
         Self(v)
     }
 
@@ -5442,6 +5523,15 @@ impl u64x2 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_v128(_: archmage::Wasm128Token, v: v128) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_v128`](Self::from_v128).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::Wasm128Token, v: v128) -> Self {
         Self(v)
     }
 

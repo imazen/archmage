@@ -104,6 +104,15 @@ impl f32x4 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_float32x4_t`](Self::from_float32x4_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: float32x4_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -1411,6 +1420,15 @@ impl f64x2 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_float64x2_t`](Self::from_float64x2_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: float64x2_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -1985,6 +2003,15 @@ impl i8x16 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_int8x16_t`](Self::from_int8x16_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: int8x16_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -2433,6 +2460,15 @@ impl u8x16 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_uint8x16_t(_: archmage::NeonToken, v: uint8x16_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_uint8x16_t`](Self::from_uint8x16_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: uint8x16_t) -> Self {
         Self(v)
     }
 
@@ -2906,6 +2942,15 @@ impl i16x8 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_int16x8_t(_: archmage::NeonToken, v: int16x8_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_int16x8_t`](Self::from_int16x8_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: int16x8_t) -> Self {
         Self(v)
     }
 
@@ -3424,6 +3469,15 @@ impl u16x8 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_uint16x8_t`](Self::from_uint16x8_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: uint16x8_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -3894,6 +3948,15 @@ impl i32x4 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_int32x4_t(_: archmage::NeonToken, v: int32x4_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_int32x4_t`](Self::from_int32x4_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: int32x4_t) -> Self {
         Self(v)
     }
 
@@ -4405,6 +4468,15 @@ impl u32x4 {
         Self(v)
     }
 
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_uint32x4_t`](Self::from_uint32x4_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: uint32x4_t) -> Self {
+        Self(v)
+    }
+
     // ========== Token-gated bytemuck replacements ==========
 
     /// Reinterpret a slice of scalars as a slice of SIMD vectors (token-gated).
@@ -4855,6 +4927,15 @@ impl i64x2 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_int64x2_t(_: archmage::NeonToken, v: int64x2_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_int64x2_t`](Self::from_int64x2_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: int64x2_t) -> Self {
         Self(v)
     }
 
@@ -5326,6 +5407,15 @@ impl u64x2 {
     /// proves the CPU supports the required SIMD features.
     #[inline(always)]
     pub fn from_uint64x2_t(_: archmage::NeonToken, v: uint64x2_t) -> Self {
+        Self(v)
+    }
+
+    /// Create from raw intrinsic type (token-gated, zero-cost).
+    ///
+    /// Portable alias for [`from_uint64x2_t`](Self::from_uint64x2_t).
+    /// Use this when you want architecture-independent code.
+    #[inline(always)]
+    pub fn from_raw_checked(_: archmage::NeonToken, v: uint64x2_t) -> Self {
         Self(v)
     }
 
