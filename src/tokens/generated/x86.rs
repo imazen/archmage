@@ -215,7 +215,7 @@ impl SimdToken for X64V2Token {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -447,7 +447,7 @@ impl SimdToken for X64CryptoToken {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -692,7 +692,7 @@ impl SimdToken for X64V3Token {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -1001,7 +1001,7 @@ impl SimdToken for X64V3CryptoToken {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -1328,7 +1328,7 @@ impl SimdToken for X64V4Token {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -1697,7 +1697,7 @@ impl SimdToken for X64V4xToken {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -2100,7 +2100,7 @@ impl SimdToken for Avx512Fp16Token {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching

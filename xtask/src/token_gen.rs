@@ -346,7 +346,7 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         {INDENT}    // Compile-time fast path (suppressed by testable_dispatch)
         {INDENT}    #[cfg(all({all_features}{dct_guard}))]
         {INDENT}    {{
-        {INDENT}        return Some(unsafe {{ Self::forge_token_dangerously() }});
+        {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
         {INDENT}    }}
 
         {INDENT}    // Runtime path with caching
@@ -387,7 +387,7 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
         {INDENT}    // Compile-time fast path (suppressed by testable_dispatch)
         {INDENT}    #[cfg(all({all_features}{dct_guard}))]
         {INDENT}    {{
-        {INDENT}        return Some(unsafe {{ Self::forge_token_dangerously() }});
+        {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
         {INDENT}    }}
 
         {INDENT}    // Runtime path with caching

@@ -57,7 +57,7 @@ impl SimdToken for NeonToken {
         // Compile-time fast path (suppressed by testable_dispatch)
         #[cfg(all(target_feature = "neon", not(feature = "testable_dispatch")))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -200,7 +200,7 @@ impl SimdToken for NeonAesToken {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -356,7 +356,7 @@ impl SimdToken for NeonSha3Token {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -513,7 +513,7 @@ impl SimdToken for NeonCrcToken {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -689,7 +689,7 @@ impl SimdToken for Arm64V2Token {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
@@ -914,7 +914,7 @@ impl SimdToken for Arm64V3Token {
             not(feature = "testable_dispatch")
         ))]
         {
-            return Some(unsafe { Self::forge_token_dangerously() });
+            Some(unsafe { Self::forge_token_dangerously() })
         }
 
         // Runtime path with caching
