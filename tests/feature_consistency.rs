@@ -391,7 +391,7 @@ fn scalar_token_always_available() {
 /// Verify that tokens on unsupported architectures return None.
 #[test]
 fn wrong_arch_tokens_return_none() {
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
     {
         assert!(
             X64V2Token::summon().is_none(),
