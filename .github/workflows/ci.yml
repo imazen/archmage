@@ -135,8 +135,8 @@ jobs:
           RUSTFLAGS: "-C target-feature=+simd128"
         run: cargo build -p magetypes --target wasm32-wasip1
 
-      # Only run lib tests — integration tests pull proptest which depends on
-      # wait-timeout, and that crate doesn't compile on WASM.
+      # Lib tests only — integration tests that use proptest pull wait-timeout
+      # which doesn't compile on WASM. Run specific integration tests separately.
       - name: Test archmage on WASM (wasmtime)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
@@ -148,6 +148,19 @@ jobs:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p magetypes --lib --target wasm32-wasip1
+
+      # Run WASM-specific integration tests individually (avoids proptest dep)
+      - name: Test WASM intrinsics exercise
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo test --test wasm_intrinsics_exercise --target wasm32-wasip1
+
+      - name: Test feature consistency (WASM)
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo test --test feature_consistency --target wasm32-wasip1
 
   # ==========================================================================
   # Generation check - ensure generated code matches committed code
