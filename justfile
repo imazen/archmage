@@ -131,10 +131,10 @@ test-all-cpus: test-p4 test-nehalem test-haswell test-skylake test-icelake
 test-i686:
     cross test --all-features --target i686-unknown-linux-gnu
 
-# Test on aarch64 (via QEMU) - lib and cross-platform tests only
+# Test on aarch64 (via QEMU) - lib, cross-platform, and feature intrinsic tests
 test-aarch64:
     cross test --lib --target aarch64-unknown-linux-gnu
-    cross test --test miri_safe --test feature_consistency --target aarch64-unknown-linux-gnu
+    cross test --test miri_safe --test feature_consistency --test arm_safe_intrinsics --test arm_feature_intrinsics --target aarch64-unknown-linux-gnu
 
 # Test on armv7 (via QEMU) - lib and cross-platform tests only
 test-armv7:
@@ -166,6 +166,30 @@ clippy-i686:
 # Clippy for all targets
 clippy-all: clippy-x86_64 clippy-aarch64 clippy-i686
     @echo "All clippy checks passed!"
+
+# ============================================================================
+# Per-token intrinsic exercise tests
+# ============================================================================
+
+# Test x86 crypto token intrinsics (PCLMULQDQ, AES-NI, VPCLMULQDQ, VAES)
+test-crypto:
+    cargo test --features "std macros" --test x86_crypto_intrinsics
+
+# Test AVX-512 FP16 token (hierarchy only — intrinsics are nightly-only)
+test-fp16:
+    cargo test --features "std macros avx512" --test avx512fp16_intrinsics
+
+# Test ARM feature-specific intrinsics (via QEMU/cross)
+test-arm-features:
+    cross test --test arm_feature_intrinsics --target aarch64-unknown-linux-gnu
+
+# Test WASM SIMD128 intrinsics (via wasmtime)
+test-wasm-intrinsics:
+    RUSTFLAGS="-C target-feature=+simd128" cargo test --test wasm_intrinsics_exercise --target wasm32-wasip1
+
+# Test all per-token intrinsics (x86 + ARM + WASM)
+test-all-tokens: test-crypto test-fp16 test-arm-features test-wasm-intrinsics
+    @echo "All per-token intrinsic tests passed!"
 
 # ============================================================================
 # CI-style comprehensive test

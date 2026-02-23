@@ -445,11 +445,23 @@ CI checks (all must pass):
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)
 3. `cargo xtask validate` — intrinsic safety + summon() feature verification
 4. `cargo xtask parity` — parity check (0 issues remaining)
-5. `cargo clippy --features "std macros avx512"` — zero warnings
-6. `cargo test --features "std macros avx512"` — all tests pass
-7. `cargo fmt --check` — code is formatted
+5. Intrinsic soundness verification
+6. `cargo clippy --features "std macros avx512"` — zero warnings
+7. `cargo test --features "std macros avx512"` — all tests pass
+8. `cargo fmt --check` — code is formatted
+9. Miri UB detection (skipped if not installed)
+10. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
+11. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
+12. **ARM64 clippy** (requires `cross` + Docker)
 
 **Note:** Parity check reports 0 issues. All W128 types have identical APIs across x86/ARM/WASM.
+
+**Note:** Steps 10-12 require cross-compilation tooling. If `cross`/Docker/`wasmtime` are unavailable, they are skipped with warnings. For full coverage before publish, install the tooling:
+```bash
+cargo install cross --git https://github.com/cross-rs/cross  # ARM64 testing
+curl https://wasmtime.dev/install.sh -sSf | bash              # WASM testing
+rustup target add wasm32-wasip1                                # WASM target
+```
 
 If ANY check fails:
 - Do NOT push
@@ -467,6 +479,49 @@ git push origin v{version} archmage-macros-v{version} magetypes-v{version}
 ```
 
 Publish order (respect dependency chain): `archmage-macros` → `archmage` → `magetypes`.
+
+## MANDATORY: Cross-Platform Token Testing
+
+Every token's feature claims MUST be verified by exercising real intrinsics on the target architecture. The test files:
+
+| Test File | Architecture | What it tests |
+|-----------|-------------|---------------|
+| `tests/x86_crypto_intrinsics.rs` | x86_64 | X64CryptoToken (PCLMULQDQ, AES-NI), X64V3CryptoToken (VPCLMULQDQ, VAES) |
+| `tests/avx512_intrinsics_exercise.rs` | x86_64 | X64V4Token, X64V4xToken (AVX-512 F/BW/CD/DQ/VL + extensions) |
+| `tests/avx512fp16_intrinsics.rs` | x86_64 | Avx512Fp16Token (hierarchy only — all 935 intrinsics are nightly) |
+| `tests/arm_feature_intrinsics.rs` | aarch64 | Arm64V2Token (RDM, DotProd, SHA2), NeonAesToken, NeonCrcToken, NeonSha3Token |
+| `tests/wasm_intrinsics_exercise.rs` | wasm32 | Wasm128Token (SIMD128 — ~100 intrinsics) |
+| `tests/feature_consistency.rs` | all | Token hierarchy, cross-arch None checks, feature detection consistency |
+
+**Before ANY publish:**
+1. `just ci` must pass (includes ARM64 + WASM when tooling available)
+2. Every new token MUST have a corresponding test in the appropriate `*_intrinsics.rs` file
+3. Every feature listed in token-registry.toml MUST be exercised by at least one intrinsic test
+4. If a feature has NO stable intrinsics in Rust, document this explicitly
+
+### Stable Intrinsic Coverage by Feature
+
+| Feature | Stable Count | Status | Notes |
+|---------|-------------|--------|-------|
+| neon | ~1540 | Full | Baseline ARM64 |
+| rdm | 36 | Full | All tested in arm_feature_intrinsics.rs |
+| neon,sha3 | 22 | Full | All tested in arm_feature_intrinsics.rs |
+| neon,aes (rounds + p64) | ~37 | Full | Tested in arm_feature_intrinsics.rs |
+| sha2 | ~10 | Full | Tested in arm_feature_intrinsics.rs |
+| crc | 8 | Full | Tested in arm_feature_intrinsics.rs |
+| dotprod (base) | 8 | Full | Tested in arm_feature_intrinsics.rs |
+| dotprod (laneq) | 4 | Nightly | Unstable — `target_feature = "dotprod"` |
+| neon,fp16 | 95/214 | Partial | 119 unstable, rest nightly-only |
+| fcma | 34 | Nightly | All unstable |
+| i8mm | 4 | Nightly | All unstable |
+| fhm | 0 | None | No Rust intrinsics in stdarch |
+| bf16 | 0 | None | No Rust intrinsics in stdarch |
+| avx512fp16 | 0/935 | Nightly | ALL 935 intrinsics are unstable |
+| pclmulqdq + aes (128-bit) | ~10 | Full | Tested in x86_crypto_intrinsics.rs |
+| vpclmulqdq + vaes (256-bit) | ~8 | Full | Tested in x86_crypto_intrinsics.rs |
+| simd128 (wasm) | ~100+ | Full | Tested in wasm_intrinsics_exercise.rs |
+
+**Features with zero stable intrinsics** (fhm, bf16, avx512fp16) are documented but cannot have exercise tests on stable Rust. When these stabilize, add tests immediately.
 
 ## Source of Truth: token-registry.toml
 

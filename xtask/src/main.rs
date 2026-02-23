@@ -1802,9 +1802,14 @@ fn check_api_parity(strict: bool) -> Result<()> {
 /// 3. Validate magetypes safety
 /// 4. Validate summon() feature checks
 /// 5. Check API parity (strict - fails on any issues)
-/// 6. Run clippy
-/// 7. Run tests
-/// 8. Check formatting
+/// 6. Intrinsic soundness verification
+/// 7. Run clippy
+/// 8. Run tests
+/// 9. Check formatting
+/// 10. Miri (UB detection)
+/// 11. ARM64 cross-compilation + tests (requires cross + Docker)
+/// 12. WASM cross-compilation + tests (requires wasmtime)
+/// 13. ARM64 clippy
 fn run_ci() -> Result<()> {
     println!("╔══════════════════════════════════════════════════════════════════╗");
     println!("║                    ARCHMAGE CI CHECK                             ║");
@@ -1812,7 +1817,7 @@ fn run_ci() -> Result<()> {
     println!("╚══════════════════════════════════════════════════════════════════╝\n");
 
     // Step 1: Generate all code
-    println!("┌─ Step 1/10: Regenerating code ─────────────────────────────────────┐");
+    println!("┌─ Step 1/13: Regenerating code ─────────────────────────────────────┐");
     generate_all()?;
     println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
 
@@ -1830,7 +1835,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Formatting complete ──────────────────────────────────────────────┘\n");
 
     // Step 2: Check for clean worktree
-    println!("┌─ Step 2/10: Checking for uncommitted changes ──────────────────────┐");
+    println!("┌─ Step 2/13: Checking for uncommitted changes ──────────────────────┐");
     let status = std::process::Command::new("git")
         .args(["status", "--porcelain"])
         .output()
@@ -1849,27 +1854,27 @@ fn run_ci() -> Result<()> {
     println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
 
     // Step 3-4: Validation (already done in generate_all, but let's be explicit)
-    println!("┌─ Step 3/10: Validating magetypes safety ────────────────────────────┐");
+    println!("┌─ Step 3/13: Validating magetypes safety ────────────────────────────┐");
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
     validate_magetypes_with_registry(&reg)?;
     println!("└─ Magetypes validation passed ──────────────────────────────────────┘\n");
 
-    println!("┌─ Step 4/10: Validating summon() features ──────────────────────────┐");
+    println!("┌─ Step 4/13: Validating summon() features ──────────────────────────┐");
     validate_summon(&reg)?;
     println!("└─ summon() validation passed ──────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
-    println!("┌─ Step 5/10: Checking API parity (strict) ──────────────────────────┐");
+    println!("┌─ Step 5/13: Checking API parity (strict) ──────────────────────────┐");
     check_api_parity(true)?;
     println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
 
     // Step 6: Soundness verification
-    println!("┌─ Step 6/10: Verifying intrinsic soundness ─────────────────────────┐");
+    println!("┌─ Step 6/13: Verifying intrinsic soundness ─────────────────────────┐");
     verify_intrinsic_soundness()?;
     println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
 
     // Step 7: Clippy
-    println!("┌─ Step 7/10: Running clippy ────────────────────────────────────────┐");
+    println!("┌─ Step 7/13: Running clippy ────────────────────────────────────────┐");
     let clippy = std::process::Command::new("cargo")
         .args([
             "clippy",
@@ -1888,7 +1893,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Clippy check passed ──────────────────────────────────────────────┘\n");
 
     // Step 8: Tests
-    println!("┌─ Step 8/10: Running tests ─────────────────────────────────────────┐");
+    println!("┌─ Step 8/13: Running tests ─────────────────────────────────────────┐");
     let tests = std::process::Command::new("cargo")
         .args(["test", "--features", "std macros avx512"])
         .status()
@@ -1899,7 +1904,7 @@ fn run_ci() -> Result<()> {
     println!("└─ All tests passed ─────────────────────────────────────────────────┘\n");
 
     // Step 9: Format check
-    println!("┌─ Step 9/10: Checking code formatting ──────────────────────────────┐");
+    println!("┌─ Step 9/13: Checking code formatting ──────────────────────────────┐");
     let fmt = std::process::Command::new("cargo")
         .args(["fmt", "--", "--check"])
         .status()
@@ -1911,7 +1916,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Format check passed ──────────────────────────────────────────────┘\n");
 
     // Step 10: Miri testing (UB detection)
-    println!("┌─ Step 10/10: Running Miri (UB detection) ──────────────────────────┐");
+    println!("┌─ Step 10/13: Running Miri (UB detection) ──────────────────────────┐");
     // Check if Miri is available
     let miri_available = std::process::Command::new("cargo")
         .args(["+nightly", "miri", "--version"])
@@ -1941,6 +1946,119 @@ fn run_ci() -> Result<()> {
         println!("  ✓ Miri found no undefined behavior");
     }
     println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
+
+    // Step 11: ARM64 cross-compilation + tests
+    println!("┌─ Step 11/13: ARM64 cross-compilation + tests ───────────────────┐");
+    let cross_ok = std::process::Command::new("cross")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    let docker_ok = std::process::Command::new("docker")
+        .arg("info")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    if cross_ok && docker_ok {
+        let arm_test = std::process::Command::new("cross")
+            .args([
+                "test",
+                "--target",
+                "aarch64-unknown-linux-gnu",
+                "--features",
+                "std macros",
+            ])
+            .status()
+            .context("Failed to run cross test for ARM64")?;
+        if !arm_test.success() {
+            bail!("ARM64 cross-compilation tests failed");
+        }
+        println!("  ✓ ARM64 tests passed");
+    } else {
+        println!("  ⚠ ARM64 cross-testing skipped (requires 'cross' + Docker)");
+        if !cross_ok {
+            println!("    Install cross: cargo install cross --git https://github.com/cross-rs/cross");
+        }
+        if !docker_ok {
+            println!("    Docker must be running for ARM64 cross-compilation");
+        }
+    }
+    println!("└─ ARM64 cross-compilation complete ───────────────────────────────┘\n");
+
+    // Step 12: WASM cross-compilation + tests
+    println!("┌─ Step 12/13: WASM cross-compilation + tests ───────────────────┐");
+    let wasmtime_ok = std::process::Command::new("wasmtime")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    let wasm_target_ok = std::process::Command::new("rustup")
+        .args(["target", "list", "--installed"])
+        .output()
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout).contains("wasm32-wasip1")
+        })
+        .unwrap_or(false);
+
+    if wasmtime_ok && wasm_target_ok {
+        // Test lib + feature_consistency + wasm_intrinsics_exercise
+        let wasm_test = std::process::Command::new("cargo")
+            .args([
+                "test",
+                "--target",
+                "wasm32-wasip1",
+                "--lib",
+                "--test",
+                "feature_consistency",
+                "--test",
+                "wasm_intrinsics_exercise",
+            ])
+            .env("RUSTFLAGS", "-C target-feature=+simd128")
+            .env("CARGO_TARGET_WASM32_WASIP1_RUNNER", "wasmtime")
+            .status()
+            .context("Failed to run WASM tests")?;
+        if !wasm_test.success() {
+            bail!("WASM cross-compilation tests failed");
+        }
+        println!("  ✓ WASM tests passed");
+    } else {
+        println!("  ⚠ WASM cross-testing skipped (requires wasmtime + wasm32-wasip1 target)");
+        if !wasmtime_ok {
+            println!("    Install wasmtime: curl https://wasmtime.dev/install.sh -sSf | bash");
+        }
+        if !wasm_target_ok {
+            println!("    Install target: rustup target add wasm32-wasip1");
+        }
+    }
+    println!("└─ WASM cross-compilation complete ───────────────────────────────┘\n");
+
+    // Step 13: ARM64 clippy
+    println!("┌─ Step 13/13: ARM64 clippy ─────────────────────────────────────┐");
+    if cross_ok && docker_ok {
+        let arm_clippy = std::process::Command::new("cargo")
+            .args([
+                "clippy",
+                "--target",
+                "aarch64-unknown-linux-gnu",
+                "--features",
+                "std macros",
+                "--",
+                "-D",
+                "warnings",
+            ])
+            .status()
+            .context("Failed to run ARM64 clippy")?;
+        if !arm_clippy.success() {
+            bail!("ARM64 clippy failed");
+        }
+        println!("  ✓ ARM64 clippy passed");
+    } else {
+        println!("  ⚠ ARM64 clippy skipped (requires cross tooling — see Step 11)");
+    }
+    println!("└─ ARM64 clippy complete ─────────────────────────────────────────┘\n");
 
     println!("╔══════════════════════════════════════════════════════════════════╗");
     println!("║  ✓ ALL CI CHECKS PASSED - Safe to push/publish                   ║");
