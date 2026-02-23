@@ -109,63 +109,10 @@ fn exercise_rdm(token: Arm64V2Token) {
 
 // =============================================================================
 // DotProd — Dot Product (Arm64V2Token)
-// Base: vdot_s32, vdotq_s32, vdot_u32, vdotq_u32 + lane variants
+// ALL dotprod intrinsics are nightly-only (stdarch_neon_dotprod).
+// Verified: vdot_s32, vdotq_s32, vdot_u32, vdotq_u32 + lane variants
+// all require #![feature(stdarch_neon_dotprod)] on stable Rust 1.93.
 // =============================================================================
-
-#[test]
-fn test_dotprod_intrinsics() {
-    if let Some(token) = Arm64V2Token::summon() {
-        exercise_dotprod(token);
-        println!("All DotProd intrinsic tests passed!");
-    } else {
-        println!("Arm64V2Token not available - skipping DotProd tests");
-    }
-}
-
-#[arcane]
-fn exercise_dotprod(token: Arm64V2Token) {
-    // Signed dot product: dot product of 4x i8 elements accumulated into i32
-    let acc_s32x2 = vdup_n_s32(0);
-    let acc_s32x4 = vdupq_n_s32(0);
-    let a_s8x8 = vdup_n_s8(2);
-    let b_s8x8 = vdup_n_s8(3);
-    let a_s8x16 = vdupq_n_s8(2);
-    let b_s8x16 = vdupq_n_s8(3);
-
-    let dot_s = vdot_s32(acc_s32x2, a_s8x8, b_s8x8);
-    black_box(dot_s);
-    let dotq_s = vdotq_s32(acc_s32x4, a_s8x16, b_s8x16);
-    black_box(dotq_s);
-
-    // Lane variants
-    let dot_lane_s = vdot_lane_s32::<0>(acc_s32x2, a_s8x8, b_s8x8);
-    black_box(dot_lane_s);
-    let dotq_lane_s = vdotq_lane_s32::<0>(acc_s32x4, a_s8x16, b_s8x8);
-    black_box(dotq_lane_s);
-
-    // Unsigned dot product
-    let acc_u32x2 = vdup_n_u32(0);
-    let acc_u32x4 = vdupq_n_u32(0);
-    let a_u8x8 = vdup_n_u8(2);
-    let b_u8x8 = vdup_n_u8(3);
-    let a_u8x16 = vdupq_n_u8(2);
-    let b_u8x16 = vdupq_n_u8(3);
-
-    let dot_u = vdot_u32(acc_u32x2, a_u8x8, b_u8x8);
-    black_box(dot_u);
-    let dotq_u = vdotq_u32(acc_u32x4, a_u8x16, b_u8x16);
-    black_box(dotq_u);
-
-    // Lane variants unsigned
-    let dot_lane_u = vdot_lane_u32::<0>(acc_u32x2, a_u8x8, b_u8x8);
-    black_box(dot_lane_u);
-    let dotq_lane_u = vdotq_lane_u32::<0>(acc_u32x4, a_u8x16, b_u8x8);
-    black_box(dotq_lane_u);
-
-    // Verify: 4 elements of 2*3 = 24
-    let result = vget_lane_s32::<0>(dot_s);
-    assert_eq!(result, 24, "dot product of [2,2,2,2] . [3,3,3,3] = 24");
-}
 
 // =============================================================================
 // AES Round Operations (NeonAesToken / Arm64V2Token)

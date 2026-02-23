@@ -1364,12 +1364,12 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
 
     // Reinterpret helpers
     let from_u = if ty.signed {
-        format!("vreinterpretq_{ns}_{}", &ns[1..]) // s8_u8, s16_u16
+        format!("vreinterpretq_{ns}_u{}", &ns[1..]) // s8_u8, s16_u16
     } else {
         String::new()
     };
     let to_u = if ty.signed {
-        format!("vreinterpretq_{}_{ns}", &ns[1..]) // u8_s8, u16_s16
+        format!("vreinterpretq_u{}_{ns}", &ns[1..]) // u8_s8, u16_s16
     } else {
         String::new()
     };
@@ -1383,7 +1383,10 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     };
 
     let wrap_ne = if ty.signed {
-        format!("{from_u}(vmvnq_{}(vceqq_{ns}(a, b)))", &ns[1..])
+        format!("{from_u}(vmvnq_u{}(vceqq_{ns}(a, b)))", &ns[1..])
+    } else if ty.elem_bits == 64 {
+        // NEON lacks vmvnq_u64 — use XOR with all-ones
+        format!("veorq_u64(vceqq_u64(a, b), vdupq_n_u64(u64::MAX))")
     } else {
         format!("vmvnq_{ns}(vceqq_{ns}(a, b))")
     };
@@ -1473,12 +1476,22 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         "#});
     }
 
-    body.push_str(&formatdoc! {r#"
+    if ty.elem_bits == 64 {
+        // NEON lacks vminq_u64/vmaxq_u64 — polyfill with compare + blend
+        body.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn min(a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vbslq_u64(vcltq_u64(a, b), a, b) }} }}
+            #[inline(always)]
+            fn max(a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vbslq_u64(vcgtq_u64(a, b), a, b) }} }}
+        "#});
+    } else {
+        body.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn min(a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vminq_{ns}(a, b) }} }}
             #[inline(always)]
             fn max(a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vmaxq_{ns}(a, b) }} }}
-    "#});
+        "#});
+    }
 
     if ty.signed && ty.elem_bits <= 16 {
         body.push_str(&formatdoc! {r#"
@@ -1592,12 +1605,12 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     if ty.elem_bits <= 16 {
         // 8-bit and 16-bit: use vminvq/vmaxvq on unsigned interpretation
         let all_true_body = if ty.signed {
-            format!("vminvq_{}({to_u}(a)) != 0", &ns[1..])
+            format!("vminvq_u{}({to_u}(a)) != 0", &ns[1..])
         } else {
             format!("vminvq_{ns}(a) != 0")
         };
         let any_true_body = if ty.signed {
-            format!("vmaxvq_{}({to_u}(a)) != 0", &ns[1..])
+            format!("vmaxvq_u{}({to_u}(a)) != 0", &ns[1..])
         } else {
             format!("vmaxvq_{ns}(a) != 0")
         };
@@ -1622,17 +1635,17 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
             }}
         "#});
     } else {
-        // u64: 2 lanes, manual extraction
+        // u64: 2 lanes, manual extraction (NEON lacks vminvq_u64/vmaxvq_u64)
         body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn all_true(a: {nt}) -> bool {{
-                unsafe {{ vminvq_{ns}(a) != 0 }}
+                unsafe {{ vgetq_lane_u64::<0>(a) != 0 && vgetq_lane_u64::<1>(a) != 0 }}
             }}
 
             #[inline(always)]
             fn any_true(a: {nt}) -> bool {{
-                unsafe {{ vmaxvq_{ns}(a) != 0 }}
+                unsafe {{ vgetq_lane_u64::<0>(a) != 0 || vgetq_lane_u64::<1>(a) != 0 }}
             }}
 
             #[inline(always)]
@@ -1758,6 +1771,12 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
                 .map(|i| format!("{from_u_fn}(vmvnq_{us}(vceqq_{ns}(a[{i}], b[{i}])))"))
                 .collect();
             format!("unsafe {{ [{}] }}", items.join(", "))
+        } else if ty.elem_bits == 64 {
+            // NEON lacks vmvnq_u64 — use XOR with all-ones
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("veorq_u64(vceqq_u64(a[{i}], b[{i}]), vdupq_n_u64(u64::MAX))"))
+                .collect();
+            format!("unsafe {{ [{}] }}", items.join(", "))
         } else {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vmvnq_{us}(vceqq_{ns}(a[{i}], b[{i}]))"))
@@ -1851,7 +1870,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -1864,7 +1883,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [0{elem}; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 
@@ -1891,15 +1910,34 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
         "#, neg = unary_op(&format!("vnegq_{ns}"))});
     }
 
-    code.push_str(&formatdoc! {r#"
+    if ty.elem_bits == 64 {
+        // NEON lacks vminq_u64/vmaxq_u64 — polyfill with compare + blend
+        let min_items: Vec<String> = (0..sub_count)
+            .map(|i| format!("vbslq_u64(vcltq_u64(a[{i}], b[{i}]), a[{i}], b[{i}])"))
+            .collect();
+        let max_items: Vec<String> = (0..sub_count)
+            .map(|i| format!("vbslq_u64(vcgtq_u64(a[{i}], b[{i}]), a[{i}], b[{i}])"))
+            .collect();
+        code.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn min(a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ [{min}] }} }}
+            #[inline(always)]
+            fn max(a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ [{max}] }} }}
+        "#,
+            min = min_items.join(", "),
+            max = max_items.join(", "),
+        });
+    } else {
+        code.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{ {min} }}
             #[inline(always)]
             fn max(a: {repr}, b: {repr}) -> {repr} {{ {max} }}
-    "#,
-        min = binary_op(&format!("vminq_{ns}")),
-        max = binary_op(&format!("vmaxq_{ns}")),
-    });
+        "#,
+            min = binary_op(&format!("vminq_{ns}")),
+            max = binary_op(&format!("vmaxq_{ns}")),
+        });
+    }
 
     if ty.signed && ty.elem_bits <= 16 {
         code.push_str(&formatdoc! {r#"
@@ -1980,6 +2018,9 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             if ty.signed {
                 let us = &ns[1..];
                 format!("vminvq_u{us}(vreinterpretq_u{us}_{ns}(a[{i}])) != 0")
+            } else if ty.elem_bits == 64 {
+                // NEON lacks vminvq_u64 — extract lanes manually
+                format!("vgetq_lane_u64::<0>(a[{i}]) != 0 && vgetq_lane_u64::<1>(a[{i}]) != 0")
             } else {
                 format!("vminvq_{ns}(a[{i}]) != 0")
             }
@@ -1990,6 +2031,9 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             if ty.signed {
                 let us = &ns[1..];
                 format!("vmaxvq_u{us}(vreinterpretq_u{us}_{ns}(a[{i}])) != 0")
+            } else if ty.elem_bits == 64 {
+                // NEON lacks vmaxvq_u64 — extract lanes manually
+                format!("vgetq_lane_u64::<0>(a[{i}]) != 0 || vgetq_lane_u64::<1>(a[{i}]) != 0")
             } else {
                 format!("vmaxvq_{ns}(a[{i}]) != 0")
             }

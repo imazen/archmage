@@ -240,12 +240,8 @@ mod aarch64_tests {
                 let rdm = vqrdmlah_s16(acc, a, b);
                 std::hint::black_box(rdm);
 
-                // DotProd: 4x i8 dot product into i32
-                let acc32 = vdup_n_s32(0);
-                let x = vdup_n_s8(2);
-                let y = vdup_n_s8(3);
-                let dot = vdot_s32(acc32, x, y);
-                std::hint::black_box(dot);
+                // DotProd: vdot_s32 is nightly-only (stdarch_neon_dotprod)
+                // Verified: compiles on nightly but unstable on stable Rust
             }
         }
     }

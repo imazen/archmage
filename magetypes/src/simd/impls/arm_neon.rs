@@ -28,7 +28,7 @@ impl F32x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [f32; 4]) -> float32x4_t {
-        Self::load(&arr)
+        <Self as F32x4Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -39,7 +39,7 @@ impl F32x4Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: float32x4_t) -> [f32; 4] {
         let mut out = [0.0f32; 4];
-        Self::store(repr, &mut out);
+        <Self as F32x4Backend>::store(repr, &mut out);
         out
     }
 
@@ -235,7 +235,7 @@ impl F32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [f32; 8]) -> [float32x4_t; 2] {
-        Self::load(&arr)
+        <Self as F32x8Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -249,7 +249,7 @@ impl F32x8Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [float32x4_t; 2]) -> [f32; 8] {
         let mut out = [0.0f32; 8];
-        Self::store(repr, &mut out);
+        <Self as F32x8Backend>::store(repr, &mut out);
         out
     }
 
@@ -536,7 +536,7 @@ impl F64x2Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [f64; 2]) -> float64x2_t {
-        Self::load(&arr)
+        <Self as F64x2Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -547,7 +547,7 @@ impl F64x2Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: float64x2_t) -> [f64; 2] {
         let mut out = [0.0f64; 2];
-        Self::store(repr, &mut out);
+        <Self as F64x2Backend>::store(repr, &mut out);
         out
     }
 
@@ -616,7 +616,7 @@ impl F64x2Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn simd_ne(a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(vmvnq_u64(vceqq_f64(a, b))) }
+        unsafe { vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a, b), vdupq_n_u64(u64::MAX))) }
     }
     #[inline(always)]
     fn simd_lt(a: float64x2_t, b: float64x2_t) -> float64x2_t {
@@ -675,7 +675,7 @@ impl F64x2Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn not(a: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(vmvnq_u64(vreinterpretq_u64_f64(a))) }
+        unsafe { vreinterpretq_f64_u64(veorq_u64(vreinterpretq_u64_f64(a), vdupq_n_u64(u64::MAX))) }
     }
     #[inline(always)]
     fn bitand(a: float64x2_t, b: float64x2_t) -> float64x2_t {
@@ -740,7 +740,7 @@ impl F64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [f64; 4]) -> [float64x2_t; 2] {
-        Self::load(&arr)
+        <Self as F64x4Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -754,7 +754,7 @@ impl F64x4Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [float64x2_t; 2]) -> [f64; 4] {
         let mut out = [0.0f64; 4];
-        Self::store(repr, &mut out);
+        <Self as F64x4Backend>::store(repr, &mut out);
         out
     }
 
@@ -855,8 +855,8 @@ impl F64x4Backend for archmage::NeonToken {
     fn simd_ne(a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe {
             [
-                vreinterpretq_f64_u64(vmvnq_u64(vceqq_f64(a[0], b[0]))),
-                vreinterpretq_f64_u64(vmvnq_u64(vceqq_f64(a[1], b[1]))),
+                vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a[0], b[0]), vdupq_n_u64(u64::MAX))),
+                vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a[1], b[1]), vdupq_n_u64(u64::MAX))),
             ]
         }
     }
@@ -962,8 +962,14 @@ impl F64x4Backend for archmage::NeonToken {
     fn not(a: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe {
             [
-                vreinterpretq_f64_u64(vmvnq_u64(vreinterpretq_u64_f64(a[0]))),
-                vreinterpretq_f64_u64(vmvnq_u64(vreinterpretq_u64_f64(a[1]))),
+                vreinterpretq_f64_u64(veorq_u64(
+                    vreinterpretq_u64_f64(a[0]),
+                    vdupq_n_u64(u64::MAX),
+                )),
+                vreinterpretq_f64_u64(veorq_u64(
+                    vreinterpretq_u64_f64(a[1]),
+                    vdupq_n_u64(u64::MAX),
+                )),
             ]
         }
     }
@@ -972,11 +978,11 @@ impl F64x4Backend for archmage::NeonToken {
     fn bitand(a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe {
             [
-                vreinterpretq_f64_u64(vandq_u32(
+                vreinterpretq_f64_u64(vandq_u64(
                     vreinterpretq_u64_f64(a[0]),
                     vreinterpretq_u64_f64(b[0]),
                 )),
-                vreinterpretq_f64_u64(vandq_u32(
+                vreinterpretq_f64_u64(vandq_u64(
                     vreinterpretq_u64_f64(a[1]),
                     vreinterpretq_u64_f64(b[1]),
                 )),
@@ -988,11 +994,11 @@ impl F64x4Backend for archmage::NeonToken {
     fn bitor(a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe {
             [
-                vreinterpretq_f64_u64(vorrq_u32(
+                vreinterpretq_f64_u64(vorrq_u64(
                     vreinterpretq_u64_f64(a[0]),
                     vreinterpretq_u64_f64(b[0]),
                 )),
-                vreinterpretq_f64_u64(vorrq_u32(
+                vreinterpretq_f64_u64(vorrq_u64(
                     vreinterpretq_u64_f64(a[1]),
                     vreinterpretq_u64_f64(b[1]),
                 )),
@@ -1004,11 +1010,11 @@ impl F64x4Backend for archmage::NeonToken {
     fn bitxor(a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe {
             [
-                vreinterpretq_f64_u64(veorq_u32(
+                vreinterpretq_f64_u64(veorq_u64(
                     vreinterpretq_u64_f64(a[0]),
                     vreinterpretq_u64_f64(b[0]),
                 )),
-                vreinterpretq_f64_u64(veorq_u32(
+                vreinterpretq_f64_u64(veorq_u64(
                     vreinterpretq_u64_f64(a[1]),
                     vreinterpretq_u64_f64(b[1]),
                 )),
@@ -1206,7 +1212,7 @@ impl I32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [i32; 8]) -> [int32x4_t; 2] {
-        Self::load(&arr)
+        <Self as I32x8Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -1220,7 +1226,7 @@ impl I32x8Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [int32x4_t; 2]) -> [i32; 8] {
         let mut out = [0i32; 8];
-        Self::store(repr, &mut out);
+        <Self as I32x8Backend>::store(repr, &mut out);
         out
     }
 
@@ -1578,7 +1584,7 @@ impl U32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [u32; 8]) -> [uint32x4_t; 2] {
-        Self::load(&arr)
+        <Self as U32x8Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -1592,7 +1598,7 @@ impl U32x8Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [uint32x4_t; 2]) -> [u32; 8] {
         let mut out = [0u32; 8];
-        Self::store(repr, &mut out);
+        <Self as U32x8Backend>::store(repr, &mut out);
         out
     }
 
@@ -1928,7 +1934,7 @@ impl I64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [i64; 4]) -> [int64x2_t; 2] {
-        Self::load(&arr)
+        <Self as I64x4Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -1942,7 +1948,7 @@ impl I64x4Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [int64x2_t; 2]) -> [i64; 4] {
         let mut out = [0i64; 4];
-        Self::store(repr, &mut out);
+        <Self as I64x4Backend>::store(repr, &mut out);
         out
     }
 
@@ -2203,32 +2209,32 @@ impl I8x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn simd_eq(a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_8(vceqq_s8(a, b)) }
+        unsafe { vreinterpretq_s8_u8(vceqq_s8(a, b)) }
     }
     #[inline(always)]
     fn simd_ne(a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_8(vmvnq_8(vceqq_s8(a, b))) }
+        unsafe { vreinterpretq_s8_u8(vmvnq_u8(vceqq_s8(a, b))) }
     }
     #[inline(always)]
     fn simd_lt(a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_8(vcltq_s8(a, b)) }
+        unsafe { vreinterpretq_s8_u8(vcltq_s8(a, b)) }
     }
     #[inline(always)]
     fn simd_le(a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_8(vcleq_s8(a, b)) }
+        unsafe { vreinterpretq_s8_u8(vcleq_s8(a, b)) }
     }
     #[inline(always)]
     fn simd_gt(a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_8(vcgtq_s8(a, b)) }
+        unsafe { vreinterpretq_s8_u8(vcgtq_s8(a, b)) }
     }
     #[inline(always)]
     fn simd_ge(a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_8(vcgeq_s8(a, b)) }
+        unsafe { vreinterpretq_s8_u8(vcgeq_s8(a, b)) }
     }
 
     #[inline(always)]
     fn blend(mask: int8x16_t, if_true: int8x16_t, if_false: int8x16_t) -> int8x16_t {
-        unsafe { vbslq_s8(vreinterpretq_8_s8(mask), if_true, if_false) }
+        unsafe { vbslq_s8(vreinterpretq_u8_s8(mask), if_true, if_false) }
     }
     #[inline(always)]
     fn reduce_add(a: int8x16_t) -> i8 {
@@ -2266,12 +2272,12 @@ impl I8x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn all_true(a: int8x16_t) -> bool {
-        unsafe { vminvq_8(vreinterpretq_8_s8(a)) != 0 }
+        unsafe { vminvq_u8(vreinterpretq_u8_s8(a)) != 0 }
     }
 
     #[inline(always)]
     fn any_true(a: int8x16_t) -> bool {
-        unsafe { vmaxvq_8(vreinterpretq_8_s8(a)) != 0 }
+        unsafe { vmaxvq_u8(vreinterpretq_u8_s8(a)) != 0 }
     }
 
     #[inline(always)]
@@ -2328,7 +2334,7 @@ impl I8x32Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [i8; 32]) -> [int8x16_t; 2] {
-        Self::load(&arr)
+        <Self as I8x32Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -2342,7 +2348,7 @@ impl I8x32Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [int8x16_t; 2]) -> [i8; 32] {
         let mut out = [0i8; 32];
-        Self::store(repr, &mut out);
+        <Self as I8x32Backend>::store(repr, &mut out);
         out
     }
 
@@ -2685,7 +2691,7 @@ impl U8x32Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [u8; 32]) -> [uint8x16_t; 2] {
-        Self::load(&arr)
+        <Self as U8x32Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -2699,7 +2705,7 @@ impl U8x32Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [uint8x16_t; 2]) -> [u8; 32] {
         let mut out = [0u8; 32];
-        Self::store(repr, &mut out);
+        <Self as U8x32Backend>::store(repr, &mut out);
         out
     }
 
@@ -2887,32 +2893,32 @@ impl I16x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn simd_eq(a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_16(vceqq_s16(a, b)) }
+        unsafe { vreinterpretq_s16_u16(vceqq_s16(a, b)) }
     }
     #[inline(always)]
     fn simd_ne(a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_16(vmvnq_16(vceqq_s16(a, b))) }
+        unsafe { vreinterpretq_s16_u16(vmvnq_u16(vceqq_s16(a, b))) }
     }
     #[inline(always)]
     fn simd_lt(a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_16(vcltq_s16(a, b)) }
+        unsafe { vreinterpretq_s16_u16(vcltq_s16(a, b)) }
     }
     #[inline(always)]
     fn simd_le(a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_16(vcleq_s16(a, b)) }
+        unsafe { vreinterpretq_s16_u16(vcleq_s16(a, b)) }
     }
     #[inline(always)]
     fn simd_gt(a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_16(vcgtq_s16(a, b)) }
+        unsafe { vreinterpretq_s16_u16(vcgtq_s16(a, b)) }
     }
     #[inline(always)]
     fn simd_ge(a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_16(vcgeq_s16(a, b)) }
+        unsafe { vreinterpretq_s16_u16(vcgeq_s16(a, b)) }
     }
 
     #[inline(always)]
     fn blend(mask: int16x8_t, if_true: int16x8_t, if_false: int16x8_t) -> int16x8_t {
-        unsafe { vbslq_s16(vreinterpretq_16_s16(mask), if_true, if_false) }
+        unsafe { vbslq_s16(vreinterpretq_u16_s16(mask), if_true, if_false) }
     }
     #[inline(always)]
     fn reduce_add(a: int16x8_t) -> i16 {
@@ -2950,12 +2956,12 @@ impl I16x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn all_true(a: int16x8_t) -> bool {
-        unsafe { vminvq_16(vreinterpretq_16_s16(a)) != 0 }
+        unsafe { vminvq_u16(vreinterpretq_u16_s16(a)) != 0 }
     }
 
     #[inline(always)]
     fn any_true(a: int16x8_t) -> bool {
-        unsafe { vmaxvq_16(vreinterpretq_16_s16(a)) != 0 }
+        unsafe { vmaxvq_u16(vreinterpretq_u16_s16(a)) != 0 }
     }
 
     #[inline(always)]
@@ -3005,7 +3011,7 @@ impl I16x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [i16; 16]) -> [int16x8_t; 2] {
-        Self::load(&arr)
+        <Self as I16x16Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -3019,7 +3025,7 @@ impl I16x16Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [int16x8_t; 2]) -> [i16; 16] {
         let mut out = [0i16; 16];
-        Self::store(repr, &mut out);
+        <Self as I16x16Backend>::store(repr, &mut out);
         out
     }
 
@@ -3365,7 +3371,7 @@ impl U16x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [u16; 16]) -> [uint16x8_t; 2] {
-        Self::load(&arr)
+        <Self as U16x16Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -3379,7 +3385,7 @@ impl U16x16Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [uint16x8_t; 2]) -> [u16; 16] {
         let mut out = [0u16; 16];
-        Self::store(repr, &mut out);
+        <Self as U16x16Backend>::store(repr, &mut out);
         out
     }
 
@@ -3550,11 +3556,11 @@ impl U64x2Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn min(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vminq_u64(a, b) }
+        unsafe { vbslq_u64(vcltq_u64(a, b), a, b) }
     }
     #[inline(always)]
     fn max(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vmaxq_u64(a, b) }
+        unsafe { vbslq_u64(vcgtq_u64(a, b), a, b) }
     }
 
     #[inline(always)]
@@ -3563,7 +3569,7 @@ impl U64x2Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn simd_ne(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vmvnq_u64(vceqq_u64(a, b)) }
+        unsafe { veorq_u64(vceqq_u64(a, b), vdupq_n_u64(u64::MAX)) }
     }
     #[inline(always)]
     fn simd_lt(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
@@ -3618,12 +3624,12 @@ impl U64x2Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn all_true(a: uint64x2_t) -> bool {
-        unsafe { vminvq_u64(a) != 0 }
+        unsafe { vgetq_lane_u64::<0>(a) != 0 && vgetq_lane_u64::<1>(a) != 0 }
     }
 
     #[inline(always)]
     fn any_true(a: uint64x2_t) -> bool {
-        unsafe { vmaxvq_u64(a) != 0 }
+        unsafe { vgetq_lane_u64::<0>(a) != 0 || vgetq_lane_u64::<1>(a) != 0 }
     }
 
     #[inline(always)]
@@ -3669,7 +3675,7 @@ impl U64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn from_array(arr: [u64; 4]) -> [uint64x2_t; 2] {
-        Self::load(&arr)
+        <Self as U64x4Backend>::load(&arr)
     }
 
     #[inline(always)]
@@ -3683,7 +3689,7 @@ impl U64x4Backend for archmage::NeonToken {
     #[inline(always)]
     fn to_array(repr: [uint64x2_t; 2]) -> [u64; 4] {
         let mut out = [0u64; 4];
-        Self::store(repr, &mut out);
+        <Self as U64x4Backend>::store(repr, &mut out);
         out
     }
 
@@ -3697,11 +3703,21 @@ impl U64x4Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn min(a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vminq_u64(a[0], b[0]), vminq_u64(a[1], b[1])] }
+        unsafe {
+            [
+                vbslq_u64(vcltq_u64(a[0], b[0]), a[0], b[0]),
+                vbslq_u64(vcltq_u64(a[1], b[1]), a[1], b[1]),
+            ]
+        }
     }
     #[inline(always)]
     fn max(a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vmaxq_u64(a[0], b[0]), vmaxq_u64(a[1], b[1])] }
+        unsafe {
+            [
+                vbslq_u64(vcgtq_u64(a[0], b[0]), a[0], b[0]),
+                vbslq_u64(vcgtq_u64(a[1], b[1]), a[1], b[1]),
+            ]
+        }
     }
 
     #[inline(always)]
@@ -3712,8 +3728,8 @@ impl U64x4Backend for archmage::NeonToken {
     fn simd_ne(a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
         unsafe {
             [
-                vmvnq_u64(vceqq_u64(a[0], b[0])),
-                vmvnq_u64(vceqq_u64(a[1], b[1])),
+                veorq_u64(vceqq_u64(a[0], b[0]), vdupq_n_u64(u64::MAX)),
+                veorq_u64(vceqq_u64(a[1], b[1]), vdupq_n_u64(u64::MAX)),
             ]
         }
     }
@@ -3790,12 +3806,22 @@ impl U64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn all_true(a: [uint64x2_t; 2]) -> bool {
-        unsafe { vminvq_u64(a[0]) != 0 && vminvq_u64(a[1]) != 0 }
+        unsafe {
+            vgetq_lane_u64::<0>(a[0]) != 0
+                && vgetq_lane_u64::<1>(a[0]) != 0
+                && vgetq_lane_u64::<0>(a[1]) != 0
+                && vgetq_lane_u64::<1>(a[1]) != 0
+        }
     }
 
     #[inline(always)]
     fn any_true(a: [uint64x2_t; 2]) -> bool {
-        unsafe { vmaxvq_u64(a[0]) != 0 || vmaxvq_u64(a[1]) != 0 }
+        unsafe {
+            vgetq_lane_u64::<0>(a[0]) != 0
+                || vgetq_lane_u64::<1>(a[0]) != 0
+                || vgetq_lane_u64::<0>(a[1]) != 0
+                || vgetq_lane_u64::<1>(a[1]) != 0
+        }
     }
 
     #[inline(always)]

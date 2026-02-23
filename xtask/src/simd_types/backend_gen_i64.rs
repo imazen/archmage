@@ -1123,7 +1123,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -1136,7 +1136,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [0i64; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 

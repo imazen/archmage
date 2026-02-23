@@ -1962,13 +1962,21 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
     };
 
     let ne_op = || -> String {
+        let eb = if elem == "f32" { 32 } else { 64 };
         let items: Vec<String> = (0..sub_count)
             .map(|i| {
-                format!(
-                    "vreinterpretq_{ns}_u{eb}(vmvnq_u{eb}(vceqq_{ns}(a[{i}], b[{i}])))",
-                    eb = if elem == "f32" { 32 } else { 64 },
-                    ns = ns
-                )
+                if eb == 64 {
+                    // NEON lacks vmvnq_u64 — use XOR with all-ones
+                    format!(
+                        "vreinterpretq_{ns}_u64(veorq_u64(vceqq_{ns}(a[{i}], b[{i}]), vdupq_n_u64(u64::MAX)))",
+                        ns = ns
+                    )
+                } else {
+                    format!(
+                        "vreinterpretq_{ns}_u{eb}(vmvnq_u{eb}(vceqq_{ns}(a[{i}], b[{i}])))",
+                        ns = ns
+                    )
+                }
             })
             .collect();
         format!("unsafe {{ [{}] }}", items.join(", "))
@@ -1990,7 +1998,12 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         let eb = if elem == "f32" { 32 } else { 64 };
         let items: Vec<String> = (0..sub_count)
             .map(|i| {
-                format!("vreinterpretq_{ns}_u{eb}(vmvnq_u{eb}(vreinterpretq_u{eb}_{ns}(a[{i}])))")
+                if eb == 64 {
+                    // NEON lacks vmvnq_u64 — use XOR with all-ones
+                    format!("vreinterpretq_{ns}_u64(veorq_u64(vreinterpretq_u64_{ns}(a[{i}]), vdupq_n_u64(u64::MAX)))")
+                } else {
+                    format!("vreinterpretq_{ns}_u{eb}(vmvnq_u{eb}(vreinterpretq_u{eb}_{ns}(a[{i}])))")
+                }
             })
             .collect();
         format!("unsafe {{ [{}] }}", items.join(", "))
@@ -2056,7 +2069,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -2069,7 +2082,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [{zero_lit}; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 
@@ -2283,9 +2296,9 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         rcp_body = unary_op(&format!("vrecpeq_{ns}")),
         rsqrt_body = unary_op(&format!("vrsqrteq_{ns}")),
         not_body = bitwise_not_op(),
-        and_body = bitwise_binary_op("vandq_u32"),
-        or_body = bitwise_binary_op("vorrq_u32"),
-        xor_body = bitwise_binary_op("veorq_u32"),
+        and_body = bitwise_binary_op(&format!("vandq_u{}", if elem == "f32" { 32 } else { 64 })),
+        or_body = bitwise_binary_op(&format!("vorrq_u{}", if elem == "f32" { 32 } else { 64 })),
+        xor_body = bitwise_binary_op(&format!("veorq_u{}", if elem == "f32" { 32 } else { 64 })),
     }
 }
 
@@ -2300,6 +2313,18 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
     let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let eb = if elem == "f32" { 32 } else { 64 };
     let native_lanes = if elem == "f32" { 4 } else { 2 };
+
+    // NEON lacks vmvnq_u64 — pre-compute NOT expression for f64
+    let not_inner = if eb == 64 {
+        format!("veorq_u64(vreinterpretq_u64_{ns}(a), vdupq_n_u64(u64::MAX))")
+    } else {
+        format!("vmvnq_u{eb}(vreinterpretq_u{eb}_{ns}(a))")
+    };
+    let ne_inner = if eb == 64 {
+        format!("veorq_u64(vceqq_{ns}(a, b), vdupq_n_u64(u64::MAX))")
+    } else {
+        format!("vmvnq_u{eb}(vceqq_{ns}(a, b))")
+    };
 
     // For native types, reduce pattern is different
     let reduce_pairwise = |pairwise: &str| -> String {
@@ -2333,7 +2358,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -2344,7 +2369,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [{zero_lit}; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 
@@ -2389,7 +2414,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             }}
             #[inline(always)]
             fn simd_ne(a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vmvnq_u{eb}(vceqq_{ns}(a, b))) }}
+                unsafe {{ vreinterpretq_{ns}_u{eb}({ne_inner}) }}
             }}
             #[inline(always)]
             fn simd_lt(a: {repr}, b: {repr}) -> {repr} {{
@@ -2435,7 +2460,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn not(a: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vmvnq_u{eb}(vreinterpretq_u{eb}_{ns}(a))) }}
+                unsafe {{ vreinterpretq_{ns}_u{eb}({not_inner}) }}
             }}
             #[inline(always)]
             fn bitand(a: {repr}, b: {repr}) -> {repr} {{
@@ -4195,7 +4220,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -4208,7 +4233,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [0i32; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 
@@ -5811,7 +5836,7 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn from_array(arr: {array}) -> {repr} {{
-                Self::load(&arr)
+                <Self as {trait_name}>::load(&arr)
             }}
 
             #[inline(always)]
@@ -5824,7 +5849,7 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             #[inline(always)]
             fn to_array(repr: {repr}) -> {array} {{
                 let mut out = [0u32; {lanes}];
-                Self::store(repr, &mut out);
+                <Self as {trait_name}>::store(repr, &mut out);
                 out
             }}
 

@@ -47,11 +47,11 @@ fn exercise_integer_arithmetic(token: Wasm128Token) {
     black_box(i8x16_sub(a_i8, b_i8));
     black_box(i8x16_neg(a_i8));
     black_box(i8x16_abs(a_i8));
-    black_box(i8x16_min_s(a_i8, b_i8));
-    black_box(i8x16_min_u(a_i8, b_i8));
-    black_box(i8x16_max_s(a_i8, b_i8));
-    black_box(i8x16_max_u(a_i8, b_i8));
-    black_box(i8x16_avgr_u(a_i8, b_i8));
+    black_box(i8x16_min(a_i8, b_i8));
+    black_box(u8x16_min(a_i8, b_i8));
+    black_box(i8x16_max(a_i8, b_i8));
+    black_box(u8x16_max(a_i8, b_i8));
+    black_box(u8x16_avgr(a_i8, b_i8));
 
     // i16x8
     let a_i16 = i16x8_splat(100);
@@ -61,12 +61,12 @@ fn exercise_integer_arithmetic(token: Wasm128Token) {
     black_box(i16x8_mul(a_i16, b_i16));
     black_box(i16x8_neg(a_i16));
     black_box(i16x8_abs(a_i16));
-    black_box(i16x8_min_s(a_i16, b_i16));
-    black_box(i16x8_min_u(a_i16, b_i16));
-    black_box(i16x8_max_s(a_i16, b_i16));
-    black_box(i16x8_max_u(a_i16, b_i16));
-    black_box(i16x8_avgr_u(a_i16, b_i16));
-    black_box(i16x8_q15mulr_sat_s(a_i16, b_i16));
+    black_box(i16x8_min(a_i16, b_i16));
+    black_box(u16x8_min(a_i16, b_i16));
+    black_box(i16x8_max(a_i16, b_i16));
+    black_box(u16x8_max(a_i16, b_i16));
+    black_box(u16x8_avgr(a_i16, b_i16));
+    black_box(i16x8_q15mulr_sat(a_i16, b_i16));
 
     // i32x4
     let a_i32 = i32x4_splat(1000);
@@ -76,10 +76,10 @@ fn exercise_integer_arithmetic(token: Wasm128Token) {
     black_box(i32x4_mul(a_i32, b_i32));
     black_box(i32x4_neg(a_i32));
     black_box(i32x4_abs(a_i32));
-    black_box(i32x4_min_s(a_i32, b_i32));
-    black_box(i32x4_min_u(a_i32, b_i32));
-    black_box(i32x4_max_s(a_i32, b_i32));
-    black_box(i32x4_max_u(a_i32, b_i32));
+    black_box(i32x4_min(a_i32, b_i32));
+    black_box(u32x4_min(a_i32, b_i32));
+    black_box(i32x4_max(a_i32, b_i32));
+    black_box(u32x4_max(a_i32, b_i32));
 
     // i64x2
     let a_i64 = i64x2_splat(100000);
@@ -147,38 +147,38 @@ fn exercise_comparisons(token: Wasm128Token) {
     let b = i8x16_splat(2);
     black_box(i8x16_eq(a, b));
     black_box(i8x16_ne(a, b));
-    black_box(i8x16_lt_s(a, b));
-    black_box(i8x16_lt_u(a, b));
-    black_box(i8x16_gt_s(a, b));
-    black_box(i8x16_gt_u(a, b));
-    black_box(i8x16_le_s(a, b));
-    black_box(i8x16_le_u(a, b));
-    black_box(i8x16_ge_s(a, b));
-    black_box(i8x16_ge_u(a, b));
+    black_box(i8x16_lt(a, b));
+    black_box(u8x16_lt(a, b));
+    black_box(i8x16_gt(a, b));
+    black_box(u8x16_gt(a, b));
+    black_box(i8x16_le(a, b));
+    black_box(u8x16_le(a, b));
+    black_box(i8x16_ge(a, b));
+    black_box(u8x16_ge(a, b));
 
     // i32x4
     let c = i32x4_splat(1);
     let d = i32x4_splat(2);
     black_box(i32x4_eq(c, d));
     black_box(i32x4_ne(c, d));
-    black_box(i32x4_lt_s(c, d));
-    black_box(i32x4_lt_u(c, d));
-    black_box(i32x4_gt_s(c, d));
-    black_box(i32x4_gt_u(c, d));
-    black_box(i32x4_le_s(c, d));
-    black_box(i32x4_le_u(c, d));
-    black_box(i32x4_ge_s(c, d));
-    black_box(i32x4_ge_u(c, d));
+    black_box(i32x4_lt(c, d));
+    black_box(u32x4_lt(c, d));
+    black_box(i32x4_gt(c, d));
+    black_box(u32x4_gt(c, d));
+    black_box(i32x4_le(c, d));
+    black_box(u32x4_le(c, d));
+    black_box(i32x4_ge(c, d));
+    black_box(u32x4_ge(c, d));
 
     // i64x2
     let e = i64x2_splat(1);
     let f = i64x2_splat(2);
     black_box(i64x2_eq(e, f));
     black_box(i64x2_ne(e, f));
-    black_box(i64x2_lt_s(e, f));
-    black_box(i64x2_gt_s(e, f));
-    black_box(i64x2_le_s(e, f));
-    black_box(i64x2_ge_s(e, f));
+    black_box(i64x2_lt(e, f));
+    black_box(i64x2_gt(e, f));
+    black_box(i64x2_le(e, f));
+    black_box(i64x2_ge(e, f));
 
     // f32x4
     let g = f32x4_splat(1.0);
@@ -229,23 +229,23 @@ fn exercise_bitwise(token: Wasm128Token) {
 fn exercise_shifts(token: Wasm128Token) {
     let a_i8 = i8x16_splat(0x42);
     black_box(i8x16_shl(a_i8, 1));
-    black_box(i8x16_shr_s(a_i8, 1));
-    black_box(i8x16_shr_u(a_i8, 1));
+    black_box(i8x16_shr(a_i8, 1));
+    black_box(u8x16_shr(a_i8, 1));
 
     let a_i16 = i16x8_splat(0x4242);
     black_box(i16x8_shl(a_i16, 1));
-    black_box(i16x8_shr_s(a_i16, 1));
-    black_box(i16x8_shr_u(a_i16, 1));
+    black_box(i16x8_shr(a_i16, 1));
+    black_box(u16x8_shr(a_i16, 1));
 
     let a_i32 = i32x4_splat(0x42424242);
     black_box(i32x4_shl(a_i32, 1));
-    black_box(i32x4_shr_s(a_i32, 1));
-    black_box(i32x4_shr_u(a_i32, 1));
+    black_box(i32x4_shr(a_i32, 1));
+    black_box(u32x4_shr(a_i32, 1));
 
     let a_i64 = i64x2_splat(0x4242424242424242);
     black_box(i64x2_shl(a_i64, 1));
-    black_box(i64x2_shr_s(a_i64, 1));
-    black_box(i64x2_shr_u(a_i64, 1));
+    black_box(i64x2_shr(a_i64, 1));
+    black_box(u64x2_shr(a_i64, 1));
 }
 
 // =============================================================================
@@ -256,19 +256,19 @@ fn exercise_shifts(token: Wasm128Token) {
 fn exercise_conversions(token: Wasm128Token) {
     // Float <-> Int truncation
     let f = f32x4_splat(42.7);
-    black_box(i32x4_trunc_sat_f32x4_s(f));
-    black_box(i32x4_trunc_sat_f32x4_u(f));
+    black_box(i32x4_trunc_sat_f32x4(f));
+    black_box(u32x4_trunc_sat_f32x4(f));
 
     let d = f64x2_splat(42.7);
-    black_box(i32x4_trunc_sat_f64x2_s_zero(d));
-    black_box(i32x4_trunc_sat_f64x2_u_zero(d));
+    black_box(i32x4_trunc_sat_f64x2_zero(d));
+    black_box(u32x4_trunc_sat_f64x2_zero(d));
 
     // Int -> Float conversion
     let i = i32x4_splat(42);
-    black_box(f32x4_convert_i32x4_s(i));
-    black_box(f32x4_convert_i32x4_u(i));
-    black_box(f64x2_convert_low_i32x4_s(i));
-    black_box(f64x2_convert_low_i32x4_u(i));
+    black_box(f32x4_convert_i32x4(i));
+    black_box(f32x4_convert_u32x4(i));
+    black_box(f64x2_convert_low_i32x4(i));
+    black_box(f64x2_convert_low_u32x4(i));
 
     // Float demote/promote
     let dd = f64x2_splat(3.14);
@@ -278,30 +278,30 @@ fn exercise_conversions(token: Wasm128Token) {
 
     // Extend (widen)
     let narrow = i8x16_splat(42);
-    black_box(i16x8_extend_low_i8x16_s(narrow));
-    black_box(i16x8_extend_high_i8x16_s(narrow));
-    black_box(i16x8_extend_low_i8x16_u(narrow));
-    black_box(i16x8_extend_high_i8x16_u(narrow));
+    black_box(i16x8_extend_low_i8x16(narrow));
+    black_box(i16x8_extend_high_i8x16(narrow));
+    black_box(i16x8_extend_low_u8x16(narrow));
+    black_box(i16x8_extend_high_u8x16(narrow));
 
     let narrow16 = i16x8_splat(42);
-    black_box(i32x4_extend_low_i16x8_s(narrow16));
-    black_box(i32x4_extend_high_i16x8_s(narrow16));
-    black_box(i32x4_extend_low_i16x8_u(narrow16));
-    black_box(i32x4_extend_high_i16x8_u(narrow16));
+    black_box(i32x4_extend_low_i16x8(narrow16));
+    black_box(i32x4_extend_high_i16x8(narrow16));
+    black_box(i32x4_extend_low_u16x8(narrow16));
+    black_box(i32x4_extend_high_u16x8(narrow16));
 
     let narrow32 = i32x4_splat(42);
-    black_box(i64x2_extend_low_i32x4_s(narrow32));
-    black_box(i64x2_extend_high_i32x4_s(narrow32));
-    black_box(i64x2_extend_low_i32x4_u(narrow32));
-    black_box(i64x2_extend_high_i32x4_u(narrow32));
+    black_box(i64x2_extend_low_i32x4(narrow32));
+    black_box(i64x2_extend_high_i32x4(narrow32));
+    black_box(i64x2_extend_low_u32x4(narrow32));
+    black_box(i64x2_extend_high_u32x4(narrow32));
 
     // Narrow (truncate)
     let wide_i16 = i16x8_splat(42);
-    black_box(i8x16_narrow_i16x8_s(wide_i16, wide_i16));
-    black_box(i8x16_narrow_i16x8_u(wide_i16, wide_i16));
+    black_box(i8x16_narrow_i16x8(wide_i16, wide_i16));
+    black_box(u8x16_narrow_i16x8(wide_i16, wide_i16));
     let wide_i32 = i32x4_splat(42);
-    black_box(i16x8_narrow_i32x4_s(wide_i32, wide_i32));
-    black_box(i16x8_narrow_i32x4_u(wide_i32, wide_i32));
+    black_box(i16x8_narrow_i32x4(wide_i32, wide_i32));
+    black_box(u16x8_narrow_i32x4(wide_i32, wide_i32));
 }
 
 // =============================================================================
@@ -312,11 +312,11 @@ fn exercise_conversions(token: Wasm128Token) {
 fn exercise_lane_ops(token: Wasm128Token) {
     // Extract lane
     let v_i8 = i8x16_splat(42);
-    black_box(i8x16_extract_lane_s::<0>(v_i8));
-    black_box(i8x16_extract_lane_u::<0>(v_i8));
+    black_box(i8x16_extract_lane::<0>(v_i8));
+    black_box(u8x16_extract_lane::<0>(v_i8));
     let v_i16 = i16x8_splat(42);
-    black_box(i16x8_extract_lane_s::<0>(v_i16));
-    black_box(i16x8_extract_lane_u::<0>(v_i16));
+    black_box(i16x8_extract_lane::<0>(v_i16));
+    black_box(u16x8_extract_lane::<0>(v_i16));
     let v_i32 = i32x4_splat(42);
     black_box(i32x4_extract_lane::<0>(v_i32));
     let v_i64 = i64x2_splat(42);
@@ -407,31 +407,31 @@ fn exercise_extended_multiply(token: Wasm128Token) {
     // i16x8 extended multiply from i8x16
     let a = i8x16_splat(10);
     let b = i8x16_splat(20);
-    black_box(i16x8_extmul_low_i8x16_s(a, b));
-    black_box(i16x8_extmul_high_i8x16_s(a, b));
-    black_box(i16x8_extmul_low_i8x16_u(a, b));
-    black_box(i16x8_extmul_high_i8x16_u(a, b));
+    black_box(i16x8_extmul_low_i8x16(a, b));
+    black_box(i16x8_extmul_high_i8x16(a, b));
+    black_box(i16x8_extmul_low_u8x16(a, b));
+    black_box(i16x8_extmul_high_u8x16(a, b));
 
     // i32x4 extended multiply from i16x8
     let c = i16x8_splat(10);
     let d = i16x8_splat(20);
-    black_box(i32x4_extmul_low_i16x8_s(c, d));
-    black_box(i32x4_extmul_high_i16x8_s(c, d));
-    black_box(i32x4_extmul_low_i16x8_u(c, d));
-    black_box(i32x4_extmul_high_i16x8_u(c, d));
+    black_box(i32x4_extmul_low_i16x8(c, d));
+    black_box(i32x4_extmul_high_i16x8(c, d));
+    black_box(i32x4_extmul_low_u16x8(c, d));
+    black_box(i32x4_extmul_high_u16x8(c, d));
 
     // i64x2 extended multiply from i32x4
     let e = i32x4_splat(10);
     let f = i32x4_splat(20);
-    black_box(i64x2_extmul_low_i32x4_s(e, f));
-    black_box(i64x2_extmul_high_i32x4_s(e, f));
-    black_box(i64x2_extmul_low_i32x4_u(e, f));
-    black_box(i64x2_extmul_high_i32x4_u(e, f));
+    black_box(i64x2_extmul_low_i32x4(e, f));
+    black_box(i64x2_extmul_high_i32x4(e, f));
+    black_box(i64x2_extmul_low_u32x4(e, f));
+    black_box(i64x2_extmul_high_u32x4(e, f));
 
     // Dot product
     let g = i16x8_splat(3);
     let h = i16x8_splat(4);
-    let dot = i32x4_dot_i16x8_s(g, h);
+    let dot = i32x4_dot_i16x8(g, h);
     black_box(dot);
     // Each i32 lane = sum of 2 i16*i16 products = 3*4 + 3*4 = 24
     let lane0 = i32x4_extract_lane::<0>(dot);
@@ -447,21 +447,21 @@ fn exercise_saturating_arithmetic(token: Wasm128Token) {
     // i8x16 saturating
     let a = i8x16_splat(100);
     let b = i8x16_splat(100);
-    black_box(i8x16_add_sat_s(a, b)); // 100+100 = saturates to 127
-    black_box(i8x16_add_sat_u(a, b)); // 100+100 = 200 (no saturation)
-    black_box(i8x16_sub_sat_s(i8x16_splat(-100), b)); // -100-100 saturates to -128
-    black_box(i8x16_sub_sat_u(i8x16_splat(0), b)); // 0-100 saturates to 0
+    black_box(i8x16_add_sat(a, b)); // 100+100 = saturates to 127
+    black_box(u8x16_add_sat(a, b)); // 100+100 = 200 (no saturation)
+    black_box(i8x16_sub_sat(i8x16_splat(-100), b)); // -100-100 saturates to -128
+    black_box(u8x16_sub_sat(i8x16_splat(0), b)); // 0-100 saturates to 0
 
     // Verify saturation
-    let sum = i8x16_add_sat_s(i8x16_splat(120), i8x16_splat(120));
-    let lane0 = i8x16_extract_lane_s::<0>(sum);
+    let sum = i8x16_add_sat(i8x16_splat(120), i8x16_splat(120));
+    let lane0 = i8x16_extract_lane::<0>(sum);
     assert_eq!(lane0, 127, "signed i8 saturation: 120+120 should be 127");
 
     // i16x8 saturating
     let c = i16x8_splat(30000);
     let d = i16x8_splat(30000);
-    black_box(i16x8_add_sat_s(c, d));
-    black_box(i16x8_add_sat_u(c, d));
-    black_box(i16x8_sub_sat_s(i16x8_splat(-30000), d));
-    black_box(i16x8_sub_sat_u(i16x8_splat(0), d));
+    black_box(i16x8_add_sat(c, d));
+    black_box(u16x8_add_sat(c, d));
+    black_box(i16x8_sub_sat(i16x8_splat(-30000), d));
+    black_box(u16x8_sub_sat(i16x8_splat(0), d));
 }
