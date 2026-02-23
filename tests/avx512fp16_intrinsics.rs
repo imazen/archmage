@@ -51,9 +51,7 @@ fn fp16_token_hierarchy() {
 fn print_fp16_status() {
     let available = archmage::Avx512Fp16Token::summon().is_some();
     println!("Avx512Fp16Token available: {available}");
-    println!(
-        "Note: 935 avx512fp16 intrinsics exist but ALL are nightly-only (unstable)."
-    );
+    println!("Note: 935 avx512fp16 intrinsics exist but ALL are nightly-only (unstable).");
     println!("No intrinsic exercise tests possible on stable Rust.");
     if !available {
         println!("(This is expected — FP16 requires Sapphire Rapids or newer Intel.)");

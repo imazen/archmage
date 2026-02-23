@@ -298,10 +298,7 @@ mod aarch64_tests {
     #[test]
     fn token_hierarchy_is_correct() {
         if Arm64V3Token::summon().is_some() {
-            assert!(
-                Arm64V2Token::summon().is_some(),
-                "Arm64V3 implies Arm64V2"
-            );
+            assert!(Arm64V2Token::summon().is_some(), "Arm64V3 implies Arm64V2");
             assert!(NeonToken::summon().is_some(), "Arm64V3 implies Neon");
             assert!(
                 NeonSha3Token::summon().is_some(),
@@ -311,14 +308,8 @@ mod aarch64_tests {
 
         if Arm64V2Token::summon().is_some() {
             assert!(NeonToken::summon().is_some(), "Arm64V2 implies Neon");
-            assert!(
-                NeonAesToken::summon().is_some(),
-                "Arm64V2 implies NeonAes"
-            );
-            assert!(
-                NeonCrcToken::summon().is_some(),
-                "Arm64V2 implies NeonCrc"
-            );
+            assert!(NeonAesToken::summon().is_some(), "Arm64V2 implies NeonAes");
+            assert!(NeonCrcToken::summon().is_some(), "Arm64V2 implies NeonCrc");
         }
     }
 

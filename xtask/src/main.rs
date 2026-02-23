@@ -1980,7 +1980,9 @@ fn run_ci() -> Result<()> {
     } else {
         println!("  ⚠ ARM64 cross-testing skipped (requires 'cross' + Docker)");
         if !cross_ok {
-            println!("    Install cross: cargo install cross --git https://github.com/cross-rs/cross");
+            println!(
+                "    Install cross: cargo install cross --git https://github.com/cross-rs/cross"
+            );
         }
         if !docker_ok {
             println!("    Docker must be running for ARM64 cross-compilation");
@@ -1998,9 +2000,7 @@ fn run_ci() -> Result<()> {
     let wasm_target_ok = std::process::Command::new("rustup")
         .args(["target", "list", "--installed"])
         .output()
-        .map(|o| {
-            String::from_utf8_lossy(&o.stdout).contains("wasm32-wasip1")
-        })
+        .map(|o| String::from_utf8_lossy(&o.stdout).contains("wasm32-wasip1"))
         .unwrap_or(false);
 
     if wasmtime_ok && wasm_target_ok {

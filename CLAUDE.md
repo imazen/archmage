@@ -509,8 +509,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | neon,aes (rounds + p64) | ~37 | Full | Tested in arm_feature_intrinsics.rs |
 | sha2 | ~10 | Full | Tested in arm_feature_intrinsics.rs |
 | crc | 8 | Full | Tested in arm_feature_intrinsics.rs |
-| dotprod (base) | 8 | Full | Tested in arm_feature_intrinsics.rs |
-| dotprod (laneq) | 4 | Nightly | Unstable — `target_feature = "dotprod"` |
+| dotprod | ALL | Nightly | ALL dotprod intrinsics require `stdarch_neon_dotprod` (unstable) |
 | neon,fp16 | 95/214 | Partial | 119 unstable, rest nightly-only |
 | fcma | 34 | Nightly | All unstable |
 | i8mm | 4 | Nightly | All unstable |

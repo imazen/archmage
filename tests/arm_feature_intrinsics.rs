@@ -398,10 +398,7 @@ fn exercise_sha3(token: NeonSha3Token) {
 fn test_arm_token_hierarchy() {
     // Arm64V3 implies Arm64V2 implies Neon
     if Arm64V3Token::summon().is_some() {
-        assert!(
-            Arm64V2Token::summon().is_some(),
-            "Arm64V3 implies Arm64V2"
-        );
+        assert!(Arm64V2Token::summon().is_some(), "Arm64V3 implies Arm64V2");
         assert!(NeonToken::summon().is_some(), "Arm64V3 implies Neon");
         assert!(
             NeonSha3Token::summon().is_some(),
@@ -411,14 +408,8 @@ fn test_arm_token_hierarchy() {
 
     if Arm64V2Token::summon().is_some() {
         assert!(NeonToken::summon().is_some(), "Arm64V2 implies Neon");
-        assert!(
-            NeonAesToken::summon().is_some(),
-            "Arm64V2 implies NeonAes"
-        );
-        assert!(
-            NeonCrcToken::summon().is_some(),
-            "Arm64V2 implies NeonCrc"
-        );
+        assert!(NeonAesToken::summon().is_some(), "Arm64V2 implies NeonAes");
+        assert!(NeonCrcToken::summon().is_some(), "Arm64V2 implies NeonCrc");
     }
 }
 
