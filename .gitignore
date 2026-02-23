@@ -2,3 +2,4 @@
 src/generated/
 docs/book/mermaid.min.js
 docs/book/mermaid-init.js
+*.rlib
