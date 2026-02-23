@@ -349,11 +349,20 @@ jobs:
           RUSTDOCFLAGS: -Dwarnings
 
   # ==========================================================================
-  # MSRV check
+  # MSRV check — verify advertised MSRV on every platform
   # ==========================================================================
   msrv:
-    name: MSRV (1.89)
-    runs-on: ubuntu-latest
+    name: MSRV 1.89 (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: x64 Linux }
+          - { os: windows-latest, name: x64 Windows }
+          - { os: ubuntu-24.04-arm, name: aarch64 Linux }
+          - { os: macos-14, name: aarch64 macOS }
+          - { os: windows-11-arm, name: aarch64 Windows }
     steps:
       - uses: actions/checkout@v6
 
