@@ -1,0 +1,50 @@
+name: Update Intrinsics Database
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # Monthly on the 1st
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, rust-src
+
+      - name: Extract intrinsics from current Rust
+        run: python3 xtask/extract_intrinsics.py > docs/intrinsics/complete_intrinsics.csv
+
+      - name: Regenerate browser data
+        run: cargo run -p xtask -- generate
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet docs/intrinsics/ docs/intrinsics-browser/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUST_VER=$(rustc --version | cut -d' ' -f2)
+          BRANCH="update-intrinsics-$(date +%Y%m%d)"
+          git checkout -b "$BRANCH"
+          git add docs/intrinsics/ docs/intrinsics-browser/
+          git commit -m "docs: update intrinsics database for Rust $RUST_VER"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "Update intrinsics for Rust $RUST_VER" \
+            --body "Automated monthly intrinsics database refresh for Rust $RUST_VER."

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'docs/book/**'
+      - 'docs/intrinsics-browser/**'
       - '.github/workflows/book.yml'
   workflow_dispatch:
 
@@ -33,6 +34,11 @@ jobs:
 
       - name: Build book
         run: mdbook build docs/book
+
+      - name: Copy intrinsics browser into book output
+        run: |
+          mkdir -p target/book/intrinsics
+          cp -r docs/intrinsics-browser/* target/book/intrinsics/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

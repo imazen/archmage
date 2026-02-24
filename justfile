@@ -262,3 +262,7 @@ simd-ref:
 # Serve the SIMD reference locally (with auto-reload)
 simd-ref-serve:
     cd docs/simd_reference && mdbook serve
+
+# Serve the intrinsics browser locally (port 3500)
+intrinsics-serve:
+    cd docs/intrinsics-browser && python3 -m http.server 3500
