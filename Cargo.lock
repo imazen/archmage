@@ -903,6 +903,7 @@ dependencies = [
  "indoc",
  "regex",
  "serde",
+ "serde_json",
  "toml",
  "walkdir",
 ]
