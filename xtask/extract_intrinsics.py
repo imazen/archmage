@@ -1,12 +1,98 @@
 #!/usr/bin/env python3
 """Extract all SIMD intrinsics from Rust stdarch source.
 
-Outputs CSV: arch,name,features,unsafe,stability,file
+Outputs CSV: arch,name,features,unsafe,stability,file,doc,signature,instruction
+
+Uses Python's csv.writer for proper RFC 4180 quoting.
 """
 
+import csv
 import os
 import re
 import sys
+import io
+
+
+def extract_doc_comment(lines, start_idx):
+    """Extract doc comments above the target_feature attribute.
+
+    Looks backwards from start_idx, skipping #[inline], #[cfg_attr(...)],
+    and other attributes to find consecutive /// or #[doc = "..."] lines.
+    Returns the full doc string (preserving Intel/ARM links).
+    """
+    doc_lines = []
+    i = start_idx - 1
+    while i >= 0:
+        stripped = lines[i].strip()
+        # /// style doc comments
+        if stripped.startswith('///'):
+            text = stripped[3:].strip()
+            doc_lines.insert(0, text)
+            i -= 1
+            continue
+        # #[doc = "..."] style (ARM generated code)
+        doc_attr = re.match(r'#\[doc\s*=\s*"(.*)"\]', stripped)
+        if doc_attr:
+            text = doc_attr.group(1)
+            doc_lines.insert(0, text)
+            i -= 1
+            continue
+        # Skip blank lines
+        if stripped == '':
+            i -= 1
+            continue
+        # Skip non-doc attributes: #[inline], #[cfg_attr(...)], etc.
+        if stripped.startswith('#[') and not stripped.startswith('#[doc'):
+            # Handle multi-line attributes
+            if stripped.count('[') > stripped.count(']'):
+                # Walk backwards to find the opening
+                depth = stripped.count(']') - stripped.count('[')
+                while i > 0 and depth < 0:
+                    i -= 1
+                    depth += lines[i].strip().count('[') - lines[i].strip().count(']')
+            i -= 1
+            continue
+        break
+    return ' '.join(doc_lines) if doc_lines else ''
+
+
+def extract_instruction(lines, start_idx, end_idx):
+    """Extract the assert_instr(...) instruction name between start and end."""
+    for i in range(start_idx, min(end_idx, len(lines))):
+        stripped = lines[i].strip()
+        m = re.search(r'assert_instr\(\s*([^,)]+)', stripped)
+        if m:
+            return m.group(1).strip()
+    return ''
+
+
+def extract_signature(lines, fn_line_idx):
+    """Extract the full function signature from the fn line.
+
+    Handles multi-line signatures by collecting until we find '{' or ';'.
+    Returns 'fn name(params) -> ret' format.
+    """
+    sig_lines = []
+    i = fn_line_idx
+    while i < len(lines):
+        line = lines[i].strip()
+        sig_lines.append(line)
+        if '{' in line or ';' in line:
+            break
+        i += 1
+
+    full = ' '.join(sig_lines)
+    # Remove pub, unsafe, const, extern qualifiers
+    full = re.sub(r'\bpub\s+', '', full)
+    full = re.sub(r'\bunsafe\s+', '', full)
+    full = re.sub(r'\bconst\s+', '', full)
+    full = re.sub(r'\bextern\s+"[^"]*"\s*', '', full)
+    # Trim at '{' or ';'
+    full = re.split(r'\s*[{;]', full)[0].strip()
+    # Remove #[inline] etc. that might be on the same line
+    full = re.sub(r'#\[[^\]]*\]\s*', '', full)
+    return full
+
 
 def extract_intrinsics(arch_dir, arch_name):
     """Extract intrinsics from a stdarch architecture directory."""
@@ -42,6 +128,10 @@ def extract_intrinsics(arch_dir, arch_name):
                 tf_match = tf_pattern.search(stripped)
                 if tf_match:
                     features = tf_match.group(1)
+                    tf_line = i
+
+                    # Collect doc comment above the target_feature line
+                    doc = extract_doc_comment(lines, tf_line)
 
                     j = i + 1
                     fn_name = None
@@ -74,13 +164,16 @@ def extract_intrinsics(arch_dir, arch_name):
                             continue
 
                         if (fline.startswith('//') or fline.startswith('///') or
-                            fline == '' or fline.startswith('*')):
+                            fline == '' or fline.startswith('*') or
+                            fline.startswith('#[doc')):
                             j += 1
                             continue
 
                         break
 
                     if fn_name:
+                        instruction = extract_instruction(lines, tf_line, j)
+                        signature = extract_signature(lines, j)
                         entry = {
                             'arch': arch_name,
                             'name': fn_name,
@@ -88,6 +181,9 @@ def extract_intrinsics(arch_dir, arch_name):
                             'unsafe': is_unsafe,
                             'stability': stability,
                             'file': rel_path,
+                            'doc': doc,
+                            'signature': signature,
+                            'instruction': instruction,
                         }
                         results.append(entry)
                         local_entries[fn_name] = entry
@@ -112,9 +208,13 @@ def extract_intrinsics(arch_dir, arch_name):
                             'unsafe': src['unsafe'],
                             'stability': src['stability'],
                             'file': rel_path,
+                            'doc': src.get('doc', ''),
+                            'signature': src.get('signature', '').replace(source_name, alias_name, 1),
+                            'instruction': src.get('instruction', ''),
                         })
 
     return results
+
 
 def main():
     sysroot = os.popen('rustc --print sysroot').read().strip()
@@ -135,12 +235,36 @@ def main():
             print(f"{label}: {len(intrinsics)} intrinsics", file=sys.stderr)
             all_intrinsics.extend(intrinsics)
 
-    print("arch,name,features,unsafe,stability,file")
+    # Merge x86 into x86_64: relabel x86 entries as x86_64, dedup by name
+    # (prefer x86_64-specific if both exist)
+    x86_64_names = {e['name'] for e in all_intrinsics if e['arch'] == 'x86_64'}
+    merged = []
     for entry in all_intrinsics:
-        unsafe_str = "True" if entry['unsafe'] else "False"
-        print(f"{entry['arch']},{entry['name']},{entry['features']},{unsafe_str},{entry['stability']},{entry['file']}")
+        if entry['arch'] == 'x86':
+            entry['arch'] = 'x86_64'
+            if entry['name'] in x86_64_names:
+                continue  # x86_64-specific version takes priority
+        merged.append(entry)
+    all_intrinsics = merged
+
+    # Write CSV with proper quoting via csv.writer
+    writer = csv.writer(sys.stdout, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(['arch', 'name', 'features', 'unsafe', 'stability', 'file', 'doc', 'signature', 'instruction'])
+    for entry in all_intrinsics:
+        writer.writerow([
+            entry['arch'],
+            entry['name'],
+            entry['features'],
+            'True' if entry['unsafe'] else 'False',
+            entry['stability'],
+            entry['file'],
+            entry.get('doc', ''),
+            entry.get('signature', ''),
+            entry.get('instruction', ''),
+        ])
 
     print(f"\nTotal: {len(all_intrinsics)} intrinsics", file=sys.stderr)
+
 
 if __name__ == '__main__':
     main()
