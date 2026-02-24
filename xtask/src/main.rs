@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod intrinsics_browser;
 mod registry;
 mod simd_types;
 mod token_gen;
@@ -484,16 +485,16 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
 // ============================================================================
 
 /// Safe memory operation extracted from safe_unaligned_simd source.
-struct SafeMemOp {
-    name: String,
-    features: String,
-    token: String,
-    signature: String,
-    doc: String,
+pub(crate) struct SafeMemOp {
+    pub(crate) name: String,
+    pub(crate) features: String,
+    pub(crate) token: String,
+    pub(crate) signature: String,
+    pub(crate) doc: String,
 }
 
 /// Find safe_unaligned_simd source in cargo cache without walkdir.
-fn find_safe_simd_path_simple() -> Result<PathBuf> {
+pub(crate) fn find_safe_simd_path_simple() -> Result<PathBuf> {
     let home = std::env::var("HOME").context("HOME not set")?;
     let registry_src = PathBuf::from(&home).join(".cargo/registry/src");
 
@@ -520,7 +521,7 @@ fn find_safe_simd_path_simple() -> Result<PathBuf> {
 }
 
 /// Extract safe memory operations from safe_unaligned_simd source using regex.
-fn extract_safe_simd_functions(safe_simd_path: &Path) -> Result<Vec<SafeMemOp>> {
+pub(crate) fn extract_safe_simd_functions(safe_simd_path: &Path) -> Result<Vec<SafeMemOp>> {
     let mut ops = Vec::new();
     let tf_re =
         Regex::new(r#"#\[target_feature\(enable\s*=\s*"([^"]+)"\)\]"#).expect("invalid tf regex");
@@ -1422,6 +1423,10 @@ pub(crate) use registry::*;
     // Generate reference documentation
     println!("\n=== Generating Reference Documentation ===");
     generate_reference_docs_new()?;
+
+    // Generate intrinsics browser data (JSON + per-token markdown)
+    println!("\n=== Generating Intrinsics Browser ===");
+    intrinsics_browser::generate_intrinsics_browser(&reg)?;
 
     // Run safety validation on generated code (hard failure)
     println!("\n=== Validating Magetypes Safety ===");
