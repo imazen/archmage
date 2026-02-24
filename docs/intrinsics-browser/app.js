@@ -387,11 +387,13 @@
     }
 
     const archModule = 'core::arch::' + i.a;
+    const hasWrapper = i.u && safeVariantSet.has(i.n);
+    const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
 
     detailContent.innerHTML = `
       <h2>${escHtml(i.n)}</h2>
       <div class="detail-grid">
-        <div class="detail-field"><span class="detail-label">Module</span><span class="detail-value">${escHtml(archModule)}</span></div>
+        <div class="detail-field"><span class="detail-label">Module</span><span class="detail-value"><code>${escHtml(archModule)}</code>${hasWrapper ? ` · <code>safe_unaligned_simd::${escHtml(archMod)}</code>` : ''}<br><span style="opacity: 0.6; font-size: 11px;">or <code>archmage::prelude</code></span></span></div>
         <div class="detail-field"><span class="detail-label">Token</span><span class="detail-value">${escHtml(tokenDisplay)}</span></div>
         <div class="detail-field"><span class="detail-label">Features</span><span class="detail-value">${escHtml(i.f || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Instruction</span><span class="detail-value">${escHtml(i.ins || '—')}</span></div>
@@ -412,18 +414,20 @@
   function buildUsageExample(i, token) {
     if (!token) return '';
     const tn = token.name;
-    const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
+    // archmage::prelude re-exports core::arch::* AND safe_unaligned_simd::*
+    // (safe versions shadow unsafe ones for load/store intrinsics)
+    const prelude = 'use archmage::prelude::*;';
     let code;
     if (i.u) {
       const sv = allData.safeVariants[i.n];
       if (sv) {
-        // safe_unaligned_simd shadows the unsafe core::arch version
-        code = `use core::arch::${i.a}::*;\nuse safe_unaligned_simd::${archMod}::*; // shadows unsafe ${i.n}\n\n// Safe — ${i.n} is now the safe_unaligned_simd version\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
+        // Prelude shadows this intrinsic with the safe version
+        code = `${prelude}\n// ${i.n} is safe via prelude (safe_unaligned_simd shadows core::arch)\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
       } else {
-        code = `use core::arch::${i.a}::*;\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+        code = `${prelude}\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
       }
     } else {
-      code = `use core::arch::${i.a}::*;\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
+      code = `${prelude}\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
     }
     return `<div class="detail-code"><div class="code-label">Usage with archmage</div><pre>${escHtml(code)}</pre></div>`;
   }
