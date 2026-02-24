@@ -386,15 +386,17 @@
       </div>`;
     }
 
+    const archModule = 'core::arch::' + i.a;
+
     detailContent.innerHTML = `
       <h2>${escHtml(i.n)}</h2>
       <div class="detail-grid">
+        <div class="detail-field"><span class="detail-label">Module</span><span class="detail-value">${escHtml(archModule)}</span></div>
         <div class="detail-field"><span class="detail-label">Token</span><span class="detail-value">${escHtml(tokenDisplay)}</span></div>
         <div class="detail-field"><span class="detail-label">Features</span><span class="detail-value">${escHtml(i.f || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Instruction</span><span class="detail-value">${escHtml(i.ins || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Stability</span><span class="detail-value">${i.s ? '<span class="badge badge-stable">stable</span>' : '<span class="badge badge-unstable">nightly</span>'}</span></div>
         <div class="detail-field"><span class="detail-label">Safety</span><span class="detail-value">${!i.u ? '<span class="badge badge-safe">safe</span>' : safeVariantSet.has(i.n) ? '<span class="badge badge-unsafe">unsafe</span> <span class="badge badge-safe-wrapped">safe via safe_unaligned_simd</span>' : '<span class="badge badge-unsafe">unsafe</span>'}</span></div>
-        <div class="detail-field"><span class="detail-label">Architecture</span><span class="detail-value">${escHtml(i.a)}</span></div>
       </div>
       <div style="margin-bottom: 8px; color: var(--text);">${escHtml(docText)}</div>
       ${linksHtml}${tokenRefHtml}
@@ -410,17 +412,18 @@
   function buildUsageExample(i, token) {
     if (!token) return '';
     const tn = token.name;
+    const useLine = `use core::arch::${i.a}::*;`;
     const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
     let code;
     if (i.u) {
       const sv = allData.safeVariants[i.n];
       if (sv) {
-        code = `// Preferred: safe wrapper (no unsafe needed)\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = safe_unaligned_simd::${archMod}::${i.n}(/* args */);\n}\n\n// Raw intrinsic (requires unsafe)\n#[rite]\nfn example_raw(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+        code = `${useLine}\n\n// Preferred: safe wrapper (no unsafe needed)\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = safe_unaligned_simd::${archMod}::${i.n}(/* args */);\n}\n\n// Raw intrinsic (requires unsafe)\n#[rite]\nfn example_raw(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
       } else {
-        code = `#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+        code = `${useLine}\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
       }
     } else {
-      code = `#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
+      code = `${useLine}\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
     }
     return `<div class="detail-code"><div class="code-label">Usage with archmage</div><pre>${escHtml(code)}</pre></div>`;
   }
