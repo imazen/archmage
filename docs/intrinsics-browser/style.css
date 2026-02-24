@@ -36,14 +36,13 @@ body {
 header {
   background: var(--bg-alt);
   border-bottom: 1px solid var(--border);
-  padding: 12px 20px 8px;
+  padding: 10px 20px;
 }
 
 .header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
 }
 
 h1 {
@@ -62,34 +61,64 @@ h1 {
 }
 .book-link:hover { text-decoration: underline; }
 
-.token-links {
+/* Token Tree */
+.token-tree {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 4px;
   flex-wrap: wrap;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
   font-size: 12px;
 }
 
-.token-links-label {
+.token-tree-label {
   color: var(--text-dim);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.token-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: var(--mono);
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.token-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.token-btn.active {
+  background: var(--bg-selected);
+  color: var(--text-bright);
+  border-color: var(--accent);
+}
+.token-btn.token-all {
   font-weight: 600;
 }
 
-.token-links a {
-  color: var(--blue);
-  text-decoration: none;
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: rgba(89, 194, 255, 0.08);
+.token-sep {
+  color: var(--text-dim);
+  font-size: 10px;
+  opacity: 0.5;
+  margin: 0 1px;
 }
-.token-links a:hover {
-  background: rgba(89, 194, 255, 0.18);
+.token-indent {
+  color: var(--text-dim);
+  font-size: 10px;
+  opacity: 0.4;
+  margin: 0 1px;
 }
-.token-links a.arch-x86 { color: var(--blue); background: rgba(89, 194, 255, 0.08); }
-.token-links a.arch-arm { color: var(--green); background: rgba(127, 217, 98, 0.08); }
-.token-links a.arch-wasm { color: var(--purple); background: rgba(210, 166, 255, 0.08); }
 
 /* Controls */
 .controls {

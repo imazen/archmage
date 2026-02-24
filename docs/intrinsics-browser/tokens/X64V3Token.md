@@ -10,19 +10,19 @@ Proof that AVX2 + FMA + BMI1/2 + F16C + LZCNT are available (x86-64-v3 level).
 ```rust
 use archmage::prelude::*;
 
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     process(token, &mut data);
 }
 
 #[arcane]  // Entry point only
-fn process(token: Desktop64, data: &mut [f32]) {
+fn process(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
 #[rite]  // All inner helpers
-fn process_chunk(_: Desktop64, chunk: &mut [f32; 8]) {
+fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(chunk);  // safe!
     let doubled = _mm256_add_ps(v, v);    // value intrinsic (safe inside #[rite])
     safe_unaligned_simd::x86_64::_mm256_storeu_ps(chunk, doubled);  // safe!

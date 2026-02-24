@@ -10,19 +10,19 @@ Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake / Zen 
 ```rust
 use archmage::prelude::*;
 
-if let Some(token) = Avx512ModernToken::summon() {
+if let Some(token) = X64V4xToken::summon() {
     process(token, &mut data);
 }
 
 #[arcane]  // Entry point only
-fn process(token: Avx512ModernToken, data: &mut [f32]) {
+fn process(token: X64V4xToken, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(16) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
 #[rite]  // All inner helpers
-fn process_chunk(_: Avx512ModernToken, chunk: &mut [f32; 16]) {
+fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
     let v = _mm512_loadu_ps(chunk.as_ptr());  // safe inside #[rite]
     let doubled = _mm512_add_ps(v, v);
     _mm512_storeu_ps(chunk.as_mut_ptr(), doubled);

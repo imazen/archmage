@@ -10,19 +10,19 @@ Proof that NEON is available.
 ```rust
 use archmage::prelude::*;
 
-if let Some(token) = Arm64::summon() {
+if let Some(token) = NeonToken::summon() {
     process(token, &mut data);
 }
 
 #[arcane]  // Entry point only
-fn process(token: Arm64, data: &mut [f32]) {
+fn process(token: NeonToken, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(4) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
 #[rite]  // All inner helpers
-fn process_chunk(_: Arm64, chunk: &mut [f32; 4]) {
+fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
     let v = safe_unaligned_simd::aarch64::vld1q_f32(chunk);  // safe!
     let doubled = vaddq_f32(v, v);  // value intrinsic (safe inside #[rite])
     safe_unaligned_simd::aarch64::vst1q_f32(chunk, doubled);  // safe!

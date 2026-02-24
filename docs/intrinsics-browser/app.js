@@ -13,16 +13,19 @@
   let tokenMap = {};        // tokenName → token object
   let safeVariantSet = null; // Set of intrinsic names that have safe variants
 
+  // Current filter state
+  let activeArch = 'x86_64';
+  let activeToken = '';     // '' = all tokens for this arch
+
   // DOM refs
   const searchInput = document.getElementById('searchInput');
   const resultCount = document.getElementById('resultCount');
-  const tokenFilter = document.getElementById('tokenFilter');
   const virtualScroll = document.getElementById('virtualScroll');
   const scrollContent = document.getElementById('scrollContent');
   const detailPanel = document.getElementById('detailPanel');
   const detailContent = document.getElementById('detailContent');
   const detailClose = document.getElementById('detailClose');
-  const tokenLinks = document.getElementById('tokenLinks');
+  const tokenTree = document.getElementById('tokenTree');
 
   // ========== Data Loading ==========
 
@@ -49,59 +52,110 @@
     // Build safe variant lookup set
     safeVariantSet = new Set(Object.keys(allData.safeVariants || {}));
 
-    populateTokenFilter();
-    populateTokenLinks();
     restoreState();
+    renderTokenTree();
     applyFilters();
     setupEvents();
 
     searchInput.focus();
   }
 
-  function populateTokenFilter() {
-    // Group by arch
-    const groups = { x86_64: [], aarch64: [], wasm32: [] };
-    for (const t of allData.tokens) {
-      const arch = t.arch || 'x86_64';
-      if (!groups[arch]) groups[arch] = [];
-      const label = t.aliases && t.aliases.length > 0
-        ? `${t.display} (${t.aliases[0]})`
-        : t.display;
-      groups[arch].push({ value: t.name, label, arch });
+  // ========== Token Tree ==========
+
+  function getTokensForArch(arch) {
+    return allData.tokens.filter(t => t.arch === arch);
+  }
+
+  function buildTree(tokens) {
+    // Build parent→children map
+    const childMap = {};  // parentName → [token, ...]
+    const roots = [];
+    for (const t of tokens) {
+      if (!t.parent) {
+        roots.push(t);
+      } else {
+        if (!childMap[t.parent]) childMap[t.parent] = [];
+        childMap[t.parent].push(t);
+      }
     }
 
-    for (const [arch, tokens] of Object.entries(groups)) {
-      if (tokens.length === 0) continue;
-      const group = document.createElement('optgroup');
-      group.label = arch === 'x86_64' ? 'x86' : arch === 'aarch64' ? 'ARM' : 'WASM';
-      for (const t of tokens) {
-        const opt = document.createElement('option');
-        opt.value = t.value;
-        opt.textContent = t.label;
-        opt.dataset.arch = t.arch;
-        group.appendChild(opt);
+    // Flatten tree in DFS order with depth info
+    const flat = [];
+    function walk(node, depth) {
+      flat.push({ token: node, depth });
+      const children = childMap[node.name] || [];
+      for (const child of children) {
+        walk(child, depth + 1);
       }
-      tokenFilter.appendChild(group);
+    }
+    for (const root of roots) {
+      walk(root, 0);
+    }
+    return flat;
+  }
+
+  function renderTokenTree() {
+    tokenTree.innerHTML = '';
+    const tokens = getTokensForArch(activeArch);
+    if (tokens.length === 0) return;
+
+    const label = document.createElement('span');
+    label.className = 'token-tree-label';
+    label.textContent = 'Tokens:';
+    tokenTree.appendChild(label);
+
+    // "All" button
+    const allBtn = document.createElement('button');
+    allBtn.className = 'token-btn token-all' + (activeToken === '' ? ' active' : '');
+    allBtn.textContent = 'All';
+    allBtn.addEventListener('click', () => {
+      activeToken = '';
+      updateTokenTreeActive();
+      applyFilters();
+    });
+    tokenTree.appendChild(allBtn);
+
+    // Build and render tree
+    const tree = buildTree(tokens);
+    for (let i = 0; i < tree.length; i++) {
+      const { token: t, depth } = tree[i];
+
+      // Arrow separator showing hierarchy
+      if (depth > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'token-indent';
+        sep.textContent = '\u2192'; // →
+        tokenTree.appendChild(sep);
+      } else if (i > 0) {
+        // Space between root-level siblings
+        const sep = document.createElement('span');
+        sep.className = 'token-sep';
+        sep.textContent = '|';
+        tokenTree.appendChild(sep);
+      }
+
+      const btn = document.createElement('button');
+      btn.className = 'token-btn' + (activeToken === t.name ? ' active' : '');
+      btn.dataset.token = t.name;
+      btn.textContent = t.name;
+      btn.title = t.doc || t.display;
+      btn.addEventListener('click', () => {
+        activeToken = t.name;
+        updateTokenTreeActive();
+        applyFilters();
+      });
+      tokenTree.appendChild(btn);
     }
   }
 
-  function populateTokenLinks() {
-    const label = tokenLinks.querySelector('.token-links-label');
-    while (tokenLinks.lastChild !== label) {
-      tokenLinks.removeChild(tokenLinks.lastChild);
-    }
-
-    for (const t of allData.tokens) {
-      const a = document.createElement('a');
-      const display = t.aliases && t.aliases.length > 0 ? t.aliases[0] : t.display;
-      a.textContent = display;
-      a.href = `tokens/${t.name}.md`;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      const archClass = t.arch === 'aarch64' ? 'arch-arm' : t.arch === 'wasm32' ? 'arch-wasm' : 'arch-x86';
-      a.className = archClass;
-      tokenLinks.appendChild(a);
-    }
+  function updateTokenTreeActive() {
+    tokenTree.querySelectorAll('.token-btn').forEach(btn => {
+      if (btn.classList.contains('token-all')) {
+        btn.classList.toggle('active', activeToken === '');
+      } else {
+        btn.classList.toggle('active', btn.dataset.token === activeToken);
+      }
+    });
   }
 
   // ========== Filtering ==========
@@ -113,28 +167,39 @@
     return active;
   }
 
-  function ensureArchEnabled(arch) {
-    const btn = document.querySelector(`.filter-btn[data-filter="arch"][data-value="${arch}"]`);
-    if (btn && !btn.classList.contains('active')) {
-      btn.classList.add('active');
-    }
-  }
-
   function applyFilters() {
     const query = searchInput.value.toLowerCase().trim();
-    const archs = new Set(getActiveValues('arch'));
-    const tokenVal = tokenFilter.value;
     const stabilities = new Set(getActiveValues('stability'));
     const safeties = new Set(getActiveValues('safety'));
 
+    // Collect valid tokens: if a specific token is selected, include it
+    // and all descendants (children inherit parent's intrinsics)
+    let validTokens = null;
+    if (activeToken) {
+      validTokens = new Set();
+      validTokens.add(activeToken);
+      // Add all descendants
+      function addDescendants(parentName) {
+        for (const t of allData.tokens) {
+          if (t.parent === parentName && !validTokens.has(t.name)) {
+            validTokens.add(t.name);
+            addDescendants(t.name);
+          }
+        }
+      }
+      addDescendants(activeToken);
+    }
+
     filtered = allData.intrinsics.filter(i => {
-      // Architecture filter
-      if (!archs.has(i.a)) return false;
+      // Architecture filter (single arch)
+      if (i.a !== activeArch) return false;
 
       // Token filter
-      if (tokenVal && i.t !== tokenVal) return false;
+      if (validTokens) {
+        if (!i.t || !validTokens.has(i.t)) return false;
+      }
 
-      // Stability toggle: both on = all, both off = none, one on = that one
+      // Stability toggle
       const isStable = i.s;
       const showStable = stabilities.has('stable');
       const showUnstable = stabilities.has('unstable');
@@ -142,7 +207,7 @@
       if (!showStable && isStable) return false;
       if (!showUnstable && !isStable) return false;
 
-      // Safety toggle: same logic
+      // Safety toggle
       const isUnsafe = i.u;
       const showSafe = safeties.has('safe');
       const showUnsafe = safeties.has('unsafe');
@@ -219,10 +284,7 @@
     row.dataset.idx = idx;
     row.style.top = (idx * ROW_HEIGHT) + 'px';
 
-    const token = i.t ? tokenMap[i.t] : null;
-    const tokenDisplay = token
-      ? (token.aliases && token.aliases.length > 0 ? token.aliases[0] : token.display)
-      : '—';
+    const tokenName = i.t || '—';
 
     const doc = truncateDoc(i.d || '', 80);
     const stableBadge = i.s
@@ -232,7 +294,6 @@
     let safeBadge;
     if (i.u) {
       if (safeVariantSet.has(i.n)) {
-        // Unsafe but has a safe_unaligned_simd wrapper
         safeBadge = '<span class="badge badge-has-safe" title="safe_unaligned_simd wrapper available">unsafe*</span>';
       } else {
         safeBadge = '<span class="badge badge-unsafe">unsafe</span>';
@@ -243,7 +304,7 @@
 
     row.innerHTML = `
       <div class="col-name">${escHtml(i.n)}</div>
-      <div class="col-token">${escHtml(tokenDisplay)}</div>
+      <div class="col-token">${escHtml(tokenName)}</div>
       <div class="col-desc">${escHtml(doc)}</div>
       <div class="col-badges">${stableBadge}${safeBadge}</div>
     `;
@@ -280,9 +341,7 @@
 
   function showDetail(i) {
     const token = i.t ? tokenMap[i.t] : null;
-    const tokenDisplay = token
-      ? `${token.name}${token.aliases && token.aliases.length > 0 ? ' (' + token.aliases.join(', ') + ')' : ''}`
-      : 'Not covered by archmage';
+    const tokenDisplay = token ? token.name : 'Not covered by archmage';
 
     // Extract doc links
     const docLinks = extractDocLinks(i.d || '');
@@ -305,7 +364,7 @@
       timingHtml += '</div>';
     }
 
-    // Safe variant — prominent display for unsafe intrinsics with safe wrappers
+    // Safe variant
     let safeHtml = '';
     if (i.u && allData.safeVariants[i.n]) {
       const sig = allData.safeVariants[i.n];
@@ -330,6 +389,14 @@
       linksHtml = '<div style="margin-top: 8px;">' +
         docLinks.map(l => `<a class="doc-link" href="${escAttr(l.url)}" target="_blank" rel="noopener">${escHtml(l.text)} ↗</a>`).join(' &nbsp; ') +
         '</div>';
+    }
+
+    // Per-token reference link
+    let tokenRefHtml = '';
+    if (token) {
+      tokenRefHtml = `<div style="margin-top: 8px;">
+        <a class="doc-link" href="tokens/${escAttr(token.name)}.md" target="_blank" rel="noopener">${escHtml(token.name)} reference ↗</a>
+      </div>`;
     }
 
     detailContent.innerHTML = `
@@ -362,6 +429,7 @@
       </div>
       <div style="margin-bottom: 8px; color: var(--text);">${escHtml(docText)}</div>
       ${linksHtml}
+      ${tokenRefHtml}
       <div class="detail-field" style="margin-top: 8px;">
         <span class="detail-label">Signature</span>
         <span class="detail-value" style="word-break: break-all;">${escHtml(i.sig || '—')}</span>
@@ -381,7 +449,7 @@
   function buildUsageExample(i, token) {
     if (!token) return '';
 
-    const tokenName = token.aliases && token.aliases.length > 0 ? token.aliases[0] : token.name;
+    const tokenName = token.name;
     const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
     let code;
 
@@ -435,10 +503,9 @@
     const query = searchInput.value.trim();
     if (query) params.set('q', query);
 
-    const archs = getActiveValues('arch');
-    if (archs.length < 3) params.set('arch', archs.join(','));
+    params.set('arch', activeArch);
 
-    if (tokenFilter.value) params.set('token', tokenFilter.value);
+    if (activeToken) params.set('token', activeToken);
 
     const stabilities = getActiveValues('stability');
     if (stabilities.length < 2) params.set('stability', stabilities.join(','));
@@ -459,17 +526,11 @@
     if (params.has('q')) searchInput.value = params.get('q');
 
     if (params.has('arch')) {
-      const archs = new Set(params.get('arch').split(','));
-      document.querySelectorAll('.filter-btn[data-filter="arch"]').forEach(b => {
-        b.classList.toggle('active', archs.has(b.dataset.value));
-      });
+      activeArch = params.get('arch');
     }
 
     if (params.has('token')) {
-      tokenFilter.value = params.get('token');
-      // Auto-enable arch for the selected token
-      const selectedToken = tokenMap[params.get('token')];
-      if (selectedToken) ensureArchEnabled(selectedToken.arch);
+      activeToken = params.get('token');
     }
 
     if (params.has('stability')) {
@@ -485,6 +546,11 @@
         b.classList.toggle('active', vals.has(b.dataset.value));
       });
     }
+
+    // Update arch button state
+    document.querySelectorAll('.arch-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.arch === activeArch);
+    });
   }
 
   // ========== Events ==========
@@ -497,23 +563,26 @@
       debounceTimer = setTimeout(applyFilters, 150);
     });
 
-    // All toggle buttons (arch, stability, safety)
-    document.querySelectorAll('.filter-btn').forEach(btn => {
+    // Arch buttons — radio behavior (one at a time)
+    document.querySelectorAll('.arch-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        btn.classList.toggle('active');
+        if (btn.dataset.arch === activeArch) return; // already selected
+        activeArch = btn.dataset.arch;
+        activeToken = ''; // reset token filter on arch change
+        document.querySelectorAll('.arch-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.arch === activeArch);
+        });
+        renderTokenTree();
         applyFilters();
       });
     });
 
-    // Token dropdown — auto-enable the matching arch
-    tokenFilter.addEventListener('change', () => {
-      if (tokenFilter.value) {
-        const selectedToken = tokenMap[tokenFilter.value];
-        if (selectedToken) {
-          ensureArchEnabled(selectedToken.arch);
-        }
-      }
-      applyFilters();
+    // Stability/safety toggle buttons
+    document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+        applyFilters();
+      });
     });
 
     // Virtual scroll

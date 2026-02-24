@@ -562,6 +562,7 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
                 "display": t.display_name.as_deref().unwrap_or(&t.name),
                 "tier": t.short_name.as_deref().unwrap_or(""),
                 "features": t.features,
+                "parent": t.parent.as_deref().unwrap_or(""),
                 "doc": t.doc.as_deref().unwrap_or("").lines().next().unwrap_or("")
             })
         })
@@ -782,12 +783,7 @@ fn generate_per_token_markdown(
 }
 
 fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> String {
-    let token_name = &token_def.name;
-    let primary_name = if !token_def.aliases.is_empty() {
-        &token_def.aliases[0]
-    } else {
-        token_name
-    };
+    let primary_name = &token_def.name;
 
     match arch {
         "x86_64" => {
@@ -839,19 +835,19 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                 formatdoc! {r#"
                     use archmage::prelude::*;
 
-                    if let Some(token) = {token_name}::summon() {{
+                    if let Some(token) = {primary_name}::summon() {{
                         process(token, &mut data);
                     }}
 
                     #[arcane]  // Entry point only
-                    fn process(token: {token_name}, data: &mut [f32]) {{
+                    fn process(token: {primary_name}, data: &mut [f32]) {{
                         for chunk in data.chunks_exact_mut(4) {{
                             process_chunk(token, chunk.try_into().unwrap());
                         }}
                     }}
 
                     #[rite]  // All inner helpers
-                    fn process_chunk(_: {token_name}, chunk: &mut [f32; 4]) {{
+                    fn process_chunk(_: {primary_name}, chunk: &mut [f32; 4]) {{
                         let v = safe_unaligned_simd::x86_64::_mm_loadu_ps(chunk);  // safe!
                         let doubled = _mm_add_ps(v, v);  // value intrinsic (safe inside #[rite])
                         safe_unaligned_simd::x86_64::_mm_storeu_ps(chunk, doubled);  // safe!

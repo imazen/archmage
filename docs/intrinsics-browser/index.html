@@ -12,10 +12,6 @@
       <h1>ARCHMAGE INTRINSICS REFERENCE</h1>
       <a href="https://github.com/imazen/archmage" class="book-link" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
-    <div class="token-links" id="tokenLinks">
-      <span class="token-links-label">Per-Token:</span>
-      <!-- Populated by JS -->
-    </div>
   </header>
 
   <div class="controls">
@@ -26,16 +22,9 @@
     <div class="filter-row">
       <div class="filter-group">
         <label>Arch:</label>
-        <button class="filter-btn active" data-filter="arch" data-value="x86_64">x86</button>
-        <button class="filter-btn active" data-filter="arch" data-value="aarch64">ARM</button>
-        <button class="filter-btn active" data-filter="arch" data-value="wasm32">WASM</button>
-      </div>
-      <div class="filter-group">
-        <label>Token:</label>
-        <select id="tokenFilter">
-          <option value="">All</option>
-          <!-- Populated by JS -->
-        </select>
+        <button class="filter-btn arch-btn active" data-arch="x86_64">x86</button>
+        <button class="filter-btn arch-btn" data-arch="aarch64">ARM</button>
+        <button class="filter-btn arch-btn" data-arch="wasm32">WASM</button>
       </div>
       <div class="filter-group">
         <label>Stable:</label>
@@ -47,6 +36,9 @@
         <button class="filter-btn active" data-filter="safety" data-value="safe">Safe</button>
         <button class="filter-btn active" data-filter="safety" data-value="unsafe">Unsafe</button>
       </div>
+    </div>
+    <div class="token-tree" id="tokenTree">
+      <!-- Populated by JS: tree of token buttons for selected arch -->
     </div>
   </div>
 
