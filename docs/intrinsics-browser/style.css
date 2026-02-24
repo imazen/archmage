@@ -241,8 +241,8 @@ h1 {
 .badge-stable { background: rgba(127, 217, 98, 0.15); color: var(--green); }
 .badge-unstable { background: rgba(255, 180, 84, 0.15); color: var(--amber); }
 .badge-safe { background: rgba(89, 194, 255, 0.12); color: var(--blue); }
+.badge-safe-wrapped { background: rgba(127, 217, 98, 0.12); color: var(--green); cursor: help; }
 .badge-unsafe { background: rgba(240, 113, 113, 0.15); color: var(--red); }
-.badge-has-safe { background: rgba(230, 180, 80, 0.18); color: var(--amber); cursor: help; }
 
 /* ── Detail Panel ── */
 .detail-panel {

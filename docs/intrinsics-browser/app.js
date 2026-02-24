@@ -174,6 +174,16 @@
     });
   }
 
+  // ========== Safety Model ==========
+  // An intrinsic is "effectively safe" if:
+  //   - it's natively safe (i.u === false), OR
+  //   - it has a safe_unaligned_simd wrapper (name match)
+  // The "Unsafe" filter shows only truly unsafe intrinsics (no safe path).
+
+  function isEffectivelySafe(i) {
+    return !i.u || safeVariantSet.has(i.n);
+  }
+
   // ========== Filtering ==========
 
   function getActiveValues(filterName) {
@@ -204,13 +214,13 @@
       if (!showStable && isStable) return false;
       if (!showUnstable && !isStable) return false;
 
-      // Safety
-      const isUnsafe = i.u;
+      // Safety — melded: safe_unaligned_simd wrappers count as safe
+      const effSafe = isEffectivelySafe(i);
       const showSafe = safeties.has('safe');
       const showUnsafe = safeties.has('unsafe');
       if (!showSafe && !showUnsafe) return false;
-      if (!showSafe && !isUnsafe) return false;
-      if (!showUnsafe && isUnsafe) return false;
+      if (!showSafe && effSafe) return false;
+      if (!showUnsafe && !effSafe) return false;
 
       // Search
       if (query) {
@@ -272,12 +282,12 @@
       : '<span class="badge badge-unstable">nightly</span>';
 
     let safeBadge;
-    if (i.u) {
-      safeBadge = safeVariantSet.has(i.n)
-        ? '<span class="badge badge-has-safe" title="safe_unaligned_simd wrapper available">unsafe*</span>'
-        : '<span class="badge badge-unsafe">unsafe</span>';
-    } else {
+    if (!i.u) {
       safeBadge = '<span class="badge badge-safe">safe</span>';
+    } else if (safeVariantSet.has(i.n)) {
+      safeBadge = '<span class="badge badge-safe-wrapped" title="safe via safe_unaligned_simd">safe*</span>';
+    } else {
+      safeBadge = '<span class="badge badge-unsafe">unsafe</span>';
     }
 
     row.innerHTML = `
@@ -371,7 +381,7 @@
         <div class="detail-field"><span class="detail-label">Features</span><span class="detail-value">${escHtml(i.f || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Instruction</span><span class="detail-value">${escHtml(i.ins || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Stability</span><span class="detail-value">${i.s ? '<span class="badge badge-stable">stable</span>' : '<span class="badge badge-unstable">nightly</span>'}</span></div>
-        <div class="detail-field"><span class="detail-label">Safety</span><span class="detail-value">${i.u ? '<span class="badge badge-unsafe">unsafe</span>' : '<span class="badge badge-safe">safe</span>'}</span></div>
+        <div class="detail-field"><span class="detail-label">Safety</span><span class="detail-value">${!i.u ? '<span class="badge badge-safe">safe</span>' : safeVariantSet.has(i.n) ? '<span class="badge badge-safe-wrapped">safe via safe_unaligned_simd</span>' : '<span class="badge badge-unsafe">unsafe</span>'}</span></div>
         <div class="detail-field"><span class="detail-label">Architecture</span><span class="detail-value">${escHtml(i.a)}</span></div>
       </div>
       <div style="margin-bottom: 8px; color: var(--text);">${escHtml(docText)}</div>
@@ -488,9 +498,17 @@
       });
     });
 
-    // Stability/safety toggles
+    // Stability/safety toggles — at least one must stay active per group
     document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
       btn.addEventListener('click', () => {
+        const group = btn.dataset.filter;
+        const siblings = document.querySelectorAll(`.filter-btn[data-filter="${group}"]`);
+        // If this is the last active one in the group, don't toggle off
+        if (btn.classList.contains('active')) {
+          let activeCount = 0;
+          siblings.forEach(b => { if (b.classList.contains('active')) activeCount++; });
+          if (activeCount <= 1) return; // can't deactivate the last one
+        }
         btn.classList.toggle('active');
         applyFilters();
       });
