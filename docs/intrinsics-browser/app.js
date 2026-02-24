@@ -214,13 +214,21 @@
       if (!showStable && isStable) return false;
       if (!showUnstable && !isStable) return false;
 
-      // Safety — melded: safe_unaligned_simd wrappers count as safe
-      const effSafe = isEffectivelySafe(i);
+      // Safety — wrapped intrinsics (unsafe + safe_unaligned_simd) are BOTH,
+      // so they pass whenever either Safe or Unsafe is active.
+      const hasWrapper = i.u && safeVariantSet.has(i.n);
       const showSafe = safeties.has('safe');
       const showUnsafe = safeties.has('unsafe');
       if (!showSafe && !showUnsafe) return false;
-      if (!showSafe && effSafe) return false;
-      if (!showUnsafe && !effSafe) return false;
+      if (hasWrapper) {
+        // Both safe and unsafe — passes if either toggle is on (already checked above)
+      } else if (!i.u) {
+        // Natively safe — need Safe toggle
+        if (!showSafe) return false;
+      } else {
+        // Truly unsafe (no wrapper) — need Unsafe toggle
+        if (!showUnsafe) return false;
+      }
 
       // Search
       if (query) {
@@ -349,8 +357,12 @@
     let safeHtml = '';
     if (i.u && allData.safeVariants[i.n]) {
       const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
-      safeHtml = `<div class="safe-variant-note">
-        <strong>Safe alternative:</strong>
+      safeHtml = `<div class="unsafe-note">
+        <strong>Unsafe (raw intrinsic):</strong>
+        <span class="safe-variant-sig">${escHtml(i.sig || i.n + '(...)')}</span>
+      </div>
+      <div class="safe-variant-note">
+        <strong>Safe (safe_unaligned_simd):</strong>
         <code>safe_unaligned_simd::${archMod}::${escHtml(i.n)}</code><br>
         <span class="safe-variant-sig">${escHtml(allData.safeVariants[i.n])}</span>
       </div>`;
@@ -381,7 +393,7 @@
         <div class="detail-field"><span class="detail-label">Features</span><span class="detail-value">${escHtml(i.f || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Instruction</span><span class="detail-value">${escHtml(i.ins || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Stability</span><span class="detail-value">${i.s ? '<span class="badge badge-stable">stable</span>' : '<span class="badge badge-unstable">nightly</span>'}</span></div>
-        <div class="detail-field"><span class="detail-label">Safety</span><span class="detail-value">${!i.u ? '<span class="badge badge-safe">safe</span>' : safeVariantSet.has(i.n) ? '<span class="badge badge-safe-wrapped">safe via safe_unaligned_simd</span>' : '<span class="badge badge-unsafe">unsafe</span>'}</span></div>
+        <div class="detail-field"><span class="detail-label">Safety</span><span class="detail-value">${!i.u ? '<span class="badge badge-safe">safe</span>' : safeVariantSet.has(i.n) ? '<span class="badge badge-unsafe">unsafe</span> <span class="badge badge-safe-wrapped">safe via safe_unaligned_simd</span>' : '<span class="badge badge-unsafe">unsafe</span>'}</span></div>
         <div class="detail-field"><span class="detail-label">Architecture</span><span class="detail-value">${escHtml(i.a)}</span></div>
       </div>
       <div style="margin-bottom: 8px; color: var(--text);">${escHtml(docText)}</div>
@@ -402,9 +414,11 @@
     let code;
     if (i.u) {
       const sv = allData.safeVariants[i.n];
-      code = sv
-        ? `#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = safe_unaligned_simd::${archMod}::${i.n}(/* args */);\n}`
-        : `#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+      if (sv) {
+        code = `// Preferred: safe wrapper (no unsafe needed)\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = safe_unaligned_simd::${archMod}::${i.n}(/* args */);\n}\n\n// Raw intrinsic (requires unsafe)\n#[rite]\nfn example_raw(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+      } else {
+        code = `#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+      }
     } else {
       code = `#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
     }

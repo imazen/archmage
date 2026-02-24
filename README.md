@@ -142,29 +142,76 @@ fn sum_squares_v3(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     acc.reduce_add() + chunks.remainder().iter().map(|x| x * x).sum::<f32>()
 }
 
-/// Scalar fallback.
+/// Scalar fallback — always required.
 fn sum_squares_scalar(_token: archmage::ScalarToken, data: &[f32]) -> f32 {
     data.iter().map(|x| x * x).sum()
 }
 
 /// Public API — dispatches to the best available at runtime.
 fn sum_squares(data: &[f32]) -> f32 {
-    incant!(sum_squares(data))
+    incant!(sum_squares(data), [v3])
 }
 ```
 
-`incant!` looks for `_v3`, `_v4`, `_neon`, `_wasm128`, and `_scalar` suffixed functions by default, and dispatches to the best one the CPU supports. Each variant uses concrete SIMD types for its platform; the scalar fallback uses plain math.
+Each variant's first parameter is the matching token type — `_v3` takes `X64V3Token`, `_neon` takes `NeonToken`, etc. A `_scalar` variant (taking `ScalarToken`) is always required. `incant!` calls the best variant the CPU supports, falling back to `_scalar`.
 
-You can specify explicit tiers to control which variants are dispatched to:
+### What you need to provide
+
+`incant!` wraps each tier's call in `#[cfg(target_arch)]` and `#[cfg(feature)]` guards, so you only need to define variants for architectures you target. The example above uses `[v3]`, so it only needs `_v3` (x86-64) and `_scalar`.
+
+With no explicit tier list, `incant!` dispatches to `v3`, `neon`, `wasm128`, and `scalar` by default (plus `v4` if the `avx512` feature is enabled):
 
 ```rust
-// Only dispatch to v1, v3, neon, and scalar
+fn sum_squares(data: &[f32]) -> f32 {
+    incant!(sum_squares(data))
+}
+// Requires on x86-64: sum_squares_v3, sum_squares_scalar
+//   (+ sum_squares_v4 if `avx512` feature is enabled)
+// Requires on aarch64: sum_squares_neon, sum_squares_scalar
+// Requires on wasm32:  sum_squares_wasm128, sum_squares_scalar
+```
+
+Each architecture only sees its own tier references at compile time. A crate that builds for all three platforms needs all four variants (v3, neon, wasm128, scalar); a crate that only targets x86-64 needs just v3 and scalar.
+
+### Explicit tiers
+
+Specify exactly which tiers to try:
+
+```rust
 fn sum_squares(data: &[f32]) -> f32 {
     incant!(sum_squares(data), [v1, v3, neon])
 }
+// Requires: sum_squares_v1, sum_squares_v3, sum_squares_neon, sum_squares_scalar
 ```
 
-Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`. The `scalar` tier is always included implicitly.
+Scalar is always appended implicitly. Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
+
+### Passthrough mode
+
+If you already have a token (e.g., inside a generic function), use `with` to dispatch on its concrete type instead of summoning a new one:
+
+```rust
+fn inner<T: archmage::IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
+    incant!(sum_squares(data) with token)
+}
+```
+
+### ARM compute tiers and f16
+
+The default tiers skip ARM compute tiers, but `arm_v2` adds useful features for half-precision and fixed-point workloads. `Arm64V2Token` covers M1+, Graviton 2+, and all post-2017 ARM chips, adding FP16, rounding doubling multiply (RDM), CRC, AES, and SHA2.
+
+For f16 specifically: `X64V3Token` includes F16C (hardware `f32`↔`f16` conversion, 4 stable intrinsics). `Arm64V2Token` includes FP16 with 95 stable intrinsics (conversion, division, FMA) and 115 more on nightly. Use explicit tiers to dispatch to both:
+
+```rust
+pub fn f32_to_f16(data: &[f32; 4]) -> [u16; 4] {
+    incant!(f32_to_f16(data), [v3, arm_v2])
+}
+// x86-64:  f32_to_f16_v3(X64V3Token, ...)      — F16C hardware
+// aarch64: f32_to_f16_arm_v2(Arm64V2Token, ...) — NEON FP16 hardware
+// all:     f32_to_f16_scalar(ScalarToken, ...)   — bit manipulation fallback
+```
+
+The scalar fallback covers WASM and any platform without hardware f16.
 
 ### `#[magetypes]` for simple cases
 

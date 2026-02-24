@@ -510,12 +510,12 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | sha2 | ~10 | Full | Tested in arm_feature_intrinsics.rs |
 | crc | 8 | Full | Tested in arm_feature_intrinsics.rs |
 | dotprod | ALL | Nightly | ALL dotprod intrinsics require `stdarch_neon_dotprod` (unstable) |
-| neon,fp16 | 95/214 | Partial | 119 unstable, rest nightly-only |
+| neon,fp16 | 95/210 | Partial | 95 stable (conversion, div, FMA), 115 unstable |
 | fcma | 34 | Nightly | All unstable |
 | i8mm | 4 | Nightly | All unstable |
 | fhm | 0 | None | No Rust intrinsics in stdarch |
 | bf16 | 0 | None | No Rust intrinsics in stdarch |
-| avx512fp16 | 0/935 | Nightly | ALL 935 intrinsics are unstable |
+| avx512fp16 | 438/440 | Stable | 438 stable, 2 unstable (per intrinsics CSV) |
 | pclmulqdq + aes (128-bit) | ~10 | Full | Tested in x86_crypto_intrinsics.rs |
 | vpclmulqdq + vaes (256-bit) | ~8 | Full | Tested in x86_crypto_intrinsics.rs |
 | simd128 (wasm) | ~100+ | Full | Tested in wasm_intrinsics_exercise.rs |
