@@ -7,38 +7,28 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <div class="header-top">
-      <h1>ARCHMAGE INTRINSICS REFERENCE</h1>
-      <a href="https://github.com/imazen/archmage" class="book-link" target="_blank" rel="noopener">GitHub ↗</a>
-    </div>
-  </header>
-
-  <div class="controls">
-    <div class="search-row">
+  <div class="toolbar">
+    <div class="toolbar-row">
+      <h1>ARCHMAGE</h1>
       <input type="text" id="searchInput" placeholder="Search intrinsics..." autocomplete="off" spellcheck="false">
       <span class="result-count" id="resultCount">Loading...</span>
-    </div>
-    <div class="filter-row">
       <div class="filter-group">
-        <label>Arch:</label>
         <button class="filter-btn arch-btn active" data-arch="x86_64">x86</button>
         <button class="filter-btn arch-btn" data-arch="aarch64">ARM</button>
         <button class="filter-btn arch-btn" data-arch="wasm32">WASM</button>
       </div>
       <div class="filter-group">
-        <label>Stable:</label>
         <button class="filter-btn active" data-filter="stability" data-value="stable">Stable</button>
         <button class="filter-btn active" data-filter="stability" data-value="unstable">Nightly</button>
       </div>
       <div class="filter-group">
-        <label>Safety:</label>
         <button class="filter-btn active" data-filter="safety" data-value="safe">Safe</button>
         <button class="filter-btn active" data-filter="safety" data-value="unsafe">Unsafe</button>
       </div>
+      <a href="https://github.com/imazen/archmage" class="book-link" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
-    <div class="token-tree" id="tokenTree">
-      <!-- Populated by JS: tree of token buttons for selected arch -->
+    <div class="token-row" id="tokenTree">
+      <!-- Populated by JS -->
     </div>
   </div>
 
@@ -50,9 +40,7 @@
       <div class="col-badges">Status</div>
     </div>
     <div class="virtual-scroll" id="virtualScroll">
-      <div class="scroll-content" id="scrollContent">
-        <!-- Virtual rows rendered by JS -->
-      </div>
+      <div class="scroll-content" id="scrollContent"></div>
     </div>
   </div>
 
