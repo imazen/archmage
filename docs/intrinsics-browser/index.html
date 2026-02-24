@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archmage Intrinsics Reference</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>ARCHMAGE INTRINSICS REFERENCE</h1>
+      <a href="https://github.com/imazen/archmage" class="book-link" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+    <div class="token-links" id="tokenLinks">
+      <span class="token-links-label">Per-Token:</span>
+      <!-- Populated by JS -->
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Search intrinsics..." autocomplete="off" spellcheck="false">
+      <span class="result-count" id="resultCount">Loading...</span>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Arch:</label>
+        <button class="filter-btn active" data-filter="arch" data-value="x86_64">x86</button>
+        <button class="filter-btn active" data-filter="arch" data-value="aarch64">ARM</button>
+        <button class="filter-btn active" data-filter="arch" data-value="wasm32">WASM</button>
+      </div>
+      <div class="filter-group">
+        <label>Token:</label>
+        <select id="tokenFilter">
+          <option value="">All</option>
+          <!-- Populated by JS -->
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Stable:</label>
+        <select id="stabilityFilter">
+          <option value="">All</option>
+          <option value="stable">Stable only</option>
+          <option value="unstable">Unstable only</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Safety:</label>
+        <select id="safetyFilter">
+          <option value="">All</option>
+          <option value="safe">Safe only</option>
+          <option value="unsafe">Unsafe only</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-header">
+      <div class="col-name">Name</div>
+      <div class="col-token">Token</div>
+      <div class="col-desc">Description</div>
+      <div class="col-badges">Status</div>
+    </div>
+    <div class="virtual-scroll" id="virtualScroll">
+      <div class="scroll-content" id="scrollContent">
+        <!-- Virtual rows rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-panel" id="detailPanel" style="display:none">
+    <div class="detail-close" id="detailClose">✕</div>
+    <div class="detail-content" id="detailContent"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
