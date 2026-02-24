@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  const ROW_HEIGHT = 36;
+  let ROW_HEIGHT = 36; // updated from CSS --row-height on init
   const OVERSCAN = 10;
 
   let allData = null;
@@ -32,6 +32,16 @@
   // ========== Data Loading ==========
 
   async function init() {
+    // Read row height from CSS (rem-based) so virtual scroll matches actual layout
+    const cssRowHeight = getComputedStyle(document.documentElement).getPropertyValue('--row-height');
+    if (cssRowHeight) {
+      const parsed = parseFloat(cssRowHeight);
+      if (parsed > 0) {
+        const fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        ROW_HEIGHT = Math.round(parsed * fontSize);
+      }
+    }
+
     resultCount.textContent = 'Loading...';
     try {
       const resp = await fetch('data/intrinsics.json');
@@ -374,14 +384,14 @@
 
     let linksHtml = '';
     if (docLinks.length > 0) {
-      linksHtml = '<div style="margin-top: 8px;">' +
+      linksHtml = '<div style="margin-top: 0.5rem;">' +
         docLinks.map(l => `<a class="doc-link" href="${escAttr(l.url)}" target="_blank" rel="noopener">${escHtml(l.text)} ↗</a>`).join(' &nbsp; ') +
         '</div>';
     }
 
     let tokenRefHtml = '';
     if (token) {
-      tokenRefHtml = `<div style="margin-top: 8px;">
+      tokenRefHtml = `<div style="margin-top: 0.5rem;">
         <a class="doc-link" href="tokens/${escAttr(token.name)}.md" target="_blank" rel="noopener">${escHtml(token.name)} reference ↗</a>
       </div>`;
     }
@@ -393,16 +403,16 @@
     detailContent.innerHTML = `
       <h2>${escHtml(i.n)}</h2>
       <div class="detail-grid">
-        <div class="detail-field"><span class="detail-label">Module</span><span class="detail-value"><code>${escHtml(archModule)}</code>${hasWrapper ? ` · <code>safe_unaligned_simd::${escHtml(archMod)}</code>` : ''}<br><span style="opacity: 0.6; font-size: 11px;">or <code>archmage::prelude</code></span></span></div>
+        <div class="detail-field"><span class="detail-label">Module</span><span class="detail-value"><code>${escHtml(archModule)}</code>${hasWrapper ? ` · <code>safe_unaligned_simd::${escHtml(archMod)}</code>` : ''}<br><span style="opacity: 0.6; font-size: 0.6875rem;">or <code>archmage::prelude</code></span></span></div>
         <div class="detail-field"><span class="detail-label">Token</span><span class="detail-value">${escHtml(tokenDisplay)}</span></div>
         <div class="detail-field"><span class="detail-label">Features</span><span class="detail-value">${escHtml(i.f || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Instruction</span><span class="detail-value">${escHtml(i.ins || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Stability</span><span class="detail-value">${i.s ? '<span class="badge badge-stable">stable</span>' : '<span class="badge badge-unstable">nightly</span>'}</span></div>
         <div class="detail-field"><span class="detail-label">Safety</span><span class="detail-value">${!i.u ? '<span class="badge badge-safe">safe</span>' : safeVariantSet.has(i.n) ? '<span class="badge badge-unsafe">unsafe</span> <span class="badge badge-safe-wrapped">safe via safe_unaligned_simd</span>' : '<span class="badge badge-unsafe">unsafe</span>'}</span></div>
       </div>
-      <div style="margin-bottom: 8px; color: var(--text);">${escHtml(docText)}</div>
+      <div style="margin-bottom: 0.5rem; color: var(--text);">${escHtml(docText)}</div>
       ${linksHtml}${tokenRefHtml}
-      <div class="detail-field" style="margin-top: 8px;"><span class="detail-label">Signature</span><span class="detail-value" style="word-break: break-all;">${escHtml(i.sig || '—')}</span></div>
+      <div class="detail-field" style="margin-top: 0.5rem;"><span class="detail-label">Signature</span><span class="detail-value" style="word-break: break-all;">${escHtml(i.sig || '—')}</span></div>
       ${timingHtml}${safeHtml}${usageExample}`;
 
     detailPanel.style.display = 'block';
@@ -540,7 +550,18 @@
     let resizeTimer;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(renderVisibleRows, 100);
+      resizeTimer = setTimeout(() => {
+        // Recompute row height (zoom may have changed rem→px ratio)
+        const cssRH = getComputedStyle(document.documentElement).getPropertyValue('--row-height');
+        if (cssRH) {
+          const parsed = parseFloat(cssRH);
+          if (parsed > 0) {
+            const fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+            ROW_HEIGHT = Math.round(parsed * fontSize);
+          }
+        }
+        renderVirtualScroll();
+      }, 100);
     });
 
     detailClose.addEventListener('click', () => {
