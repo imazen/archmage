@@ -83,3 +83,8 @@ fn main() {
 - [Installation](./getting-started/installation.md) — Add archmage to your project
 - [Your First SIMD Function](./getting-started/first-simd.md) — Write real SIMD code
 - [Understanding Tokens](./getting-started/tokens.md) — Learn the token system
+
+## Resources
+
+- **[Intrinsics Browser](../intrinsics/)** — Search 12,000+ SIMD intrinsics by token, architecture, safety, and stability
+- [SIMD Reference](../simd_reference/) — ASM-verified patterns, per-token listings, cross-platform differences

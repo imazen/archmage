@@ -49,3 +49,7 @@
 - [Trait Reference](./reference/traits.md)
 - [Feature Flags](./reference/features.md)
 - [Prelude](./reference/prelude.md)
+
+# Tools
+
+- [Intrinsics Browser](../intrinsics/index.html)

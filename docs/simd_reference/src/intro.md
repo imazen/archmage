@@ -12,6 +12,8 @@ This is the searchable reference companion to the [Archmage & Magetypes tutorial
 
 ## How to use this reference
 
+**Looking up a specific intrinsic?** Use the [Interactive Intrinsics Browser](../../intrinsics/) — search 12,000+ intrinsics with filters for token, safety, and stability.
+
 **Already know what you're looking for?** Use search. Every intrinsic name, token name, and concept is indexed.
 
 **Writing a new SIMD kernel?** Start with [Loading Data](patterns/loading.md) and [Safety Model](patterns/safety.md).

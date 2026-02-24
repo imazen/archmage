@@ -7,6 +7,8 @@
 [![MSRV](https://img.shields.io/crates/msrv/archmage.svg)](https://crates.io/crates/archmage)
 [![License](https://img.shields.io/crates/l/archmage.svg)](https://github.com/imazen/archmage#license)
 
+**[Browse 12,000+ SIMD Intrinsics →](https://imazen.github.io/archmage/intrinsics/)** · [Tutorial Book](https://imazen.github.io/archmage/) · [API Docs](https://docs.rs/archmage)
+
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 
 **Zero overhead.** Archmage generates identical assembly to hand-written unsafe code. The safety abstractions exist only at compile time—at runtime, you get raw SIMD instructions. Calling an `#[arcane]` function costs exactly the same as calling a bare `#[target_feature]` function directly.

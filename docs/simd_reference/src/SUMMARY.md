@@ -25,6 +25,7 @@
 
 # Intrinsics Reference
 
+- [Interactive Browser](../../intrinsics/index.html)
 - [x86 Intrinsics by Token](intrinsics/x86.md)
 - [AArch64 Intrinsics by Token](intrinsics/aarch64.md)
 - [Safe Memory Operations](intrinsics/memory-ops.md)

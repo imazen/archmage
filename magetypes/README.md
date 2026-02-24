@@ -6,6 +6,8 @@ Token-gated SIMD types with natural operators.
 [![Documentation](https://docs.rs/magetypes/badge.svg)](https://docs.rs/magetypes)
 [![License](https://img.shields.io/crates/l/magetypes.svg)](LICENSE)
 
+**[Intrinsics Browser](https://imazen.github.io/archmage/intrinsics/)** · [Tutorial Book](https://imazen.github.io/archmage/) · [API Docs](https://docs.rs/magetypes)
+
 ## Overview
 
 `magetypes` provides SIMD vector types (`f32x8`, `i32x4`, etc.) that require [archmage](https://crates.io/crates/archmage) tokens for safe construction. This ensures SIMD operations are only performed when CPU features have been verified at runtime.
