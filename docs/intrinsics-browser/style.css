@@ -186,7 +186,8 @@ select:focus { border-color: var(--accent); }
 
 /* Table */
 .table-container {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -282,13 +283,15 @@ select:focus { border-color: var(--accent); }
 .badge-unstable { background: rgba(255, 180, 84, 0.15); color: var(--amber); }
 .badge-safe { background: rgba(89, 194, 255, 0.12); color: var(--blue); }
 .badge-unsafe { background: rgba(240, 113, 113, 0.15); color: var(--red); }
+.badge-has-safe { background: rgba(230, 180, 80, 0.18); color: var(--amber); cursor: help; }
 
 /* Detail Panel */
 .detail-panel {
   background: var(--bg-alt);
   border-top: 2px solid var(--accent);
   padding: 16px 20px;
-  max-height: 45vh;
+  flex: 0 1 auto;
+  max-height: 60vh;
   overflow-y: auto;
   position: relative;
 }
@@ -398,6 +401,24 @@ select:focus { border-color: var(--accent); }
   border-radius: 4px;
   font-size: 12px;
   color: var(--blue);
+}
+
+.safe-variant-sig {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.unsafe-note {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(240, 113, 113, 0.06);
+  border: 1px solid rgba(240, 113, 113, 0.2);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--red);
 }
 
 .doc-link {

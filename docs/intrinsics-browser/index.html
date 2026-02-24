@@ -39,19 +39,13 @@
       </div>
       <div class="filter-group">
         <label>Stable:</label>
-        <select id="stabilityFilter">
-          <option value="">All</option>
-          <option value="stable">Stable only</option>
-          <option value="unstable">Unstable only</option>
-        </select>
+        <button class="filter-btn active" data-filter="stability" data-value="stable">Stable</button>
+        <button class="filter-btn active" data-filter="stability" data-value="unstable">Nightly</button>
       </div>
       <div class="filter-group">
         <label>Safety:</label>
-        <select id="safetyFilter">
-          <option value="">All</option>
-          <option value="safe">Safe only</option>
-          <option value="unsafe">Unsafe only</option>
-        </select>
+        <button class="filter-btn active" data-filter="safety" data-value="safe">Safe</button>
+        <button class="filter-btn active" data-filter="safety" data-value="unsafe">Unsafe</button>
       </div>
     </div>
   </div>

@@ -1,5 +1,5 @@
 // Archmage Intrinsics Browser — Search + Virtual Scroll
-// ~500 lines vanilla JS, no dependencies
+// Vanilla JS, no dependencies
 
 (function () {
   'use strict';
@@ -11,13 +11,12 @@
   let filtered = [];        // Current filtered results
   let selectedIdx = -1;     // Selected row in filtered[]
   let tokenMap = {};        // tokenName → token object
+  let safeVariantSet = null; // Set of intrinsic names that have safe variants
 
   // DOM refs
   const searchInput = document.getElementById('searchInput');
   const resultCount = document.getElementById('resultCount');
   const tokenFilter = document.getElementById('tokenFilter');
-  const stabilityFilter = document.getElementById('stabilityFilter');
-  const safetyFilter = document.getElementById('safetyFilter');
   const virtualScroll = document.getElementById('virtualScroll');
   const scrollContent = document.getElementById('scrollContent');
   const detailPanel = document.getElementById('detailPanel');
@@ -47,6 +46,9 @@
       }
     }
 
+    // Build safe variant lookup set
+    safeVariantSet = new Set(Object.keys(allData.safeVariants || {}));
+
     populateTokenFilter();
     populateTokenLinks();
     restoreState();
@@ -65,7 +67,7 @@
       const label = t.aliases && t.aliases.length > 0
         ? `${t.display} (${t.aliases[0]})`
         : t.display;
-      groups[arch].push({ value: t.name, label });
+      groups[arch].push({ value: t.name, label, arch });
     }
 
     for (const [arch, tokens] of Object.entries(groups)) {
@@ -76,6 +78,7 @@
         const opt = document.createElement('option');
         opt.value = t.value;
         opt.textContent = t.label;
+        opt.dataset.arch = t.arch;
         group.appendChild(opt);
       }
       tokenFilter.appendChild(group);
@@ -84,7 +87,6 @@
 
   function populateTokenLinks() {
     const label = tokenLinks.querySelector('.token-links-label');
-    // Keep the label, clear the rest
     while (tokenLinks.lastChild !== label) {
       tokenLinks.removeChild(tokenLinks.lastChild);
     }
@@ -104,19 +106,26 @@
 
   // ========== Filtering ==========
 
-  function getActiveArchs() {
-    const btns = document.querySelectorAll('.filter-btn[data-filter="arch"]');
+  function getActiveValues(filterName) {
+    const btns = document.querySelectorAll(`.filter-btn[data-filter="${filterName}"]`);
     const active = [];
     btns.forEach(b => { if (b.classList.contains('active')) active.push(b.dataset.value); });
     return active;
   }
 
+  function ensureArchEnabled(arch) {
+    const btn = document.querySelector(`.filter-btn[data-filter="arch"][data-value="${arch}"]`);
+    if (btn && !btn.classList.contains('active')) {
+      btn.classList.add('active');
+    }
+  }
+
   function applyFilters() {
     const query = searchInput.value.toLowerCase().trim();
-    const archs = new Set(getActiveArchs());
+    const archs = new Set(getActiveValues('arch'));
     const tokenVal = tokenFilter.value;
-    const stabilityVal = stabilityFilter.value;
-    const safetyVal = safetyFilter.value;
+    const stabilities = new Set(getActiveValues('stability'));
+    const safeties = new Set(getActiveValues('safety'));
 
     filtered = allData.intrinsics.filter(i => {
       // Architecture filter
@@ -125,13 +134,21 @@
       // Token filter
       if (tokenVal && i.t !== tokenVal) return false;
 
-      // Stability filter
-      if (stabilityVal === 'stable' && !i.s) return false;
-      if (stabilityVal === 'unstable' && i.s) return false;
+      // Stability toggle: both on = all, both off = none, one on = that one
+      const isStable = i.s;
+      const showStable = stabilities.has('stable');
+      const showUnstable = stabilities.has('unstable');
+      if (!showStable && !showUnstable) return false;
+      if (!showStable && isStable) return false;
+      if (!showUnstable && !isStable) return false;
 
-      // Safety filter
-      if (safetyVal === 'safe' && i.u) return false;
-      if (safetyVal === 'unsafe' && !i.u) return false;
+      // Safety toggle: same logic
+      const isUnsafe = i.u;
+      const showSafe = safeties.has('safe');
+      const showUnsafe = safeties.has('unsafe');
+      if (!showSafe && !showUnsafe) return false;
+      if (!showSafe && !isUnsafe) return false;
+      if (!showUnsafe && isUnsafe) return false;
 
       // Search
       if (query) {
@@ -211,9 +228,18 @@
     const stableBadge = i.s
       ? '<span class="badge badge-stable">stable</span>'
       : '<span class="badge badge-unstable">nightly</span>';
-    const safeBadge = i.u
-      ? '<span class="badge badge-unsafe">unsafe</span>'
-      : '<span class="badge badge-safe">safe</span>';
+
+    let safeBadge;
+    if (i.u) {
+      if (safeVariantSet.has(i.n)) {
+        // Unsafe but has a safe_unaligned_simd wrapper
+        safeBadge = '<span class="badge badge-has-safe" title="safe_unaligned_simd wrapper available">unsafe*</span>';
+      } else {
+        safeBadge = '<span class="badge badge-unsafe">unsafe</span>';
+      }
+    } else {
+      safeBadge = '<span class="badge badge-safe">safe</span>';
+    }
 
     row.innerHTML = `
       <div class="col-name">${escHtml(i.n)}</div>
@@ -228,7 +254,6 @@
 
   function selectRow(idx) {
     if (selectedIdx === idx) {
-      // Toggle off
       selectedIdx = -1;
       detailPanel.style.display = 'none';
       updateSelectedClass();
@@ -275,15 +300,19 @@
       timingHtml += '</div>';
     }
 
-    // Safe variant
+    // Safe variant — prominent display for unsafe intrinsics with safe wrappers
     let safeHtml = '';
     if (i.u && allData.safeVariants[i.n]) {
+      const sig = allData.safeVariants[i.n];
+      const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
       safeHtml = `<div class="safe-variant-note">
-        <strong>Safe variant available:</strong> <code>safe_unaligned_simd::${allData.safeVariants[i.n]}</code>
+        <strong>Safe alternative:</strong>
+        <code>safe_unaligned_simd::${archMod}::${escHtml(i.n)}</code><br>
+        <span class="safe-variant-sig">${escHtml(sig)}</span>
       </div>`;
-    } else if (i.sv) {
-      safeHtml = `<div class="safe-variant-note">
-        <strong>Safe variant available</strong> via <code>safe_unaligned_simd</code>
+    } else if (i.u) {
+      safeHtml = `<div class="unsafe-note">
+        No safe wrapper available. Requires <code>unsafe</code> block.
       </div>`;
     }
 
@@ -344,19 +373,17 @@
     if (!token) return '';
 
     const tokenName = token.aliases && token.aliases.length > 0 ? token.aliases[0] : token.name;
+    const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
     let code;
 
     if (i.u) {
-      // Unsafe intrinsic — show safe_unaligned_simd pattern
       const safeVar = allData.safeVariants[i.n];
       if (safeVar) {
-        const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
         code = `#[rite]\nfn example(_: ${tokenName}, /* params */) {\n    // Use safe_unaligned_simd instead of unsafe:\n    let result = safe_unaligned_simd::${archMod}::${i.n}(/* args */);\n}`;
       } else {
-        code = `#[rite]\nfn example(_: ${tokenName}, /* params */) {\n    // This intrinsic requires unsafe.\n    // Check if safe_unaligned_simd has a wrapper.\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+        code = `#[rite]\nfn example(_: ${tokenName}, /* params */) {\n    // No safe wrapper — requires unsafe block.\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
       }
     } else {
-      // Safe intrinsic
       code = `#[rite]\nfn example(_: ${tokenName}, /* params */) {\n    // Safe inside #[rite] — no unsafe needed\n    let result = ${i.n}(/* args */);\n}`;
     }
 
@@ -369,7 +396,6 @@
   // ========== Helpers ==========
 
   function truncateDoc(doc, max) {
-    // Remove markdown link portion but keep description
     const cleaned = doc.split('[')[0].trim().replace(/\.$/, '');
     return cleaned.length > max ? cleaned.substring(0, max) + '...' : cleaned;
   }
@@ -400,12 +426,16 @@
     const query = searchInput.value.trim();
     if (query) params.set('q', query);
 
-    const archs = getActiveArchs();
+    const archs = getActiveValues('arch');
     if (archs.length < 3) params.set('arch', archs.join(','));
 
     if (tokenFilter.value) params.set('token', tokenFilter.value);
-    if (stabilityFilter.value) params.set('stable', stabilityFilter.value);
-    if (safetyFilter.value) params.set('safe', safetyFilter.value);
+
+    const stabilities = getActiveValues('stability');
+    if (stabilities.length < 2) params.set('stability', stabilities.join(','));
+
+    const safeties = getActiveValues('safety');
+    if (safeties.length < 2) params.set('safety', safeties.join(','));
 
     const hash = params.toString();
     history.replaceState(null, '', hash ? '#' + hash : location.pathname);
@@ -426,9 +456,26 @@
       });
     }
 
-    if (params.has('token')) tokenFilter.value = params.get('token');
-    if (params.has('stable')) stabilityFilter.value = params.get('stable');
-    if (params.has('safe')) safetyFilter.value = params.get('safe');
+    if (params.has('token')) {
+      tokenFilter.value = params.get('token');
+      // Auto-enable arch for the selected token
+      const selectedToken = tokenMap[params.get('token')];
+      if (selectedToken) ensureArchEnabled(selectedToken.arch);
+    }
+
+    if (params.has('stability')) {
+      const vals = new Set(params.get('stability').split(','));
+      document.querySelectorAll('.filter-btn[data-filter="stability"]').forEach(b => {
+        b.classList.toggle('active', vals.has(b.dataset.value));
+      });
+    }
+
+    if (params.has('safety')) {
+      const vals = new Set(params.get('safety').split(','));
+      document.querySelectorAll('.filter-btn[data-filter="safety"]').forEach(b => {
+        b.classList.toggle('active', vals.has(b.dataset.value));
+      });
+    }
   }
 
   // ========== Events ==========
@@ -441,18 +488,24 @@
       debounceTimer = setTimeout(applyFilters, 150);
     });
 
-    // Arch toggle buttons
-    document.querySelectorAll('.filter-btn[data-filter="arch"]').forEach(btn => {
+    // All toggle buttons (arch, stability, safety)
+    document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         btn.classList.toggle('active');
         applyFilters();
       });
     });
 
-    // Dropdowns
-    tokenFilter.addEventListener('change', applyFilters);
-    stabilityFilter.addEventListener('change', applyFilters);
-    safetyFilter.addEventListener('change', applyFilters);
+    // Token dropdown — auto-enable the matching arch
+    tokenFilter.addEventListener('change', () => {
+      if (tokenFilter.value) {
+        const selectedToken = tokenMap[tokenFilter.value];
+        if (selectedToken) {
+          ensureArchEnabled(selectedToken.arch);
+        }
+      }
+      applyFilters();
+    });
 
     // Virtual scroll
     virtualScroll.addEventListener('scroll', renderVisibleRows);
@@ -480,7 +533,6 @@
         } else {
           selectRow(Math.max(selectedIdx - 1, 0));
         }
-        // Scroll selected into view
         if (selectedIdx >= 0) {
           const rowTop = selectedIdx * ROW_HEIGHT;
           const scrollTop = virtualScroll.scrollTop;
@@ -507,7 +559,6 @@
         }
       }
 
-      // Ctrl/Cmd+K or / to focus search
       if ((e.key === '/' || (e.key === 'k' && (e.ctrlKey || e.metaKey))) && e.target !== searchInput) {
         e.preventDefault();
         searchInput.focus();
