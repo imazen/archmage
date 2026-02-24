@@ -412,18 +412,18 @@
   function buildUsageExample(i, token) {
     if (!token) return '';
     const tn = token.name;
-    const useLine = `use core::arch::${i.a}::*;`;
     const archMod = i.a === 'aarch64' ? 'aarch64' : i.a === 'wasm32' ? 'wasm32' : 'x86_64';
     let code;
     if (i.u) {
       const sv = allData.safeVariants[i.n];
       if (sv) {
-        code = `${useLine}\n\n// Preferred: safe wrapper (no unsafe needed)\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = safe_unaligned_simd::${archMod}::${i.n}(/* args */);\n}\n\n// Raw intrinsic (requires unsafe)\n#[rite]\nfn example_raw(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+        // safe_unaligned_simd shadows the unsafe core::arch version
+        code = `use core::arch::${i.a}::*;\nuse safe_unaligned_simd::${archMod}::*; // shadows unsafe ${i.n}\n\n// Safe — ${i.n} is now the safe_unaligned_simd version\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
       } else {
-        code = `${useLine}\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+        code = `use core::arch::${i.a}::*;\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
       }
     } else {
-      code = `${useLine}\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
+      code = `use core::arch::${i.a}::*;\n\n#[rite]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
     }
     return `<div class="detail-code"><div class="code-label">Usage with archmage</div><pre>${escHtml(code)}</pre></div>`;
   }
