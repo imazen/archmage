@@ -138,12 +138,34 @@ def extract_intrinsics(arch_dir, arch_name):
                     is_unsafe = False
                     stability = "unknown"
                     bracket_depth = 0
+                    # Track multi-line cfg_attr context for ARM stability
+                    in_arm_only_attr = False
+                    in_not_arm_attr = False
 
                     while j < len(lines) and j < i + 30:
                         fline = lines[j].strip()
 
                         if bracket_depth > 0:
+                            # Still check stability inside multi-line attrs
+                            if 'not(target_arch = "arm")' in fline:
+                                in_not_arm_attr = True
+                                in_arm_only_attr = False
+                            elif 'target_arch = "arm"' in fline and 'not(' not in fline:
+                                in_arm_only_attr = True
+                                in_not_arm_attr = False
+
+                            if 'stable(' in fline and 'unstable(' not in fline:
+                                if not in_arm_only_attr:
+                                    stability = "stable"
+                            elif 'unstable(' in fline:
+                                if not in_not_arm_attr and not in_arm_only_attr:
+                                    stability = "unstable"
+
                             bracket_depth += fline.count('[') - fline.count(']')
+                            if bracket_depth <= 0:
+                                bracket_depth = 0
+                                in_arm_only_attr = False
+                                in_not_arm_attr = False
                             j += 1
                             continue
 
@@ -159,7 +181,24 @@ def extract_intrinsics(arch_dir, arch_name):
                             break
 
                         if fline.startswith('#['):
+                            # Enter multi-line attribute tracking
+                            if 'cfg_attr' in fline:
+                                if 'not(target_arch = "arm")' in fline:
+                                    in_not_arm_attr = True
+                                elif 'target_arch = "arm"' in fline:
+                                    in_arm_only_attr = True
+                            # Check stability on single-line attrs too
+                            if 'stable(' in fline and 'unstable(' not in fline:
+                                if not in_arm_only_attr:
+                                    stability = "stable"
+                            elif 'unstable(' in fline:
+                                if not in_not_arm_attr and not in_arm_only_attr:
+                                    stability = "unstable"
                             bracket_depth = fline.count('[') - fline.count(']')
+                            if bracket_depth <= 0:
+                                bracket_depth = 0
+                                in_arm_only_attr = False
+                                in_not_arm_attr = False
                             j += 1
                             continue
 

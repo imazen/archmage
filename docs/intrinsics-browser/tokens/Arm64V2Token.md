@@ -3,7 +3,7 @@
 Proof that the Arm64-v2 feature set is available.
 
 **Architecture:** aarch64 | **Features:** neon, crc, rdm, dotprod, fp16, aes, sha2
-**Total intrinsics:** 481 (437 safe, 44 unsafe, 36 stable, 445 unstable/unknown)
+**Total intrinsics:** 481 (437 safe, 44 unsafe, 46 stable, 435 unstable/unknown)
 
 ## Usage
 
@@ -34,7 +34,7 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 
 ## All Intrinsics
 
-### Stable, Safe (36 intrinsics)
+### Stable, Safe (46 intrinsics)
 
 | Name | Description | Instruction | Timing (H/Z4) |
 |------|-------------|-------------|---------------|
@@ -74,8 +74,18 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 | `vqrdmlshs_lane_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
 | `vqrdmlshs_laneq_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
 | `vqrdmlshs_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
+| `vsha1cq_u32` | SHA1 hash update accelerator, choose | sha1c | — |
+| `vsha1h_u32` | SHA1 fixed rotate | sha1h | — |
+| `vsha1mq_u32` | SHA1 hash update accelerator, majority | sha1m | — |
+| `vsha1pq_u32` | SHA1 hash update accelerator, parity | sha1p | — |
+| `vsha1su0q_u32` | SHA1 schedule update accelerator, first part | sha1su0 | — |
+| `vsha1su1q_u32` | SHA1 schedule update accelerator, second part | sha1su1 | — |
+| `vsha256h2q_u32` | SHA1 schedule update accelerator, upper part | sha256h2 | — |
+| `vsha256hq_u32` | SHA1 schedule update accelerator, first part | sha256h | — |
+| `vsha256su0q_u32` | SHA256 schedule update accelerator, first part | sha256su0 | — |
+| `vsha256su1q_u32` | SHA256 schedule update accelerator, second part | sha256su1 | — |
 
-### Unstable/Nightly (445 intrinsics)
+### Unstable/Nightly (435 intrinsics)
 
 | Name | Description | Instruction |
 |------|-------------|-------------|
@@ -468,16 +478,6 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 | `vrsqrtsq_f16` | Floating-point reciprocal square root step | vrsqrts |
 | `vset_lane_f16` |  |  |
 | `vsetq_lane_f16` |  |  |
-| `vsha1cq_u32` | SHA1 hash update accelerator, choose | sha1c |
-| `vsha1h_u32` | SHA1 fixed rotate | sha1h |
-| `vsha1mq_u32` | SHA1 hash update accelerator, majority | sha1m |
-| `vsha1pq_u32` | SHA1 hash update accelerator, parity | sha1p |
-| `vsha1su0q_u32` | SHA1 schedule update accelerator, first part | sha1su0 |
-| `vsha1su1q_u32` | SHA1 schedule update accelerator, second part | sha1su1 |
-| `vsha256h2q_u32` | SHA1 schedule update accelerator, upper part | sha256h2 |
-| `vsha256hq_u32` | SHA1 schedule update accelerator, first part | sha256h |
-| `vsha256su0q_u32` | SHA256 schedule update accelerator, first part | sha256su0 |
-| `vsha256su1q_u32` | SHA256 schedule update accelerator, second part | sha256su1 |
 | `vsqrt_f16` | Calculates the square root of each lane |  |
 | `vsqrth_f16` | Floating-point round to integral, using current rounding mod... | fsqrt |
 | `vsqrtq_f16` | Calculates the square root of each lane |  |

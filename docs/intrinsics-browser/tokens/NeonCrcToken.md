@@ -3,7 +3,7 @@
 Proof that NEON + CRC is available.
 
 **Architecture:** aarch64 | **Features:** neon, crc
-**Total intrinsics:** 8 (8 safe, 0 unsafe, 0 stable, 8 unstable/unknown)
+**Total intrinsics:** 8 (8 safe, 0 unsafe, 6 stable, 2 unstable/unknown)
 
 ## Usage
 
@@ -34,17 +34,22 @@ fn process_chunk(_: NeonCrcToken, chunk: &mut [f32; 4]) {
 
 ## All Intrinsics
 
-### Unstable/Nightly (8 intrinsics)
+### Stable, Safe (6 intrinsics)
+
+| Name | Description | Instruction | Timing (H/Z4) |
+|------|-------------|-------------|---------------|
+| `__crc32b` | CRC32 single round checksum for bytes (8 bits) | crc32b | — |
+| `__crc32cb` | CRC32-C single round checksum for bytes (8 bits) | crc32cb | — |
+| `__crc32ch` | CRC32-C single round checksum for bytes (16 bits) | crc32ch | — |
+| `__crc32cw` | CRC32-C single round checksum for bytes (32 bits) | crc32cw | — |
+| `__crc32h` | CRC32 single round checksum for bytes (16 bits) | crc32h | — |
+| `__crc32w` | CRC32 single round checksum for bytes (32 bits) | crc32w | — |
+
+### Unstable/Nightly (2 intrinsics)
 
 | Name | Description | Instruction |
 |------|-------------|-------------|
-| `__crc32b` | CRC32 single round checksum for bytes (8 bits) | crc32b |
-| `__crc32cb` | CRC32-C single round checksum for bytes (8 bits) | crc32cb |
 | `__crc32cd` | CRC32-C single round checksum for quad words (64 bits) | crc32cw |
-| `__crc32ch` | CRC32-C single round checksum for bytes (16 bits) | crc32ch |
-| `__crc32cw` | CRC32-C single round checksum for bytes (32 bits) | crc32cw |
 | `__crc32d` | CRC32 single round checksum for quad words (64 bits) | crc32w |
-| `__crc32h` | CRC32 single round checksum for bytes (16 bits) | crc32h |
-| `__crc32w` | CRC32 single round checksum for bytes (32 bits) | crc32w |
 
 
