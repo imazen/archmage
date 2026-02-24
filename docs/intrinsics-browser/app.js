@@ -163,7 +163,7 @@
 
     resultCount.textContent = `${filtered.length.toLocaleString()} results`;
     selectedIdx = -1;
-    detailPanel.style.display = 'none';
+    closeDetail();
     renderVirtualScroll();
     saveState();
   }
@@ -255,7 +255,7 @@
   function selectRow(idx) {
     if (selectedIdx === idx) {
       selectedIdx = -1;
-      detailPanel.style.display = 'none';
+      closeDetail();
       updateSelectedClass();
       return;
     }
@@ -272,6 +272,11 @@
   }
 
   // ========== Detail Panel ==========
+
+  function closeDetail() {
+    detailPanel.style.display = 'none';
+    virtualScroll.style.paddingBottom = '0';
+  }
 
   function showDetail(i) {
     const token = i.t ? tokenMap[i.t] : null;
@@ -367,6 +372,10 @@
     `;
 
     detailPanel.style.display = 'block';
+    // Add padding so table rows aren't hidden behind the fixed overlay
+    requestAnimationFrame(() => {
+      virtualScroll.style.paddingBottom = detailPanel.offsetHeight + 'px';
+    });
   }
 
   function buildUsageExample(i, token) {
@@ -519,7 +528,7 @@
 
     // Detail close
     detailClose.addEventListener('click', () => {
-      detailPanel.style.display = 'none';
+      closeDetail();
       selectedIdx = -1;
       updateSelectedClass();
     });
@@ -549,7 +558,7 @@
 
       if (e.key === 'Escape') {
         if (detailPanel.style.display !== 'none') {
-          detailPanel.style.display = 'none';
+          closeDetail();
           selectedIdx = -1;
           updateSelectedClass();
         } else {

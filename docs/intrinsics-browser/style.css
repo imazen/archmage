@@ -285,15 +285,19 @@ select:focus { border-color: var(--accent); }
 .badge-unsafe { background: rgba(240, 113, 113, 0.15); color: var(--red); }
 .badge-has-safe { background: rgba(230, 180, 80, 0.18); color: var(--amber); cursor: help; }
 
-/* Detail Panel */
+/* Detail Panel — fixed overlay at bottom of viewport */
 .detail-panel {
   background: var(--bg-alt);
   border-top: 2px solid var(--accent);
-  padding: 16px 20px;
-  flex: 0 1 auto;
-  max-height: 60vh;
+  padding: 16px 20px 20px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 65vh;
   overflow-y: auto;
-  position: relative;
+  z-index: 100;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
 }
 
 .detail-close {
