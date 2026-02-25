@@ -64,12 +64,12 @@ use archmage::{SimdToken, Desktop64, Arm64};
 fn main() {
     // Tokens compile everywhere - summon() returns None on unsupported platforms
     match Desktop64::summon() {
-        Some(_) => println!("{} available!", Desktop64::NAME),
+        Some(token) => println!("{} available!", token.name()),
         None => println!("No AVX2+FMA"),
     }
 
     match Arm64::summon() {
-        Some(_) => println!("{} available!", Arm64::NAME),
+        Some(token) => println!("{} available!", token.name()),
         None => println!("No NEON"),
     }
 }

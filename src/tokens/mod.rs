@@ -68,6 +68,20 @@ pub trait SimdToken: sealed::Sealed + Copy + Clone + Send + Sync + 'static {
     /// Human-readable name for diagnostics and error messages.
     const NAME: &'static str;
 
+    /// Returns the human-readable name for this token.
+    ///
+    /// This is a convenience method that returns [`Self::NAME`].
+    ///
+    /// ```rust
+    /// use archmage::{ScalarToken, SimdToken};
+    /// let token = ScalarToken;
+    /// assert_eq!(token.name(), "Scalar");
+    /// ```
+    #[inline(always)]
+    fn name(&self) -> &'static str {
+        Self::NAME
+    }
+
     /// Comma-delimited target features (e.g., `"sse,sse2,avx2,fma,bmi1,bmi2,f16c,lzcnt"`).
     ///
     /// All features are listed, including baseline features like SSE/SSE2 for
