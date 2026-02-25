@@ -243,25 +243,17 @@ verify-asm-update:
 # Documentation
 # ============================================================================
 
-# Build the documentation book
+# Build the documentation site (Zola)
 docs:
-    cd docs/book && mdbook build
+    cd docs/site && zola build -o ../../target/site
 
-# Serve the documentation locally (with auto-reload)
+# Serve the documentation locally (with auto-reload, port 3100)
 docs-serve:
-    cd docs/book && mdbook serve
+    cd docs/site && zola serve --port 3100
 
 # Clean the built documentation
 docs-clean:
-    rm -rf target/book target/simd_reference
-
-# Build the SIMD reference book
-simd-ref:
-    cd docs/simd_reference && mdbook build
-
-# Serve the SIMD reference locally (with auto-reload)
-simd-ref-serve:
-    cd docs/simd_reference && mdbook serve
+    rm -rf target/site
 
 # Serve the intrinsics browser locally (port 3500)
 intrinsics-serve:

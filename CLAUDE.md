@@ -658,10 +658,17 @@ magetypes/                   # SIMD types crate (depends on archmage)
 │           ├── wasm/       # WASM types (w128)
 │           └── polyfill.rs # Width emulation
 docs/
-└── generated/              # Auto-generated reference docs
-    ├── x86-intrinsics-by-token.md
-    ├── aarch64-intrinsics-by-token.md
-    └── memory-ops-reference.md
+├── site/                   # Zola documentation site (Goyo theme)
+│   ├── config.toml         # Zola configuration
+│   ├── content/
+│   │   ├── archmage/       # Archmage docs (stable)
+│   │   └── magetypes/      # Magetypes docs (experimental)
+│   └── themes/goyo/        # Git submodule
+├── generated/              # Auto-generated reference docs
+│   ├── x86-intrinsics-by-token.md
+│   ├── aarch64-intrinsics-by-token.md
+│   └── memory-ops-reference.md
+└── intrinsics-browser/     # Static HTML/JS intrinsics search
 xtask/                       # Code generator and validation
 └── src/
     ├── main.rs             # Generates everything, validates safety, parity check

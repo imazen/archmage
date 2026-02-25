@@ -8,3 +8,6 @@ docs/book/mermaid-init.js
 /intrinsics/
 /docs/intrinsics/index.html
 /docs/book/intrinsics/
+
+# Zola build output
+docs/site/public/

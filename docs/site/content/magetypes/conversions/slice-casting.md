@@ -1,0 +1,68 @@
++++
+title = "Slice Casting"
+weight = 4
++++
+
+Magetypes provides safe, token-gated slice casting as an alternative to `bytemuck`. These methods reinterpret scalar slices as SIMD vector slices (and vice versa) without copying data.
+
+## Cast Scalar Slices to Vector Slices
+
+```rust
+// View &[f32] as &[f32x8] (zero-copy)
+let data: &[f32] = &[1.0; 64];
+if let Some(chunks) = f32x8::cast_slice(token, data) {
+    // chunks: &[f32x8] with 8 elements (64 / 8 = 8)
+    for chunk in chunks {
+        let sum = chunk.reduce_add();
+    }
+}
+
+// Mutable version
+let data: &mut [f32] = &mut [0.0; 64];
+if let Some(chunks) = f32x8::cast_slice_mut(token, data) {
+    // chunks: &mut [f32x8]
+}
+```
+
+`cast_slice` returns `None` if the slice length isn't a multiple of the vector width or if alignment is wrong. No UB possible.
+
+## Byte-Level Access
+
+View a vector's raw bytes. These don't need a token — you already have the vector, which proves CPU support:
+
+```rust
+let v = f32x8::splat(token, 1.0);
+
+// Immutable byte view (zero-cost)
+let bytes: &[u8; 32] = v.as_bytes();
+
+// Mutable byte view
+let mut v = f32x8::splat(token, 0.0);
+let bytes: &mut [u8; 32] = v.as_bytes_mut();
+```
+
+## Create from Bytes
+
+Construct a vector from raw bytes (token-gated):
+
+```rust
+let bytes = [0u8; 32];
+let v = f32x8::from_bytes(token, &bytes);
+
+// Owned version
+let v = f32x8::from_bytes_owned(token, bytes);
+```
+
+## Why Not bytemuck?
+
+Implementing bytemuck's `Pod` and `Zeroable` traits would bypass token-gated construction:
+
+```rust
+// bytemuck would allow this — no token, no CPU check:
+let v: f32x8 = bytemuck::Zeroable::zeroed();  // Bad: no proof of CPU support
+
+// magetypes requires the token:
+let v = f32x8::zero(token);  // Good: token proves the CPU can handle it
+```
+
+The token-gated `cast_slice` and `from_bytes` methods provide the same functionality without compromising the safety model. `cast_slice` returns `None` on alignment or length mismatch, so you get runtime safety checks without `unsafe`.

@@ -1,0 +1,75 @@
+# Archmage & Magetypes Documentation
+# Built with Zola + Goyo theme
+
+base_url = "https://imazen.github.io/archmage"
+title = "Archmage"
+description = "Safe SIMD via capability tokens for Rust"
+
+theme = "goyo"
+
+build_search_index = true
+default_language = "en"
+generate_feeds = false
+generate_sitemap = true
+compile_sass = true
+
+taxonomies = [
+    { name = "tags", feed = false },
+    { name = "categories", feed = false },
+]
+
+[markdown]
+bottom_footnotes = true
+
+[markdown.highlighting]
+theme = "ayu-dark"
+
+[search]
+include_title = true
+include_description = true
+include_path = true
+include_content = true
+truncate_content_length = 200
+
+[extra]
+footer_html = "<span>Powered by <a href='https://www.getzola.org'>Zola</a> and <a href='https://github.com/hahwul/goyo'>Goyo</a></span>"
+default_thumbnail = ""
+gtag = ""
+
+nav = [
+    { name = "Archmage", url = "/archmage", type = "url", icon = "fa-solid fa-hat-wizard" },
+    { name = "Magetypes", url = "/magetypes", type = "url", icon = "fa-solid fa-shapes" },
+    { name = "Intrinsics", url = "/intrinsics/", type = "url", icon = "fa-solid fa-magnifying-glass" },
+    { name = "Links", type = "dropdown", icon = "fa-solid fa-link", members = [
+        { name = "GitHub", url = "https://github.com/imazen/archmage", type = "url", icon = "fa-brands fa-github" },
+        { name = "crates.io", url = "https://crates.io/crates/archmage", type = "url", icon = "fa-solid fa-cube" },
+        { name = "docs.rs", url = "https://docs.rs/archmage", type = "url", icon = "fa-solid fa-book" },
+    ] },
+]
+
+# Edit this page Configuration
+edit_url = "https://github.com/imazen/archmage/edit/main/docs/site"
+issue_url = "https://github.com/imazen/archmage/issues"
+
+# Logo
+[extra.logo]
+text = "Archmage"
+
+# Theme
+[extra.theme]
+colorset = "dark"
+brightness = "normal"
+disable_toggle = false
+default_theme_dark = "goyo-dark"
+default_theme_light = "goyo-light"
+
+# Sidebar
+[extra.sidebar]
+expand_depth = 2
+disable_root_hide = false
+enable_desktop_menu = true
+
+# Share
+[extra.share]
+copy_url = true
+x = false
