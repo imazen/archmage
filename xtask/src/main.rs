@@ -1787,14 +1787,10 @@ fn check_api_parity(strict: bool) -> Result<()> {
         for issue in &actionable_issues {
             println!("  {}", issue);
         }
-        // Parity is tracked but not blocking for now - too many methods need implementation
-        // TODO: Make strict again once parity is achieved
-        println!(
-            "\n⚠️  Warning: {} methods are missing from some architectures.",
+        bail!(
+            "{} parity issues found. All architectures must have identical APIs.",
             actionable_issues.len()
         );
-        println!("   Full parity is required before 1.0 release.");
-        println!("   See CLAUDE.md 'Pending Work' section for details.");
     }
 
     Ok(())
