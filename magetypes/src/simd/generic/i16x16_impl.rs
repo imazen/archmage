@@ -17,7 +17,7 @@ use crate::simd::backends::I16x16Backend;
 /// 16-lane i16 SIMD vector, generic over backend `T`.
 ///
 /// `T` is a token type that proves CPU support for the required SIMD features.
-/// The inner representation is `T::Repr` (e.g., `__m256i` on x86).
+/// The inner representation is `T::Repr` (e.g., `__m256i` on AVX2, `[i16; 16]` on scalar).
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 /// After construction, operations don't need the token — it's baked into the type.
@@ -198,7 +198,7 @@ impl<T: I16x16Backend> i16x16<T> {
 
     // ====== Reductions ======
 
-    /// Sum all 16 lanes.
+    /// Sum all 16 lanes (wrapping).
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
         T::reduce_add(self.0)

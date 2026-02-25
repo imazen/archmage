@@ -519,7 +519,7 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
     /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
     #[inline(always)]
     pub fn from_i32_bitcast(_: T, v: super::i32x8<T>) -> Self {
-        Self::from_repr_unchecked(T::bitcast_i32_to_f32(v.into_repr()))
+        Self(T::bitcast_i32_to_f32(v.into_repr()), PhantomData)
     }
 
     /// Convert to i32x8 with truncation toward zero.
@@ -537,7 +537,7 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
     /// Create from i32x8 via numeric conversion.
     #[inline(always)]
     pub fn from_i32(_: T, v: super::i32x8<T>) -> Self {
-        Self::from_repr_unchecked(T::convert_i32_to_f32(v.into_repr()))
+        Self(T::convert_i32_to_f32(v.into_repr()), PhantomData)
     }
 
     // ====== Backward-compatible aliases (old generated API names) ======

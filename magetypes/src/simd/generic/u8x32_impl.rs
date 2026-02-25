@@ -17,7 +17,7 @@ use crate::simd::backends::U8x32Backend;
 /// 32-lane u8 SIMD vector, generic over backend `T`.
 ///
 /// `T` is a token type that proves CPU support for the required SIMD features.
-/// The inner representation is `T::Repr` (e.g., `__m256i` on x86).
+/// The inner representation is `T::Repr` (e.g., `__m256i` on AVX2, `[u8; 32]` on scalar).
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 /// After construction, operations don't need the token — it's baked into the type.

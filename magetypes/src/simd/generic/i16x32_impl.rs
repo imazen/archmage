@@ -198,7 +198,7 @@ impl<T: I16x32Backend> i16x32<T> {
 
     // ====== Reductions ======
 
-    /// Sum all 32 lanes.
+    /// Sum all 32 lanes (wrapping).
     #[inline(always)]
     pub fn reduce_add(self) -> i16 {
         T::reduce_add(self.0)

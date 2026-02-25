@@ -253,7 +253,7 @@ impl<T: F64x2Backend> f64x2<T> {
 
     // ====== Approximations ======
 
-    /// Reciprocal approximation.
+    /// Fast reciprocal approximation (~12-bit precision).
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
         Self(T::rcp_approx(self.0), PhantomData)
@@ -265,7 +265,7 @@ impl<T: F64x2Backend> f64x2<T> {
         Self(T::recip(self.0), PhantomData)
     }
 
-    /// Reciprocal square root approximation.
+    /// Fast reciprocal square root approximation (~12-bit precision).
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
         Self(T::rsqrt_approx(self.0), PhantomData)

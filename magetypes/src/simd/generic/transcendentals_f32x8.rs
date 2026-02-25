@@ -53,11 +53,9 @@ impl<T: F32x8Convert> f32x8<T> {
 
         let m = mantissa - splat_f32::<T>(1.0);
 
-        // Horner's for numerator: P2*m^2 + P1*m + P0
         let yp = splat_f32::<T>(P2).mul_add(m, splat_f32::<T>(P1));
         let yp = yp.mul_add(m, splat_f32::<T>(P0));
 
-        // Horner's for denominator: Q2*m^2 + Q1*m + Q0
         let yq = splat_f32::<T>(Q2).mul_add(m, splat_f32::<T>(Q1));
         let yq = yq.mul_add(m, splat_f32::<T>(Q0));
 
@@ -71,9 +69,6 @@ impl<T: F32x8Convert> f32x8<T> {
     }
 
     /// Low-precision base-2 exponential (~1% max error).
-    ///
-    /// Uses degree-3 polynomial with IEEE 754 bit manipulation for the
-    /// integer part.
     #[inline(always)]
     pub fn exp2_lowp(self) -> Self {
         const C0: f32 = 1.0;
@@ -160,7 +155,6 @@ impl<T: F32x8Convert> f32x8<T> {
         const ONE_BITS: u32 = 0x3f80_0000;
         const MANTISSA_MASK: i32 = 0x007f_ffff_u32 as i32;
 
-        // Coefficients for odd polynomial on y = (a-1)/(a+1)
         const C0: f32 = 2.885_39;
         const C1: f32 = 0.961_800_76;
         const C2: f32 = 0.576_974_45;
@@ -168,24 +162,19 @@ impl<T: F32x8Convert> f32x8<T> {
 
         let x_bits = self.bitcast_to_i32();
 
-        // Normalize mantissa to [sqrt(2)/2, sqrt(2)]
         let offset = splat_i32::<T>((ONE_BITS - SQRT2_OVER_2) as i32);
         let adjusted = x_bits + offset;
 
-        // Extract exponent
         let exp_raw = adjusted.shr_arithmetic_const::<23>();
         let n = (exp_raw - splat_i32::<T>(127)).to_f32();
 
-        // Reconstruct normalized mantissa
         let mantissa_bits = adjusted & splat_i32::<T>(MANTISSA_MASK);
         let a = (mantissa_bits + splat_i32::<T>(SQRT2_OVER_2 as i32)).bitcast_to_f32();
 
-        // y = (a - 1) / (a + 1)
         let one = splat_f32::<T>(1.0);
         let y = (a - one) / (a + one);
         let y2 = y * y;
 
-        // Polynomial: C0*y + C1*y^3 + C2*y^5 + C3*y^7
         let poly = splat_f32::<T>(C3).mul_add(y2, splat_f32::<T>(C2));
         let poly = poly.mul_add(y2, splat_f32::<T>(C1));
         let poly = poly.mul_add(y2, splat_f32::<T>(C0));
@@ -214,9 +203,7 @@ impl<T: F32x8Convert> f32x8<T> {
         self.log2_midp()
     }
 
-    /// Mid-precision base-2 exponential (~3 ULP).
-    ///
-    /// Uses degree-6 polynomial approximation. Undefined for extreme inputs.
+    /// Mid-precision base-2 exponential (~3 ULP). Undefined for extreme inputs.
     #[inline(always)]
     pub fn exp2_midp_unchecked(self) -> Self {
         const C0: f32 = 1.0;
@@ -332,26 +319,21 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Mid-precision cube root.
     ///
     /// Uses Kahan's initial approximation via bit manipulation followed
-    /// by 3 Newton-Raphson iterations. Handles negative inputs correctly
-    /// (returns -cbrt(|x|)).
+    /// by 3 Newton-Raphson iterations.
     #[inline(always)]
     pub fn cbrt_midp(self) -> Self {
         const MAGIC: u32 = 0x2a50_8c2d;
         const TWO_THIRDS: f32 = 0.666_666_6;
 
-        // Save sign and work with absolute value
         let sign_mask = splat_f32::<T>(-0.0);
         let sign = self & sign_mask;
         let abs_x = self.abs();
 
-        // Initial approximation: scalar bit manipulation (Kahan's method)
-        // bits/3 + magic gives ~1-digit accuracy
         let abs_arr = abs_x.to_array();
         let approx_arr: [f32; 8] =
             core::array::from_fn(|i| f32::from_bits((abs_arr[i].to_bits() / 3) + MAGIC));
         let mut y = f32x8::from_repr_unchecked(<T as F32x8Backend>::from_array(approx_arr));
 
-        // 3 Newton-Raphson iterations: y' = y * (2/3 + x/(3*y^3))
         let three = splat_f32::<T>(3.0);
         let two_thirds = splat_f32::<T>(TWO_THIRDS);
         for _ in 0..3 {
@@ -360,7 +342,6 @@ impl<T: F32x8Convert> f32x8<T> {
             y *= two_thirds + abs_x / (three * y3);
         }
 
-        // Restore sign
         y | sign
     }
 
@@ -373,17 +354,14 @@ impl<T: F32x8Convert> f32x8<T> {
         let abs_x = self.abs();
         let is_denorm = abs_x.simd_lt(splat_f32::<T>(1.175_494_4e-38));
 
-        // Scale up denormals by 2^24
         let scaled = self * splat_f32::<T>(16_777_216.0);
         let x_for_cbrt = Self::blend(is_denorm, scaled, self);
 
         let result = x_for_cbrt.cbrt_midp();
 
-        // Scale down: cbrt(2^24) = 2^8, so divide by 256
         let scaled_result = result * splat_f32::<T>(1.0 / 256.0);
         let result = Self::blend(is_denorm, scaled_result, result);
 
-        // Zero → zero
         Self::blend(is_zero, zero, result)
     }
 }

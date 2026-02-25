@@ -1250,6 +1250,7 @@ fn generate_all() -> Result<()> {
         "archmage-macros/src/generated",
         "src/tokens/generated",
         "magetypes/src/simd/generated",
+        "magetypes/src/simd/generic",
         "docs/generated",
     ];
     for dir in &generated_dirs {

@@ -25,7 +25,7 @@ use crate::simd::backends::I64x8Backend;
 /// # Note
 ///
 /// 64-bit integer SIMD has limited native support: no hardware multiply on
-/// most ISAs, and arithmetic right shift requires AVX-512 on x86.
+/// AVX2/NEON/WASM, and arithmetic right shift requires AVX-512 on x86.
 /// Operations like `min`, `max`, and `abs` are polyfilled where needed.
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -203,7 +203,7 @@ impl<T: I64x8Backend> i64x8<T> {
 
     // ====== Reductions ======
 
-    /// Sum all 8 lanes.
+    /// Sum all 8 lanes (wrapping).
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
         T::reduce_add(self.0)

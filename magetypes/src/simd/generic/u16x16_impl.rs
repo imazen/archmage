@@ -17,7 +17,7 @@ use crate::simd::backends::U16x16Backend;
 /// 16-lane u16 SIMD vector, generic over backend `T`.
 ///
 /// `T` is a token type that proves CPU support for the required SIMD features.
-/// The inner representation is `T::Repr` (e.g., `__m256i` on x86).
+/// The inner representation is `T::Repr` (e.g., `__m256i` on AVX2, `[u16; 16]` on scalar).
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 /// After construction, operations don't need the token — it's baked into the type.

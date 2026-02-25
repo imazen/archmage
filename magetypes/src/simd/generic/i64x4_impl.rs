@@ -203,7 +203,7 @@ impl<T: I64x4Backend> i64x4<T> {
 
     // ====== Reductions ======
 
-    /// Sum all 4 lanes.
+    /// Sum all 4 lanes (wrapping).
     #[inline(always)]
     pub fn reduce_add(self) -> i64 {
         T::reduce_add(self.0)
@@ -217,6 +217,12 @@ impl<T: I64x4Backend> i64x4<T> {
         Self(T::shl_const::<N>(self.0), PhantomData)
     }
 
+    /// Arithmetic shift right by constant (sign-extending).
+    #[inline(always)]
+    pub fn shr_arithmetic_const<const N: i32>(self) -> Self {
+        Self(T::shr_arithmetic_const::<N>(self.0), PhantomData)
+    }
+
     /// Logical shift right by constant (zero-filling).
     #[inline(always)]
     pub fn shr_logical_const<const N: i32>(self) -> Self {
@@ -227,6 +233,12 @@ impl<T: I64x4Backend> i64x4<T> {
     #[inline(always)]
     pub fn shl<const N: i32>(self) -> Self {
         self.shl_const::<N>()
+    }
+
+    /// Alias for [`shr_arithmetic_const`](Self::shr_arithmetic_const).
+    #[inline(always)]
+    pub fn shr_arithmetic<const N: i32>(self) -> Self {
+        self.shr_arithmetic_const::<N>()
     }
 
     /// Alias for [`shr_logical_const`](Self::shr_logical_const).
