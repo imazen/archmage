@@ -1375,6 +1375,23 @@ pub(crate) use registry::*;
         backend_total_bytes
     );
 
+    // Generate generic wrapper types (strategy-pattern types parameterized by backend)
+    println!("\n=== Generating Generic Wrapper Types ===");
+    fs::create_dir_all(simd_dir.join("generic"))?;
+    let generic_files = simd_types::generic_gen::generate_generic_files();
+    let mut generic_total_bytes = 0;
+    for (rel_path, content) in &generic_files {
+        let full_path = simd_dir.join(rel_path);
+        fs::write(&full_path, content)?;
+        generic_total_bytes += content.len();
+        println!("  Wrote {} ({} bytes)", full_path.display(), content.len());
+    }
+    println!(
+        "Total generic files: {} files, {} bytes",
+        generic_files.len(),
+        generic_total_bytes
+    );
+
     // Generate SIMD type tests
     let simd_tests = simd_types::generate_simd_tests();
     let simd_test_path = PathBuf::from("magetypes/tests/generated_simd_types.rs");
@@ -1414,6 +1431,9 @@ pub(crate) use registry::*;
     }
     fmt_paths.push(width_path);
     for rel in backend_files.keys() {
+        fmt_paths.push(simd_dir.join(rel));
+    }
+    for rel in generic_files.keys() {
         fmt_paths.push(simd_dir.join(rel));
     }
     for path in &fmt_paths {

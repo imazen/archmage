@@ -24,6 +24,7 @@ pub mod block_ops_arm;
 pub mod block_ops_wasm;
 pub mod extend_ops_arm;
 pub mod extend_ops_wasm;
+pub mod generic_gen;
 mod ops;
 pub mod ops_bitcast;
 mod ops_comparison;
