@@ -352,6 +352,214 @@ mod i32x8_native_vs_polyfill {
 }
 
 // ============================================================================
+// i32x8: Shift and bitwise NOT (common polyfill divergence area)
+// ============================================================================
+
+mod i32x8_shift_bitwise {
+    use super::*;
+    use archmage::{SimdToken, X64V3Token};
+    use magetypes::simd::{i32x4, i32x8};
+
+    fn compare_unary(
+        a: [i32; 8],
+        native_op: impl Fn(i32x8) -> i32x8,
+        polyfill_op: impl Fn(i32x4) -> i32x4,
+    ) -> bool {
+        if let Some(token) = X64V3Token::summon() {
+            let native_result = native_op(i32x8::from_array(token, a)).to_array();
+            let lo: [i32; 4] = a[0..4].try_into().unwrap();
+            let hi: [i32; 4] = a[4..8].try_into().unwrap();
+            let p_lo = polyfill_op(i32x4::from_array(token, lo)).to_array();
+            let p_hi = polyfill_op(i32x4::from_array(token, hi)).to_array();
+            let polyfill: [i32; 8] = [
+                p_lo[0], p_lo[1], p_lo[2], p_lo[3], p_hi[0], p_hi[1], p_hi[2], p_hi[3],
+            ];
+            i32_arrays_eq(&native_result, &polyfill)
+        } else {
+            true
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10000))]
+
+        #[test]
+        fn fuzz_not(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.not(), |x| x.not()));
+        }
+
+        // Const-generic shifts: test representative shift amounts
+        #[test]
+        fn fuzz_shl_1(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shl::<1>(), |x| x.shl::<1>()));
+        }
+
+        #[test]
+        fn fuzz_shl_7(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shl::<7>(), |x| x.shl::<7>()));
+        }
+
+        #[test]
+        fn fuzz_shl_16(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shl::<16>(), |x| x.shl::<16>()));
+        }
+
+        #[test]
+        fn fuzz_shl_31(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shl::<31>(), |x| x.shl::<31>()));
+        }
+
+        #[test]
+        fn fuzz_shr_logical_1(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shr_logical::<1>(), |x| x.shr_logical::<1>()));
+        }
+
+        #[test]
+        fn fuzz_shr_logical_16(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shr_logical::<16>(), |x| x.shr_logical::<16>()));
+        }
+
+        #[test]
+        fn fuzz_shr_arithmetic_1(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shr_arithmetic::<1>(), |x| x.shr_arithmetic::<1>()));
+        }
+
+        #[test]
+        fn fuzz_shr_arithmetic_16(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shr_arithmetic::<16>(), |x| x.shr_arithmetic::<16>()));
+        }
+
+        #[test]
+        fn fuzz_shr_arithmetic_31(a in prop::array::uniform8(i32::MIN..i32::MAX)) {
+            prop_assert!(compare_unary(a, |x| x.shr_arithmetic::<31>(), |x| x.shr_arithmetic::<31>()));
+        }
+    }
+}
+
+// ============================================================================
+// Bitcast round-trip fuzz (all element types at 128-bit width)
+// ============================================================================
+
+mod bitcast_roundtrip {
+    use super::*;
+    use archmage::{SimdToken, X64V3Token};
+    use magetypes::simd::{f32x4, i32x4, u32x4};
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10000))]
+
+        // f32x4 → i32x4 → f32x4 (generic bitcast)
+        #[test]
+        fn fuzz_f32_i32_roundtrip(a in prop::array::uniform4(-1e10f32..1e10f32)) {
+            if let Some(token) = X64V3Token::summon() {
+                let v = f32x4::from_array(token, a);
+                let back = v.bitcast_i32x4().bitcast_f32x4().to_array();
+                prop_assert!(f32_arrays_eq(&a, &back), "roundtrip failed: {:?} != {:?}", a, back);
+            }
+        }
+
+        // i32x4 → f32x4 → i32x4 (generic bitcast)
+        #[test]
+        fn fuzz_i32_f32_roundtrip(a in prop::array::uniform4(i32::MIN..i32::MAX)) {
+            if let Some(token) = X64V3Token::summon() {
+                let v = i32x4::from_array(token, a);
+                let back = v.bitcast_f32x4().bitcast_i32x4().to_array();
+                prop_assert_eq!(a, back);
+            }
+        }
+
+        // u32x4 → i32x4 → f32x4 → i32x4 chain (generic bitcasts)
+        #[test]
+        fn fuzz_u32_i32_f32_chain(a in prop::array::uniform4(u32::MIN..u32::MAX)) {
+            if let Some(token) = X64V3Token::summon() {
+                let v = u32x4::from_array(token, a);
+                let via_i32 = v.bitcast_i32x4().to_array();
+                let via_f32 = i32x4::from_array(token, via_i32).bitcast_f32x4();
+                let back = via_f32.bitcast_i32x4().to_array();
+                // u32 → i32 bit reinterpretation, round-tripped through f32
+                let expected: [i32; 4] = a.map(|x| x as i32);
+                prop_assert_eq!(back, expected);
+            }
+        }
+
+        // f32x4 bit pattern preservation: bits → i32 → bits should be identical
+        #[test]
+        fn fuzz_f32_bit_preservation(bits in prop::array::uniform4(u32::MIN..u32::MAX)) {
+            if let Some(token) = X64V3Token::summon() {
+                let floats: [f32; 4] = bits.map(f32::from_bits);
+                let v = f32x4::from_array(token, floats);
+                let as_ints = v.bitcast_i32x4().to_array();
+                let back_floats = i32x4::from_array(token, as_ints).bitcast_f32x4().to_array();
+                // Compare bit patterns, not float equality (NaN != NaN)
+                for i in 0..4 {
+                    prop_assert_eq!(
+                        floats[i].to_bits(), back_floats[i].to_bits(),
+                        "bit pattern mismatch at lane {}", i
+                    );
+                }
+            }
+        }
+
+        // u32x4 → f32x4 → i32x4 (u32 → f32 and f32 → i32 are both available)
+        #[test]
+        fn fuzz_u32_f32_i32_chain(a in prop::array::uniform4(u32::MIN..u32::MAX)) {
+            if let Some(token) = X64V3Token::summon() {
+                let v = u32x4::from_array(token, a);
+                let as_f32 = v.bitcast_f32x4();
+                let as_i32 = as_f32.bitcast_i32x4().to_array();
+                // u32 reinterpreted as i32 should be the same bits
+                let expected: [i32; 4] = a.map(|x| x as i32);
+                prop_assert_eq!(as_i32, expected);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Load/store boundary fuzz (memory ops)
+// ============================================================================
+
+mod memory_ops_fuzz {
+    use super::*;
+    use archmage::{SimdToken, X64V3Token};
+    use magetypes::simd::f32x8;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10000))]
+
+        #[test]
+        fn fuzz_load_store_roundtrip(a in prop::array::uniform8(-1e10f32..1e10f32)) {
+            if let Some(token) = X64V3Token::summon() {
+                let v = f32x8::load(token, &a);
+                let mut out = [0.0f32; 8];
+                v.store(&mut out);
+                prop_assert!(f32_arrays_eq(&a, &out), "load/store roundtrip: {:?} != {:?}", a, out);
+            }
+        }
+
+        #[test]
+        fn fuzz_from_array_to_array_roundtrip(a in prop::array::uniform8(-1e10f32..1e10f32)) {
+            if let Some(token) = X64V3Token::summon() {
+                let v = f32x8::from_array(token, a);
+                let out = v.to_array();
+                prop_assert!(f32_arrays_eq(&a, &out), "from/to array roundtrip: {:?} != {:?}", a, out);
+            }
+        }
+
+        #[test]
+        fn fuzz_splat_consistency(val in -1e10f32..1e10f32) {
+            if let Some(token) = X64V3Token::summon() {
+                let v = f32x8::splat(token, val);
+                let arr = v.to_array();
+                for (i, &x) in arr.iter().enumerate() {
+                    prop_assert!(f32_eq(x, val), "splat lane {} diverged: {} != {}", i, x, val);
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
 // Reduce operations (these aggregate across lanes, more subtle divergences)
 // ============================================================================
 
