@@ -49,9 +49,9 @@ fn add(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 
 No individual `use` statements needed -- `Desktop64`, `_mm256_loadu_ps`, `_mm256_add_ps`, and `_mm256_storeu_ps` all come from the prelude.
 
-## magetypes Prelude
+## magetypes Prelude (exploratory)
 
-`use magetypes::prelude::*` re-exports the archmage prelude plus all SIMD types:
+[Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases. `use magetypes::prelude::*` re-exports the archmage prelude plus all SIMD types:
 
 ```rust
 use magetypes::prelude::*;

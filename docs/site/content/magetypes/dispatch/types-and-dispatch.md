@@ -34,7 +34,7 @@ fn sum_scalar(data: &[f32; 8]) -> f32 {
 
 // Dispatch: tries v3 -> neon -> wasm128 -> scalar
 pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum(data))
+    incant!(sum(data), [v3, neon, wasm128])
 }
 ```
 
@@ -71,7 +71,7 @@ fn dot_product_scalar(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 
 pub fn dot_product(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    incant!(dot_product(a, b))
+    incant!(dot_product(a, b), [v3, neon, wasm128])
 }
 ```
 
@@ -111,7 +111,7 @@ fn validate(token: Token, threshold: f32) -> bool {
 // Generates: validate_v3, validate_neon, validate_wasm128, validate_scalar
 // Ready for incant!:
 pub fn validate(threshold: f32) -> bool {
-    incant!(validate(threshold))
+    incant!(validate(threshold), [v3, neon, wasm128])
 }
 ```
 
@@ -125,7 +125,7 @@ When you already have a token and want to dispatch to specialized variants witho
 use archmage::{incant, IntoConcreteToken};
 
 fn process_inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-    incant!(token => compute(data))
+    incant!(compute(data) with token, [v3, neon, wasm128])
     // Uses IntoConcreteToken to check what the token actually is
 }
 ```

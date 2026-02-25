@@ -25,7 +25,6 @@ Use the `_self` argument and reference `_self` in your code:
 
 ```rust
 use archmage::{Desktop64, arcane};
-use magetypes::simd::f32x8;
 
 struct Vector8([f32; 8]);
 
@@ -33,8 +32,13 @@ impl Vector8 {
     #[arcane(_self = Vector8)]
     fn magnitude(&self, token: Desktop64) -> f32 {
         // Use _self, not self
-        let v = f32x8::from_array(token, _self.0);
-        (v * v).reduce_add().sqrt()
+        let v = _mm256_loadu_ps(&_self.0);
+        let sq = _mm256_mul_ps(v, v);
+        let sum = _mm256_hadd_ps(sq, sq);
+        let sum = _mm256_hadd_ps(sum, sum);
+        let low = _mm256_castps256_ps128(sum);
+        let high = _mm256_extractf128_ps::<1>(sum);
+        _mm_cvtss_f32(_mm_sqrt_ss(_mm_add_ss(low, high)))
     }
 }
 ```
@@ -47,9 +51,14 @@ impl Vector8 {
 impl Vector8 {
     #[arcane(_self = Vector8)]
     fn dot(&self, token: Desktop64, other: &Self) -> f32 {
-        let a = f32x8::from_array(token, _self.0);
-        let b = f32x8::from_array(token, other.0);
-        (a * b).reduce_add()
+        let a = _mm256_loadu_ps(&_self.0);
+        let b = _mm256_loadu_ps(&other.0);
+        let mul = _mm256_mul_ps(a, b);
+        let sum = _mm256_hadd_ps(mul, mul);
+        let sum = _mm256_hadd_ps(sum, sum);
+        let low = _mm256_castps256_ps128(sum);
+        let high = _mm256_extractf128_ps::<1>(sum);
+        _mm_cvtss_f32(_mm_add_ss(low, high))
     }
 }
 ```
@@ -60,12 +69,17 @@ impl Vector8 {
 impl Vector8 {
     #[arcane(_self = Vector8)]
     fn normalize(&mut self, token: Desktop64) {
-        let v = f32x8::from_array(token, _self.0);
-        let len = (v * v).reduce_add().sqrt();
+        let v = _mm256_loadu_ps(&_self.0);
+        let sq = _mm256_mul_ps(v, v);
+        let sum = _mm256_hadd_ps(sq, sq);
+        let sum = _mm256_hadd_ps(sum, sum);
+        let low = _mm256_castps256_ps128(sum);
+        let high = _mm256_extractf128_ps::<1>(sum);
+        let len = _mm_cvtss_f32(_mm_sqrt_ss(_mm_add_ss(low, high)));
         if len > 0.0 {
-            let inv = f32x8::splat(token, 1.0 / len);
-            let normalized = v * inv;
-            _self.0 = normalized.to_array();
+            let inv = _mm256_set1_ps(1.0 / len);
+            let normalized = _mm256_mul_ps(v, inv);
+            _mm256_storeu_ps(&mut _self.0, normalized);
         }
     }
 }
@@ -77,9 +91,11 @@ impl Vector8 {
 impl Vector8 {
     #[arcane(_self = Vector8)]
     fn scaled(self, token: Desktop64, factor: f32) -> Self {
-        let v = f32x8::from_array(token, _self.0);
-        let s = f32x8::splat(token, factor);
-        Vector8((v * s).to_array())
+        let v = _mm256_loadu_ps(&_self.0);
+        let s = _mm256_set1_ps(factor);
+        let mut out = [0.0f32; 8];
+        _mm256_storeu_ps(&mut out, _mm256_mul_ps(v, s));
+        Vector8(out)
     }
 }
 ```
@@ -96,8 +112,10 @@ trait SimdOps {
 impl SimdOps for Vector8 {
     #[arcane(_self = Vector8)]
     fn double(&self, token: Desktop64) -> Self {
-        let v = f32x8::from_array(token, _self.0);
-        Vector8((v + v).to_array())
+        let v = _mm256_loadu_ps(&_self.0);
+        let mut out = [0.0f32; 8];
+        _mm256_storeu_ps(&mut out, _mm256_add_ps(v, v));
+        Vector8(out)
     }
 }
 ```
@@ -118,18 +136,28 @@ It's a deliberate choice to make the transformation visible.
 // You write:
 impl Vector8 {
     #[arcane(_self = Vector8)]
-    fn process(&self, token: Desktop64) -> f32 {
-        f32x8::from_array(token, _self.0).reduce_add()
+    fn sum(&self, token: Desktop64) -> f32 {
+        let v = _mm256_loadu_ps(&_self.0);
+        let sum = _mm256_hadd_ps(v, v);
+        let sum = _mm256_hadd_ps(sum, sum);
+        let low = _mm256_castps256_ps128(sum);
+        let high = _mm256_extractf128_ps::<1>(sum);
+        _mm_cvtss_f32(_mm_add_ss(low, high))
     }
 }
 
 // Macro generates:
 impl Vector8 {
-    fn process(&self, token: Desktop64) -> f32 {
+    fn sum(&self, token: Desktop64) -> f32 {
         #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
         #[inline]
         fn __inner(_self: &Vector8, token: Desktop64) -> f32 {
-            f32x8::from_array(token, _self.0).reduce_add()
+            let v = _mm256_loadu_ps(&_self.0);
+            let sum = _mm256_hadd_ps(v, v);
+            let sum = _mm256_hadd_ps(sum, sum);
+            let low = _mm256_castps256_ps128(sum);
+            let high = _mm256_extractf128_ps::<1>(sum);
+            _mm_cvtss_f32(_mm_add_ss(low, high))
         }
         unsafe { __inner(self, token) }
     }
@@ -145,14 +173,14 @@ impl ImageProcessor {
     #[arcane(_self = ImageProcessor)]
     fn with_brightness(self, token: Desktop64, amount: f32) -> Self {
         let mut result = _self;
-        // Process brightness...
+        // Process brightness with SIMD...
         result
     }
 
     #[arcane(_self = ImageProcessor)]
     fn with_contrast(self, token: Desktop64, amount: f32) -> Self {
         let mut result = _self;
-        // Process contrast...
+        // Process contrast with SIMD...
         result
     }
 }
@@ -170,9 +198,10 @@ impl Buffer {
     #[arcane(_self = Buffer)]
     fn process_all(&mut self, token: Desktop64) {
         for chunk in _self.data.chunks_exact_mut(8) {
-            let v = f32x8::from_slice(token, chunk);
-            let result = v * v;
-            result.store_slice(chunk);
+            let arr: &mut [f32; 8] = chunk.try_into().unwrap();
+            let v = _mm256_loadu_ps(arr as &[f32; 8]);
+            let result = _mm256_mul_ps(v, v);
+            _mm256_storeu_ps(arr, result);
         }
     }
 }

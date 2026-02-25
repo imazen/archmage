@@ -85,6 +85,10 @@ fn main() {
 | AArch64 | `NeonToken`/`Arm64`, `Arm64V2Token`, `Arm64V3Token`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken` | 128 bit |
 | WASM | `Wasm128Token`, `Wasm128RelaxedToken` | 128 bit |
 
+## Magetypes (Exploratory)
+
+[Magetypes](/magetypes/) is our companion crate that provides ergonomic SIMD vector types with natural Rust operators (`f32x8`, `i32x4`, etc.). It's an **exploratory crate** — the API may change between releases. Archmage itself is stable and does not depend on magetypes.
+
 ## Next Steps
 
 - [Installation](@/archmage/getting-started/installation.md) — Add archmage to your project
@@ -93,4 +97,4 @@ fn main() {
 
 ## Resources
 
-- **[Intrinsics Browser](/intrinsics/)** — Search 12,000+ SIMD intrinsics by token, architecture, safety, and stability
+- **[Intrinsics Browser](https://imazen.github.io/archmage/intrinsics/)** — Search 12,000+ SIMD intrinsics by token, architecture, safety, and stability

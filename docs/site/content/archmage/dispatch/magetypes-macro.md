@@ -5,6 +5,8 @@ weight = 3
 
 `#[magetypes]` generates platform-specific function variants by replacing `Token` with each concrete token type. It works with `incant!` to provide both generation and dispatch.
 
+> **Note:** This macro is part of archmage (the `macros` feature), not the [magetypes crate](/magetypes/). The name reflects that it generates code in the style that magetypes types use. Magetypes itself is an exploratory companion crate — its API may change between releases.
+
 ## When to Use
 
 Use `#[magetypes]` for functions that don't use platform-specific SIMD types — where `Token` is the only platform-dependent part. If your function body uses `f32x8` or `__m256`, write the variants manually and use `incant!` directly.
@@ -36,7 +38,7 @@ These suffixed functions are exactly what `incant!` expects:
 
 ```rust
 pub fn process(data: &[f32]) -> f32 {
-    incant!(process(data))
+    incant!(process(data), [v3, neon, wasm128])
 }
 ```
 

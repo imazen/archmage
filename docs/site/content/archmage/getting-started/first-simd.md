@@ -37,9 +37,9 @@ fn main() {
 }
 ```
 
-## Using magetypes
+## Using magetypes (exploratory)
 
-For the most ergonomic experience, use magetypes' vector types:
+For a more ergonomic experience, [magetypes](/magetypes/) provides vector types with natural operators. Note that magetypes is an exploratory crate — its API may change between releases:
 
 ```rust
 use archmage::{Desktop64, SimdToken};

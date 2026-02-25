@@ -24,8 +24,7 @@ flowchart TD
 ## Example
 
 ```rust
-use archmage::{X64V3Token, SimdToken, arcane, rite};
-use magetypes::simd::f32x8;
+use archmage::prelude::*;
 
 fn find_closest(points: &[[f32; 8]], query: &[f32; 8]) -> usize {
     if let Some(token) = X64V3Token::summon() {
@@ -53,13 +52,28 @@ fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -
 
 // Inner helper: #[rite] — inlines into caller, no boundary
 #[rite]
-fn distance_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = f32x8::from_array(token, *a);
-    let vb = f32x8::from_array(token, *b);
-    let diff = va - vb;
-    (diff * diff).reduce_add().sqrt()
+fn distance_simd(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let va = _mm256_loadu_ps(a);
+    let vb = _mm256_loadu_ps(b);
+    let diff = _mm256_sub_ps(va, vb);
+    let sq = _mm256_mul_ps(diff, diff);
+    // Horizontal sum
+    let sum = _mm256_hadd_ps(sq, sq);
+    let sum = _mm256_hadd_ps(sum, sum);
+    let low = _mm256_castps256_ps128(sum);
+    let high = _mm256_extractf128_ps::<1>(sum);
+    let total = _mm_add_ss(low, high);
+    _mm_cvtss_f32(_mm_sqrt_ss(total))
 }
 ```
+
+> **With magetypes**, the `distance_simd` body becomes more concise:
+> ```rust
+> let va = f32x8::from_array(token, *a);
+> let vb = f32x8::from_array(token, *b);
+> let diff = va - vb;
+> (diff * diff).reduce_add().sqrt()
+> ```
 
 ## Why This Matters
 

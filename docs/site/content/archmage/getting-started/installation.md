@@ -12,7 +12,7 @@ Add archmage to your `Cargo.toml`:
 archmage = "0.8"
 ```
 
-For SIMD vector types with natural operators, also add magetypes:
+For SIMD vector types with natural operators, you can also add [magetypes](/magetypes/) — our exploratory companion crate (API may change between releases):
 
 ```toml
 [dependencies]

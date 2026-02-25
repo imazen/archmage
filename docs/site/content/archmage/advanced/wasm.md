@@ -20,104 +20,66 @@ Or in `.cargo/config.toml`:
 rustflags = ["-Ctarget-feature=+simd128"]
 ```
 
+## No Dynamic Dispatch on WASM
+
+WASM is fundamentally different from x86/ARM: there is **no runtime feature detection**. Whether SIMD128 is available is decided entirely at compile time via `-Ctarget-feature=+simd128`.
+
+This means:
+- `Wasm128Token::summon()` always returns `Some` if the binary was compiled with SIMD128, and always `None` if it wasn't. The check compiles away entirely.
+- There is no need for `incant!` dispatch on WASM — you either have SIMD128 or you don't, and that's known at compile time.
+- `#[arcane]` still works and generates the correct `#[target_feature]` wrapper, but the safety boundary is the only thing it provides — there's no runtime detection to do.
+
+The token still serves its purpose: it proves at the type level that SIMD128 is available, which makes intrinsics safe inside `#[arcane]`. But the dispatch story is purely compile-time.
+
+For cross-platform code that also targets x86/ARM, use `incant!` as normal — on WASM, the macro just emits a direct call to the `_wasm128` variant (or `_scalar` if SIMD128 wasn't enabled).
+
 ## The Token
 
 ```rust
 use archmage::{Wasm128Token, SimdToken};
 
-fn check_wasm_simd() {
-    if let Some(token) = Wasm128Token::summon() {
-        process_simd(token, &data);
-    } else {
-        process_scalar(&data);
-    }
+// On WASM: always Some (if compiled with simd128) or always None
+// No runtime check — this compiles away
+if let Some(token) = Wasm128Token::summon() {
+    process_simd(token, &data);
+} else {
+    process_scalar(&data);
 }
 ```
 
-**Note**: On WASM, `Wasm128Token::summon()` succeeds if the binary was compiled with SIMD128 support. There's no runtime feature detection in WASM -- the capability is determined at compile time.
-
-## Available Types
-
-| Type | Elements |
-|------|----------|
-| `f32x4` | 4 x f32 |
-| `f64x2` | 2 x f64 |
-| `i32x4` | 4 x i32 |
-| `i64x2` | 2 x i64 |
-| `i16x8` | 8 x i16 |
-| `i8x16` | 16 x i8 |
-| `u32x4` | 4 x u32 |
-| `u64x2` | 2 x u64 |
-| `u16x8` | 8 x u16 |
-| `u8x16` | 16 x u8 |
-
-## Basic Usage
+## Basic Usage with Raw Intrinsics
 
 ```rust
 use archmage::{Wasm128Token, arcane};
-use magetypes::simd::f32x4;
+use std::arch::wasm32::*;
 
 #[arcane]
-fn dot_product(token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
-    let va = f32x4::from_array(token, *a);
-    let vb = f32x4::from_array(token, *b);
-    (va * vb).reduce_add()
+fn dot_product(_token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
+    let va = v128_load(a.as_ptr() as *const v128);
+    let vb = v128_load(b.as_ptr() as *const v128);
+    let mul = f32x4_mul(va, vb);
+    // Horizontal sum via shuffle+add
+    let shuf = i32x4_shuffle::<1, 0, 3, 2>(mul, mul);
+    let sum = f32x4_add(mul, shuf);
+    let shuf2 = i32x4_shuffle::<2, 3, 0, 1>(sum, sum);
+    let final_sum = f32x4_add(sum, shuf2);
+    f32x4_extract_lane::<0>(final_sum)
 }
 ```
 
-## Cross-Platform Code
+> **With magetypes**, the same function becomes:
+> ```rust
+> use magetypes::simd::f32x4;
+>
+> #[arcane]
+> fn dot_product(token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
+>     let va = f32x4::from_array(token, *a);
+>     let vb = f32x4::from_array(token, *b);
+>     (va * vb).reduce_add()
+> }
+> ```
 
-Write once, run on x86, ARM, and WASM:
-
-```rust
-use archmage::{Desktop64, NeonToken, Wasm128Token, SimdToken, incant};
-
-// Platform variants -- #[arcane] generates stubs on non-matching architectures
-#[arcane]
-fn sum_v3(token: Desktop64, data: &[f32; 8]) -> f32 {
-    use magetypes::simd::f32x8;
-    f32x8::from_array(token, *data).reduce_add()
-}
-
-#[arcane]
-fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
-    use magetypes::simd::f32x4;
-    let a = f32x4::from_slice(token, &data[0..4]);
-    let b = f32x4::from_slice(token, &data[4..8]);
-    a.reduce_add() + b.reduce_add()
-}
-
-#[arcane]
-fn sum_wasm128(token: Wasm128Token, data: &[f32; 8]) -> f32 {
-    use magetypes::simd::f32x4;
-    let a = f32x4::from_slice(token, &data[0..4]);
-    let b = f32x4::from_slice(token, &data[4..8]);
-    a.reduce_add() + b.reduce_add()
-}
-
-fn sum_scalar(data: &[f32; 8]) -> f32 {
-    data.iter().sum()
-}
-
-// Public API
-pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum(data))
-}
-```
-
-## WASM-Specific Considerations
-
-### No Runtime Detection
-
-Unlike x86/ARM, WASM doesn't have runtime feature detection. The SIMD support is baked in at compile time:
-
-```rust
-// On WASM, this is always the same result
-// (based on compile-time -Ctarget-feature=+simd128)
-let has_simd = Wasm128Token::summon().is_some();
-```
-
-### Browser Compatibility
+## Browser Compatibility
 
 WASM SIMD is supported in:
 - Chrome 91+ (May 2021)
@@ -127,7 +89,7 @@ WASM SIMD is supported in:
 
 For older browsers, provide a non-SIMD fallback WASM binary.
 
-### Relaxed SIMD
+## Relaxed SIMD
 
 WASM relaxed-simd is standardized (Wasm 3.0), stable in Rust since 1.82, and supported by Chrome, Firefox 145+, and Wasmtime. It provides 28 intrinsics (FMA, relaxed lane-select, relaxed min/max, dot products, relaxed truncation) that trade strict cross-platform determinism for performance.
 
@@ -147,42 +109,36 @@ Enable with:
 RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo build
 ```
 
-## Example: Image Processing in Browser
+## Cross-Platform Code
+
+For code that runs on x86, ARM, and WASM, use `incant!` with explicit tiers. On WASM, the dispatch compiles down to a direct call:
 
 ```rust
-use wasm_bindgen::prelude::*;
-use archmage::{Wasm128Token, SimdToken, arcane};
-use magetypes::simd::u8x16;
+use archmage::{arcane, incant};
 
-#[wasm_bindgen]
-pub fn brighten_image(pixels: &mut [u8], amount: u8) {
-    if let Some(token) = Wasm128Token::summon() {
-        brighten_simd(token, pixels, amount);
-    } else {
-        brighten_scalar(pixels, amount);
-    }
+#[arcane]
+fn sum_v3(_token: X64V3Token, data: &[f32; 8]) -> f32 {
+    // AVX2: raw intrinsics or magetypes
+    let v = _mm256_loadu_ps(data);
+    // ... horizontal sum ...
 }
 
 #[arcane]
-fn brighten_simd(token: Wasm128Token, pixels: &mut [u8], amount: u8) {
-    let add = u8x16::splat(token, amount);
-
-    for chunk in pixels.chunks_exact_mut(16) {
-        let v = u8x16::from_slice(token, chunk);
-        let bright = v.saturating_add(add);
-        bright.store_slice(chunk);
-    }
-
-    // Handle remainder
-    for pixel in pixels.chunks_exact_mut(16).into_remainder() {
-        *pixel = pixel.saturating_add(amount);
-    }
+fn sum_neon(_token: NeonToken, data: &[f32; 8]) -> f32 {
+    // Process as two halves on 128-bit NEON
 }
 
-fn brighten_scalar(pixels: &mut [u8], amount: u8) {
-    for pixel in pixels {
-        *pixel = pixel.saturating_add(amount);
-    }
+#[arcane]
+fn sum_wasm128(_token: Wasm128Token, data: &[f32; 8]) -> f32 {
+    // Process as two halves on 128-bit WASM SIMD
+}
+
+fn sum_scalar(_token: ScalarToken, data: &[f32; 8]) -> f32 {
+    data.iter().sum()
+}
+
+pub fn sum(data: &[f32; 8]) -> f32 {
+    incant!(sum(data), [v3, neon, wasm128])
 }
 ```
 

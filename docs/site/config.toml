@@ -38,12 +38,12 @@ gtag = ""
 
 nav = [
     { name = "Archmage", url = "/archmage", type = "url", icon = "fa-solid fa-hat-wizard" },
+    { name = "docs.rs", url = "https://docs.rs/archmage", type = "url", icon = "fa-solid fa-book" },
     { name = "Magetypes", url = "/magetypes", type = "url", icon = "fa-solid fa-shapes" },
-    { name = "Intrinsics", url = "/intrinsics/", type = "url", icon = "fa-solid fa-magnifying-glass" },
+    { name = "Intrinsics", url = "https://imazen.github.io/archmage/intrinsics/", type = "url", icon = "fa-solid fa-magnifying-glass" },
     { name = "Links", type = "dropdown", icon = "fa-solid fa-link", members = [
         { name = "GitHub", url = "https://github.com/imazen/archmage", type = "url", icon = "fa-brands fa-github" },
         { name = "crates.io", url = "https://crates.io/crates/archmage", type = "url", icon = "fa-solid fa-cube" },
-        { name = "docs.rs", url = "https://docs.rs/archmage", type = "url", icon = "fa-solid fa-book" },
     ] },
 ]
 

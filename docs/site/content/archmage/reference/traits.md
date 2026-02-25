@@ -169,7 +169,9 @@ Only enables AVX-512F. Missing critical AVX-512 extensions.
 
 **Use instead**: `X64V4Token` or `HasX64V4`
 
-## magetypes Traits
+## magetypes Traits (exploratory)
+
+[Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases.
 
 ### SimdTypes
 

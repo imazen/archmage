@@ -61,7 +61,9 @@ use archmage::prelude::*;
 // safe_unaligned_simd functions available
 ```
 
-## magetypes Features
+## magetypes Features (exploratory)
+
+[Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases.
 
 ### `std` (default)
 

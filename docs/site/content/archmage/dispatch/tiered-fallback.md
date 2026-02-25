@@ -42,6 +42,7 @@ Each token implies all the capabilities below it. `summon()` returns the first m
 
 ```rust
 use archmage::*;
+use std::arch::x86_64::*;
 
 pub fn process(data: &mut [f32]) -> f32 {
     // Try highest tier first — summon() returns None on wrong architecture
@@ -76,39 +77,43 @@ pub fn process(data: &mut [f32]) -> f32 {
 When your algorithm naturally works at different widths:
 
 ```rust
-use magetypes::*;
+use archmage::prelude::*;
 
 pub fn sum_f32(data: &[f32]) -> f32 {
     // Try 256-bit first
     if let Some(token) = X64V3Token::summon() {
-        return sum_f32x8(token, data);
+        return sum_avx2(token, data);
     }
 
     // Fall back to 128-bit
     if let Some(token) = X64V2Token::summon() {
-        return sum_f32x4(token, data);
+        return sum_sse(token, data);
     }
 
     if let Some(token) = NeonToken::summon() {
-        return sum_f32x4_neon(token, data);
+        return sum_neon(token, data);
     }
 
     sum_scalar(data)
 }
 
 #[arcane]
-fn sum_f32x8(token: X64V3Token, data: &[f32]) -> f32 {
-    let mut acc = f32x8::zero(token);
+fn sum_avx2(token: X64V3Token, data: &[f32]) -> f32 {
+    let mut acc = _mm256_setzero_ps();
     for chunk in data.chunks_exact(8) {
-        let v = f32x8::from_slice(token, chunk);
-        acc = acc + v;
+        let v = _mm256_loadu_ps(chunk.as_ptr());
+        acc = _mm256_add_ps(acc, v);
     }
-    // Handle remainder
-    let mut sum = acc.reduce_add();
+    // Horizontal sum: hadd twice, then 128-bit halves
+    let sum = _mm256_hadd_ps(acc, acc);
+    let sum = _mm256_hadd_ps(sum, sum);
+    let low = _mm256_castps256_ps128(sum);
+    let high = _mm256_extractf128_ps::<1>(sum);
+    let mut total = _mm_cvtss_f32(_mm_add_ss(low, high));
     for &x in data.chunks_exact(8).remainder() {
-        sum += x;
+        total += x;
     }
-    sum
+    total
 }
 ```
 

@@ -112,7 +112,7 @@ See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-r
 Functions with the same token type inline into each other:
 
 ```rust
-use magetypes::simd::f32x8;
+use archmage::prelude::*;
 
 #[arcane]
 fn outer(token: Desktop64, data: &[f32; 8]) -> f32 {
@@ -121,11 +121,14 @@ fn outer(token: Desktop64, data: &[f32; 8]) -> f32 {
 }
 
 #[arcane]
-fn inner(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn inner(_token: Desktop64, data: &[f32; 8]) -> f32 {
     // Both functions share the same #[target_feature] region
-    // LLVM optimizes across both
-    let v = f32x8::from_array(token, *data);
-    v.reduce_add()
+    let v = _mm256_loadu_ps(data);
+    let sum = _mm256_hadd_ps(v, v);
+    let sum = _mm256_hadd_ps(sum, sum);
+    let low = _mm256_castps256_ps128(sum);
+    let high = _mm256_extractf128_ps::<1>(sum);
+    _mm_cvtss_f32(_mm_add_ss(low, high))
 }
 ```
 
@@ -134,20 +137,20 @@ fn inner(token: Desktop64, data: &[f32; 8]) -> f32 {
 Higher tokens can call functions expecting lower tokens:
 
 ```rust
-use magetypes::simd::f32x8;
-
 #[arcane]
 fn v4_kernel(token: X64V4Token, data: &[f32; 8]) -> f32 {
     // V4 ⊃ V3, so this works and inlines properly
     v3_sum(token, data)
-    // ... could do AVX-512 specific work too ...
 }
 
 #[arcane]
-fn v3_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    // Actual SIMD: load 8 floats, horizontal sum
-    let v = f32x8::from_array(token, *data);
-    v.reduce_add()
+fn v3_sum(_token: X64V3Token, data: &[f32; 8]) -> f32 {
+    let v = _mm256_loadu_ps(data);
+    let sum = _mm256_hadd_ps(v, v);
+    let sum = _mm256_hadd_ps(sum, sum);
+    let low = _mm256_castps256_ps128(sum);
+    let high = _mm256_extractf128_ps::<1>(sum);
+    _mm_cvtss_f32(_mm_add_ss(low, high))
 }
 ```
 

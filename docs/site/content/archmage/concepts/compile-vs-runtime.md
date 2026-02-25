@@ -74,8 +74,12 @@ fn outer(token: Desktop64, data: &[f32; 8]) -> f32 {
 
 #[arcane]
 fn inner(token: Desktop64, data: &[f32; 8]) -> f32 {
-    let v = f32x8::from_array(token, *data);
-    v.reduce_add()
+    let v = _mm256_loadu_ps(data);
+    let sum = _mm256_hadd_ps(v, v);
+    let sum = _mm256_hadd_ps(sum, sum);
+    let low = _mm256_castps256_ps128(sum);
+    let high = _mm256_extractf128_ps::<1>(sum);
+    _mm_cvtss_f32(_mm_add_ss(low, high))
 }
 ```
 
