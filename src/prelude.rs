@@ -35,7 +35,8 @@
 //! Also includes: [`ScalarToken`] (always available), [`X64V2Token`],
 //! [`X64CryptoToken`] (V2 + PCLMULQDQ + AES-NI),
 //! [`X64V3CryptoToken`] (V3 + VPCLMULQDQ + VAES, Zen 3+/Alder Lake+),
-//! [`Wasm128Token`], [`NeonAesToken`], [`NeonSha3Token`], [`NeonCrcToken`],
+//! [`Wasm128Token`], [`Wasm128RelaxedToken`],
+//! [`NeonAesToken`], [`NeonSha3Token`], [`NeonCrcToken`],
 //! and the AVX-512 tokens ([`Avx512Token`], [`X64V4xToken`],
 //! [`Avx512Fp16Token`]) when the `avx512` feature is enabled.
 //!
@@ -113,7 +114,7 @@
 //! ```
 //!
 //! Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
-//! `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`, `scalar`.
+//! `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`, `wasm128_relaxed`, `scalar`.
 //!
 //! **Required variants per platform (default tiers):**
 //!
@@ -149,7 +150,6 @@ pub use crate::tokens::{HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3
 
 // -- Tokens (all compile on all platforms; summon() returns None on wrong arch) --
 pub use crate::tokens::ScalarToken;
-pub use crate::tokens::Wasm128Token;
 pub use crate::tokens::{
     Arm64, Arm64V2Token, Arm64V3Token, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken,
 };
@@ -157,6 +157,7 @@ pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V
 pub use crate::tokens::{
     Desktop64, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken, X64V3Token,
 };
+pub use crate::tokens::{Wasm128RelaxedToken, Wasm128Token};
 
 // -- Macros --
 #[cfg(feature = "macros")]

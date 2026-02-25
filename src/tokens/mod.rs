@@ -487,6 +487,12 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
+    /// Try to cast to Wasm128RelaxedToken.
+    #[inline(always)]
+    fn as_wasm128_relaxed(self) -> Option<Wasm128RelaxedToken> {
+        None
+    }
+
     /// Try to cast to ScalarToken.
     #[inline(always)]
     fn as_scalar(self) -> Option<ScalarToken> {
@@ -618,6 +624,14 @@ impl IntoConcreteToken for Arm64V3Token {
 impl IntoConcreteToken for Wasm128Token {
     #[inline(always)]
     fn as_wasm128(self) -> Option<Wasm128Token> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for Wasm128RelaxedToken
+impl IntoConcreteToken for Wasm128RelaxedToken {
+    #[inline(always)]
+    fn as_wasm128_relaxed(self) -> Option<Wasm128RelaxedToken> {
         Some(self)
     }
 }

@@ -9,7 +9,7 @@
 use crate::registry::Registry;
 use anyhow::{Context, Result};
 use indoc::formatdoc;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
@@ -296,7 +296,11 @@ fn classify_timing(name: &str) -> Option<&'static str> {
             _ => "Float Mul XMM",
         });
     }
-    if name.contains("fmadd") || name.contains("fmsub") || name.contains("fnmadd") || name.contains("fnmsub") {
+    if name.contains("fmadd")
+        || name.contains("fmsub")
+        || name.contains("fnmadd")
+        || name.contains("fnmsub")
+    {
         return Some(match width {
             "ZMM" => "Float FMA ZMM",
             "YMM" => "Float FMA YMM",
@@ -333,8 +337,12 @@ fn classify_timing(name: &str) -> Option<&'static str> {
             _ => "Float Rcp/Rsqrt XMM",
         });
     }
-    if name.contains("_cmp_p") || name.contains("_cmpeq_p") || name.contains("_cmplt_p")
-        || name.contains("_cmpgt_p") || name.contains("_cmpord_p") || name.contains("_cmpneq_p")
+    if name.contains("_cmp_p")
+        || name.contains("_cmpeq_p")
+        || name.contains("_cmplt_p")
+        || name.contains("_cmpgt_p")
+        || name.contains("_cmpord_p")
+        || name.contains("_cmpneq_p")
     {
         return Some(match width {
             "YMM" => "Float Cmp YMM",
@@ -349,7 +357,9 @@ fn classify_timing(name: &str) -> Option<&'static str> {
     }
 
     // Integer operations
-    if name.contains("_add_epi") || name.contains("_sub_epi") || name.contains("_adds_epi")
+    if name.contains("_add_epi")
+        || name.contains("_sub_epi")
+        || name.contains("_adds_epi")
         || name.contains("_subs_epi")
     {
         return Some(match width {
@@ -364,7 +374,10 @@ fn classify_timing(name: &str) -> Option<&'static str> {
             _ => "Int Mul 32 XMM",
         });
     }
-    if name.contains("_mullo_epi16") || name.contains("_mulhi_epi16") || name.contains("_mulhi_epu16") {
+    if name.contains("_mullo_epi16")
+        || name.contains("_mulhi_epi16")
+        || name.contains("_mulhi_epu16")
+    {
         return Some(match width {
             "YMM" => "Int Mul 16 YMM",
             _ => "Int Mul 16 XMM",
@@ -378,7 +391,9 @@ fn classify_timing(name: &str) -> Option<&'static str> {
     }
 
     // Bitwise
-    if name.contains("_and_") || name.contains("_or_") || name.contains("_xor_")
+    if name.contains("_and_")
+        || name.contains("_or_")
+        || name.contains("_xor_")
         || name.contains("_andnot_")
     {
         return Some(match width {
@@ -389,8 +404,12 @@ fn classify_timing(name: &str) -> Option<&'static str> {
     }
 
     // Shifts
-    if name.contains("_sll") || name.contains("_srl") || name.contains("_sra")
-        || name.contains("_slli_") || name.contains("_srli_") || name.contains("_srai_")
+    if name.contains("_sll")
+        || name.contains("_srl")
+        || name.contains("_sra")
+        || name.contains("_slli_")
+        || name.contains("_srli_")
+        || name.contains("_srai_")
     {
         return Some(match width {
             "ZMM" => "Shift ZMM",
@@ -416,8 +435,11 @@ fn classify_timing(name: &str) -> Option<&'static str> {
     }
 
     // Load/Store
-    if name.contains("_loadu_") || name.contains("_load_") || name.contains("_lddqu_")
-        || name.contains("_loadl_") || name.contains("_loadh_")
+    if name.contains("_loadu_")
+        || name.contains("_load_")
+        || name.contains("_lddqu_")
+        || name.contains("_loadl_")
+        || name.contains("_loadh_")
     {
         return Some(match width {
             "ZMM" => "Load ZMM",
@@ -425,8 +447,11 @@ fn classify_timing(name: &str) -> Option<&'static str> {
             _ => "Load XMM",
         });
     }
-    if name.contains("_storeu_") || name.contains("_store_") || name.contains("_storel_")
-        || name.contains("_storeh_") || name.contains("_stream_")
+    if name.contains("_storeu_")
+        || name.contains("_store_")
+        || name.contains("_storel_")
+        || name.contains("_storeh_")
+        || name.contains("_stream_")
     {
         return Some(match width {
             "ZMM" => "Store ZMM",
@@ -562,7 +587,7 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
                 "display": t.display_name.as_deref().unwrap_or(&t.name),
                 "tier": t.short_name.as_deref().unwrap_or(""),
                 "features": t.features,
-                "parent": t.parent.as_deref().unwrap_or(""),
+                "parents": t.parents,
                 "doc": t.doc.as_deref().unwrap_or("").lines().next().unwrap_or("")
             })
         })
@@ -626,12 +651,7 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
         .output()
         .ok()
         .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| {
-            s.split_whitespace()
-                .nth(1)
-                .unwrap_or("unknown")
-                .to_string()
-        })
+        .map(|s| s.split_whitespace().nth(1).unwrap_or("unknown").to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
     let root_json = json!({
@@ -657,7 +677,13 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
     );
 
     // Generate per-token markdown files
-    generate_per_token_markdown(reg, &intrinsics, &feature_map, &safe_variants, &timing_table)?;
+    generate_per_token_markdown(
+        reg,
+        &intrinsics,
+        &feature_map,
+        &safe_variants,
+        &timing_table,
+    )?;
 
     Ok(())
 }
@@ -696,10 +722,7 @@ fn generate_per_token_markdown(
             "wasm" => "wasm32",
             other => other,
         };
-        let display = token_def
-            .display_name
-            .as_deref()
-            .unwrap_or(token_name);
+        let display = token_def.display_name.as_deref().unwrap_or(token_name);
         let aliases_str = if token_def.aliases.is_empty() {
             String::new()
         } else {
@@ -720,10 +743,7 @@ fn generate_per_token_markdown(
                 if i.arch != arch && !(arch == "x86_64" && i.arch == "x86") {
                     return false;
                 }
-                feature_map
-                    .find_token(&i.arch, &i.features)
-                    .as_deref()
-                    == Some(token_name.as_str())
+                feature_map.find_token(&i.arch, &i.features).as_deref() == Some(token_name.as_str())
             })
             .collect();
         token_intrinsics.sort_by(|a, b| a.name.cmp(&b.name));
@@ -907,9 +927,7 @@ fn build_safe_ops_table(
 ) -> String {
     let ops: Vec<(&CsvIntrinsic, &String)> = token_intrinsics
         .iter()
-        .filter_map(|i| {
-            safe_variants.get(&i.name).map(|sig| (*i, sig))
-        })
+        .filter_map(|i| safe_variants.get(&i.name).map(|sig| (*i, sig)))
         .collect();
 
     if ops.is_empty() {
@@ -999,10 +1017,7 @@ fn build_intrinsics_tables(
         out.push_str("|------|-------------|-------------|\n");
         for i in &unstable {
             let doc = truncate_doc(&i.doc, 60);
-            out.push_str(&format!(
-                "| `{}` | {} | {} |\n",
-                i.name, doc, i.instruction
-            ));
+            out.push_str(&format!("| `{}` | {} | {} |\n", i.name, doc, i.instruction));
         }
         out.push('\n');
     }
@@ -1025,10 +1040,7 @@ fn truncate_doc(doc: &str, max_len: usize) -> String {
     }
 }
 
-fn format_timing(
-    intrinsic: &CsvIntrinsic,
-    timing_table: &BTreeMap<&str, TimingEntry>,
-) -> String {
+fn format_timing(intrinsic: &CsvIntrinsic, timing_table: &BTreeMap<&str, TimingEntry>) -> String {
     let cat = match classify_timing(&intrinsic.name) {
         Some(c) => c,
         None => return "—".to_string(),

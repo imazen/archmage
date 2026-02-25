@@ -985,7 +985,7 @@ fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
 /// `scalar` is always included implicitly.
 ///
 /// Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
-/// `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
+/// `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
 ///
 /// # What gets replaced
 ///
@@ -1269,6 +1269,15 @@ const ALL_TIERS: &[TierDescriptor] = &[
     },
     // WASM
     TierDescriptor {
+        name: "wasm128_relaxed",
+        suffix: "wasm128_relaxed",
+        token_path: "archmage::Wasm128RelaxedToken",
+        as_method: "as_wasm128_relaxed",
+        target_arch: Some("wasm32"),
+        cargo_feature: None,
+        priority: 21,
+    },
+    TierDescriptor {
         name: "wasm128",
         suffix: "wasm128",
         token_path: "archmage::Wasm128Token",
@@ -1430,7 +1439,7 @@ impl Parse for IncantInput {
 /// order (highest priority first).
 ///
 /// Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
-/// `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
+/// `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
 ///
 /// # Passthrough Mode (already have token)
 ///

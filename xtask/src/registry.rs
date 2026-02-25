@@ -47,9 +47,9 @@ pub struct TokenDef {
     /// Extraction method name (e.g., "v2", "v3", "neon").
     #[serde(default)]
     pub short_name: Option<String>,
-    /// Parent token in the hierarchy (for extraction method chain).
+    /// Parent tokens in the hierarchy (for extraction method chain, DAG).
     #[serde(default)]
-    pub parent: Option<String>,
+    pub parents: Vec<String>,
     /// Extra extraction method names (e.g., ["avx512"] for X64V4Token).
     #[serde(default)]
     pub extraction_aliases: Vec<String>,
@@ -336,7 +336,7 @@ impl Registry {
         let token_names: HashSet<&str> = self.token.iter().map(|t| t.name.as_str()).collect();
 
         for token in &self.token {
-            if let Some(parent) = &token.parent {
+            for parent in &token.parents {
                 if !token_names.contains(parent.as_str()) {
                     bail!("Token {} references unknown parent: {}", token.name, parent);
                 }
@@ -350,6 +350,24 @@ impl Registry {
                             parent,
                             parent_def.arch
                         );
+                    }
+                }
+            }
+
+            // Cycle detection: BFS from this token through parents must not revisit itself
+            let mut visited = HashSet::new();
+            let mut queue: std::collections::VecDeque<&str> =
+                token.parents.iter().map(|s| s.as_str()).collect();
+            while let Some(name) = queue.pop_front() {
+                if name == token.name {
+                    bail!("Token {} has a cycle in its parent hierarchy", token.name);
+                }
+                if !visited.insert(name) {
+                    continue;
+                }
+                if let Some(ancestor) = self.token.iter().find(|t| t.name == name) {
+                    for gp in &ancestor.parents {
+                        queue.push_back(gp.as_str());
                     }
                 }
             }
@@ -591,12 +609,12 @@ mod tests {
         let registry = Registry::load(&path).expect("Failed to load token-registry.toml");
 
         // Basic counts
-        assert_eq!(registry.token.len(), 11, "Expected 11 tokens");
-        assert_eq!(registry.traits.len(), 8, "Expected 8 traits");
+        assert_eq!(registry.token.len(), 16, "Expected 16 tokens");
+        assert_eq!(registry.traits.len(), 10, "Expected 10 traits");
         assert_eq!(
             registry.width_namespace.len(),
-            5,
-            "Expected 5 width namespaces"
+            4,
+            "Expected 4 width namespaces"
         );
         assert_eq!(
             registry.magetypes_file.len(),

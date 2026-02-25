@@ -289,14 +289,16 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
             "}
         }
         "wasm" => {
-            // No testable_dispatch guard for WASM — simd128 is a compile-time
-            // decision with no runtime detection to toggle.
+            // No testable_dispatch guard for WASM — compile-time only,
+            // no runtime detection to toggle.
+            let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
+            let all_conditions = cfg_all_features(&check_features);
             formatdoc! {"
                 {INDENT}#[inline]
                 {INDENT}fn compiled_with() -> Option<bool> {{
-                {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
+                {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
                 {INDENT}    {{ Some(true) }}
-                {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]
+                {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
                 {INDENT}    {{ None }}
                 {INDENT}}}
             "}
@@ -309,7 +311,7 @@ fn gen_summon(token: &TokenDef, arch: &str) -> String {
     match arch {
         "x86" => gen_summon_x86(token),
         "aarch64" => gen_summon_aarch64(token),
-        "wasm" => gen_summon_wasm(),
+        "wasm" => gen_summon_wasm(token),
         _ => unreachable!("unknown arch: {arch}"),
     }
 }
@@ -411,20 +413,20 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
     "}
 }
 
-fn gen_summon_wasm() -> String {
-    // No testable_dispatch guard for WASM — simd128 is a compile-time
-    // decision with no runtime detection to toggle. The testable_dispatch
-    // feature only makes sense for x86/aarch64 where runtime CPUID checks
-    // can be bypassed.
+fn gen_summon_wasm(token: &TokenDef) -> String {
+    // No testable_dispatch guard for WASM — compile-time only,
+    // no runtime detection to toggle.
+    let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
+    let all_conditions = cfg_all_features(&check_features);
     formatdoc! {"
         {INDENT}#[allow(deprecated)]
         {INDENT}#[inline]
         {INDENT}fn summon() -> Option<Self> {{
-        {INDENT}    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
+        {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
         {INDENT}    {{
         {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
         {INDENT}    }}
-        {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", target_feature = \"simd128\")))]
+        {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
         {INDENT}    {{
         {INDENT}        None
         {INDENT}    }}
@@ -587,16 +589,21 @@ fn gen_cascade_code(descendants: &[&TokenDef], all_tokens_in_file: &[&TokenDef])
     cascade
 }
 
-/// Walk parent chain and collect all ancestors (parent, grandparent, ...).
+/// BFS through parent DAG and collect all ancestors (deduplicated, stable order).
 fn collect_ancestors<'a>(reg: &'a Registry, token: &'a TokenDef) -> Vec<&'a TokenDef> {
     let mut ancestors = Vec::new();
-    let mut current = token;
-    while let Some(parent_name) = &current.parent {
-        if let Some(parent) = reg.token.iter().find(|t| t.name == *parent_name) {
+    let mut visited = std::collections::HashSet::new();
+    let mut queue: std::collections::VecDeque<&str> =
+        token.parents.iter().map(|s| s.as_str()).collect();
+    while let Some(name) = queue.pop_front() {
+        if !visited.insert(name) {
+            continue;
+        }
+        if let Some(parent) = reg.token.iter().find(|t| t.name == name) {
             ancestors.push(parent);
-            current = parent;
-        } else {
-            break;
+            for gp in &parent.parents {
+                queue.push_back(gp.as_str());
+            }
         }
     }
     ancestors
@@ -871,7 +878,7 @@ fn feature_flag_strings(token: &TokenDef) -> (&'static str, String, String, Stri
     let filtered: Vec<&str> = match token.arch.as_str() {
         "x86" => token.features.iter().map(|s| s.as_str()).collect(),
         "aarch64" => token.features.iter().map(|s| s.as_str()).collect(),
-        "wasm" => vec!["simd128"],
+        "wasm" => token.features.iter().map(|s| s.as_str()).collect(),
         _ => vec![],
     };
 

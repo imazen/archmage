@@ -71,15 +71,19 @@
   // ========== Token Hierarchy Helpers ==========
 
   function getAncestors(tokenName) {
-    // Returns array from root to tokenName (inclusive)
-    const chain = [];
-    let cur = tokenName;
-    while (cur) {
-      chain.unshift(cur);
+    // Returns set of tokenName + all ancestors (BFS through parents DAG)
+    const result = new Set([tokenName]);
+    const queue = [tokenName];
+    while (queue.length > 0) {
+      const cur = queue.shift();
       const t = tokenMap[cur];
-      cur = t && t.parent ? t.parent : null;
+      if (t && t.parents) {
+        for (const p of t.parents) {
+          if (!result.has(p)) { result.add(p); queue.push(p); }
+        }
+      }
     }
-    return chain;
+    return [...result];
   }
 
   function getTokensForArch(arch) {
@@ -87,15 +91,16 @@
   }
 
   function buildTreeFlat(tokens) {
-    // DFS order with depth
+    // DFS order with depth (use first parent as primary for tree display)
     const childMap = {};
     const roots = [];
     for (const t of tokens) {
-      if (!t.parent) {
+      const primary = t.parents && t.parents.length > 0 ? t.parents[0] : null;
+      if (!primary) {
         roots.push(t);
       } else {
-        if (!childMap[t.parent]) childMap[t.parent] = [];
-        childMap[t.parent].push(t);
+        if (!childMap[primary]) childMap[primary] = [];
+        childMap[primary].push(t);
       }
     }
     const flat = [];

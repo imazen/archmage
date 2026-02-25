@@ -368,10 +368,36 @@ mod wasm32_tests {
         }
     }
 
+    /// Wasm128RelaxedToken should be available when compiled with both
+    /// simd128 and relaxed-simd target features.
+    #[test]
+    fn wasm128_relaxed_available_with_relaxed_simd() {
+        #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
+        {
+            assert!(
+                Wasm128RelaxedToken::summon().is_some(),
+                "Wasm128RelaxedToken should be available with +simd128,+relaxed-simd"
+            );
+            // Relaxed implies base wasm128
+            assert!(
+                Wasm128Token::summon().is_some(),
+                "Wasm128Token should be available when relaxed-simd is enabled"
+            );
+        }
+        #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
+        {
+            println!("relaxed-simd not enabled - Wasm128RelaxedToken not available");
+        }
+    }
+
     #[test]
     fn print_detected_features() {
         println!("Feature detection results (wasm32):");
-        println!("  Wasm128:  {}", Wasm128Token::summon().is_some());
+        println!("  Wasm128:          {}", Wasm128Token::summon().is_some());
+        println!(
+            "  Wasm128Relaxed:   {}",
+            Wasm128RelaxedToken::summon().is_some()
+        );
     }
 }
 
@@ -413,6 +439,10 @@ fn wrong_arch_tokens_return_none() {
         assert!(
             Wasm128Token::summon().is_none(),
             "WASM tokens should be None on non-WASM"
+        );
+        assert!(
+            Wasm128RelaxedToken::summon().is_none(),
+            "WASM relaxed tokens should be None on non-WASM"
         );
     }
 }

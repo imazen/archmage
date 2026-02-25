@@ -517,6 +517,9 @@ impl X64CryptoToken {
     /// Returns `Err` when all required features are compile-time enabled
     /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
     /// elided the runtime checks.
+    ///
+    /// **Cascading:** Also affects descendants:
+    /// - `X64V3CryptoToken`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
@@ -559,6 +562,8 @@ impl X64CryptoToken {
             X64_CRYPTO_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
             X64_CRYPTO_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_CRYPTO_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_CRYPTO_CACHE.store(v, Ordering::Relaxed);
             Ok(())
         }
     }
@@ -1073,6 +1078,12 @@ impl X64V3CryptoToken {
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
+    }
+    /// Get a X64CryptoToken (x86-64-v3 Crypto implies x86-64 Crypto)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn x64_crypto(self) -> X64CryptoToken {
+        unsafe { X64CryptoToken::forge_token_dangerously() }
     }
     /// Get a X64V2Token (x86-64-v3 Crypto implies x86-64-v2)
     #[allow(deprecated)]

@@ -51,4 +51,83 @@ impl SimdToken for Wasm128Token {
     }
 }
 
+/// Proof that WASM Relaxed SIMD is available.
+///
+/// Relaxed SIMD (Wasm 3.0) provides 28 instructions that trade strict
+/// cross-platform determinism for performance: FMA, relaxed lane-select,
+/// relaxed min/max, dot products, and relaxed truncation.
+///
+/// Supported by Chrome 114+, Firefox 145+, Safari 16.4+, and Wasmtime 14+.
+/// Stable in Rust since 1.82.
+#[derive(Clone, Copy, Debug)]
+pub struct Wasm128RelaxedToken {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for Wasm128RelaxedToken {}
+
+impl SimdToken for Wasm128RelaxedToken {
+    const NAME: &'static str = "WASM Relaxed SIMD";
+    const TARGET_FEATURES: &'static str = "simd128,relaxed-simd";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+simd128,+relaxed-simd";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-simd128,-relaxed-simd";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            target_feature = "relaxed-simd"
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            target_feature = "relaxed-simd"
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
+    #[inline]
+    fn summon() -> Option<Self> {
+        #[cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            target_feature = "relaxed-simd"
+        ))]
+        {
+            Some(unsafe { Self::forge_token_dangerously() })
+        }
+        #[cfg(not(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            target_feature = "relaxed-simd"
+        )))]
+        {
+            None
+        }
+    }
+
+    #[inline(always)]
+    #[allow(deprecated)]
+    unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Wasm128RelaxedToken {
+    /// Get a Wasm128Token (WASM Relaxed SIMD implies WASM SIMD128)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn wasm128(self) -> Wasm128Token {
+        unsafe { Wasm128Token::forge_token_dangerously() }
+    }
+}
+
 impl Has128BitSimd for Wasm128Token {}
+impl Has128BitSimd for Wasm128RelaxedToken {}

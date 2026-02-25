@@ -159,6 +159,7 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
             "bf16",
         ]),
         "Wasm128Token" => Some(&["simd128"]),
+        "Wasm128RelaxedToken" => Some(&["simd128", "relaxed-simd"]),
         _ => None,
     }
 }
@@ -367,6 +368,7 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
             "bf16",
         ]),
         "Wasm128Token" => Some(&["simd128"]),
+        "Wasm128RelaxedToken" => Some(&["simd128", "relaxed-simd"]),
 
         _ => None,
     }
@@ -392,6 +394,7 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
         "Arm64V2Token" => Some("aarch64"),
         "Arm64V3Token" => Some("aarch64"),
         "Wasm128Token" => Some("wasm32"),
+        "Wasm128RelaxedToken" => Some("wasm32"),
         _ => None,
     }
 }
@@ -421,6 +424,7 @@ pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
     "Arm64V2Token",
     "Arm64V3Token",
     "Wasm128Token",
+    "Wasm128RelaxedToken",
 ];
 
 /// All trait names that exist in the runtime crate.

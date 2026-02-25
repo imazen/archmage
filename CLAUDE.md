@@ -2,6 +2,19 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
+## CRITICAL: Every Conversation Health Check
+
+**Run these checks at the start of every conversation, even if the user doesn't ask:**
+
+```bash
+just generate           # Regenerate all code from token-registry.toml
+just validate-registry  # Validate token-registry.toml
+just validate-tokens    # Validate magetypes safety + summon() checks
+just soundness          # Static intrinsic soundness verification
+```
+
+If any fail, fix them before starting other work. Report failures to the user.
+
 ## CRITICAL: Naming Conventions
 
 **Use the thematic names, not the boring ones:**
@@ -263,7 +276,7 @@ pub fn sum(data: &[f32]) -> f32 {
 ```
 
 Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`,
-`neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
+`neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
 Scalar is always implicit.
 
 **Passthrough mode** (already have token):
