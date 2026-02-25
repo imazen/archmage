@@ -15,6 +15,8 @@ mod registry;
 mod simd_types;
 mod token_gen;
 
+use intrinsics_browser::parse_csv_line;
+
 /// Version of safe_unaligned_simd we're generating from
 const SAFE_SIMD_VERSION: &str = "0.2.4";
 
@@ -75,10 +77,13 @@ fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
         .with_context(|| format!("Failed to read {}. Run: python3 xtask/extract_intrinsics.py > docs/intrinsics/complete_intrinsics.csv", csv_path.display()))?;
 
     for line in content.lines().skip(1) {
-        let fields: Vec<&str> = line.splitn(6, ',').collect();
+        if line.trim().is_empty() {
+            continue;
+        }
+        let fields = parse_csv_line(line);
         if fields.len() >= 4 {
-            let name = fields[1].to_string();
-            let features = fields[2].to_string();
+            let name = fields[1].clone();
+            let features = fields[2].clone();
             let is_unsafe = fields[3] == "True";
             db.insert(
                 name,
@@ -2210,10 +2215,10 @@ fn refresh_intrinsics_database() -> Result<()> {
         csv.lines()
             .skip(1) // header
             .filter_map(|line| {
-                let parts: Vec<&str> = line.split(',').collect();
-                if parts.len() >= 4 {
-                    let name = parts[1].to_string();
-                    let is_unsafe = parts[3] == "True";
+                let fields = parse_csv_line(line);
+                if fields.len() >= 4 {
+                    let name = fields[1].clone();
+                    let is_unsafe = fields[3] == "True";
                     Some((name, is_unsafe))
                 } else {
                     None

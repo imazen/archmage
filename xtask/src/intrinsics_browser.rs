@@ -63,7 +63,7 @@ fn parse_csv(content: &str) -> Vec<CsvIntrinsic> {
 }
 
 /// Parse a single CSV line respecting RFC 4180 quoting.
-fn parse_csv_line(line: &str) -> Vec<String> {
+pub(crate) fn parse_csv_line(line: &str) -> Vec<String> {
     let mut fields = Vec::new();
     let mut current = String::new();
     let mut in_quotes = false;

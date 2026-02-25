@@ -3,15 +3,167 @@
 Auto-generated reference mapping stdarch intrinsics to archmage tokens.
 Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 
-## NeonToken / Arm64 (4181 intrinsics)
+## NeonAesToken (115 intrinsics)
 
 ### Load
 
-- `vld1_dup_f16`
+- `vld1_dup_p64` (unsafe)
+- `vld1_lane_p64` (unsafe)
+- `vld1_p64` (unsafe)
+- `vld1_p64_x2` (unsafe)
+- `vld1_p64_x3` (unsafe)
+- `vld1_p64_x4` (unsafe)
+- `vld1q_dup_p64` (unsafe)
+- `vld1q_lane_p64` (unsafe)
+- `vld1q_p64` (unsafe)
+- `vld1q_p64_x2` (unsafe)
+- `vld1q_p64_x3` (unsafe)
+- `vld1q_p64_x4` (unsafe)
+- `vld2_dup_p64` (unsafe)
+- `vld2_lane_p64` (unsafe)
+- `vld2_p64` (unsafe)
+- `vld2q_dup_p64` (unsafe)
+- `vld2q_lane_p64` (unsafe)
+- `vld2q_p64` (unsafe)
+- `vld3_dup_p64` (unsafe)
+- `vld3_lane_p64` (unsafe)
+- `vld3_p64` (unsafe)
+- `vld3q_dup_p64` (unsafe)
+- `vld3q_lane_p64` (unsafe)
+- `vld3q_p64` (unsafe)
+- `vld4_dup_p64` (unsafe)
+- `vld4_lane_p64` (unsafe)
+- `vld4_p64` (unsafe)
+- `vld4q_dup_p64` (unsafe)
+- `vld4q_lane_p64` (unsafe)
+- `vld4q_p64` (unsafe)
+
+### Other
+
+- `vcreate_p64`
+- `vmull_high_p64`
+- `vmull_p64`
+- `vreinterpret_p16_p64`
+- `vreinterpret_p64_p16`
+- `vreinterpret_p64_p8`
+- `vreinterpret_p64_s16`
+- `vreinterpret_p64_s32`
+- `vreinterpret_p64_s8`
+- `vreinterpret_p64_u16`
+- `vreinterpret_p64_u32`
+- `vreinterpret_p64_u8`
+- `vreinterpret_p8_p64`
+- `vreinterpret_s16_p64`
+- `vreinterpret_s32_p64`
+- `vreinterpret_s8_p64`
+- `vreinterpret_u16_p64`
+- `vreinterpret_u32_p64`
+- `vreinterpret_u8_p64`
+- `vreinterpretq_p128_p16`
+- `vreinterpretq_p128_p64`
+- `vreinterpretq_p128_p8`
+- `vreinterpretq_p128_s16`
+- `vreinterpretq_p128_s32`
+- `vreinterpretq_p128_s64`
+- `vreinterpretq_p128_s8`
+- `vreinterpretq_p128_u16`
+- `vreinterpretq_p128_u32`
+- `vreinterpretq_p128_u64`
+- `vreinterpretq_p128_u8`
+- `vreinterpretq_p16_p128`
+- `vreinterpretq_p16_p64`
+- `vreinterpretq_p64_p128`
+- `vreinterpretq_p64_p16`
+- `vreinterpretq_p64_p8`
+- `vreinterpretq_p64_s16`
+- `vreinterpretq_p64_s32`
+- `vreinterpretq_p64_s8`
+- `vreinterpretq_p64_u16`
+- `vreinterpretq_p64_u32`
+- `vreinterpretq_p64_u8`
+- `vreinterpretq_p8_p128`
+- `vreinterpretq_p8_p64`
+- `vreinterpretq_s16_p128`
+- `vreinterpretq_s16_p64`
+- `vreinterpretq_s32_p128`
+- `vreinterpretq_s32_p64`
+- `vreinterpretq_s64_p128`
+- `vreinterpretq_s8_p128`
+- `vreinterpretq_s8_p64`
+- `vreinterpretq_u16_p128`
+- `vreinterpretq_u16_p64`
+- `vreinterpretq_u32_p128`
+- `vreinterpretq_u32_p64`
+- `vreinterpretq_u64_p128`
+- `vreinterpretq_u8_p128`
+- `vreinterpretq_u8_p64`
+- `vset_lane_p64`
+- `vsetq_lane_p64`
+- `vsli_n_p64`
+- `vsliq_n_p64`
+- `vsri_n_p64`
+- `vsriq_n_p64`
+
+### Store
+
+- `vst1_lane_p64` (unsafe)
+- `vst1_p64` (unsafe)
+- `vst1_p64_x2` (unsafe)
+- `vst1_p64_x3` (unsafe)
+- `vst1_p64_x4` (unsafe)
+- `vst1q_lane_p64` (unsafe)
+- `vst1q_p64` (unsafe)
+- `vst1q_p64_x2` (unsafe)
+- `vst1q_p64_x3` (unsafe)
+- `vst1q_p64_x4` (unsafe)
+- `vst2_lane_p64` (unsafe)
+- `vst2_p64` (unsafe)
+- `vst2q_lane_p64` (unsafe)
+- `vst2q_p64` (unsafe)
+- `vst3_lane_p64` (unsafe)
+- `vst3_p64` (unsafe)
+- `vst3q_lane_p64` (unsafe)
+- `vst3q_p64` (unsafe)
+- `vst4_lane_p64` (unsafe)
+- `vst4_p64` (unsafe)
+- `vst4q_lane_p64` (unsafe)
+- `vst4q_p64` (unsafe)
+
+## NeonSha3Token (22 intrinsics)
+
+### Other
+
+- `vbcaxq_s16`
+- `vbcaxq_s32`
+- `vbcaxq_s64`
+- `vbcaxq_s8`
+- `vbcaxq_u16`
+- `vbcaxq_u32`
+- `vbcaxq_u64`
+- `vbcaxq_u8`
+- `veor3q_s16`
+- `veor3q_s32`
+- `veor3q_s64`
+- `veor3q_s8`
+- `veor3q_u16`
+- `veor3q_u32`
+- `veor3q_u64`
+- `veor3q_u8`
+- `vrax1q_u64`
+- `vsha512h2q_u64`
+- `vsha512hq_u64`
+- `vsha512su0q_u64`
+- `vsha512su1q_u64`
+- `vxarq_u64`
+
+## NeonToken / Arm64 (4044 intrinsics)
+
+### Load
+
+- `vld1_dup_f16` (unsafe)
 - `vld1_dup_f32` (unsafe)
 - `vld1_dup_f64` (unsafe)
 - `vld1_dup_p16` (unsafe)
-- `vld1_dup_p64`
 - `vld1_dup_p8` (unsafe)
 - `vld1_dup_s16` (unsafe)
 - `vld1_dup_s32` (unsafe)
@@ -21,10 +173,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld1_dup_u32` (unsafe)
 - `vld1_dup_u64` (unsafe)
 - `vld1_dup_u8` (unsafe)
-- `vld1_f16`
-- `vld1_f16_x2`
-- `vld1_f16_x3`
-- `vld1_f16_x4`
+- `vld1_f16` (unsafe)
+- `vld1_f16_x2` (unsafe)
+- `vld1_f16_x3` (unsafe)
+- `vld1_f16_x4` (unsafe)
 - `vld1_f32` (unsafe)
 - `vld1_f32_x2` (unsafe)
 - `vld1_f32_x3` (unsafe)
@@ -33,11 +185,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld1_f64_x2` (unsafe)
 - `vld1_f64_x3` (unsafe)
 - `vld1_f64_x4` (unsafe)
-- `vld1_lane_f16`
+- `vld1_lane_f16` (unsafe)
 - `vld1_lane_f32` (unsafe)
 - `vld1_lane_f64` (unsafe)
 - `vld1_lane_p16` (unsafe)
-- `vld1_lane_p64`
 - `vld1_lane_p8` (unsafe)
 - `vld1_lane_s16` (unsafe)
 - `vld1_lane_s32` (unsafe)
@@ -51,10 +202,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld1_p16_x2` (unsafe)
 - `vld1_p16_x3` (unsafe)
 - `vld1_p16_x4` (unsafe)
-- `vld1_p64`
-- `vld1_p64_x2`
-- `vld1_p64_x3`
-- `vld1_p64_x4`
 - `vld1_p8` (unsafe)
 - `vld1_p8_x2` (unsafe)
 - `vld1_p8_x3` (unsafe)
@@ -91,11 +238,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld1_u8_x2` (unsafe)
 - `vld1_u8_x3` (unsafe)
 - `vld1_u8_x4` (unsafe)
-- `vld1q_dup_f16`
+- `vld1q_dup_f16` (unsafe)
 - `vld1q_dup_f32` (unsafe)
 - `vld1q_dup_f64` (unsafe)
 - `vld1q_dup_p16` (unsafe)
-- `vld1q_dup_p64`
 - `vld1q_dup_p8` (unsafe)
 - `vld1q_dup_s16` (unsafe)
 - `vld1q_dup_s32` (unsafe)
@@ -105,10 +251,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld1q_dup_u32` (unsafe)
 - `vld1q_dup_u64` (unsafe)
 - `vld1q_dup_u8` (unsafe)
-- `vld1q_f16`
-- `vld1q_f16_x2`
-- `vld1q_f16_x3`
-- `vld1q_f16_x4`
+- `vld1q_f16` (unsafe)
+- `vld1q_f16_x2` (unsafe)
+- `vld1q_f16_x3` (unsafe)
+- `vld1q_f16_x4` (unsafe)
 - `vld1q_f32` (unsafe)
 - `vld1q_f32_x2` (unsafe)
 - `vld1q_f32_x3` (unsafe)
@@ -117,11 +263,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld1q_f64_x2` (unsafe)
 - `vld1q_f64_x3` (unsafe)
 - `vld1q_f64_x4` (unsafe)
-- `vld1q_lane_f16`
+- `vld1q_lane_f16` (unsafe)
 - `vld1q_lane_f32` (unsafe)
 - `vld1q_lane_f64` (unsafe)
 - `vld1q_lane_p16` (unsafe)
-- `vld1q_lane_p64`
 - `vld1q_lane_p8` (unsafe)
 - `vld1q_lane_s16` (unsafe)
 - `vld1q_lane_s32` (unsafe)
@@ -135,10 +280,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld1q_p16_x2` (unsafe)
 - `vld1q_p16_x3` (unsafe)
 - `vld1q_p16_x4` (unsafe)
-- `vld1q_p64`
-- `vld1q_p64_x2`
-- `vld1q_p64_x3`
-- `vld1q_p64_x4`
 - `vld1q_p8` (unsafe)
 - `vld1q_p8_x2` (unsafe)
 - `vld1q_p8_x3` (unsafe)
@@ -175,11 +316,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld1q_u8_x2` (unsafe)
 - `vld1q_u8_x3` (unsafe)
 - `vld1q_u8_x4` (unsafe)
-- `vld2_dup_f16`
+- `vld2_dup_f16` (unsafe)
 - `vld2_dup_f32` (unsafe)
 - `vld2_dup_f64` (unsafe)
 - `vld2_dup_p16` (unsafe)
-- `vld2_dup_p64`
 - `vld2_dup_p8` (unsafe)
 - `vld2_dup_s16` (unsafe)
 - `vld2_dup_s32` (unsafe)
@@ -189,25 +329,23 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld2_dup_u32` (unsafe)
 - `vld2_dup_u64` (unsafe)
 - `vld2_dup_u8` (unsafe)
-- `vld2_f16`
+- `vld2_f16` (unsafe)
 - `vld2_f32` (unsafe)
 - `vld2_f64` (unsafe)
-- `vld2_lane_f16`
-- `vld2_lane_f32`
+- `vld2_lane_f16` (unsafe)
+- `vld2_lane_f32` (unsafe)
 - `vld2_lane_f64` (unsafe)
 - `vld2_lane_p16` (unsafe)
-- `vld2_lane_p64`
 - `vld2_lane_p8` (unsafe)
-- `vld2_lane_s16`
-- `vld2_lane_s32`
+- `vld2_lane_s16` (unsafe)
+- `vld2_lane_s32` (unsafe)
 - `vld2_lane_s64` (unsafe)
-- `vld2_lane_s8`
+- `vld2_lane_s8` (unsafe)
 - `vld2_lane_u16` (unsafe)
 - `vld2_lane_u32` (unsafe)
 - `vld2_lane_u64` (unsafe)
 - `vld2_lane_u8` (unsafe)
 - `vld2_p16` (unsafe)
-- `vld2_p64`
 - `vld2_p8` (unsafe)
 - `vld2_s16` (unsafe)
 - `vld2_s32` (unsafe)
@@ -217,11 +355,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld2_u32` (unsafe)
 - `vld2_u64` (unsafe)
 - `vld2_u8` (unsafe)
-- `vld2q_dup_f16`
+- `vld2q_dup_f16` (unsafe)
 - `vld2q_dup_f32` (unsafe)
 - `vld2q_dup_f64` (unsafe)
 - `vld2q_dup_p16` (unsafe)
-- `vld2q_dup_p64`
 - `vld2q_dup_p8` (unsafe)
 - `vld2q_dup_s16` (unsafe)
 - `vld2q_dup_s32` (unsafe)
@@ -231,17 +368,16 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld2q_dup_u32` (unsafe)
 - `vld2q_dup_u64` (unsafe)
 - `vld2q_dup_u8` (unsafe)
-- `vld2q_f16`
+- `vld2q_f16` (unsafe)
 - `vld2q_f32` (unsafe)
 - `vld2q_f64` (unsafe)
-- `vld2q_lane_f16`
-- `vld2q_lane_f32`
+- `vld2q_lane_f16` (unsafe)
+- `vld2q_lane_f32` (unsafe)
 - `vld2q_lane_f64` (unsafe)
 - `vld2q_lane_p16` (unsafe)
-- `vld2q_lane_p64`
 - `vld2q_lane_p8` (unsafe)
-- `vld2q_lane_s16`
-- `vld2q_lane_s32`
+- `vld2q_lane_s16` (unsafe)
+- `vld2q_lane_s32` (unsafe)
 - `vld2q_lane_s64` (unsafe)
 - `vld2q_lane_s8` (unsafe)
 - `vld2q_lane_u16` (unsafe)
@@ -249,7 +385,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld2q_lane_u64` (unsafe)
 - `vld2q_lane_u8` (unsafe)
 - `vld2q_p16` (unsafe)
-- `vld2q_p64`
 - `vld2q_p8` (unsafe)
 - `vld2q_s16` (unsafe)
 - `vld2q_s32` (unsafe)
@@ -259,73 +394,68 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld2q_u32` (unsafe)
 - `vld2q_u64` (unsafe)
 - `vld2q_u8` (unsafe)
-- `vld3_dup_f16`
-- `vld3_dup_f32`
+- `vld3_dup_f16` (unsafe)
+- `vld3_dup_f32` (unsafe)
 - `vld3_dup_f64` (unsafe)
 - `vld3_dup_p16` (unsafe)
-- `vld3_dup_p64`
 - `vld3_dup_p8` (unsafe)
-- `vld3_dup_s16`
-- `vld3_dup_s32`
-- `vld3_dup_s64`
-- `vld3_dup_s8`
+- `vld3_dup_s16` (unsafe)
+- `vld3_dup_s32` (unsafe)
+- `vld3_dup_s64` (unsafe)
+- `vld3_dup_s8` (unsafe)
 - `vld3_dup_u16` (unsafe)
 - `vld3_dup_u32` (unsafe)
 - `vld3_dup_u64` (unsafe)
 - `vld3_dup_u8` (unsafe)
-- `vld3_f16`
-- `vld3_f32`
+- `vld3_f16` (unsafe)
+- `vld3_f32` (unsafe)
 - `vld3_f64` (unsafe)
-- `vld3_lane_f16`
-- `vld3_lane_f32`
+- `vld3_lane_f16` (unsafe)
+- `vld3_lane_f32` (unsafe)
 - `vld3_lane_f64` (unsafe)
 - `vld3_lane_p16` (unsafe)
-- `vld3_lane_p64`
 - `vld3_lane_p8` (unsafe)
-- `vld3_lane_s16`
-- `vld3_lane_s32`
+- `vld3_lane_s16` (unsafe)
+- `vld3_lane_s32` (unsafe)
 - `vld3_lane_s64` (unsafe)
-- `vld3_lane_s8`
+- `vld3_lane_s8` (unsafe)
 - `vld3_lane_u16` (unsafe)
 - `vld3_lane_u32` (unsafe)
 - `vld3_lane_u64` (unsafe)
 - `vld3_lane_u8` (unsafe)
 - `vld3_p16` (unsafe)
-- `vld3_p64`
 - `vld3_p8` (unsafe)
-- `vld3_s16`
-- `vld3_s32`
-- `vld3_s64`
-- `vld3_s8`
+- `vld3_s16` (unsafe)
+- `vld3_s32` (unsafe)
+- `vld3_s64` (unsafe)
+- `vld3_s8` (unsafe)
 - `vld3_u16` (unsafe)
 - `vld3_u32` (unsafe)
 - `vld3_u64` (unsafe)
 - `vld3_u8` (unsafe)
-- `vld3q_dup_f16`
-- `vld3q_dup_f32`
+- `vld3q_dup_f16` (unsafe)
+- `vld3q_dup_f32` (unsafe)
 - `vld3q_dup_f64` (unsafe)
 - `vld3q_dup_p16` (unsafe)
-- `vld3q_dup_p64`
 - `vld3q_dup_p8` (unsafe)
-- `vld3q_dup_s16`
-- `vld3q_dup_s32`
+- `vld3q_dup_s16` (unsafe)
+- `vld3q_dup_s32` (unsafe)
 - `vld3q_dup_s64` (unsafe)
-- `vld3q_dup_s8`
+- `vld3q_dup_s8` (unsafe)
 - `vld3q_dup_u16` (unsafe)
 - `vld3q_dup_u32` (unsafe)
 - `vld3q_dup_u64` (unsafe)
 - `vld3q_dup_u8` (unsafe)
-- `vld3q_f16`
-- `vld3q_f32`
+- `vld3q_f16` (unsafe)
+- `vld3q_f32` (unsafe)
 - `vld3q_f64` (unsafe)
-- `vld3q_lane_f16`
-- `vld3q_lane_f32`
+- `vld3q_lane_f16` (unsafe)
+- `vld3q_lane_f32` (unsafe)
 - `vld3q_lane_f64` (unsafe)
 - `vld3q_lane_p16` (unsafe)
-- `vld3q_lane_p64`
 - `vld3q_lane_p8` (unsafe)
-- `vld3q_lane_s16`
-- `vld3q_lane_s32`
+- `vld3q_lane_s16` (unsafe)
+- `vld3q_lane_s32` (unsafe)
 - `vld3q_lane_s64` (unsafe)
 - `vld3q_lane_s8` (unsafe)
 - `vld3q_lane_u16` (unsafe)
@@ -333,63 +463,58 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld3q_lane_u64` (unsafe)
 - `vld3q_lane_u8` (unsafe)
 - `vld3q_p16` (unsafe)
-- `vld3q_p64`
 - `vld3q_p8` (unsafe)
-- `vld3q_s16`
-- `vld3q_s32`
+- `vld3q_s16` (unsafe)
+- `vld3q_s32` (unsafe)
 - `vld3q_s64` (unsafe)
-- `vld3q_s8`
+- `vld3q_s8` (unsafe)
 - `vld3q_u16` (unsafe)
 - `vld3q_u32` (unsafe)
 - `vld3q_u64` (unsafe)
 - `vld3q_u8` (unsafe)
-- `vld4_dup_f16`
+- `vld4_dup_f16` (unsafe)
 - `vld4_dup_f32` (unsafe)
 - `vld4_dup_f64` (unsafe)
 - `vld4_dup_p16` (unsafe)
-- `vld4_dup_p64`
 - `vld4_dup_p8` (unsafe)
 - `vld4_dup_s16` (unsafe)
 - `vld4_dup_s32` (unsafe)
-- `vld4_dup_s64`
+- `vld4_dup_s64` (unsafe)
 - `vld4_dup_s8` (unsafe)
 - `vld4_dup_u16` (unsafe)
 - `vld4_dup_u32` (unsafe)
 - `vld4_dup_u64` (unsafe)
 - `vld4_dup_u8` (unsafe)
-- `vld4_f16`
-- `vld4_f32`
+- `vld4_f16` (unsafe)
+- `vld4_f32` (unsafe)
 - `vld4_f64` (unsafe)
-- `vld4_lane_f16`
-- `vld4_lane_f32`
+- `vld4_lane_f16` (unsafe)
+- `vld4_lane_f32` (unsafe)
 - `vld4_lane_f64` (unsafe)
 - `vld4_lane_p16` (unsafe)
-- `vld4_lane_p64`
 - `vld4_lane_p8` (unsafe)
-- `vld4_lane_s16`
-- `vld4_lane_s32`
+- `vld4_lane_s16` (unsafe)
+- `vld4_lane_s32` (unsafe)
 - `vld4_lane_s64` (unsafe)
-- `vld4_lane_s8`
+- `vld4_lane_s8` (unsafe)
 - `vld4_lane_u16` (unsafe)
 - `vld4_lane_u32` (unsafe)
 - `vld4_lane_u64` (unsafe)
 - `vld4_lane_u8` (unsafe)
 - `vld4_p16` (unsafe)
-- `vld4_p64`
 - `vld4_p8` (unsafe)
-- `vld4_s16`
-- `vld4_s32`
-- `vld4_s64`
-- `vld4_s8`
+- `vld4_s16` (unsafe)
+- `vld4_s32` (unsafe)
+- `vld4_s64` (unsafe)
+- `vld4_s8` (unsafe)
 - `vld4_u16` (unsafe)
 - `vld4_u32` (unsafe)
 - `vld4_u64` (unsafe)
 - `vld4_u8` (unsafe)
-- `vld4q_dup_f16`
+- `vld4q_dup_f16` (unsafe)
 - `vld4q_dup_f32` (unsafe)
 - `vld4q_dup_f64` (unsafe)
 - `vld4q_dup_p16` (unsafe)
-- `vld4q_dup_p64`
 - `vld4q_dup_p8` (unsafe)
 - `vld4q_dup_s16` (unsafe)
 - `vld4q_dup_s32` (unsafe)
@@ -399,17 +524,16 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld4q_dup_u32` (unsafe)
 - `vld4q_dup_u64` (unsafe)
 - `vld4q_dup_u8` (unsafe)
-- `vld4q_f16`
-- `vld4q_f32`
+- `vld4q_f16` (unsafe)
+- `vld4q_f32` (unsafe)
 - `vld4q_f64` (unsafe)
-- `vld4q_lane_f16`
-- `vld4q_lane_f32`
+- `vld4q_lane_f16` (unsafe)
+- `vld4q_lane_f32` (unsafe)
 - `vld4q_lane_f64` (unsafe)
 - `vld4q_lane_p16` (unsafe)
-- `vld4q_lane_p64`
 - `vld4q_lane_p8` (unsafe)
-- `vld4q_lane_s16`
-- `vld4q_lane_s32`
+- `vld4q_lane_s16` (unsafe)
+- `vld4q_lane_s32` (unsafe)
 - `vld4q_lane_s64` (unsafe)
 - `vld4q_lane_s8` (unsafe)
 - `vld4q_lane_u16` (unsafe)
@@ -417,12 +541,11 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld4q_lane_u64` (unsafe)
 - `vld4q_lane_u8` (unsafe)
 - `vld4q_p16` (unsafe)
-- `vld4q_p64`
 - `vld4q_p8` (unsafe)
-- `vld4q_s16`
-- `vld4q_s32`
+- `vld4q_s16` (unsafe)
+- `vld4q_s32` (unsafe)
 - `vld4q_s64` (unsafe)
-- `vld4q_s8`
+- `vld4q_s8` (unsafe)
 - `vld4q_u16` (unsafe)
 - `vld4q_u32` (unsafe)
 - `vld4q_u64` (unsafe)
@@ -623,14 +746,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vandq_u32`
 - `vandq_u64`
 - `vandq_u8`
-- `vbcaxq_s16`
-- `vbcaxq_s32`
-- `vbcaxq_s64`
-- `vbcaxq_s8`
-- `vbcaxq_u16`
-- `vbcaxq_u32`
-- `vbcaxq_u64`
-- `vbcaxq_u8`
 - `vbic_s16`
 - `vbic_s32`
 - `vbic_s64`
@@ -1115,7 +1230,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vcreate_f32`
 - `vcreate_f64`
 - `vcreate_p16`
-- `vcreate_p64`
 - `vcreate_p8`
 - `vcreate_s16`
 - `vcreate_s32`
@@ -1441,14 +1555,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vdups_laneq_f32`
 - `vdups_laneq_s32`
 - `vdups_laneq_u32`
-- `veor3q_s16`
-- `veor3q_s32`
-- `veor3q_s64`
-- `veor3q_s8`
-- `veor3q_u16`
-- `veor3q_u32`
-- `veor3q_u64`
-- `veor3q_u8`
 - `veor_s16`
 - `veor_s32`
 - `veor_s64`
@@ -1659,32 +1765,32 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vhsubq_u16`
 - `vhsubq_u32`
 - `vhsubq_u8`
-- `vluti2_lane_p16`
-- `vluti2_lane_p8`
-- `vluti2_lane_s16`
-- `vluti2_lane_s8`
-- `vluti2_lane_u16`
-- `vluti2_lane_u8`
-- `vluti2q_lane_p16`
-- `vluti2q_lane_p8`
-- `vluti2q_lane_s16`
-- `vluti2q_lane_s8`
-- `vluti2q_lane_u16`
-- `vluti2q_lane_u8`
-- `vluti4q_lane_f16_x2`
-- `vluti4q_lane_p16_x2`
-- `vluti4q_lane_p8`
-- `vluti4q_lane_s16_x2`
-- `vluti4q_lane_s8`
-- `vluti4q_lane_u16_x2`
-- `vluti4q_lane_u8`
-- `vluti4q_laneq_f16_x2`
-- `vluti4q_laneq_p16_x2`
-- `vluti4q_laneq_p8`
-- `vluti4q_laneq_s16_x2`
-- `vluti4q_laneq_s8`
-- `vluti4q_laneq_u16_x2`
-- `vluti4q_laneq_u8`
+- `vluti2_lane_p16` (unsafe)
+- `vluti2_lane_p8` (unsafe)
+- `vluti2_lane_s16` (unsafe)
+- `vluti2_lane_s8` (unsafe)
+- `vluti2_lane_u16` (unsafe)
+- `vluti2_lane_u8` (unsafe)
+- `vluti2q_lane_p16` (unsafe)
+- `vluti2q_lane_p8` (unsafe)
+- `vluti2q_lane_s16` (unsafe)
+- `vluti2q_lane_s8` (unsafe)
+- `vluti2q_lane_u16` (unsafe)
+- `vluti2q_lane_u8` (unsafe)
+- `vluti4q_lane_f16_x2` (unsafe)
+- `vluti4q_lane_p16_x2` (unsafe)
+- `vluti4q_lane_p8` (unsafe)
+- `vluti4q_lane_s16_x2` (unsafe)
+- `vluti4q_lane_s8` (unsafe)
+- `vluti4q_lane_u16_x2` (unsafe)
+- `vluti4q_lane_u8` (unsafe)
+- `vluti4q_laneq_f16_x2` (unsafe)
+- `vluti4q_laneq_p16_x2` (unsafe)
+- `vluti4q_laneq_p8` (unsafe)
+- `vluti4q_laneq_s16_x2` (unsafe)
+- `vluti4q_laneq_s8` (unsafe)
+- `vluti4q_laneq_u16_x2` (unsafe)
+- `vluti4q_laneq_u8` (unsafe)
 - `vmax_f16`
 - `vmax_f32`
 - `vmax_f64`
@@ -2047,7 +2153,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vmull_high_n_s32`
 - `vmull_high_n_u16`
 - `vmull_high_n_u32`
-- `vmull_high_p64`
 - `vmull_high_p8`
 - `vmull_high_s16`
 - `vmull_high_s32`
@@ -2067,7 +2172,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vmull_n_s32`
 - `vmull_n_u16`
 - `vmull_n_u32`
-- `vmull_p64`
 - `vmull_p8`
 - `vmull_s16`
 - `vmull_s32`
@@ -2705,7 +2809,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vraddhn_u16`
 - `vraddhn_u32`
 - `vraddhn_u64`
-- `vrax1q_u64`
 - `vrbit_p8`
 - `vrbit_s8`
 - `vrbit_u8`
@@ -2777,7 +2880,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_p16_f16`
 - `vreinterpret_p16_f32`
 - `vreinterpret_p16_f64`
-- `vreinterpret_p16_p64`
 - `vreinterpret_p16_p8`
 - `vreinterpret_p16_s16`
 - `vreinterpret_p16_s32`
@@ -2790,21 +2892,12 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_p64_f16`
 - `vreinterpret_p64_f32`
 - `vreinterpret_p64_f64`
-- `vreinterpret_p64_p16`
-- `vreinterpret_p64_p8`
-- `vreinterpret_p64_s16`
-- `vreinterpret_p64_s32`
 - `vreinterpret_p64_s64`
-- `vreinterpret_p64_s8`
-- `vreinterpret_p64_u16`
-- `vreinterpret_p64_u32`
 - `vreinterpret_p64_u64`
-- `vreinterpret_p64_u8`
 - `vreinterpret_p8_f16`
 - `vreinterpret_p8_f32`
 - `vreinterpret_p8_f64`
 - `vreinterpret_p8_p16`
-- `vreinterpret_p8_p64`
 - `vreinterpret_p8_s16`
 - `vreinterpret_p8_s32`
 - `vreinterpret_p8_s64`
@@ -2817,7 +2910,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_s16_f32`
 - `vreinterpret_s16_f64`
 - `vreinterpret_s16_p16`
-- `vreinterpret_s16_p64`
 - `vreinterpret_s16_p8`
 - `vreinterpret_s16_s32`
 - `vreinterpret_s16_s64`
@@ -2830,7 +2922,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_s32_f32`
 - `vreinterpret_s32_f64`
 - `vreinterpret_s32_p16`
-- `vreinterpret_s32_p64`
 - `vreinterpret_s32_p8`
 - `vreinterpret_s32_s16`
 - `vreinterpret_s32_s64`
@@ -2856,7 +2947,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_s8_f32`
 - `vreinterpret_s8_f64`
 - `vreinterpret_s8_p16`
-- `vreinterpret_s8_p64`
 - `vreinterpret_s8_p8`
 - `vreinterpret_s8_s16`
 - `vreinterpret_s8_s32`
@@ -2869,7 +2959,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_u16_f32`
 - `vreinterpret_u16_f64`
 - `vreinterpret_u16_p16`
-- `vreinterpret_u16_p64`
 - `vreinterpret_u16_p8`
 - `vreinterpret_u16_s16`
 - `vreinterpret_u16_s32`
@@ -2882,7 +2971,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_u32_f32`
 - `vreinterpret_u32_f64`
 - `vreinterpret_u32_p16`
-- `vreinterpret_u32_p64`
 - `vreinterpret_u32_p8`
 - `vreinterpret_u32_s16`
 - `vreinterpret_u32_s32`
@@ -2908,7 +2996,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_u8_f32`
 - `vreinterpret_u8_f64`
 - `vreinterpret_u8_p16`
-- `vreinterpret_u8_p64`
 - `vreinterpret_u8_p8`
 - `vreinterpret_u8_s16`
 - `vreinterpret_u8_s32`
@@ -2962,22 +3049,9 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_p128_f16`
 - `vreinterpretq_p128_f32`
 - `vreinterpretq_p128_f64`
-- `vreinterpretq_p128_p16`
-- `vreinterpretq_p128_p64`
-- `vreinterpretq_p128_p8`
-- `vreinterpretq_p128_s16`
-- `vreinterpretq_p128_s32`
-- `vreinterpretq_p128_s64`
-- `vreinterpretq_p128_s8`
-- `vreinterpretq_p128_u16`
-- `vreinterpretq_p128_u32`
-- `vreinterpretq_p128_u64`
-- `vreinterpretq_p128_u8`
 - `vreinterpretq_p16_f16`
 - `vreinterpretq_p16_f32`
 - `vreinterpretq_p16_f64`
-- `vreinterpretq_p16_p128`
-- `vreinterpretq_p16_p64`
 - `vreinterpretq_p16_p8`
 - `vreinterpretq_p16_s16`
 - `vreinterpretq_p16_s32`
@@ -2990,23 +3064,12 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_p64_f16`
 - `vreinterpretq_p64_f32`
 - `vreinterpretq_p64_f64`
-- `vreinterpretq_p64_p128`
-- `vreinterpretq_p64_p16`
-- `vreinterpretq_p64_p8`
-- `vreinterpretq_p64_s16`
-- `vreinterpretq_p64_s32`
 - `vreinterpretq_p64_s64`
-- `vreinterpretq_p64_s8`
-- `vreinterpretq_p64_u16`
-- `vreinterpretq_p64_u32`
 - `vreinterpretq_p64_u64`
-- `vreinterpretq_p64_u8`
 - `vreinterpretq_p8_f16`
 - `vreinterpretq_p8_f32`
 - `vreinterpretq_p8_f64`
-- `vreinterpretq_p8_p128`
 - `vreinterpretq_p8_p16`
-- `vreinterpretq_p8_p64`
 - `vreinterpretq_p8_s16`
 - `vreinterpretq_p8_s32`
 - `vreinterpretq_p8_s64`
@@ -3018,9 +3081,7 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_s16_f16`
 - `vreinterpretq_s16_f32`
 - `vreinterpretq_s16_f64`
-- `vreinterpretq_s16_p128`
 - `vreinterpretq_s16_p16`
-- `vreinterpretq_s16_p64`
 - `vreinterpretq_s16_p8`
 - `vreinterpretq_s16_s32`
 - `vreinterpretq_s16_s64`
@@ -3032,9 +3093,7 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_s32_f16`
 - `vreinterpretq_s32_f32`
 - `vreinterpretq_s32_f64`
-- `vreinterpretq_s32_p128`
 - `vreinterpretq_s32_p16`
-- `vreinterpretq_s32_p64`
 - `vreinterpretq_s32_p8`
 - `vreinterpretq_s32_s16`
 - `vreinterpretq_s32_s64`
@@ -3046,7 +3105,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_s64_f16`
 - `vreinterpretq_s64_f32`
 - `vreinterpretq_s64_f64`
-- `vreinterpretq_s64_p128`
 - `vreinterpretq_s64_p16`
 - `vreinterpretq_s64_p64`
 - `vreinterpretq_s64_p8`
@@ -3060,9 +3118,7 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_s8_f16`
 - `vreinterpretq_s8_f32`
 - `vreinterpretq_s8_f64`
-- `vreinterpretq_s8_p128`
 - `vreinterpretq_s8_p16`
-- `vreinterpretq_s8_p64`
 - `vreinterpretq_s8_p8`
 - `vreinterpretq_s8_s16`
 - `vreinterpretq_s8_s32`
@@ -3074,9 +3130,7 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_u16_f16`
 - `vreinterpretq_u16_f32`
 - `vreinterpretq_u16_f64`
-- `vreinterpretq_u16_p128`
 - `vreinterpretq_u16_p16`
-- `vreinterpretq_u16_p64`
 - `vreinterpretq_u16_p8`
 - `vreinterpretq_u16_s16`
 - `vreinterpretq_u16_s32`
@@ -3088,9 +3142,7 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_u32_f16`
 - `vreinterpretq_u32_f32`
 - `vreinterpretq_u32_f64`
-- `vreinterpretq_u32_p128`
 - `vreinterpretq_u32_p16`
-- `vreinterpretq_u32_p64`
 - `vreinterpretq_u32_p8`
 - `vreinterpretq_u32_s16`
 - `vreinterpretq_u32_s32`
@@ -3102,7 +3154,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_u64_f16`
 - `vreinterpretq_u64_f32`
 - `vreinterpretq_u64_f64`
-- `vreinterpretq_u64_p128`
 - `vreinterpretq_u64_p16`
 - `vreinterpretq_u64_p64`
 - `vreinterpretq_u64_p8`
@@ -3116,9 +3167,7 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_u8_f16`
 - `vreinterpretq_u8_f32`
 - `vreinterpretq_u8_f64`
-- `vreinterpretq_u8_p128`
 - `vreinterpretq_u8_p16`
-- `vreinterpretq_u8_p64`
 - `vreinterpretq_u8_p8`
 - `vreinterpretq_u8_s16`
 - `vreinterpretq_u8_s32`
@@ -3345,7 +3394,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vset_lane_f32`
 - `vset_lane_f64`
 - `vset_lane_p16`
-- `vset_lane_p64`
 - `vset_lane_p8`
 - `vset_lane_s16`
 - `vset_lane_s32`
@@ -3359,7 +3407,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vsetq_lane_f32`
 - `vsetq_lane_f64`
 - `vsetq_lane_p16`
-- `vsetq_lane_p64`
 - `vsetq_lane_p8`
 - `vsetq_lane_s16`
 - `vsetq_lane_s32`
@@ -3369,10 +3416,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vsetq_lane_u32`
 - `vsetq_lane_u64`
 - `vsetq_lane_u8`
-- `vsha512h2q_u64`
-- `vsha512hq_u64`
-- `vsha512su0q_u64`
-- `vsha512su1q_u64`
 - `vshl_n_s16`
 - `vshl_n_s32`
 - `vshl_n_s64`
@@ -3452,7 +3495,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vshrq_n_u64`
 - `vshrq_n_u8`
 - `vsli_n_p16`
-- `vsli_n_p64`
 - `vsli_n_p8`
 - `vsli_n_s16`
 - `vsli_n_s32`
@@ -3465,7 +3507,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vslid_n_s64`
 - `vslid_n_u64`
 - `vsliq_n_p16`
-- `vsliq_n_p64`
 - `vsliq_n_p8`
 - `vsliq_n_s16`
 - `vsliq_n_s32`
@@ -3522,7 +3563,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vsraq_n_u64`
 - `vsraq_n_u8`
 - `vsri_n_p16`
-- `vsri_n_p64`
 - `vsri_n_p8`
 - `vsri_n_s16`
 - `vsri_n_s32`
@@ -3535,7 +3575,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vsrid_n_s64`
 - `vsrid_n_u64`
 - `vsriq_n_p16`
-- `vsriq_n_p64`
 - `vsriq_n_p8`
 - `vsriq_n_s16`
 - `vsriq_n_s32`
@@ -3813,7 +3852,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vuzpq_u16`
 - `vuzpq_u32`
 - `vuzpq_u8`
-- `vxarq_u64`
 - `vzip1_f16`
 - `vzip1_f32`
 - `vzip1_p16`
@@ -3885,10 +3923,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 
 ### Store
 
-- `vst1_f16`
-- `vst1_f16_x2`
-- `vst1_f16_x3`
-- `vst1_f16_x4`
+- `vst1_f16` (unsafe)
+- `vst1_f16_x2` (unsafe)
+- `vst1_f16_x3` (unsafe)
+- `vst1_f16_x4` (unsafe)
 - `vst1_f32` (unsafe)
 - `vst1_f32_x2` (unsafe)
 - `vst1_f32_x3` (unsafe)
@@ -3897,11 +3935,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst1_f64_x2` (unsafe)
 - `vst1_f64_x3` (unsafe)
 - `vst1_f64_x4` (unsafe)
-- `vst1_lane_f16`
+- `vst1_lane_f16` (unsafe)
 - `vst1_lane_f32` (unsafe)
 - `vst1_lane_f64` (unsafe)
 - `vst1_lane_p16` (unsafe)
-- `vst1_lane_p64`
 - `vst1_lane_p8` (unsafe)
 - `vst1_lane_s16` (unsafe)
 - `vst1_lane_s32` (unsafe)
@@ -3915,30 +3952,26 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst1_p16_x2` (unsafe)
 - `vst1_p16_x3` (unsafe)
 - `vst1_p16_x4` (unsafe)
-- `vst1_p64`
-- `vst1_p64_x2`
-- `vst1_p64_x3`
-- `vst1_p64_x4`
 - `vst1_p8` (unsafe)
 - `vst1_p8_x2` (unsafe)
 - `vst1_p8_x3` (unsafe)
 - `vst1_p8_x4` (unsafe)
 - `vst1_s16` (unsafe)
-- `vst1_s16_x2`
-- `vst1_s16_x3`
-- `vst1_s16_x4`
+- `vst1_s16_x2` (unsafe)
+- `vst1_s16_x3` (unsafe)
+- `vst1_s16_x4` (unsafe)
 - `vst1_s32` (unsafe)
-- `vst1_s32_x2`
-- `vst1_s32_x3`
-- `vst1_s32_x4`
+- `vst1_s32_x2` (unsafe)
+- `vst1_s32_x3` (unsafe)
+- `vst1_s32_x4` (unsafe)
 - `vst1_s64` (unsafe)
-- `vst1_s64_x2`
-- `vst1_s64_x3`
-- `vst1_s64_x4`
+- `vst1_s64_x2` (unsafe)
+- `vst1_s64_x3` (unsafe)
+- `vst1_s64_x4` (unsafe)
 - `vst1_s8` (unsafe)
-- `vst1_s8_x2`
-- `vst1_s8_x3`
-- `vst1_s8_x4`
+- `vst1_s8_x2` (unsafe)
+- `vst1_s8_x3` (unsafe)
+- `vst1_s8_x4` (unsafe)
 - `vst1_u16` (unsafe)
 - `vst1_u16_x2` (unsafe)
 - `vst1_u16_x3` (unsafe)
@@ -3955,10 +3988,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst1_u8_x2` (unsafe)
 - `vst1_u8_x3` (unsafe)
 - `vst1_u8_x4` (unsafe)
-- `vst1q_f16`
-- `vst1q_f16_x2`
-- `vst1q_f16_x3`
-- `vst1q_f16_x4`
+- `vst1q_f16` (unsafe)
+- `vst1q_f16_x2` (unsafe)
+- `vst1q_f16_x3` (unsafe)
+- `vst1q_f16_x4` (unsafe)
 - `vst1q_f32` (unsafe)
 - `vst1q_f32_x2` (unsafe)
 - `vst1q_f32_x3` (unsafe)
@@ -3967,11 +4000,10 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst1q_f64_x2` (unsafe)
 - `vst1q_f64_x3` (unsafe)
 - `vst1q_f64_x4` (unsafe)
-- `vst1q_lane_f16`
+- `vst1q_lane_f16` (unsafe)
 - `vst1q_lane_f32` (unsafe)
 - `vst1q_lane_f64` (unsafe)
 - `vst1q_lane_p16` (unsafe)
-- `vst1q_lane_p64`
 - `vst1q_lane_p8` (unsafe)
 - `vst1q_lane_s16` (unsafe)
 - `vst1q_lane_s32` (unsafe)
@@ -3985,30 +4017,26 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst1q_p16_x2` (unsafe)
 - `vst1q_p16_x3` (unsafe)
 - `vst1q_p16_x4` (unsafe)
-- `vst1q_p64`
-- `vst1q_p64_x2`
-- `vst1q_p64_x3`
-- `vst1q_p64_x4`
 - `vst1q_p8` (unsafe)
 - `vst1q_p8_x2` (unsafe)
 - `vst1q_p8_x3` (unsafe)
 - `vst1q_p8_x4` (unsafe)
 - `vst1q_s16` (unsafe)
-- `vst1q_s16_x2`
-- `vst1q_s16_x3`
-- `vst1q_s16_x4`
+- `vst1q_s16_x2` (unsafe)
+- `vst1q_s16_x3` (unsafe)
+- `vst1q_s16_x4` (unsafe)
 - `vst1q_s32` (unsafe)
-- `vst1q_s32_x2`
-- `vst1q_s32_x3`
-- `vst1q_s32_x4`
+- `vst1q_s32_x2` (unsafe)
+- `vst1q_s32_x3` (unsafe)
+- `vst1q_s32_x4` (unsafe)
 - `vst1q_s64` (unsafe)
-- `vst1q_s64_x2`
-- `vst1q_s64_x3`
-- `vst1q_s64_x4`
+- `vst1q_s64_x2` (unsafe)
+- `vst1q_s64_x3` (unsafe)
+- `vst1q_s64_x4` (unsafe)
 - `vst1q_s8` (unsafe)
-- `vst1q_s8_x2`
-- `vst1q_s8_x3`
-- `vst1q_s8_x4`
+- `vst1q_s8_x2` (unsafe)
+- `vst1q_s8_x3` (unsafe)
+- `vst1q_s8_x4` (unsafe)
 - `vst1q_u16` (unsafe)
 - `vst1q_u16_x2` (unsafe)
 - `vst1q_u16_x3` (unsafe)
@@ -4025,45 +4053,42 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst1q_u8_x2` (unsafe)
 - `vst1q_u8_x3` (unsafe)
 - `vst1q_u8_x4` (unsafe)
-- `vst2_f16`
-- `vst2_f32`
+- `vst2_f16` (unsafe)
+- `vst2_f32` (unsafe)
 - `vst2_f64` (unsafe)
-- `vst2_lane_f16`
-- `vst2_lane_f32`
+- `vst2_lane_f16` (unsafe)
+- `vst2_lane_f32` (unsafe)
 - `vst2_lane_f64` (unsafe)
 - `vst2_lane_p16` (unsafe)
-- `vst2_lane_p64`
 - `vst2_lane_p8` (unsafe)
-- `vst2_lane_s16`
-- `vst2_lane_s32`
+- `vst2_lane_s16` (unsafe)
+- `vst2_lane_s32` (unsafe)
 - `vst2_lane_s64` (unsafe)
-- `vst2_lane_s8`
+- `vst2_lane_s8` (unsafe)
 - `vst2_lane_u16` (unsafe)
 - `vst2_lane_u32` (unsafe)
 - `vst2_lane_u64` (unsafe)
 - `vst2_lane_u8` (unsafe)
 - `vst2_p16` (unsafe)
-- `vst2_p64`
 - `vst2_p8` (unsafe)
-- `vst2_s16`
-- `vst2_s32`
+- `vst2_s16` (unsafe)
+- `vst2_s32` (unsafe)
 - `vst2_s64` (unsafe)
-- `vst2_s8`
+- `vst2_s8` (unsafe)
 - `vst2_u16` (unsafe)
 - `vst2_u32` (unsafe)
 - `vst2_u64` (unsafe)
 - `vst2_u8` (unsafe)
-- `vst2q_f16`
-- `vst2q_f32`
+- `vst2q_f16` (unsafe)
+- `vst2q_f32` (unsafe)
 - `vst2q_f64` (unsafe)
-- `vst2q_lane_f16`
-- `vst2q_lane_f32`
+- `vst2q_lane_f16` (unsafe)
+- `vst2q_lane_f32` (unsafe)
 - `vst2q_lane_f64` (unsafe)
 - `vst2q_lane_p16` (unsafe)
-- `vst2q_lane_p64`
 - `vst2q_lane_p8` (unsafe)
-- `vst2q_lane_s16`
-- `vst2q_lane_s32`
+- `vst2q_lane_s16` (unsafe)
+- `vst2q_lane_s32` (unsafe)
 - `vst2q_lane_s64` (unsafe)
 - `vst2q_lane_s8` (unsafe)
 - `vst2q_lane_u16` (unsafe)
@@ -4071,24 +4096,22 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst2q_lane_u64` (unsafe)
 - `vst2q_lane_u8` (unsafe)
 - `vst2q_p16` (unsafe)
-- `vst2q_p64`
 - `vst2q_p8` (unsafe)
-- `vst2q_s16`
-- `vst2q_s32`
+- `vst2q_s16` (unsafe)
+- `vst2q_s32` (unsafe)
 - `vst2q_s64` (unsafe)
-- `vst2q_s8`
+- `vst2q_s8` (unsafe)
 - `vst2q_u16` (unsafe)
 - `vst2q_u32` (unsafe)
 - `vst2q_u64` (unsafe)
 - `vst2q_u8` (unsafe)
-- `vst3_f16`
+- `vst3_f16` (unsafe)
 - `vst3_f32` (unsafe)
 - `vst3_f64` (unsafe)
-- `vst3_lane_f16`
+- `vst3_lane_f16` (unsafe)
 - `vst3_lane_f32` (unsafe)
 - `vst3_lane_f64` (unsafe)
 - `vst3_lane_p16` (unsafe)
-- `vst3_lane_p64`
 - `vst3_lane_p8` (unsafe)
 - `vst3_lane_s16` (unsafe)
 - `vst3_lane_s32` (unsafe)
@@ -4099,24 +4122,22 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst3_lane_u64` (unsafe)
 - `vst3_lane_u8` (unsafe)
 - `vst3_p16` (unsafe)
-- `vst3_p64`
 - `vst3_p8` (unsafe)
 - `vst3_s16` (unsafe)
 - `vst3_s32` (unsafe)
-- `vst3_s64`
+- `vst3_s64` (unsafe)
 - `vst3_s8` (unsafe)
 - `vst3_u16` (unsafe)
 - `vst3_u32` (unsafe)
 - `vst3_u64` (unsafe)
 - `vst3_u8` (unsafe)
-- `vst3q_f16`
+- `vst3q_f16` (unsafe)
 - `vst3q_f32` (unsafe)
 - `vst3q_f64` (unsafe)
-- `vst3q_lane_f16`
+- `vst3q_lane_f16` (unsafe)
 - `vst3q_lane_f32` (unsafe)
 - `vst3q_lane_f64` (unsafe)
 - `vst3q_lane_p16` (unsafe)
-- `vst3q_lane_p64`
 - `vst3q_lane_p8` (unsafe)
 - `vst3q_lane_s16` (unsafe)
 - `vst3q_lane_s32` (unsafe)
@@ -4127,7 +4148,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst3q_lane_u64` (unsafe)
 - `vst3q_lane_u8` (unsafe)
 - `vst3q_p16` (unsafe)
-- `vst3q_p64`
 - `vst3q_p8` (unsafe)
 - `vst3q_s16` (unsafe)
 - `vst3q_s32` (unsafe)
@@ -4137,14 +4157,13 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst3q_u32` (unsafe)
 - `vst3q_u64` (unsafe)
 - `vst3q_u8` (unsafe)
-- `vst4_f16`
+- `vst4_f16` (unsafe)
 - `vst4_f32` (unsafe)
 - `vst4_f64` (unsafe)
-- `vst4_lane_f16`
+- `vst4_lane_f16` (unsafe)
 - `vst4_lane_f32` (unsafe)
 - `vst4_lane_f64` (unsafe)
 - `vst4_lane_p16` (unsafe)
-- `vst4_lane_p64`
 - `vst4_lane_p8` (unsafe)
 - `vst4_lane_s16` (unsafe)
 - `vst4_lane_s32` (unsafe)
@@ -4155,7 +4174,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst4_lane_u64` (unsafe)
 - `vst4_lane_u8` (unsafe)
 - `vst4_p16` (unsafe)
-- `vst4_p64`
 - `vst4_p8` (unsafe)
 - `vst4_s16` (unsafe)
 - `vst4_s32` (unsafe)
@@ -4165,14 +4183,13 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst4_u32` (unsafe)
 - `vst4_u64` (unsafe)
 - `vst4_u8` (unsafe)
-- `vst4q_f16`
+- `vst4q_f16` (unsafe)
 - `vst4q_f32` (unsafe)
 - `vst4q_f64` (unsafe)
-- `vst4q_lane_f16`
+- `vst4q_lane_f16` (unsafe)
 - `vst4q_lane_f32` (unsafe)
 - `vst4q_lane_f64` (unsafe)
 - `vst4q_lane_p16` (unsafe)
-- `vst4q_lane_p64`
 - `vst4q_lane_p8` (unsafe)
 - `vst4q_lane_s16` (unsafe)
 - `vst4q_lane_s32` (unsafe)
@@ -4183,7 +4200,6 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst4q_lane_u64` (unsafe)
 - `vst4q_lane_u8` (unsafe)
 - `vst4q_p16` (unsafe)
-- `vst4q_p64`
 - `vst4q_p8` (unsafe)
 - `vst4q_s16` (unsafe)
 - `vst4q_s32` (unsafe)
