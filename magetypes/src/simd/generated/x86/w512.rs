@@ -1214,6 +1214,108 @@ impl f32x16 {
     pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
         unsafe { &mut *(self as *mut Self as *mut u32x16) }
     }
+    /// Reinterpret bits as `i8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x64(self) -> i8x64 {
+        unsafe { core::mem::transmute(_mm512_castps_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
+        unsafe { &*(self as *const Self as *const i8x64) }
+    }
+
+    /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
+        unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `u8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x64(self) -> u8x64 {
+        unsafe { core::mem::transmute(_mm512_castps_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
+        unsafe { &*(self as *const Self as *const u8x64) }
+    }
+
+    /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
+        unsafe { &mut *(self as *mut Self as *mut u8x64) }
+    }
+    /// Reinterpret bits as `i16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> i16x32 {
+        unsafe { core::mem::transmute(_mm512_castps_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
+        unsafe { &*(self as *const Self as *const i16x32) }
+    }
+
+    /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
+        unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `u16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x32(self) -> u16x32 {
+        unsafe { core::mem::transmute(_mm512_castps_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
+        unsafe { &*(self as *const Self as *const u16x32) }
+    }
+
+    /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
+        unsafe { &mut *(self as *mut Self as *mut u16x32) }
+    }
+    /// Reinterpret bits as `i64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x8(self) -> i64x8 {
+        unsafe { core::mem::transmute(_mm512_castps_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
+        unsafe { &*(self as *const Self as *const i64x8) }
+    }
+
+    /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
+        unsafe { &mut *(self as *mut Self as *mut i64x8) }
+    }
+    /// Reinterpret bits as `u64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x8(self) -> u64x8 {
+        unsafe { core::mem::transmute(_mm512_castps_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
+        unsafe { &*(self as *const Self as *const u64x8) }
+    }
+
+    /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
+        unsafe { &mut *(self as *mut Self as *mut u64x8) }
+    }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -1865,6 +1967,108 @@ impl f64x8 {
     pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
         unsafe { &mut *(self as *mut Self as *mut u64x8) }
     }
+    /// Reinterpret bits as `i8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x64(self) -> i8x64 {
+        unsafe { core::mem::transmute(_mm512_castpd_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
+        unsafe { &*(self as *const Self as *const i8x64) }
+    }
+
+    /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
+        unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `u8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x64(self) -> u8x64 {
+        unsafe { core::mem::transmute(_mm512_castpd_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
+        unsafe { &*(self as *const Self as *const u8x64) }
+    }
+
+    /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
+        unsafe { &mut *(self as *mut Self as *mut u8x64) }
+    }
+    /// Reinterpret bits as `i16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> i16x32 {
+        unsafe { core::mem::transmute(_mm512_castpd_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
+        unsafe { &*(self as *const Self as *const i16x32) }
+    }
+
+    /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
+        unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `u16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x32(self) -> u16x32 {
+        unsafe { core::mem::transmute(_mm512_castpd_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
+        unsafe { &*(self as *const Self as *const u16x32) }
+    }
+
+    /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
+        unsafe { &mut *(self as *mut Self as *mut u16x32) }
+    }
+    /// Reinterpret bits as `i32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x16(self) -> i32x16 {
+        unsafe { core::mem::transmute(_mm512_castpd_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
+        unsafe { &*(self as *const Self as *const i32x16) }
+    }
+
+    /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
+        unsafe { &mut *(self as *mut Self as *mut i32x16) }
+    }
+    /// Reinterpret bits as `u32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x16(self) -> u32x16 {
+        unsafe { core::mem::transmute(_mm512_castpd_si512(self.0)) }
+    }
+
+    /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
+        unsafe { &*(self as *const Self as *const u32x16) }
+    }
+
+    /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
+        unsafe { &mut *(self as *mut Self as *mut u32x16) }
+    }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -2376,6 +2580,142 @@ impl i8x64 {
     pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
         unsafe { &mut *(self as *mut Self as *mut u8x64) }
     }
+    /// Reinterpret bits as `f32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f32x16(self) -> f32x16 {
+        unsafe { core::mem::transmute(_mm512_castsi512_ps(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f32x16(&self) -> &f32x16 {
+        unsafe { &*(self as *const Self as *const f32x16) }
+    }
+
+    /// Reinterpret bits as `&mut f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
+        unsafe { &mut *(self as *mut Self as *mut f32x16) }
+    }
+    /// Reinterpret bits as `f64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f64x8(self) -> f64x8 {
+        unsafe { core::mem::transmute(_mm512_castsi512_pd(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x8(&self) -> &f64x8 {
+        unsafe { &*(self as *const Self as *const f64x8) }
+    }
+
+    /// Reinterpret bits as `&mut f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
+        unsafe { &mut *(self as *mut Self as *mut f64x8) }
+    }
+    /// Reinterpret bits as `i16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> i16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
+        unsafe { &*(self as *const Self as *const i16x32) }
+    }
+
+    /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
+        unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `u16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x32(self) -> u16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
+        unsafe { &*(self as *const Self as *const u16x32) }
+    }
+
+    /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
+        unsafe { &mut *(self as *mut Self as *mut u16x32) }
+    }
+    /// Reinterpret bits as `i32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x16(self) -> i32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
+        unsafe { &*(self as *const Self as *const i32x16) }
+    }
+
+    /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
+        unsafe { &mut *(self as *mut Self as *mut i32x16) }
+    }
+    /// Reinterpret bits as `u32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x16(self) -> u32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
+        unsafe { &*(self as *const Self as *const u32x16) }
+    }
+
+    /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
+        unsafe { &mut *(self as *mut Self as *mut u32x16) }
+    }
+    /// Reinterpret bits as `i64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x8(self) -> i64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
+        unsafe { &*(self as *const Self as *const i64x8) }
+    }
+
+    /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
+        unsafe { &mut *(self as *mut Self as *mut i64x8) }
+    }
+    /// Reinterpret bits as `u64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x8(self) -> u64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
+        unsafe { &*(self as *const Self as *const u64x8) }
+    }
+
+    /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
+        unsafe { &mut *(self as *mut Self as *mut u64x8) }
+    }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -2839,6 +3179,142 @@ impl u8x64 {
     #[inline(always)]
     pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
         unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `f32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f32x16(self) -> f32x16 {
+        unsafe { core::mem::transmute(_mm512_castsi512_ps(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f32x16(&self) -> &f32x16 {
+        unsafe { &*(self as *const Self as *const f32x16) }
+    }
+
+    /// Reinterpret bits as `&mut f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
+        unsafe { &mut *(self as *mut Self as *mut f32x16) }
+    }
+    /// Reinterpret bits as `f64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f64x8(self) -> f64x8 {
+        unsafe { core::mem::transmute(_mm512_castsi512_pd(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x8(&self) -> &f64x8 {
+        unsafe { &*(self as *const Self as *const f64x8) }
+    }
+
+    /// Reinterpret bits as `&mut f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
+        unsafe { &mut *(self as *mut Self as *mut f64x8) }
+    }
+    /// Reinterpret bits as `i16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> i16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
+        unsafe { &*(self as *const Self as *const i16x32) }
+    }
+
+    /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
+        unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `u16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x32(self) -> u16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
+        unsafe { &*(self as *const Self as *const u16x32) }
+    }
+
+    /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
+        unsafe { &mut *(self as *mut Self as *mut u16x32) }
+    }
+    /// Reinterpret bits as `i32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x16(self) -> i32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
+        unsafe { &*(self as *const Self as *const i32x16) }
+    }
+
+    /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
+        unsafe { &mut *(self as *mut Self as *mut i32x16) }
+    }
+    /// Reinterpret bits as `u32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x16(self) -> u32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
+        unsafe { &*(self as *const Self as *const u32x16) }
+    }
+
+    /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
+        unsafe { &mut *(self as *mut Self as *mut u32x16) }
+    }
+    /// Reinterpret bits as `i64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x8(self) -> i64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
+        unsafe { &*(self as *const Self as *const i64x8) }
+    }
+
+    /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
+        unsafe { &mut *(self as *mut Self as *mut i64x8) }
+    }
+    /// Reinterpret bits as `u64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x8(self) -> u64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
+        unsafe { &*(self as *const Self as *const u64x8) }
+    }
+
+    /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
+        unsafe { &mut *(self as *mut Self as *mut u64x8) }
     }
 }
 
@@ -3309,6 +3785,142 @@ impl i16x32 {
     pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
         unsafe { &mut *(self as *mut Self as *mut u16x32) }
     }
+    /// Reinterpret bits as `f32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f32x16(self) -> f32x16 {
+        unsafe { core::mem::transmute(_mm512_castsi512_ps(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f32x16(&self) -> &f32x16 {
+        unsafe { &*(self as *const Self as *const f32x16) }
+    }
+
+    /// Reinterpret bits as `&mut f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
+        unsafe { &mut *(self as *mut Self as *mut f32x16) }
+    }
+    /// Reinterpret bits as `f64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f64x8(self) -> f64x8 {
+        unsafe { core::mem::transmute(_mm512_castsi512_pd(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x8(&self) -> &f64x8 {
+        unsafe { &*(self as *const Self as *const f64x8) }
+    }
+
+    /// Reinterpret bits as `&mut f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
+        unsafe { &mut *(self as *mut Self as *mut f64x8) }
+    }
+    /// Reinterpret bits as `i8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x64(self) -> i8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
+        unsafe { &*(self as *const Self as *const i8x64) }
+    }
+
+    /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
+        unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `u8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x64(self) -> u8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
+        unsafe { &*(self as *const Self as *const u8x64) }
+    }
+
+    /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
+        unsafe { &mut *(self as *mut Self as *mut u8x64) }
+    }
+    /// Reinterpret bits as `i32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x16(self) -> i32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
+        unsafe { &*(self as *const Self as *const i32x16) }
+    }
+
+    /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
+        unsafe { &mut *(self as *mut Self as *mut i32x16) }
+    }
+    /// Reinterpret bits as `u32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x16(self) -> u32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
+        unsafe { &*(self as *const Self as *const u32x16) }
+    }
+
+    /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
+        unsafe { &mut *(self as *mut Self as *mut u32x16) }
+    }
+    /// Reinterpret bits as `i64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x8(self) -> i64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
+        unsafe { &*(self as *const Self as *const i64x8) }
+    }
+
+    /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
+        unsafe { &mut *(self as *mut Self as *mut i64x8) }
+    }
+    /// Reinterpret bits as `u64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x8(self) -> u64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
+        unsafe { &*(self as *const Self as *const u64x8) }
+    }
+
+    /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
+        unsafe { &mut *(self as *mut Self as *mut u64x8) }
+    }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -3766,6 +4378,142 @@ impl u16x32 {
     #[inline(always)]
     pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
         unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `f32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f32x16(self) -> f32x16 {
+        unsafe { core::mem::transmute(_mm512_castsi512_ps(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f32x16(&self) -> &f32x16 {
+        unsafe { &*(self as *const Self as *const f32x16) }
+    }
+
+    /// Reinterpret bits as `&mut f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
+        unsafe { &mut *(self as *mut Self as *mut f32x16) }
+    }
+    /// Reinterpret bits as `f64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f64x8(self) -> f64x8 {
+        unsafe { core::mem::transmute(_mm512_castsi512_pd(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x8(&self) -> &f64x8 {
+        unsafe { &*(self as *const Self as *const f64x8) }
+    }
+
+    /// Reinterpret bits as `&mut f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
+        unsafe { &mut *(self as *mut Self as *mut f64x8) }
+    }
+    /// Reinterpret bits as `i8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x64(self) -> i8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
+        unsafe { &*(self as *const Self as *const i8x64) }
+    }
+
+    /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
+        unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `u8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x64(self) -> u8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
+        unsafe { &*(self as *const Self as *const u8x64) }
+    }
+
+    /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
+        unsafe { &mut *(self as *mut Self as *mut u8x64) }
+    }
+    /// Reinterpret bits as `i32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x16(self) -> i32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
+        unsafe { &*(self as *const Self as *const i32x16) }
+    }
+
+    /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
+        unsafe { &mut *(self as *mut Self as *mut i32x16) }
+    }
+    /// Reinterpret bits as `u32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x16(self) -> u32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
+        unsafe { &*(self as *const Self as *const u32x16) }
+    }
+
+    /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
+        unsafe { &mut *(self as *mut Self as *mut u32x16) }
+    }
+    /// Reinterpret bits as `i64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x8(self) -> i64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
+        unsafe { &*(self as *const Self as *const i64x8) }
+    }
+
+    /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
+        unsafe { &mut *(self as *mut Self as *mut i64x8) }
+    }
+    /// Reinterpret bits as `u64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x8(self) -> u64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
+        unsafe { &*(self as *const Self as *const u64x8) }
+    }
+
+    /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
+        unsafe { &mut *(self as *mut Self as *mut u64x8) }
     }
 }
 
@@ -4263,6 +5011,125 @@ impl i32x16 {
     pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
         unsafe { &mut *(self as *mut Self as *mut u32x16) }
     }
+    /// Reinterpret bits as `f64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f64x8(self) -> f64x8 {
+        unsafe { core::mem::transmute(_mm512_castsi512_pd(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x8(&self) -> &f64x8 {
+        unsafe { &*(self as *const Self as *const f64x8) }
+    }
+
+    /// Reinterpret bits as `&mut f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
+        unsafe { &mut *(self as *mut Self as *mut f64x8) }
+    }
+    /// Reinterpret bits as `i8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x64(self) -> i8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
+        unsafe { &*(self as *const Self as *const i8x64) }
+    }
+
+    /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
+        unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `u8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x64(self) -> u8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
+        unsafe { &*(self as *const Self as *const u8x64) }
+    }
+
+    /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
+        unsafe { &mut *(self as *mut Self as *mut u8x64) }
+    }
+    /// Reinterpret bits as `i16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> i16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
+        unsafe { &*(self as *const Self as *const i16x32) }
+    }
+
+    /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
+        unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `u16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x32(self) -> u16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
+        unsafe { &*(self as *const Self as *const u16x32) }
+    }
+
+    /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
+        unsafe { &mut *(self as *mut Self as *mut u16x32) }
+    }
+    /// Reinterpret bits as `i64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x8(self) -> i64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
+        unsafe { &*(self as *const Self as *const i64x8) }
+    }
+
+    /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
+        unsafe { &mut *(self as *mut Self as *mut i64x8) }
+    }
+    /// Reinterpret bits as `u64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x8(self) -> u64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
+        unsafe { &*(self as *const Self as *const u64x8) }
+    }
+
+    /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
+        unsafe { &mut *(self as *mut Self as *mut u64x8) }
+    }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -4737,6 +5604,125 @@ impl u32x16 {
     #[inline(always)]
     pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
         unsafe { &mut *(self as *mut Self as *mut i32x16) }
+    }
+    /// Reinterpret bits as `f64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f64x8(self) -> f64x8 {
+        unsafe { core::mem::transmute(_mm512_castsi512_pd(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f64x8(&self) -> &f64x8 {
+        unsafe { &*(self as *const Self as *const f64x8) }
+    }
+
+    /// Reinterpret bits as `&mut f64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f64x8(&mut self) -> &mut f64x8 {
+        unsafe { &mut *(self as *mut Self as *mut f64x8) }
+    }
+    /// Reinterpret bits as `i8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x64(self) -> i8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
+        unsafe { &*(self as *const Self as *const i8x64) }
+    }
+
+    /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
+        unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `u8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x64(self) -> u8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
+        unsafe { &*(self as *const Self as *const u8x64) }
+    }
+
+    /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
+        unsafe { &mut *(self as *mut Self as *mut u8x64) }
+    }
+    /// Reinterpret bits as `i16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> i16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
+        unsafe { &*(self as *const Self as *const i16x32) }
+    }
+
+    /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
+        unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `u16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x32(self) -> u16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
+        unsafe { &*(self as *const Self as *const u16x32) }
+    }
+
+    /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
+        unsafe { &mut *(self as *mut Self as *mut u16x32) }
+    }
+    /// Reinterpret bits as `i64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i64x8(self) -> i64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i64x8(&self) -> &i64x8 {
+        unsafe { &*(self as *const Self as *const i64x8) }
+    }
+
+    /// Reinterpret bits as `&mut i64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
+        unsafe { &mut *(self as *mut Self as *mut i64x8) }
+    }
+    /// Reinterpret bits as `u64x8` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u64x8(self) -> u64x8 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u64x8(&self) -> &u64x8 {
+        unsafe { &*(self as *const Self as *const u64x8) }
+    }
+
+    /// Reinterpret bits as `&mut u64x8` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
+        unsafe { &mut *(self as *mut Self as *mut u64x8) }
     }
 }
 
@@ -5226,6 +6212,125 @@ impl i64x8 {
     pub fn bitcast_mut_u64x8(&mut self) -> &mut u64x8 {
         unsafe { &mut *(self as *mut Self as *mut u64x8) }
     }
+    /// Reinterpret bits as `f32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f32x16(self) -> f32x16 {
+        unsafe { core::mem::transmute(_mm512_castsi512_ps(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f32x16(&self) -> &f32x16 {
+        unsafe { &*(self as *const Self as *const f32x16) }
+    }
+
+    /// Reinterpret bits as `&mut f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
+        unsafe { &mut *(self as *mut Self as *mut f32x16) }
+    }
+    /// Reinterpret bits as `i8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x64(self) -> i8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
+        unsafe { &*(self as *const Self as *const i8x64) }
+    }
+
+    /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
+        unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `u8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x64(self) -> u8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
+        unsafe { &*(self as *const Self as *const u8x64) }
+    }
+
+    /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
+        unsafe { &mut *(self as *mut Self as *mut u8x64) }
+    }
+    /// Reinterpret bits as `i16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> i16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
+        unsafe { &*(self as *const Self as *const i16x32) }
+    }
+
+    /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
+        unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `u16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x32(self) -> u16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
+        unsafe { &*(self as *const Self as *const u16x32) }
+    }
+
+    /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
+        unsafe { &mut *(self as *mut Self as *mut u16x32) }
+    }
+    /// Reinterpret bits as `i32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x16(self) -> i32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
+        unsafe { &*(self as *const Self as *const i32x16) }
+    }
+
+    /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
+        unsafe { &mut *(self as *mut Self as *mut i32x16) }
+    }
+    /// Reinterpret bits as `u32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x16(self) -> u32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
+        unsafe { &*(self as *const Self as *const u32x16) }
+    }
+
+    /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
+        unsafe { &mut *(self as *mut Self as *mut u32x16) }
+    }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -5698,6 +6803,125 @@ impl u64x8 {
     #[inline(always)]
     pub fn bitcast_mut_i64x8(&mut self) -> &mut i64x8 {
         unsafe { &mut *(self as *mut Self as *mut i64x8) }
+    }
+    /// Reinterpret bits as `f32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_f32x16(self) -> f32x16 {
+        unsafe { core::mem::transmute(_mm512_castsi512_ps(self.0)) }
+    }
+
+    /// Reinterpret bits as `&f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_f32x16(&self) -> &f32x16 {
+        unsafe { &*(self as *const Self as *const f32x16) }
+    }
+
+    /// Reinterpret bits as `&mut f32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_f32x16(&mut self) -> &mut f32x16 {
+        unsafe { &mut *(self as *mut Self as *mut f32x16) }
+    }
+    /// Reinterpret bits as `i8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i8x64(self) -> i8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i8x64(&self) -> &i8x64 {
+        unsafe { &*(self as *const Self as *const i8x64) }
+    }
+
+    /// Reinterpret bits as `&mut i8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i8x64(&mut self) -> &mut i8x64 {
+        unsafe { &mut *(self as *mut Self as *mut i8x64) }
+    }
+    /// Reinterpret bits as `u8x64` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u8x64(self) -> u8x64 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u8x64(&self) -> &u8x64 {
+        unsafe { &*(self as *const Self as *const u8x64) }
+    }
+
+    /// Reinterpret bits as `&mut u8x64` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u8x64(&mut self) -> &mut u8x64 {
+        unsafe { &mut *(self as *mut Self as *mut u8x64) }
+    }
+    /// Reinterpret bits as `i16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> i16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &i16x32 {
+        unsafe { &*(self as *const Self as *const i16x32) }
+    }
+
+    /// Reinterpret bits as `&mut i16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut i16x32 {
+        unsafe { &mut *(self as *mut Self as *mut i16x32) }
+    }
+    /// Reinterpret bits as `u16x32` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u16x32(self) -> u16x32 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u16x32(&self) -> &u16x32 {
+        unsafe { &*(self as *const Self as *const u16x32) }
+    }
+
+    /// Reinterpret bits as `&mut u16x32` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u16x32(&mut self) -> &mut u16x32 {
+        unsafe { &mut *(self as *mut Self as *mut u16x32) }
+    }
+    /// Reinterpret bits as `i32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_i32x16(self) -> i32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x16(&self) -> &i32x16 {
+        unsafe { &*(self as *const Self as *const i32x16) }
+    }
+
+    /// Reinterpret bits as `&mut i32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x16(&mut self) -> &mut i32x16 {
+        unsafe { &mut *(self as *mut Self as *mut i32x16) }
+    }
+    /// Reinterpret bits as `u32x16` (zero-cost).
+    #[inline(always)]
+    pub fn bitcast_u32x16(self) -> u32x16 {
+        unsafe { core::mem::transmute(self) }
+    }
+
+    /// Reinterpret bits as `&u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_u32x16(&self) -> &u32x16 {
+        unsafe { &*(self as *const Self as *const u32x16) }
+    }
+
+    /// Reinterpret bits as `&mut u32x16` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_u32x16(&mut self) -> &mut u32x16 {
+        unsafe { &mut *(self as *mut Self as *mut u32x16) }
     }
 }
 
