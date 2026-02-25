@@ -1250,7 +1250,7 @@ fn generate_all() -> Result<()> {
         "archmage-macros/src/generated",
         "src/tokens/generated",
         "magetypes/src/simd/generated",
-        "magetypes/src/simd/generic",
+        "magetypes/src/simd/generic/generated",
         "docs/generated",
     ];
     for dir in &generated_dirs {
@@ -1378,7 +1378,7 @@ pub(crate) use registry::*;
 
     // Generate generic wrapper types (strategy-pattern types parameterized by backend)
     println!("\n=== Generating Generic Wrapper Types ===");
-    fs::create_dir_all(simd_dir.join("generic"))?;
+    fs::create_dir_all(simd_dir.join("generic/generated"))?;
     let generic_files = simd_types::generic_gen::generate_generic_files();
     let mut generic_total_bytes = 0;
     for (rel_path, content) in &generic_files {
