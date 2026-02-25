@@ -62,7 +62,6 @@ impl<T: U8x64Backend> u8x64<T> {
         Self(T::from_array(arr), PhantomData)
     }
 
-
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[u8; 64]], &[u8])` — the bulk portion reinterpreted
@@ -73,9 +72,7 @@ impl<T: U8x64Backend> u8x64<T> {
         let (head, tail) = data.split_at(bulk * 64);
         // SAFETY: head.len() is bulk * 64, so it's exactly `bulk` chunks of [u8; 64].
         // The pointer cast is valid because [u8] and [[u8; 64]] have the same alignment.
-        let chunks = unsafe {
-            core::slice::from_raw_parts(head.as_ptr().cast::<[u8; 64]>(), bulk)
-        };
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[u8; 64]>(), bulk) };
         (chunks, tail)
     }
 
@@ -89,9 +86,8 @@ impl<T: U8x64Backend> u8x64<T> {
         let (head, tail) = data.split_at_mut(bulk * 64);
         // SAFETY: head.len() is bulk * 64, so it's exactly `bulk` chunks of [u8; 64].
         // The pointer cast is valid because [u8] and [[u8; 64]] have the same alignment.
-        let chunks = unsafe {
-            core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[u8; 64]>(), bulk)
-        };
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[u8; 64]>(), bulk) };
         (chunks, tail)
     }
 

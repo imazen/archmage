@@ -58,9 +58,7 @@ mod x86_tests {
     #[test]
     fn v3_invoke_rite_returns_complex_type() {
         if let Some(token) = archmage::X64V3Token::summon() {
-            let (a, b) = token.invoke_rite(|_t| {
-                ("hello", vec![1, 2, 3])
-            });
+            let (a, b) = token.invoke_rite(|_t| ("hello", vec![1, 2, 3]));
             assert_eq!(a, "hello");
             assert_eq!(b, vec![1, 2, 3]);
         }
