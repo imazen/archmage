@@ -228,9 +228,6 @@ fn gen_real_token_struct(
     // Extraction methods
     gen_extraction_methods(out, reg, token);
 
-    // invoke_rite() method
-    gen_invoke_rite(out, token);
-
     // Disable/getter methods (not for WASM — compile-time only)
     if arch != "wasm" {
         gen_disable_methods(out, reg, token, all_tokens_in_file);
@@ -435,80 +432,6 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
         {INDENT}    }}
         {INDENT}}}
     "}
-}
-
-/// Generate `invoke_rite()` method for a real token.
-///
-/// Creates a closure-based `#[target_feature]` entry point — the method form
-/// of `#[arcane]`. On native arch, wraps the closure in a `#[target_feature]`
-/// inner function. The token is passed through to the closure.
-fn gen_invoke_rite(out: &mut String, token: &TokenDef) {
-    let name = &token.name;
-    let (_, target_features, _, _) = feature_flag_strings(token);
-
-    out.push_str(&formatdoc! {"
-
-        impl {name} {{
-            /// Invoke a closure within this token's `#[target_feature]` context.
-            ///
-            /// This is the method form of `#[arcane]` — it creates a single
-            /// `#[target_feature]` optimization boundary, then calls your closure
-            /// with the token inside that boundary.
-            ///
-            /// Use this when you want `#[arcane]` semantics without proc macros:
-            ///
-            /// ```rust,ignore
-            /// if let Some(token) = {name}::summon() {{
-            ///     token.invoke_rite(|t| process_simd(t, data))
-            /// }}
-            /// ```
-            ///
-            /// Inside the closure, all value-based SIMD intrinsics for this token's
-            /// feature set are safe to use (Rust 1.85+).
-            #[inline(always)]
-            pub fn invoke_rite<F, R>(self, f: F) -> R
-            where
-                F: FnOnce(Self) -> R,
-            {{
-                #[target_feature(enable = \"{target_features}\")]
-                unsafe fn __invoke_rite_inner<F, R>(token: {name}, f: F) -> R
-                where
-                    F: FnOnce({name}) -> R,
-                {{
-                    f(token)
-                }}
-                // SAFETY: Token existence proves CPU features are available.
-                // The token can only be created via summon() which verified CPUID.
-                unsafe {{ __invoke_rite_inner(self, f) }}
-            }}
-        }}
-    "});
-}
-
-/// Generate `invoke_rite()` method for a stub token (wrong architecture).
-///
-/// The method exists for API compatibility but is unreachable — the token
-/// can never be constructed on the wrong architecture.
-fn gen_stub_invoke_rite(out: &mut String, token: &TokenDef) {
-    let name = &token.name;
-
-    out.push_str(&formatdoc! {"
-
-        impl {name} {{
-            /// Invoke a closure within this token's `#[target_feature]` context.
-            ///
-            /// This method is unreachable on this architecture — `{name}` cannot
-            /// be constructed here (`summon()` always returns `None`).
-            #[inline(always)]
-            #[allow(unused_variables)]
-            pub fn invoke_rite<F, R>(self, f: F) -> R
-            where
-                F: FnOnce(Self) -> R,
-            {{
-                unreachable!(\"{name} cannot exist on this architecture\")
-            }}
-        }}
-    "});
 }
 
 fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
@@ -736,7 +659,6 @@ fn gen_stub_tokens(reg: &Registry, tokens: &[&TokenDef]) -> String {
     // Generate struct + SimdToken impl for each token
     for token in tokens {
         gen_stub_token_struct(&mut out, token);
-        gen_stub_invoke_rite(&mut out, token);
         out.push('\n');
     }
 

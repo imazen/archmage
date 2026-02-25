@@ -51,41 +51,6 @@ impl SimdToken for Wasm128Token {
     }
 }
 
-impl Wasm128Token {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This is the method form of `#[arcane]` — it creates a single
-    /// `#[target_feature]` optimization boundary, then calls your closure
-    /// with the token inside that boundary.
-    ///
-    /// Use this when you want `#[arcane]` semantics without proc macros:
-    ///
-    /// ```rust,ignore
-    /// if let Some(token) = Wasm128Token::summon() {
-    ///     token.invoke_rite(|t| process_simd(t, data))
-    /// }
-    /// ```
-    ///
-    /// Inside the closure, all value-based SIMD intrinsics for this token's
-    /// feature set are safe to use (Rust 1.85+).
-    #[inline(always)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        #[target_feature(enable = "simd128")]
-        unsafe fn __invoke_rite_inner<F, R>(token: Wasm128Token, f: F) -> R
-        where
-            F: FnOnce(Wasm128Token) -> R,
-        {
-            f(token)
-        }
-        // SAFETY: Token existence proves CPU features are available.
-        // The token can only be created via summon() which verified CPUID.
-        unsafe { __invoke_rite_inner(self, f) }
-    }
-}
-
 /// Proof that WASM Relaxed SIMD is available.
 ///
 /// Relaxed SIMD (Wasm 3.0) provides 28 instructions that trade strict
@@ -161,41 +126,6 @@ impl Wasm128RelaxedToken {
     #[inline(always)]
     pub fn wasm128(self) -> Wasm128Token {
         unsafe { Wasm128Token::forge_token_dangerously() }
-    }
-}
-
-impl Wasm128RelaxedToken {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This is the method form of `#[arcane]` — it creates a single
-    /// `#[target_feature]` optimization boundary, then calls your closure
-    /// with the token inside that boundary.
-    ///
-    /// Use this when you want `#[arcane]` semantics without proc macros:
-    ///
-    /// ```rust,ignore
-    /// if let Some(token) = Wasm128RelaxedToken::summon() {
-    ///     token.invoke_rite(|t| process_simd(t, data))
-    /// }
-    /// ```
-    ///
-    /// Inside the closure, all value-based SIMD intrinsics for this token's
-    /// feature set are safe to use (Rust 1.85+).
-    #[inline(always)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        #[target_feature(enable = "simd128,relaxed-simd")]
-        unsafe fn __invoke_rite_inner<F, R>(token: Wasm128RelaxedToken, f: F) -> R
-        where
-            F: FnOnce(Wasm128RelaxedToken) -> R,
-        {
-            f(token)
-        }
-        // SAFETY: Token existence proves CPU features are available.
-        // The token can only be created via summon() which verified CPUID.
-        unsafe { __invoke_rite_inner(self, f) }
     }
 }
 

@@ -60,21 +60,6 @@ impl NeonToken {
     }
 }
 
-impl NeonToken {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This method is unreachable on this architecture — `NeonToken` cannot
-    /// be constructed here (`summon()` always returns `None`).
-    #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        unreachable!("NeonToken cannot exist on this architecture")
-    }
-}
-
 /// Stub for NEON+AES token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct NeonAesToken {
@@ -127,21 +112,6 @@ impl NeonAesToken {
             target_features: Self::TARGET_FEATURES,
             disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
-    }
-}
-
-impl NeonAesToken {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This method is unreachable on this architecture — `NeonAesToken` cannot
-    /// be constructed here (`summon()` always returns `None`).
-    #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        unreachable!("NeonAesToken cannot exist on this architecture")
     }
 }
 
@@ -200,21 +170,6 @@ impl NeonSha3Token {
     }
 }
 
-impl NeonSha3Token {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This method is unreachable on this architecture — `NeonSha3Token` cannot
-    /// be constructed here (`summon()` always returns `None`).
-    #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        unreachable!("NeonSha3Token cannot exist on this architecture")
-    }
-}
-
 /// Stub for NEON+CRC token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct NeonCrcToken {
@@ -267,21 +222,6 @@ impl NeonCrcToken {
             target_features: Self::TARGET_FEATURES,
             disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
-    }
-}
-
-impl NeonCrcToken {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This method is unreachable on this architecture — `NeonCrcToken` cannot
-    /// be constructed here (`summon()` always returns `None`).
-    #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        unreachable!("NeonCrcToken cannot exist on this architecture")
     }
 }
 
@@ -342,21 +282,6 @@ impl Arm64V2Token {
     }
 }
 
-impl Arm64V2Token {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This method is unreachable on this architecture — `Arm64V2Token` cannot
-    /// be constructed here (`summon()` always returns `None`).
-    #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        unreachable!("Arm64V2Token cannot exist on this architecture")
-    }
-}
-
 /// Stub for Arm64-v3 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct Arm64V3Token {
@@ -412,21 +337,6 @@ impl Arm64V3Token {
             target_features: Self::TARGET_FEATURES,
             disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
-    }
-}
-
-impl Arm64V3Token {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This method is unreachable on this architecture — `Arm64V3Token` cannot
-    /// be constructed here (`summon()` always returns `None`).
-    #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        unreachable!("Arm64V3Token cannot exist on this architecture")
     }
 }
 

@@ -60,21 +60,6 @@ impl Wasm128Token {
     }
 }
 
-impl Wasm128Token {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This method is unreachable on this architecture — `Wasm128Token` cannot
-    /// be constructed here (`summon()` always returns `None`).
-    #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        unreachable!("Wasm128Token cannot exist on this architecture")
-    }
-}
-
 /// Stub for WASM Relaxed SIMD token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct Wasm128RelaxedToken {
@@ -127,21 +112,6 @@ impl Wasm128RelaxedToken {
             target_features: Self::TARGET_FEATURES,
             disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
-    }
-}
-
-impl Wasm128RelaxedToken {
-    /// Invoke a closure within this token's `#[target_feature]` context.
-    ///
-    /// This method is unreachable on this architecture — `Wasm128RelaxedToken` cannot
-    /// be constructed here (`summon()` always returns `None`).
-    #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn invoke_rite<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        unreachable!("Wasm128RelaxedToken cannot exist on this architecture")
     }
 }
 
