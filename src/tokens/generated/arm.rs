@@ -87,6 +87,41 @@ impl SimdToken for NeonToken {
 }
 
 impl NeonToken {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This is the method form of `#[arcane]` — it creates a single
+    /// `#[target_feature]` optimization boundary, then calls your closure
+    /// with the token inside that boundary.
+    ///
+    /// Use this when you want `#[arcane]` semantics without proc macros:
+    ///
+    /// ```rust,ignore
+    /// if let Some(token) = NeonToken::summon() {
+    ///     token.invoke_rite(|t| process_simd(t, data))
+    /// }
+    /// ```
+    ///
+    /// Inside the closure, all value-based SIMD intrinsics for this token's
+    /// feature set are safe to use (Rust 1.85+).
+    #[inline(always)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        #[target_feature(enable = "neon")]
+        unsafe fn __invoke_rite_inner<F, R>(token: NeonToken, f: F) -> R
+        where
+            F: FnOnce(NeonToken) -> R,
+        {
+            f(token)
+        }
+        // SAFETY: Token existence proves CPU features are available.
+        // The token can only be created via summon() which verified CPUID.
+        unsafe { __invoke_rite_inner(self, f) }
+    }
+}
+
+impl NeonToken {
     /// Disable this token process-wide for testing and benchmarking.
     ///
     /// When disabled, `summon()` will return `None` even if the CPU supports
@@ -240,6 +275,41 @@ impl NeonAesToken {
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+impl NeonAesToken {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This is the method form of `#[arcane]` — it creates a single
+    /// `#[target_feature]` optimization boundary, then calls your closure
+    /// with the token inside that boundary.
+    ///
+    /// Use this when you want `#[arcane]` semantics without proc macros:
+    ///
+    /// ```rust,ignore
+    /// if let Some(token) = NeonAesToken::summon() {
+    ///     token.invoke_rite(|t| process_simd(t, data))
+    /// }
+    /// ```
+    ///
+    /// Inside the closure, all value-based SIMD intrinsics for this token's
+    /// feature set are safe to use (Rust 1.85+).
+    #[inline(always)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        #[target_feature(enable = "neon,aes")]
+        unsafe fn __invoke_rite_inner<F, R>(token: NeonAesToken, f: F) -> R
+        where
+            F: FnOnce(NeonAesToken) -> R,
+        {
+            f(token)
+        }
+        // SAFETY: Token existence proves CPU features are available.
+        // The token can only be created via summon() which verified CPUID.
+        unsafe { __invoke_rite_inner(self, f) }
     }
 }
 
@@ -400,6 +470,41 @@ impl NeonSha3Token {
 }
 
 impl NeonSha3Token {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This is the method form of `#[arcane]` — it creates a single
+    /// `#[target_feature]` optimization boundary, then calls your closure
+    /// with the token inside that boundary.
+    ///
+    /// Use this when you want `#[arcane]` semantics without proc macros:
+    ///
+    /// ```rust,ignore
+    /// if let Some(token) = NeonSha3Token::summon() {
+    ///     token.invoke_rite(|t| process_simd(t, data))
+    /// }
+    /// ```
+    ///
+    /// Inside the closure, all value-based SIMD intrinsics for this token's
+    /// feature set are safe to use (Rust 1.85+).
+    #[inline(always)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        #[target_feature(enable = "neon,sha3")]
+        unsafe fn __invoke_rite_inner<F, R>(token: NeonSha3Token, f: F) -> R
+        where
+            F: FnOnce(NeonSha3Token) -> R,
+        {
+            f(token)
+        }
+        // SAFETY: Token existence proves CPU features are available.
+        // The token can only be created via summon() which verified CPUID.
+        unsafe { __invoke_rite_inner(self, f) }
+    }
+}
+
+impl NeonSha3Token {
     /// Disable this token process-wide for testing and benchmarking.
     ///
     /// When disabled, `summon()` will return `None` even if the CPU supports
@@ -553,6 +658,41 @@ impl NeonCrcToken {
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+impl NeonCrcToken {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This is the method form of `#[arcane]` — it creates a single
+    /// `#[target_feature]` optimization boundary, then calls your closure
+    /// with the token inside that boundary.
+    ///
+    /// Use this when you want `#[arcane]` semantics without proc macros:
+    ///
+    /// ```rust,ignore
+    /// if let Some(token) = NeonCrcToken::summon() {
+    ///     token.invoke_rite(|t| process_simd(t, data))
+    /// }
+    /// ```
+    ///
+    /// Inside the closure, all value-based SIMD intrinsics for this token's
+    /// feature set are safe to use (Rust 1.85+).
+    #[inline(always)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        #[target_feature(enable = "neon,crc")]
+        unsafe fn __invoke_rite_inner<F, R>(token: NeonCrcToken, f: F) -> R
+        where
+            F: FnOnce(NeonCrcToken) -> R,
+        {
+            f(token)
+        }
+        // SAFETY: Token existence proves CPU features are available.
+        // The token can only be created via summon() which verified CPUID.
+        unsafe { __invoke_rite_inner(self, f) }
     }
 }
 
@@ -739,6 +879,41 @@ impl Arm64V2Token {
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+impl Arm64V2Token {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This is the method form of `#[arcane]` — it creates a single
+    /// `#[target_feature]` optimization boundary, then calls your closure
+    /// with the token inside that boundary.
+    ///
+    /// Use this when you want `#[arcane]` semantics without proc macros:
+    ///
+    /// ```rust,ignore
+    /// if let Some(token) = Arm64V2Token::summon() {
+    ///     token.invoke_rite(|t| process_simd(t, data))
+    /// }
+    /// ```
+    ///
+    /// Inside the closure, all value-based SIMD intrinsics for this token's
+    /// feature set are safe to use (Rust 1.85+).
+    #[inline(always)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        #[target_feature(enable = "neon,crc,rdm,dotprod,fp16,aes,sha2")]
+        unsafe fn __invoke_rite_inner<F, R>(token: Arm64V2Token, f: F) -> R
+        where
+            F: FnOnce(Arm64V2Token) -> R,
+        {
+            f(token)
+        }
+        // SAFETY: Token existence proves CPU features are available.
+        // The token can only be created via summon() which verified CPUID.
+        unsafe { __invoke_rite_inner(self, f) }
     }
 }
 
@@ -980,6 +1155,41 @@ impl Arm64V3Token {
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+impl Arm64V3Token {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This is the method form of `#[arcane]` — it creates a single
+    /// `#[target_feature]` optimization boundary, then calls your closure
+    /// with the token inside that boundary.
+    ///
+    /// Use this when you want `#[arcane]` semantics without proc macros:
+    ///
+    /// ```rust,ignore
+    /// if let Some(token) = Arm64V3Token::summon() {
+    ///     token.invoke_rite(|t| process_simd(t, data))
+    /// }
+    /// ```
+    ///
+    /// Inside the closure, all value-based SIMD intrinsics for this token's
+    /// feature set are safe to use (Rust 1.85+).
+    #[inline(always)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        #[target_feature(enable = "neon,crc,rdm,dotprod,fp16,aes,sha2,fhm,fcma,sha3,i8mm,bf16")]
+        unsafe fn __invoke_rite_inner<F, R>(token: Arm64V3Token, f: F) -> R
+        where
+            F: FnOnce(Arm64V3Token) -> R,
+        {
+            f(token)
+        }
+        // SAFETY: Token existence proves CPU features are available.
+        // The token can only be created via summon() which verified CPUID.
+        unsafe { __invoke_rite_inner(self, f) }
     }
 }
 

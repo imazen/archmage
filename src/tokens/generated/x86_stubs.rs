@@ -60,6 +60,21 @@ impl X64V1Token {
     }
 }
 
+impl X64V1Token {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This method is unreachable on this architecture — `X64V1Token` cannot
+    /// be constructed here (`summon()` always returns `None`).
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        unreachable!("X64V1Token cannot exist on this architecture")
+    }
+}
+
 /// Stub for x86-64-v2 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct X64V2Token {
@@ -114,6 +129,21 @@ impl X64V2Token {
             target_features: Self::TARGET_FEATURES,
             disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
+    }
+}
+
+impl X64V2Token {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This method is unreachable on this architecture — `X64V2Token` cannot
+    /// be constructed here (`summon()` always returns `None`).
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        unreachable!("X64V2Token cannot exist on this architecture")
     }
 }
 
@@ -173,6 +203,21 @@ impl X64CryptoToken {
     }
 }
 
+impl X64CryptoToken {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This method is unreachable on this architecture — `X64CryptoToken` cannot
+    /// be constructed here (`summon()` always returns `None`).
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        unreachable!("X64CryptoToken cannot exist on this architecture")
+    }
+}
+
 /// Stub for x86-64-v3 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct X64V3Token {
@@ -225,6 +270,21 @@ impl X64V3Token {
             target_features: Self::TARGET_FEATURES,
             disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
+    }
+}
+
+impl X64V3Token {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This method is unreachable on this architecture — `X64V3Token` cannot
+    /// be constructed here (`summon()` always returns `None`).
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        unreachable!("X64V3Token cannot exist on this architecture")
     }
 }
 
@@ -283,6 +343,21 @@ impl X64V3CryptoToken {
     }
 }
 
+impl X64V3CryptoToken {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This method is unreachable on this architecture — `X64V3CryptoToken` cannot
+    /// be constructed here (`summon()` always returns `None`).
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        unreachable!("X64V3CryptoToken cannot exist on this architecture")
+    }
+}
+
 /// Stub for AVX-512 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct X64V4Token {
@@ -335,6 +410,21 @@ impl X64V4Token {
             target_features: Self::TARGET_FEATURES,
             disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
+    }
+}
+
+impl X64V4Token {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This method is unreachable on this architecture — `X64V4Token` cannot
+    /// be constructed here (`summon()` always returns `None`).
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        unreachable!("X64V4Token cannot exist on this architecture")
     }
 }
 
@@ -393,6 +483,21 @@ impl X64V4xToken {
     }
 }
 
+impl X64V4xToken {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This method is unreachable on this architecture — `X64V4xToken` cannot
+    /// be constructed here (`summon()` always returns `None`).
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        unreachable!("X64V4xToken cannot exist on this architecture")
+    }
+}
+
 /// Stub for AVX-512FP16 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct Avx512Fp16Token {
@@ -445,6 +550,21 @@ impl Avx512Fp16Token {
             target_features: Self::TARGET_FEATURES,
             disable_flags: Self::DISABLE_TARGET_FEATURES,
         })
+    }
+}
+
+impl Avx512Fp16Token {
+    /// Invoke a closure within this token's `#[target_feature]` context.
+    ///
+    /// This method is unreachable on this architecture — `Avx512Fp16Token` cannot
+    /// be constructed here (`summon()` always returns `None`).
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        unreachable!("Avx512Fp16Token cannot exist on this architecture")
     }
 }
 

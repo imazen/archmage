@@ -224,6 +224,18 @@ impl SimdToken for ScalarToken {
 }
 
 impl ScalarToken {
+    /// Invoke a closure (no-op passthrough for scalar).
+    ///
+    /// `ScalarToken` has no target features, so this just calls the closure
+    /// directly with no `#[target_feature]` boundary.
+    #[inline(always)]
+    pub fn invoke_rite<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(Self) -> R,
+    {
+        f(self)
+    }
+
     /// Scalar tokens cannot be disabled (they are always available).
     ///
     /// Always returns `Err(CompileTimeGuaranteedError)` because `ScalarToken`
