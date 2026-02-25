@@ -644,4 +644,137 @@ mod tests {
             .expect("NeonCrcToken not found");
         assert_eq!(crc.features, vec!["neon", "crc"]);
     }
+
+    fn load_test_registry() -> Registry {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("token-registry.toml");
+        Registry::load(&path).expect("Failed to load token-registry.toml")
+    }
+
+    #[test]
+    fn macro_registry_contains_all_tokens() {
+        let registry = load_test_registry();
+        let output = registry.generate_macro_registry();
+
+        // Every token should appear in the generated registry
+        for token in &registry.token {
+            assert!(
+                output.contains(&token.name),
+                "Token {} missing from macro registry output",
+                token.name
+            );
+            // Every alias should also appear
+            for alias in &token.aliases {
+                assert!(
+                    output.contains(alias),
+                    "Alias {} for {} missing from macro registry",
+                    alias,
+                    token.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn macro_registry_contains_features() {
+        let registry = load_test_registry();
+        let output = registry.generate_macro_registry();
+
+        // Key features should appear in the output
+        for feature in &["avx2", "fma", "neon", "simd128"] {
+            assert!(
+                output.contains(feature),
+                "Feature {feature} missing from macro registry output",
+            );
+        }
+    }
+
+    #[test]
+    fn token_hierarchy_is_consistent() {
+        let registry = load_test_registry();
+
+        // Every parent must exist
+        for token in &registry.token {
+            for parent_name in &token.parents {
+                assert!(
+                    registry.find_token(parent_name).is_some(),
+                    "Token {} declares parent {} which doesn't exist",
+                    token.name,
+                    parent_name
+                );
+            }
+        }
+
+        // Every child's features must be a superset of parent's features
+        for token in &registry.token {
+            for parent_name in &token.parents {
+                if let Some(parent) = registry.find_token(parent_name) {
+                    for parent_feature in &parent.features {
+                        assert!(
+                            token.features.contains(parent_feature),
+                            "Token {} missing parent feature {} from {}",
+                            token.name,
+                            parent_feature,
+                            parent_name
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn all_traits_referenced_by_tokens_exist() {
+        let registry = load_test_registry();
+        let trait_names: Vec<&str> = registry.traits.iter().map(|t| t.name.as_str()).collect();
+
+        for token in &registry.token {
+            for trait_name in &token.traits {
+                assert!(
+                    trait_names.contains(&trait_name.as_str()),
+                    "Token {} references trait {} which isn't defined",
+                    token.name,
+                    trait_name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn features_for_returns_correct_data() {
+        let registry = load_test_registry();
+
+        // X64V3Token should include inherited features
+        let v3_features = registry.features_for("X64V3Token").unwrap();
+        assert!(v3_features.contains(&"avx2"));
+        assert!(v3_features.contains(&"fma"));
+        assert!(v3_features.contains(&"sse2")); // inherited from V1
+
+        // Alias should work too
+        let desktop = registry.features_for("Desktop64").unwrap();
+        assert_eq!(v3_features, desktop);
+
+        // Nonexistent token
+        assert!(registry.features_for("FakeToken").is_none());
+    }
+
+    #[test]
+    fn arch_grouping_covers_all_tokens() {
+        let registry = load_test_registry();
+        let valid_arches = ["x86", "aarch64", "wasm"];
+
+        for token in &registry.token {
+            if token.name == "ScalarToken" {
+                continue; // ScalarToken has arch "any"
+            }
+            assert!(
+                valid_arches.contains(&token.arch.as_str()) || token.arch == "any",
+                "Token {} has unexpected arch: {}",
+                token.name,
+                token.arch
+            );
+        }
+    }
 }

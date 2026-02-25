@@ -228,6 +228,9 @@ fn gen_real_token_struct(
     // Extraction methods
     gen_extraction_methods(out, reg, token);
 
+    // invoke_rite() method
+    gen_invoke_rite(out, token);
+
     // Disable/getter methods (not for WASM — compile-time only)
     if arch != "wasm" {
         gen_disable_methods(out, reg, token, all_tokens_in_file);
@@ -432,6 +435,80 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
         {INDENT}    }}
         {INDENT}}}
     "}
+}
+
+/// Generate `invoke_rite()` method for a real token.
+///
+/// Creates a closure-based `#[target_feature]` entry point — the method form
+/// of `#[arcane]`. On native arch, wraps the closure in a `#[target_feature]`
+/// inner function. The token is passed through to the closure.
+fn gen_invoke_rite(out: &mut String, token: &TokenDef) {
+    let name = &token.name;
+    let (_, target_features, _, _) = feature_flag_strings(token);
+
+    out.push_str(&formatdoc! {"
+
+        impl {name} {{
+            /// Invoke a closure within this token's `#[target_feature]` context.
+            ///
+            /// This is the method form of `#[arcane]` — it creates a single
+            /// `#[target_feature]` optimization boundary, then calls your closure
+            /// with the token inside that boundary.
+            ///
+            /// Use this when you want `#[arcane]` semantics without proc macros:
+            ///
+            /// ```rust,ignore
+            /// if let Some(token) = {name}::summon() {{
+            ///     token.invoke_rite(|t| process_simd(t, data))
+            /// }}
+            /// ```
+            ///
+            /// Inside the closure, all value-based SIMD intrinsics for this token's
+            /// feature set are safe to use (Rust 1.85+).
+            #[inline(always)]
+            pub fn invoke_rite<F, R>(self, f: F) -> R
+            where
+                F: FnOnce(Self) -> R,
+            {{
+                #[target_feature(enable = \"{target_features}\")]
+                unsafe fn __invoke_rite_inner<F, R>(token: {name}, f: F) -> R
+                where
+                    F: FnOnce({name}) -> R,
+                {{
+                    f(token)
+                }}
+                // SAFETY: Token existence proves CPU features are available.
+                // The token can only be created via summon() which verified CPUID.
+                unsafe {{ __invoke_rite_inner(self, f) }}
+            }}
+        }}
+    "});
+}
+
+/// Generate `invoke_rite()` method for a stub token (wrong architecture).
+///
+/// The method exists for API compatibility but is unreachable — the token
+/// can never be constructed on the wrong architecture.
+fn gen_stub_invoke_rite(out: &mut String, token: &TokenDef) {
+    let name = &token.name;
+
+    out.push_str(&formatdoc! {"
+
+        impl {name} {{
+            /// Invoke a closure within this token's `#[target_feature]` context.
+            ///
+            /// This method is unreachable on this architecture — `{name}` cannot
+            /// be constructed here (`summon()` always returns `None`).
+            #[inline(always)]
+            #[allow(unused_variables)]
+            pub fn invoke_rite<F, R>(self, f: F) -> R
+            where
+                F: FnOnce(Self) -> R,
+            {{
+                unreachable!(\"{name} cannot exist on this architecture\")
+            }}
+        }}
+    "});
 }
 
 fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
@@ -659,6 +736,7 @@ fn gen_stub_tokens(reg: &Registry, tokens: &[&TokenDef]) -> String {
     // Generate struct + SimdToken impl for each token
     for token in tokens {
         gen_stub_token_struct(&mut out, token);
+        gen_stub_invoke_rite(&mut out, token);
         out.push('\n');
     }
 
@@ -987,5 +1065,225 @@ fn gen_doc_comment(doc: &Option<String>) -> String {
             block
         }
         None => String::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::registry::Registry;
+    use std::path::Path;
+
+    fn load_test_registry() -> Registry {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("token-registry.toml");
+        Registry::load(&path).expect("Failed to load token-registry.toml")
+    }
+
+    #[test]
+    fn generates_expected_file_set() {
+        let reg = load_test_registry();
+        let files = generate_token_files(&reg);
+        let names: Vec<&str> = files.iter().map(|(n, _)| n.as_str()).collect();
+
+        // Must produce exactly these files
+        let expected = [
+            "x86.rs",
+            "arm.rs",
+            "wasm.rs",
+            "x86_stubs.rs",
+            "arm_stubs.rs",
+            "wasm_stubs.rs",
+            "traits.rs",
+            "mod.rs",
+        ];
+        for exp in &expected {
+            assert!(
+                names.contains(exp),
+                "Missing expected file: {exp}. Got: {names:?}"
+            );
+        }
+        assert_eq!(
+            files.len(),
+            expected.len(),
+            "Unexpected file count. Got: {names:?}"
+        );
+    }
+
+    #[test]
+    fn x86_real_tokens_contain_all_x86_tokens() {
+        let reg = load_test_registry();
+        let files = generate_token_files(&reg);
+        let x86_code = &files.iter().find(|(n, _)| n == "x86.rs").unwrap().1;
+
+        let x86_tokens: Vec<&str> = reg
+            .token
+            .iter()
+            .filter(|t| t.arch == "x86")
+            .map(|t| t.name.as_str())
+            .collect();
+
+        for token_name in &x86_tokens {
+            assert!(
+                x86_code.contains(&format!("pub struct {token_name}")),
+                "x86.rs missing struct definition for {token_name}"
+            );
+            assert!(
+                x86_code.contains(&format!("impl SimdToken for {token_name}")),
+                "x86.rs missing SimdToken impl for {token_name}"
+            );
+        }
+    }
+
+    #[test]
+    fn arm_real_tokens_contain_all_arm_tokens() {
+        let reg = load_test_registry();
+        let files = generate_token_files(&reg);
+        let arm_code = &files.iter().find(|(n, _)| n == "arm.rs").unwrap().1;
+
+        let arm_tokens: Vec<&str> = reg
+            .token
+            .iter()
+            .filter(|t| t.arch == "aarch64")
+            .map(|t| t.name.as_str())
+            .collect();
+
+        for token_name in &arm_tokens {
+            assert!(
+                arm_code.contains(&format!("pub struct {token_name}")),
+                "arm.rs missing struct definition for {token_name}"
+            );
+            assert!(
+                arm_code.contains(&format!("impl SimdToken for {token_name}")),
+                "arm.rs missing SimdToken impl for {token_name}"
+            );
+        }
+    }
+
+    #[test]
+    fn stubs_return_none_for_summon() {
+        let reg = load_test_registry();
+        let files = generate_token_files(&reg);
+
+        for (name, code) in &files {
+            if name.ends_with("_stubs.rs") {
+                // Every stub's summon must return None
+                assert!(
+                    !code.contains("Some(Self"),
+                    "{name} contains Some(Self — stubs must only return None"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn traits_file_contains_all_traits() {
+        let reg = load_test_registry();
+        let files = generate_token_files(&reg);
+        let traits_code = &files.iter().find(|(n, _)| n == "traits.rs").unwrap().1;
+
+        for trait_def in &reg.traits {
+            assert!(
+                traits_code.contains(&format!("pub trait {}", trait_def.name)),
+                "traits.rs missing trait: {}",
+                trait_def.name
+            );
+        }
+    }
+
+    #[test]
+    fn real_tokens_have_summon_and_compiled_with() {
+        let reg = load_test_registry();
+        let files = generate_token_files(&reg);
+
+        for (name, code) in &files {
+            if name == "x86.rs" || name == "arm.rs" || name == "wasm.rs" {
+                // Every real token file must implement summon() and compiled_with()
+                let arch_tokens: Vec<&str> = reg
+                    .token
+                    .iter()
+                    .filter(|t| match name.as_str() {
+                        "x86.rs" => t.arch == "x86",
+                        "arm.rs" => t.arch == "aarch64",
+                        "wasm.rs" => t.arch == "wasm",
+                        _ => false,
+                    })
+                    .map(|t| t.name.as_str())
+                    .collect();
+
+                for token_name in &arch_tokens {
+                    assert!(
+                        code.contains("fn summon()"),
+                        "{name} missing summon() for {token_name}"
+                    );
+                    assert!(
+                        code.contains("fn compiled_with()"),
+                        "{name} missing compiled_with() for {token_name}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn parent_extraction_methods_generated() {
+        let reg = load_test_registry();
+        let files = generate_token_files(&reg);
+        let x86_code = &files.iter().find(|(n, _)| n == "x86.rs").unwrap().1;
+
+        // X64V3Token has parent X64V2Token — should generate extraction method
+        let v3 = reg.find_token("X64V3Token").unwrap();
+        assert!(
+            !v3.parents.is_empty(),
+            "X64V3Token should have parents for this test"
+        );
+        // The short_name of the parent becomes the extraction method
+        let v2 = reg.find_token("X64V2Token").unwrap();
+        let short = v2.short_name.as_deref().expect("X64V2Token has short_name");
+        assert!(
+            x86_code.contains(&format!("pub fn {short}(self)")),
+            "x86.rs missing parent extraction method {short}() on X64V3Token",
+        );
+    }
+
+    #[test]
+    fn cache_variable_names_are_unique() {
+        let reg = load_test_registry();
+
+        let mut cache_names = std::collections::HashSet::new();
+        for token in &reg.token {
+            if token.arch == "any" {
+                continue;
+            }
+            let name = cache_var_name(&token.name);
+            assert!(
+                cache_names.insert(name.clone()),
+                "Duplicate cache variable: {name} (from {})",
+                token.name
+            );
+        }
+    }
+
+    #[test]
+    fn mod_rs_routes_all_architectures() {
+        let reg = load_test_registry();
+        let files = generate_token_files(&reg);
+        let mod_code = &files.iter().find(|(n, _)| n == "mod.rs").unwrap().1;
+
+        // Must have cfg routing for all architectures
+        assert!(
+            mod_code.contains("target_arch = \"x86_64\""),
+            "mod.rs missing x86_64 routing"
+        );
+        assert!(
+            mod_code.contains("target_arch = \"aarch64\""),
+            "mod.rs missing aarch64 routing"
+        );
+        assert!(
+            mod_code.contains("target_arch = \"wasm32\""),
+            "mod.rs missing wasm32 routing"
+        );
     }
 }
