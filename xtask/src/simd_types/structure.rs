@@ -463,7 +463,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         /// }}
         /// ```
         #[inline(always)]
-        pub fn partition_slice<'a>(_: archmage::{token}, data: &'a [{elem}]) -> (&'a [[{elem}; {lanes}]], &'a [{elem}]) {{
+        pub fn partition_slice(_: archmage::{token}, data: &[{elem}]) -> (&[[{elem}; {lanes}]], &[{elem}]) {{
             let bulk = data.len() / {lanes};
             let (head, tail) = data.split_at(bulk * {lanes});
             // SAFETY: head.len() is a multiple of {lanes}, and [{elem}] has no alignment requirements
@@ -479,7 +479,7 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         /// Returns `(chunks, remainder)` where each chunk is a `&mut [{elem}; {lanes}]`
         /// that can be passed directly to [`store`](Self::store).
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(_: archmage::{token}, data: &'a mut [{elem}]) -> (&'a mut [[{elem}; {lanes}]], &'a mut [{elem}]) {{
+        pub fn partition_slice_mut(_: archmage::{token}, data: &mut [{elem}]) -> (&mut [[{elem}; {lanes}]], &mut [{elem}]) {{
             let bulk = data.len() / {lanes};
             let (head, tail) = data.split_at_mut(bulk * {lanes});
             // SAFETY: head.len() is a multiple of {lanes}, and [{elem}] has no alignment requirements

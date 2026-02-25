@@ -67,7 +67,7 @@ impl<T: I16x32Backend> i16x32<T> {
     /// Returns `(&[[i16; 32]], &[i16])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice<'a>(_: T, data: &'a [i16]) -> (&'a [[i16; 32]], &'a [i16]) {
+    pub fn partition_slice(_: T, data: &[i16]) -> (&[[i16; 32]], &[i16]) {
         let bulk = data.len() / 32;
         let (head, tail) = data.split_at(bulk * 32);
         // SAFETY: head.len() is bulk * 32, so it's exactly `bulk` chunks of [i16; 32].
@@ -82,10 +82,7 @@ impl<T: I16x32Backend> i16x32<T> {
     /// Returns `(&mut [[i16; 32]], &mut [i16])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
-        _: T,
-        data: &'a mut [i16],
-    ) -> (&'a mut [[i16; 32]], &'a mut [i16]) {
+    pub fn partition_slice_mut(_: T, data: &mut [i16]) -> (&mut [[i16; 32]], &mut [i16]) {
         let bulk = data.len() / 32;
         let (head, tail) = data.split_at_mut(bulk * 32);
         // SAFETY: head.len() is bulk * 32, so it's exactly `bulk` chunks of [i16; 32].
@@ -124,6 +121,7 @@ impl<T: I16x32Backend> i16x32<T> {
     /// Wrap a repr without requiring a token value.
     /// Only usable within the `generic` module (for cross-type conversions).
     #[inline(always)]
+    #[allow(dead_code)]
     pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
         Self(repr, PhantomData)
     }

@@ -243,10 +243,24 @@ impl IntVecType {
         }
     }
 
+    /// Signed type suffix for literal constants (e.g., `-1_i8` instead of `-1 as i8`)
+    fn x86_set1_literal_suffix(&self) -> &'static str {
+        if self.signed {
+            ""
+        } else {
+            match self.elem_bits {
+                8 => "_i8",
+                16 => "_i16",
+                64 => "_i64",
+                _ => unreachable!(),
+            }
+        }
+    }
+
     /// Bias value for unsigned comparison (as signed literal)
     fn unsigned_bias_literal(&self) -> &'static str {
         match self.elem_bits {
-            8 => "0x80u8 as i8",
+            8 => "i8::MIN",
             16 => "i16::MIN",
             64 => "i64::MIN",
             _ => unreachable!(),
@@ -562,6 +576,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     let set1_suf = ty.x86_set1_suffix();
     let arith_suf = ty.x86_arith_suffix();
     let set1_cast = ty.x86_set1_cast();
+    let set1_lit = ty.x86_set1_literal_suffix();
 
     let mut body = String::new();
 
@@ -762,7 +777,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
             fn simd_ne(a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let eq = {p}_cmpeq_{cmp_suf}(a, b);
-                    {p}_andnot_si{bits}(eq, {p}_set1_{set1_suf}(-1{set1_cast}))
+                    {p}_andnot_si{bits}(eq, {p}_set1_{set1_suf}(-1{set1_lit}))
                 }}
             }}
 
@@ -785,7 +800,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
             fn simd_le(a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let gt = <Self as {trait_name}>::simd_gt(a, b);
-                    {p}_andnot_si{bits}(gt, {p}_set1_{set1_suf}(-1{set1_cast}))
+                    {p}_andnot_si{bits}(gt, {p}_set1_{set1_suf}(-1{set1_lit}))
                 }}
             }}
 
@@ -793,7 +808,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
             fn simd_ge(a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let lt = <Self as {trait_name}>::simd_gt(b, a);
-                    {p}_andnot_si{bits}(lt, {p}_set1_{set1_suf}(-1{set1_cast}))
+                    {p}_andnot_si{bits}(lt, {p}_set1_{set1_suf}(-1{set1_lit}))
                 }}
             }}
         "#});
@@ -827,7 +842,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             #[inline(always)]
             fn not(a: {inner}) -> {inner} {{
-                unsafe {{ {p}_andnot_si{bits}(a, {p}_set1_{set1_suf}(-1{set1_cast})) }}
+                unsafe {{ {p}_andnot_si{bits}(a, {p}_set1_{set1_suf}(-1{set1_lit})) }}
             }}
 
             #[inline(always)]
@@ -1142,7 +1157,11 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
                 8 | 16 | 64 => ty.elem_bits - 1,
                 _ => unreachable!(),
             };
-            format!("((a[{i}] >> {shift_by}) as u32 & 1) << {i}")
+            if i == 0 {
+                format!("((a[0] >> {shift_by}) as u32 & 1)")
+            } else {
+                format!("((a[{i}] >> {shift_by}) as u32 & 1) << {i}")
+            }
         })
         .collect();
     let bitmask_body = bitmask_items.join(" | ");
@@ -1698,11 +1717,12 @@ fn generate_neon_bitmask(ty: &IntVecType) -> String {
             let lanes = ty.lanes_per_128();
             let items: Vec<String> = (0..lanes)
                 .map(|i| {
+                    let shift = if i == 0 { String::new() } else { format!(" << {i}") };
                     if ty.signed {
                         let us = &ns[1..]; // "16"
-                        format!("(vgetq_lane_u{us}::<{i}>(vreinterpretq_u{us}_{ns}(vshrq_n_{ns}::<15>(a))) as u32 & 1) << {i}")
+                        format!("(vgetq_lane_u{us}::<{i}>(vreinterpretq_u{us}_{ns}(vshrq_n_{ns}::<15>(a))) as u32 & 1){shift}")
                     } else {
-                        format!("(vgetq_lane_{ns}::<{i}>(vshrq_n_{ns}::<15>(a)) as u32 & 1) << {i}")
+                        format!("(vgetq_lane_{ns}::<{i}>(vshrq_n_{ns}::<15>(a)) as u32 & 1){shift}")
                     }
                 })
                 .collect();

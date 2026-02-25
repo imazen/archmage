@@ -59,10 +59,7 @@ impl f32x4 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[f32; 4]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [f32],
-    ) -> (&'a [[f32; 4]], &'a [f32]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[f32]) -> (&[[f32; 4]], &[f32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, [f32; 4] has same alignment as [f32]
@@ -72,10 +69,10 @@ impl f32x4 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [f32],
-    ) -> (&'a mut [[f32; 4]], &'a mut [f32]) {
+        data: &mut [f32],
+    ) -> (&mut [[f32; 4]], &mut [f32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at_mut(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, [f32; 4] has same alignment as [f32]
@@ -1507,10 +1504,7 @@ impl f64x2 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[f64; 2]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [f64],
-    ) -> (&'a [[f64; 2]], &'a [f64]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[f64]) -> (&[[f64; 2]], &[f64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, [f64; 2] has same alignment as [f64]
@@ -1520,10 +1514,10 @@ impl f64x2 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [f64],
-    ) -> (&'a mut [[f64; 2]], &'a mut [f64]) {
+        data: &mut [f64],
+    ) -> (&mut [[f64; 2]], &mut [f64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at_mut(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, [f64; 2] has same alignment as [f64]
@@ -2222,10 +2216,7 @@ impl i8x16 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[i8; 16]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [i8],
-    ) -> (&'a [[i8; 16]], &'a [i8]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[i8]) -> (&[[i8; 16]], &[i8]) {
         let bulk = data.len() / 16;
         let (head, tail) = data.split_at(bulk * 16);
         // SAFETY: head.len() is a multiple of 16, [i8; 16] has same alignment as [i8]
@@ -2235,10 +2226,10 @@ impl i8x16 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [i8],
-    ) -> (&'a mut [[i8; 16]], &'a mut [i8]) {
+        data: &mut [i8],
+    ) -> (&mut [[i8; 16]], &mut [i8]) {
         let bulk = data.len() / 16;
         let (head, tail) = data.split_at_mut(bulk * 16);
         // SAFETY: head.len() is a multiple of 16, [i8; 16] has same alignment as [i8]
@@ -2848,10 +2839,7 @@ impl u8x16 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[u8; 16]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [u8],
-    ) -> (&'a [[u8; 16]], &'a [u8]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[u8]) -> (&[[u8; 16]], &[u8]) {
         let bulk = data.len() / 16;
         let (head, tail) = data.split_at(bulk * 16);
         // SAFETY: head.len() is a multiple of 16, [u8; 16] has same alignment as [u8]
@@ -2861,10 +2849,10 @@ impl u8x16 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [u8],
-    ) -> (&'a mut [[u8; 16]], &'a mut [u8]) {
+        data: &mut [u8],
+    ) -> (&mut [[u8; 16]], &mut [u8]) {
         let bulk = data.len() / 16;
         let (head, tail) = data.split_at_mut(bulk * 16);
         // SAFETY: head.len() is a multiple of 16, [u8; 16] has same alignment as [u8]
@@ -3496,10 +3484,7 @@ impl i16x8 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[i16; 8]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [i16],
-    ) -> (&'a [[i16; 8]], &'a [i16]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[i16]) -> (&[[i16; 8]], &[i16]) {
         let bulk = data.len() / 8;
         let (head, tail) = data.split_at(bulk * 8);
         // SAFETY: head.len() is a multiple of 8, [i16; 8] has same alignment as [i16]
@@ -3509,10 +3494,10 @@ impl i16x8 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [i16],
-    ) -> (&'a mut [[i16; 8]], &'a mut [i16]) {
+        data: &mut [i16],
+    ) -> (&mut [[i16; 8]], &mut [i16]) {
         let bulk = data.len() / 8;
         let (head, tail) = data.split_at_mut(bulk * 8);
         // SAFETY: head.len() is a multiple of 8, [i16; 8] has same alignment as [i16]
@@ -4186,10 +4171,7 @@ impl u16x8 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[u16; 8]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [u16],
-    ) -> (&'a [[u16; 8]], &'a [u16]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[u16]) -> (&[[u16; 8]], &[u16]) {
         let bulk = data.len() / 8;
         let (head, tail) = data.split_at(bulk * 8);
         // SAFETY: head.len() is a multiple of 8, [u16; 8] has same alignment as [u16]
@@ -4199,10 +4181,10 @@ impl u16x8 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [u16],
-    ) -> (&'a mut [[u16; 8]], &'a mut [u16]) {
+        data: &mut [u16],
+    ) -> (&mut [[u16; 8]], &mut [u16]) {
         let bulk = data.len() / 8;
         let (head, tail) = data.split_at_mut(bulk * 8);
         // SAFETY: head.len() is a multiple of 8, [u16; 8] has same alignment as [u16]
@@ -4834,10 +4816,7 @@ impl i32x4 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[i32; 4]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [i32],
-    ) -> (&'a [[i32; 4]], &'a [i32]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[i32]) -> (&[[i32; 4]], &[i32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, [i32; 4] has same alignment as [i32]
@@ -4847,10 +4826,10 @@ impl i32x4 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [i32],
-    ) -> (&'a mut [[i32; 4]], &'a mut [i32]) {
+        data: &mut [i32],
+    ) -> (&mut [[i32; 4]], &mut [i32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at_mut(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, [i32; 4] has same alignment as [i32]
@@ -5500,10 +5479,7 @@ impl u32x4 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[u32; 4]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [u32],
-    ) -> (&'a [[u32; 4]], &'a [u32]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[u32]) -> (&[[u32; 4]], &[u32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, [u32; 4] has same alignment as [u32]
@@ -5513,10 +5489,10 @@ impl u32x4 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [u32],
-    ) -> (&'a mut [[u32; 4]], &'a mut [u32]) {
+        data: &mut [u32],
+    ) -> (&mut [[u32; 4]], &mut [u32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at_mut(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, [u32; 4] has same alignment as [u32]
@@ -6111,10 +6087,7 @@ impl i64x2 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[i64; 2]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [i64],
-    ) -> (&'a [[i64; 2]], &'a [i64]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[i64]) -> (&[[i64; 2]], &[i64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, [i64; 2] has same alignment as [i64]
@@ -6124,10 +6097,10 @@ impl i64x2 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [i64],
-    ) -> (&'a mut [[i64; 2]], &'a mut [i64]) {
+        data: &mut [i64],
+    ) -> (&mut [[i64; 2]], &mut [i64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at_mut(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, [i64; 2] has same alignment as [i64]
@@ -6740,10 +6713,7 @@ impl u64x2 {
     /// Returns `(chunks, remainder)` where each chunk is a `&[u64; 2]`
     /// that can be passed directly to [`load`](Self::load).
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::NeonToken,
-        data: &'a [u64],
-    ) -> (&'a [[u64; 2]], &'a [u64]) {
+    pub fn partition_slice(_: archmage::NeonToken, data: &[u64]) -> (&[[u64; 2]], &[u64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, [u64; 2] has same alignment as [u64]
@@ -6753,10 +6723,10 @@ impl u64x2 {
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::NeonToken,
-        data: &'a mut [u64],
-    ) -> (&'a mut [[u64; 2]], &'a mut [u64]) {
+        data: &mut [u64],
+    ) -> (&mut [[u64; 2]], &mut [u64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at_mut(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, [u64; 2] has same alignment as [u64]

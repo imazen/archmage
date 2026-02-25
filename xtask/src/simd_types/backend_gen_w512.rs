@@ -920,21 +920,10 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
     };
 
     let shr_arith_body = if ty.is_signed() {
-        match ty.elem_bits {
-            8 => format!(
-                "core::array::from_fn(|i| if N < 8 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"
-            ),
-            16 => format!(
-                "core::array::from_fn(|i| if N < 16 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"
-            ),
-            32 => format!(
-                "core::array::from_fn(|i| if N < 32 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"
-            ),
-            64 => format!(
-                "core::array::from_fn(|i| if N < 64 {{ a[i].wrapping_shr(N as u32) }} else {{ if a[i] < 0 {{ -1 }} else {{ 0 }} }})"
-            ),
-            _ => unreachable!(),
-        }
+        let bits = ty.elem_bits;
+        format!(
+            "core::array::from_fn(|i| if N < {bits} {{ a[i].wrapping_shr(N as u32) }} else if a[i] < 0 {{ -1 }} else {{ 0 }})"
+        )
     } else {
         match ty.elem_bits {
             8 => format!(
@@ -2496,7 +2485,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
                     // Extract high bit of each lane: compare < 0 for signed interpretation
                     let zero = _mm512_setzero_si512();
                     _mm512_cmpneq_{blend_suffix}_mask(
-                        _mm512_and_si512(a, _mm512_set1_{set1_signed}(1 << ({elem_bits} - 1) as {sign_type})),
+                        _mm512_and_si512(a, _mm512_set1_{set1_signed}(1_{sign_type} << ({elem_bits} - 1))),
                         zero
                     ) as u64
                 }}

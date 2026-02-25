@@ -93,7 +93,7 @@ impl F32x4Backend for archmage::X64V3Token {
     #[inline(always)]
     fn abs(a: __m128) -> __m128 {
         unsafe {
-            let mask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFF_FFFFu32 as i32));
+            let mask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFF_FFFFi32));
             _mm_and_ps(a, mask)
         }
     }
@@ -318,7 +318,7 @@ impl F32x8Backend for archmage::X64V3Token {
     #[inline(always)]
     fn abs(a: __m256) -> __m256 {
         unsafe {
-            let mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFF_FFFFu32 as i32));
+            let mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFF_FFFFi32));
             _mm256_and_ps(a, mask)
         }
     }
@@ -552,7 +552,7 @@ impl F64x2Backend for archmage::X64V3Token {
     #[inline(always)]
     fn abs(a: __m128d) -> __m128d {
         unsafe {
-            let mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFu64 as i64));
+            let mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
             _mm_and_pd(a, mask)
         }
     }
@@ -762,7 +762,7 @@ impl F64x4Backend for archmage::X64V3Token {
     #[inline(always)]
     fn abs(a: __m256d) -> __m256d {
         unsafe {
-            let mask = _mm256_castsi256_pd(_mm256_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFu64 as i64));
+            let mask = _mm256_castsi256_pd(_mm256_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
             _mm256_and_pd(a, mask)
         }
     }
@@ -2554,14 +2554,14 @@ impl U8x16Backend for archmage::X64V3Token {
     fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi8(a, b);
-            _mm_andnot_si128(eq, _mm_set1_epi8(-1 as i8))
+            _mm_andnot_si128(eq, _mm_set1_epi8(-1_i8))
         }
     }
 
     #[inline(always)]
     fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let bias = _mm_set1_epi8(0x80u8 as i8);
+            let bias = _mm_set1_epi8(i8::MIN);
             let sa = _mm_xor_si128(a, bias);
             let sb = _mm_xor_si128(b, bias);
             _mm_cmpgt_epi8(sa, sb)
@@ -2577,7 +2577,7 @@ impl U8x16Backend for archmage::X64V3Token {
     fn simd_le(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let gt = <Self as U8x16Backend>::simd_gt(a, b);
-            _mm_andnot_si128(gt, _mm_set1_epi8(-1 as i8))
+            _mm_andnot_si128(gt, _mm_set1_epi8(-1_i8))
         }
     }
 
@@ -2585,7 +2585,7 @@ impl U8x16Backend for archmage::X64V3Token {
     fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let lt = <Self as U8x16Backend>::simd_gt(b, a);
-            _mm_andnot_si128(lt, _mm_set1_epi8(-1 as i8))
+            _mm_andnot_si128(lt, _mm_set1_epi8(-1_i8))
         }
     }
 
@@ -2606,7 +2606,7 @@ impl U8x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn not(a: __m128i) -> __m128i {
-        unsafe { _mm_andnot_si128(a, _mm_set1_epi8(-1 as i8)) }
+        unsafe { _mm_andnot_si128(a, _mm_set1_epi8(-1_i8)) }
     }
 
     #[inline(always)]
@@ -2735,14 +2735,14 @@ impl U8x32Backend for archmage::X64V3Token {
     fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi8(a, b);
-            _mm256_andnot_si256(eq, _mm256_set1_epi8(-1 as i8))
+            _mm256_andnot_si256(eq, _mm256_set1_epi8(-1_i8))
         }
     }
 
     #[inline(always)]
     fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let bias = _mm256_set1_epi8(0x80u8 as i8);
+            let bias = _mm256_set1_epi8(i8::MIN);
             let sa = _mm256_xor_si256(a, bias);
             let sb = _mm256_xor_si256(b, bias);
             _mm256_cmpgt_epi8(sa, sb)
@@ -2758,7 +2758,7 @@ impl U8x32Backend for archmage::X64V3Token {
     fn simd_le(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let gt = <Self as U8x32Backend>::simd_gt(a, b);
-            _mm256_andnot_si256(gt, _mm256_set1_epi8(-1 as i8))
+            _mm256_andnot_si256(gt, _mm256_set1_epi8(-1_i8))
         }
     }
 
@@ -2766,7 +2766,7 @@ impl U8x32Backend for archmage::X64V3Token {
     fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let lt = <Self as U8x32Backend>::simd_gt(b, a);
-            _mm256_andnot_si256(lt, _mm256_set1_epi8(-1 as i8))
+            _mm256_andnot_si256(lt, _mm256_set1_epi8(-1_i8))
         }
     }
 
@@ -2787,7 +2787,7 @@ impl U8x32Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn not(a: __m256i) -> __m256i {
-        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi8(-1 as i8)) }
+        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi8(-1_i8)) }
     }
 
     #[inline(always)]
@@ -3298,7 +3298,7 @@ impl U16x8Backend for archmage::X64V3Token {
     fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi16(a, b);
-            _mm_andnot_si128(eq, _mm_set1_epi16(-1 as i16))
+            _mm_andnot_si128(eq, _mm_set1_epi16(-1_i16))
         }
     }
 
@@ -3321,7 +3321,7 @@ impl U16x8Backend for archmage::X64V3Token {
     fn simd_le(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let gt = <Self as U16x8Backend>::simd_gt(a, b);
-            _mm_andnot_si128(gt, _mm_set1_epi16(-1 as i16))
+            _mm_andnot_si128(gt, _mm_set1_epi16(-1_i16))
         }
     }
 
@@ -3329,7 +3329,7 @@ impl U16x8Backend for archmage::X64V3Token {
     fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let lt = <Self as U16x8Backend>::simd_gt(b, a);
-            _mm_andnot_si128(lt, _mm_set1_epi16(-1 as i16))
+            _mm_andnot_si128(lt, _mm_set1_epi16(-1_i16))
         }
     }
 
@@ -3350,7 +3350,7 @@ impl U16x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn not(a: __m128i) -> __m128i {
-        unsafe { _mm_andnot_si128(a, _mm_set1_epi16(-1 as i16)) }
+        unsafe { _mm_andnot_si128(a, _mm_set1_epi16(-1_i16)) }
     }
 
     #[inline(always)]
@@ -3479,7 +3479,7 @@ impl U16x16Backend for archmage::X64V3Token {
     fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi16(a, b);
-            _mm256_andnot_si256(eq, _mm256_set1_epi16(-1 as i16))
+            _mm256_andnot_si256(eq, _mm256_set1_epi16(-1_i16))
         }
     }
 
@@ -3502,7 +3502,7 @@ impl U16x16Backend for archmage::X64V3Token {
     fn simd_le(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let gt = <Self as U16x16Backend>::simd_gt(a, b);
-            _mm256_andnot_si256(gt, _mm256_set1_epi16(-1 as i16))
+            _mm256_andnot_si256(gt, _mm256_set1_epi16(-1_i16))
         }
     }
 
@@ -3510,7 +3510,7 @@ impl U16x16Backend for archmage::X64V3Token {
     fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let lt = <Self as U16x16Backend>::simd_gt(b, a);
-            _mm256_andnot_si256(lt, _mm256_set1_epi16(-1 as i16))
+            _mm256_andnot_si256(lt, _mm256_set1_epi16(-1_i16))
         }
     }
 
@@ -3531,7 +3531,7 @@ impl U16x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn not(a: __m256i) -> __m256i {
-        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi16(-1 as i16)) }
+        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi16(-1_i16)) }
     }
 
     #[inline(always)]
@@ -3668,7 +3668,7 @@ impl U64x2Backend for archmage::X64V3Token {
     fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi64(a, b);
-            _mm_andnot_si128(eq, _mm_set1_epi64x(-1 as i64))
+            _mm_andnot_si128(eq, _mm_set1_epi64x(-1_i64))
         }
     }
 
@@ -3691,7 +3691,7 @@ impl U64x2Backend for archmage::X64V3Token {
     fn simd_le(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let gt = <Self as U64x2Backend>::simd_gt(a, b);
-            _mm_andnot_si128(gt, _mm_set1_epi64x(-1 as i64))
+            _mm_andnot_si128(gt, _mm_set1_epi64x(-1_i64))
         }
     }
 
@@ -3699,7 +3699,7 @@ impl U64x2Backend for archmage::X64V3Token {
     fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let lt = <Self as U64x2Backend>::simd_gt(b, a);
-            _mm_andnot_si128(lt, _mm_set1_epi64x(-1 as i64))
+            _mm_andnot_si128(lt, _mm_set1_epi64x(-1_i64))
         }
     }
 
@@ -3720,7 +3720,7 @@ impl U64x2Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn not(a: __m128i) -> __m128i {
-        unsafe { _mm_andnot_si128(a, _mm_set1_epi64x(-1 as i64)) }
+        unsafe { _mm_andnot_si128(a, _mm_set1_epi64x(-1_i64)) }
     }
 
     #[inline(always)]
@@ -3853,7 +3853,7 @@ impl U64x4Backend for archmage::X64V3Token {
     fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi64(a, b);
-            _mm256_andnot_si256(eq, _mm256_set1_epi64x(-1 as i64))
+            _mm256_andnot_si256(eq, _mm256_set1_epi64x(-1_i64))
         }
     }
 
@@ -3876,7 +3876,7 @@ impl U64x4Backend for archmage::X64V3Token {
     fn simd_le(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let gt = <Self as U64x4Backend>::simd_gt(a, b);
-            _mm256_andnot_si256(gt, _mm256_set1_epi64x(-1 as i64))
+            _mm256_andnot_si256(gt, _mm256_set1_epi64x(-1_i64))
         }
     }
 
@@ -3884,7 +3884,7 @@ impl U64x4Backend for archmage::X64V3Token {
     fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let lt = <Self as U64x4Backend>::simd_gt(b, a);
-            _mm256_andnot_si256(lt, _mm256_set1_epi64x(-1 as i64))
+            _mm256_andnot_si256(lt, _mm256_set1_epi64x(-1_i64))
         }
     }
 
@@ -3905,7 +3905,7 @@ impl U64x4Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn not(a: __m256i) -> __m256i {
-        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi64x(-1 as i64)) }
+        unsafe { _mm256_andnot_si256(a, _mm256_set1_epi64x(-1_i64)) }
     }
 
     #[inline(always)]

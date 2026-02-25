@@ -1029,9 +1029,9 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
         "epi64x"
     };
     let abs_mask = if elem == "f32" {
-        "0x7FFF_FFFFu32 as i32"
+        "0x7FFF_FFFFi32"
     } else {
-        "0x7FFF_FFFF_FFFF_FFFFu64 as i64"
+        "0x7FFF_FFFF_FFFF_FFFFi64"
     };
 
     // Round intrinsics differ by width
@@ -1464,6 +1464,8 @@ fn generate_scalar_impls(types: &[FloatVecType]) -> String {
         //! All operations are plain array math. Always available on all platforms.
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+
+        #![allow(clippy::needless_range_loop, clippy::identity_op, clippy::collapsible_else_if, clippy::unnecessary_cast)]
 
         use crate::simd::backends::*;
 

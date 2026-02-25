@@ -2967,7 +2967,7 @@ impl I16x8Backend for archmage::NeonToken {
     #[inline(always)]
     fn bitmask(a: int16x8_t) -> u32 {
         unsafe {
-            (vgetq_lane_u16::<0>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 0
+            (vgetq_lane_u16::<0>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1)
                 | (vgetq_lane_u16::<1>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 1
                 | (vgetq_lane_u16::<2>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 2
                 | (vgetq_lane_u16::<3>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 3
@@ -3327,7 +3327,7 @@ impl U16x8Backend for archmage::NeonToken {
     #[inline(always)]
     fn bitmask(a: uint16x8_t) -> u32 {
         unsafe {
-            (vgetq_lane_u16::<0>(vshrq_n_u16::<15>(a)) as u32 & 1) << 0
+            (vgetq_lane_u16::<0>(vshrq_n_u16::<15>(a)) as u32 & 1)
                 | (vgetq_lane_u16::<1>(vshrq_n_u16::<15>(a)) as u32 & 1) << 1
                 | (vgetq_lane_u16::<2>(vshrq_n_u16::<15>(a)) as u32 & 1) << 2
                 | (vgetq_lane_u16::<3>(vshrq_n_u16::<15>(a)) as u32 & 1) << 3

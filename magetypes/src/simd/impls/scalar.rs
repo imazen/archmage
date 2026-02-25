@@ -4,6 +4,13 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
+#![allow(
+    clippy::needless_range_loop,
+    clippy::identity_op,
+    clippy::collapsible_else_if,
+    clippy::unnecessary_cast
+)]
+
 use crate::simd::backends::*;
 
 // Helpers to avoid trait method name shadowing inside the impl block.
@@ -3594,7 +3601,7 @@ impl I8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [i8; 16]) -> u32 {
-        ((a[0] >> 7) as u32 & 1) << 0
+        ((a[0] >> 7) as u32 & 1)
             | ((a[1] >> 7) as u32 & 1) << 1
             | ((a[2] >> 7) as u32 & 1) << 2
             | ((a[3] >> 7) as u32 & 1) << 3
@@ -4587,7 +4594,7 @@ impl I8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [i8; 32]) -> u32 {
-        ((a[0] >> 7) as u32 & 1) << 0
+        ((a[0] >> 7) as u32 & 1)
             | ((a[1] >> 7) as u32 & 1) << 1
             | ((a[2] >> 7) as u32 & 1) << 2
             | ((a[3] >> 7) as u32 & 1) << 3
@@ -5126,7 +5133,7 @@ impl U8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [u8; 16]) -> u32 {
-        ((a[0] >> 7) as u32 & 1) << 0
+        ((a[0] >> 7) as u32 & 1)
             | ((a[1] >> 7) as u32 & 1) << 1
             | ((a[2] >> 7) as u32 & 1) << 2
             | ((a[3] >> 7) as u32 & 1) << 3
@@ -6005,7 +6012,7 @@ impl U8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [u8; 32]) -> u32 {
-        ((a[0] >> 7) as u32 & 1) << 0
+        ((a[0] >> 7) as u32 & 1)
             | ((a[1] >> 7) as u32 & 1) << 1
             | ((a[2] >> 7) as u32 & 1) << 2
             | ((a[3] >> 7) as u32 & 1) << 3
@@ -6421,7 +6428,7 @@ impl I16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [i16; 8]) -> u32 {
-        ((a[0] >> 15) as u32 & 1) << 0
+        ((a[0] >> 15) as u32 & 1)
             | ((a[1] >> 15) as u32 & 1) << 1
             | ((a[2] >> 15) as u32 & 1) << 2
             | ((a[3] >> 15) as u32 & 1) << 3
@@ -7024,7 +7031,7 @@ impl I16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [i16; 16]) -> u32 {
-        ((a[0] >> 15) as u32 & 1) << 0
+        ((a[0] >> 15) as u32 & 1)
             | ((a[1] >> 15) as u32 & 1) << 1
             | ((a[2] >> 15) as u32 & 1) << 2
             | ((a[3] >> 15) as u32 & 1) << 3
@@ -7382,7 +7389,7 @@ impl U16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [u16; 8]) -> u32 {
-        ((a[0] >> 15) as u32 & 1) << 0
+        ((a[0] >> 15) as u32 & 1)
             | ((a[1] >> 15) as u32 & 1) << 1
             | ((a[2] >> 15) as u32 & 1) << 2
             | ((a[3] >> 15) as u32 & 1) << 3
@@ -7919,7 +7926,7 @@ impl U16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [u16; 16]) -> u32 {
-        ((a[0] >> 15) as u32 & 1) << 0
+        ((a[0] >> 15) as u32 & 1)
             | ((a[1] >> 15) as u32 & 1) << 1
             | ((a[2] >> 15) as u32 & 1) << 2
             | ((a[3] >> 15) as u32 & 1) << 3
@@ -8108,7 +8115,7 @@ impl U64x2Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [u64; 2]) -> u32 {
-        ((a[0] >> 63) as u32 & 1) << 0 | ((a[1] >> 63) as u32 & 1) << 1
+        ((a[0] >> 63) as u32 & 1) | ((a[1] >> 63) as u32 & 1) << 1
     }
 }
 
@@ -8328,7 +8335,7 @@ impl U64x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn bitmask(a: [u64; 4]) -> u32 {
-        ((a[0] >> 63) as u32 & 1) << 0
+        ((a[0] >> 63) as u32 & 1)
             | ((a[1] >> 63) as u32 & 1) << 1
             | ((a[2] >> 63) as u32 & 1) << 2
             | ((a[3] >> 63) as u32 & 1) << 3
@@ -9305,8 +9312,10 @@ impl I8x64Backend for archmage::ScalarToken {
         core::array::from_fn(|i| {
             if N < 8 {
                 a[i].wrapping_shr(N as u32)
+            } else if a[i] < 0 {
+                -1
             } else {
-                if a[i] < 0 { -1 } else { 0 }
+                0
             }
         })
     }
@@ -9673,8 +9682,10 @@ impl I16x32Backend for archmage::ScalarToken {
         core::array::from_fn(|i| {
             if N < 16 {
                 a[i].wrapping_shr(N as u32)
+            } else if a[i] < 0 {
+                -1
             } else {
-                if a[i] < 0 { -1 } else { 0 }
+                0
             }
         })
     }
@@ -10046,8 +10057,10 @@ impl I32x16Backend for archmage::ScalarToken {
         core::array::from_fn(|i| {
             if N < 32 {
                 a[i].wrapping_shr(N as u32)
+            } else if a[i] < 0 {
+                -1
             } else {
-                if a[i] < 0 { -1 } else { 0 }
+                0
             }
         })
     }
@@ -10414,8 +10427,10 @@ impl I64x8Backend for archmage::ScalarToken {
         core::array::from_fn(|i| {
             if N < 64 {
                 a[i].wrapping_shr(N as u32)
+            } else if a[i] < 0 {
+                -1
             } else {
-                if a[i] < 0 { -1 } else { 0 }
+                0
             }
         })
     }

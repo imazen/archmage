@@ -678,10 +678,8 @@ impl I8x64Backend for archmage::X64V4Token {
         unsafe {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi8_mask(
-                _mm512_and_si512(a, _mm512_set1_epi8(1 << (8 - 1) as i8)),
-                zero,
-            ) as u64
+            _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
+                as u64
         }
     }
 }
@@ -881,10 +879,8 @@ impl U8x64Backend for archmage::X64V4Token {
         unsafe {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi8_mask(
-                _mm512_and_si512(a, _mm512_set1_epi8(1 << (8 - 1) as i8)),
-                zero,
-            ) as u64
+            _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
+                as u64
         }
     }
 }
@@ -1080,7 +1076,7 @@ impl I16x32Backend for archmage::X64V4Token {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi16_mask(
-                _mm512_and_si512(a, _mm512_set1_epi16(1 << (16 - 1) as i16)),
+                _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
                 zero,
             ) as u64
         }
@@ -1273,7 +1269,7 @@ impl U16x32Backend for archmage::X64V4Token {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi16_mask(
-                _mm512_and_si512(a, _mm512_set1_epi16(1 << (16 - 1) as i16)),
+                _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
                 zero,
             ) as u64
         }
@@ -1471,7 +1467,7 @@ impl I32x16Backend for archmage::X64V4Token {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi32_mask(
-                _mm512_and_si512(a, _mm512_set1_epi32(1 << (32 - 1) as i32)),
+                _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
                 zero,
             ) as u64
         }
@@ -1664,7 +1660,7 @@ impl U32x16Backend for archmage::X64V4Token {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi32_mask(
-                _mm512_and_si512(a, _mm512_set1_epi32(1 << (32 - 1) as i32)),
+                _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
                 zero,
             ) as u64
         }
@@ -1857,7 +1853,7 @@ impl I64x8Backend for archmage::X64V4Token {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi64_mask(
-                _mm512_and_si512(a, _mm512_set1_epi64(1 << (64 - 1) as i64)),
+                _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
                 zero,
             ) as u64
         }
@@ -2045,7 +2041,7 @@ impl U64x8Backend for archmage::X64V4Token {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi64_mask(
-                _mm512_and_si512(a, _mm512_set1_epi64(1 << (64 - 1) as i64)),
+                _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
                 zero,
             ) as u64
         }
@@ -2716,10 +2712,8 @@ impl I8x64Backend for archmage::X64V4xToken {
         unsafe {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi8_mask(
-                _mm512_and_si512(a, _mm512_set1_epi8(1 << (8 - 1) as i8)),
-                zero,
-            ) as u64
+            _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
+                as u64
         }
     }
 }
@@ -2919,10 +2913,8 @@ impl U8x64Backend for archmage::X64V4xToken {
         unsafe {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi8_mask(
-                _mm512_and_si512(a, _mm512_set1_epi8(1 << (8 - 1) as i8)),
-                zero,
-            ) as u64
+            _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
+                as u64
         }
     }
 }
@@ -3118,7 +3110,7 @@ impl I16x32Backend for archmage::X64V4xToken {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi16_mask(
-                _mm512_and_si512(a, _mm512_set1_epi16(1 << (16 - 1) as i16)),
+                _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
                 zero,
             ) as u64
         }
@@ -3311,7 +3303,7 @@ impl U16x32Backend for archmage::X64V4xToken {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi16_mask(
-                _mm512_and_si512(a, _mm512_set1_epi16(1 << (16 - 1) as i16)),
+                _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
                 zero,
             ) as u64
         }
@@ -3509,7 +3501,7 @@ impl I32x16Backend for archmage::X64V4xToken {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi32_mask(
-                _mm512_and_si512(a, _mm512_set1_epi32(1 << (32 - 1) as i32)),
+                _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
                 zero,
             ) as u64
         }
@@ -3702,7 +3694,7 @@ impl U32x16Backend for archmage::X64V4xToken {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi32_mask(
-                _mm512_and_si512(a, _mm512_set1_epi32(1 << (32 - 1) as i32)),
+                _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
                 zero,
             ) as u64
         }
@@ -3895,7 +3887,7 @@ impl I64x8Backend for archmage::X64V4xToken {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi64_mask(
-                _mm512_and_si512(a, _mm512_set1_epi64(1 << (64 - 1) as i64)),
+                _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
                 zero,
             ) as u64
         }
@@ -4083,7 +4075,7 @@ impl U64x8Backend for archmage::X64V4xToken {
             // Extract high bit of each lane: compare < 0 for signed interpretation
             let zero = _mm512_setzero_si512();
             _mm512_cmpneq_epi64_mask(
-                _mm512_and_si512(a, _mm512_set1_epi64(1 << (64 - 1) as i64)),
+                _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
                 zero,
             ) as u64
         }

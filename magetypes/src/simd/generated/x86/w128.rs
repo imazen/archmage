@@ -78,10 +78,7 @@ impl f32x4 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [f32],
-    ) -> (&'a [[f32; 4]], &'a [f32]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[f32]) -> (&[[f32; 4]], &[f32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, and [f32] has no alignment requirements
@@ -95,10 +92,10 @@ impl f32x4 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [f32; 4]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [f32],
-    ) -> (&'a mut [[f32; 4]], &'a mut [f32]) {
+        data: &mut [f32],
+    ) -> (&mut [[f32; 4]], &mut [f32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at_mut(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, and [f32] has no alignment requirements
@@ -1471,10 +1468,7 @@ impl f64x2 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [f64],
-    ) -> (&'a [[f64; 2]], &'a [f64]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[f64]) -> (&[[f64; 2]], &[f64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, and [f64] has no alignment requirements
@@ -1488,10 +1482,10 @@ impl f64x2 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [f64; 2]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [f64],
-    ) -> (&'a mut [[f64; 2]], &'a mut [f64]) {
+        data: &mut [f64],
+    ) -> (&mut [[f64; 2]], &mut [f64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at_mut(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, and [f64] has no alignment requirements
@@ -2214,10 +2208,7 @@ impl i8x16 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [i8],
-    ) -> (&'a [[i8; 16]], &'a [i8]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[i8]) -> (&[[i8; 16]], &[i8]) {
         let bulk = data.len() / 16;
         let (head, tail) = data.split_at(bulk * 16);
         // SAFETY: head.len() is a multiple of 16, and [i8] has no alignment requirements
@@ -2231,10 +2222,10 @@ impl i8x16 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [i8; 16]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [i8],
-    ) -> (&'a mut [[i8; 16]], &'a mut [i8]) {
+        data: &mut [i8],
+    ) -> (&mut [[i8; 16]], &mut [i8]) {
         let bulk = data.len() / 16;
         let (head, tail) = data.split_at_mut(bulk * 16);
         // SAFETY: head.len() is a multiple of 16, and [i8] has no alignment requirements
@@ -2856,10 +2847,7 @@ impl u8x16 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [u8],
-    ) -> (&'a [[u8; 16]], &'a [u8]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[u8]) -> (&[[u8; 16]], &[u8]) {
         let bulk = data.len() / 16;
         let (head, tail) = data.split_at(bulk * 16);
         // SAFETY: head.len() is a multiple of 16, and [u8] has no alignment requirements
@@ -2873,10 +2861,10 @@ impl u8x16 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [u8; 16]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [u8],
-    ) -> (&'a mut [[u8; 16]], &'a mut [u8]) {
+        data: &mut [u8],
+    ) -> (&mut [[u8; 16]], &mut [u8]) {
         let bulk = data.len() / 16;
         let (head, tail) = data.split_at_mut(bulk * 16);
         // SAFETY: head.len() is a multiple of 16, and [u8] has no alignment requirements
@@ -3527,10 +3515,7 @@ impl i16x8 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [i16],
-    ) -> (&'a [[i16; 8]], &'a [i16]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[i16]) -> (&[[i16; 8]], &[i16]) {
         let bulk = data.len() / 8;
         let (head, tail) = data.split_at(bulk * 8);
         // SAFETY: head.len() is a multiple of 8, and [i16] has no alignment requirements
@@ -3544,10 +3529,10 @@ impl i16x8 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [i16; 8]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [i16],
-    ) -> (&'a mut [[i16; 8]], &'a mut [i16]) {
+        data: &mut [i16],
+    ) -> (&mut [[i16; 8]], &mut [i16]) {
         let bulk = data.len() / 8;
         let (head, tail) = data.split_at_mut(bulk * 8);
         // SAFETY: head.len() is a multiple of 8, and [i16] has no alignment requirements
@@ -4210,10 +4195,7 @@ impl u16x8 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [u16],
-    ) -> (&'a [[u16; 8]], &'a [u16]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[u16]) -> (&[[u16; 8]], &[u16]) {
         let bulk = data.len() / 8;
         let (head, tail) = data.split_at(bulk * 8);
         // SAFETY: head.len() is a multiple of 8, and [u16] has no alignment requirements
@@ -4227,10 +4209,10 @@ impl u16x8 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [u16; 8]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [u16],
-    ) -> (&'a mut [[u16; 8]], &'a mut [u16]) {
+        data: &mut [u16],
+    ) -> (&mut [[u16; 8]], &mut [u16]) {
         let bulk = data.len() / 8;
         let (head, tail) = data.split_at_mut(bulk * 8);
         // SAFETY: head.len() is a multiple of 8, and [u16] has no alignment requirements
@@ -4867,10 +4849,7 @@ impl i32x4 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [i32],
-    ) -> (&'a [[i32; 4]], &'a [i32]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[i32]) -> (&[[i32; 4]], &[i32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, and [i32] has no alignment requirements
@@ -4884,10 +4863,10 @@ impl i32x4 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [i32; 4]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [i32],
-    ) -> (&'a mut [[i32; 4]], &'a mut [i32]) {
+        data: &mut [i32],
+    ) -> (&mut [[i32; 4]], &mut [i32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at_mut(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, and [i32] has no alignment requirements
@@ -5528,10 +5507,7 @@ impl u32x4 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [u32],
-    ) -> (&'a [[u32; 4]], &'a [u32]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[u32]) -> (&[[u32; 4]], &[u32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, and [u32] has no alignment requirements
@@ -5545,10 +5521,10 @@ impl u32x4 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [u32; 4]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [u32],
-    ) -> (&'a mut [[u32; 4]], &'a mut [u32]) {
+        data: &mut [u32],
+    ) -> (&mut [[u32; 4]], &mut [u32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at_mut(bulk * 4);
         // SAFETY: head.len() is a multiple of 4, and [u32] has no alignment requirements
@@ -6148,10 +6124,7 @@ impl i64x2 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [i64],
-    ) -> (&'a [[i64; 2]], &'a [i64]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[i64]) -> (&[[i64; 2]], &[i64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, and [i64] has no alignment requirements
@@ -6165,10 +6138,10 @@ impl i64x2 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [i64; 2]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [i64],
-    ) -> (&'a mut [[i64; 2]], &'a mut [i64]) {
+        data: &mut [i64],
+    ) -> (&mut [[i64; 2]], &mut [i64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at_mut(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, and [i64] has no alignment requirements
@@ -6805,10 +6778,7 @@ impl u64x2 {
     /// }
     /// ```
     #[inline(always)]
-    pub fn partition_slice<'a>(
-        _: archmage::X64V3Token,
-        data: &'a [u64],
-    ) -> (&'a [[u64; 2]], &'a [u64]) {
+    pub fn partition_slice(_: archmage::X64V3Token, data: &[u64]) -> (&[[u64; 2]], &[u64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, and [u64] has no alignment requirements
@@ -6822,10 +6792,10 @@ impl u64x2 {
     /// Returns `(chunks, remainder)` where each chunk is a `&mut [u64; 2]`
     /// that can be passed directly to [`store`](Self::store).
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
+    pub fn partition_slice_mut(
         _: archmage::X64V3Token,
-        data: &'a mut [u64],
-    ) -> (&'a mut [[u64; 2]], &'a mut [u64]) {
+        data: &mut [u64],
+    ) -> (&mut [[u64; 2]], &mut [u64]) {
         let bulk = data.len() / 2;
         let (head, tail) = data.split_at_mut(bulk * 2);
         // SAFETY: head.len() is a multiple of 2, and [u64] has no alignment requirements

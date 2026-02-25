@@ -67,7 +67,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Returns `(&[[f32; 4]], &[f32])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice<'a>(_: T, data: &'a [f32]) -> (&'a [[f32; 4]], &'a [f32]) {
+    pub fn partition_slice(_: T, data: &[f32]) -> (&[[f32; 4]], &[f32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at(bulk * 4);
         // SAFETY: head.len() is bulk * 4, so it's exactly `bulk` chunks of [f32; 4].
@@ -81,10 +81,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Returns `(&mut [[f32; 4]], &mut [f32])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
-        _: T,
-        data: &'a mut [f32],
-    ) -> (&'a mut [[f32; 4]], &'a mut [f32]) {
+    pub fn partition_slice_mut(_: T, data: &mut [f32]) -> (&mut [[f32; 4]], &mut [f32]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at_mut(bulk * 4);
         // SAFETY: head.len() is bulk * 4, so it's exactly `bulk` chunks of [f32; 4].
@@ -123,6 +120,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Wrap a repr without requiring a token value.
     /// Only usable within the `generic` module (for cross-type conversions).
     #[inline(always)]
+    #[allow(dead_code)]
     pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
         Self(repr, PhantomData)
     }

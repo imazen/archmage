@@ -73,7 +73,7 @@ impl<T: I64x4Backend> i64x4<T> {
     /// Returns `(&[[i64; 4]], &[i64])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice<'a>(_: T, data: &'a [i64]) -> (&'a [[i64; 4]], &'a [i64]) {
+    pub fn partition_slice(_: T, data: &[i64]) -> (&[[i64; 4]], &[i64]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at(bulk * 4);
         // SAFETY: head.len() is bulk * 4, so it's exactly `bulk` chunks of [i64; 4].
@@ -87,10 +87,7 @@ impl<T: I64x4Backend> i64x4<T> {
     /// Returns `(&mut [[i64; 4]], &mut [i64])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice_mut<'a>(
-        _: T,
-        data: &'a mut [i64],
-    ) -> (&'a mut [[i64; 4]], &'a mut [i64]) {
+    pub fn partition_slice_mut(_: T, data: &mut [i64]) -> (&mut [[i64; 4]], &mut [i64]) {
         let bulk = data.len() / 4;
         let (head, tail) = data.split_at_mut(bulk * 4);
         // SAFETY: head.len() is bulk * 4, so it's exactly `bulk` chunks of [i64; 4].
@@ -129,6 +126,7 @@ impl<T: I64x4Backend> i64x4<T> {
     /// Wrap a repr without requiring a token value.
     /// Only usable within the `generic` module (for cross-type conversions).
     #[inline(always)]
+    #[allow(dead_code)]
     pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
         Self(repr, PhantomData)
     }

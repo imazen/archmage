@@ -460,16 +460,17 @@ CI checks (all must pass):
 4. `cargo xtask parity` — parity check (0 issues remaining)
 5. Intrinsic soundness verification
 6. `cargo clippy --features "std macros avx512"` — zero warnings
-7. `cargo test --features "std macros avx512"` — all tests pass
-8. `cargo fmt --check` — code is formatted
-9. Miri UB detection (skipped if not installed)
-10. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
-11. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
-12. **ARM64 clippy** (requires `cross` + Docker)
+7. `cargo clippy -p magetypes` (default features) — zero warnings
+8. `cargo test --features "std macros avx512"` — all tests pass
+9. `cargo fmt --check` — code is formatted
+10. Miri UB detection (skipped if not installed)
+11. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
+12. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
+13. **ARM64 clippy** (requires `cross` + Docker)
 
 **Note:** Parity check reports 0 issues. All W128 types have identical APIs across x86/ARM/WASM.
 
-**Note:** Steps 10-12 require cross-compilation tooling. If `cross`/Docker/`wasmtime` are unavailable, they are skipped with warnings. For full coverage before publish, install the tooling:
+**Note:** Steps 11-13 require cross-compilation tooling. If `cross`/Docker/`wasmtime` are unavailable, they are skipped with warnings. For full coverage before publish, install the tooling:
 ```bash
 cargo install cross --git https://github.com/cross-rs/cross  # ARM64 testing
 curl https://wasmtime.dev/install.sh -sSf | bash              # WASM testing

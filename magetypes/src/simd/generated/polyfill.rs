@@ -66,7 +66,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[f32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [f32]) -> (&'a [[f32; 8]], &'a [f32]) {
+        pub fn partition_slice(_: X64V3Token, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [f32; 8] has same alignment as [f32]
@@ -77,10 +77,10 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [f32],
-        ) -> (&'a mut [[f32; 8]], &'a mut [f32]) {
+            data: &mut [f32],
+        ) -> (&mut [[f32; 8]], &mut [f32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [f32; 8] has same alignment as [f32]
@@ -512,7 +512,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[f64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [f64]) -> (&'a [[f64; 4]], &'a [f64]) {
+        pub fn partition_slice(_: X64V3Token, data: &[f64]) -> (&[[f64; 4]], &[f64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [f64; 4] has same alignment as [f64]
@@ -523,10 +523,10 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [f64],
-        ) -> (&'a mut [[f64; 4]], &'a mut [f64]) {
+            data: &mut [f64],
+        ) -> (&mut [[f64; 4]], &mut [f64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [f64; 4] has same alignment as [f64]
@@ -958,7 +958,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i8; 32]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [i8]) -> (&'a [[i8; 32]], &'a [i8]) {
+        pub fn partition_slice(_: X64V3Token, data: &[i8]) -> (&[[i8; 32]], &[i8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [i8; 32] has same alignment as [i8]
@@ -969,10 +969,7 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
-            _: X64V3Token,
-            data: &'a mut [i8],
-        ) -> (&'a mut [[i8; 32]], &'a mut [i8]) {
+        pub fn partition_slice_mut(_: X64V3Token, data: &mut [i8]) -> (&mut [[i8; 32]], &mut [i8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at_mut(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [i8; 32] has same alignment as [i8]
@@ -1320,7 +1317,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u8; 32]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [u8]) -> (&'a [[u8; 32]], &'a [u8]) {
+        pub fn partition_slice(_: X64V3Token, data: &[u8]) -> (&[[u8; 32]], &[u8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [u8; 32] has same alignment as [u8]
@@ -1331,10 +1328,7 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
-            _: X64V3Token,
-            data: &'a mut [u8],
-        ) -> (&'a mut [[u8; 32]], &'a mut [u8]) {
+        pub fn partition_slice_mut(_: X64V3Token, data: &mut [u8]) -> (&mut [[u8; 32]], &mut [u8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at_mut(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [u8; 32] has same alignment as [u8]
@@ -1673,7 +1667,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i16; 16]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [i16]) -> (&'a [[i16; 16]], &'a [i16]) {
+        pub fn partition_slice(_: X64V3Token, data: &[i16]) -> (&[[i16; 16]], &[i16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [i16; 16] has same alignment as [i16]
@@ -1684,10 +1678,10 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [i16],
-        ) -> (&'a mut [[i16; 16]], &'a mut [i16]) {
+            data: &mut [i16],
+        ) -> (&mut [[i16; 16]], &mut [i16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [i16; 16] has same alignment as [i16]
@@ -2053,7 +2047,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u16; 16]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [u16]) -> (&'a [[u16; 16]], &'a [u16]) {
+        pub fn partition_slice(_: X64V3Token, data: &[u16]) -> (&[[u16; 16]], &[u16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [u16; 16] has same alignment as [u16]
@@ -2064,10 +2058,10 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [u16],
-        ) -> (&'a mut [[u16; 16]], &'a mut [u16]) {
+            data: &mut [u16],
+        ) -> (&mut [[u16; 16]], &mut [u16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [u16; 16] has same alignment as [u16]
@@ -2424,7 +2418,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [i32]) -> (&'a [[i32; 8]], &'a [i32]) {
+        pub fn partition_slice(_: X64V3Token, data: &[i32]) -> (&[[i32; 8]], &[i32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [i32; 8] has same alignment as [i32]
@@ -2435,10 +2429,10 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [i32],
-        ) -> (&'a mut [[i32; 8]], &'a mut [i32]) {
+            data: &mut [i32],
+        ) -> (&mut [[i32; 8]], &mut [i32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [i32; 8] has same alignment as [i32]
@@ -2804,7 +2798,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [u32]) -> (&'a [[u32; 8]], &'a [u32]) {
+        pub fn partition_slice(_: X64V3Token, data: &[u32]) -> (&[[u32; 8]], &[u32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [u32; 8] has same alignment as [u32]
@@ -2815,10 +2809,10 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [u32],
-        ) -> (&'a mut [[u32; 8]], &'a mut [u32]) {
+            data: &mut [u32],
+        ) -> (&mut [[u32; 8]], &mut [u32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [u32; 8] has same alignment as [u32]
@@ -3175,7 +3169,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [i64]) -> (&'a [[i64; 4]], &'a [i64]) {
+        pub fn partition_slice(_: X64V3Token, data: &[i64]) -> (&[[i64; 4]], &[i64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [i64; 4] has same alignment as [i64]
@@ -3186,10 +3180,10 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [i64],
-        ) -> (&'a mut [[i64; 4]], &'a mut [i64]) {
+            data: &mut [i64],
+        ) -> (&mut [[i64; 4]], &mut [i64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [i64; 4] has same alignment as [i64]
@@ -3504,7 +3498,7 @@ pub mod v3 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [u64]) -> (&'a [[u64; 4]], &'a [u64]) {
+        pub fn partition_slice(_: X64V3Token, data: &[u64]) -> (&[[u64; 4]], &[u64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [u64; 4] has same alignment as [u64]
@@ -3515,10 +3509,10 @@ pub mod v3 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [u64],
-        ) -> (&'a mut [[u64; 4]], &'a mut [u64]) {
+            data: &mut [u64],
+        ) -> (&mut [[u64; 4]], &mut [u64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [u64; 4] has same alignment as [u64]
@@ -3870,7 +3864,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[f32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [f32]) -> (&'a [[f32; 8]], &'a [f32]) {
+        pub fn partition_slice(_: NeonToken, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [f32; 8] has same alignment as [f32]
@@ -3881,10 +3875,10 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: NeonToken,
-            data: &'a mut [f32],
-        ) -> (&'a mut [[f32; 8]], &'a mut [f32]) {
+            data: &mut [f32],
+        ) -> (&mut [[f32; 8]], &mut [f32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [f32; 8] has same alignment as [f32]
@@ -4316,7 +4310,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[f64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [f64]) -> (&'a [[f64; 4]], &'a [f64]) {
+        pub fn partition_slice(_: NeonToken, data: &[f64]) -> (&[[f64; 4]], &[f64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [f64; 4] has same alignment as [f64]
@@ -4327,10 +4321,10 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: NeonToken,
-            data: &'a mut [f64],
-        ) -> (&'a mut [[f64; 4]], &'a mut [f64]) {
+            data: &mut [f64],
+        ) -> (&mut [[f64; 4]], &mut [f64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [f64; 4] has same alignment as [f64]
@@ -4762,7 +4756,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i8; 32]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [i8]) -> (&'a [[i8; 32]], &'a [i8]) {
+        pub fn partition_slice(_: NeonToken, data: &[i8]) -> (&[[i8; 32]], &[i8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [i8; 32] has same alignment as [i8]
@@ -4773,10 +4767,7 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
-            _: NeonToken,
-            data: &'a mut [i8],
-        ) -> (&'a mut [[i8; 32]], &'a mut [i8]) {
+        pub fn partition_slice_mut(_: NeonToken, data: &mut [i8]) -> (&mut [[i8; 32]], &mut [i8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at_mut(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [i8; 32] has same alignment as [i8]
@@ -5124,7 +5115,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u8; 32]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [u8]) -> (&'a [[u8; 32]], &'a [u8]) {
+        pub fn partition_slice(_: NeonToken, data: &[u8]) -> (&[[u8; 32]], &[u8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [u8; 32] has same alignment as [u8]
@@ -5135,10 +5126,7 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
-            _: NeonToken,
-            data: &'a mut [u8],
-        ) -> (&'a mut [[u8; 32]], &'a mut [u8]) {
+        pub fn partition_slice_mut(_: NeonToken, data: &mut [u8]) -> (&mut [[u8; 32]], &mut [u8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at_mut(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [u8; 32] has same alignment as [u8]
@@ -5477,7 +5465,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i16; 16]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [i16]) -> (&'a [[i16; 16]], &'a [i16]) {
+        pub fn partition_slice(_: NeonToken, data: &[i16]) -> (&[[i16; 16]], &[i16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [i16; 16] has same alignment as [i16]
@@ -5488,10 +5476,10 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: NeonToken,
-            data: &'a mut [i16],
-        ) -> (&'a mut [[i16; 16]], &'a mut [i16]) {
+            data: &mut [i16],
+        ) -> (&mut [[i16; 16]], &mut [i16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [i16; 16] has same alignment as [i16]
@@ -5857,7 +5845,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u16; 16]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [u16]) -> (&'a [[u16; 16]], &'a [u16]) {
+        pub fn partition_slice(_: NeonToken, data: &[u16]) -> (&[[u16; 16]], &[u16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [u16; 16] has same alignment as [u16]
@@ -5868,10 +5856,10 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: NeonToken,
-            data: &'a mut [u16],
-        ) -> (&'a mut [[u16; 16]], &'a mut [u16]) {
+            data: &mut [u16],
+        ) -> (&mut [[u16; 16]], &mut [u16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [u16; 16] has same alignment as [u16]
@@ -6228,7 +6216,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [i32]) -> (&'a [[i32; 8]], &'a [i32]) {
+        pub fn partition_slice(_: NeonToken, data: &[i32]) -> (&[[i32; 8]], &[i32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [i32; 8] has same alignment as [i32]
@@ -6239,10 +6227,10 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: NeonToken,
-            data: &'a mut [i32],
-        ) -> (&'a mut [[i32; 8]], &'a mut [i32]) {
+            data: &mut [i32],
+        ) -> (&mut [[i32; 8]], &mut [i32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [i32; 8] has same alignment as [i32]
@@ -6608,7 +6596,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [u32]) -> (&'a [[u32; 8]], &'a [u32]) {
+        pub fn partition_slice(_: NeonToken, data: &[u32]) -> (&[[u32; 8]], &[u32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [u32; 8] has same alignment as [u32]
@@ -6619,10 +6607,10 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: NeonToken,
-            data: &'a mut [u32],
-        ) -> (&'a mut [[u32; 8]], &'a mut [u32]) {
+            data: &mut [u32],
+        ) -> (&mut [[u32; 8]], &mut [u32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [u32; 8] has same alignment as [u32]
@@ -6979,7 +6967,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [i64]) -> (&'a [[i64; 4]], &'a [i64]) {
+        pub fn partition_slice(_: NeonToken, data: &[i64]) -> (&[[i64; 4]], &[i64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [i64; 4] has same alignment as [i64]
@@ -6990,10 +6978,10 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: NeonToken,
-            data: &'a mut [i64],
-        ) -> (&'a mut [[i64; 4]], &'a mut [i64]) {
+            data: &mut [i64],
+        ) -> (&mut [[i64; 4]], &mut [i64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [i64; 4] has same alignment as [i64]
@@ -7308,7 +7296,7 @@ pub mod neon {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: NeonToken, data: &'a [u64]) -> (&'a [[u64; 4]], &'a [u64]) {
+        pub fn partition_slice(_: NeonToken, data: &[u64]) -> (&[[u64; 4]], &[u64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [u64; 4] has same alignment as [u64]
@@ -7319,10 +7307,10 @@ pub mod neon {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: NeonToken,
-            data: &'a mut [u64],
-        ) -> (&'a mut [[u64; 4]], &'a mut [u64]) {
+            data: &mut [u64],
+        ) -> (&mut [[u64; 4]], &mut [u64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [u64; 4] has same alignment as [u64]
@@ -7674,10 +7662,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[f32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(
-            _: Wasm128Token,
-            data: &'a [f32],
-        ) -> (&'a [[f32; 8]], &'a [f32]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [f32; 8] has same alignment as [f32]
@@ -7688,10 +7673,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [f32],
-        ) -> (&'a mut [[f32; 8]], &'a mut [f32]) {
+            data: &mut [f32],
+        ) -> (&mut [[f32; 8]], &mut [f32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [f32; 8] has same alignment as [f32]
@@ -8123,10 +8108,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[f64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(
-            _: Wasm128Token,
-            data: &'a [f64],
-        ) -> (&'a [[f64; 4]], &'a [f64]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[f64]) -> (&[[f64; 4]], &[f64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [f64; 4] has same alignment as [f64]
@@ -8137,10 +8119,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [f64],
-        ) -> (&'a mut [[f64; 4]], &'a mut [f64]) {
+            data: &mut [f64],
+        ) -> (&mut [[f64; 4]], &mut [f64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [f64; 4] has same alignment as [f64]
@@ -8572,7 +8554,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i8; 32]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: Wasm128Token, data: &'a [i8]) -> (&'a [[i8; 32]], &'a [i8]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[i8]) -> (&[[i8; 32]], &[i8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [i8; 32] has same alignment as [i8]
@@ -8583,10 +8565,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [i8],
-        ) -> (&'a mut [[i8; 32]], &'a mut [i8]) {
+            data: &mut [i8],
+        ) -> (&mut [[i8; 32]], &mut [i8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at_mut(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [i8; 32] has same alignment as [i8]
@@ -8934,7 +8916,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u8; 32]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(_: Wasm128Token, data: &'a [u8]) -> (&'a [[u8; 32]], &'a [u8]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[u8]) -> (&[[u8; 32]], &[u8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [u8; 32] has same alignment as [u8]
@@ -8945,10 +8927,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [u8],
-        ) -> (&'a mut [[u8; 32]], &'a mut [u8]) {
+            data: &mut [u8],
+        ) -> (&mut [[u8; 32]], &mut [u8]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at_mut(bulk * 32);
             // SAFETY: head.len() is a multiple of 32, [u8; 32] has same alignment as [u8]
@@ -9287,10 +9269,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i16; 16]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(
-            _: Wasm128Token,
-            data: &'a [i16],
-        ) -> (&'a [[i16; 16]], &'a [i16]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[i16]) -> (&[[i16; 16]], &[i16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [i16; 16] has same alignment as [i16]
@@ -9301,10 +9280,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [i16],
-        ) -> (&'a mut [[i16; 16]], &'a mut [i16]) {
+            data: &mut [i16],
+        ) -> (&mut [[i16; 16]], &mut [i16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [i16; 16] has same alignment as [i16]
@@ -9670,10 +9649,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u16; 16]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(
-            _: Wasm128Token,
-            data: &'a [u16],
-        ) -> (&'a [[u16; 16]], &'a [u16]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[u16]) -> (&[[u16; 16]], &[u16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [u16; 16] has same alignment as [u16]
@@ -9684,10 +9660,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [u16],
-        ) -> (&'a mut [[u16; 16]], &'a mut [u16]) {
+            data: &mut [u16],
+        ) -> (&mut [[u16; 16]], &mut [u16]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             // SAFETY: head.len() is a multiple of 16, [u16; 16] has same alignment as [u16]
@@ -10044,10 +10020,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(
-            _: Wasm128Token,
-            data: &'a [i32],
-        ) -> (&'a [[i32; 8]], &'a [i32]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[i32]) -> (&[[i32; 8]], &[i32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [i32; 8] has same alignment as [i32]
@@ -10058,10 +10031,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [i32],
-        ) -> (&'a mut [[i32; 8]], &'a mut [i32]) {
+            data: &mut [i32],
+        ) -> (&mut [[i32; 8]], &mut [i32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [i32; 8] has same alignment as [i32]
@@ -10427,10 +10400,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u32; 8]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(
-            _: Wasm128Token,
-            data: &'a [u32],
-        ) -> (&'a [[u32; 8]], &'a [u32]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[u32]) -> (&[[u32; 8]], &[u32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [u32; 8] has same alignment as [u32]
@@ -10441,10 +10411,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [u32],
-        ) -> (&'a mut [[u32; 8]], &'a mut [u32]) {
+            data: &mut [u32],
+        ) -> (&mut [[u32; 8]], &mut [u32]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             // SAFETY: head.len() is a multiple of 8, [u32; 8] has same alignment as [u32]
@@ -10801,10 +10771,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[i64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(
-            _: Wasm128Token,
-            data: &'a [i64],
-        ) -> (&'a [[i64; 4]], &'a [i64]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[i64]) -> (&[[i64; 4]], &[i64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [i64; 4] has same alignment as [i64]
@@ -10815,10 +10782,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [i64],
-        ) -> (&'a mut [[i64; 4]], &'a mut [i64]) {
+            data: &mut [i64],
+        ) -> (&mut [[i64; 4]], &mut [i64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [i64; 4] has same alignment as [i64]
@@ -11133,10 +11100,7 @@ pub mod wasm128 {
         /// Returns `(chunks, remainder)` where each chunk is a `&[u64; 4]`
         /// that can be passed directly to [`load`](Self::load).
         #[inline(always)]
-        pub fn partition_slice<'a>(
-            _: Wasm128Token,
-            data: &'a [u64],
-        ) -> (&'a [[u64; 4]], &'a [u64]) {
+        pub fn partition_slice(_: Wasm128Token, data: &[u64]) -> (&[[u64; 4]], &[u64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [u64; 4] has same alignment as [u64]
@@ -11147,10 +11111,10 @@ pub mod wasm128 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: Wasm128Token,
-            data: &'a mut [u64],
-        ) -> (&'a mut [[u64; 4]], &'a mut [u64]) {
+            data: &mut [u64],
+        ) -> (&mut [[u64; 4]], &mut [u64]) {
             let bulk = data.len() / 4;
             let (head, tail) = data.split_at_mut(bulk * 4);
             // SAFETY: head.len() is a multiple of 4, [u64; 4] has same alignment as [u64]
@@ -11511,7 +11475,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [f32]) -> (&'a [[f32; 16]], &'a [f32]) {
+        pub fn partition_slice(_: X64V3Token, data: &[f32]) -> (&[[f32; 16]], &[f32]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             let chunks =
@@ -11521,10 +11485,10 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [f32],
-        ) -> (&'a mut [[f32; 16]], &'a mut [f32]) {
+            data: &mut [f32],
+        ) -> (&mut [[f32; 16]], &mut [f32]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             let chunks = unsafe {
@@ -11946,7 +11910,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [f64]) -> (&'a [[f64; 8]], &'a [f64]) {
+        pub fn partition_slice(_: X64V3Token, data: &[f64]) -> (&[[f64; 8]], &[f64]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             let chunks =
@@ -11956,10 +11920,10 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [f64],
-        ) -> (&'a mut [[f64; 8]], &'a mut [f64]) {
+            data: &mut [f64],
+        ) -> (&mut [[f64; 8]], &mut [f64]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             let chunks = unsafe {
@@ -12381,7 +12345,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [i8]) -> (&'a [[i8; 64]], &'a [i8]) {
+        pub fn partition_slice(_: X64V3Token, data: &[i8]) -> (&[[i8; 64]], &[i8]) {
             let bulk = data.len() / 64;
             let (head, tail) = data.split_at(bulk * 64);
             let chunks =
@@ -12391,10 +12355,7 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
-            _: X64V3Token,
-            data: &'a mut [i8],
-        ) -> (&'a mut [[i8; 64]], &'a mut [i8]) {
+        pub fn partition_slice_mut(_: X64V3Token, data: &mut [i8]) -> (&mut [[i8; 64]], &mut [i8]) {
             let bulk = data.len() / 64;
             let (head, tail) = data.split_at_mut(bulk * 64);
             let chunks = unsafe {
@@ -12732,7 +12693,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [u8]) -> (&'a [[u8; 64]], &'a [u8]) {
+        pub fn partition_slice(_: X64V3Token, data: &[u8]) -> (&[[u8; 64]], &[u8]) {
             let bulk = data.len() / 64;
             let (head, tail) = data.split_at(bulk * 64);
             let chunks =
@@ -12742,10 +12703,7 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
-            _: X64V3Token,
-            data: &'a mut [u8],
-        ) -> (&'a mut [[u8; 64]], &'a mut [u8]) {
+        pub fn partition_slice_mut(_: X64V3Token, data: &mut [u8]) -> (&mut [[u8; 64]], &mut [u8]) {
             let bulk = data.len() / 64;
             let (head, tail) = data.split_at_mut(bulk * 64);
             let chunks = unsafe {
@@ -13074,7 +13032,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [i16]) -> (&'a [[i16; 32]], &'a [i16]) {
+        pub fn partition_slice(_: X64V3Token, data: &[i16]) -> (&[[i16; 32]], &[i16]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at(bulk * 32);
             let chunks =
@@ -13084,10 +13042,10 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [i16],
-        ) -> (&'a mut [[i16; 32]], &'a mut [i16]) {
+            data: &mut [i16],
+        ) -> (&mut [[i16; 32]], &mut [i16]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at_mut(bulk * 32);
             let chunks = unsafe {
@@ -13443,7 +13401,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [u16]) -> (&'a [[u16; 32]], &'a [u16]) {
+        pub fn partition_slice(_: X64V3Token, data: &[u16]) -> (&[[u16; 32]], &[u16]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at(bulk * 32);
             let chunks =
@@ -13453,10 +13411,10 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [u16],
-        ) -> (&'a mut [[u16; 32]], &'a mut [u16]) {
+            data: &mut [u16],
+        ) -> (&mut [[u16; 32]], &mut [u16]) {
             let bulk = data.len() / 32;
             let (head, tail) = data.split_at_mut(bulk * 32);
             let chunks = unsafe {
@@ -13803,7 +13761,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [i32]) -> (&'a [[i32; 16]], &'a [i32]) {
+        pub fn partition_slice(_: X64V3Token, data: &[i32]) -> (&[[i32; 16]], &[i32]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             let chunks =
@@ -13813,10 +13771,10 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [i32],
-        ) -> (&'a mut [[i32; 16]], &'a mut [i32]) {
+            data: &mut [i32],
+        ) -> (&mut [[i32; 16]], &mut [i32]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             let chunks = unsafe {
@@ -14172,7 +14130,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [u32]) -> (&'a [[u32; 16]], &'a [u32]) {
+        pub fn partition_slice(_: X64V3Token, data: &[u32]) -> (&[[u32; 16]], &[u32]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at(bulk * 16);
             let chunks =
@@ -14182,10 +14140,10 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [u32],
-        ) -> (&'a mut [[u32; 16]], &'a mut [u32]) {
+            data: &mut [u32],
+        ) -> (&mut [[u32; 16]], &mut [u32]) {
             let bulk = data.len() / 16;
             let (head, tail) = data.split_at_mut(bulk * 16);
             let chunks = unsafe {
@@ -14532,7 +14490,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [i64]) -> (&'a [[i64; 8]], &'a [i64]) {
+        pub fn partition_slice(_: X64V3Token, data: &[i64]) -> (&[[i64; 8]], &[i64]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             let chunks =
@@ -14542,10 +14500,10 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [i64],
-        ) -> (&'a mut [[i64; 8]], &'a mut [i64]) {
+            data: &mut [i64],
+        ) -> (&mut [[i64; 8]], &mut [i64]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             let chunks = unsafe {
@@ -14850,7 +14808,7 @@ pub mod v3_512 {
 
         /// Split a slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice<'a>(_: X64V3Token, data: &'a [u64]) -> (&'a [[u64; 8]], &'a [u64]) {
+        pub fn partition_slice(_: X64V3Token, data: &[u64]) -> (&[[u64; 8]], &[u64]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at(bulk * 8);
             let chunks =
@@ -14860,10 +14818,10 @@ pub mod v3_512 {
 
         /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
         #[inline(always)]
-        pub fn partition_slice_mut<'a>(
+        pub fn partition_slice_mut(
             _: X64V3Token,
-            data: &'a mut [u64],
-        ) -> (&'a mut [[u64; 8]], &'a mut [u64]) {
+            data: &mut [u64],
+        ) -> (&mut [[u64; 8]], &mut [u64]) {
             let bulk = data.len() / 8;
             let (head, tail) = data.split_at_mut(bulk * 8);
             let chunks = unsafe {
