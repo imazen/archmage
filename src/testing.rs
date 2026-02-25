@@ -110,6 +110,7 @@ struct TokenSlot {
 
 /// Builds a `TokenSlot` from a token type. Generates a named `fn` for the
 /// availability check to avoid closure-to-fn-pointer coercion issues.
+#[allow(unused_macros)]
 macro_rules! token_slot {
     ($token:ty, $desc:expr) => {{
         fn check_avail() -> bool {
@@ -127,6 +128,7 @@ macro_rules! token_slot {
 }
 
 fn build_token_slots() -> Vec<TokenSlot> {
+    #[allow(unused_mut)]
     let mut slots = Vec::new();
 
     // x86/x86_64 hierarchy:

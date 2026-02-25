@@ -351,7 +351,10 @@ impl std::error::Error for DisableAllSimdError {}
 /// // ... run benchmarks ...
 /// dangerously_disable_tokens_except_wasm(false)?;
 /// ```
-pub fn dangerously_disable_tokens_except_wasm(disabled: bool) -> Result<(), DisableAllSimdError> {
+pub fn dangerously_disable_tokens_except_wasm(
+    #[allow(unused)] disabled: bool,
+) -> Result<(), DisableAllSimdError> {
+    #[allow(unused_mut)]
     let mut errors = alloc::vec::Vec::new();
 
     // x86/x86_64: disable V2 (cascades to V3, V4, Modern, Fp16)

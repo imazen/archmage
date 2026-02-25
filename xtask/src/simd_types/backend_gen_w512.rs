@@ -35,6 +35,7 @@ pub(super) struct W512Type {
     pub kind: W512Kind,
 }
 
+#[allow(dead_code)]
 impl W512Type {
     /// Type name: "f32x16", "i8x64", etc.
     pub fn name(&self) -> String {
@@ -2606,7 +2607,7 @@ pub(super) fn generate_x86_modern_w512_impls(types: &[W512Type]) -> String {
 fn generate_popcnt_backend_trait(ty: &W512Type) -> String {
     let trait_name = ty.trait_name();
     let name = ty.name();
-    let elem = ty.elem;
+    let _elem = ty.elem;
 
     formatdoc! {r#"
         /// Population count (popcnt) extension for {name}.
