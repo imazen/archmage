@@ -113,12 +113,35 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 
 ## Suffix Conventions
 
+**Default tiers** (used when no explicit tier list is given):
+
 | Suffix | Token | Platform |
 |--------|-------|----------|
 | `_v4` | `X64V4Token` | x86-64 AVX-512 (requires `avx512` feature) |
 | `_v3` | `X64V3Token` | x86-64 AVX2+FMA |
 | `_neon` | `NeonToken` | AArch64 |
 | `_wasm128` | `Wasm128Token` | WASM |
+| `_scalar` | `ScalarToken` | Always required |
+
+**All known tiers** (for explicit tier lists):
+
+| Suffix | Token | Platform |
+|--------|-------|----------|
+| `_v1` | `X64V1Token` | x86-64 baseline |
+| `_v2` | `X64V2Token` | x86-64 SSE4.2 |
+| `_x64_crypto` | `X64CryptoToken` | x86-64 V2 + AES-NI |
+| `_v3` | `X64V3Token` | x86-64 AVX2+FMA |
+| `_v3_crypto` | `X64V3CryptoToken` | x86-64 V3 + VAES |
+| `_v4` | `X64V4Token` | x86-64 AVX-512 |
+| `_v4x` | `X64V4xToken` | x86-64 AVX-512 extensions |
+| `_neon` | `NeonToken` | AArch64 NEON |
+| `_neon_aes` | `NeonAesToken` | AArch64 NEON + AES |
+| `_neon_sha3` | `NeonSha3Token` | AArch64 NEON + SHA3 |
+| `_neon_crc` | `NeonCrcToken` | AArch64 NEON + CRC |
+| `_arm_v2` | `Arm64V2Token` | AArch64 modern compute |
+| `_arm_v3` | `Arm64V3Token` | AArch64 full modern |
+| `_wasm128` | `Wasm128Token` | WASM SIMD128 |
+| `_wasm128_relaxed` | `Wasm128RelaxedToken` | WASM Relaxed SIMD |
 | `_scalar` | `ScalarToken` | Always required |
 
 Cross-architecture variants are excluded by `#[cfg]` — on x86-64, you need `_v3`, `_scalar`, and `_v4` if `avx512` is enabled. You don't need `_neon` or `_wasm128`.

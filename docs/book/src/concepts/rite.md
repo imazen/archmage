@@ -39,7 +39,7 @@ flowchart TD
 | Called from `#[arcane]` or `#[rite]` with same/compatible token | `#[rite]` |
 | Called from non-SIMD code (tests, public API, after `summon()`) | `#[arcane]` |
 
-**Default to `#[rite]}`.** Only use `#[arcane]` when you need the safe wrapper.
+**Default to `#[rite]`.** Only use `#[arcane]` when you need the safe wrapper.
 
 ```rust
 use archmage::prelude::*;

@@ -10,15 +10,20 @@ flowchart TD
     subgraph x86["x86-64"]
         V4["X64V4Token<br/>(AVX-512)"] --> V3["X64V3Token<br/>(AVX2+FMA)"]
         V3 --> V2["X64V2Token<br/>(SSE4.2)"]
-        V2 --> S1["ScalarToken"]
+        V2 --> V1["X64V1Token<br/>(SSE2 baseline)"]
+        V1 --> S1["ScalarToken"]
     end
     subgraph arm["AArch64"]
-        SHA3["NeonSha3Token"] --> NEON["NeonToken<br/>(baseline)"]
+        ARMV3["Arm64V3Token<br/>(I8MM, BF16, SHA3)"] --> ARMV2["Arm64V2Token<br/>(CRC, RDM, FP16, AES)"]
+        ARMV2 --> NEON["NeonToken<br/>(baseline)"]
+        SHA3["NeonSha3Token"] --> NEON
         AES["NeonAesToken"] --> NEON
+        CRC["NeonCrcToken"] --> NEON
         NEON --> S2["ScalarToken"]
     end
     subgraph wasm["WASM"]
-        W128["Wasm128Token"] --> S3["ScalarToken"]
+        WREL["Wasm128RelaxedToken"] --> W128["Wasm128Token"]
+        W128 --> S3["ScalarToken"]
     end
 
     style V3 fill:#2d5a27,color:#fff

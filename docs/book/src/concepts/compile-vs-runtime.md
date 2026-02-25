@@ -198,7 +198,7 @@ With `-Ctarget-cpu=native` or `-Ctarget-cpu=haswell`:
 ```rust
 // When compiled with -Ctarget-cpu=haswell:
 // - #[cfg(target_feature = "avx2")] is TRUE
-// - X64V3Token::guaranteed() returns Some(true)
+// - X64V3Token::compiled_with() returns Some(true)
 // - summon() becomes a no-op
 // - LLVM eliminates the branch entirely
 
@@ -210,7 +210,7 @@ if let Some(token) = X64V3Token::summon() {
 Check programmatically:
 
 ```rust
-match X64V3Token::guaranteed() {
+match X64V3Token::compiled_with() {
     Some(true) => println!("Compile-time guaranteed"),
     Some(false) => println!("Wrong architecture"),
     None => println!("Runtime check needed"),
@@ -305,7 +305,7 @@ if let Some(token) = Desktop64::summon() {
 | "Does this code exist in the binary?" | `#[cfg(...)]` — compile-time |
 | "Can this CPU run AVX2?" | `Token::summon()` — runtime |
 | "What instructions can LLVM use here?" | `#[target_feature(enable)]` — per-function |
-| "Is runtime check needed?" | `Token::guaranteed()` — tells you |
+| "Is runtime check needed?" | `Token::compiled_with()` — tells you |
 | "Will these functions inline together?" | Same target features + concrete types = yes |
 | "Do generic bounds hurt performance?" | Yes, they create optimization boundaries |
 | "Is downcasting (V4→V3) free?" | Yes, features are superset |

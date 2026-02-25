@@ -9,9 +9,11 @@ The base trait for all capability tokens.
 ```rust
 pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     const NAME: &'static str;
-    fn guaranteed() -> Option<bool>;
+    const TARGET_FEATURES: &'static str;
+    const ENABLE_TARGET_FEATURES: &'static str;
+    const DISABLE_TARGET_FEATURES: &'static str;
+    fn compiled_with() -> Option<bool>;
     fn summon() -> Option<Self>;
-    fn attempt() -> Option<Self>;
 }
 ```
 
@@ -23,18 +25,22 @@ Enables compile-time dispatch via type checking.
 
 ```rust
 pub trait IntoConcreteToken: SimdToken {
+    fn as_x64v1(self) -> Option<X64V1Token> { None }
     fn as_x64v2(self) -> Option<X64V2Token> { None }
+    fn as_x64_crypto(self) -> Option<X64CryptoToken> { None }
     fn as_x64v3(self) -> Option<X64V3Token> { None }
+    fn as_x64v3_crypto(self) -> Option<X64V3CryptoToken> { None }
     fn as_x64v4(self) -> Option<X64V4Token> { None }
-    fn as_x64_v4x(self) -> Option<X64V4xToken> { None }
+    fn as_x64v4x(self) -> Option<X64V4xToken> { None }
     fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> { None }
     fn as_neon(self) -> Option<NeonToken> { None }
-    fn as_arm_v2(self) -> Option<Arm64V2Token> { None }
-    fn as_arm_v3(self) -> Option<Arm64V3Token> { None }
     fn as_neon_aes(self) -> Option<NeonAesToken> { None }
     fn as_neon_sha3(self) -> Option<NeonSha3Token> { None }
     fn as_neon_crc(self) -> Option<NeonCrcToken> { None }
+    fn as_arm_v2(self) -> Option<Arm64V2Token> { None }
+    fn as_arm_v3(self) -> Option<Arm64V3Token> { None }
     fn as_wasm128(self) -> Option<Wasm128Token> { None }
+    fn as_wasm128_relaxed(self) -> Option<Wasm128RelaxedToken> { None }
     fn as_scalar(self) -> Option<ScalarToken> { None }
 }
 ```

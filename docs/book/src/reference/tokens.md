@@ -4,6 +4,21 @@ Complete reference for all archmage tokens. See [`token-registry.toml`](https://
 
 ## x86-64 Tokens
 
+### X64V1Token / Sse2Token
+
+**Features**: SSE, SSE2 (x86-64 baseline — always available)
+
+**CPUs**: All x86-64 processors
+
+```rust
+use archmage::{X64V1Token, Sse2Token, SimdToken};
+
+// Always succeeds on x86-64
+let token = X64V1Token::summon().unwrap();
+```
+
+**Alias**: `Sse2Token`
+
 ### X64V2Token
 
 **Features**: SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT
@@ -15,6 +30,20 @@ use archmage::{X64V2Token, SimdToken};
 
 if let Some(token) = X64V2Token::summon() {
     // 128-bit SSE operations
+}
+```
+
+### X64CryptoToken
+
+**Features**: All V2 + PCLMULQDQ, AES-NI
+
+**CPUs**: Intel Westmere (2010)+, AMD Bulldozer (2011)+
+
+```rust
+use archmage::{X64CryptoToken, SimdToken};
+
+if let Some(token) = X64CryptoToken::summon() {
+    // AES-NI and carry-less multiplication available
 }
 ```
 
@@ -33,6 +62,20 @@ let t2: Option<Desktop64> = Desktop64::summon();
 ```
 
 **Alias**: `Desktop64` — Friendly name for typical desktop/laptop CPUs
+
+### X64V3CryptoToken
+
+**Features**: All V3 + VPCLMULQDQ, VAES
+
+**CPUs**: AMD Zen 3 (2020)+, Intel Alder Lake (2021)+
+
+```rust
+use archmage::{X64V3CryptoToken, SimdToken};
+
+if let Some(token) = X64V3CryptoToken::summon() {
+    // 256-bit VAES and VPCLMULQDQ available
+}
+```
 
 ### X64V4Token / Server64 / Avx512Token
 
@@ -186,6 +229,22 @@ if let Some(token) = Wasm128Token::summon() {
 }
 ```
 
+### Wasm128RelaxedToken
+
+**Features**: WASM SIMD128 + Relaxed SIMD
+
+**Requires**: Compile with `-Ctarget-feature=+simd128,+relaxed-simd`
+
+Relaxed SIMD provides 28 intrinsics (FMA, relaxed lane-select, relaxed min/max, dot products, relaxed truncation) that trade strict cross-platform determinism for performance.
+
+```rust
+use archmage::{Wasm128RelaxedToken, SimdToken};
+
+if let Some(token) = Wasm128RelaxedToken::summon() {
+    // Relaxed SIMD operations
+}
+```
+
 ## Universal Token
 
 ### ScalarToken
@@ -211,19 +270,19 @@ All tokens implement `SimdToken`:
 ```rust
 pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
     const NAME: &'static str;
+    const TARGET_FEATURES: &'static str;
+    const ENABLE_TARGET_FEATURES: &'static str;
+    const DISABLE_TARGET_FEATURES: &'static str;
 
-    /// Compile-time guarantee check
-    fn guaranteed() -> Option<bool>;
+    /// Compile-time check: was this binary compiled with these features?
+    fn compiled_with() -> Option<bool>;
 
     /// Runtime detection
     fn summon() -> Option<Self>;
-
-    /// Alias for summon()
-    fn attempt() -> Option<Self>;
 }
 ```
 
-### guaranteed()
+### compiled_with()
 
 Returns:
 - `Some(true)` — Feature is compile-time guaranteed (e.g., `-Ctarget-cpu=haswell`)
@@ -231,7 +290,7 @@ Returns:
 - `None` — Runtime check needed
 
 ```rust
-match Desktop64::guaranteed() {
+match Desktop64::compiled_with() {
     Some(true) => {
         // summon() will always succeed, check is elided
         let token = Desktop64::summon().unwrap();

@@ -126,7 +126,19 @@ For older browsers, provide a non-SIMD fallback WASM binary.
 
 ### Relaxed SIMD
 
-WASM also has "relaxed SIMD" with even more instructions. As of 2024, this requires additional flags:
+WASM relaxed-simd is standardized (Wasm 3.0), stable in Rust since 1.82, and supported by Chrome, Firefox 145+, and Wasmtime. It provides 28 intrinsics (FMA, relaxed lane-select, relaxed min/max, dot products, relaxed truncation) that trade strict cross-platform determinism for performance.
+
+Archmage provides `Wasm128RelaxedToken` for these:
+
+```rust
+use archmage::{Wasm128RelaxedToken, SimdToken};
+
+if let Some(token) = Wasm128RelaxedToken::summon() {
+    // Relaxed SIMD intrinsics available
+}
+```
+
+Enable with:
 
 ```bash
 RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo build

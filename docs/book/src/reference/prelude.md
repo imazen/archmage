@@ -6,13 +6,13 @@
 
 ### Tokens
 
-`Desktop64`, `Arm64`, `ScalarToken`, `X64V2Token`, `X64V3Token`, `NeonToken`, `Wasm128Token`
+`Desktop64`, `Arm64`, `ScalarToken`, `X64V1Token`, `Sse2Token`, `X64V2Token`, `X64CryptoToken`, `X64V3Token`, `X64V3CryptoToken`, `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`, `Arm64V2Token`, `Arm64V3Token`, `Wasm128Token`, `Wasm128RelaxedToken`
 
 With `avx512` feature: `X64V4Token`, `Server64`, `Avx512Token`, `X64V4xToken`, `Avx512Fp16Token`
 
 ### Traits
 
-`SimdToken`, `IntoConcreteToken`, `HasX64V2`, `HasNeon`, `HasNeonAes`, `HasNeonSha3`
+`SimdToken`, `IntoConcreteToken`, `HasX64V2`, `HasNeon`, `HasNeonAes`, `HasNeonSha3`, `HasArm64V2`, `HasArm64V3`
 
 With `avx512` feature: `HasX64V4`
 

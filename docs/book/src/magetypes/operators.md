@@ -160,16 +160,16 @@ let sum = a + b;
 let diff = a - b;
 let prod = a * b;
 
-// Bitwise
-let and = a & b;
-let or = a | b;
-let xor = a ^ b;
-let not = !a;
+// Bitwise (methods work on all platforms; operators only on x86)
+let and = a.and(b);
+let or = a.or(b);
+let xor = a.xor(b);
+let not = a.not();
 
-// Shifts
-let shl = a << 2;           // Shift left by constant
-let shr = a >> 1;           // Shift right by constant
-let shr_arith = a.shr_arithmetic(1);  // Sign-extending shift
+// Shifts (const generic)
+let shl = a.shl::<2>();              // Shift left by constant
+let shr = a.shr::<1>();              // Shift right by constant
+let shr_arith = a.shr_arithmetic::<1>();  // Sign-extending shift
 ```
 
 ## Example: Dot Product

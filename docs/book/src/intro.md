@@ -74,9 +74,9 @@ fn main() {
 
 | Platform | Tokens | Register Width |
 |----------|--------|----------------|
-| x86-64 | `X64V2Token`, `X64V3Token`/`Desktop64`, `X64V4Token`/`Server64` | 128-512 bit |
-| AArch64 | `NeonToken`/`Arm64`, `NeonAesToken`, `NeonSha3Token` | 128 bit |
-| WASM | `Wasm128Token` | 128 bit |
+| x86-64 | `X64V1Token`, `X64V2Token`, `X64CryptoToken`, `X64V3Token`/`Desktop64`, `X64V3CryptoToken`, `X64V4Token`/`Server64`, `X64V4xToken`, `Avx512Fp16Token` | 128-512 bit |
+| AArch64 | `NeonToken`/`Arm64`, `Arm64V2Token`, `Arm64V3Token`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken` | 128 bit |
+| WASM | `Wasm128Token`, `Wasm128RelaxedToken` | 128 bit |
 
 ## Next Steps
 

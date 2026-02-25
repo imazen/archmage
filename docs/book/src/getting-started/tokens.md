@@ -8,25 +8,32 @@ Tokens are the core of archmage's safety model. They're zero-sized proof types t
 
 | Token | Alias | Features | CPUs |
 |-------|-------|----------|------|
-| `X64V2Token` | — | SSE4.2, POPCNT | Nehalem 2008+ |
+| `X64V1Token` | `Sse2Token` | SSE, SSE2 (baseline) | All x86-64 |
+| `X64V2Token` | — | + SSE4.2, POPCNT | Nehalem 2008+ |
+| `X64CryptoToken` | — | V2 + PCLMULQDQ, AES-NI | Westmere 2010+ |
 | `X64V3Token` | `Desktop64` | + AVX2, FMA, BMI1, BMI2 | Haswell 2013+, Zen 1+ |
+| `X64V3CryptoToken` | — | V3 + VPCLMULQDQ, VAES | Zen 3+ 2020, Alder Lake 2021+ |
 | `X64V4Token` | `Server64`, `Avx512Token` | + AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4+ |
 | `X64V4xToken` | — | + VNNI, VBMI, etc. | Ice Lake 2019+, Zen 4+ |
+| `Avx512Fp16Token` | — | + AVX-512 FP16 | Sapphire Rapids 2023+ |
 
 ### AArch64 Tokens
 
 | Token | Alias | Features |
 |-------|-------|----------|
 | `NeonToken` | `Arm64` | NEON (baseline, always available) |
-| `NeonAesToken` | — | + AES instructions |
-| `NeonSha3Token` | — | + SHA3 instructions |
-| `NeonCrcToken` | — | + CRC instructions |
+| `Arm64V2Token` | — | + CRC, RDM, DotProd, FP16, AES, SHA2 |
+| `Arm64V3Token` | — | + FHM, FCMA, SHA3, I8MM, BF16 |
+| `NeonAesToken` | — | NEON + AES |
+| `NeonSha3Token` | — | NEON + SHA3 |
+| `NeonCrcToken` | — | NEON + CRC |
 
-### WASM Token
+### WASM Tokens
 
 | Token | Features |
 |-------|----------|
 | `Wasm128Token` | WASM SIMD128 |
+| `Wasm128RelaxedToken` | + Relaxed SIMD |
 
 ## Summoning Tokens
 
@@ -50,7 +57,7 @@ Check if detection is needed:
 ```rust
 use archmage::{Desktop64, SimdToken};
 
-match Desktop64::guaranteed() {
+match Desktop64::compiled_with() {
     Some(true) => {
         // Compiled with -Ctarget-cpu=haswell or higher
         // summon() will always succeed, check is elided
@@ -136,3 +143,5 @@ Available traits:
 - `HasX64V4` — AVX-512 tier (requires `avx512` feature)
 - `HasNeon` — NEON baseline
 - `HasNeonAes`, `HasNeonSha3` — NEON extensions
+- `HasArm64V2` — Modern ARM compute tier
+- `HasArm64V3` — Full modern ARM feature set

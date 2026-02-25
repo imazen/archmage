@@ -4,15 +4,15 @@ Add archmage to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-archmage = "0.6"
+archmage = "0.8"
 ```
 
 For SIMD vector types with natural operators, also add magetypes:
 
 ```toml
 [dependencies]
-archmage = "0.6"
-magetypes = "0.6"
+archmage = "0.8"
+magetypes = "0.8"
 ```
 
 ## Feature Flags
@@ -64,12 +64,12 @@ use archmage::{SimdToken, Desktop64, Arm64};
 fn main() {
     // Tokens compile everywhere - summon() returns None on unsupported platforms
     match Desktop64::summon() {
-        Some(token) => println!("{} available!", token.name()),
+        Some(_) => println!("{} available!", Desktop64::NAME),
         None => println!("No AVX2+FMA"),
     }
 
     match Arm64::summon() {
-        Some(token) => println!("{} available!", token.name()),
+        Some(_) => println!("{} available!", Arm64::NAME),
         None => println!("No NEON"),
     }
 }

@@ -85,13 +85,22 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
 
 | Token | Enabled Features |
 |-------|------------------|
-| `X64V2Token` | sse3, ssse3, sse4.1, sse4.2, popcnt |
+| `X64V1Token` / `Sse2Token` | sse, sse2 (x86-64 baseline) |
+| `X64V2Token` | + sse3, ssse3, sse4.1, sse4.2, popcnt |
 | `X64CryptoToken` | V2 + pclmulqdq, aes |
 | `X64V3Token` / `Desktop64` | + avx, avx2, fma, bmi1, bmi2, f16c |
 | `X64V3CryptoToken` | V3 + vpclmulqdq, vaes |
 | `X64V4Token` / `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl |
+| `X64V4xToken` | V4 + vpopcntdq, ifma, vbmi, vnni, vbmi2, bitalg, vpclmulqdq, gfni, vaes |
+| `Avx512Fp16Token` | V4 + avx512fp16 |
 | `NeonToken` / `Arm64` | neon |
+| `Arm64V2Token` | neon + crc, rdm, dotprod, fp16, aes, sha2 |
+| `Arm64V3Token` | V2 + fhm, fcma, sha3, i8mm, bf16 |
+| `NeonAesToken` | neon + aes |
+| `NeonSha3Token` | neon + sha3 |
+| `NeonCrcToken` | neon + crc |
 | `Wasm128Token` | simd128 |
+| `Wasm128RelaxedToken` | simd128 + relaxed-simd |
 
 See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete mapping.
 

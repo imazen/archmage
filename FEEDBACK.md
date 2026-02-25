@@ -42,3 +42,4 @@
   - F32x4Convert/F32x8Convert conversion traits
   - Implementations for x86 V3, scalar, NEON, WASM platforms
   - Update generate_backend_files() and generate_backends_mod()
+2026-02-25T00:30:38-07:00 - User requested comprehensive review and update of mdbook docs (docs/book/src/). Fixed: deprecated guaranteed()→compiled_with(), version 0.6→0.8, incomplete token/trait listings, typos, outdated references.

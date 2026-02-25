@@ -90,8 +90,8 @@ use archmage::{Desktop64, X64V3Token, X64V4Token};
 // But summon() returns None:
 assert!(Desktop64::summon().is_none());  // On ARM
 
-// And guaranteed() tells you:
-assert_eq!(Desktop64::guaranteed(), Some(false));  // Wrong arch
+// And compiled_with() tells you:
+assert_eq!(Desktop64::compiled_with(), Some(false));  // Wrong arch
 ```
 
 This enables cross-platform code without `#[cfg]` soup:
