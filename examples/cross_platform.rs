@@ -53,7 +53,7 @@ pub fn sum_of_squares(data: &[f32]) -> f32 {
 // This ensures intrinsics inline properly into single SIMD instructions.
 // ============================================================================
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 use archmage::arcane;
 
 /// AVX2+FMA implementation (8 lanes)
@@ -107,13 +107,27 @@ fn sum_of_squares_sse(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     sum
 }
 
-// Note: ARM NEON support requires fixing some missing intrinsics in the generator.
-// For now, use scalar fallback on aarch64. When fixed, this will use #[arcane].
+/// NEON implementation (4 lanes)
 #[cfg(target_arch = "aarch64")]
-fn sum_of_squares_neon(_token: archmage::NeonToken, data: &[f32]) -> f32 {
-    // TODO: Use SIMD when ARM generator is fixed
-    // For now, fall back to scalar
-    sum_of_squares_scalar(data)
+#[arcane]
+fn sum_of_squares_neon(token: archmage::NeonToken, data: &[f32]) -> f32 {
+    use magetypes::simd::f32x4;
+
+    let mut acc = f32x4::zero(token);
+    let chunks = data.chunks_exact(4);
+    let remainder = chunks.remainder();
+
+    for chunk in chunks {
+        let arr: &[f32; 4] = chunk.try_into().unwrap();
+        let v = f32x4::load(token, arr);
+        acc = v.mul_add(v, acc);
+    }
+
+    let mut sum = acc.reduce_add();
+    for &x in remainder {
+        sum += x * x;
+    }
+    sum
 }
 
 /// Scalar fallback - works on any platform
@@ -184,10 +198,27 @@ fn polynomial_eval_avx2(token: archmage::X64V3Token, data: &mut [f32], a: f32, b
     }
 }
 
+/// NEON polynomial evaluation using #[arcane]
 #[cfg(target_arch = "aarch64")]
-fn polynomial_eval_neon(_token: archmage::NeonToken, data: &mut [f32], a: f32, b: f32, c: f32) {
-    // TODO: Use #[arcane] when ARM generator is fixed
-    for x in data.iter_mut() {
+#[arcane]
+fn polynomial_eval_neon(token: archmage::NeonToken, data: &mut [f32], a: f32, b: f32, c: f32) {
+    use magetypes::simd::f32x4;
+
+    let a_v = f32x4::splat(token, a);
+    let b_v = f32x4::splat(token, b);
+    let c_v = f32x4::splat(token, c);
+
+    let (chunks, remainder) = data.split_at_mut(data.len() - data.len() % 4);
+
+    for chunk in chunks.chunks_exact_mut(4) {
+        let arr: &[f32; 4] = (&*chunk).try_into().unwrap();
+        let x = f32x4::load(token, arr);
+        let result = x.mul_add(x.mul_add(a_v, b_v), c_v);
+        let out: &mut [f32; 4] = chunk.try_into().unwrap();
+        result.store(out);
+    }
+
+    for x in remainder {
         *x = a * (*x) * (*x) + b * (*x) + c;
     }
 }
