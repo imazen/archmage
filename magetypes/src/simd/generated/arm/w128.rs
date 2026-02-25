@@ -54,6 +54,36 @@ impl f32x4 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[f32; 4]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [f32],
+    ) -> (&'a [[f32; 4]], &'a [f32]) {
+        let bulk = data.len() / 4;
+        let (head, tail) = data.split_at(bulk * 4);
+        // SAFETY: head.len() is a multiple of 4, [f32; 4] has same alignment as [f32]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[f32; 4]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [f32],
+    ) -> (&'a mut [[f32; 4]], &'a mut [f32]) {
+        let bulk = data.len() / 4;
+        let (head, tail) = data.split_at_mut(bulk * 4);
+        // SAFETY: head.len() is a multiple of 4, [f32; 4] has same alignment as [f32]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[f32; 4]>(), bulk) };
+        (chunks, tail)
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [f32; 4]) {
@@ -1472,6 +1502,36 @@ impl f64x2 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[f64; 2]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [f64],
+    ) -> (&'a [[f64; 2]], &'a [f64]) {
+        let bulk = data.len() / 2;
+        let (head, tail) = data.split_at(bulk * 2);
+        // SAFETY: head.len() is a multiple of 2, [f64; 2] has same alignment as [f64]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[f64; 2]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [f64],
+    ) -> (&'a mut [[f64; 2]], &'a mut [f64]) {
+        let bulk = data.len() / 2;
+        let (head, tail) = data.split_at_mut(bulk * 2);
+        // SAFETY: head.len() is a multiple of 2, [f64; 2] has same alignment as [f64]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[f64; 2]>(), bulk) };
+        (chunks, tail)
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [f64; 2]) {
@@ -2157,6 +2217,36 @@ impl i8x16 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[i8; 16]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [i8],
+    ) -> (&'a [[i8; 16]], &'a [i8]) {
+        let bulk = data.len() / 16;
+        let (head, tail) = data.split_at(bulk * 16);
+        // SAFETY: head.len() is a multiple of 16, [i8; 16] has same alignment as [i8]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[i8; 16]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [i8],
+    ) -> (&'a mut [[i8; 16]], &'a mut [i8]) {
+        let bulk = data.len() / 16;
+        let (head, tail) = data.split_at_mut(bulk * 16);
+        // SAFETY: head.len() is a multiple of 16, [i8; 16] has same alignment as [i8]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[i8; 16]>(), bulk) };
+        (chunks, tail)
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [i8; 16]) {
@@ -2751,6 +2841,36 @@ impl u8x16 {
         let arr: [u8; 16] = slice[..16].try_into().unwrap();
         // SAFETY: [u8; 16] and uint8x16_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[u8; 16]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [u8],
+    ) -> (&'a [[u8; 16]], &'a [u8]) {
+        let bulk = data.len() / 16;
+        let (head, tail) = data.split_at(bulk * 16);
+        // SAFETY: head.len() is a multiple of 16, [u8; 16] has same alignment as [u8]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[u8; 16]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [u8],
+    ) -> (&'a mut [[u8; 16]], &'a mut [u8]) {
+        let bulk = data.len() / 16;
+        let (head, tail) = data.split_at_mut(bulk * 16);
+        // SAFETY: head.len() is a multiple of 16, [u8; 16] has same alignment as [u8]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[u8; 16]>(), bulk) };
+        (chunks, tail)
     }
 
     /// Store to array
@@ -3369,6 +3489,36 @@ impl i16x8 {
         let arr: [i16; 8] = slice[..8].try_into().unwrap();
         // SAFETY: [i16; 8] and int16x8_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[i16; 8]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [i16],
+    ) -> (&'a [[i16; 8]], &'a [i16]) {
+        let bulk = data.len() / 8;
+        let (head, tail) = data.split_at(bulk * 8);
+        // SAFETY: head.len() is a multiple of 8, [i16; 8] has same alignment as [i16]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[i16; 8]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [i16],
+    ) -> (&'a mut [[i16; 8]], &'a mut [i16]) {
+        let bulk = data.len() / 8;
+        let (head, tail) = data.split_at_mut(bulk * 8);
+        // SAFETY: head.len() is a multiple of 8, [i16; 8] has same alignment as [i16]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[i16; 8]>(), bulk) };
+        (chunks, tail)
     }
 
     /// Store to array
@@ -4031,6 +4181,36 @@ impl u16x8 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[u16; 8]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [u16],
+    ) -> (&'a [[u16; 8]], &'a [u16]) {
+        let bulk = data.len() / 8;
+        let (head, tail) = data.split_at(bulk * 8);
+        // SAFETY: head.len() is a multiple of 8, [u16; 8] has same alignment as [u16]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[u16; 8]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [u16],
+    ) -> (&'a mut [[u16; 8]], &'a mut [u16]) {
+        let bulk = data.len() / 8;
+        let (head, tail) = data.split_at_mut(bulk * 8);
+        // SAFETY: head.len() is a multiple of 8, [u16; 8] has same alignment as [u16]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[u16; 8]>(), bulk) };
+        (chunks, tail)
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [u16; 8]) {
@@ -4647,6 +4827,36 @@ impl i32x4 {
         let arr: [i32; 4] = slice[..4].try_into().unwrap();
         // SAFETY: [i32; 4] and int32x4_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[i32; 4]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [i32],
+    ) -> (&'a [[i32; 4]], &'a [i32]) {
+        let bulk = data.len() / 4;
+        let (head, tail) = data.split_at(bulk * 4);
+        // SAFETY: head.len() is a multiple of 4, [i32; 4] has same alignment as [i32]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[i32; 4]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [i32],
+    ) -> (&'a mut [[i32; 4]], &'a mut [i32]) {
+        let bulk = data.len() / 4;
+        let (head, tail) = data.split_at_mut(bulk * 4);
+        // SAFETY: head.len() is a multiple of 4, [i32; 4] has same alignment as [i32]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[i32; 4]>(), bulk) };
+        (chunks, tail)
     }
 
     /// Store to array
@@ -5285,6 +5495,36 @@ impl u32x4 {
         Self(unsafe { core::mem::transmute(arr) })
     }
 
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[u32; 4]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [u32],
+    ) -> (&'a [[u32; 4]], &'a [u32]) {
+        let bulk = data.len() / 4;
+        let (head, tail) = data.split_at(bulk * 4);
+        // SAFETY: head.len() is a multiple of 4, [u32; 4] has same alignment as [u32]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[u32; 4]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [u32],
+    ) -> (&'a mut [[u32; 4]], &'a mut [u32]) {
+        let bulk = data.len() / 4;
+        let (head, tail) = data.split_at_mut(bulk * 4);
+        // SAFETY: head.len() is a multiple of 4, [u32; 4] has same alignment as [u32]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[u32; 4]>(), bulk) };
+        (chunks, tail)
+    }
+
     /// Store to array
     #[inline(always)]
     pub fn store(self, out: &mut [u32; 4]) {
@@ -5864,6 +6104,36 @@ impl i64x2 {
         let arr: [i64; 2] = slice[..2].try_into().unwrap();
         // SAFETY: [i64; 2] and int64x2_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[i64; 2]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [i64],
+    ) -> (&'a [[i64; 2]], &'a [i64]) {
+        let bulk = data.len() / 2;
+        let (head, tail) = data.split_at(bulk * 2);
+        // SAFETY: head.len() is a multiple of 2, [i64; 2] has same alignment as [i64]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[i64; 2]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [i64],
+    ) -> (&'a mut [[i64; 2]], &'a mut [i64]) {
+        let bulk = data.len() / 2;
+        let (head, tail) = data.split_at_mut(bulk * 2);
+        // SAFETY: head.len() is a multiple of 2, [i64; 2] has same alignment as [i64]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[i64; 2]>(), bulk) };
+        (chunks, tail)
     }
 
     /// Store to array
@@ -6463,6 +6733,36 @@ impl u64x2 {
         let arr: [u64; 2] = slice[..2].try_into().unwrap();
         // SAFETY: [u64; 2] and uint64x2_t have identical size and layout
         Self(unsafe { core::mem::transmute(arr) })
+    }
+
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    ///
+    /// Returns `(chunks, remainder)` where each chunk is a `&[u64; 2]`
+    /// that can be passed directly to [`load`](Self::load).
+    #[inline(always)]
+    pub fn partition_slice<'a>(
+        _: archmage::NeonToken,
+        data: &'a [u64],
+    ) -> (&'a [[u64; 2]], &'a [u64]) {
+        let bulk = data.len() / 2;
+        let (head, tail) = data.split_at(bulk * 2);
+        // SAFETY: head.len() is a multiple of 2, [u64; 2] has same alignment as [u64]
+        let chunks = unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[u64; 2]>(), bulk) };
+        (chunks, tail)
+    }
+
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    #[inline(always)]
+    pub fn partition_slice_mut<'a>(
+        _: archmage::NeonToken,
+        data: &'a mut [u64],
+    ) -> (&'a mut [[u64; 2]], &'a mut [u64]) {
+        let bulk = data.len() / 2;
+        let (head, tail) = data.split_at_mut(bulk * 2);
+        // SAFETY: head.len() is a multiple of 2, [u64; 2] has same alignment as [u64]
+        let chunks =
+            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[u64; 2]>(), bulk) };
+        (chunks, tail)
     }
 
     /// Store to array

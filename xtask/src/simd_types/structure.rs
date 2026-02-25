@@ -445,6 +445,51 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         Self(unsafe {{ core::mem::transmute(arr) }})
         }}
 
+        /// Split a slice into SIMD-width chunks and a scalar remainder.
+        ///
+        /// Returns `(chunks, remainder)` where each chunk is a `&[{elem}; {lanes}]`
+        /// that can be passed directly to [`load`](Self::load).
+        ///
+        /// # Example
+        ///
+        /// ```rust,ignore
+        /// let (chunks, remainder) = {name}::partition_slice(token, data);
+        /// for chunk in chunks {{
+        ///     let v = {name}::load(token, chunk);
+        ///     // ... SIMD processing ...
+        /// }}
+        /// for x in remainder {{
+        ///     // ... scalar remainder ...
+        /// }}
+        /// ```
+        #[inline(always)]
+        pub fn partition_slice<'a>(_: archmage::{token}, data: &'a [{elem}]) -> (&'a [[{elem}; {lanes}]], &'a [{elem}]) {{
+            let bulk = data.len() / {lanes};
+            let (head, tail) = data.split_at(bulk * {lanes});
+            // SAFETY: head.len() is a multiple of {lanes}, and [{elem}] has no alignment requirements
+            // beyond {elem} alignment, which [{elem}; {lanes}] shares.
+            let chunks = unsafe {{
+                core::slice::from_raw_parts(head.as_ptr().cast::<[{elem}; {lanes}]>(), bulk)
+            }};
+            (chunks, tail)
+        }}
+
+        /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+        ///
+        /// Returns `(chunks, remainder)` where each chunk is a `&mut [{elem}; {lanes}]`
+        /// that can be passed directly to [`store`](Self::store).
+        #[inline(always)]
+        pub fn partition_slice_mut<'a>(_: archmage::{token}, data: &'a mut [{elem}]) -> (&'a mut [[{elem}; {lanes}]], &'a mut [{elem}]) {{
+            let bulk = data.len() / {lanes};
+            let (head, tail) = data.split_at_mut(bulk * {lanes});
+            // SAFETY: head.len() is a multiple of {lanes}, and [{elem}] has no alignment requirements
+            // beyond {elem} alignment, which [{elem}; {lanes}] shares.
+            let chunks = unsafe {{
+                core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[{elem}; {lanes}]>(), bulk)
+            }};
+            (chunks, tail)
+        }}
+
         /// Store to array
         #[inline(always)]
         pub fn store(self, out: &mut [{elem}; {lanes}]) {{

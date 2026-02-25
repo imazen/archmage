@@ -289,6 +289,33 @@ fn generate_polyfill_type(elem: ElementType, platform: &PlatformConfig) -> Strin
                     Self::load(token, &arr)
                 }}
 
+                /// Split a slice into SIMD-width chunks and a scalar remainder.
+                ///
+                /// Returns `(chunks, remainder)` where each chunk is a `&[{elem_name}; {full_lanes}]`
+                /// that can be passed directly to [`load`](Self::load).
+                #[inline(always)]
+                pub fn partition_slice<'a>(_: {token}, data: &'a [{elem_name}]) -> (&'a [[{elem_name}; {full_lanes}]], &'a [{elem_name}]) {{
+                    let bulk = data.len() / {full_lanes};
+                    let (head, tail) = data.split_at(bulk * {full_lanes});
+                    // SAFETY: head.len() is a multiple of {full_lanes}, [{elem_name}; {full_lanes}] has same alignment as [{elem_name}]
+                    let chunks = unsafe {{
+                        core::slice::from_raw_parts(head.as_ptr().cast::<[{elem_name}; {full_lanes}]>(), bulk)
+                    }};
+                    (chunks, tail)
+                }}
+
+                /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+                #[inline(always)]
+                pub fn partition_slice_mut<'a>(_: {token}, data: &'a mut [{elem_name}]) -> (&'a mut [[{elem_name}; {full_lanes}]], &'a mut [{elem_name}]) {{
+                    let bulk = data.len() / {full_lanes};
+                    let (head, tail) = data.split_at_mut(bulk * {full_lanes});
+                    // SAFETY: head.len() is a multiple of {full_lanes}, [{elem_name}; {full_lanes}] has same alignment as [{elem_name}]
+                    let chunks = unsafe {{
+                        core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[{elem_name}; {full_lanes}]>(), bulk)
+                    }};
+                    (chunks, tail)
+                }}
+
                 /// Store to array
                 #[inline(always)]
                 pub fn store(self, out: &mut [{elem_name}; {full_lanes}]) {{
@@ -599,6 +626,28 @@ fn generate_w512_polyfill_type(elem: ElementType, platform: &W512PlatformConfig)
                     let mut out = [{zero_lit}; {full_lanes}];
                     self.store(&mut out);
                     out
+                }}
+
+                /// Split a slice into SIMD-width chunks and a scalar remainder.
+                #[inline(always)]
+                pub fn partition_slice<'a>(_: {token}, data: &'a [{elem_name}]) -> (&'a [[{elem_name}; {full_lanes}]], &'a [{elem_name}]) {{
+                    let bulk = data.len() / {full_lanes};
+                    let (head, tail) = data.split_at(bulk * {full_lanes});
+                    let chunks = unsafe {{
+                        core::slice::from_raw_parts(head.as_ptr().cast::<[{elem_name}; {full_lanes}]>(), bulk)
+                    }};
+                    (chunks, tail)
+                }}
+
+                /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+                #[inline(always)]
+                pub fn partition_slice_mut<'a>(_: {token}, data: &'a mut [{elem_name}]) -> (&'a mut [[{elem_name}; {full_lanes}]], &'a mut [{elem_name}]) {{
+                    let bulk = data.len() / {full_lanes};
+                    let (head, tail) = data.split_at_mut(bulk * {full_lanes});
+                    let chunks = unsafe {{
+                        core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[{elem_name}; {full_lanes}]>(), bulk)
+                    }};
+                    (chunks, tail)
                 }}
 
     "});

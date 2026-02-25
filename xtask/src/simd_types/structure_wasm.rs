@@ -123,6 +123,33 @@ fn generate_construction_methods(ty: &SimdType) -> String {
         Self(unsafe {{ core::mem::transmute(arr) }})
         }}
 
+        /// Split a slice into SIMD-width chunks and a scalar remainder.
+        ///
+        /// Returns `(chunks, remainder)` where each chunk is a `&[{elem}; {lanes}]`
+        /// that can be passed directly to [`load`](Self::load).
+        #[inline(always)]
+        pub fn partition_slice<'a>(_: archmage::Wasm128Token, data: &'a [{elem}]) -> (&'a [[{elem}; {lanes}]], &'a [{elem}]) {{
+            let bulk = data.len() / {lanes};
+            let (head, tail) = data.split_at(bulk * {lanes});
+            // SAFETY: head.len() is a multiple of {lanes}, [{elem}; {lanes}] has same alignment as [{elem}]
+            let chunks = unsafe {{
+                core::slice::from_raw_parts(head.as_ptr().cast::<[{elem}; {lanes}]>(), bulk)
+            }};
+            (chunks, tail)
+        }}
+
+        /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+        #[inline(always)]
+        pub fn partition_slice_mut<'a>(_: archmage::Wasm128Token, data: &'a mut [{elem}]) -> (&'a mut [[{elem}; {lanes}]], &'a mut [{elem}]) {{
+            let bulk = data.len() / {lanes};
+            let (head, tail) = data.split_at_mut(bulk * {lanes});
+            // SAFETY: head.len() is a multiple of {lanes}, [{elem}; {lanes}] has same alignment as [{elem}]
+            let chunks = unsafe {{
+                core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[{elem}; {lanes}]>(), bulk)
+            }};
+            (chunks, tail)
+        }}
+
         /// Store to array
         #[inline(always)]
         pub fn store(self, out: &mut [{elem}; {lanes}]) {{
