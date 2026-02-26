@@ -15,6 +15,7 @@ use magetypes::simd::{
     backends::{I16x8Backend, I32x4Backend},
 };
 
+#[inline(always)]
 fn pack_examples<T: I16x8Backend>(token: T) {
     // i16x8 -> i8x16 (two i16x8 vectors packed into one i8x16, clamped to i8 range)
     let a = i16x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
@@ -25,6 +26,7 @@ fn pack_examples<T: I16x8Backend>(token: T) {
     let narrow = a.pack_u8(b);   // Values clamped to 0..255
 }
 
+#[inline(always)]
 fn pack_i32<T: I32x4Backend>(token: T) {
     // i32x4 -> i16x8
     let c = i32x4::<T>::from_array(token, [1, 2, 3, 4]);
@@ -45,6 +47,7 @@ use magetypes::simd::{
     backends::I16x8Backend,
 };
 
+#[inline(always)]
 fn extend_examples<T: I16x8Backend>(token: T) {
     // i16x8 -> two i32x4 halves
     let narrow = i16x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);

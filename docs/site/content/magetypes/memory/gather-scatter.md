@@ -19,6 +19,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn manual_gather<T: F32x8Backend>(token: T) -> f32x8<T> {
     let data = [0.0f32, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0];
     let indices = [0usize, 2, 4, 6, 8, 1, 3, 5];

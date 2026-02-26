@@ -13,6 +13,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn example<T: F32x8Backend>(token: T) {
     let v = f32x8::<T>::splat(token, 4.0);
     let rcp = v.rcp_approx();  // ~ [0.25; 8]
@@ -37,6 +38,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn example<T: F32x8Backend>(token: T) {
     let v = f32x8::<T>::splat(token, 4.0);
     let rsqrt = v.rsqrt_approx();  // ~ [0.5; 8]
@@ -59,6 +61,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn refined_rsqrt<T: F32x8Backend>(token: T, v: f32x8<T>) -> f32x8<T> {
     let approx = v.rsqrt_approx();
     let half = f32x8::<T>::splat(token, 0.5);
@@ -79,6 +82,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn refined_rcp<T: F32x8Backend>(token: T, v: f32x8<T>) -> f32x8<T> {
     let approx = v.rcp_approx();
     let two = f32x8::<T>::splat(token, 2.0);

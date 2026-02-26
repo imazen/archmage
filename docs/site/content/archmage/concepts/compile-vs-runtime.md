@@ -121,24 +121,25 @@ The compiler generates one version of this function for the trait bound, not spe
 
 **Rule: Use concrete tokens for hot paths.**
 
-### Exception: magetypes Generic Types Are Zero-Cost
+### Exception: magetypes Generic Types Are Zero-Cost (When Inlined)
 
-Magetypes backend traits (`F32x8Backend`, etc.) are different from archmage feature traits. When a generic function using `f32x8::<T>` is called from inside `#[arcane]`, the backend methods (all `#[inline(always)]`) inline into the caller's `#[target_feature]` region. The assembly is **byte-for-byte identical** to using concrete `f32x8::<x64v3>`:
+Magetypes backend traits (`F32x8Backend`, etc.) are different from archmage feature traits. When a generic function using `f32x8::<T>` **inlines** into an `#[arcane]` caller, the backend methods (all `#[inline(always)]`) get compiled within the caller's `#[target_feature]` region. The assembly is **byte-for-byte identical** to using concrete `f32x8::<x64v3>`:
 
 ```rust
-// These produce identical assembly when called from #[arcane]:
+// These produce identical assembly — IF generic_sum inlines into the #[arcane] caller:
+#[inline(always)]
 fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
     let v = f32x8::<T>::from_array(token, *data);
-    (v + v).reduce_add()  // ~1.3 ns
+    (v + v).reduce_add()  // ~1.35 ns
 }
 
 fn concrete_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::<x64v3>::from_array(token, *data);
-    (v + v).reduce_add()  // ~1.3 ns (identical)
+    (v + v).reduce_add()  // ~1.16 ns (identical instructions)
 }
 ```
 
-But calling `generic_sum` from a plain function **without** `#[arcane]` is 18x slower — intrinsics become function calls. The `#[target_feature]` context is what matters, not whether the code is generic. See [PERFORMANCE.md](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md) for full benchmark data.
+**The generic function has no `#[target_feature]` of its own.** It gets the right features only by being inlined into the `#[arcane]` caller. Mark generic SIMD helpers `#[inline(always)]` to guarantee this. With `#[inline(never)]`, the same function is 18x slower even inside `#[arcane]` — the non-inlined body compiles with baseline features, turning intrinsics into function calls. See [PERFORMANCE.md](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md) for full benchmark data.
 
 ## Downcasting vs Upcasting
 
@@ -336,6 +337,6 @@ if let Some(token) = Desktop64::summon() {
 | "Is runtime check needed?" | `Token::compiled_with()` — tells you |
 | "Will these functions inline together?" | Same target features + concrete types = yes |
 | "Do archmage generic bounds hurt performance?" | Yes, `HasX64V2` etc. create optimization boundaries |
-| "Do magetypes generic types hurt performance?" | No — `f32x8::<T>` inside `#[arcane]` = identical assembly to concrete |
+| "Do magetypes generic types hurt performance?" | No — if the generic helper is `#[inline(always)]` and called from `#[arcane]`, identical assembly to concrete |
 | "Is downcasting (V4→V3) free?" | Yes, features are superset |
 | "Is upcasting safe?" | Yes, but creates optimization boundary |

@@ -15,6 +15,7 @@ use magetypes::simd::{
     backends::F32x4Backend,
 };
 
+#[inline(always)]
 fn deinterleave_rgba<T: F32x4Backend>(
     token: T,
     r0: [f32; 4], g0: [f32; 4], b0: [f32; 4], a0: [f32; 4],
@@ -48,6 +49,7 @@ use magetypes::simd::{
     backends::{F32x4Backend, F32x4Convert},
 };
 
+#[inline(always)]
 fn process_channels<T: F32x4Backend + F32x4Convert>(token: T, r: f32x4<T>, g: f32x4<T>) {
     // Brighten the red channel
     let r_bright = r + f32x4::<T>::splat(token, 0.1);
@@ -77,6 +79,7 @@ use magetypes::simd::{
     backends::F32x4Backend,
 };
 
+#[inline(always)]
 fn interleave_example<T: F32x4Backend>(token: T) {
     let a = f32x4::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0]);
     let b = f32x4::<T>::from_array(token, [5.0, 6.0, 7.0, 8.0]);
@@ -98,6 +101,7 @@ use magetypes::simd::{
     backends::F32x4Backend,
 };
 
+#[inline(always)]
 fn transpose_example<T: F32x4Backend>(token: T, row0: f32x4<T>, row1: f32x4<T>, row2: f32x4<T>, row3: f32x4<T>) {
     let mut rows = [row0, row1, row2, row3];
     f32x4::<T>::transpose_4x4(&mut rows);

@@ -82,6 +82,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn example<T: F32x8Backend>(token: T) {
     // Construct from array
     let a = f32x8::<T>::from_array(token, [1.0; 8]);
@@ -115,6 +116,7 @@ All magetypes SIMD types are:
 ```rust
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
+#[inline(always)]
 fn copy_demo<T: F32x8Backend>(token: T) {
     let a = f32x8::<T>::splat(token, 1.0);
     let b = a;  // Copy, not move

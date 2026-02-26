@@ -15,6 +15,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn example<T: F32x8Backend>(token: T) {
     // From an array
     let arr = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
@@ -45,6 +46,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn example<T: F32x8Backend>(token: T) {
     let v = f32x8::<T>::splat(token, 42.0);
 

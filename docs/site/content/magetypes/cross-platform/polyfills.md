@@ -35,6 +35,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn example<T: F32x8Backend>(token: T) {
     let a = f32x8::<T>::splat(token, 1.0);
     let b = f32x8::<T>::splat(token, 2.0);
@@ -110,14 +111,15 @@ The polyfill layer covers:
 
 The API is identical. The only difference is the number of hardware instructions emitted.
 
-## Performance: Generic = Concrete Inside `#[arcane]`
+## Performance: Generic = Concrete Inside `#[arcane]` (When Inlined)
 
-A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produce worse code than `f32x8::<x64v3>`? **No** — inside `#[arcane]` or `#[rite]`, they produce byte-for-byte identical assembly. All backend methods are `#[inline(always)]` and LLVM inlines them into the caller's `#[target_feature]` region.
+A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produce worse code than `f32x8::<x64v3>`? **No — if the generic function inlines into the `#[arcane]` caller.** The backend methods are all `#[inline(always)]`, and once the generic function body is inside the `#[target_feature]` region, LLVM emits the same SIMD instructions.
 
 | Pattern | Time |
 |---------|------|
-| `f32x8::<T>` generic inside `#[arcane]` | 1.32 ns |
-| `f32x8::<x64v3>` concrete inside `#[arcane]` | 1.33 ns |
-| `f32x8::<T>` generic **without** `#[arcane]` | 23.3 ns (18x slower) |
+| `f32x8::<T>` generic `#[inline(always)]` inside `#[arcane]` | 1.35 ns |
+| `f32x8::<x64v3>` concrete inside `#[arcane]` | 1.16 ns |
+| `f32x8::<T>` generic `#[inline(never)]` inside `#[arcane]` | 23.7 ns (18x — inlining is required!) |
+| `f32x8::<T>` generic **without** `#[arcane]` | 24.7 ns (18x slower) |
 
-The generic pattern is zero-cost — but it must be called from within an `#[arcane]` or `#[rite]` function. Without `#[target_feature]` on the caller, intrinsics become function calls.
+**The generic function has no `#[target_feature]` of its own.** It inherits the caller's features through inlining. Mark generic SIMD helpers `#[inline(always)]` to guarantee this. Without inlining, intrinsics become function calls — even inside `#[arcane]`.

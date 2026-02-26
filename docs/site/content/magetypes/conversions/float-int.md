@@ -17,6 +17,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn truncate<T: F32x8Convert>(token: T) {
     let floats = f32x8::<T>::from_array(token, [1.5, 2.7, -3.2, 4.0, 5.9, 6.1, 7.0, 8.5]);
 
@@ -43,6 +44,7 @@ use magetypes::simd::{
     backends::I32x8Convert,
 };
 
+#[inline(always)]
 fn int_to_float<T: I32x8Convert>(token: T) {
     let ints = i32x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
     let floats = ints.to_f32x8();
@@ -62,6 +64,7 @@ use magetypes::simd::{
     backends::F32x4Convert,
 };
 
+#[inline(always)]
 fn conversions_128<T: F32x4Convert>(token: T) {
     let floats = f32x4::<T>::from_array(token, [1.5, 2.7, -3.2, 4.0]);
     let ints = floats.to_i32x4();          // Truncate
@@ -81,6 +84,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn lane_access<T: F32x8Backend>(token: T) {
     let v = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 

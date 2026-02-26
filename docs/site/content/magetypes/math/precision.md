@@ -18,6 +18,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn example<T: F32x8Convert>(token: T) {
     let v = f32x8::<T>::splat(token, 2.0);
 
@@ -44,6 +45,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn example<T: F32x8Convert>(token: T) {
     let v = f32x8::<T>::splat(token, 2.0);
 

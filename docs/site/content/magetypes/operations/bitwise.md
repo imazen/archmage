@@ -10,6 +10,7 @@ Integer types (`i32x8<T>`, `u8x16<T>`, `i16x8<T>`, etc.) support arithmetic, bit
 ```rust
 use magetypes::simd::{generic::i32x8, backends::I32x8Backend};
 
+#[inline(always)]
 fn arithmetic_example<T: I32x8Backend>(token: T) {
     let a = i32x8::<T>::splat(token, 10);
     let b = i32x8::<T>::splat(token, 3);
@@ -27,6 +28,7 @@ Generic integer types support the standard Rust bitwise operators `&`, `|`, `^`,
 ```rust
 use magetypes::simd::{generic::i32x8, backends::I32x8Backend};
 
+#[inline(always)]
 fn bitwise_example<T: I32x8Backend>(token: T) {
     let a = i32x8::<T>::splat(token, 0b1010);
     let b = i32x8::<T>::splat(token, 0b1100);

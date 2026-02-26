@@ -90,6 +90,7 @@ fn process_scalar(_token: ScalarToken, data: &[f32]) -> f32 {
 Or use the **generic pattern** when the same algorithm works across backends:
 
 ```rust
+#[inline(always)]
 fn process_generic<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
     let v = f32x8::<T>::from_array(token, data[..8].try_into().unwrap());
     v.reduce_add()

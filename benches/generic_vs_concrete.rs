@@ -5,6 +5,8 @@
 //!   1. Generic function called without #[target_feature] on caller
 //!   2. Generic function called from inside #[arcane] (has target features)
 //!   3. Concrete f32x8<x64v3> inside #[arcane] (the "ideal" case)
+//!   5. Generic #[inline(never)] called from inside #[arcane] — forced no-inline
+//!   6. Generic #[inline(always)] called from inside #[arcane] — guaranteed inline
 //!
 //! Run:
 //!   cargo bench --bench generic_vs_concrete --features "std macros"
@@ -13,6 +15,8 @@
 //!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" generic_no_target_feature
 //!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" generic_inside_arcane
 //!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" concrete_v3_in_arcane
+//!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" generic_noinline_inside_arcane
+//!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" generic_inline_always_inside_arcane
 
 #![cfg(target_arch = "x86_64")]
 #![allow(dead_code)]
@@ -28,6 +32,20 @@ use magetypes::simd::generic::f32x8;
 // ============================================================================
 
 fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    let v = f32x8::<T>::from_array(token, *data);
+    let doubled = v + v;
+    doubled.reduce_add()
+}
+
+#[inline(never)]
+fn generic_sum_noinline<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    let v = f32x8::<T>::from_array(token, *data);
+    let doubled = v + v;
+    doubled.reduce_add()
+}
+
+#[inline(always)]
+fn generic_sum_inline_always<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
     let v = f32x8::<T>::from_array(token, *data);
     let doubled = v + v;
     doubled.reduce_add()
@@ -113,6 +131,38 @@ fn concrete_v3_rite_inner(token: X64V3Token, data: &[f32; 8]) -> f32 {
 }
 
 // ============================================================================
+// Pattern 5: Generic #[inline(never)] called from inside #[arcane]
+// Forces the generic function NOT to inline — proves the inline requirement.
+// ============================================================================
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+fn generic_noinline_inside_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    generic_noinline_arcane_entry(token, data)
+}
+
+#[arcane]
+fn generic_noinline_arcane_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    generic_sum_noinline(token, data)
+}
+
+// ============================================================================
+// Pattern 6: Generic #[inline(always)] called from inside #[arcane]
+// Guaranteed to inline — the correct pattern for cross-crate use.
+// ============================================================================
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+fn generic_inline_always_inside_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    generic_inline_always_arcane_entry(token, data)
+}
+
+#[arcane]
+fn generic_inline_always_arcane_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    generic_sum_inline_always(token, data)
+}
+
+// ============================================================================
 // Dot product variants — more complex operation
 // ============================================================================
 
@@ -175,13 +225,19 @@ fn bench_patterns(c: &mut Criterion) {
         c.bench_function("4_concrete_v3_via_rite", |b| {
             b.iter(|| concrete_v3_via_rite(token, black_box(&data)))
         });
-        c.bench_function("5_dot_generic_no_target", |b| {
+        c.bench_function("5_generic_noinline_inside_arcane", |b| {
+            b.iter(|| generic_noinline_inside_arcane(token, black_box(&data)))
+        });
+        c.bench_function("6_generic_inline_always_inside_arcane", |b| {
+            b.iter(|| generic_inline_always_inside_arcane(token, black_box(&data)))
+        });
+        c.bench_function("7_dot_generic_no_target", |b| {
             b.iter(|| dot_generic_no_target(black_box(&data), black_box(&data2)))
         });
-        c.bench_function("6_dot_generic_in_arcane", |b| {
+        c.bench_function("8_dot_generic_in_arcane", |b| {
             b.iter(|| dot_generic_in_arcane(token, black_box(&data), black_box(&data2)))
         });
-        c.bench_function("7_dot_concrete_in_arcane", |b| {
+        c.bench_function("9_dot_concrete_in_arcane", |b| {
             b.iter(|| dot_concrete_in_arcane(token, black_box(&data), black_box(&data2)))
         });
     }

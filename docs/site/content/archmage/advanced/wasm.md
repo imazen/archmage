@@ -69,12 +69,12 @@ fn dot_product(_token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
 
 > **With magetypes**, the same function becomes:
 > ```rust
-> use magetypes::simd::f32x4;
+> use magetypes::simd::{generic::f32x4, backends::wasm128};
 >
 > #[arcane]
 > fn dot_product(token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
->     let va = f32x4::from_array(token, *a);
->     let vb = f32x4::from_array(token, *b);
+>     let va = f32x4::<wasm128>::from_array(token, *a);
+>     let vb = f32x4::<wasm128>::from_array(token, *b);
 >     (va * vb).reduce_add()
 > }
 > ```

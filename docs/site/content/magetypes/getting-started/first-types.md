@@ -16,6 +16,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn scale_and_sum<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
     // 1. Construct: token is the first argument, turbofish selects the backend
     let a = f32x8::<T>::from_array(token, *input);
@@ -57,6 +58,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn process_data<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
     let a = f32x8::<T>::from_array(token, *input);
     let b = f32x8::<T>::splat(token, 0.5);  // Same token, no re-detection
@@ -91,6 +93,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn sum8<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
     f32x8::<T>::from_array(token, *data).reduce_add()
 }
@@ -154,6 +157,7 @@ All magetypes SIMD types are:
 ```rust
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
+#[inline(always)]
 fn copy_example<T: F32x8Backend>(token: T) {
     let a = f32x8::<T>::splat(token, 1.0);
     let b = a;       // Copy, not move
@@ -164,9 +168,15 @@ fn copy_example<T: F32x8Backend>(token: T) {
 
 ## Performance Note
 
-The generic pattern (`f32x8::<T>`) produces **identical assembly** to concrete types (`f32x8::<x64v3>`) when called from inside `#[arcane]` or `#[rite]`. All backend methods are `#[inline(always)]` — LLVM inlines them fully. There is zero abstraction cost.
+The generic pattern (`f32x8::<T>`) produces **identical assembly** to concrete types (`f32x8::<x64v3>`) — but two conditions must hold:
 
-The only requirement: your generic function must be called from within a `#[target_feature]` context (via `#[arcane]` or `#[rite]`). Without it, intrinsics become function calls and performance drops ~18x. See [Polyfills — Performance](@/magetypes/cross-platform/polyfills.md#performance-generic-concrete-inside-arcane) for benchmark data.
+1. **The generic function must be called from inside `#[arcane]` or `#[rite]`** — without `#[target_feature]` on the caller, intrinsics become function calls (~18x slower).
+
+2. **The generic function must inline into the caller** — mark it `#[inline(always)]`. The generic function has no `#[target_feature]` of its own; it inherits the caller's features through inlining. Without inlining, even calling from `#[arcane]` is 18x slower.
+
+The backend methods are all `#[inline(always)]`, but that only helps once the generic body is inside the `#[target_feature]` region. For small same-crate functions, LLVM usually inlines without annotation — but this is a heuristic, not a guarantee. `#[inline(always)]` removes the ambiguity.
+
+See [Polyfills — Performance](@/magetypes/cross-platform/polyfills.md#performance-generic-concrete-inside-arcane-when-inlined) for benchmark data.
 
 ## Next Steps
 

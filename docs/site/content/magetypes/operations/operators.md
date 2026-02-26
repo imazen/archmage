@@ -10,6 +10,7 @@ Magetypes vectors support standard Rust operators for element-wise arithmetic.
 ```rust
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
+#[inline(always)]
 fn arithmetic_example<T: F32x8Backend>(token: T) {
     let a = f32x8::<T>::splat(token, 2.0);
     let b = f32x8::<T>::splat(token, 3.0);
@@ -25,6 +26,7 @@ fn arithmetic_example<T: F32x8Backend>(token: T) {
 ### Compound Assignment
 
 ```rust
+#[inline(always)]
 fn compound_example<T: F32x8Backend>(token: T) {
     let mut v = f32x8::<T>::splat(token, 1.0);
     v += f32x8::<T>::splat(token, 2.0);  // v = [3.0; 8]
@@ -53,6 +55,7 @@ Comparisons return mask types with one boolean per lane:
 ```rust
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
+#[inline(always)]
 fn comparison_example<T: F32x8Backend>(token: T) {
     let a = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
     let b = f32x8::<T>::splat(token, 4.0);
@@ -86,6 +89,7 @@ let max = a.max(b);  // Element-wise maximum
 Clamp to a range:
 
 ```rust
+#[inline(always)]
 fn clamp_example<T: F32x8Backend>(token: T, v: f32x8<T>) -> f32x8<T> {
     v.max(f32x8::<T>::splat(token, 0.0))
      .min(f32x8::<T>::splat(token, 1.0))

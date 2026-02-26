@@ -13,6 +13,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn cast_examples<T: F32x8Backend>(token: T) {
     // View &[f32] as &[f32x8] (zero-copy)
     let data: &[f32] = &[1.0; 64];

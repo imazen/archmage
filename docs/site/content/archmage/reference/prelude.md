@@ -59,6 +59,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn dot<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::<T>::from_array(token, *a);
     let vb = f32x8::<T>::from_array(token, *b);

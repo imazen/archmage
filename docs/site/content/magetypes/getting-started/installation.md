@@ -81,6 +81,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn print_splat<T: F32x8Backend>(token: T, val: f32) {
     let v = f32x8::<T>::splat(token, val);
     println!("f32x8: {:?}", v.to_array());

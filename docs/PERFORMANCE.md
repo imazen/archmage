@@ -102,25 +102,44 @@ Every downgrade pattern matched its bare `#[target_feature]` equivalent exactly.
 
 **The rule:** downgrades are free (caller's superset features enable inlining), upgrades hit the boundary (callee needs features the caller doesn't have).
 
-### Generic magetypes types: zero overhead inside `#[arcane]`
+### Generic magetypes types: zero overhead inside `#[arcane]` (with `#[inline(always)]`)
 
-A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produce worse code than concrete `f32x8::<x64v3>`? No — inside `#[arcane]`, they produce **byte-for-byte identical assembly**.
+A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produce worse code than concrete `f32x8::<x64v3>`? **No — but only if the generic function can inline into the `#[arcane]` caller.**
+
+The backend trait methods are all `#[inline(always)]`, but that's not enough on its own. **Your generic helper function must also inline** into the `#[arcane]` caller so LLVM compiles it within the `#[target_feature]` region. The generic function itself has no `#[target_feature]` — it gets the right features only by being inlined into a function that does.
 
 Source: [`benches/generic_vs_concrete.rs`](../benches/generic_vs_concrete.rs).
 
 | Pattern | Time | Assembly |
 |---------|------|----------|
-| `f32x8::<T>` generic inside `#[arcane]` | 1.32 ns | `vmovups` + `vaddps` + horizontal sum |
-| `f32x8::<x64v3>` concrete inside `#[arcane]` | 1.33 ns | identical |
-| Concrete via `#[rite]` in `#[arcane]` | 1.32 ns | identical |
-| `f32x8::<T>` generic **without** `#[target_feature]` | **23.3 ns (18x)** | `call _mm256_add_ps` (function calls!) |
+| `f32x8::<T>` generic `#[inline(always)]` inside `#[arcane]` | 1.35 ns | `vmovups` + `vaddps` + horizontal sum |
+| `f32x8::<T>` generic (no annotation) inside `#[arcane]` | 1.37 ns | identical — LLVM chose to inline (not guaranteed) |
+| `f32x8::<x64v3>` concrete inside `#[arcane]` | 1.16 ns | identical instructions |
+| Concrete via `#[rite]` in `#[arcane]` | 1.40 ns | identical |
+| `f32x8::<T>` generic `#[inline(never)]` inside `#[arcane]` | **23.7 ns (18x)** | `call _mm256_add_ps` — forced no-inline proves it |
+| `f32x8::<T>` generic **without** `#[target_feature]` | **24.7 ns (18x)** | `call _mm256_add_ps` (function calls!) |
 
-The backend trait methods are all `#[inline(always)]`. When the caller has `#[target_feature]` (from `#[arcane]` or `#[rite]`), LLVM inlines everything and emits the same SIMD instructions regardless of whether the code is generic or concrete.
+The `#[inline(never)]` row is the smoking gun: even inside `#[arcane]`, a generic function that can't inline is just as slow as having no `#[target_feature]` at all. The generic function body is compiled without target features — it only gets them by being inlined into the `#[arcane]` caller's `#[target_feature]` region.
 
-Without `#[target_feature]`, it's catastrophic: intrinsics become function calls because LLVM can't inline them into a caller that lacks the right features. Every `_mm256_add_ps` is a `call` instruction with stack spills instead of a single `vaddps`.
+**Mark generic SIMD helpers `#[inline(always)]`.** For small same-crate functions, LLVM usually inlines without annotation (the "no annotation" row above). But this is an LLVM heuristic, not a guarantee — LLVM can decline to inline any function without `#[inline(always)]`. Cross-crate, without at least `#[inline]`, the function body isn't even available to the caller's compilation unit. `#[inline(always)]` removes all ambiguity: the function will always inline, and the generic code will always get the caller's target features.
+
+```rust
+// CORRECT: #[inline(always)] guarantees the generic body inlines into the caller
+#[inline(always)]
+fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    let v = f32x8::<T>::from_array(token, *data);
+    (v + v).reduce_add()  // ~1.35 ns from #[arcane]
+}
+
+// The #[arcane] caller provides #[target_feature] — generic_sum inlines into it
+#[arcane]
+fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    generic_sum(token, data)  // Inlines → full AVX2 codegen
+}
+```
 
 ```asm
-; Inside #[arcane] — generic and concrete both produce:
+; #[inline(always)] generic inside #[arcane] — identical to concrete:
 vmovups ymm0, [rdi]          ; load 8 floats
 vaddps  ymm0, ymm0, ymm0    ; v + v
 vextractf128 xmm1, ymm0, 1  ; horizontal sum...
@@ -129,14 +148,14 @@ vhaddps xmm0, xmm0, xmm0
 vmovshdup xmm1, xmm0
 vaddss  xmm0, xmm0, xmm1
 
-; Without #[target_feature] — generic becomes:
+; #[inline(never)] generic inside #[arcane] — still catastrophic:
 movups  xmm0, [rdi]          ; SSE2 load, not AVX!
 call    _mm256_add_ps         ; FUNCTION CALL
 call    _mm256_extractf128_ps ; FUNCTION CALL
 call    _mm_hadd_ps           ; FUNCTION CALL
 ```
 
-**The rule:** generic magetypes code is zero-cost, but it must be called from within an `#[arcane]` or `#[rite]` function. The optimization barrier isn't generics — it's missing `#[target_feature]`.
+**The rule:** generic magetypes code is zero-cost when it inlines into an `#[arcane]` or `#[rite]` caller. Mark generic SIMD helpers `#[inline(always)]` to guarantee this. The generic function has no `#[target_feature]` of its own — it inherits the caller's features through inlining.
 
 ## Rules
 
@@ -152,7 +171,7 @@ These are distilled from the benchmark data above.
 
 5. **Upcasting hits the boundary.** A V3 function calling a V4 helper can't inline because the caller lacks AVX-512 features. Dispatch at the entry point, not deep in hot code.
 
-6. **Generic magetypes types are zero-cost inside `#[arcane]`.** `f32x8::<T>` and `f32x8::<x64v3>` produce identical assembly. The backend methods are `#[inline(always)]` and LLVM inlines them when the caller has matching target features. But never call generic magetypes code from a plain function without `#[target_feature]` — intrinsics become function calls (18x slower).
+6. **Generic magetypes types are zero-cost inside `#[arcane]` — if they inline.** `f32x8::<T>` and `f32x8::<x64v3>` produce identical assembly when the generic function inlines into the `#[arcane]` caller. Mark generic SIMD helpers `#[inline(always)]` to ensure this. The generic function has no `#[target_feature]` of its own — if it doesn't inline, intrinsics become function calls (18x slower). The backend methods are `#[inline(always)]`, but that only helps once the generic body is inside the `#[target_feature]` region.
 
 ## Reproducing
 

@@ -15,6 +15,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn process<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
     let v = f32x8::<T>::load(token, data);
     v.reduce_add()

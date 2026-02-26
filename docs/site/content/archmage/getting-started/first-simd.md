@@ -47,6 +47,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn square_f32x8<T: F32x8Backend>(token: T, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::<T>::from_array(token, *data);
     let squared = v * v;  // Natural operator!

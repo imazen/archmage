@@ -10,6 +10,7 @@ Reductions collapse all lanes of a vector into a single scalar value.
 ```rust
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
+#[inline(always)]
 fn reduction_example<T: F32x8Backend>(token: T) {
     let v = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 

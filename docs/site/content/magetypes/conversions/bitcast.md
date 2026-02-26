@@ -13,6 +13,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn float_int_bitcast<T: F32x8Convert>(token: T) {
     // View float bits as integers
     let floats = f32x8::<T>::splat(token, 1.0);
@@ -38,6 +39,7 @@ use magetypes::simd::{
     backends::I32x8Backend,
 };
 
+#[inline(always)]
 fn signed_unsigned_bitcast<T: I32x8Backend>(token: T) {
     // i32x8 -> u32x8 (no conversion, just reinterpretation)
     let signed = i32x8::<T>::from_array(token, [-1, 0, 1, 2, 3, 4, 5, 6]);

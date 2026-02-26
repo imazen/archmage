@@ -20,6 +20,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
+#[inline(always)]
 fn bitwise_example<T: F32x8Backend>(a: f32x8<T>, b: f32x8<T>) {
     // Portable — works on all platforms
     let result = a.and(b);
@@ -44,6 +45,7 @@ use magetypes::simd::{
     backends::I32x4Backend,
 };
 
+#[inline(always)]
 fn shift_example<T: I32x4Backend>(token: T) {
     let v = i32x4::<T>::splat(token, -8);
 
@@ -78,6 +80,7 @@ use magetypes::simd::{
     backends::F32x4Backend,
 };
 
+#[inline(always)]
 fn interleave_example<T: F32x4Backend>(a: f32x4<T>, b: f32x4<T>) {
     // Works everywhere
     let lo = a.interleave_lo(b);

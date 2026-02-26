@@ -13,6 +13,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn exponentials<T: F32x8Convert>(token: T) {
     let v = f32x8::<T>::splat(token, 3.0);
 
@@ -32,6 +33,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn logarithms<T: F32x8Convert>(token: T) {
     let v = f32x8::<T>::splat(token, 8.0);
 
@@ -54,6 +56,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn power<T: F32x8Convert>(token: T) {
     let base = f32x8::<T>::splat(token, 2.0);
 
@@ -72,6 +75,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn roots<T: F32x8Convert>(token: T) {
     let v = f32x8::<T>::splat(token, 9.0);
 
@@ -112,6 +116,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
+#[inline(always)]
 fn domain_errors<T: F32x8Convert>(token: T) {
     let v = f32x8::<T>::from_array(token, [-1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
 
