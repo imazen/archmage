@@ -43,3 +43,5 @@
   - Implementations for x86 V3, scalar, NEON, WASM platforms
   - Update generate_backend_files() and generate_backends_mod()
 2026-02-25T00:30:38-07:00 - User requested comprehensive review and update of mdbook docs (docs/book/src/). Fixed: deprecated guaranteed()→compiled_with(), version 0.6→0.8, incomplete token/trait listings, typos, outdated references.
+2026-02-25 - User requested creating all 31 Zola markdown files for the magetypes documentation section. Created: section indexes (9), getting-started (2), types (2), operations (4), conversions (4), math (3), memory (4), cross-platform (2), dispatch (1). Content migrated from docs/book/src/magetypes/ and expanded with proper TOML front matter, `@/` internal links, standalone context.
+2026-02-25 - User requested rewriting all magetypes docs to use generic pattern (`f32x8::<T>`, not flat aliases). Also: CI-tested doc examples, CLAUDE.md rule for doc testing. User asked "why do we have to import the backends again?" — discussed nested use path syntax as solution.

@@ -426,6 +426,40 @@ let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
 let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
 ```
 
+## CRITICAL: Doc Example Testing (CI-Enforced)
+
+Every code example in `docs/site/content/` MUST have a corresponding test in
+`magetypes/tests/doc_examples.rs` (for magetypes docs) or `tests/doc_examples.rs`
+(for archmage docs). Code that appears in documentation MUST compile and pass tests.
+
+- When modifying doc pages, update the corresponding test
+- When adding new doc pages with code examples, add tests first
+- `cargo test -p magetypes --test doc_examples` must pass before pushing doc changes
+- Magetypes examples MUST use the generic pattern: `f32x8::<T>`, not flat aliases
+- Flat aliases (`use magetypes::simd::f32x8`) are BANNED in documentation
+
+### Correct doc import pattern
+
+```rust
+use magetypes::simd::{
+    generic::f32x8,
+    backends::{F32x8Backend, x64v3, neon, scalar},
+};
+```
+
+### Correct generic function pattern (primary in all docs)
+
+```rust
+fn sum<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
+    let mut acc = f32x8::<T>::zero(token);
+    for chunk in data.chunks_exact(8) {
+        let v = f32x8::<T>::load(token, chunk.try_into().unwrap());
+        acc = acc + v;
+    }
+    acc.reduce_add()
+}
+```
+
 ## Quick Start
 
 ```bash
