@@ -8,17 +8,20 @@ The standard pattern for processing large arrays with SIMD: iterate in fixed-siz
 ## The Pattern
 
 ```rust
-use archmage::{Desktop64, arcane};
-use magetypes::simd::f32x8;
+use archmage::{arcane, rite};
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
 #[arcane]
-fn process_large(token: Desktop64, data: &mut [f32]) {
+fn process_large<T: F32x8Backend>(token: T, data: &mut [f32]) {
     let (chunks, remainder) = data.split_at_mut(data.len() - data.len() % 8);
 
     // Process full 8-element chunks
     for chunk in chunks.chunks_exact_mut(8) {
         let chunk_arr: &mut [f32; 8] = chunk.try_into().unwrap();
-        let v = f32x8::from_array(token, *chunk_arr);
+        let v = f32x8::<T>::from_array(token, *chunk_arr);
         let result = v * v;  // Your SIMD operation
         result.store(chunk_arr);
     }
@@ -37,16 +40,22 @@ fn process_large(token: Desktop64, data: &mut [f32]) {
 When reducing an entire array to a single value:
 
 ```rust
+use archmage::arcane;
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
 #[arcane]
-fn sum_array(token: Desktop64, data: &[f32]) -> f32 {
+fn sum_array<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
     let chunks = data.chunks_exact(8);
     let remainder = chunks.remainder();
 
     // Accumulate in a SIMD register
-    let mut acc = f32x8::zero(token);
+    let mut acc = f32x8::<T>::zero(token);
     for chunk in chunks {
         let chunk_arr: &[f32; 8] = chunk.try_into().unwrap();
-        let v = f32x8::from_array(token, *chunk_arr);
+        let v = f32x8::<T>::from_array(token, *chunk_arr);
         acc = acc + v;
     }
 

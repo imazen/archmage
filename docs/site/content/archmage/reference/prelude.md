@@ -51,15 +51,19 @@ No individual `use` statements needed -- `Desktop64`, `_mm256_loadu_ps`, `_mm256
 
 ## magetypes Prelude (exploratory)
 
-[Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases. `use magetypes::prelude::*` re-exports the archmage prelude plus all SIMD types:
+[Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases. The primary magetypes pattern uses explicit generic imports for cross-platform code:
 
 ```rust
-use magetypes::prelude::*;
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-#[arcane]
-fn dot(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = f32x8::from_array(token, *a);
-    let vb = f32x8::from_array(token, *b);
-    va.mul_add(vb, f32x8::zero(token)).reduce_add()
+fn dot<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let va = f32x8::<T>::from_array(token, *a);
+    let vb = f32x8::<T>::from_array(token, *b);
+    va.mul_add(vb, f32x8::<T>::zero(token)).reduce_add()
 }
 ```
+
+This works with any backend — `x64v3` for AVX2, `neon` for ARM, `scalar` as fallback. See [magetypes Getting Started](@/magetypes/getting-started/first-types.md) for the full pattern.

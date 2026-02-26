@@ -8,7 +8,7 @@ weight = 2
 sidebar = true
 +++
 
-Magetypes provides fixed-size SIMD vector types for each platform. This section covers what's available, what tokens they require, and how platform-specific imports work.
+Magetypes provides generic SIMD vector types parameterized by backend token. This section covers what's available, what tokens they require, and how the generic pattern works across platforms.
 
-1. [Type Overview](@/magetypes/types/overview.md) — Full type tables, properties, basic usage, prelude
+1. [Type Overview](@/magetypes/types/overview.md) — Full type tables, properties, basic usage
 2. [Platform Notes](@/magetypes/types/platform-notes.md) — Platform-specific imports, feature flags, `#[cfg]` patterns

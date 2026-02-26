@@ -39,17 +39,25 @@ fn main() {
 
 ## Using magetypes (exploratory)
 
-For a more ergonomic experience, [magetypes](/magetypes/) provides vector types with natural operators. Note that magetypes is an exploratory crate — its API may change between releases:
+For a more ergonomic experience, [magetypes](/magetypes/) provides generic vector types with natural operators. Write one function, run it on any backend. Note that magetypes is an exploratory crate — its API may change between releases:
 
 ```rust
-use archmage::{Desktop64, SimdToken};
-use magetypes::simd::f32x8;
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-fn square_f32x8(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::from_array(token, *data);
+fn square_f32x8<T: F32x8Backend>(token: T, data: &[f32; 8]) -> [f32; 8] {
+    let v = f32x8::<T>::from_array(token, *data);
     let squared = v * v;  // Natural operator!
     squared.to_array()
 }
+```
+
+Call it with any backend token — `Desktop64` for AVX2, `NeonToken` for ARM, `ScalarToken` as fallback:
+
+```rust
+use archmage::{Desktop64, SimdToken};
 
 fn main() {
     if let Some(token) = Desktop64::summon() {

@@ -3,64 +3,58 @@ title = "Types and Dispatch"
 weight = 1
 +++
 
-Magetypes vectors work with archmage's [`incant!`](@/archmage/dispatch/incant.md) macro for multi-platform dispatch. Write platform-specific variants using the right types for each architecture, dispatch with a single call.
+Magetypes vectors work with archmage's [`incant!`](@/archmage/dispatch/incant.md) macro for multi-platform dispatch. The generic backend pattern lets you write one function body that works across all architectures — `incant!` selects the best available token at runtime.
 
-## The Pattern
+## The Generic Pattern
 
-Each platform gets a function variant using its native vector types. `incant!` picks the best available at runtime:
+Write your SIMD function once with a generic backend bound. `incant!` dispatches to it with the best available token:
 
 ```rust
-use archmage::{arcane, incant, X64V3Token, NeonToken, SimdToken};
-use magetypes::simd::{f32x8, f32x4};
+use archmage::{arcane, incant};
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+#[arcane]
+fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    f32x8::<T>::from_array(token, *data).reduce_add()
+}
+
+pub fn sum(data: &[f32; 8]) -> f32 {
+    incant!(sum_impl(data))
+}
+```
+
+`incant!` tries tokens from best to worst (V4 → V3 → NEON → WASM → scalar) and calls the first available variant. With the generic pattern, the same function body handles all of them.
+
+## When Algorithms Differ Per Platform
+
+Sometimes you want separate implementations to exploit architecture-specific strengths — different register widths, native instruction sequences, or algorithm shapes:
+
+```rust
+use archmage::{arcane, incant, X64V3Token, NeonToken};
+use magetypes::simd::generic::{f32x8, f32x4};
 
 // x86-64: use f32x8 (256-bit AVX2)
 #[arcane]
-fn sum_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    f32x8::from_array(token, *data).reduce_add()
+fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let va = f32x8::<X64V3Token>::from_array(token, *a);
+    let vb = f32x8::<X64V3Token>::from_array(token, *b);
+    (va * vb).reduce_add()
 }
 
 // AArch64: use f32x4 (128-bit NEON) — process in two halves
 #[arcane]
-fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
-    let a = f32x4::from_slice(token, &data[0..4]);
-    let b = f32x4::from_slice(token, &data[4..8]);
-    a.reduce_add() + b.reduce_add()
-}
-
-// Scalar fallback — no SIMD, no token
-fn sum_scalar(data: &[f32; 8]) -> f32 {
-    data.iter().sum()
-}
-
-// Dispatch: tries v3 -> neon -> wasm128 -> scalar
-pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum(data), [v3, neon, wasm128])
-}
-```
-
-## When Algorithms Differ Per Platform
-
-Different register widths often mean different algorithms. On x86-64 with AVX2, you can process 8 floats in one operation. On ARM NEON, you process 4. The algorithm shape changes:
-
-```rust
-#[arcane]
-fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = f32x8::from_array(token, *a);
-    let vb = f32x8::from_array(token, *b);
-    (va * vb).reduce_add()
-}
-
-#[arcane]
 fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    // Two 4-wide multiplies, two reductions, final add
     let sum1 = {
-        let va = f32x4::from_slice(token, &a[0..4]);
-        let vb = f32x4::from_slice(token, &b[0..4]);
+        let va = f32x4::<NeonToken>::from_slice(token, &a[0..4]);
+        let vb = f32x4::<NeonToken>::from_slice(token, &b[0..4]);
         (va * vb).reduce_add()
     };
     let sum2 = {
-        let va = f32x4::from_slice(token, &a[4..8]);
-        let vb = f32x4::from_slice(token, &b[4..8]);
+        let va = f32x4::<NeonToken>::from_slice(token, &a[4..8]);
+        let vb = f32x4::<NeonToken>::from_slice(token, &b[4..8]);
         (va * vb).reduce_add()
     };
     sum1 + sum2
@@ -75,32 +69,41 @@ pub fn dot_product(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 ```
 
-## Using Polyfill Types Instead
+When the algorithm is the same on every platform, the generic pattern is cleaner. When you need platform-tuned implementations, write concrete variants and name them explicitly.
 
-If your algorithm works the same regardless of register width, you can use the [polyfill types](@/magetypes/cross-platform/polyfills.md) and write one implementation:
+## Using Polyfill Types
+
+If your algorithm works the same regardless of register width, the generic pattern automatically uses polyfills on narrower hardware. There's nothing special to do — `f32x8::<NeonToken>` is already the polyfill:
 
 ```rust
-// f32x8 on ARM is polyfilled with two f32x4 ops
+use archmage::{arcane, incant};
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+// One function — works on all platforms
 #[arcane]
-fn sum_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    f32x8::from_array(token, *data).reduce_add()
+fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    // On AVX2: one 256-bit operation
+    // On NEON: two 128-bit NEON operations (polyfill)
+    // On WASM: two 128-bit SIMD128 operations (polyfill)
+    f32x8::<T>::from_array(token, *data).reduce_add()
 }
 
-#[arcane]
-fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
-    // f32x8 works on ARM too — polyfilled with two NEON ops
-    f32x8::from_array(token, *data).reduce_add()
+pub fn sum(data: &[f32; 8]) -> f32 {
+    incant!(sum_impl(data))
 }
 ```
 
-The polyfill version is simpler to write but may be slightly less efficient than a hand-tuned native implementation. For most code, the difference is negligible.
+The polyfill version is simpler to write than separate platform variants. For most code, the performance difference is negligible.
 
 ## The #[magetypes] Macro
 
 When the function body is truly platform-independent (only the token type changes), use [`#[magetypes]`](@/archmage/dispatch/magetypes-macro.md) to generate all variants automatically:
 
 ```rust
-use archmage::magetypes;
+use archmage::{magetypes, incant};
 
 #[magetypes]
 fn validate(token: Token, threshold: f32) -> bool {
@@ -115,7 +118,7 @@ pub fn validate(threshold: f32) -> bool {
 }
 ```
 
-`#[magetypes]` does text substitution — `Token` becomes the concrete token type for each variant. It's useful when the token is the only platform-dependent part. When your function body uses platform-specific types like `f32x8` or different algorithms per platform, write the variants manually.
+`#[magetypes]` does text substitution — `Token` becomes the concrete token type for each variant. It's useful when the token is the only platform-dependent part. When your function body uses specific SIMD operations that differ by platform, use the generic pattern with `F32x8Backend` bounds, or write concrete variants manually.
 
 ## Passthrough Dispatch
 

@@ -3,60 +3,77 @@ title = "Your First Types"
 weight = 2
 +++
 
-Every magetypes vector requires a token for construction. The pattern is: **summon a token, construct vectors, operate, extract results.**
+Every magetypes vector requires a token for construction. The pattern is: **write a generic function over a backend trait, summon a token, call the function.**
 
 ## The Pattern
 
+Write the computation as a generic function bounded on the backend trait. The token parameter gates construction; once you have the vector, operators work without it.
+
 ```rust
 use archmage::{Desktop64, SimdToken};
-use magetypes::simd::f32x8;
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+fn scale_and_sum<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
+    // 1. Construct: token is the first argument, turbofish selects the backend
+    let a = f32x8::<T>::from_array(token, *input);
+    let b = f32x8::<T>::splat(token, 2.0);
+
+    // 2. Operate: natural Rust operators
+    let c = a * b;
+
+    // 3. Extract: get scalar results back
+    c.reduce_add()
+}
 
 fn main() {
-    // 1. Summon: prove the CPU supports AVX2+FMA
+    // 4. Summon: prove the CPU supports AVX2+FMA
     if let Some(token) = Desktop64::summon() {
-
-        // 2. Construct: token is the first argument
-        let a = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-        let b = f32x8::splat(token, 2.0);
-
-        // 3. Operate: natural Rust operators
-        let c = a * b;
-
-        // 4. Extract: get scalar results back
-        let result: [f32; 8] = c.to_array();
-        println!("{:?}", result);
-        // [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]
+        let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
+        let result = scale_and_sum(token, &data);
+        println!("{}", result);  // 72.0
     }
 }
 ```
 
+The turbofish `f32x8::<T>` is required on constructors because Rust can't infer the backend from a consumed token value. Once the vector exists, methods like `*`, `reduce_add()`, and `to_array()` resolve without annotation.
+
 ## Why Tokens?
 
-The token proves CPU support exists. Without it, constructing an `f32x8` on a CPU without AVX2 would produce garbage or crash. The type system prevents this at compile time — you cannot call `f32x8::splat()` without a token that guarantees the right features.
+The token proves CPU support exists. Without it, constructing an `f32x8` on a CPU without AVX2 would produce garbage or crash. The type system prevents this at compile time — you cannot call `f32x8::<T>::splat()` without a token of type `T`, and `T` can only be summoned if the CPU supports the required features.
 
 Tokens are zero-sized. Passing them around costs nothing at runtime. Construction functions need the token; once you have the vector, operations like `+`, `*`, `reduce_add()` don't need it again.
 
 ## Summon Once, Use Many
 
-You don't need to summon a token every time you construct a vector. Summon once, pass it around:
+You don't need to summon a token every time you construct a vector. Summon once at the dispatch boundary, pass the token into generic SIMD code:
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
-use magetypes::simd::f32x8;
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-#[arcane]
-fn process_data(token: Desktop64, input: &[f32; 8]) -> f32 {
-    let a = f32x8::from_array(token, *input);
-    let b = f32x8::splat(token, 0.5);  // Same token, no re-detection
+fn process_data<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
+    let a = f32x8::<T>::from_array(token, *input);
+    let b = f32x8::<T>::splat(token, 0.5);  // Same token, no re-detection
     let scaled = a * b;
     scaled.reduce_add()
 }
 
+#[arcane]
+fn process_avx2(token: Desktop64, input: &[f32; 8]) -> f32 {
+    process_data(token, input)
+}
+
 fn main() {
     if let Some(token) = Desktop64::summon() {
-        let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let result = process_data(token, &data);
-        println!("sum of halved values: {}", result);
+        let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
+        let result = process_avx2(token, &data);
+        println!("sum of halved values: {}", result);  // 18.0
     }
 }
 ```
@@ -65,36 +82,65 @@ fn main() {
 
 ## Different Tokens, Different Types
 
-The token determines what hardware you're targeting:
+The backend type parameter determines what hardware you're targeting. The same generic function works across all of them:
 
 ```rust
-use archmage::{X64V2Token, Desktop64, NeonToken, SimdToken};
-use magetypes::simd::{f32x4, f32x8};
+use archmage::{Desktop64, ScalarToken, SimdToken};
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-fn example_x86_128bit() {
-    // 128-bit SSE4.2 — available on most x86-64 CPUs (2008+)
-    if let Some(token) = X64V2Token::summon() {
-        let v = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
-        println!("sum: {}", v.reduce_add());
-    }
+fn sum8<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    f32x8::<T>::from_array(token, *data).reduce_add()
 }
 
-fn example_x86_256bit() {
-    // 256-bit AVX2+FMA — Haswell 2013+, Zen 1+
+fn dispatch_sum8(data: &[f32; 8]) -> f32 {
+    // Scalar is always available — no summon needed
+    let scalar = ScalarToken::new();
+
+    #[cfg(target_arch = "x86_64")]
     if let Some(token) = Desktop64::summon() {
-        let v = f32x8::from_array(token, [1.0; 8]);
-        println!("sum: {}", v.reduce_add());
+        return sum8(token, data);
     }
-}
 
-fn example_arm() {
-    // 128-bit NEON — all 64-bit ARM
-    if let Some(token) = NeonToken::summon() {
-        let v = f32x4::from_array(token, [1.0, 2.0, 3.0, 4.0]);
-        println!("sum: {}", v.reduce_add());
-    }
+    sum8(scalar, data)
 }
 ```
+
+On AArch64, `NeonToken` backs the NEON implementation. On x86-64, `Desktop64` gives AVX2+FMA. On any platform, `ScalarToken` falls back to portable scalar code. The generic function `sum8` compiles correctly for each.
+
+## Concrete Backends
+
+When you need to name a specific backend type (e.g., in a `use` or a type annotation), the `backends` module exports short aliases:
+
+```rust
+use magetypes::simd::backends::{x64v3, neon, scalar};
+use magetypes::simd::generic::f32x8;
+
+// Explicit concrete types for type annotations or static dispatch
+type F32x8Avx2  = f32x8<x64v3>;
+type F32x8Neon  = f32x8<neon>;
+type F32x8Scalar = f32x8<scalar>;
+```
+
+These aliases (`x64v3`, `neon`, `wasm128`, `scalar`, etc.) are simply re-exports of the archmage token types under shorter names.
+
+## Implementation Name
+
+Concrete specializations expose `implementation_name()` to confirm which backend is active:
+
+```rust
+use magetypes::simd::generic::f32x8;
+
+fn show_impl() {
+    #[cfg(target_arch = "x86_64")]
+    println!("{}", f32x8::<archmage::X64V3Token>::implementation_name());
+    // "x86::v3::f32x8"
+}
+```
+
+This is an associated function on the concrete specialization, not on the generic type or on a vector value.
 
 ## Type Properties
 
@@ -106,9 +152,14 @@ All magetypes SIMD types are:
 - **Send + Sync** — safe to share across threads
 
 ```rust
-let a = f32x8::splat(token, 1.0);
-let b = a;       // Copy, not move
-let c = a + b;   // Both still valid
+use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
+
+fn copy_example<T: F32x8Backend>(token: T) {
+    let a = f32x8::<T>::splat(token, 1.0);
+    let b = a;       // Copy, not move
+    let c = a + b;   // Both still valid
+    let _ = c;
+}
 ```
 
 ## Next Steps

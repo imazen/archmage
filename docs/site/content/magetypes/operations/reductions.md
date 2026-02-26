@@ -8,14 +8,18 @@ Reductions collapse all lanes of a vector into a single scalar value.
 ## Available Reductions
 
 ```rust
-let v = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
-let sum = v.reduce_add();  // 36.0 — sum of all lanes
-let max = v.reduce_max();  // 8.0  — maximum lane value
-let min = v.reduce_min();  // 1.0  — minimum lane value
+fn reduction_example<T: F32x8Backend>(token: T) {
+    let v = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+
+    let sum = v.reduce_add();  // 36.0 — sum of all lanes
+    let max = v.reduce_max();  // 8.0  — maximum lane value
+    let min = v.reduce_min();  // 1.0  — minimum lane value
+}
 ```
 
-These work on float types (`f32x4`, `f32x8`, `f64x2`, etc.) and integer types (`i32x4`, `i32x8`, `u32x4`, etc.).
+These work on float types (`f32x4<T>`, `f32x8<T>`, `f64x2<T>`, etc.) and integer types (`i32x4<T>`, `i32x8<T>`, `u32x4<T>`, etc.).
 
 ## Boolean Reductions
 
@@ -35,7 +39,7 @@ let bits = mask.bitmask();  // Bit pattern of which lanes are true
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
-use magetypes::simd::f32x8;
+use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
 #[arcane]
 fn find_max(token: Desktop64, data: &[f32]) -> f32 {
@@ -43,9 +47,9 @@ fn find_max(token: Desktop64, data: &[f32]) -> f32 {
     let remainder = chunks.remainder();
 
     // SIMD reduction over full chunks
-    let mut max_v = f32x8::splat(token, f32::NEG_INFINITY);
+    let mut max_v = f32x8::<Desktop64>::splat(token, f32::NEG_INFINITY);
     for chunk in chunks {
-        let v = f32x8::from_slice(token, chunk);
+        let v = f32x8::<Desktop64>::from_slice(token, chunk);
         max_v = max_v.max(v);
     }
 

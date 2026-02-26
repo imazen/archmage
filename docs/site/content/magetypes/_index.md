@@ -14,23 +14,38 @@ Magetypes provides SIMD vector types — `f32x8`, `i32x4`, `u8x16`, and friends 
 
 ## Relationship to Archmage
 
-Magetypes depends on [archmage](@/archmage/_index.md) for capability tokens. You cannot construct a magetypes vector without first proving that the CPU supports the required features — this is what "token-gated construction" means:
+Magetypes depends on [archmage](@/archmage/_index.md) for capability tokens. You cannot construct a magetypes vector without first proving that the CPU supports the required features — this is what "token-gated construction" means.
+
+The types are generic over a backend token `T`. Write one function, get a correct implementation on every architecture:
+
+```rust
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+fn dot_product<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let va = f32x8::<T>::load(token, a);
+    let vb = f32x8::<T>::load(token, b);
+
+    // Natural operators — no intrinsics, no unsafe
+    let product = va * vb;
+    product.reduce_add()
+}
+```
+
+To call this from concrete code, summon a token and pass it in:
 
 ```rust
 use archmage::{Desktop64, SimdToken};
-use magetypes::simd::f32x8;
 
-fn example() {
+fn main() {
     // Prove CPU supports AVX2+FMA — returns None on unsupported hardware
     if let Some(token) = Desktop64::summon() {
-        let a = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-        let b = f32x8::splat(token, 2.0);
-
-        // Natural operators — no intrinsics, no unsafe
-        let c = a * b;
-        let sum = c.reduce_add();
-
-        println!("sum: {}", sum);  // 90.0
+        let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
+        let b = [2.0f32; 8];
+        let result = dot_product(token, &a, &b);
+        println!("dot: {}", result);  // 72.0
     }
 }
 ```

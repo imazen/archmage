@@ -13,10 +13,17 @@ Transcendental functions come in multiple precision variants. Pick the level tha
 | `_midp` | ~20 bits (~6 decimal digits) | Balanced | General compute, ML inference |
 
 ```rust
-let v = f32x8::splat(token, 2.0);
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Convert,
+};
 
-let fast     = v.exp2_lowp();   // ~12-bit precision
-let balanced = v.exp2_midp();   // ~20-bit precision
+fn example<T: F32x8Convert>(token: T) {
+    let v = f32x8::<T>::splat(token, 2.0);
+
+    let fast     = v.exp2_lowp();   // ~12-bit precision
+    let balanced = v.exp2_midp();   // ~20-bit precision
+}
 ```
 
 There are no unsuffixed "full precision" transcendentals — `_midp` is the highest level. For exact results, use `sqrt()` (a hardware instruction).
@@ -32,10 +39,17 @@ There are no unsuffixed "full precision" transcendentals — `_midp` is the high
 Some `_midp` functions have a `_precise` variant that adds a correction step:
 
 ```rust
-let v = f32x8::splat(token, 2.0);
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Convert,
+};
 
-let result = v.log2_midp();          // ~20-bit precision
-let result = v.log2_midp_precise();  // Slightly more accurate, slightly slower
+fn example<T: F32x8Convert>(token: T) {
+    let v = f32x8::<T>::splat(token, 2.0);
+
+    let result = v.log2_midp();          // ~20-bit precision
+    let result = v.log2_midp_precise();  // Slightly more accurate, slightly slower
+}
 ```
 
 Available `_precise` variants: `log2_midp_precise`, `ln_midp_precise`, `pow_midp_precise`, `log10_midp_precise`, `cbrt_midp_precise`.
@@ -45,6 +59,9 @@ Available `_precise` variants: `log2_midp_precise`, `ln_midp_precise`, `pow_midp
 Functions with domain restrictions (log requires positive input, etc.) have `_unchecked` variants that skip validation:
 
 ```rust
+// given token: T where T: F32x8Convert
+// let v = f32x8::<T>::splat(token, 2.0);
+
 // Checked: returns NaN for non-positive inputs
 let result = v.ln_lowp();
 

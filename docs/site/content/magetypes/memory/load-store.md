@@ -10,15 +10,20 @@ Moving data between memory and SIMD registers. For most cases, `from_array`/`fro
 The default and recommended approach. Modern CPUs handle unaligned access with minimal or no penalty:
 
 ```rust
-use magetypes::simd::f32x8;
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-// From an array
-let arr = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-let v = f32x8::from_array(token, arr);
+fn example<T: F32x8Backend>(token: T) {
+    // From an array
+    let arr = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let v = f32x8::<T>::from_array(token, arr);
 
-// From a slice (must have enough elements)
-let slice = &[1.0f32; 16];
-let v = f32x8::from_slice(token, &slice[0..8]);
+    // From a slice (must have enough elements)
+    let slice = &[1.0f32; 16];
+    let v = f32x8::<T>::from_slice(token, &slice[0..8]);
+}
 ```
 
 ## Aligned Load
@@ -27,7 +32,7 @@ If you know your data is aligned to the vector width (32 bytes for `f32x8`), you
 
 ```rust
 // Aligned load — UB if pointer is not aligned to 32 bytes
-let v = unsafe { f32x8::load_aligned(ptr) };
+let v = unsafe { f32x8::<T>::load_aligned(ptr) };
 ```
 
 In practice, the performance difference between aligned and unaligned loads is negligible on modern CPUs (Haswell+, all ARM Cortex-A). Prefer unaligned loads unless profiling says otherwise.
@@ -35,14 +40,21 @@ In practice, the performance difference between aligned and unaligned loads is n
 ## Unaligned Store
 
 ```rust
-let v = f32x8::splat(token, 42.0);
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-// To an array
-let arr: [f32; 8] = v.to_array();
+fn example<T: F32x8Backend>(token: T) {
+    let v = f32x8::<T>::splat(token, 42.0);
 
-// Store to a mutable array reference
-let mut buf = [0.0f32; 8];
-v.store(&mut buf);
+    // To an array
+    let arr: [f32; 8] = v.to_array();
+
+    // Store to a mutable array reference
+    let mut buf = [0.0f32; 8];
+    v.store(&mut buf);
+}
 ```
 
 ## Aligned Store

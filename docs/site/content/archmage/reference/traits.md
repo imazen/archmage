@@ -173,40 +173,25 @@ Only enables AVX-512F. Missing critical AVX-512 extensions.
 
 [Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases.
 
-### SimdTypes
+### Backend Traits (Primary Pattern)
 
-Associates SIMD types with a token.
+Each SIMD type has a backend trait that defines the operations available. Write functions generic over the backend to get cross-platform code:
 
 ```rust
-pub trait SimdTypes {
-    type F32: SimdFloat;
-    type F64: SimdFloat;
-    type I32: SimdInt;
-    type I64: SimdInt;
-    // ...
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+fn process<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    let v = f32x8::<T>::from_array(token, *data);
+    v.reduce_add()
 }
 ```
 
-**Usage**:
+Available backend traits: `F32x4Backend`, `F32x8Backend`, `F64x2Backend`, `F64x4Backend`, `I32x4Backend`, `I32x8Backend`, `U32x4Backend`, `U32x8Backend`, and more. See [magetypes Types Overview](@/magetypes/types/overview.md) for the complete list.
 
-```rust
-fn process<T: SimdTypes>(token: T, data: &[f32]) {
-    let v = T::F32::splat(1.0);
-    // ...
-}
-```
-
-### WidthDispatch
-
-Provides access to all SIMD widths from any token.
-
-```rust
-pub trait WidthDispatch {
-    fn w128(&self) -> W128Types;
-    fn w256(&self) -> Option<W256Types>;
-    fn w512(&self) -> Option<W512Types>;
-}
-```
+Conversion traits like `F32x8Convert` extend `F32x8Backend` with float↔int conversions and transcendentals.
 
 ## Using Traits Correctly
 

@@ -9,18 +9,37 @@ Magetypes lets you write code using wider types (like `f32x8`) even on hardware 
 
 On x86-64 with AVX2, `f32x8` maps directly to a single 256-bit `__m256` register. On AArch64 NEON (128-bit registers), the same `f32x8` type is implemented as two `f32x4` operations internally. Every method — `+`, `reduce_add()`, `splat()`, etc. — works identically regardless of the underlying implementation.
 
-```rust
-use archmage::{NeonToken, SimdToken};
-use magetypes::simd::f32x8;
+The generic type `f32x8<T>` is parameterized by a backend token. Different backends produce different implementations:
 
-fn example_arm() {
-    if let Some(token) = NeonToken::summon() {
-        // f32x8 on ARM: internally two f32x4 NEON operations
-        let a = f32x8::splat(token, 1.0);
-        let b = f32x8::splat(token, 2.0);
-        let c = a + b;  // Two vaddq_f32 instructions under the hood
-        let sum = c.reduce_add();  // Reduces both halves, then adds
-    }
+```rust
+use magetypes::simd::{
+    generic::f32x8,
+    backends::{x64v3, neon, scalar},
+};
+
+// x86-64 AVX2: maps to a single __m256 register
+let a = f32x8::<x64v3>::splat(token, 1.0);
+
+// AArch64 NEON: internally two f32x4 NEON operations
+let a = f32x8::<neon>::splat(token, 1.0);
+
+// Scalar fallback: eight individual f32 values
+let a = f32x8::<scalar>::splat(token, 1.0);
+```
+
+Write your code once using a generic backend bound — the right implementation is selected at the call site:
+
+```rust
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+fn example<T: F32x8Backend>(token: T) {
+    let a = f32x8::<T>::splat(token, 1.0);
+    let b = f32x8::<T>::splat(token, 2.0);
+    let c = a + b;       // Two vaddq_f32 on NEON, one vaddps on AVX2
+    let sum = c.reduce_add();
 }
 ```
 
@@ -36,11 +55,19 @@ Wider polyfills have overhead (2x or 4x the instruction count) but the overhead 
 
 ## implementation_name()
 
-Every magetypes vector has an `implementation_name()` method that returns a string identifying the actual implementation:
+Every magetypes vector has an `implementation_name()` associated function that returns a string identifying the actual implementation. It's an associated function, not a method — call it on the type, not on a value:
 
 ```rust
-let v = f32x8::splat(token, 1.0);
-println!("{}", v.implementation_name());
+use magetypes::simd::{
+    generic::f32x8,
+    backends::{x64v3, neon},
+};
+
+println!("{}", f32x8::<x64v3>::implementation_name());
+// "x86::v3::f32x8"
+
+println!("{}", f32x8::<neon>::implementation_name());
+// "polyfill::neon::f32x8"
 ```
 
 | Platform | f32x8 implementation_name |

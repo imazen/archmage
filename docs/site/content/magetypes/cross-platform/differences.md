@@ -15,11 +15,18 @@ Magetypes maintains full API parity across x86-64, AArch64, and WASM — the sam
 **Portable choice:** Always use `.and()`, `.or()`, `.xor()`, `.not()` methods. They work on all platforms.
 
 ```rust
-// Portable
-let result = a.and(b);
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-// x86-64 only — won't compile on ARM/WASM
-let result = a & b;
+fn bitwise_example<T: F32x8Backend>(a: f32x8<T>, b: f32x8<T>) {
+    // Portable — works on all platforms
+    let result = a.and(b);
+
+    // x86-64 only — won't compile on ARM/WASM
+    // let result = a & b;
+}
 ```
 
 ## Shift Right for Signed Integers
@@ -32,16 +39,23 @@ let result = a & b;
 **Portable choice:** Use `shr_arithmetic` when you want sign-extending behavior. Use `shr` when you want zero-filling behavior (and be aware it sign-extends on ARM/WASM).
 
 ```rust
-let v = i32x4::splat(token, -8);
+use magetypes::simd::{
+    generic::i32x4,
+    backends::I32x4Backend,
+};
 
-// shr: behavior differs by platform
-let shifted = v.shr::<1>();
-// x86-64:  [-8 >> 1] with zero-fill = some large positive number
-// ARM/WASM: [-8 >> 1] with sign-extend = -4
+fn shift_example<T: I32x4Backend>(token: T) {
+    let v = i32x4::<T>::splat(token, -8);
 
-// shr_arithmetic: consistent everywhere
-let shifted = v.shr_arithmetic::<1>();
-// All platforms: -4
+    // shr: behavior differs by platform
+    let shifted = v.shr::<1>();
+    // x86-64:  [-8 >> 1] with zero-fill = some large positive number
+    // ARM/WASM: [-8 >> 1] with sign-extend = -4
+
+    // shr_arithmetic: consistent everywhere
+    let shifted = v.shr_arithmetic::<1>();
+    // All platforms: -4
+}
 ```
 
 This difference exists because x86-64's SSE/AVX shift instructions are logical for all types, while ARM NEON and WASM use arithmetic shifts for signed types.
@@ -59,9 +73,16 @@ The method exists on all platforms but the calling convention differs. For porta
 Available on `f32x4` across all platforms. Not available on integer types.
 
 ```rust
-// Works everywhere
-let lo = f32x4_a.interleave_lo(f32x4_b);
-let hi = f32x4_a.interleave_hi(f32x4_b);
+use magetypes::simd::{
+    generic::f32x4,
+    backends::F32x4Backend,
+};
+
+fn interleave_example<T: F32x4Backend>(a: f32x4<T>, b: f32x4<T>) {
+    // Works everywhere
+    let lo = a.interleave_lo(b);
+    let hi = a.interleave_hi(b);
+}
 ```
 
 ## Summary: Safe Portable Patterns

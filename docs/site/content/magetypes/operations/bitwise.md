@@ -3,41 +3,40 @@ title = "Integer & Bitwise"
 weight = 4
 +++
 
-Integer types (`i32x8`, `u8x16`, `i16x8`, etc.) support arithmetic, bitwise operations, and shifts.
+Integer types (`i32x8<T>`, `u8x16<T>`, `i16x8<T>`, etc.) support arithmetic, bitwise operations, and shifts.
 
 ## Arithmetic
 
 ```rust
-let a = i32x8::splat(token, 10);
-let b = i32x8::splat(token, 3);
+use magetypes::simd::{generic::i32x8, backends::I32x8Backend};
 
-let sum  = a + b;   // [13; 8]
-let diff = a - b;   // [7; 8]
-let prod = a * b;   // [30; 8]
+fn arithmetic_example<T: I32x8Backend>(token: T) {
+    let a = i32x8::<T>::splat(token, 10);
+    let b = i32x8::<T>::splat(token, 3);
+
+    let sum  = a + b;   // [13; 8]
+    let diff = a - b;   // [7; 8]
+    let prod = a * b;   // [30; 8]
+}
 ```
 
 ## Bitwise Operations
 
-**Use methods for portable code.** Methods work identically on all platforms:
+Generic integer types support the standard Rust bitwise operators `&`, `|`, `^`, and the `.not()` method. These work identically on all platforms:
 
 ```rust
-let and = a.and(b);
-let or  = a.or(b);
-let xor = a.xor(b);
-let not = a.not();
+use magetypes::simd::{generic::i32x8, backends::I32x8Backend};
+
+fn bitwise_example<T: I32x8Backend>(token: T) {
+    let a = i32x8::<T>::splat(token, 0b1010);
+    let b = i32x8::<T>::splat(token, 0b1100);
+
+    let and = a & b;        // 0b1000
+    let or  = a | b;        // 0b1110
+    let xor = a ^ b;        // 0b0110
+    let not = a.not();      // bitwise NOT
+}
 ```
-
-On x86-64, bitwise trait operators (`&`, `|`, `^`, `!`) are also implemented:
-
-```rust
-// x86-64 only — these are operator overloads, not available on ARM/WASM
-let and = a & b;
-let or  = a | b;
-let xor = a ^ b;
-let not = !a;
-```
-
-On ARM and WASM, use the `.and()`, `.or()`, `.xor()`, `.not()` methods. This is a known [behavioral difference](@/magetypes/cross-platform/differences.md) — the methods are the portable choice.
 
 ## Shifts
 
@@ -59,14 +58,17 @@ See [Width Conversions](@/magetypes/conversions/width.md) for `pack_u8`, `pack_i
 
 ```rust
 use archmage::{Desktop64, SimdToken, arcane};
-use magetypes::simd::{u8x16, i16x8};
+use magetypes::simd::{
+    generic::{u8x16, i16x8},
+    backends::U8x16Backend,
+};
 
 #[arcane]
 fn threshold(token: Desktop64, pixels: &mut [u8; 16], cutoff: u8) {
-    let v = u8x16::from_array(token, *pixels);
-    let threshold = u8x16::splat(token, cutoff);
-    let white = u8x16::splat(token, 255);
-    let black = u8x16::zero(token);
+    let v = u8x16::<Desktop64>::from_array(token, *pixels);
+    let threshold = u8x16::<Desktop64>::splat(token, cutoff);
+    let white = u8x16::<Desktop64>::splat(token, 255);
+    let black = u8x16::<Desktop64>::zero(token);
 
     let mask = v.simd_gt(threshold);
     let result = mask.blend(white, black);

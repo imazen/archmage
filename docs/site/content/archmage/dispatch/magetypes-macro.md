@@ -69,10 +69,15 @@ fn validate(token: Token, threshold: f32) -> bool {
 **Write manual variants** when the function body uses platform-specific types or different algorithms per platform:
 
 ```rust
+use magetypes::simd::{
+    generic::f32x8,
+    backends::{F32x8Backend, x64v3},
+};
+
 #[cfg(target_arch = "x86_64")]
 fn process_v3(token: X64V3Token, data: &[f32]) -> f32 {
-    // Uses f32x8 — 8-wide AVX2 algorithm
-    let v = f32x8::from_array(token, data[..8].try_into().unwrap());
+    // Uses f32x8::<x64v3> — 8-wide AVX2 algorithm
+    let v = f32x8::<x64v3>::from_array(token, data[..8].try_into().unwrap());
     v.reduce_add()
 }
 
@@ -82,4 +87,13 @@ fn process_scalar(_token: ScalarToken, data: &[f32]) -> f32 {
 }
 ```
 
-In practice, SIMD functions almost always need different types and algorithms per platform, so `incant!` with manual variants is the more common pattern.
+Or use the **generic pattern** when the same algorithm works across backends:
+
+```rust
+fn process_generic<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
+    let v = f32x8::<T>::from_array(token, data[..8].try_into().unwrap());
+    v.reduce_add()
+}
+```
+
+In practice, SIMD functions almost always need different types and algorithms per platform, so `incant!` with manual variants is the more common pattern. But for algorithms that only differ by backend token, the generic pattern avoids code duplication.

@@ -77,11 +77,7 @@ Enables 512-bit types.
 magetypes = { version = "0.8", features = ["avx512"] }
 ```
 
-**Unlocks**:
-- `f32x16`, `f64x8`
-- `i32x16`, `i64x8`
-- `i16x32`, `i8x64`
-- `u32x16`, `u64x8`, `u16x32`, `u8x64`
+**Unlocks** 512-bit generic types (e.g., `f32x16::<T>`, `f64x8::<T>`, `i32x16::<T>`, etc.) and their backend traits (`F32x16Backend`, `F64x8Backend`, etc.).
 
 ## Feature Combinations
 

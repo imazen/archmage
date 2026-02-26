@@ -5,20 +5,26 @@ weight = 1
 
 All construction methods take a token as the first argument. Once you have a vector, extraction methods don't need the token.
 
+Constructor calls are always turbofished with the type parameter: `f32x8::<T>::splat(token, 1.0)`. The `T` is resolved by the function's generic bound.
+
 ## Construction
 
 ### From Array
 
 ```rust
+use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
+
+// given a token: T where T: F32x8Backend
 let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-let v = f32x8::from_array(token, data);
+let v = f32x8::<T>::from_array(token, data);
 ```
 
 ### From Slice
 
 ```rust
-let slice = &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-let v = f32x8::from_slice(token, slice);
+// given a token: T where T: F32x8Backend
+let slice = &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
+let v = f32x8::<T>::from_slice(token, slice);
 ```
 
 The slice must have at least as many elements as the vector width.
@@ -28,20 +34,22 @@ The slice must have at least as many elements as the vector width.
 Fill every lane with the same value:
 
 ```rust
-let v = f32x8::splat(token, 3.14159);  // All 8 lanes = pi
+// given a token: T where T: F32x8Backend
+let v = f32x8::<T>::splat(token, 3.14159);  // All 8 lanes = pi
 ```
 
 ### Zero
 
 ```rust
-let v = f32x8::zero(token);  // All lanes = 0.0
+// given a token: T where T: F32x8Backend
+let v = f32x8::<T>::zero(token);  // All lanes = 0.0
 ```
 
 ### Load from Array Reference
 
 ```rust
-// Load from fixed-size array reference
-let v = f32x8::load(token, &data);  // data: &[f32; 8]
+// given a token: T where T: F32x8Backend, data: &[f32; 8]
+let v = f32x8::<T>::load(token, data);
 ```
 
 `load` takes a reference to a fixed-size array, not a raw pointer. This is safe by design.

@@ -14,25 +14,33 @@ SIMD loads and stores are contiguous — `from_slice` reads 4 or 8 consecutive e
 Magetypes vectors support `Index<usize>` for lane access, so you can build a vector from scattered positions:
 
 ```rust
-let data = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0];
-let indices = [0, 2, 4, 6, 8, 1, 3, 5];
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-let mut arr = [0.0f32; 8];
-for i in 0..8 {
-    arr[i] = data[indices[i]];
+fn manual_gather<T: F32x8Backend>(token: T) -> f32x8<T> {
+    let data = [0.0f32, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0];
+    let indices = [0usize, 2, 4, 6, 8, 1, 3, 5];
+
+    let mut arr = [0.0f32; 8];
+    for i in 0..8 {
+        arr[i] = data[indices[i]];
+    }
+    f32x8::<T>::from_array(token, arr)
+    // result = [0.0, 20.0, 40.0, 60.0, 80.0, 10.0, 30.0, 50.0]
 }
-let gathered = f32x8::from_array(token, arr);
-// gathered = [0.0, 20.0, 40.0, 60.0, 80.0, 10.0, 30.0, 50.0]
 ```
 
 This is straightforward and safe. The compiler may auto-vectorize it, but don't count on it.
 
 ## Approach: Raw Intrinsics for Gather
 
-If you need hardware gather (`vgatherdps`), use raw intrinsics inside `#[arcane]`:
+If you need hardware gather (`vgatherdps`), use raw intrinsics inside `#[arcane]`. This is x86-specific and doesn't fit the generic backend pattern — use it only when targeting AVX2 directly:
 
 ```rust
 use std::arch::x86_64::*;
+use archmage::{Desktop64, arcane};
 
 #[arcane]
 fn gather_example(token: Desktop64, data: &[f32], indices: &[i32; 8]) -> [f32; 8] {

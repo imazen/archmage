@@ -76,14 +76,19 @@ RUSTFLAGS="-Ctarget-feature=+simd128" cargo build --target wasm32-unknown-unknow
 
 ```rust
 use archmage::{Desktop64, SimdToken};
-use magetypes::simd::f32x8;
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+fn print_splat<T: F32x8Backend>(token: T, val: f32) {
+    let v = f32x8::<T>::splat(token, val);
+    println!("f32x8: {:?}", v.to_array());
+}
 
 fn main() {
     match Desktop64::summon() {
-        Some(token) => {
-            let v = f32x8::splat(token, 42.0);
-            println!("f32x8: {:?}", v.to_array());
-        }
+        Some(token) => print_splat(token, 42.0),
         None => println!("AVX2+FMA not available on this CPU"),
     }
 }

@@ -3,16 +3,25 @@ title = "Platform Notes"
 weight = 2
 +++
 
-For cross-platform code, import types from the top-level `magetypes::simd` module. The platform-specific submodules exist for when you need direct access.
+Magetypes uses a generic strategy-pattern design: `f32x8<T>` where `T` is the backend token. The same type name works on all platforms — the token determines which intrinsics get used.
 
-## Cross-Platform Imports (Recommended)
+## The Generic Pattern
+
+Import from `magetypes::simd::generic` and `magetypes::simd::backends`:
 
 ```rust
-use magetypes::simd::f32x8;
-use magetypes::simd::i32x4;
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+fn process<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    let v = f32x8::<T>::load(token, data);
+    v.reduce_add()
+}
 ```
 
-These re-exports resolve to the correct platform implementation at compile time. Use them for all portable code.
+The function above compiles correctly on x86-64 (backed by `__m256`), AArch64 (polyfilled with two `float32x4_t`), and WASM (polyfilled with two `v128`). The token type determines the backend.
 
 ## Platform-Specific Imports
 
@@ -29,7 +38,7 @@ use magetypes::simd::arm::*;
 use magetypes::simd::wasm::*;
 ```
 
-You rarely need these. The top-level `magetypes::simd::f32x8` works on all platforms (via polyfills on ARM and WASM). Use platform-specific imports only when you need a type that doesn't exist in the cross-platform namespace.
+You rarely need these. The generic types from `magetypes::simd::generic` work on all platforms. Use platform-specific imports only when you need a type that doesn't exist in the generic namespace.
 
 ## Feature Flags
 
@@ -53,6 +62,19 @@ Each width tier requires a minimum token:
 | 512-bit | `X64V4Token` | `NeonToken` (polyfill) | `Wasm128Token` (polyfill) |
 
 Higher tokens also work — `Desktop64` (alias for `X64V3Token`) accepts any function expecting `X64V2Token` because V3 is a superset of V2.
+
+## Backend Type Aliases
+
+The `backends` module provides lowercase type aliases for use in generic bounds and explicit turbofish:
+
+```rust
+use magetypes::simd::backends::{x64v3, neon, wasm128};
+
+// Concrete instantiations for specific platforms
+type MyF32x8 = magetypes::simd::generic::f32x8<x64v3>;
+```
+
+The aliases: `x64v1`, `x64v2`, `x64v3`, `x64v4`, `x86_v4x`, `neon`, `wasm128`, `scalar`.
 
 ## Compile-Time Optimization
 

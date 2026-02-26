@@ -12,10 +12,17 @@ Convert between floating-point and integer vector types.
 Behaves like `as i32` in Rust — drops the fractional part:
 
 ```rust
-let floats = f32x8::from_array(token, [1.5, 2.7, -3.2, 4.0, 5.9, 6.1, 7.0, 8.5]);
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Convert,
+};
 
-let ints = floats.to_i32x8();
-// [1, 2, -3, 4, 5, 6, 7, 8]
+fn truncate<T: F32x8Convert>(token: T) {
+    let floats = f32x8::<T>::from_array(token, [1.5, 2.7, -3.2, 4.0, 5.9, 6.1, 7.0, 8.5]);
+
+    let ints = floats.to_i32x8();
+    // [1, 2, -3, 4, 5, 6, 7, 8]
+}
 ```
 
 ### Round to nearest
@@ -23,6 +30,7 @@ let ints = floats.to_i32x8();
 Rounds to the nearest integer (banker's rounding — ties go to even):
 
 ```rust
+// given token: T where T: F32x8Convert
 let rounded = floats.to_i32x8_round();
 // [2, 3, -3, 4, 6, 6, 7, 8]
 ```
@@ -30,9 +38,16 @@ let rounded = floats.to_i32x8_round();
 ## Integer to Float
 
 ```rust
-let ints = i32x8::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
-let floats = ints.to_f32x8();
-// [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+use magetypes::simd::{
+    generic::i32x8,
+    backends::I32x8Convert,
+};
+
+fn int_to_float<T: I32x8Convert>(token: T) {
+    let ints = i32x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
+    let floats = ints.to_f32x8();
+    // [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+}
 ```
 
 For values that don't fit exactly in f32 (integers above 2^24), the result is the nearest representable float.
@@ -42,11 +57,18 @@ For values that don't fit exactly in f32 (integers above 2^24), the result is th
 The same methods exist on 128-bit types:
 
 ```rust
-let floats = f32x4::from_array(token, [1.5, 2.7, -3.2, 4.0]);
-let ints = floats.to_i32x4();        // Truncate
-let rounded = floats.to_i32x4_round(); // Round
+use magetypes::simd::{
+    generic::f32x4,
+    backends::F32x4Convert,
+};
 
-let back = ints.to_f32x4();
+fn conversions_128<T: F32x4Convert>(token: T) {
+    let floats = f32x4::<T>::from_array(token, [1.5, 2.7, -3.2, 4.0]);
+    let ints = floats.to_i32x4();          // Truncate
+    let rounded = floats.to_i32x4_round(); // Round
+
+    let back = ints.to_f32x4();
+}
 ```
 
 ## Lane Access
@@ -54,12 +76,19 @@ let back = ints.to_f32x4();
 Vectors implement `Index<usize>` and `IndexMut<usize>` for single-lane access:
 
 ```rust
-let v = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
 
-let third = v[2];   // 3.0
+fn lane_access<T: F32x8Backend>(token: T) {
+    let v = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 
-let mut v = v;
-v[2] = 99.0;        // [1.0, 2.0, 99.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    let third = v[2];   // 3.0
+
+    let mut v = v;
+    v[2] = 99.0;        // [1.0, 2.0, 99.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+}
 ```
 
 Lane indices are runtime values with bounds checking — out-of-bounds panics.

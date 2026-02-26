@@ -8,6 +8,6 @@ weight = 8
 sidebar = true
 +++
 
-Magetypes vectors work with archmage's dispatch system. Write platform-specific variants using the right types for each architecture, then dispatch automatically.
+Magetypes vectors work with archmage's dispatch system. The generic backend pattern means one function covers all architectures — `incant!` handles runtime selection automatically.
 
-1. [Types and Dispatch](@/magetypes/dispatch/types-and-dispatch.md) — `incant!` with typed SIMD code, `#[magetypes]` for generic bodies
+1. [Types and Dispatch](@/magetypes/dispatch/types-and-dispatch.md) — `incant!` with generic SIMD code, `#[magetypes]` for generated bodies
