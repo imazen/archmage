@@ -109,3 +109,15 @@ The polyfill layer covers:
 - Conversions
 
 The API is identical. The only difference is the number of hardware instructions emitted.
+
+## Performance: Generic = Concrete Inside `#[arcane]`
+
+A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produce worse code than `f32x8::<x64v3>`? **No** — inside `#[arcane]` or `#[rite]`, they produce byte-for-byte identical assembly. All backend methods are `#[inline(always)]` and LLVM inlines them into the caller's `#[target_feature]` region.
+
+| Pattern | Time |
+|---------|------|
+| `f32x8::<T>` generic inside `#[arcane]` | 1.32 ns |
+| `f32x8::<x64v3>` concrete inside `#[arcane]` | 1.33 ns |
+| `f32x8::<T>` generic **without** `#[arcane]` | 23.3 ns (18x slower) |
+
+The generic pattern is zero-cost — but it must be called from within an `#[arcane]` or `#[rite]` function. Without `#[target_feature]` on the caller, intrinsics become function calls.

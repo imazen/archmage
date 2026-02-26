@@ -102,6 +102,42 @@ Every downgrade pattern matched its bare `#[target_feature]` equivalent exactly.
 
 **The rule:** downgrades are free (caller's superset features enable inlining), upgrades hit the boundary (callee needs features the caller doesn't have).
 
+### Generic magetypes types: zero overhead inside `#[arcane]`
+
+A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produce worse code than concrete `f32x8::<x64v3>`? No — inside `#[arcane]`, they produce **byte-for-byte identical assembly**.
+
+Source: [`benches/generic_vs_concrete.rs`](../benches/generic_vs_concrete.rs).
+
+| Pattern | Time | Assembly |
+|---------|------|----------|
+| `f32x8::<T>` generic inside `#[arcane]` | 1.32 ns | `vmovups` + `vaddps` + horizontal sum |
+| `f32x8::<x64v3>` concrete inside `#[arcane]` | 1.33 ns | identical |
+| Concrete via `#[rite]` in `#[arcane]` | 1.32 ns | identical |
+| `f32x8::<T>` generic **without** `#[target_feature]` | **23.3 ns (18x)** | `call _mm256_add_ps` (function calls!) |
+
+The backend trait methods are all `#[inline(always)]`. When the caller has `#[target_feature]` (from `#[arcane]` or `#[rite]`), LLVM inlines everything and emits the same SIMD instructions regardless of whether the code is generic or concrete.
+
+Without `#[target_feature]`, it's catastrophic: intrinsics become function calls because LLVM can't inline them into a caller that lacks the right features. Every `_mm256_add_ps` is a `call` instruction with stack spills instead of a single `vaddps`.
+
+```asm
+; Inside #[arcane] — generic and concrete both produce:
+vmovups ymm0, [rdi]          ; load 8 floats
+vaddps  ymm0, ymm0, ymm0    ; v + v
+vextractf128 xmm1, ymm0, 1  ; horizontal sum...
+vaddps  xmm0, xmm1, xmm0
+vhaddps xmm0, xmm0, xmm0
+vmovshdup xmm1, xmm0
+vaddss  xmm0, xmm0, xmm1
+
+; Without #[target_feature] — generic becomes:
+movups  xmm0, [rdi]          ; SSE2 load, not AVX!
+call    _mm256_add_ps         ; FUNCTION CALL
+call    _mm256_extractf128_ps ; FUNCTION CALL
+call    _mm_hadd_ps           ; FUNCTION CALL
+```
+
+**The rule:** generic magetypes code is zero-cost, but it must be called from within an `#[arcane]` or `#[rite]` function. The optimization barrier isn't generics — it's missing `#[target_feature]`.
+
 ## Rules
 
 These are distilled from the benchmark data above.
@@ -116,7 +152,7 @@ These are distilled from the benchmark data above.
 
 5. **Upcasting hits the boundary.** A V3 function calling a V4 helper can't inline because the caller lacks AVX-512 features. Dispatch at the entry point, not deep in hot code.
 
-6. **Use concrete tokens, not generics.** Generic bounds (`impl HasX64V2`) create optimization barriers. Use `X64V3Token` directly for hot paths.
+6. **Generic magetypes types are zero-cost inside `#[arcane]`.** `f32x8::<T>` and `f32x8::<x64v3>` produce identical assembly. The backend methods are `#[inline(always)]` and LLVM inlines them when the caller has matching target features. But never call generic magetypes code from a plain function without `#[target_feature]` — intrinsics become function calls (18x slower).
 
 ## Reproducing
 

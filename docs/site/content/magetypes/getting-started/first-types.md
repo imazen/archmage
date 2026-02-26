@@ -162,6 +162,12 @@ fn copy_example<T: F32x8Backend>(token: T) {
 }
 ```
 
+## Performance Note
+
+The generic pattern (`f32x8::<T>`) produces **identical assembly** to concrete types (`f32x8::<x64v3>`) when called from inside `#[arcane]` or `#[rite]`. All backend methods are `#[inline(always)]` — LLVM inlines them fully. There is zero abstraction cost.
+
+The only requirement: your generic function must be called from within a `#[target_feature]` context (via `#[arcane]` or `#[rite]`). Without it, intrinsics become function calls and performance drops ~18x. See [Polyfills — Performance](@/magetypes/cross-platform/polyfills.md#performance-generic-concrete-inside-arcane) for benchmark data.
+
 ## Next Steps
 
 - [Type Overview](@/magetypes/types/overview.md) — full list of available types per platform

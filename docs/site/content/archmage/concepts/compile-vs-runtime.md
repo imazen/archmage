@@ -107,7 +107,7 @@ This still works—V4 is a superset of V3—but LLVM can't fully inline across t
 
 ### Generic Bounds = Optimization Boundary
 
-Generics create the same problem:
+Generics with archmage trait bounds create the same problem:
 
 ```rust
 #[arcane]
@@ -120,6 +120,25 @@ fn generic_impl<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
 The compiler generates one version of this function for the trait bound, not specialized versions for each concrete token. This prevents inlining and vectorization across the boundary.
 
 **Rule: Use concrete tokens for hot paths.**
+
+### Exception: magetypes Generic Types Are Zero-Cost
+
+Magetypes backend traits (`F32x8Backend`, etc.) are different from archmage feature traits. When a generic function using `f32x8::<T>` is called from inside `#[arcane]`, the backend methods (all `#[inline(always)]`) inline into the caller's `#[target_feature]` region. The assembly is **byte-for-byte identical** to using concrete `f32x8::<x64v3>`:
+
+```rust
+// These produce identical assembly when called from #[arcane]:
+fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    let v = f32x8::<T>::from_array(token, *data);
+    (v + v).reduce_add()  // ~1.3 ns
+}
+
+fn concrete_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    let v = f32x8::<x64v3>::from_array(token, *data);
+    (v + v).reduce_add()  // ~1.3 ns (identical)
+}
+```
+
+But calling `generic_sum` from a plain function **without** `#[arcane]` is 18x slower — intrinsics become function calls. The `#[target_feature]` context is what matters, not whether the code is generic. See [PERFORMANCE.md](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md) for full benchmark data.
 
 ## Downcasting vs Upcasting
 
@@ -226,10 +245,10 @@ match X64V3Token::compiled_with() {
 
 ## Common Mistakes
 
-### Mistake 1: Generic Bounds in Hot Paths
+### Mistake 1: Generic Archmage Bounds in Hot Paths
 
 ```rust
-// SLOW: Generic creates optimization boundary
+// SLOW: Generic archmage trait creates optimization boundary
 fn process<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
     // Called millions of times, can't inline properly
 }
@@ -239,6 +258,8 @@ fn process(token: Desktop64, data: &[f32]) -> f32 {
     // LLVM knows exact features, inlines everything
 }
 ```
+
+Note: magetypes backend generics (`T: F32x8Backend`) are fine inside `#[arcane]` — the backend methods are `#[inline(always)]` and produce identical assembly to concrete types. The problem above is specific to archmage feature traits like `HasX64V2`.
 
 ### Mistake 2: Assuming `#[cfg(target_feature)]` Is Runtime
 
@@ -314,6 +335,7 @@ if let Some(token) = Desktop64::summon() {
 | "What instructions can LLVM use here?" | `#[target_feature(enable)]` — per-function |
 | "Is runtime check needed?" | `Token::compiled_with()` — tells you |
 | "Will these functions inline together?" | Same target features + concrete types = yes |
-| "Do generic bounds hurt performance?" | Yes, they create optimization boundaries |
+| "Do archmage generic bounds hurt performance?" | Yes, `HasX64V2` etc. create optimization boundaries |
+| "Do magetypes generic types hurt performance?" | No — `f32x8::<T>` inside `#[arcane]` = identical assembly to concrete |
 | "Is downcasting (V4→V3) free?" | Yes, features are superset |
 | "Is upcasting safe?" | Yes, but creates optimization boundary |

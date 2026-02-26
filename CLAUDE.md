@@ -145,6 +145,9 @@ fn inner_work(token: X64V3Token, data: &[f32]) -> f32 {
 - Generic bounds break this chain — each function is a separate compilation unit
 - Even `#[inline(always)]` can't force inlining across trait object boundaries
 
+**Exception: magetypes backend generics are zero-cost inside `#[arcane]`.**
+`f32x8::<T>` where `T: F32x8Backend` produces **identical assembly** to concrete `f32x8::<x64v3>` when called from `#[arcane]` or `#[rite]`. The backend methods are all `#[inline(always)]` and LLVM inlines them into the caller's `#[target_feature]` region. Benchmarked: 1.32 ns generic vs 1.33 ns concrete (noise). But calling the same generic code from a plain function **without** `#[target_feature]` is 18x slower — intrinsics become function calls. See `benches/generic_vs_concrete.rs`.
+
 **Downcasting is free:** Pass a higher token to a function expecting a lower one. Nested `#[arcane]` with downcasting preserves the inlining chain:
 
 ```rust
