@@ -61,6 +61,10 @@ harness = false
 name = "asm_patterns"
 harness = false
 
+[[bench]]
+name = "generic_vs_concrete"
+harness = false
+
 [package.metadata.docs.rs]
 features = ["std", "macros", "safe_unaligned_simd", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]

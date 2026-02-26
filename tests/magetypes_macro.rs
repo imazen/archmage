@@ -287,3 +287,46 @@ mod passthrough_integration {
         }
     }
 }
+
+// =============================================================================
+// Generic magetypes function + incant! dispatch (manual variants)
+// =============================================================================
+
+#[cfg(not(target_arch = "wasm32"))] // magetypes is non-wasm dev-dep
+mod generic_magetypes_dispatch {
+    use archmage::{arcane, incant, ScalarToken};
+    use magetypes::simd::backends::F32x8Backend;
+    use magetypes::simd::generic::f32x8;
+
+    // NOTE: #[magetypes] + f32x8::<Token> does NOT work because #[magetypes]
+    // generates variants for ALL tokens (v3, v4, neon, wasm128, scalar) but
+    // F32x8Backend is only implemented for specific base tokens (v3, neon,
+    // wasm128, scalar). The v4 variant would fail to compile.
+    //
+    // Instead: write a generic function and wire up incant! manually.
+
+    fn sum_generic<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+        f32x8::<T>::from_array(token, *data).reduce_add()
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[arcane]
+    fn sum_impl_v3(token: archmage::X64V3Token, data: &[f32; 8]) -> f32 {
+        sum_generic(token, data)
+    }
+
+    fn sum_impl_scalar(token: ScalarToken, data: &[f32; 8]) -> f32 {
+        sum_generic(token, data)
+    }
+
+    pub fn sum(data: &[f32; 8]) -> f32 {
+        incant!(sum_impl(data), [v3])
+    }
+
+    #[test]
+    fn generic_dispatch_works() {
+        let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let result = sum(&data);
+        assert!((result - 36.0).abs() < 0.01);
+    }
+}
