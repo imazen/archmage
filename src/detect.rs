@@ -451,9 +451,28 @@ macro_rules! is_aarch64_feature_available {
 
 /// Implementation macro for AArch64 feature check with compile-time optimization.
 /// Not intended for direct use.
+///
+/// For features in the Apple aarch64 target spec baseline (neon, crc, rdm,
+/// dotprod, fp16, aes, sha2, sha3, fhm, fcma), this uses an Apple vendor
+/// fallback when runtime detection fails. This works around two bugs:
+///
+/// 1. LLVM's `-Ctarget-cpu=native` drops baseline features from compile-time
+///    detection on macOS (sha2, sha3, etc. show `cfg!(target_feature)` = false)
+/// 2. `std::arch::is_aarch64_feature_detected!` returns false for sha2/sha3
+///    on macOS 15.x even though all Apple Silicon has these features
+///
+/// These features are guaranteed by the `aarch64-apple-*` target spec and
+/// are present on ALL Apple Silicon (M1+). The Apple fallback is safe because
+/// Apple controls both hardware and target spec, and has never shipped a chip
+/// without these features.
+///
+/// Features NOT in the Apple baseline (i8mm, bf16, sve, sve2) use standard
+/// runtime-only detection, as they vary by chip generation.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __impl_aarch64_feature_check {
+    // === Features in Apple aarch64 target spec baseline ===
+    // Use __impl_aarch64_apple_or_runtime_check! as fallback
     ("neon") => {{
         #[cfg(target_feature = "neon")]
         {
@@ -461,9 +480,101 @@ macro_rules! __impl_aarch64_feature_check {
         }
         #[cfg(not(target_feature = "neon"))]
         {
-            $crate::__impl_aarch64_runtime_only_check!("neon")
+            $crate::__impl_aarch64_apple_or_runtime_check!("neon")
         }
     }};
+    ("aes") => {{
+        #[cfg(target_feature = "aes")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "aes"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("aes")
+        }
+    }};
+    ("sha2") => {{
+        #[cfg(target_feature = "sha2")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sha2"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("sha2")
+        }
+    }};
+    ("sha3") => {{
+        #[cfg(target_feature = "sha3")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sha3"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("sha3")
+        }
+    }};
+    ("crc") => {{
+        #[cfg(target_feature = "crc")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "crc"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("crc")
+        }
+    }};
+    ("dotprod") => {{
+        #[cfg(target_feature = "dotprod")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "dotprod"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("dotprod")
+        }
+    }};
+    ("rdm") => {{
+        #[cfg(target_feature = "rdm")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "rdm"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("rdm")
+        }
+    }};
+    ("fp16") => {{
+        #[cfg(target_feature = "fp16")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "fp16"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("fp16")
+        }
+    }};
+    ("fhm") => {{
+        #[cfg(target_feature = "fhm")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "fhm"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("fhm")
+        }
+    }};
+    ("fcma") => {{
+        #[cfg(target_feature = "fcma")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "fcma"))]
+        {
+            $crate::__impl_aarch64_apple_or_runtime_check!("fcma")
+        }
+    }};
+    // === Features NOT in Apple baseline (vary by chip) ===
+    // Use standard runtime-only detection
     ("sve") => {{
         #[cfg(target_feature = "sve")]
         {
@@ -484,96 +595,6 @@ macro_rules! __impl_aarch64_feature_check {
             $crate::__impl_aarch64_runtime_only_check!("sve2")
         }
     }};
-    ("aes") => {{
-        #[cfg(target_feature = "aes")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "aes"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("aes")
-        }
-    }};
-    ("sha2") => {{
-        #[cfg(target_feature = "sha2")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "sha2"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("sha2")
-        }
-    }};
-    ("sha3") => {{
-        #[cfg(target_feature = "sha3")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "sha3"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("sha3")
-        }
-    }};
-    ("crc") => {{
-        #[cfg(target_feature = "crc")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "crc"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("crc")
-        }
-    }};
-    ("dotprod") => {{
-        #[cfg(target_feature = "dotprod")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "dotprod"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("dotprod")
-        }
-    }};
-    ("rdm") => {{
-        #[cfg(target_feature = "rdm")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "rdm"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("rdm")
-        }
-    }};
-    ("fp16") => {{
-        #[cfg(target_feature = "fp16")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "fp16"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("fp16")
-        }
-    }};
-    ("fhm") => {{
-        #[cfg(target_feature = "fhm")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "fhm"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("fhm")
-        }
-    }};
-    ("fcma") => {{
-        #[cfg(target_feature = "fcma")]
-        {
-            true
-        }
-        #[cfg(not(target_feature = "fcma"))]
-        {
-            $crate::__impl_aarch64_runtime_only_check!("fcma")
-        }
-    }};
     ("i8mm") => {{
         #[cfg(target_feature = "i8mm")]
         {
@@ -592,6 +613,29 @@ macro_rules! __impl_aarch64_feature_check {
         #[cfg(not(target_feature = "bf16"))]
         {
             $crate::__impl_aarch64_runtime_only_check!("bf16")
+        }
+    }};
+}
+
+/// Apple aarch64 fallback + runtime check.
+///
+/// On Apple Silicon (`target_vendor = "apple"` + `target_arch = "aarch64"`),
+/// returns true unconditionally for features in the Apple target spec baseline.
+/// This works around broken `is_aarch64_feature_detected!` on macOS 15.x
+/// and LLVM's `-Ctarget-cpu=native` dropping baseline features.
+///
+/// On non-Apple targets, falls through to standard runtime detection.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_aarch64_apple_or_runtime_check {
+    ($feature:tt) => {{
+        #[cfg(all(target_vendor = "apple", target_arch = "aarch64"))]
+        {
+            true
+        }
+        #[cfg(not(all(target_vendor = "apple", target_arch = "aarch64")))]
+        {
+            $crate::__impl_aarch64_runtime_only_check!($feature)
         }
     }};
 }
