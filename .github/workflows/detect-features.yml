@@ -14,6 +14,7 @@ jobs:
           - { os: ubuntu-24.04-arm, name: "Linux ARM64 (Cobalt 100 / Neoverse N2)" }
           - { os: macos-14, name: "macOS 14 (Apple M1)" }
           - { os: macos-15, name: "macOS 15 (Apple M-series)" }
+          - { os: macos-latest, name: "macOS latest" }
           - { os: windows-11-arm, name: "Windows ARM64 (Snapdragon X)" }
 
     steps:
