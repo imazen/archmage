@@ -420,10 +420,7 @@ mod float_int {
     fn int_to_float<T: F32x8Convert>(token: T) {
         let ints = i32x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
         let floats = f32x8::<T>::from_i32(token, ints);
-        assert_eq!(
-            floats.to_array(),
-            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
-        );
+        assert_eq!(floats.to_array(), [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
     }
 
     #[test]
@@ -714,10 +711,7 @@ mod polyfills {
     #[cfg(target_arch = "x86_64")]
     #[test]
     fn impl_name_x86() {
-        assert_eq!(
-            f32x8::<X64V3Token>::implementation_name(),
-            "x86::v3::f32x8"
-        );
+        assert_eq!(f32x8::<X64V3Token>::implementation_name(), "x86::v3::f32x8");
     }
 }
 

@@ -294,7 +294,7 @@ mod passthrough_integration {
 
 #[cfg(not(target_arch = "wasm32"))] // magetypes is non-wasm dev-dep
 mod generic_magetypes_dispatch {
-    use archmage::{arcane, incant, ScalarToken};
+    use archmage::{ScalarToken, arcane, incant};
     use magetypes::simd::backends::F32x8Backend;
     use magetypes::simd::generic::f32x8;
 

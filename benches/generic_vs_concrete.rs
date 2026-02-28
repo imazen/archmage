@@ -21,7 +21,7 @@
 #![cfg(target_arch = "x86_64")]
 #![allow(dead_code)]
 
-use archmage::{arcane, rite, SimdToken, X64V3Token};
+use archmage::{SimdToken, X64V3Token, arcane, rite};
 
 use magetypes::simd::backends::{F32x8Backend, x64v3};
 use magetypes::simd::generic::f32x8;
