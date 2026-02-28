@@ -534,6 +534,8 @@ git push origin v{version} archmage-macros-v{version} magetypes-v{version}
 
 Publish order (respect dependency chain): `archmage-macros` → `archmage` → `magetypes`.
 
+**Every published crate MUST have an `include` list in Cargo.toml.** Without one, cargo ships the entire repo — docs, CI workflows, intrinsics databases, browser apps, everything. Run `cargo package --list` before publishing and verify only source code, tests, benches, examples, and essential metadata are included. The archmage crate ballooned to 36MB (503 rejected by crates.io) before this was caught. Target: under 300KB compressed.
+
 ## MANDATORY: Cross-Platform Token Testing
 
 Every token's feature claims MUST be verified by exercising real intrinsics on the target architecture. The test files:
