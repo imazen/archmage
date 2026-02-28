@@ -117,7 +117,10 @@ fn detect_aarch64() {
     report("aes", aes);
     report("sha2", sha2);
     let all_v2 = neon && crc && rdm && dotprod && fp16 && aes && sha2;
-    println!("  => all V2 features: {}", if all_v2 { "YES" } else { "NO" });
+    println!(
+        "  => all V2 features: {}",
+        if all_v2 { "YES" } else { "NO" }
+    );
     println!(
         "  => V2 summon:       {}",
         if archmage::Arm64V2Token::summon().is_some() {
@@ -127,8 +130,11 @@ fn detect_aarch64() {
         }
     );
     if all_v2 != archmage::Arm64V2Token::summon().is_some() {
-        println!("  *** V2 MISMATCH: individual features say {} but summon says {} ***",
-            all_v2, archmage::Arm64V2Token::summon().is_some());
+        println!(
+            "  *** V2 MISMATCH: individual features say {} but summon says {} ***",
+            all_v2,
+            archmage::Arm64V2Token::summon().is_some()
+        );
     }
 
     // V3 feature-by-feature
@@ -145,7 +151,10 @@ fn detect_aarch64() {
     report("i8mm", i8mm);
     report("bf16", bf16);
     let all_v3 = all_v2 && fhm && fcma && sha3 && i8mm && bf16;
-    println!("  => all V3 features: {}", if all_v3 { "YES" } else { "NO" });
+    println!(
+        "  => all V3 features: {}",
+        if all_v3 { "YES" } else { "NO" }
+    );
     println!(
         "  => V3 summon:       {}",
         if archmage::Arm64V3Token::summon().is_some() {
