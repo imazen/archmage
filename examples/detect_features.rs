@@ -2,12 +2,15 @@
 //!
 //! Run with: cargo run --example detect_features
 //!
-//! Compares three detection methods on AArch64:
+//! Compares two detection methods on AArch64:
 //! 1. `cfg!(target_feature)` — compile-time, affected by -Ctarget-cpu=native
-//! 2. `std::arch::is_aarch64_feature_detected!` — runtime CPUID
-//! 3. `archmage::is_aarch64_feature_available!` — archmage's combined macro
+//! 2. `archmage::is_aarch64_feature_available!` — archmage's combined macro
 //!
 //! Discrepancies between methods indicate bugs in archmage's detection.
+//!
+//! Note: We avoid `std::arch::is_aarch64_feature_detected!` for individual
+//! feature comparison because it uses different feature name strings than
+//! `cfg!(target_feature)` on some Rust versions, causing compilation errors.
 
 use archmage::SimdToken;
 
@@ -31,30 +34,24 @@ fn main() {
 #[cfg(target_arch = "aarch64")]
 fn detect_aarch64() {
     use archmage::is_aarch64_feature_available;
-    use std::arch::is_aarch64_feature_detected;
 
-    // Compare all three detection methods for Arm64V2 features
-    println!("--- Arm64V2 Features: Detection Method Comparison ---");
-    println!(
-        "  {:10} {:>10} {:>10} {:>10}",
-        "feature", "cfg!", "std", "archmage"
-    );
+    // Compare cfg! vs archmage for all Arm64V2 features
+    println!("--- Arm64V2 Features: cfg! vs archmage ---");
+    println!("  {:10} {:>10} {:>10}", "feature", "cfg!", "archmage");
 
     macro_rules! compare_feature {
-        ($name:literal) => {
+        ($name:tt) => {
             let cfg_val = cfg!(target_feature = $name);
-            let std_val = is_aarch64_feature_detected!($name);
             let am_val = is_aarch64_feature_available!($name);
-            let mismatch = if cfg_val != std_val || std_val != am_val {
+            let mismatch = if cfg_val != am_val {
                 " *** MISMATCH ***"
             } else {
                 ""
             };
             println!(
-                "  {:10} {:>10} {:>10} {:>10}{}",
+                "  {:10} {:>10} {:>10}{}",
                 $name,
                 yn(cfg_val),
-                yn(std_val),
                 yn(am_val),
                 mismatch
             );
@@ -72,10 +69,7 @@ fn detect_aarch64() {
     // Additional V3 features
     println!();
     println!("--- Arm64V3 Additional Features ---");
-    println!(
-        "  {:10} {:>10} {:>10} {:>10}",
-        "feature", "cfg!", "std", "archmage"
-    );
+    println!("  {:10} {:>10} {:>10}", "feature", "cfg!", "archmage");
     compare_feature!("fhm");
     compare_feature!("fcma");
     compare_feature!("sha3");
@@ -105,13 +99,61 @@ fn detect_aarch64() {
     report_token("Arm64V2Token", archmage::Arm64V2Token::summon().is_some());
     report_token("Arm64V3Token", archmage::Arm64V3Token::summon().is_some());
 
-    // Additional raw feature detection
+    // Individual feature detection details for Arm64V2 (for debugging summon failures)
     println!();
-    println!("--- Other Features (std detection) ---");
-    report("sve", is_aarch64_feature_detected!("sve"));
-    report("sve2", is_aarch64_feature_detected!("sve2"));
-    report("lse", is_aarch64_feature_detected!("lse"));
-    report("sm4", is_aarch64_feature_detected!("sm4"));
+    println!("--- Arm64V2 Feature-by-Feature Availability ---");
+    let neon = is_aarch64_feature_available!("neon");
+    let crc = is_aarch64_feature_available!("crc");
+    let rdm = is_aarch64_feature_available!("rdm");
+    let dotprod = is_aarch64_feature_available!("dotprod");
+    let fp16 = is_aarch64_feature_available!("fp16");
+    let aes = is_aarch64_feature_available!("aes");
+    let sha2 = is_aarch64_feature_available!("sha2");
+    report("neon", neon);
+    report("crc", crc);
+    report("rdm", rdm);
+    report("dotprod", dotprod);
+    report("fp16", fp16);
+    report("aes", aes);
+    report("sha2", sha2);
+    let all_v2 = neon && crc && rdm && dotprod && fp16 && aes && sha2;
+    println!("  => all V2 features: {}", if all_v2 { "YES" } else { "NO" });
+    println!(
+        "  => V2 summon:       {}",
+        if archmage::Arm64V2Token::summon().is_some() {
+            "YES"
+        } else {
+            "NO"
+        }
+    );
+    if all_v2 != archmage::Arm64V2Token::summon().is_some() {
+        println!("  *** V2 MISMATCH: individual features say {} but summon says {} ***",
+            all_v2, archmage::Arm64V2Token::summon().is_some());
+    }
+
+    // V3 feature-by-feature
+    println!();
+    println!("--- Arm64V3 Feature-by-Feature Availability ---");
+    let fhm = is_aarch64_feature_available!("fhm");
+    let fcma = is_aarch64_feature_available!("fcma");
+    let sha3 = is_aarch64_feature_available!("sha3");
+    let i8mm = is_aarch64_feature_available!("i8mm");
+    let bf16 = is_aarch64_feature_available!("bf16");
+    report("fhm", fhm);
+    report("fcma", fcma);
+    report("sha3", sha3);
+    report("i8mm", i8mm);
+    report("bf16", bf16);
+    let all_v3 = all_v2 && fhm && fcma && sha3 && i8mm && bf16;
+    println!("  => all V3 features: {}", if all_v3 { "YES" } else { "NO" });
+    println!(
+        "  => V3 summon:       {}",
+        if archmage::Arm64V3Token::summon().is_some() {
+            "YES"
+        } else {
+            "NO"
+        }
+    );
 }
 
 #[cfg(target_arch = "x86_64")]
