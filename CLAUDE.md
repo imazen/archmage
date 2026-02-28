@@ -917,6 +917,25 @@ These are documented semantic differences between architectures. Tests must acco
 | `blend` signature | `(mask, true, false)` | `(mask, true, false)` | `(self, other, mask)` | Avoid in portable code; use bitcast + comparison verification |
 | `interleave_lo/hi` | f32x4 only | f32x4 only | f32x4 only | Only use on f32x4, not integer types |
 
+### Known Platform Detection Issues
+
+**macOS 15.x + `-Ctarget-cpu=native`** (fixed in 0.8.8+):
+- LLVM's target-cpu=native drops sha2/sha3 (and other features) from compile-time on Apple aarch64
+- `std::arch::is_aarch64_feature_detected!("sha2")` returns false on macOS 15.x (works on 14.x)
+- This caused Arm64V2Token::summon() to return None when using target-cpu=native
+- **Fix**: Apple vendor fallback in `__impl_aarch64_apple_or_runtime_check!` — features in the
+  Apple target spec baseline (neon, crc, rdm, dotprod, fp16, aes, sha2, sha3, fhm, fcma) return
+  true unconditionally on `target_vendor = "apple"` when compile-time detection fails
+- Upstream bugs: LLVM native CPU probe + Rust std_detect on macOS 15.x
+
+**Windows ARM64 — limited runtime detection** (not fixable in archmage):
+- Windows `IsProcessorFeaturePresent` API only exposes: neon, crc, dotprod, aes, sha2
+- Features NOT detectable at runtime on Windows: rdm, fp16, fhm, fcma, sha3, i8mm, bf16
+- This means Arm64V2Token::summon() returns None on Windows ARM64 (rdm and fp16 missing)
+- Snapdragon X definitely has these features but Windows doesn't expose them
+- Possible future fix: registry-based detection or undocumented Windows APIs
+- Tracked as a known Rust std_detect limitation
+
 ### Long-Term
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
