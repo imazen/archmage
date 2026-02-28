@@ -70,6 +70,10 @@ ci:
 # Alias for ci (all-inclusive check)
 all: ci
 
+# Test testable_dispatch with CompileTimePolicy::Fail (must not panic)
+test-dispatch:
+    cargo test --features "std macros avx512 testable_dispatch" --test token_permutations -- --test-threads=1
+
 # ============================================================================
 # Parity tests (cross-architecture + polyfill vs native)
 # ============================================================================

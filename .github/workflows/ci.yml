@@ -412,6 +412,32 @@ jobs:
         run: cargo test ${{ matrix.test }}
 
   # ==========================================================================
+  # Testable dispatch — CompileTimePolicy::Fail must succeed
+  # ==========================================================================
+  testable-dispatch:
+    name: Testable Dispatch (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: x64 Linux }
+          - { os: ubuntu-24.04-arm, name: aarch64 Linux }
+          - { os: windows-11-arm, name: aarch64 Windows }
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Test with testable_dispatch + CompileTimePolicy::Fail
+        run: cargo test --features "std macros avx512 testable_dispatch" --test token_permutations -- --test-threads=1
+
+  # ==========================================================================
   # Code Coverage (x86_64)
   # ==========================================================================
   coverage:

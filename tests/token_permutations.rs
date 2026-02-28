@@ -119,10 +119,11 @@ fn cascade_disabling_works() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn no_duplicate_effective_states() {
-    let mut states: Vec<(bool, bool, bool, bool, bool, bool)> = Vec::new();
+    let mut states: Vec<(bool, bool, bool, bool, bool, bool, bool)> = Vec::new();
 
     let _ = for_each_token_permutation(CompileTimePolicy::Warn, |_perm| {
         let state = (
+            archmage::X64V1Token::summon().is_some(),
             archmage::X64V2Token::summon().is_some(),
             archmage::X64V3Token::summon().is_some(),
             archmage::X64V3CryptoToken::summon().is_some(),
@@ -144,6 +145,56 @@ fn warn_policy_does_not_panic() {
     let report = for_each_token_permutation(CompileTimePolicy::Warn, |_perm| {});
     // Should complete without panicking
     assert!(report.permutations_run >= 1);
+}
+
+/// With `testable_dispatch`, `CompileTimePolicy::Fail` must succeed —
+/// no token should be compile-time guaranteed when the feature is active.
+#[cfg(feature = "testable_dispatch")]
+#[test]
+fn fail_policy_succeeds_with_testable_dispatch() {
+    let report = for_each_token_permutation(CompileTimePolicy::Fail, |perm| {
+        // Verify the permutation actually ran.
+        // In the "all enabled" state, at least one token should be available.
+        if perm.disabled.is_empty() {
+            #[cfg(target_arch = "x86_64")]
+            assert!(
+                archmage::X64V1Token::summon().is_some(),
+                "baseline x86_64 token should be available"
+            );
+            #[cfg(target_arch = "aarch64")]
+            assert!(
+                archmage::NeonToken::summon().is_some(),
+                "NEON token should be available on aarch64"
+            );
+        }
+
+        // Disabled tokens must return None from summon().
+        for &name in &perm.disabled {
+            #[cfg(target_arch = "x86_64")]
+            {
+                if name == archmage::X64V2Token::NAME {
+                    assert!(archmage::X64V2Token::summon().is_none());
+                }
+                if name == archmage::X64V3Token::NAME {
+                    assert!(archmage::X64V3Token::summon().is_none());
+                }
+            }
+        }
+    });
+
+    // No warnings — testable_dispatch should prevent all compile-time guarantees.
+    assert!(
+        report.warnings.is_empty(),
+        "testable_dispatch should prevent compile-time guarantees, but got warnings: {:?}",
+        report.warnings
+    );
+
+    // Should have run multiple permutations on any real CPU.
+    assert!(
+        report.permutations_run >= 2,
+        "expected at least 2 permutations, got {}",
+        report.permutations_run
+    );
 }
 
 /// Verify the report Display impl includes warnings.

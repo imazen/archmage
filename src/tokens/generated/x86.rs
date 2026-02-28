@@ -48,13 +48,30 @@ impl SimdToken for X64V1Token {
 
     #[inline]
     fn compiled_with() -> Option<bool> {
-        Some(true)
+        #[cfg(not(feature = "testable_dispatch"))]
+        {
+            Some(true)
+        }
+        #[cfg(feature = "testable_dispatch")]
+        {
+            None
+        }
     }
 
     #[allow(deprecated)]
     #[inline]
     fn summon() -> Option<Self> {
-        Some(unsafe { Self::forge_token_dangerously() })
+        #[cfg(not(feature = "testable_dispatch"))]
+        {
+            Some(unsafe { Self::forge_token_dangerously() })
+        }
+        #[cfg(feature = "testable_dispatch")]
+        {
+            match X64_V1_CACHE.load(Ordering::Relaxed) {
+                1 => None,
+                _ => Some(unsafe { Self::forge_token_dangerously() }),
+            }
+        }
     }
 
     #[inline(always)]

@@ -254,10 +254,15 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
                 .collect();
 
             if check_features.is_empty() {
+                // Baseline-only token (V1): always available on x86_64,
+                // but testable_dispatch must still allow runtime disabling.
                 formatdoc! {"
                     {INDENT}#[inline]
                     {INDENT}fn compiled_with() -> Option<bool> {{
-                    {INDENT}    Some(true)
+                    {INDENT}    #[cfg(not(feature = \"testable_dispatch\"))]
+                    {INDENT}    {{ Some(true) }}
+                    {INDENT}    #[cfg(feature = \"testable_dispatch\")]
+                    {INDENT}    {{ None }}
                     {INDENT}}}
                 "}
             } else {
@@ -328,11 +333,24 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         .collect();
 
     if check_features.is_empty() {
+        // Baseline-only token (V1): always available on x86_64.
+        // With testable_dispatch, use cache so runtime disabling works.
+        let cache_name = cache_var_name(&token.name);
         return formatdoc! {"
             {INDENT}#[allow(deprecated)]
             {INDENT}#[inline]
             {INDENT}fn summon() -> Option<Self> {{
-            {INDENT}    Some(unsafe {{ Self::forge_token_dangerously() }})
+            {INDENT}    #[cfg(not(feature = \"testable_dispatch\"))]
+            {INDENT}    {{
+            {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
+            {INDENT}    }}
+            {INDENT}    #[cfg(feature = \"testable_dispatch\")]
+            {INDENT}    {{
+            {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
+            {INDENT}            1 => None,
+            {INDENT}            _ => Some(unsafe {{ Self::forge_token_dangerously() }}),
+            {INDENT}        }}
+            {INDENT}    }}
             {INDENT}}}
         "};
     }
