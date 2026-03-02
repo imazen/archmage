@@ -6,6 +6,7 @@
 //! - **x86_64 + avx512**: 512-bit types (f32x16, i32x16, etc.) with `X64V4Token`
 //! - **aarch64**: 128-bit types (f32x4, i32x4, etc.) with `NeonToken`
 //! - **wasm32**: 128-bit types (f32x4, i32x4, etc.) with `Wasm128Token`
+//! - **other**: 128-bit types (f32x4, i32x4, etc.) with `ScalarToken` (array math fallback)
 //!
 //! # Example
 //!
@@ -35,6 +36,7 @@
 //! | x86_64 + `avx512` | `X64V4Token` | AVX-512 for server workloads |
 //! | aarch64 | `NeonToken` | NEON is baseline on all 64-bit ARM |
 //! | wasm32 | `Wasm128Token` | SIMD128 is the only WASM SIMD tier |
+//! | other | `ScalarToken` | Pure array math fallback for all other targets |
 //!
 //! ## Type aliases (`F32Vec`, `I32Vec`, etc.)
 //!
@@ -189,5 +191,58 @@ pub const F32_LANES: usize = 4;
 pub const F64_LANES: usize = 2;
 
 #[cfg(target_arch = "wasm32")]
+/// Number of i32 lanes in the recommended vector type.
+pub const I32_LANES: usize = 4;
+
+// ============================================================================
+// Scalar fallback: all other architectures (i686, armv7, riscv, etc.)
+// ============================================================================
+
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
+pub use crate::simd::{
+    f32x4 as F32Vec, f64x2 as F64Vec, i8x16 as I8Vec, i16x8 as I16Vec, i32x4 as I32Vec,
+    i64x2 as I64Vec, u8x16 as U8Vec, u16x8 as U16Vec, u32x4 as U32Vec, u64x2 as U64Vec,
+};
+
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
+pub use archmage::ScalarToken as RecommendedToken;
+
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
+/// Number of f32 lanes in the recommended vector type.
+pub const LANES: usize = 4;
+
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
+/// Number of f32 lanes in the recommended vector type.
+pub const F32_LANES: usize = 4;
+
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
+/// Number of f64 lanes in the recommended vector type.
+pub const F64_LANES: usize = 2;
+
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
 /// Number of i32 lanes in the recommended vector type.
 pub const I32_LANES: usize = 4;

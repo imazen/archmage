@@ -160,6 +160,9 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
     // Generate WASM SIMD128 namespace
     code.push_str(&generate_simd128_namespace());
 
+    // Generate Scalar fallback namespace (available on all architectures)
+    code.push_str(&generate_scalar_namespace());
+
     code
 }
 
@@ -514,6 +517,113 @@ fn generate_simd128_namespace() -> String {
     code.push_str("}\n");
 
     code
+}
+
+/// Generate Scalar fallback width namespace (unconditional, all architectures)
+fn generate_scalar_namespace() -> String {
+    use indoc::formatdoc;
+
+    let w128_types = [
+        ("f32x4", "f32x4"),
+        ("f64x2", "f64x2"),
+        ("i8x16", "i8x16"),
+        ("u8x16", "u8x16"),
+        ("i16x8", "i16x8"),
+        ("u16x8", "u16x8"),
+        ("i32x4", "i32x4"),
+        ("u32x4", "u32x4"),
+        ("i64x2", "i64x2"),
+        ("u64x2", "u64x2"),
+    ];
+    let w256_types = [
+        ("f32x8", "f32x8"),
+        ("f64x4", "f64x4"),
+        ("i8x32", "i8x32"),
+        ("u8x32", "u8x32"),
+        ("i16x16", "i16x16"),
+        ("u16x16", "u16x16"),
+        ("i32x8", "i32x8"),
+        ("u32x8", "u32x8"),
+        ("i64x4", "i64x4"),
+        ("u64x4", "u64x4"),
+    ];
+    let w512_types = [
+        ("f32x16", "f32x16"),
+        ("f64x8", "f64x8"),
+        ("i8x64", "i8x64"),
+        ("u8x64", "u8x64"),
+        ("i16x32", "i16x32"),
+        ("u16x32", "u16x32"),
+        ("i32x16", "i32x16"),
+        ("u32x16", "u32x16"),
+        ("i64x8", "i64x8"),
+        ("u64x8", "u64x8"),
+    ];
+
+    let mut type_aliases = String::new();
+    for &(name, generic) in &w128_types {
+        type_aliases.push_str(&format!(
+            "    pub type {name} = crate::simd::generic::{generic}<archmage::ScalarToken>;\n"
+        ));
+    }
+    type_aliases.push('\n');
+
+    // xN aliases (natural width = 128-bit for scalar)
+    let xn_aliases: String = w128_types
+        .iter()
+        .map(|&(name, _)| {
+            let xn = name
+                .replace("f32x4", "f32xN")
+                .replace("f64x2", "f64xN")
+                .replace("i8x16", "i8xN")
+                .replace("u8x16", "u8xN")
+                .replace("i16x8", "i16xN")
+                .replace("u16x8", "u16xN")
+                .replace("i32x4", "i32xN")
+                .replace("u32x4", "u32xN")
+                .replace("i64x2", "i64xN")
+                .replace("u64x2", "u64xN");
+            format!("    pub type {xn} = {name};\n")
+        })
+        .collect();
+    type_aliases.push_str(&xn_aliases);
+    type_aliases.push('\n');
+
+    for &(name, generic) in &w256_types {
+        type_aliases.push_str(&format!(
+            "    pub type {name} = crate::simd::generic::{generic}<archmage::ScalarToken>;\n"
+        ));
+    }
+    type_aliases.push('\n');
+
+    for &(name, generic) in &w512_types {
+        type_aliases.push_str(&format!(
+            "    pub type {name} = crate::simd::generic::{generic}<archmage::ScalarToken>;\n"
+        ));
+    }
+
+    formatdoc! {r#"
+
+        #[allow(non_camel_case_types)]
+        pub mod scalar {{
+            //! All SIMD types available with `ScalarToken`.
+            //!
+            //! Natural width: none (pure array math). `f32xN` = `f32x4`.
+            //!
+            //! All types are generic over `ScalarToken`, backed by plain arrays.
+            //! Available on all architectures unconditionally.
+
+        {type_aliases}
+            /// Token type for this width level
+            pub type Token = archmage::ScalarToken;
+
+            pub const LANES_F32: usize = 4;
+            pub const LANES_F64: usize = 2;
+            pub const LANES_32: usize = 4;
+            pub const LANES_16: usize = 8;
+            pub const LANES_8: usize = 16;
+        }}
+    "#}
 }
 
 /// Generate a file containing types of a specific width

@@ -103,7 +103,7 @@ impl<T: F32x4Backend> f32x4<T> {
     #[inline(always)]
     pub fn to_u8(self) -> [u8; 4] {
         let arr = self.to_array();
-        core::array::from_fn(|i| arr[i].round().clamp(0.0, 255.0) as u8)
+        core::array::from_fn(|i| crate::nostd_math::roundf(arr[i]).clamp(0.0, 255.0) as u8)
     }
 
     // ====== Interleave Operations ======
@@ -151,7 +151,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Output: 4 vectors, each containing one channel across all pixels.
     ///
     /// This is equivalent to `transpose_4x4_copy`.
-    #[inline]
+    #[inline(always)]
     pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
         Self::transpose_4x4_copy(rgba)
     }
@@ -162,7 +162,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Output: 4 vectors, each containing one complete RGBA pixel.
     ///
     /// This is the inverse of `deinterleave_4ch` (also equivalent to transpose).
-    #[inline]
+    #[inline(always)]
     pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
         Self::transpose_4x4_copy(channels)
     }
@@ -173,7 +173,7 @@ impl<T: F32x4Backend> f32x4<T> {
     ///
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
-    #[inline]
+    #[inline(always)]
     pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
         let r: [f32; 4] = core::array::from_fn(|i| rgba[i * 4] as f32);
         let g: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
@@ -191,7 +191,7 @@ impl<T: F32x4Backend> f32x4<T> {
     ///
     /// Values are rounded and clamped to `[0, 255]`.
     /// Output: 16 bytes = 4 RGBA pixels in interleaved format.
-    #[inline]
+    #[inline(always)]
     pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
         let rv = r.to_array();
         let gv = g.to_array();
@@ -199,10 +199,10 @@ impl<T: F32x4Backend> f32x4<T> {
         let av = a.to_array();
         let mut out = [0u8; 16];
         for i in 0..4 {
-            out[i * 4] = rv[i].round().clamp(0.0, 255.0) as u8;
-            out[i * 4 + 1] = gv[i].round().clamp(0.0, 255.0) as u8;
-            out[i * 4 + 2] = bv[i].round().clamp(0.0, 255.0) as u8;
-            out[i * 4 + 3] = av[i].round().clamp(0.0, 255.0) as u8;
+            out[i * 4] = crate::nostd_math::roundf(rv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 1] = crate::nostd_math::roundf(gv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 2] = crate::nostd_math::roundf(bv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 3] = crate::nostd_math::roundf(av[i]).clamp(0.0, 255.0) as u8;
         }
         out
     }
@@ -212,7 +212,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Transpose a 4x4 matrix represented as 4 row vectors (in-place).
     ///
     /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_4x4(rows: &mut [Self; 4]) {
         let a = rows[0].to_array();
         let b = rows[1].to_array();
@@ -225,7 +225,7 @@ impl<T: F32x4Backend> f32x4<T> {
     }
 
     /// Transpose a 4x4 matrix, returning the transposed rows.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_4x4_copy(rows: [Self; 4]) -> [Self; 4] {
         let mut result = rows;
         Self::transpose_4x4(&mut result);

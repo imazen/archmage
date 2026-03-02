@@ -16,41 +16,43 @@ use crate::simd::backends::*;
 // Helpers to avoid trait method name shadowing inside the impl block.
 // Inside `impl XxxBackend`, names like `sqrt`, `floor`, etc. resolve to
 // the trait's associated functions instead of f32's inherent methods.
+// Uses crate::nostd_math for no_std compatibility.
 #[inline(always)]
 fn f32_sqrt(x: f32) -> f32 {
-    x.sqrt()
+    crate::nostd_math::sqrtf(x)
 }
 #[inline(always)]
 fn f32_floor(x: f32) -> f32 {
-    x.floor()
+    crate::nostd_math::floorf(x)
 }
 #[inline(always)]
 fn f32_ceil(x: f32) -> f32 {
-    x.ceil()
+    crate::nostd_math::ceilf(x)
 }
 #[inline(always)]
 fn f32_round(x: f32) -> f32 {
-    x.round()
+    crate::nostd_math::roundf(x)
 }
 
 // Helpers to avoid trait method name shadowing inside the impl block.
 // Inside `impl XxxBackend`, names like `sqrt`, `floor`, etc. resolve to
 // the trait's associated functions instead of f64's inherent methods.
+// Uses crate::nostd_math for no_std compatibility.
 #[inline(always)]
 fn f64_sqrt(x: f64) -> f64 {
-    x.sqrt()
+    crate::nostd_math::sqrt(x)
 }
 #[inline(always)]
 fn f64_floor(x: f64) -> f64 {
-    x.floor()
+    crate::nostd_math::floor(x)
 }
 #[inline(always)]
 fn f64_ceil(x: f64) -> f64 {
-    x.ceil()
+    crate::nostd_math::ceil(x)
 }
 #[inline(always)]
 fn f64_round(x: f64) -> f64 {
-    x.round()
+    crate::nostd_math::round(x)
 }
 
 impl F32x4Backend for archmage::ScalarToken {
@@ -8715,72 +8717,27 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn sqrt(a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].sqrt()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::sqrtf(a[i] as f64) as f32
-            }
-        })
+        core::array::from_fn(|i| crate::nostd_math::sqrtf(a[i]))
     }
 
     #[inline(always)]
     fn abs(a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].abs()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::fabsf(a[i] as f64) as f32
-            }
-        })
+        core::array::from_fn(|i| f32::from_bits(a[i].to_bits() & 0x7FFF_FFFF))
     }
 
     #[inline(always)]
     fn floor(a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].floor()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::floorf(a[i] as f64) as f32
-            }
-        })
+        core::array::from_fn(|i| crate::nostd_math::floorf(a[i]))
     }
 
     #[inline(always)]
     fn ceil(a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].ceil()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::ceilf(a[i] as f64) as f32
-            }
-        })
+        core::array::from_fn(|i| crate::nostd_math::ceilf(a[i]))
     }
 
     #[inline(always)]
     fn round(a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].round()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::roundf(a[i] as f64) as f32
-            }
-        })
+        core::array::from_fn(|i| crate::nostd_math::roundf(a[i]))
     }
 
     #[inline(always)]
@@ -8976,72 +8933,27 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn sqrt(a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].sqrt()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::sqrt(a[i])
-            }
-        })
+        core::array::from_fn(|i| crate::nostd_math::sqrt(a[i]))
     }
 
     #[inline(always)]
     fn abs(a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].abs()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::fabs(a[i])
-            }
-        })
+        core::array::from_fn(|i| f64::from_bits(a[i].to_bits() & 0x7FFF_FFFF_FFFF_FFFF))
     }
 
     #[inline(always)]
     fn floor(a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].floor()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::floor(a[i])
-            }
-        })
+        core::array::from_fn(|i| crate::nostd_math::floor(a[i]))
     }
 
     #[inline(always)]
     fn ceil(a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].ceil()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::ceil(a[i])
-            }
-        })
+        core::array::from_fn(|i| crate::nostd_math::ceil(a[i]))
     }
 
     #[inline(always)]
     fn round(a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| {
-            #[cfg(feature = "std")]
-            {
-                a[i].round()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                libm::round(a[i])
-            }
-        })
+        core::array::from_fn(|i| crate::nostd_math::round(a[i]))
     }
 
     #[inline(always)]

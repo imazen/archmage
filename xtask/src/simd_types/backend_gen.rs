@@ -1471,29 +1471,47 @@ fn generate_scalar_impls(types: &[FloatVecType]) -> String {
 
     "#};
 
-    // Emit helper functions once per element type (not per vector type)
+    // Emit helper functions once per element type (not per vector type).
+    // These use crate::nostd_math for no_std compatibility — the scalar backend
+    // runs on platforms without hardware SIMD or std math intrinsics.
     let mut seen_elems = std::collections::BTreeSet::new();
     for ty in types {
         if seen_elems.insert(ty.elem) {
+            let (sqrt_fn, floor_fn, ceil_fn, round_fn) = if ty.elem == "f32" {
+                (
+                    "crate::nostd_math::sqrtf",
+                    "crate::nostd_math::floorf",
+                    "crate::nostd_math::ceilf",
+                    "crate::nostd_math::roundf",
+                )
+            } else {
+                (
+                    "crate::nostd_math::sqrt",
+                    "crate::nostd_math::floor",
+                    "crate::nostd_math::ceil",
+                    "crate::nostd_math::round",
+                )
+            };
             code.push_str(&formatdoc! {r#"
                 // Helpers to avoid trait method name shadowing inside the impl block.
                 // Inside `impl XxxBackend`, names like `sqrt`, `floor`, etc. resolve to
                 // the trait's associated functions instead of {elem}'s inherent methods.
+                // Uses crate::nostd_math for no_std compatibility.
                 #[inline(always)]
                 fn {elem}_sqrt(x: {elem}) -> {elem} {{
-                    x.sqrt()
+                    {sqrt_fn}(x)
                 }}
                 #[inline(always)]
                 fn {elem}_floor(x: {elem}) -> {elem} {{
-                    x.floor()
+                    {floor_fn}(x)
                 }}
                 #[inline(always)]
                 fn {elem}_ceil(x: {elem}) -> {elem} {{
-                    x.ceil()
+                    {ceil_fn}(x)
                 }}
                 #[inline(always)]
                 fn {elem}_round(x: {elem}) -> {elem} {{
-                    x.round()
+                    {round_fn}(x)
                 }}
 
             "#, elem = ty.elem});

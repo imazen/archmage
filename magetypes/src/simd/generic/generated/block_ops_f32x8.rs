@@ -103,7 +103,7 @@ impl<T: F32x8Backend> f32x8<T> {
     #[inline(always)]
     pub fn to_u8(self) -> [u8; 8] {
         let arr = self.to_array();
-        core::array::from_fn(|i| arr[i].round().clamp(0.0, 255.0) as u8)
+        core::array::from_fn(|i| crate::nostd_math::roundf(arr[i]).clamp(0.0, 255.0) as u8)
     }
 
     // ====== Interleave Operations ======
@@ -164,7 +164,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// - `rgba[3]` = `[R6, G6, B6, A6, R7, G7, B7, A7]`
     ///
     /// Output: `[R_all, G_all, B_all, A_all]` — one f32x8 per channel.
-    #[inline]
+    #[inline(always)]
     pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
         let v: [[f32; 8]; 4] = core::array::from_fn(|i| rgba[i].to_array());
         // Each input vector has 2 RGBA pixels (4 elements each)
@@ -187,7 +187,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// Output: 4 f32x8 vectors in interleaved AoS format.
     ///
     /// This is the inverse of `deinterleave_4ch`.
-    #[inline]
+    #[inline(always)]
     pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
         let r = channels[0].to_array();
         let g = channels[1].to_array();
@@ -214,7 +214,7 @@ impl<T: F32x8Backend> f32x8<T> {
     ///
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
-    #[inline]
+    #[inline(always)]
     pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         let r: [f32; 8] = core::array::from_fn(|i| rgba[i * 4] as f32);
         let g: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
@@ -232,7 +232,7 @@ impl<T: F32x8Backend> f32x8<T> {
     ///
     /// Values are rounded and clamped to `[0, 255]`.
     /// Output: 32 bytes = 8 RGBA pixels in interleaved format.
-    #[inline]
+    #[inline(always)]
     pub fn store_8_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {
         let rv = r.to_array();
         let gv = g.to_array();
@@ -240,10 +240,10 @@ impl<T: F32x8Backend> f32x8<T> {
         let av = a.to_array();
         let mut out = [0u8; 32];
         for i in 0..8 {
-            out[i * 4] = rv[i].round().clamp(0.0, 255.0) as u8;
-            out[i * 4 + 1] = gv[i].round().clamp(0.0, 255.0) as u8;
-            out[i * 4 + 2] = bv[i].round().clamp(0.0, 255.0) as u8;
-            out[i * 4 + 3] = av[i].round().clamp(0.0, 255.0) as u8;
+            out[i * 4] = crate::nostd_math::roundf(rv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 1] = crate::nostd_math::roundf(gv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 2] = crate::nostd_math::roundf(bv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 3] = crate::nostd_math::roundf(av[i]).clamp(0.0, 255.0) as u8;
         }
         out
     }
@@ -253,7 +253,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// Transpose an 8x8 matrix represented as 8 row vectors (in-place).
     ///
     /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_8x8(rows: &mut [Self; 8]) {
         let r: [[f32; 8]; 8] = core::array::from_fn(|i| rows[i].to_array());
         for i in 0..8 {
@@ -262,7 +262,7 @@ impl<T: F32x8Backend> f32x8<T> {
     }
 
     /// Transpose an 8x8 matrix, returning the transposed rows.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
         let mut result = rows;
         Self::transpose_8x8(&mut result);
@@ -270,7 +270,7 @@ impl<T: F32x8Backend> f32x8<T> {
     }
 
     /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
-    #[inline]
+    #[inline(always)]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         core::array::from_fn(|i| {
             let arr: [f32; 8] = block[i * 8..][..8].try_into().unwrap();
@@ -279,7 +279,7 @@ impl<T: F32x8Backend> f32x8<T> {
     }
 
     /// Store 8 row vectors to a contiguous 8x8 f32 block.
-    #[inline]
+    #[inline(always)]
     pub fn store_8x8(rows: &[Self; 8], block: &mut [f32; 64]) {
         for i in 0..8 {
             let arr = rows[i].to_array();

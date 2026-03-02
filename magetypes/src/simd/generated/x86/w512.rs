@@ -1065,7 +1065,7 @@ impl f32x16 {
     /// Transpose an 8x8 matrix using AVX-512.
     ///
     /// Takes 8 f32x16 vectors where only the lower 8 elements are used.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_8x8(rows: &mut [Self; 8]) {
         unsafe {
             let idx_lo =
@@ -1154,7 +1154,7 @@ impl f32x16 {
     }
 
     /// Transpose an 8x8 matrix, returning the transposed rows.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
         let mut result = rows;
         Self::transpose_8x8(&mut result);
@@ -1162,7 +1162,7 @@ impl f32x16 {
     }
 
     /// Load an 8x8 f32 block into 8 f32x16 vectors (lower 8 elements used).
-    #[inline]
+    #[inline(always)]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         unsafe {
             [
@@ -1193,7 +1193,7 @@ impl f32x16 {
     }
 
     /// Store 8 f32x16 vectors (lower 8 elements) to a contiguous 8x8 f32 block.
-    #[inline]
+    #[inline(always)]
     pub fn store_8x8(rows: &[Self; 8], block: &mut [f32; 64]) {
         unsafe {
             _mm256_storeu_ps(block.as_mut_ptr(), _mm512_castps512_ps256(rows[0].0));

@@ -555,3 +555,66 @@ pub mod wasm128 {
     pub const LANES_16: usize = 8;
     pub const LANES_8: usize = 16;
 }
+
+#[allow(non_camel_case_types)]
+pub mod scalar {
+    //! All SIMD types available with `ScalarToken`.
+    //!
+    //! Natural width: none (pure array math). `f32xN` = `f32x4`.
+    //!
+    //! All types are generic over `ScalarToken`, backed by plain arrays.
+    //! Available on all architectures unconditionally.
+
+    pub type f32x4 = crate::simd::generic::f32x4<archmage::ScalarToken>;
+    pub type f64x2 = crate::simd::generic::f64x2<archmage::ScalarToken>;
+    pub type i8x16 = crate::simd::generic::i8x16<archmage::ScalarToken>;
+    pub type u8x16 = crate::simd::generic::u8x16<archmage::ScalarToken>;
+    pub type i16x8 = crate::simd::generic::i16x8<archmage::ScalarToken>;
+    pub type u16x8 = crate::simd::generic::u16x8<archmage::ScalarToken>;
+    pub type i32x4 = crate::simd::generic::i32x4<archmage::ScalarToken>;
+    pub type u32x4 = crate::simd::generic::u32x4<archmage::ScalarToken>;
+    pub type i64x2 = crate::simd::generic::i64x2<archmage::ScalarToken>;
+    pub type u64x2 = crate::simd::generic::u64x2<archmage::ScalarToken>;
+
+    pub type f32xN = f32x4;
+    pub type f64xN = f64x2;
+    pub type i8xN = i8x16;
+    pub type u8xN = u8x16;
+    pub type i16xN = i16x8;
+    pub type u16xN = u16x8;
+    pub type i32xN = i32x4;
+    pub type u32xN = u32x4;
+    pub type i64xN = i64x2;
+    pub type u64xN = u64x2;
+
+    pub type f32x8 = crate::simd::generic::f32x8<archmage::ScalarToken>;
+    pub type f64x4 = crate::simd::generic::f64x4<archmage::ScalarToken>;
+    pub type i8x32 = crate::simd::generic::i8x32<archmage::ScalarToken>;
+    pub type u8x32 = crate::simd::generic::u8x32<archmage::ScalarToken>;
+    pub type i16x16 = crate::simd::generic::i16x16<archmage::ScalarToken>;
+    pub type u16x16 = crate::simd::generic::u16x16<archmage::ScalarToken>;
+    pub type i32x8 = crate::simd::generic::i32x8<archmage::ScalarToken>;
+    pub type u32x8 = crate::simd::generic::u32x8<archmage::ScalarToken>;
+    pub type i64x4 = crate::simd::generic::i64x4<archmage::ScalarToken>;
+    pub type u64x4 = crate::simd::generic::u64x4<archmage::ScalarToken>;
+
+    pub type f32x16 = crate::simd::generic::f32x16<archmage::ScalarToken>;
+    pub type f64x8 = crate::simd::generic::f64x8<archmage::ScalarToken>;
+    pub type i8x64 = crate::simd::generic::i8x64<archmage::ScalarToken>;
+    pub type u8x64 = crate::simd::generic::u8x64<archmage::ScalarToken>;
+    pub type i16x32 = crate::simd::generic::i16x32<archmage::ScalarToken>;
+    pub type u16x32 = crate::simd::generic::u16x32<archmage::ScalarToken>;
+    pub type i32x16 = crate::simd::generic::i32x16<archmage::ScalarToken>;
+    pub type u32x16 = crate::simd::generic::u32x16<archmage::ScalarToken>;
+    pub type i64x8 = crate::simd::generic::i64x8<archmage::ScalarToken>;
+    pub type u64x8 = crate::simd::generic::u64x8<archmage::ScalarToken>;
+
+    /// Token type for this width level
+    pub type Token = archmage::ScalarToken;
+
+    pub const LANES_F32: usize = 4;
+    pub const LANES_F64: usize = 2;
+    pub const LANES_32: usize = 4;
+    pub const LANES_16: usize = 8;
+    pub const LANES_8: usize = 16;
+}

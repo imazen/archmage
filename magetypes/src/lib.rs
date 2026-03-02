@@ -10,6 +10,7 @@
 //! - **x86-64**: x86-64-v3 (128-bit, 256-bit), AVX-512 (512-bit)
 //! - **AArch64**: NEON (128-bit)
 //! - **WASM**: SIMD128 (128-bit) - compile with `RUSTFLAGS="-C target-feature=+simd128"`
+//! - **All other targets**: Scalar fallback (pure array math, no hardware SIMD)
 //!
 //! ## Example
 //!
@@ -43,50 +44,21 @@ extern crate alloc;
 // Re-export archmage for convenience
 pub use archmage;
 
+// Pure-Rust math functions for no_std scalar backends
+#[doc(hidden)]
+pub mod nostd_math;
+
 // SimdTypes trait - associates SIMD types with tokens
-#[cfg(any(
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
 mod types;
-#[cfg(any(
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
 pub use types::SimdTypes;
 
 // Cross-tier casting utilities
-#[cfg(any(
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
 pub mod cast;
 
 // Platform-appropriate types via prelude
-#[cfg(any(
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
 pub mod prelude;
 
 // Auto-generated SIMD types with natural operators
-#[cfg(any(
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
-#[cfg_attr(
-    docsrs,
-    doc(cfg(any(
-        target_arch = "x86_64",
-        target_arch = "aarch64",
-        target_arch = "wasm32"
-    )))
-)]
 pub mod simd;
 
 // Width dispatch trait for accessing all SIMD sizes from any token

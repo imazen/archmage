@@ -92,43 +92,43 @@ impl f32x1 {
     /// Element-wise square root.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
-        Self(self.0.sqrt())
+        Self(crate::nostd_math::sqrtf(self.0))
     }
 
     /// Element-wise absolute value.
     #[inline(always)]
     pub fn abs(self) -> Self {
-        Self(self.0.abs())
+        Self(f32::from_bits(self.0.to_bits() & 0x7FFF_FFFF))
     }
 
     /// Element-wise floor.
     #[inline(always)]
     pub fn floor(self) -> Self {
-        Self(self.0.floor())
+        Self(crate::nostd_math::floorf(self.0))
     }
 
     /// Element-wise ceiling.
     #[inline(always)]
     pub fn ceil(self) -> Self {
-        Self(self.0.ceil())
+        Self(crate::nostd_math::ceilf(self.0))
     }
 
     /// Element-wise round to nearest.
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self(self.0.round())
+        Self(crate::nostd_math::roundf(self.0))
     }
 
     /// Fused multiply-add: `self * b + c`.
     #[inline(always)]
     pub fn mul_add(self, b: Self, c: Self) -> Self {
-        Self(self.0.mul_add(b.0, c.0))
+        Self(crate::nostd_math::fmaf(self.0, b.0, c.0))
     }
 
     /// Fused multiply-subtract: `self * b - c`.
     #[inline(always)]
     pub fn mul_sub(self, b: Self, c: Self) -> Self {
-        Self(self.0.mul_add(b.0, -c.0))
+        Self(crate::nostd_math::fmaf(self.0, b.0, -c.0))
     }
 }
 
@@ -226,19 +226,19 @@ impl f64x1 {
     /// Element-wise square root.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
-        Self(self.0.sqrt())
+        Self(crate::nostd_math::sqrt(self.0))
     }
 
     /// Element-wise absolute value.
     #[inline(always)]
     pub fn abs(self) -> Self {
-        Self(self.0.abs())
+        Self(f64::from_bits(self.0.to_bits() & 0x7FFF_FFFF_FFFF_FFFF))
     }
 
     /// Fused multiply-add: `self * b + c`.
     #[inline(always)]
     pub fn mul_add(self, b: Self, c: Self) -> Self {
-        Self(self.0.mul_add(b.0, c.0))
+        Self(crate::nostd_math::fma(self.0, b.0, c.0))
     }
 }
 

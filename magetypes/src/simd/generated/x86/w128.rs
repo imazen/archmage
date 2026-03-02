@@ -1084,7 +1084,7 @@ impl f32x4 {
     ///         [2] = [B0, B1, B2, B3]  (blue channel)
     ///         [3] = [A0, A1, A2, A3]  (alpha channel)
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
         Self::transpose_4x4_copy(rgba)
     }
@@ -1095,7 +1095,7 @@ impl f32x4 {
     /// Output: 4 vectors where each contains one complete RGBA pixel.
     ///
     /// This is the inverse of `deinterleave_4ch`.
-    #[inline]
+    #[inline(always)]
     pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
         Self::transpose_4x4_copy(channels)
     }
@@ -1104,7 +1104,7 @@ impl f32x4 {
     ///
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
-    #[inline]
+    #[inline(always)]
     pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
         unsafe {
             let v = _mm_loadu_si128(rgba.as_ptr() as *const __m128i);
@@ -1140,7 +1140,7 @@ impl f32x4 {
     ///
     /// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
     /// Output: 16 bytes = 4 RGBA pixels in interleaved format.
-    #[inline]
+    #[inline(always)]
     pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
         unsafe {
             // Convert to i32 with rounding
@@ -1171,7 +1171,7 @@ impl f32x4 {
     /// Transpose a 4x4 matrix represented as 4 row vectors.
     ///
     /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_4x4(rows: &mut [Self; 4]) {
         unsafe {
             let t0 = _mm_unpacklo_ps(rows[0].0, rows[1].0);
@@ -1187,7 +1187,7 @@ impl f32x4 {
     }
 
     /// Transpose a 4x4 matrix, returning the transposed rows.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_4x4_copy(rows: [Self; 4]) -> [Self; 4] {
         let mut result = rows;
         Self::transpose_4x4(&mut result);

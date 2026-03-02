@@ -1127,7 +1127,7 @@ impl f32x8 {
     /// - `[1]` = [G0, G1, G2, G3, G4, G5, G6, G7]
     /// - `[2]` = [B0, B1, B2, B3, B4, B5, B6, B7]
     /// - `[3]` = [A0, A1, A2, A3, A4, A5, A6, A7]
-    #[inline]
+    #[inline(always)]
     pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
         unsafe {
             // Stage 1: Unpack pairs
@@ -1162,7 +1162,7 @@ impl f32x8 {
     /// Output: 4 f32x8 vectors in interleaved AoS format.
     ///
     /// This is the inverse of `deinterleave_4ch`.
-    #[inline]
+    #[inline(always)]
     pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
         unsafe {
             let r = channels[0].0;
@@ -1199,7 +1199,7 @@ impl f32x8 {
     ///
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: (R, G, B, A) where each is f32x8 with values in [0.0, 255.0].
-    #[inline]
+    #[inline(always)]
     pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         unsafe {
             // Load 32 bytes
@@ -1260,7 +1260,7 @@ impl f32x8 {
     ///
     /// Input: (R, G, B, A) channel vectors with values that will be clamped to [0, 255].
     /// Output: 32 bytes = 8 RGBA pixels in interleaved format.
-    #[inline]
+    #[inline(always)]
     pub fn store_8_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {
         unsafe {
             // Convert f32 to i32
@@ -1301,7 +1301,7 @@ impl f32x8 {
     /// 1. `unpacklo/hi` - interleave pairs within 128-bit lanes
     /// 2. `shuffle` - reorder within lanes
     /// 3. `permute2f128` - exchange 128-bit halves
-    #[inline]
+    #[inline(always)]
     pub fn transpose_8x8(rows: &mut [Self; 8]) {
         unsafe {
             let t0 = _mm256_unpacklo_ps(rows[0].0, rows[1].0);
@@ -1334,7 +1334,7 @@ impl f32x8 {
     }
 
     /// Transpose an 8x8 matrix, returning the transposed rows.
-    #[inline]
+    #[inline(always)]
     pub fn transpose_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
         let mut result = rows;
         Self::transpose_8x8(&mut result);
@@ -1342,7 +1342,7 @@ impl f32x8 {
     }
 
     /// Load an 8x8 f32 block from a contiguous array.
-    #[inline]
+    #[inline(always)]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         unsafe {
             [
@@ -1359,7 +1359,7 @@ impl f32x8 {
     }
 
     /// Store 8 row vectors to a contiguous 8x8 f32 block.
-    #[inline]
+    #[inline(always)]
     pub fn store_8x8(rows: &[Self; 8], block: &mut [f32; 64]) {
         unsafe {
             _mm256_storeu_ps(block.as_mut_ptr(), rows[0].0);

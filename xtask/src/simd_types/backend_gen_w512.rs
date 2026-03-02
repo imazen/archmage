@@ -753,52 +753,27 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn sqrt(a: {array}) -> {array} {{
-                core::array::from_fn(|i| {{
-                    #[cfg(feature = "std")]
-                    {{ a[i].sqrt() }}
-                    #[cfg(not(feature = "std"))]
-                    {{ libm::{sqrt_fn}(a[i]{as_f64}) {from_f64} }}
-                }})
+                core::array::from_fn(|i| crate::nostd_math::{sqrt_fn}(a[i]))
             }}
 
             #[inline(always)]
             fn abs(a: {array}) -> {array} {{
-                core::array::from_fn(|i| {{
-                    #[cfg(feature = "std")]
-                    {{ a[i].abs() }}
-                    #[cfg(not(feature = "std"))]
-                    {{ libm::{fabs_fn}(a[i]{as_f64}) {from_f64} }}
-                }})
+                core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() & {abs_mask}))
             }}
 
             #[inline(always)]
             fn floor(a: {array}) -> {array} {{
-                core::array::from_fn(|i| {{
-                    #[cfg(feature = "std")]
-                    {{ a[i].floor() }}
-                    #[cfg(not(feature = "std"))]
-                    {{ libm::{floor_fn}(a[i]{as_f64}) {from_f64} }}
-                }})
+                core::array::from_fn(|i| crate::nostd_math::{floor_fn}(a[i]))
             }}
 
             #[inline(always)]
             fn ceil(a: {array}) -> {array} {{
-                core::array::from_fn(|i| {{
-                    #[cfg(feature = "std")]
-                    {{ a[i].ceil() }}
-                    #[cfg(not(feature = "std"))]
-                    {{ libm::{ceil_fn}(a[i]{as_f64}) {from_f64} }}
-                }})
+                core::array::from_fn(|i| crate::nostd_math::{ceil_fn}(a[i]))
             }}
 
             #[inline(always)]
             fn round(a: {array}) -> {array} {{
-                core::array::from_fn(|i| {{
-                    #[cfg(feature = "std")]
-                    {{ a[i].round() }}
-                    #[cfg(not(feature = "std"))]
-                    {{ libm::{round_fn}(a[i]{as_f64}) {from_f64} }}
-                }})
+                core::array::from_fn(|i| crate::nostd_math::{round_fn}(a[i]))
             }}
 
             #[inline(always)]
@@ -855,12 +830,10 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
         elem_name = format!("{zero_lit}"),
         uint = if elem == "f32" { "u32" } else { "u64" },
         sqrt_fn = if elem == "f32" { "sqrtf" } else { "sqrt" },
-        fabs_fn = if elem == "f32" { "fabsf" } else { "fabs" },
         floor_fn = if elem == "f32" { "floorf" } else { "floor" },
         ceil_fn = if elem == "f32" { "ceilf" } else { "ceil" },
         round_fn = if elem == "f32" { "roundf" } else { "round" },
-        as_f64 = if elem == "f32" { " as f64" } else { "" },
-        from_f64 = if elem == "f32" { " as f32" } else { "" },
+        abs_mask = if elem == "f32" { "0x7FFF_FFFF" } else { "0x7FFF_FFFF_FFFF_FFFF" },
     }
 }
 
