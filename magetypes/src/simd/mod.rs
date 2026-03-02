@@ -404,4 +404,9 @@ mod _type_aliases {
     )))]
     pub type u16x32 = super::generic::u16x32<archmage::ScalarToken>;
 }
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+)))]
 pub use _type_aliases::*;

@@ -409,5 +409,4 @@ fn survey_aarch64() {
     feat!("rand");
     feat!("flagm");
     feat!("tme");
-    feat!("lor");
 }
