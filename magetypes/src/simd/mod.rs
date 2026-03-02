@@ -404,9 +404,7 @@ mod _type_aliases {
     )))]
     pub type u16x32 = super::generic::u16x32<archmage::ScalarToken>;
 }
-#[cfg(not(any(
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-)))]
+// On aarch64/wasm32, type aliases come from generated/ — this module is empty,
+// but the pub use is harmless and needed on x86_64 and scalar targets.
+#[allow(unused_imports)]
 pub use _type_aliases::*;
