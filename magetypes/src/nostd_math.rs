@@ -369,7 +369,126 @@ mod tests {
         ours.to_bits() == std_result.to_bits()
     }
 
+    // Quick spot-check tests — always run (including under Miri)
     #[test]
+    fn spot_check_f32_floor() {
+        let cases: &[(f32, f32)] = &[
+            (0.0, 0.0),
+            (-0.0, -0.0),
+            (1.5, 1.0),
+            (-1.5, -2.0),
+            (2.9, 2.0),
+            (-2.9, -3.0),
+            (1e10, 1e10),
+            (-1e10, -1e10),
+            (f32::INFINITY, f32::INFINITY),
+            (f32::NEG_INFINITY, f32::NEG_INFINITY),
+        ];
+        for &(input, expected) in cases {
+            let result = floorf(input);
+            assert!(
+                f32_match(result, expected),
+                "floorf({input}) = {result}, expected {expected}"
+            );
+        }
+        assert!(floorf(f32::NAN).is_nan());
+    }
+
+    #[test]
+    fn spot_check_f32_ceil() {
+        let cases: &[(f32, f32)] = &[
+            (0.0, 0.0),
+            (-0.0, -0.0),
+            (1.5, 2.0),
+            (-1.5, -1.0),
+            (2.1, 3.0),
+            (-2.1, -2.0),
+            (1e10, 1e10),
+        ];
+        for &(input, expected) in cases {
+            let result = ceilf(input);
+            assert!(
+                f32_match(result, expected),
+                "ceilf({input}) = {result}, expected {expected}"
+            );
+        }
+        assert!(ceilf(f32::NAN).is_nan());
+    }
+
+    #[test]
+    fn spot_check_f32_round() {
+        let cases: &[(f32, f32)] = &[
+            (0.0, 0.0),
+            (-0.0, -0.0),
+            (0.5, 1.0),
+            (-0.5, -1.0),
+            (1.5, 2.0),
+            (-1.5, -2.0),
+            (2.4, 2.0),
+            (-2.4, -2.0),
+            (2.6, 3.0),
+            (-2.6, -3.0),
+            (1e10, 1e10),
+        ];
+        for &(input, expected) in cases {
+            let result = roundf(input);
+            assert!(
+                f32_match(result, expected),
+                "roundf({input}) = {result}, expected {expected}"
+            );
+        }
+        assert!(roundf(f32::NAN).is_nan());
+    }
+
+    #[test]
+    fn spot_check_f32_sqrt() {
+        let cases: &[(f32, f32)] = &[
+            (0.0, 0.0),
+            (1.0, 1.0),
+            (4.0, 2.0),
+            (9.0, 3.0),
+            (16.0, 4.0),
+            (2.0, core::f32::consts::SQRT_2),
+            (0.25, 0.5),
+        ];
+        for &(input, expected) in cases {
+            let result = sqrtf(input);
+            assert!(
+                f32_match(result, expected),
+                "sqrtf({input}) = {result}, expected {expected}"
+            );
+        }
+        assert!(sqrtf(f32::NAN).is_nan());
+        assert!(sqrtf(-1.0).is_nan());
+        assert!(sqrtf(f32::INFINITY).is_infinite());
+    }
+
+    #[test]
+    fn spot_check_f64_sqrt() {
+        let cases: &[(f64, f64)] = &[
+            (0.0, 0.0),
+            (1.0, 1.0),
+            (4.0, 2.0),
+            (9.0, 3.0),
+            (16.0, 4.0),
+            (2.0, core::f64::consts::SQRT_2),
+            (0.25, 0.5),
+        ];
+        for &(input, expected) in cases {
+            let result = sqrt(input);
+            assert_eq!(
+                result.to_bits(),
+                expected.to_bits(),
+                "sqrt({input}) = {result}, expected {expected}"
+            );
+        }
+        assert!(sqrt(f64::NAN).is_nan());
+        assert!(sqrt(-1.0).is_nan());
+        assert!(sqrt(f64::INFINITY).is_infinite());
+    }
+
+    #[test]
+    #[ignore] // 4B iterations — run with `cargo test -- --ignored`
     fn brute_force_f32_floor() {
         for bits in 0..=u32::MAX {
             let x = f32::from_bits(bits);
@@ -383,6 +502,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // 4B iterations — run with `cargo test -- --ignored`
     fn brute_force_f32_ceil() {
         for bits in 0..=u32::MAX {
             let x = f32::from_bits(bits);
@@ -396,6 +516,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // 4B iterations — run with `cargo test -- --ignored`
     fn brute_force_f32_round() {
         for bits in 0..=u32::MAX {
             let x = f32::from_bits(bits);
@@ -409,6 +530,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // 4B iterations — run with `cargo test -- --ignored`
     fn brute_force_f32_sqrt() {
         for bits in 0..=u32::MAX {
             let x = f32::from_bits(bits);
@@ -474,8 +596,9 @@ mod tests {
         }
 
         // Random-ish bit patterns across the f64 range
-        // Stride through all 2^64 bits taking ~10M samples
-        let stride = u64::MAX / 10_000_000;
+        // Under Miri, use fewer samples to keep runtime reasonable
+        let sample_count = if cfg!(miri) { 10_000 } else { 10_000_000 };
+        let stride = u64::MAX / sample_count;
         let mut bits = 0u64;
         loop {
             values.push(f64::from_bits(bits));
