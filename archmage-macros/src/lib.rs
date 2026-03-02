@@ -6,32 +6,81 @@
 use proc_macro::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use syn::{
-    Attribute, FnArg, GenericParam, Ident, ItemFn, PatType, ReturnType, Signature, Token, Type,
-    TypeParamBound,
-    fold::Fold,
+    Attribute, FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound,
     parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote,
+    parse_macro_input, parse_quote, token,
 };
 
-/// A Fold implementation that replaces `Self` with a concrete type.
-struct ReplaceSelf<'a> {
-    replacement: &'a Type,
+/// A function parsed with the body left as an opaque TokenStream.
+///
+/// Only the signature is fully parsed into an AST — the body tokens are collected
+/// without building any AST nodes (no expressions, statements, or patterns parsed).
+/// This saves ~2ms per function invocation at 100 lines of code.
+struct LightFn {
+    attrs: Vec<Attribute>,
+    vis: syn::Visibility,
+    sig: Signature,
+    brace_token: token::Brace,
+    body: proc_macro2::TokenStream,
 }
 
-impl Fold for ReplaceSelf<'_> {
-    fn fold_type(&mut self, ty: Type) -> Type {
-        match ty {
-            Type::Path(ref type_path) if type_path.qself.is_none() => {
-                // Check if it's just `Self`
-                if type_path.path.is_ident("Self") {
-                    return self.replacement.clone();
-                }
-                // Otherwise continue folding
-                syn::fold::fold_type(self, ty)
+impl Parse for LightFn {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let attrs = input.call(Attribute::parse_outer)?;
+        let vis: syn::Visibility = input.parse()?;
+        let sig: Signature = input.parse()?;
+        let content;
+        let brace_token = syn::braced!(content in input);
+        let body: proc_macro2::TokenStream = content.parse()?;
+        Ok(LightFn {
+            attrs,
+            vis,
+            sig,
+            brace_token,
+            body,
+        })
+    }
+}
+
+impl ToTokens for LightFn {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        for attr in &self.attrs {
+            attr.to_tokens(tokens);
+        }
+        self.vis.to_tokens(tokens);
+        self.sig.to_tokens(tokens);
+        self.brace_token.surround(tokens, |tokens| {
+            self.body.to_tokens(tokens);
+        });
+    }
+}
+
+/// Replace all `Self` identifier tokens with a concrete type in a token stream.
+///
+/// Recurses into groups (braces, parens, brackets). Used for `#[arcane(_self = Type)]`
+/// to replace `Self` in both the return type and body without needing to parse the body.
+fn replace_self_in_tokens(
+    tokens: proc_macro2::TokenStream,
+    replacement: &Type,
+) -> proc_macro2::TokenStream {
+    let mut result = proc_macro2::TokenStream::new();
+    for tt in tokens {
+        match tt {
+            proc_macro2::TokenTree::Ident(ref ident) if ident == "Self" => {
+                result.extend(replacement.to_token_stream());
             }
-            _ => syn::fold::fold_type(self, ty),
+            proc_macro2::TokenTree::Group(group) => {
+                let new_stream = replace_self_in_tokens(group.stream(), replacement);
+                let mut new_group = proc_macro2::Group::new(group.delimiter(), new_stream);
+                new_group.set_span(group.span());
+                result.extend(std::iter::once(proc_macro2::TokenTree::Group(new_group)));
+            }
+            other => {
+                result.extend(std::iter::once(other));
+            }
         }
     }
+    result
 }
 
 /// Arguments to the `#[arcane]` macro.
@@ -327,7 +376,7 @@ enum SelfReceiver {
 }
 
 /// Shared implementation for arcane/arcane macros.
-fn arcane_impl(mut input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> TokenStream {
+fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> TokenStream {
     // Check for self receiver
     let has_self_receiver = input_fn
         .sig
@@ -420,7 +469,7 @@ fn arcane_impl(mut input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> Toke
     let where_clause = &generics.where_clause;
     let inputs = &sig.inputs;
     let output = &sig.output;
-    let body = &input_fn.block;
+    let body = &input_fn.body;
     let attrs = &input_fn.attrs;
 
     // Determine self receiver type if present
@@ -481,17 +530,16 @@ fn arcane_impl(mut input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> Toke
         parse_quote!(#[inline])
     };
 
-    // Transform output and body to replace Self with concrete type if needed
-    let (inner_output, inner_body): (ReturnType, syn::Block) =
+    // Transform output and body to replace Self with concrete type if needed.
+    // Uses token-level replacement instead of syn::Fold — replaces `Self` ident tokens
+    // everywhere (type positions, expressions, paths) without parsing the body.
+    let (inner_output, inner_body): (proc_macro2::TokenStream, proc_macro2::TokenStream) =
         if let Some(ref self_ty) = args.self_type {
-            let mut replacer = ReplaceSelf {
-                replacement: self_ty,
-            };
-            let transformed_output = replacer.fold_return_type(output.clone());
-            let transformed_body = replacer.fold_block((**body).clone());
+            let transformed_output = replace_self_in_tokens(output.to_token_stream(), self_ty);
+            let transformed_body = replace_self_in_tokens(body.clone(), self_ty);
             (transformed_output, transformed_body)
         } else {
-            (output.clone(), (**body).clone())
+            (output.to_token_stream(), body.clone())
         };
 
     // Generate the expanded function
@@ -505,8 +553,9 @@ fn arcane_impl(mut input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> Toke
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
-                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
-                #inner_body
+                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause {
+                    #inner_body
+                }
 
                 // SAFETY: The token parameter proves the required CPU features are available.
                 // Calling a #[target_feature] function from a non-matching context requires
@@ -542,8 +591,9 @@ fn arcane_impl(mut input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> Toke
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
-                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause
-                #inner_body
+                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause {
+                    #inner_body
+                }
 
                 // SAFETY: Calling a #[target_feature] function from a non-matching context
                 // requires unsafe. The token proves the required CPU features are available.
@@ -732,7 +782,7 @@ fn arcane_impl(mut input_fn: ItemFn, macro_name: &str, args: ArcaneArgs) -> Toke
 #[proc_macro_attribute]
 pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);
-    let input_fn = parse_macro_input!(item as ItemFn);
+    let input_fn = parse_macro_input!(item as LightFn);
     arcane_impl(input_fn, "arcane", args)
 }
 
@@ -743,7 +793,7 @@ pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[doc(hidden)]
 pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);
-    let input_fn = parse_macro_input!(item as ItemFn);
+    let input_fn = parse_macro_input!(item as LightFn);
     arcane_impl(input_fn, "simd_fn", args)
 }
 
@@ -762,7 +812,7 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);
-    let input_fn = parse_macro_input!(item as ItemFn);
+    let input_fn = parse_macro_input!(item as LightFn);
     arcane_impl(input_fn, "token_target_features_boundary", args)
 }
 
@@ -822,7 +872,7 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse optional arguments (currently just inline_always)
     let args = parse_macro_input!(attr as RiteArgs);
-    let input_fn = parse_macro_input!(item as ItemFn);
+    let input_fn = parse_macro_input!(item as LightFn);
     rite_impl(input_fn, args)
 }
 
@@ -839,7 +889,7 @@ pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as RiteArgs);
-    let input_fn = parse_macro_input!(item as ItemFn);
+    let input_fn = parse_macro_input!(item as LightFn);
     rite_impl(input_fn, args)
 }
 
@@ -869,7 +919,7 @@ impl Parse for RiteArgs {
 }
 
 /// Implementation for the `#[rite]` macro.
-fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
+fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     // Find the token parameter and its features
     let TokenParamInfo {
         features,
@@ -925,13 +975,14 @@ fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
         let vis = &input_fn.vis;
         let sig = &input_fn.sig;
         let attrs = &input_fn.attrs;
-        let block = &input_fn.block;
+        let body = &input_fn.body;
 
         quote! {
             #[cfg(target_arch = #arch)]
             #(#attrs)*
-            #vis #sig
-            #block
+            #vis #sig {
+                #body
+            }
 
             #[cfg(not(target_arch = #arch))]
             #vis #sig {
@@ -1009,7 +1060,7 @@ fn rite_impl(mut input_fn: ItemFn, args: RiteArgs) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input_fn = parse_macro_input!(item as ItemFn);
+    let input_fn = parse_macro_input!(item as LightFn);
 
     // Parse optional tier list from attribute args
     let tier_names: Vec<String> = if attr.is_empty() {
@@ -1031,7 +1082,7 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     magetypes_impl(input_fn, &tiers)
 }
 
-fn magetypes_impl(mut input_fn: ItemFn, tiers: &[&TierDescriptor]) -> TokenStream {
+fn magetypes_impl(mut input_fn: LightFn, tiers: &[&TierDescriptor]) -> TokenStream {
     // Strip user-provided #[arcane] / #[rite] to prevent double-wrapping
     // (magetypes auto-adds #[arcane] on non-scalar variants)
     input_fn
