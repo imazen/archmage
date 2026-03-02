@@ -486,7 +486,9 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         _ => None,
     });
 
-    // Build inner function parameters, transforming self if needed
+    // Build inner function parameters, transforming self if needed.
+    // Also replace Self in non-self parameter types when _self = Type is set,
+    // since the inner function is a nested fn where Self from the impl is not in scope.
     let inner_params: Vec<proc_macro2::TokenStream> = inputs
         .iter()
         .map(|arg| match arg {
@@ -499,7 +501,13 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
                     SelfReceiver::RefMut => quote!(_self: &mut #self_ty),
                 }
             }
-            FnArg::Typed(pat_type) => quote!(#pat_type),
+            FnArg::Typed(pat_type) => {
+                if let Some(ref self_ty) = args.self_type {
+                    replace_self_in_tokens(quote!(#pat_type), self_ty)
+                } else {
+                    quote!(#pat_type)
+                }
+            }
         })
         .collect();
 
@@ -530,17 +538,33 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         parse_quote!(#[inline])
     };
 
-    // Transform output and body to replace Self with concrete type if needed.
-    // Uses token-level replacement instead of syn::Fold — replaces `Self` ident tokens
-    // everywhere (type positions, expressions, paths) without parsing the body.
-    let (inner_output, inner_body): (proc_macro2::TokenStream, proc_macro2::TokenStream) =
-        if let Some(ref self_ty) = args.self_type {
-            let transformed_output = replace_self_in_tokens(output.to_token_stream(), self_ty);
-            let transformed_body = replace_self_in_tokens(body.clone(), self_ty);
-            (transformed_output, transformed_body)
-        } else {
-            (output.to_token_stream(), body.clone())
-        };
+    // Transform output, body, and where clause to replace Self with concrete type if needed.
+    // The inner function is a nested fn where Self from the impl block is not in scope,
+    // so all Self references must be replaced with the concrete type.
+    // Uses token-level replacement — replaces `Self` ident tokens everywhere (type positions,
+    // expressions, paths) without parsing the body.
+    let (inner_output, inner_body, inner_where_clause): (
+        proc_macro2::TokenStream,
+        proc_macro2::TokenStream,
+        proc_macro2::TokenStream,
+    ) = if let Some(ref self_ty) = args.self_type {
+        let transformed_output = replace_self_in_tokens(output.to_token_stream(), self_ty);
+        let transformed_body = replace_self_in_tokens(body.clone(), self_ty);
+        let transformed_where = where_clause
+            .as_ref()
+            .map(|wc| replace_self_in_tokens(wc.to_token_stream(), self_ty))
+            .unwrap_or_default();
+        (transformed_output, transformed_body, transformed_where)
+    } else {
+        (
+            output.to_token_stream(),
+            body.clone(),
+            where_clause
+                .as_ref()
+                .map(|wc| wc.to_token_stream())
+                .unwrap_or_default(),
+        )
+    };
 
     // Generate the expanded function
     // If we know the target arch (concrete token), generate cfg-gated real impl + stub
@@ -553,7 +577,7 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
-                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause {
+                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
                     #inner_body
                 }
 
@@ -591,7 +615,7 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
-                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #where_clause {
+                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
                     #inner_body
                 }
 
