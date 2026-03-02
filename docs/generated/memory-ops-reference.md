@@ -1,6 +1,6 @@
 # Safe Memory Operations Reference
 
-Safe unaligned load/store operations from `safe_unaligned_simd` v0.2.4,
+Safe unaligned load/store operations from `safe_unaligned_simd` v0.2.5,
 organized by the archmage token required to use them inside `#[arcane]` functions.
 
 Regenerate: `cargo xtask generate`
@@ -357,8 +357,6 @@ Features: `avx`
 
 ### `i16x8_load_extend_i8x8`
 
-Loads eight 8-bit integers and sign extends each one to a 16-bit lane.
-
 ```rust
 fn i16x8_load_extend_i8x8<T: Is8BytesUnaligned>(t: &T) -> v128
 ```
@@ -366,8 +364,6 @@ fn i16x8_load_extend_i8x8<T: Is8BytesUnaligned>(t: &T) -> v128
 Features: `simd128`
 
 ### `i16x8_load_extend_u8x8`
-
-Loads eight 8-bit integers and zero extends each one to a 16-bit lane.
 
 ```rust
 fn i16x8_load_extend_u8x8<T: Is8BytesUnaligned>(t: &T) -> v128
@@ -377,8 +373,6 @@ Features: `simd128`
 
 ### `i32x4_load_extend_i16x4`
 
-Loads four 16-bit integers and sign extends each one to a 32-bit lane.
-
 ```rust
 fn i32x4_load_extend_i16x4<T: Is8BytesUnaligned>(t: &T) -> v128
 ```
@@ -386,8 +380,6 @@ fn i32x4_load_extend_i16x4<T: Is8BytesUnaligned>(t: &T) -> v128
 Features: `simd128`
 
 ### `i32x4_load_extend_u16x4`
-
-Loads four 16-bit integers and zero extends each one to a 32-bit lane.
 
 ```rust
 fn i32x4_load_extend_u16x4<T: Is8BytesUnaligned>(t: &T) -> v128
@@ -397,8 +389,6 @@ Features: `simd128`
 
 ### `i64x2_load_extend_i32x2`
 
-Loads two 32-bit integers and sign extends each one to a 64-bit lane.
-
 ```rust
 fn i64x2_load_extend_i32x2<T: Is8BytesUnaligned>(t: &T) -> v128
 ```
@@ -406,8 +396,6 @@ fn i64x2_load_extend_i32x2<T: Is8BytesUnaligned>(t: &T) -> v128
 Features: `simd128`
 
 ### `i64x2_load_extend_u32x2`
-
-Loads two 32-bit integers and zero extends each one to a 64-bit lane.
 
 ```rust
 fn i64x2_load_extend_u32x2<T: Is8BytesUnaligned>(t: &T) -> v128
@@ -417,8 +405,6 @@ Features: `simd128`
 
 ### `u16x8_load_extend_u8x8`
 
-Loads eight 8-bit integers and zero extends each one to a 16-bit lane.
-
 ```rust
 fn u16x8_load_extend_u8x8<T: Is8BytesUnaligned>(t: &T) -> v128
 ```
@@ -426,8 +412,6 @@ fn u16x8_load_extend_u8x8<T: Is8BytesUnaligned>(t: &T) -> v128
 Features: `simd128`
 
 ### `u32x4_load_extend_u16x4`
-
-Loads four 16-bit integers and zero extends each one to a 32-bit lane.
 
 ```rust
 fn u32x4_load_extend_u16x4<T: Is8BytesUnaligned>(t: &T) -> v128
@@ -437,8 +421,6 @@ Features: `simd128`
 
 ### `u64x2_load_extend_u32x2`
 
-Loads two 32-bit integers and zero extends each one to a 64-bit lane.
-
 ```rust
 fn u64x2_load_extend_u32x2<T: Is8BytesUnaligned>(t: &T) -> v128
 ```
@@ -446,8 +428,6 @@ fn u64x2_load_extend_u32x2<T: Is8BytesUnaligned>(t: &T) -> v128
 Features: `simd128`
 
 ### `v128_load`
-
-Loads a `v128` vector from the given heap address.
 
 ```rust
 fn v128_load<T: Is16BytesUnaligned>(t: &T) -> v128
@@ -457,8 +437,6 @@ Features: `simd128`
 
 ### `v128_load16_splat`
 
-Loads a single element and splats to all lanes of a `v128` vector.
-
 ```rust
 fn v128_load16_splat<T: Is2BytesUnaligned>(t: &T) -> v128
 ```
@@ -466,8 +444,6 @@ fn v128_load16_splat<T: Is2BytesUnaligned>(t: &T) -> v128
 Features: `simd128`
 
 ### `v128_load32_splat`
-
-Loads a single element and splats to all lanes of a `v128` vector.
 
 ```rust
 fn v128_load32_splat<T: Is4BytesUnaligned>(t: &T) -> v128
@@ -477,8 +453,6 @@ Features: `simd128`
 
 ### `v128_load32_zero`
 
-Loads a 32-bit element into the low bits of the vector and sets all other bits to zero.
-
 ```rust
 fn v128_load32_zero<T: Is4BytesUnaligned>(t: &T) -> v128
 ```
@@ -486,8 +460,6 @@ fn v128_load32_zero<T: Is4BytesUnaligned>(t: &T) -> v128
 Features: `simd128`
 
 ### `v128_load64_splat`
-
-Loads a single element and splats to all lanes of a `v128` vector.
 
 ```rust
 fn v128_load64_splat<T: Is8BytesUnaligned>(t: &T) -> v128
@@ -497,8 +469,6 @@ Features: `simd128`
 
 ### `v128_load64_zero`
 
-Loads a 64-bit element into the low bits of the vector and sets all other bits to zero.
-
 ```rust
 fn v128_load64_zero<T: Is8BytesUnaligned>(t: &T) -> v128
 ```
@@ -507,8 +477,6 @@ Features: `simd128`
 
 ### `v128_load8_splat`
 
-Loads a single element and splats to all lanes of a `v128` vector.
-
 ```rust
 fn v128_load8_splat<T: Is1ByteUnaligned>(t: &T) -> v128
 ```
@@ -516,8 +484,6 @@ fn v128_load8_splat<T: Is1ByteUnaligned>(t: &T) -> v128
 Features: `simd128`
 
 ### `v128_store`
-
-Stores a `v128` vector to the given heap address.
 
 ```rust
 fn v128_store<T: Is16BytesUnaligned>(t: &mut T, v: v128) -> ()

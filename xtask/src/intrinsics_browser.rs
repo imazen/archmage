@@ -688,9 +688,10 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
     Ok(())
 }
 
-/// Get current date as YYYY-MM-DD string (no chrono dependency).
+/// Get current date as YYYY-MM-DD string in UTC (no chrono dependency).
 fn chrono_date() -> String {
     let output = std::process::Command::new("date")
+        .arg("-u")
         .arg("+%Y-%m-%d")
         .output()
         .ok()

@@ -18,7 +18,7 @@ mod token_gen;
 use intrinsics_browser::parse_csv_line;
 
 /// Version of safe_unaligned_simd we're generating from
-const SAFE_SIMD_VERSION: &str = "0.2.4";
+const SAFE_SIMD_VERSION: &str = "0.2.5";
 
 // Feature lookups now come from token-registry.toml via Registry::features_for().
 
