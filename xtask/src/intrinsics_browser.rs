@@ -667,7 +667,7 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
     let out_dir = PathBuf::from("docs/intrinsics-browser/data");
     fs::create_dir_all(&out_dir)?;
     let json_path = out_dir.join("intrinsics.json");
-    let json_str = serde_json::to_string(&root_json)?;
+    let json_str = serde_json::to_string_pretty(&root_json)?;
     fs::write(&json_path, &json_str)?;
     println!(
         "  Wrote {} ({} bytes, ~{}KB gzipped est.)",
