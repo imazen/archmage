@@ -1,0 +1,81 @@
+name: CPU Survey
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  survey:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x86_64 Linux
+          - { os: ubuntu-24.04, name: "Ubuntu 24.04 (x64)" }
+          - { os: ubuntu-22.04, name: "Ubuntu 22.04 (x64)" }
+          # ARM64 Linux
+          - { os: ubuntu-24.04-arm, name: "Ubuntu 24.04 ARM64 (Cobalt 100)" }
+          - { os: ubuntu-22.04-arm, name: "Ubuntu 22.04 ARM64 (Cobalt 100)" }
+          # x86_64 Windows
+          - { os: windows-2025, name: "Windows 2025 (x64)" }
+          - { os: windows-2022, name: "Windows 2022 (x64)" }
+          # ARM64 Windows
+          - { os: windows-11-arm, name: "Windows ARM64 (Snapdragon X)" }
+          # ARM64 macOS
+          - { os: macos-15, name: "macOS 15 (Apple M1)" }
+          - { os: macos-14, name: "macOS 14 (Apple M1)" }
+          - { os: macos-26, name: "macOS 26 (Apple M-series)" }
+          # x86_64 macOS
+          - { os: macos-15-intel, name: "macOS 15 Intel (Xeon W)" }
+          - { os: macos-26-intel, name: "macOS 26 Intel (Xeon W)" }
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: System info (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "=== uname ==="
+          uname -a
+          echo ""
+          echo "=== /proc/cpuinfo (first 60 lines) ==="
+          head -60 /proc/cpuinfo || true
+          echo ""
+          echo "=== lscpu ==="
+          lscpu || true
+
+      - name: System info (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "=== uname ==="
+          uname -a
+          echo ""
+          echo "=== CPU info ==="
+          sysctl -n machdep.cpu.brand_string 2>/dev/null || true
+          sysctl -n hw.chip 2>/dev/null || true
+          echo ""
+          echo "=== sysctl hw ==="
+          sysctl hw 2>/dev/null | grep -iE "(cpu|chip|model|machine|optional|ncpu|memsize)" | head -40 || true
+
+      - name: System info (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "=== PROCESSOR_IDENTIFIER ==="
+          echo "$PROCESSOR_IDENTIFIER"
+          echo ""
+          echo "=== PROCESSOR_ARCHITECTURE ==="
+          echo "$PROCESSOR_ARCHITECTURE"
+          echo ""
+          echo "=== NUMBER_OF_PROCESSORS ==="
+          echo "$NUMBER_OF_PROCESSORS"
+
+      - name: Run CPU survey
+        run: cargo run --example cpu_survey --features "avx512"
