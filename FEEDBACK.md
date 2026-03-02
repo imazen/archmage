@@ -1,5 +1,9 @@
 # User Feedback Log
 
+## 2026-03-01
+
+- User requested CPU survey tool + GitHub Actions workflow: `examples/cpu_survey.rs` (comprehensive CPU feature report) and `.github/workflows/cpu-survey.yml` (12-runner matrix covering all public GH runners)
+
 ## 2026-01-31
 
 - User requested implementing plan: hard-fail validation, fix intrinsic bugs, explicit feature checks
@@ -47,3 +51,4 @@
 2026-02-25 - User requested rewriting all magetypes docs to use generic pattern (`f32x8::<T>`, not flat aliases). Also: CI-tested doc examples, CLAUDE.md rule for doc testing. User asked "why do we have to import the backends again?" — discussed nested use path syntax as solution.
 - 2026-02-26: Added #[inline(always)] to all generic function definitions in documentation files under docs/site/content/
 - 2026-02-28: User requested CI test for testable_dispatch + CompileTimePolicy::Fail. Fixed V1 codegen to respect testable_dispatch (compiled_with/summon were unconditional), added test + CI job + justfile target.
+2026-03-01: User requested research on unstable Rust target features across architectures
