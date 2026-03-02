@@ -15,7 +15,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  FEATURES: "std macros bytemuck avx512"
+  FEATURES: "std macros avx512"
 
 jobs:
   sde-test:
