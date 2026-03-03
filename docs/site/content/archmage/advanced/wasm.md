@@ -27,7 +27,7 @@ WASM is fundamentally different from x86/ARM: there is **no runtime feature dete
 This means:
 - `Wasm128Token::summon()` always returns `Some` if the binary was compiled with SIMD128, and always `None` if it wasn't. The check compiles away entirely.
 - There is no need for `incant!` dispatch on WASM — you either have SIMD128 or you don't, and that's known at compile time.
-- `#[arcane]` still works and generates the correct `#[target_feature]` wrapper, but the safety boundary is the only thing it provides — there's no runtime detection to do.
+- `#[arcane]` still works and generates the correct `#[target_feature]` annotation, but since wasm32 target features are safe (the validation model traps deterministically), it skips the `unsafe` wrapper entirely and emits the function directly. No sibling function, no `unsafe` block -- just `#[target_feature]` + `#[inline]` on your original function.
 
 The token still serves its purpose: it proves at the type level that SIMD128 is available, which makes intrinsics safe inside `#[arcane]`. But the dispatch story is purely compile-time.
 
