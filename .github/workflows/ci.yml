@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-26-intel]
 
     steps:
       - uses: actions/checkout@v6
@@ -388,6 +388,7 @@ jobs:
         include:
           - { os: ubuntu-latest, name: x64 Linux }
           - { os: windows-latest, name: x64 Windows }
+          - { os: macos-26-intel, name: x64 macOS Intel }
           - { os: ubuntu-24.04-arm, name: aarch64 Linux }
           - { os: macos-14, name: aarch64 macOS }
           - { os: windows-11-arm, name: aarch64 Windows }
