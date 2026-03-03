@@ -499,38 +499,52 @@ mod x86_tests {
 }
 
 // =============================================================================
-// Cross-architecture stub tests
+// Cross-architecture cfg-out and stub tests
 // =============================================================================
-// Verify that #[arcane] with wrong-arch tokens compiles (generates stub)
 
 #[cfg(target_arch = "x86_64")]
-mod cross_arch_stub_tests {
+mod cross_arch_cfgout_tests {
     use archmage::{NeonToken, SimdToken, arcane};
 
-    /// This function uses an ARM token on x86 - should compile to a stub
+    // Default behavior: ARM function is cfg'd out on x86 (no stub)
     #[arcane]
-    fn arm_function_on_x86(_token: NeonToken, data: &[f32]) -> f32 {
-        // This body uses no intrinsics so it would compile either way,
-        // but the key is that #[arcane] generates a stub instead of
-        // trying to enable neon features on x86
+    fn arm_function_cfgout(_token: NeonToken, data: &[f32]) -> f32 {
+        data.iter().sum()
+    }
+
+    #[test]
+    fn cfgout_function_not_callable() {
+        // NeonToken can't be summoned on x86, and the function is cfg'd out
+        assert!(NeonToken::summon().is_none());
+        // arm_function_cfgout doesn't exist on x86 — not referenceable
+    }
+
+    // With stub: ARM function exists as unreachable stub on x86
+    #[arcane(stub)]
+    fn arm_function_with_stub(_token: NeonToken, data: &[f32]) -> f32 {
         data.iter().sum()
     }
 
     #[test]
     fn stub_function_compiles() {
-        // We can't call the function (NeonToken::summon() returns None on x86)
-        // but the code compiles, which is the point
+        // Function exists (stub) but can't be reached — token returns None
         assert!(NeonToken::summon().is_none());
     }
 }
 
 #[cfg(target_arch = "aarch64")]
-mod cross_arch_stub_tests_arm {
+mod cross_arch_cfgout_tests_arm {
     use archmage::{SimdToken, X64V3Token, arcane};
 
-    /// This function uses an x86 token on ARM - should compile to a stub
+    // Default: x86 function cfg'd out on ARM
     #[arcane]
-    fn x86_function_on_arm(_token: X64V3Token, data: &[f32]) -> f32 {
+    fn x86_function_cfgout(_token: X64V3Token, data: &[f32]) -> f32 {
+        data.iter().sum()
+    }
+
+    // With stub: x86 function exists as unreachable stub on ARM
+    #[arcane(stub)]
+    fn x86_function_with_stub(_token: X64V3Token, data: &[f32]) -> f32 {
         data.iter().sum()
     }
 

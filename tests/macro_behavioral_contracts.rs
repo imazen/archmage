@@ -273,37 +273,53 @@ mod rite_contracts_x86 {
 }
 
 // =============================================================================
-// C. Cross-arch stubs (current behavior)
+// C. Cross-arch behavior: cfg-out default, stub opt-in
 // =============================================================================
 
 #[cfg(target_arch = "x86_64")]
-mod cross_arch_stubs_x86 {
+mod cross_arch_cfgout_x86 {
     use archmage::{NeonToken, SimdToken, arcane};
 
-    // ARM token on x86 → generates unreachable stub
+    // Default: ARM function cfg'd out on x86 — doesn't exist
     #[arcane]
-    fn arm_on_x86(_token: NeonToken, data: &[f32]) -> f32 {
+    fn arm_cfgout(_token: NeonToken, data: &[f32]) -> f32 {
+        data.iter().sum()
+    }
+
+    // With stub: ARM function exists as unreachable stub on x86
+    #[arcane(stub)]
+    fn arm_with_stub(_token: NeonToken, data: &[f32]) -> f32 {
         data.iter().sum()
     }
 
     #[test]
-    fn arm_stub_compiles_on_x86() {
-        // Token can't be summoned on x86 → function is unreachable
+    fn arm_token_not_available_on_x86() {
         assert!(NeonToken::summon().is_none());
+    }
+
+    #[test]
+    fn stub_function_exists() {
+        // arm_with_stub exists as a stub — can take a reference
+        let _fn_ref: fn(NeonToken, &[f32]) -> f32 = arm_with_stub;
     }
 }
 
 #[cfg(target_arch = "aarch64")]
-mod cross_arch_stubs_arm {
+mod cross_arch_cfgout_arm {
     use archmage::{SimdToken, X64V3Token, arcane};
 
     #[arcane]
-    fn x86_on_arm(_token: X64V3Token, data: &[f32]) -> f32 {
+    fn x86_cfgout(_token: X64V3Token, data: &[f32]) -> f32 {
+        data.iter().sum()
+    }
+
+    #[arcane(stub)]
+    fn x86_with_stub(_token: X64V3Token, data: &[f32]) -> f32 {
         data.iter().sum()
     }
 
     #[test]
-    fn x86_stub_compiles_on_arm() {
+    fn x86_token_not_available_on_arm() {
         assert!(X64V3Token::summon().is_none());
     }
 }
