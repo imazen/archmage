@@ -720,27 +720,101 @@ mod polyfills {
 // ============================================================================
 mod dispatch {
     use super::*;
+    // --- Section 1: The Generic Pattern ---
+    // Doc shows: #[inline(always)] generic fn + concrete #[arcane] wrappers + incant!
+    // We test the generic function and manual dispatch here (macros need "macros" feature,
+    // tested separately in tests/incant_macro.rs and tests/magetypes_macro.rs).
 
-    // The generic kernel — works with any backend
-    fn sum_kernel<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    // 1. Generic function — #[inline(always)], no #[arcane]
+    #[inline(always)]
+    fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
         f32x8::<T>::from_array(token, *data).reduce_add()
     }
 
-    // Dispatch pattern
+    // Manual dispatch (equivalent to what incant! generates)
     fn sum_dispatch(data: &[f32; 8]) -> f32 {
         #[cfg(target_arch = "x86_64")]
         if let Some(token) = X64V3Token::summon() {
-            return sum_kernel(token, data);
+            return sum_impl(token, data);
         }
 
-        sum_kernel(ScalarToken, data)
+        sum_impl(ScalarToken, data)
     }
 
     #[test]
-    fn dispatch_works() {
+    fn generic_pattern_dispatch() {
         let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let result = sum_dispatch(&data);
         assert!((result - 36.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn generic_function_with_scalar() {
+        let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let result = sum_impl(ScalarToken, &data);
+        assert!((result - 36.0).abs() < 0.01);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn generic_function_with_x64v3() {
+        if let Some(token) = X64V3Token::summon() {
+            let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let result = sum_impl(token, &data);
+            assert!((result - 36.0).abs() < 0.01);
+        }
+    }
+
+    // --- Section 2: When Algorithms Differ Per Platform ---
+    // Doc shows separate implementations per architecture.
+
+    #[cfg(target_arch = "x86_64")]
+    fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+        let va = f32x8::<X64V3Token>::from_array(token, *a);
+        let vb = f32x8::<X64V3Token>::from_array(token, *b);
+        (va * vb).reduce_add()
+    }
+
+    fn dot_product_scalar(_token: ScalarToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+        a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+    }
+
+    fn dot_product_dispatch(a: &[f32; 8], b: &[f32; 8]) -> f32 {
+        #[cfg(target_arch = "x86_64")]
+        if let Some(token) = X64V3Token::summon() {
+            return dot_product_v3(token, a, b);
+        }
+
+        dot_product_scalar(ScalarToken, a, b)
+    }
+
+    #[test]
+    fn per_platform_dispatch() {
+        let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let b = [8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
+        let result = dot_product_dispatch(&a, &b);
+        // 1*8 + 2*7 + 3*6 + 4*5 + 5*4 + 6*3 + 7*2 + 8*1 = 120
+        assert!((result - 120.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn scalar_dot_product_takes_token() {
+        // Verify scalar functions take ScalarToken (not bare fn)
+        let a = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let b = [5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let result = dot_product_scalar(ScalarToken, &a, &b);
+        assert!((result - 5.0).abs() < 0.01);
+    }
+
+    // --- Polyfill story ---
+    // f32x8::<ScalarToken> uses polyfills (two f32x4 ops). Same generic fn, no changes.
+
+    #[test]
+    fn polyfill_via_generic() {
+        // ScalarToken uses polyfill backend — same sum_impl function
+        let data = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
+        let result = sum_impl(ScalarToken, &data);
+        assert!((result - 360.0).abs() < 0.01);
     }
 }
 

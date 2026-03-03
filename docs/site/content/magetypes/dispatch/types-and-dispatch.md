@@ -7,33 +7,90 @@ Magetypes vectors work with archmage's [`incant!`](@/archmage/dispatch/incant.md
 
 ## The Generic Pattern
 
-Write your SIMD function once with a generic backend bound. `incant!` dispatches to it with the best available token:
+Write your SIMD logic once with a generic backend bound, then wire it up with concrete `#[arcane]` wrappers and `incant!`:
 
 ```rust
-use archmage::{arcane, incant};
+use archmage::{arcane, incant, ScalarToken, X64V3Token};
 use magetypes::simd::{
     generic::f32x8,
     backends::F32x8Backend,
 };
 
-#[arcane]
+// 1. Generic function — no #[arcane], just #[inline(always)]
+//    This has no #[target_feature] of its own. It inherits the caller's
+//    features through inlining — without inlining, intrinsics become
+//    function calls (18x slower). Always use #[inline(always)].
+#[inline(always)]
 fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
     f32x8::<T>::from_array(token, *data).reduce_add()
 }
 
+// 2. Concrete #[arcane] wrappers — one per tier
+//    #[arcane] needs a concrete token to know which #[target_feature] to emit.
+//    Generic bounds like F32x8Backend are unknown to it.
+#[arcane]
+fn sum_impl_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    sum_impl(token, data)  // generic inlines here, gets AVX2+FMA
+}
+
+fn sum_impl_scalar(token: ScalarToken, data: &[f32; 8]) -> f32 {
+    sum_impl(token, data)
+}
+
+// 3. incant! dispatches to the best available variant at runtime
 pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum_impl(data))
+    incant!(sum_impl(data), [v3])
 }
 ```
 
-`incant!` tries tokens from best to worst (V4 → V3 → NEON → WASM → scalar) and calls the first available variant. With the generic pattern, the same function body handles all of them.
+Why three layers? `#[arcane]` parses the token type from your function signature to choose which `#[target_feature]` attributes to emit. It only recognizes concrete tokens (`X64V3Token`, `NeonToken`, etc.) — not generic bounds like `F32x8Backend`. The generic function carries the algorithm; the `#[arcane]` wrappers provide the target-feature context; `incant!` picks the right wrapper at runtime.
+
+**Polyfills are automatic.** `f32x8::<NeonToken>` compiles to two 128-bit NEON operations. `f32x8::<Wasm128Token>` compiles to two 128-bit SIMD128 operations. The same generic function works everywhere with zero code changes — on AVX2 it's one 256-bit operation, on narrower hardware it's polyfilled.
+
+A complete cross-platform version adds NEON and WASM wrappers:
+
+```rust
+use archmage::{arcane, incant, ScalarToken, X64V3Token, NeonToken, Wasm128Token};
+use magetypes::simd::{
+    generic::f32x8,
+    backends::F32x8Backend,
+};
+
+#[inline(always)]
+fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+    f32x8::<T>::from_array(token, *data).reduce_add()
+}
+
+#[arcane]
+fn sum_impl_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    sum_impl(token, data)
+}
+
+#[arcane]
+fn sum_impl_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
+    sum_impl(token, data)  // polyfilled: two f32x4 ops
+}
+
+#[arcane]
+fn sum_impl_wasm128(token: Wasm128Token, data: &[f32; 8]) -> f32 {
+    sum_impl(token, data)  // polyfilled: two f32x4 ops
+}
+
+fn sum_impl_scalar(token: ScalarToken, data: &[f32; 8]) -> f32 {
+    sum_impl(token, data)
+}
+
+pub fn sum(data: &[f32; 8]) -> f32 {
+    incant!(sum_impl(data), [v3, neon, wasm128])
+}
+```
 
 ## When Algorithms Differ Per Platform
 
 Sometimes you want separate implementations to exploit architecture-specific strengths — different register widths, native instruction sequences, or algorithm shapes:
 
 ```rust
-use archmage::{arcane, incant, X64V3Token, NeonToken};
+use archmage::{arcane, incant, ScalarToken, X64V3Token, NeonToken};
 use magetypes::simd::generic::{f32x8, f32x4};
 
 // x86-64: use f32x8 (256-bit AVX2)
@@ -60,43 +117,16 @@ fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     sum1 + sum2
 }
 
-fn dot_product_scalar(a: &[f32; 8], b: &[f32; 8]) -> f32 {
+fn dot_product_scalar(_token: ScalarToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
 }
 
 pub fn dot_product(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    incant!(dot_product(a, b), [v3, neon, wasm128])
+    incant!(dot_product(a, b), [v3, neon])
 }
 ```
 
-When the algorithm is the same on every platform, the generic pattern is cleaner. When you need platform-tuned implementations, write concrete variants and name them explicitly.
-
-## Using Polyfill Types
-
-If your algorithm works the same regardless of register width, the generic pattern automatically uses polyfills on narrower hardware. There's nothing special to do — `f32x8::<NeonToken>` is already the polyfill:
-
-```rust
-use archmage::{arcane, incant};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-// One function — works on all platforms
-#[arcane]
-fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    // On AVX2: one 256-bit operation
-    // On NEON: two 128-bit NEON operations (polyfill)
-    // On WASM: two 128-bit SIMD128 operations (polyfill)
-    f32x8::<T>::from_array(token, *data).reduce_add()
-}
-
-pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum_impl(data))
-}
-```
-
-The polyfill version is simpler to write than separate platform variants. For most code, the performance difference is negligible.
+When the algorithm is the same on every platform, the generic pattern from the previous section is cleaner. When you need platform-tuned implementations, write concrete variants and list the tiers explicitly. Scalar is always implicit — `incant!` falls back to it automatically.
 
 ## The #[magetypes] Macro
 
@@ -118,7 +148,9 @@ pub fn validate(threshold: f32) -> bool {
 }
 ```
 
-`#[magetypes]` does text substitution — `Token` becomes the concrete token type for each variant. It's useful when the token is the only platform-dependent part. When your function body uses specific SIMD operations that differ by platform, use the generic pattern with `F32x8Backend` bounds, or write concrete variants manually.
+`#[magetypes]` does text substitution — `Token` becomes the concrete token type for each variant, and `#[arcane]` is applied to each generated function. This works when the function body doesn't depend on SIMD types that vary by backend.
+
+**Limitation:** `#[magetypes]` generates variants for all tiers, including `v4`. If your function uses `f32x8::<Token>`, the `v4` variant will fail because `X64V4Token` doesn't implement `F32x8Backend` (it uses `f32x16`). For generic SIMD code, use the three-layer pattern from the first section instead.
 
 ## Passthrough Dispatch
 
