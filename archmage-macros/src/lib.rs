@@ -488,6 +488,19 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         parse_quote!(#[inline])
     };
 
+    // On wasm32, #[target_feature(enable = "simd128")] functions are safe (Rust 1.54+).
+    // The wasm validation model guarantees unsupported instructions trap deterministically,
+    // so there's no UB from feature mismatch. Skip the unsafe wrapper entirely.
+    if target_arch == Some("wasm32") {
+        return arcane_impl_wasm_safe(
+            input_fn,
+            &args,
+            token_type_name,
+            target_feature_attrs,
+            inline_attr,
+        );
+    }
+
     if args.nested {
         arcane_impl_nested(
             input_fn,
@@ -507,6 +520,98 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
             inline_attr,
         )
     }
+}
+
+/// WASM-safe expansion: emits rite-style output (no unsafe wrapper).
+///
+/// On wasm32, `#[target_feature(enable = "simd128")]` is safe — the wasm validation
+/// model traps deterministically on unsupported instructions, so there's no UB.
+/// We emit the function directly with `#[target_feature]` + `#[inline]`, like `#[rite]`.
+///
+/// If `_self = Type` is set, we inject `let _self = self;` at the top of the body
+/// (the function stays in impl scope, so `Self` resolves naturally — no replacement needed).
+fn arcane_impl_wasm_safe(
+    input_fn: LightFn,
+    args: &ArcaneArgs,
+    token_type_name: Option<String>,
+    target_feature_attrs: Vec<Attribute>,
+    inline_attr: Attribute,
+) -> TokenStream {
+    let vis = &input_fn.vis;
+    let sig = &input_fn.sig;
+    let fn_name = &sig.ident;
+    let attrs = &input_fn.attrs;
+
+    let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
+
+    // If _self = Type is set, inject `let _self = self;` at top of body so user code
+    // referencing `_self` works. The function remains in impl scope, so `Self` resolves
+    // naturally — no Self replacement needed (unlike nested mode's inner fn).
+    let body = if args.self_type.is_some() {
+        let original_body = &input_fn.body;
+        quote! {
+            let _self = self;
+            #original_body
+        }
+    } else {
+        input_fn.body.clone()
+    };
+
+    // Prepend target_feature + inline attrs
+    let mut new_attrs = target_feature_attrs;
+    new_attrs.push(inline_attr);
+    for attr in attrs {
+        new_attrs.push(attr.clone());
+    }
+
+    let stub = if args.stub {
+        // Build stub args for suppressing unused-variable warnings
+        let stub_args: Vec<proc_macro2::TokenStream> = sig
+            .inputs
+            .iter()
+            .filter_map(|arg| match arg {
+                FnArg::Typed(pat_type) => {
+                    if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
+                        let ident = &pat_ident.ident;
+                        Some(quote!(#ident))
+                    } else {
+                        None
+                    }
+                }
+                FnArg::Receiver(_) => None,
+            })
+            .collect();
+
+        quote! {
+            #[cfg(not(target_arch = "wasm32"))]
+            #vis #sig {
+                let _ = (#(#stub_args),*);
+                unreachable!(
+                    "BUG: {}() was called but requires {} (target_arch = \"wasm32\"). \
+                     {}::summon() returns None on this architecture, so this function \
+                     is unreachable in safe code. If you used forge_token_dangerously(), \
+                     that is the bug.",
+                    stringify!(#fn_name),
+                    #token_type_str,
+                    #token_type_str,
+                )
+            }
+        }
+    } else {
+        quote! {}
+    };
+
+    let expanded = quote! {
+        #[cfg(target_arch = "wasm32")]
+        #(#new_attrs)*
+        #vis #sig {
+            #body
+        }
+
+        #stub
+    };
+
+    expanded.into()
 }
 
 /// Sibling expansion (default): generates two functions at the same scope level.
