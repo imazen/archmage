@@ -46,8 +46,6 @@ If you use `incant!` with `[v3, neon]`, you cover x86 and ARM with two implement
 - Gather/scatter (much faster than AVX2's versions)
 - Conflict detection, ternary logic, and other operations with no AVX2 equivalent
 
-The catch: heavy 512-bit operations can throttle CPU frequency by 10-30% on older Intel chips. For sustained workloads, measure whether 512-bit is actually faster than 256-bit at higher clock speed. Modern chips (Zen 4+, Sapphire Rapids+) have reduced or eliminated this penalty.
-
 V4 vs V4x: V4 is the conservative choice (Skylake-X 2017+, Zen 4 2022+). V4x adds modern extensions that are useful for ML (VNNI), cryptography (GFNI, VAES), and bit manipulation (VBMI, VPOPCNTDQ). Use V4x when those specific instructions help your workload; otherwise V4 is fine.
 
 Require the `avx512` cargo feature in your dependency:
