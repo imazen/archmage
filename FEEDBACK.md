@@ -1,5 +1,12 @@
 # User Feedback Log
 
+## 2026-03-02
+
+- User requested updating all repo documentation for sibling expansion, cfg-out default, stub param, and analyzing all dependents for breakage
+  - Updated 11 files: README, spec, CHANGELOG, site docs (arcane, rite, cross-platform, methods), book docs, crate docs
+  - Analyzed 11 dependents: all safe from cfg-out default change
+  - Key finding: all dependents properly cfg-guard their #[arcane] functions and use incant! with scalar fallbacks
+
 ## 2026-03-01
 
 - User requested CPU survey tool + GitHub Actions workflow: `examples/cpu_survey.rs` (comprehensive CPU feature report) and `.github/workflows/cpu-survey.yml` (12-runner matrix covering all public GH runners)
