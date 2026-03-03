@@ -183,6 +183,88 @@ Paradoxically, Windows *does* detect SVE/SVE2 features (sve2-bitperm, sve2-sha3,
 
 **Note**: `ubuntu-latest` x64 draws from a mixed pool. Some jobs get Intel Xeon 8370C (AVX-512), others get AMD EPYC 7763 (no AVX-512). Token-level tests that require AVX-512 may pass or fail non-deterministically on this runner. The SDE jobs provide deterministic emulation for specific CPU levels.
 
+## Features Left on the Table
+
+When you choose a token, the CPU may support features the token doesn't enable. This section maps what's unused at each tier.
+
+**"Covered elsewhere"** = another archmage token enables it (use a separate token for that workload).
+**"No token"** = no archmage token includes it (needs manual `#[target_feature]`).
+
+### x86_64: At the Highest Available Token
+
+| CPU | Highest Token | Covered by Other Token | No Token |
+|-----|--------------|----------------------|----------|
+| Coffee Lake i7-8700B | X64V3Token | aes, pclmulqdq → *X64CryptoToken* | — |
+| Zen 3 EPYC 7763 | X64V3CryptoToken | — | sha |
+| Zen 4 Ryzen 7950X | X64V4xToken | aes, pclmulqdq → *X64CryptoToken* | avx512bf16, sha |
+| Ice Lake Xeon 8370C | X64V4xToken | aes, pclmulqdq → *X64CryptoToken* | sha |
+
+**Key finding:** X64V4xToken includes `vaes`/`vpclmulqdq` (256/512-bit vectorized crypto) but NOT their 128-bit predecessors `aes`/`pclmulqdq`. The crypto branch (CryptoToken → V3CryptoToken) is parallel to the compute branch (V3 → V4 → V4x). Use X64CryptoToken separately for `_mm_aesenc_si128` and `_mm_clmulepi64_si128`.
+
+Non-compute features on all surveyed x86_64 CPUs but outside archmage scope: adx, rdrand, rdseed. AMD-only: sse4a.
+
+### AArch64: At the Highest Available Token
+
+| CPU | Highest Token | Covered by Other Token | No Token (compute) |
+|-----|--------------|----------------------|-------------------|
+| Apple M1 | Arm64V2Token | sha3 → *NeonSha3Token* | fhm, fcma |
+| Cobalt 100 (Linux) | Arm64V3Token | — | sm4 |
+| Cobalt 100 (Windows) | NeonToken | aes → *NeonAesToken*, crc → *NeonCrcToken* | dotprod* |
+
+\* Windows ARM64 cannot detect rdm or fp16, so Arm64V2Token won't summon. The CPU has all V3 features but only NeonToken + leaf tokens (NeonAesToken, NeonCrcToken) are available.
+
+Non-compute features outside archmage scope: jsconv, frintts, lse, rcpc, rcpc2, security (dit, sb, ssbs, paca, pacg), cache maintenance (dpb, dpb2), flagm, SVE/SVE2.
+
+### x86_64: Stepping Down from the Highest Token
+
+For CPUs that support higher tiers, this shows what you leave unused by choosing a lower token. Features listed are cumulative — everything in the row plus everything in rows above it.
+
+#### Zen 4 / Ice Lake (max: X64V4xToken)
+
+| If you use... | You leave these features unused |
+|---------------|-------------------------------|
+| X64V4xToken *(highest)* | aes, pclmulqdq |
+| X64V4Token | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes |
+| X64V3CryptoToken | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl *(but retains aes, pclmulqdq, vaes, vpclmulqdq)* |
+| X64V3Token | + aes, pclmulqdq, vaes, vpclmulqdq + all AVX-512 |
+| X64V2Token | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe |
+| X64V1Token | + sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b |
+
+#### Zen 3 (max: X64V3CryptoToken)
+
+| If you use... | You leave these features unused |
+|---------------|-------------------------------|
+| X64V3CryptoToken *(highest)* | — *(all token-managed features covered)* |
+| X64V3Token | + aes, pclmulqdq, vaes, vpclmulqdq |
+| X64CryptoToken | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe *(but retains aes, pclmulqdq)* |
+| X64V2Token | + avx, avx2, fma, ..., aes, pclmulqdq, vaes, vpclmulqdq |
+
+#### Coffee Lake (max: X64V3Token)
+
+| If you use... | You leave these features unused |
+|---------------|-------------------------------|
+| X64V3Token *(highest)* | aes, pclmulqdq |
+| X64CryptoToken | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe *(but retains aes, pclmulqdq)* |
+| X64V2Token | + aes, pclmulqdq + all V3 features |
+
+### AArch64: Stepping Down
+
+#### Apple M1 (max: Arm64V2Token)
+
+| If you use... | You leave these features unused |
+|---------------|-------------------------------|
+| Arm64V2Token *(highest)* | sha3, fhm, fcma *(M1 has these but V3 also needs i8mm, bf16 which M1 lacks)* |
+| NeonAesToken | + crc, rdm, dotprod, fp16, sha2 *(retains aes)* |
+| NeonToken | + aes, crc, rdm, dotprod, fp16, sha2, sha3, fhm, fcma |
+
+#### Cobalt 100 on Linux (max: Arm64V3Token)
+
+| If you use... | You leave these features unused |
+|---------------|-------------------------------|
+| Arm64V3Token *(highest)* | — *(all token-managed features covered)* |
+| Arm64V2Token | + fhm, fcma, sha3, i8mm, bf16 |
+| NeonToken | + crc, rdm, dotprod, fp16, aes, sha2 + all V3 features |
+
 ## Running the Survey
 
 ```bash
