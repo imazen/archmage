@@ -12,9 +12,7 @@
 
 #[cfg(target_arch = "x86_64")]
 mod arcane_contracts_x86 {
-    use archmage::{
-        Desktop64, HasNeon, HasX64V2, SimdToken, X64V2Token, X64V3Token, arcane,
-    };
+    use archmage::{Desktop64, HasNeon, HasX64V2, SimdToken, X64V2Token, X64V3Token, arcane};
 
     // --- Concrete token: compiles and executes ---
 
@@ -328,7 +326,11 @@ mod cross_arch_cfgout_arm {
 // D. incant! integration
 // =============================================================================
 
-#[cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))]
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 mod incant_contracts {
     use archmage::{ScalarToken, SimdToken, incant};
 

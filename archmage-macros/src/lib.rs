@@ -489,9 +489,23 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
     };
 
     if args.nested {
-        arcane_impl_nested(input_fn, &args, target_arch, token_type_name, target_feature_attrs, inline_attr)
+        arcane_impl_nested(
+            input_fn,
+            &args,
+            target_arch,
+            token_type_name,
+            target_feature_attrs,
+            inline_attr,
+        )
     } else {
-        arcane_impl_sibling(input_fn, &args, target_arch, token_type_name, target_feature_attrs, inline_attr)
+        arcane_impl_sibling(
+            input_fn,
+            &args,
+            target_arch,
+            token_type_name,
+            target_feature_attrs,
+            inline_attr,
+        )
     }
 }
 
