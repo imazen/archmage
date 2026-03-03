@@ -40,6 +40,18 @@ jobs:
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
 
+      - name: CPU survey
+        if: always()
+        shell: bash
+        run: cargo run --example cpu_survey --features "avx512" 2>&1 | tee cpu-survey.txt
+
+      - name: Upload CPU survey
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-survey-test-x64-${{ matrix.os }}
+          path: cpu-survey.txt
+
   # ==========================================================================
   # Primary: Native ARM64 testing
   # ==========================================================================
@@ -69,6 +81,18 @@ jobs:
 
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
+
+      - name: CPU survey
+        if: always()
+        shell: bash
+        run: cargo run --example cpu_survey --features "avx512" 2>&1 | tee cpu-survey.txt
+
+      - name: Upload CPU survey
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-survey-test-aarch64-${{ matrix.os }}
+          path: cpu-survey.txt
 
   # ==========================================================================
   # Cross-compiled testing with QEMU emulation
@@ -273,6 +297,9 @@ jobs:
       - name: Run Miri on archmage
         run: cargo miri test -p archmage --lib --features avx512
 
+      - name: Run Miri on miri_safe
+        run: cargo miri test --test miri_safe --features "${{ env.FEATURES }}"
+
   # ==========================================================================
   # Fuzz testing - property-based divergence detection
   # ==========================================================================
@@ -378,6 +405,18 @@ jobs:
       - name: Check MSRV
         run: cargo check --features "${{ env.FEATURES }}"
 
+      - name: CPU survey
+        if: always()
+        shell: bash
+        run: cargo run --example cpu_survey --features "avx512" 2>&1 | tee cpu-survey.txt
+
+      - name: Upload CPU survey
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-survey-msrv-${{ matrix.os }}
+          path: cpu-survey.txt
+
   # ==========================================================================
   # Feature Combination Testing
   # ==========================================================================
@@ -414,6 +453,7 @@ jobs:
 
   # ==========================================================================
   # Testable dispatch — CompileTimePolicy::Fail must succeed
+  # Also runs detect_features variants (merged from bench detect-testable-dispatch)
   # ==========================================================================
   testable-dispatch:
     name: Testable Dispatch (${{ matrix.name }})
@@ -424,6 +464,8 @@ jobs:
         include:
           - { os: ubuntu-latest, name: x64 Linux }
           - { os: ubuntu-24.04-arm, name: aarch64 Linux }
+          - { os: macos-latest, name: aarch64 macOS latest }
+          - { os: macos-14, name: aarch64 macOS 14 }
           - { os: windows-11-arm, name: aarch64 Windows }
 
     steps:
@@ -437,6 +479,107 @@ jobs:
 
       - name: Test with testable_dispatch + CompileTimePolicy::Fail
         run: cargo test --features "std macros avx512 testable_dispatch" --test token_permutations -- --test-threads=1
+
+      - name: Detect features (default)
+        shell: bash
+        run: cargo run --example detect_features --features "${{ env.FEATURES }}" 2>&1 | tee detect-features.txt
+
+      - name: Detect features (testable_dispatch)
+        shell: bash
+        run: cargo run --example detect_features --features "${{ env.FEATURES }} testable_dispatch" 2>&1 | tee -a detect-features.txt
+
+      - name: Detect features (testable_dispatch + target-cpu=native)
+        shell: bash
+        run: cargo run --example detect_features --features "${{ env.FEATURES }} testable_dispatch" 2>&1 | tee -a detect-features.txt
+        env:
+          RUSTFLAGS: "-C target-cpu=native"
+
+      - name: Detect features (target-cpu=native, no testable_dispatch)
+        shell: bash
+        run: cargo run --example detect_features --features "${{ env.FEATURES }}" 2>&1 | tee -a detect-features.txt
+        env:
+          RUSTFLAGS: "-C target-cpu=native"
+
+      - name: CPU survey
+        if: always()
+        shell: bash
+        run: cargo run --example cpu_survey --features "avx512" 2>&1 | tee cpu-survey.txt
+
+      - name: Upload detect features
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detect-features-${{ matrix.os }}
+          path: detect-features.txt
+
+      - name: Upload CPU survey
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-survey-testable-dispatch-${{ matrix.os }}
+          path: cpu-survey.txt
+
+  # ==========================================================================
+  # Intel SDE CPU emulation tests (absorbed from sde-test.yml)
+  # ==========================================================================
+  sde:
+    name: SDE ${{ matrix.cpu.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cpu:
+          - { name: "Pentium 4 (SSE2)", flag: "-p4" }
+          - { name: "Nehalem (SSE4.2)", flag: "-nhm" }
+          - { name: "Haswell (AVX2+FMA)", flag: "-hsw" }
+          - { name: "Skylake-X (AVX-512)", flag: "-skx" }
+          - { name: "Ice Lake (AVX-512 VBMI2)", flag: "-icl" }
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Download Intel SDE
+        run: |
+          wget -q https://downloadmirror.intel.com/831748/sde-external-9.44.0-2024-08-22-lin.tar.xz
+          tar -xf sde-external-9.44.0-2024-08-22-lin.tar.xz
+          echo "$PWD/sde-external-9.44.0-2024-08-22-lin" >> $GITHUB_PATH
+
+      - name: Build tests
+        run: cargo test --features "${{ env.FEATURES }}" --no-run
+
+      - name: Run tests under SDE (${{ matrix.cpu.name }})
+        run: |
+          # Find the test binary
+          TEST_BIN=$(find target/debug/deps -name 'archmage-*' -type f -executable | head -1)
+          echo "Running: sde64 ${{ matrix.cpu.flag }} -- $TEST_BIN"
+          sde64 ${{ matrix.cpu.flag }} -- $TEST_BIN
+
+      - name: Run integration tests under SDE
+        run: |
+          for test in target/debug/deps/*-*; do
+            if [ -x "$test" ] && [ -f "$test" ]; then
+              echo "Running: $test"
+              sde64 ${{ matrix.cpu.flag }} -- "$test" || true
+            fi
+          done
+
+      - name: CPU survey
+        if: always()
+        shell: bash
+        run: cargo run --example cpu_survey --features "avx512" 2>&1 | tee cpu-survey.txt
+
+      - name: Upload CPU survey
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-survey-sde-${{ matrix.cpu.name }}
+          path: cpu-survey.txt
 
   # ==========================================================================
   # Code Coverage (x86_64)

@@ -1,5 +1,8 @@
-name: CPU Survey
+name: CPU Survey (Hardware Catalog)
 
+# Catalog-only: runners not already covered by CI or bench workflows.
+# CI covers: ubuntu-latest, windows-latest, ubuntu-24.04-arm, macos-14, macos-latest, windows-11-arm
+# Bench covers: macos-26-intel
 on:
   workflow_dispatch:
 
@@ -14,24 +17,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # x86_64 Linux
+          # x86_64 Linux (specific versions)
           - { os: ubuntu-24.04, name: "Ubuntu 24.04 (x64)" }
           - { os: ubuntu-22.04, name: "Ubuntu 22.04 (x64)" }
-          # ARM64 Linux
-          - { os: ubuntu-24.04-arm, name: "Ubuntu 24.04 ARM64 (Cobalt 100)" }
+          # ARM64 Linux (older)
           - { os: ubuntu-22.04-arm, name: "Ubuntu 22.04 ARM64 (Cobalt 100)" }
-          # x86_64 Windows
+          # x86_64 Windows (specific versions)
           - { os: windows-2025, name: "Windows 2025 (x64)" }
           - { os: windows-2022, name: "Windows 2022 (x64)" }
-          # ARM64 Windows
-          - { os: windows-11-arm, name: "Windows ARM64 (Snapdragon X)" }
-          # ARM64 macOS
+          # ARM64 macOS (specific versions)
           - { os: macos-15, name: "macOS 15 (Apple M1)" }
-          - { os: macos-14, name: "macOS 14 (Apple M1)" }
           - { os: macos-26, name: "macOS 26 (Apple M-series)" }
           # x86_64 macOS
           - { os: macos-15-intel, name: "macOS 15 Intel (Xeon W)" }
-          - { os: macos-26-intel, name: "macOS 26 Intel (Xeon W)" }
 
     steps:
       - uses: actions/checkout@v6
@@ -39,43 +37,13 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: System info (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          echo "=== uname ==="
-          uname -a
-          echo ""
-          echo "=== /proc/cpuinfo (first 60 lines) ==="
-          head -60 /proc/cpuinfo || true
-          echo ""
-          echo "=== lscpu ==="
-          lscpu || true
-
-      - name: System info (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          echo "=== uname ==="
-          uname -a
-          echo ""
-          echo "=== CPU info ==="
-          sysctl -n machdep.cpu.brand_string 2>/dev/null || true
-          sysctl -n hw.chip 2>/dev/null || true
-          echo ""
-          echo "=== sysctl hw ==="
-          sysctl hw 2>/dev/null | grep -iE "(cpu|chip|model|machine|optional|ncpu|memsize)" | head -40 || true
-
-      - name: System info (Windows)
-        if: runner.os == 'Windows'
+      - name: CPU survey
         shell: bash
-        run: |
-          echo "=== PROCESSOR_IDENTIFIER ==="
-          echo "$PROCESSOR_IDENTIFIER"
-          echo ""
-          echo "=== PROCESSOR_ARCHITECTURE ==="
-          echo "$PROCESSOR_ARCHITECTURE"
-          echo ""
-          echo "=== NUMBER_OF_PROCESSORS ==="
-          echo "$NUMBER_OF_PROCESSORS"
+        run: cargo run --example cpu_survey --features "avx512" 2>&1 | tee cpu-survey.txt
 
-      - name: Run CPU survey
-        run: cargo run --example cpu_survey --features "avx512"
+      - name: Upload CPU survey
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-survey-catalog-${{ matrix.os }}
+          path: cpu-survey.txt

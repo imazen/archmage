@@ -523,13 +523,20 @@ If ANY check fails:
 - Fix the issue first
 - Re-run `just ci` until it passes
 
-**Git tags are MANDATORY for every publish.** After `cargo publish`, immediately create tags:
+**NEVER run `cargo publish` locally.** All releases go through GitHub Actions via tagged releases only. This ensures every published version has passed the full CI suite (including cross-platform tests, SDE emulation, Miri, etc.) before reaching crates.io. Local `cargo publish` bypasses CI and is banned.
 
-```bash
-git tag v{version}                        # archmage
-git tag archmage-macros-v{version}        # archmage-macros
-git tag magetypes-v{version}              # magetypes
-git push origin v{version} archmage-macros-v{version} magetypes-v{version}
+**Release process:**
+1. Update version numbers in all Cargo.toml files
+2. Commit the version bump, push to main
+3. Wait for CI to pass on main
+4. Create a GitHub release with matching tags — the release workflow handles `cargo publish`
+
+**Git tags are MANDATORY for every publish.** Tags MUST match published versions:
+
+```
+v{version}                        # archmage
+archmage-macros-v{version}        # archmage-macros
+magetypes-v{version}              # magetypes
 ```
 
 Publish order (respect dependency chain): `archmage-macros` → `archmage` → `magetypes`.

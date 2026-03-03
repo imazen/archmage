@@ -10,7 +10,6 @@ env:
   FEATURES: "std macros avx512"
 
 jobs:
-  # Run benchmarks on all platforms
   bench:
     strategy:
       fail-fast: false
@@ -40,8 +39,11 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Detect features
-        run: cargo run --example detect_features --features "${{ env.FEATURES }}"
+
+      - name: CPU survey
+        shell: bash
+        run: cargo run --example cpu_survey --features "avx512" 2>&1 | tee cpu-survey.txt
+
       - name: Run benchmarks
         shell: bash
         run: |
@@ -49,42 +51,17 @@ jobs:
             echo "=== Running bench: $bench ==="
             cargo bench --bench "$bench" --features "${{ env.FEATURES }}" -- --noplot 2>&1 | tee -a bench-output.txt
           done
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload bench output
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: bench-${{ matrix.name }}
           path: bench-output.txt
 
-  # Diagnostic: detect features with testable_dispatch on all aarch64 platforms
-  # This catches bugs where testable_dispatch + runtime detection gives wrong results
-  detect-testable-dispatch:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04-arm
-            name: Linux aarch64
-          - os: macos-latest
-            name: macOS aarch64 (latest)
-          - os: macos-14
-            name: macOS aarch64 (14)
-          - os: windows-11-arm
-            name: Windows aarch64
-    name: detect (${{ matrix.name }})
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Detect features (default)
-        run: cargo run --example detect_features --features "${{ env.FEATURES }}"
-      - name: Detect features (testable_dispatch)
-        run: cargo run --example detect_features --features "${{ env.FEATURES }} testable_dispatch"
-      - name: Detect features (testable_dispatch + target-cpu=native)
-        run: cargo run --example detect_features --features "${{ env.FEATURES }} testable_dispatch"
-        env:
-          RUSTFLAGS: "-C target-cpu=native"
-      - name: Detect features (target-cpu=native, no testable_dispatch)
-        run: cargo run --example detect_features --features "${{ env.FEATURES }}"
-        env:
-          RUSTFLAGS: "-C target-cpu=native"
+      - name: Upload CPU survey
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-survey-bench-${{ matrix.name }}
+          path: cpu-survey.txt
