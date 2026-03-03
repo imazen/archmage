@@ -153,10 +153,11 @@ pub use crate::tokens::ScalarToken;
 pub use crate::tokens::{
     Arm64, Arm64V2Token, Arm64V3Token, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken,
 };
-pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
 pub use crate::tokens::{
-    X64V3Token, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken, X64V3Token,
+    Avx2FmaToken, Desktop64, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken,
+    X64V3Token,
 };
+pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
 pub use crate::tokens::{Wasm128RelaxedToken, Wasm128Token};
 
 // -- Macros --

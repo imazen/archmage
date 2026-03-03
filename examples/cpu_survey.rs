@@ -32,7 +32,7 @@ fn main() {
     report_token::<archmage::X64V1Token>("X64V1Token", "Sse2Token");
     report_token::<archmage::X64V2Token>("X64V2Token", "");
     report_token::<archmage::X64CryptoToken>("X64CryptoToken", "");
-    report_token::<archmage::X64V3Token>("X64V3Token", "Desktop64");
+    report_token::<archmage::X64V3Token>("X64V3Token", "Avx2FmaToken");
     report_token::<archmage::X64V3CryptoToken>("X64V3CryptoToken", "");
     report_token::<archmage::X64V4Token>("X64V4Token", "Avx512Token, Server64");
     report_token::<archmage::X64V4xToken>("X64V4xToken", "");

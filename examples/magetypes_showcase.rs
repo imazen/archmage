@@ -32,7 +32,7 @@ mod comparison {
 
     /// Raw intrinsics: verbose, error-prone, hard to read
     #[arcane]
-    pub fn dot_product_raw(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    pub fn dot_product_raw(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
         let va = _mm256_loadu_ps(a);
         let vb = _mm256_loadu_ps(b);
         let prod = _mm256_mul_ps(va, vb);
@@ -48,7 +48,7 @@ mod comparison {
 
     /// Magetypes: clean, readable, same codegen
     #[arcane]
-    pub fn dot_product_clean(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    pub fn dot_product_clean(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
         let va = f32x8::from_array(token, *a);
         let vb = f32x8::from_array(token, *b);
         (va * vb).reduce_add()
@@ -56,7 +56,7 @@ mod comparison {
 
     /// FMA with raw intrinsics
     #[arcane]
-    pub fn fma_raw(_token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    pub fn fma_raw(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
         let va = _mm256_loadu_ps(a);
         let vb = _mm256_loadu_ps(b);
         let vc = _mm256_loadu_ps(c);
@@ -68,7 +68,7 @@ mod comparison {
 
     /// FMA with magetypes: a * b + c
     #[arcane]
-    pub fn fma_clean(token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    pub fn fma_clean(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
         let va = f32x8::from_array(token, *a);
         let vb = f32x8::from_array(token, *b);
         let vc = f32x8::from_array(token, *c);
@@ -85,7 +85,7 @@ mod operators {
     use super::*;
 
     #[arcane]
-    pub fn vector_math(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    pub fn vector_math(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
         let va = f32x8::from_array(token, *a);
         let vb = f32x8::from_array(token, *b);
 
@@ -101,7 +101,7 @@ mod operators {
     }
 
     #[arcane]
-    pub fn integer_ops(token: Desktop64, a: &[i32; 8], b: &[i32; 8]) -> [i32; 8] {
+    pub fn integer_ops(token: X64V3Token, a: &[i32; 8], b: &[i32; 8]) -> [i32; 8] {
         let va = i32x8::from_array(token, *a);
         let vb = i32x8::from_array(token, *b);
 
@@ -123,7 +123,7 @@ mod methods {
     use super::*;
 
     #[arcane]
-    pub fn statistics(token: Desktop64, data: &[f32; 8]) -> (f32, f32, f32) {
+    pub fn statistics(token: X64V3Token, data: &[f32; 8]) -> (f32, f32, f32) {
         let v = f32x8::from_array(token, *data);
 
         let sum = v.reduce_add();
@@ -134,7 +134,7 @@ mod methods {
     }
 
     #[arcane]
-    pub fn clamped_normalize(token: Desktop64, data: &[f32; 8], lo: f32, hi: f32) -> [f32; 8] {
+    pub fn clamped_normalize(token: X64V3Token, data: &[f32; 8], lo: f32, hi: f32) -> [f32; 8] {
         let v = f32x8::from_array(token, *data);
         let lo_v = f32x8::splat(token, lo);
         let hi_v = f32x8::splat(token, hi);
@@ -148,14 +148,14 @@ mod methods {
     }
 
     #[arcane]
-    pub fn abs_values(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    pub fn abs_values(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = f32x8::from_array(token, *data);
         v.abs().to_array()
     }
 
     #[arcane]
     pub fn sqrt_and_reciprocals(
-        token: Desktop64,
+        token: X64V3Token,
         data: &[f32; 8],
     ) -> ([f32; 8], [f32; 8], [f32; 8]) {
         let v = f32x8::from_array(token, *data);
@@ -168,7 +168,7 @@ mod methods {
     }
 
     #[arcane]
-    pub fn floor_ceil_round(token: Desktop64, data: &[f32; 8]) -> ([f32; 8], [f32; 8], [f32; 8]) {
+    pub fn floor_ceil_round(token: X64V3Token, data: &[f32; 8]) -> ([f32; 8], [f32; 8], [f32; 8]) {
         let v = f32x8::from_array(token, *data);
 
         (
@@ -189,7 +189,7 @@ mod transcendentals {
 
     /// Softmax activation function (one chunk)
     #[arcane]
-    pub fn softmax_chunk(token: Desktop64, logits: &[f32; 8], max_val: f32) -> ([f32; 8], f32) {
+    pub fn softmax_chunk(token: X64V3Token, logits: &[f32; 8], max_val: f32) -> ([f32; 8], f32) {
         let v = f32x8::from_array(token, *logits);
         let max_v = f32x8::splat(token, max_val);
 
@@ -203,14 +203,14 @@ mod transcendentals {
 
     /// Power function for gamma correction
     #[arcane]
-    pub fn gamma_correction(token: Desktop64, pixels: &[f32; 8], gamma: f32) -> [f32; 8] {
+    pub fn gamma_correction(token: X64V3Token, pixels: &[f32; 8], gamma: f32) -> [f32; 8] {
         let v = f32x8::from_array(token, *pixels);
         v.pow_lowp(gamma).to_array()
     }
 
     /// Log-sum-exp (numerically stable)
     #[arcane]
-    pub fn log_sum_exp(token: Desktop64, data: &[f32; 8]) -> f32 {
+    pub fn log_sum_exp(token: X64V3Token, data: &[f32; 8]) -> f32 {
         let v = f32x8::from_array(token, *data);
 
         let max_val = v.reduce_max();
@@ -224,14 +224,14 @@ mod transcendentals {
 
     /// Natural log
     #[arcane]
-    pub fn log_values(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    pub fn log_values(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = f32x8::from_array(token, *data);
         v.ln_lowp().to_array()
     }
 
     /// Base-2 logarithm
     #[arcane]
-    pub fn log2_values(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    pub fn log2_values(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         let v = f32x8::from_array(token, *data);
         v.log2_lowp().to_array()
     }
@@ -247,7 +247,7 @@ mod conditionals {
 
     /// ReLU activation: max(0, x)
     #[arcane]
-    pub fn relu(token: Desktop64, x: &[f32; 8]) -> [f32; 8] {
+    pub fn relu(token: X64V3Token, x: &[f32; 8]) -> [f32; 8] {
         let v = f32x8::from_array(token, *x);
         let zero = f32x8::zero(token);
         v.max(zero).to_array()
@@ -255,7 +255,7 @@ mod conditionals {
 
     /// Leaky ReLU: x if x > 0 else alpha * x
     #[arcane]
-    pub fn leaky_relu(token: Desktop64, x: &[f32; 8], alpha: f32) -> [f32; 8] {
+    pub fn leaky_relu(token: X64V3Token, x: &[f32; 8], alpha: f32) -> [f32; 8] {
         let v = f32x8::from_array(token, *x);
         let zero = f32x8::zero(token);
         let alpha_v = f32x8::splat(token, alpha);
@@ -270,7 +270,7 @@ mod conditionals {
 
     /// Threshold: 1.0 if x > threshold else 0.0
     #[arcane]
-    pub fn threshold(token: Desktop64, x: &[f32; 8], thresh: f32) -> [f32; 8] {
+    pub fn threshold(token: X64V3Token, x: &[f32; 8], thresh: f32) -> [f32; 8] {
         let v = f32x8::from_array(token, *x);
         let thresh_v = f32x8::splat(token, thresh);
         let one = f32x8::splat(token, 1.0);
@@ -282,7 +282,7 @@ mod conditionals {
 
     /// Clamp to range using the dedicated method
     #[arcane]
-    pub fn clamp(token: Desktop64, x: &[f32; 8], lo: f32, hi: f32) -> [f32; 8] {
+    pub fn clamp(token: X64V3Token, x: &[f32; 8], lo: f32, hi: f32) -> [f32; 8] {
         let v = f32x8::from_array(token, *x);
         let lo_v = f32x8::splat(token, lo);
         let hi_v = f32x8::splat(token, hi);
@@ -300,7 +300,7 @@ mod batch_norm {
 
     /// Batch normalization: (x - mean) / sqrt(var + eps) * gamma + beta
     pub fn batch_norm(data: &mut [f32], mean: f32, var: f32, gamma: f32, beta: f32, eps: f32) {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             batch_norm_avx2(token, data, mean, var, gamma, beta, eps);
         } else {
             batch_norm_scalar(data, mean, var, gamma, beta, eps);
@@ -309,7 +309,7 @@ mod batch_norm {
 
     #[arcane]
     fn batch_norm_avx2(
-        token: Desktop64,
+        token: X64V3Token,
         data: &mut [f32],
         mean: f32,
         var: f32,
@@ -351,7 +351,7 @@ mod layer_norm {
     use super::*;
 
     pub fn layer_norm(data: &mut [f32], gamma: f32, beta: f32, eps: f32) {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             layer_norm_avx2(token, data, gamma, beta, eps);
         } else {
             layer_norm_scalar(data, gamma, beta, eps);
@@ -359,7 +359,7 @@ mod layer_norm {
     }
 
     #[arcane]
-    fn layer_norm_avx2(token: Desktop64, data: &mut [f32], gamma: f32, beta: f32, eps: f32) {
+    fn layer_norm_avx2(token: X64V3Token, data: &mut [f32], gamma: f32, beta: f32, eps: f32) {
         // Pass 1: Compute mean
         let mean = compute_mean(token, data);
 
@@ -384,7 +384,7 @@ mod layer_norm {
     }
 
     #[rite]
-    fn compute_mean(token: Desktop64, data: &[f32]) -> f32 {
+    fn compute_mean(token: X64V3Token, data: &[f32]) -> f32 {
         let mut sum = f32x8::zero(token);
         for chunk in data.chunks_exact(8) {
             let v = f32x8::from_array(token, chunk.try_into().unwrap());
@@ -398,7 +398,7 @@ mod layer_norm {
     }
 
     #[rite]
-    fn compute_variance(token: Desktop64, data: &[f32], mean: f32) -> f32 {
+    fn compute_variance(token: X64V3Token, data: &[f32], mean: f32) -> f32 {
         let mean_v = f32x8::splat(token, mean);
         let mut sum_sq = f32x8::zero(token);
 
@@ -438,7 +438,7 @@ mod cosine_similarity {
     pub fn cosine_sim(a: &[f32], b: &[f32]) -> f32 {
         assert_eq!(a.len(), b.len());
 
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             cosine_sim_avx2(token, a, b)
         } else {
             cosine_sim_scalar(a, b)
@@ -446,7 +446,7 @@ mod cosine_similarity {
     }
 
     #[arcane]
-    fn cosine_sim_avx2(token: Desktop64, a: &[f32], b: &[f32]) -> f32 {
+    fn cosine_sim_avx2(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
         let mut dot = f32x8::zero(token);
         let mut norm_a = f32x8::zero(token);
         let mut norm_b = f32x8::zero(token);
@@ -499,7 +499,7 @@ mod softmax {
             return;
         }
 
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             softmax_avx2(token, data);
         } else {
             softmax_scalar(data);
@@ -507,7 +507,7 @@ mod softmax {
     }
 
     #[arcane]
-    fn softmax_avx2(token: Desktop64, data: &mut [f32]) {
+    fn softmax_avx2(token: X64V3Token, data: &mut [f32]) {
         // Find max
         let max_val = find_max(token, data);
 
@@ -540,7 +540,7 @@ mod softmax {
     }
 
     #[rite]
-    fn find_max(token: Desktop64, data: &[f32]) -> f32 {
+    fn find_max(token: X64V3Token, data: &[f32]) -> f32 {
         let mut max_vec = f32x8::splat(token, f32::NEG_INFINITY);
         for chunk in data.chunks_exact(8) {
             let v = f32x8::from_array(token, chunk.try_into().unwrap());
@@ -574,7 +574,7 @@ mod softmax {
 fn main() {
     println!("Magetypes Showcase\n");
 
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         // Comparison: raw vs clean
         let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let b = [2.0f32; 8];
@@ -630,7 +630,7 @@ fn main() {
             cosine_similarity::cosine_sim(&v1, &v3)
         );
     } else {
-        println!("Desktop64 (AVX2+FMA) not available on this CPU");
+        println!("X64V3Token (AVX2+FMA) not available on this CPU");
     }
 }
 
@@ -640,7 +640,7 @@ mod tests {
 
     #[test]
     fn test_dot_equivalence() {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let b = [2.0f32; 8];
             let raw = comparison::dot_product_raw(token, &a, &b);
@@ -651,7 +651,7 @@ mod tests {
 
     #[test]
     fn test_relu() {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let x = [-2.0f32, -1.0, 0.0, 1.0, 2.0, 3.0, -0.5, 0.5];
             let result = conditionals::relu(token, &x);
             assert_eq!(result, [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 0.0, 0.5]);

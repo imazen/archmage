@@ -174,9 +174,9 @@ pub use tokens::{
     Arm64,
     Arm64V2Token,
     Arm64V3Token,
-    // x86 tier tokens
+    // x86 tier tokens (aliases still exported for backward compat)
     Avx2FmaToken,
-    X64V3Token,
+    Desktop64,
     NeonAesToken,
     NeonCrcToken,
     NeonSha3Token,

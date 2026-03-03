@@ -19,7 +19,7 @@ mod pattern1 {
     use super::*;
 
     pub fn public_api(data: &[f32]) -> f32 {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             process_simd(token, data)
         } else {
             data.iter().sum()
@@ -27,7 +27,7 @@ mod pattern1 {
     }
 
     #[arcane]
-    fn process_simd(token: Desktop64, data: &[f32]) -> f32 {
+    fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
         let mut sum = 0.0;
         for chunk in data.chunks_exact(8) {
             sum += process_chunk(token, chunk.try_into().unwrap());
@@ -36,7 +36,7 @@ mod pattern1 {
     }
 
     #[rite]
-    fn process_chunk(token: Desktop64, chunk: &[f32; 8]) -> f32 {
+    fn process_chunk(token: X64V3Token, chunk: &[f32; 8]) -> f32 {
         let v = f32x8::from_array(token, *chunk);
         v.reduce_add()
     }
@@ -58,7 +58,7 @@ mod pattern2_correct {
     use super::*;
 
     fn process_all(pairs: &[([f32; 8], [f32; 8])]) -> f32 {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             process_all_simd(token, pairs)
         } else {
             process_all_scalar(pairs)
@@ -66,7 +66,7 @@ mod pattern2_correct {
     }
 
     #[arcane]
-    fn process_all_simd(token: Desktop64, pairs: &[([f32; 8], [f32; 8])]) -> f32 {
+    fn process_all_simd(token: X64V3Token, pairs: &[([f32; 8], [f32; 8])]) -> f32 {
         pairs
             .iter()
             .map(|(a, b)| process_pair_simd(token, a, b))
@@ -74,7 +74,7 @@ mod pattern2_correct {
     }
 
     #[rite]
-    fn process_pair_simd(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    fn process_pair_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
         let va = f32x8::from_array(token, *a);
         let vb = f32x8::from_array(token, *b);
         (va * vb).reduce_add()
@@ -108,20 +108,20 @@ mod pattern4 {
     use safe_unaligned_simd::x86_64::_mm256_loadu_ps;
 
     #[arcane]
-    fn load_and_square_intrinsics(token: Desktop64, data: &[f32; 8]) -> __m256 {
+    fn load_and_square_intrinsics(token: X64V3Token, data: &[f32; 8]) -> __m256 {
         let v = _mm256_loadu_ps(data);
         _mm256_mul_ps(v, v)
     }
 
     #[arcane]
-    fn load_and_square_magetypes(token: Desktop64, data: &[f32; 8]) -> f32x8 {
+    fn load_and_square_magetypes(token: X64V3Token, data: &[f32; 8]) -> f32x8 {
         let v = f32x8::from_array(token, *data);
         v * v
     }
 
     #[test]
     fn test_pattern4() {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             let data = [2.0f32; 8];
             let result = load_and_square_magetypes(token, &data);
             let arr = result.to_array();
@@ -140,7 +140,7 @@ mod mistake5_correct {
     use super::*;
 
     pub fn api(data: &[f32]) -> f32 {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             process_simd(token, data)
         } else {
             process_scalar(data)
@@ -148,7 +148,7 @@ mod mistake5_correct {
     }
 
     #[arcane]
-    fn process_simd(token: Desktop64, data: &[f32]) -> f32 {
+    fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
         let mut sum = f32x8::zero(token);
         for chunk in data.chunks_exact(8) {
             let v = f32x8::from_array(token, chunk.try_into().unwrap());
@@ -178,7 +178,7 @@ mod explicit_dispatch {
     use magetypes::simd::f32x4;
 
     pub fn process(data: &[f32]) -> f32 {
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             process_avx2(token, data)
         } else if let Some(token) = Arm64::summon() {
             process_neon(token, data)
@@ -188,7 +188,7 @@ mod explicit_dispatch {
     }
 
     #[arcane]
-    fn process_avx2(token: Desktop64, data: &[f32]) -> f32 {
+    fn process_avx2(token: X64V3Token, data: &[f32]) -> f32 {
         let mut sum = f32x8::zero(token);
         for chunk in data.chunks_exact(8) {
             let v = f32x8::from_array(token, chunk.try_into().unwrap());
@@ -260,7 +260,7 @@ mod rms_normalize {
             return;
         }
 
-        let sum_sq: f32 = if let Some(token) = Desktop64::summon() {
+        let sum_sq: f32 = if let Some(token) = X64V3Token::summon() {
             sum_squares_avx2(token, samples)
         } else {
             samples.iter().map(|x| x * x).sum()
@@ -272,7 +272,7 @@ mod rms_normalize {
         }
         let scale = 1.0 / rms;
 
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             scale_avx2(token, samples, scale);
         } else {
             samples.iter_mut().for_each(|x| *x *= scale);
@@ -280,7 +280,7 @@ mod rms_normalize {
     }
 
     #[arcane]
-    fn sum_squares_avx2(token: Desktop64, data: &[f32]) -> f32 {
+    fn sum_squares_avx2(token: X64V3Token, data: &[f32]) -> f32 {
         let mut acc = f32x8::zero(token);
 
         for chunk in data.chunks_exact(8) {
@@ -296,7 +296,7 @@ mod rms_normalize {
     }
 
     #[arcane]
-    fn scale_avx2(token: Desktop64, data: &mut [f32], scale: f32) {
+    fn scale_avx2(token: X64V3Token, data: &mut [f32], scale: f32) {
         let s = f32x8::splat(token, scale);
 
         let chunks = data.len() / 8;
@@ -333,7 +333,7 @@ mod softmax {
             return;
         }
 
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             softmax_avx2(token, logits);
         } else {
             softmax_scalar(logits);
@@ -341,7 +341,7 @@ mod softmax {
     }
 
     #[arcane]
-    fn softmax_avx2(token: Desktop64, data: &mut [f32]) {
+    fn softmax_avx2(token: X64V3Token, data: &mut [f32]) {
         // Find max
         let max_val = reduce_max(token, data);
 
@@ -377,7 +377,7 @@ mod softmax {
     }
 
     #[rite]
-    fn reduce_max(token: Desktop64, data: &[f32]) -> f32 {
+    fn reduce_max(token: X64V3Token, data: &[f32]) -> f32 {
         let mut max_vec = f32x8::splat(token, f32::NEG_INFINITY);
 
         for chunk in data.chunks_exact(8) {
@@ -435,7 +435,7 @@ mod dot_product {
     pub fn dot(a: &[f32], b: &[f32]) -> f32 {
         assert_eq!(a.len(), b.len());
 
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             dot_avx2(token, a, b)
         } else if let Some(token) = Arm64::summon() {
             dot_neon(token, a, b)
@@ -445,7 +445,7 @@ mod dot_product {
     }
 
     #[arcane]
-    fn dot_avx2(token: Desktop64, a: &[f32], b: &[f32]) -> f32 {
+    fn dot_avx2(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
         let mut acc = f32x8::zero(token);
 
         for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
