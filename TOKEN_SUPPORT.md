@@ -196,10 +196,10 @@ When you choose a token, the CPU may support features the token doesn't enable. 
 |-----|--------------|----------------------|----------|
 | Coffee Lake i7-8700B | X64V3Token | aes, pclmulqdq → *X64CryptoToken* | — |
 | Zen 3 EPYC 7763 | X64V3CryptoToken | — | sha |
-| Zen 4 Ryzen 7950X | X64V4xToken | aes, pclmulqdq → *X64CryptoToken* | avx512bf16, sha |
-| Ice Lake Xeon 8370C | X64V4xToken | aes, pclmulqdq → *X64CryptoToken* | sha |
+| Zen 4 Ryzen 7950X | X64V4xToken | — | avx512bf16, sha |
+| Ice Lake Xeon 8370C | X64V4xToken | — | sha |
 
-**Key finding:** X64V4xToken includes `vaes`/`vpclmulqdq` (256/512-bit vectorized crypto) but NOT their 128-bit predecessors `aes`/`pclmulqdq`. The crypto branch (CryptoToken → V3CryptoToken) is parallel to the compute branch (V3 → V4 → V4x). Use X64CryptoToken separately for `_mm_aesenc_si128` and `_mm_clmulepi64_si128`.
+**Note:** V4Token and above now include `aes`/`pclmulqdq` (every AVX-512 CPU has AES-NI). V4xToken also includes `vaes`/`vpclmulqdq`. So at the V4+ tier, no crypto features are left on the table. V3Token still requires a separate X64CryptoToken for `_mm_aesenc_si128` and `_mm_clmulepi64_si128`.
 
 Non-compute features on all surveyed x86_64 CPUs but outside archmage scope: adx, rdrand, rdseed. AMD-only: sse4a.
 
@@ -223,7 +223,7 @@ For CPUs that support higher tiers, this shows what you leave unused by choosing
 
 | If you use... | You leave these features unused |
 |---------------|-------------------------------|
-| X64V4xToken *(highest)* | aes, pclmulqdq |
+| X64V4xToken *(highest)* | — *(all token-managed features covered)* |
 | X64V4Token | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes |
 | X64V3CryptoToken | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl *(but retains aes, pclmulqdq, vaes, vpclmulqdq)* |
 | X64V3Token | + aes, pclmulqdq, vaes, vpclmulqdq + all AVX-512 |
@@ -243,7 +243,7 @@ For CPUs that support higher tiers, this shows what you leave unused by choosing
 
 | If you use... | You leave these features unused |
 |---------------|-------------------------------|
-| X64V3Token *(highest)* | aes, pclmulqdq |
+| X64V3Token *(highest)* | aes, pclmulqdq *(use X64CryptoToken for 128-bit crypto)* |
 | X64CryptoToken | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe *(but retains aes, pclmulqdq)* |
 | X64V2Token | + aes, pclmulqdq + all V3 features |
 

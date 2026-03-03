@@ -100,12 +100,13 @@ features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
+    "pclmulqdq", "aes",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
 ]
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
 display_name = "AVX-512"
 short_name = "v4"
-parents = ["X64V3Token"]
+parents = ["X64V3Token", "X64CryptoToken"]
 extraction_aliases = ["avx512"]
 doc = "Proof that AVX-512 (F + CD + VL + DQ + BW) is available.\n\nThis is the complete x86-64-v4 AVX-512 feature set, available on:\n- Intel Skylake-X (2017+), Ice Lake, Sapphire Rapids\n- AMD Zen 4+ (2022+)\n\nNote: Intel 12th-14th gen consumer CPUs do NOT have AVX-512."
 
@@ -117,6 +118,7 @@ features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
+    "pclmulqdq", "aes",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
     "avx512vpopcntdq", "avx512ifma", "avx512vbmi", "avx512vbmi2",
     "avx512bitalg", "avx512vnni",
@@ -125,7 +127,7 @@ features = [
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
 display_name = "x86-64-v4x"
 short_name = "v4x"
-parents = ["X64V4Token"]
+parents = ["X64V4Token", "X64V3CryptoToken"]
 doc = "Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake / Zen 4 level).\n\nThis includes all of `X64V4Token` (F+CD+VL+DQ+BW) plus:\n- VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI\n- VPCLMULQDQ, GFNI, VAES\n\nAvailable on Intel Ice Lake (2019+), Sapphire Rapids, AMD Zen 4+.\nNOT available on Skylake-X (lacks VBMI2, VNNI, etc.)."
 
 [[token]]
@@ -135,6 +137,7 @@ features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
+    "pclmulqdq", "aes",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
     "avx512fp16",
 ]

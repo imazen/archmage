@@ -873,8 +873,8 @@ When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the
 - `X64CryptoToken` - V2 + PCLMULQDQ + AES-NI (Westmere 2010+)
 - `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
 - `X64V3CryptoToken` - V3 + VPCLMULQDQ + VAES (Zen 3+ 2020, Alder Lake 2021+)
-- `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
-- `X64V4xToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
+- `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL + AES-NI (Skylake-X 2017+, Zen 4+)
+- `X64V4xToken` - + modern extensions + VAES/VPCLMULQDQ/GFNI (Ice Lake 2019+, Zen 4+)
 - `Avx512Fp16Token` - + FP16 (Sapphire Rapids 2023+)
 
 **ARM (compute tiers):**

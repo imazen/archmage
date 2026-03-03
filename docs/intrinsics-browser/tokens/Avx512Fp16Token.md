@@ -2,7 +2,7 @@
 
 Proof that AVX-512 FP16 (half-precision) is available.
 
-**Architecture:** x86_64 | **Features:** sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b, avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe, avx512f, avx512bw, avx512cd, avx512dq, avx512vl, avx512fp16
+**Architecture:** x86_64 | **Features:** sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b, avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe, pclmulqdq, aes, avx512f, avx512bw, avx512cd, avx512dq, avx512vl, avx512fp16
 **Total intrinsics:** 935 (918 safe, 17 unsafe, 0 stable, 935 unstable/unknown)
 
 ## Usage

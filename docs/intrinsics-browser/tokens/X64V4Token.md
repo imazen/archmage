@@ -2,7 +2,7 @@
 
 Proof that AVX-512 (F + CD + VL + DQ + BW) is available.
 
-**Architecture:** x86_64 | **Features:** sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b, avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe, avx512f, avx512bw, avx512cd, avx512dq, avx512vl
+**Architecture:** x86_64 | **Features:** sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b, avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe, pclmulqdq, aes, avx512f, avx512bw, avx512cd, avx512dq, avx512vl
 **Total intrinsics:** 3902 (3560 safe, 342 unsafe, 3902 stable, 0 unstable/unknown)
 
 ## Usage
