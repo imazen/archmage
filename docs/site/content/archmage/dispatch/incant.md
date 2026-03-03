@@ -129,7 +129,7 @@ Always specify which tiers your function supports. The `_scalar` suffix is alway
 | `_wasm128_relaxed` | `Wasm128RelaxedToken` | WASM Relaxed SIMD |
 | `_scalar` | `ScalarToken` | Always required (implicit) |
 
-Cross-architecture variants are excluded by `#[cfg]` — on x86-64, you need `_v3` and `_scalar`. You don't need `_neon` or `_wasm128` (they compile to stubs).
+Cross-architecture variants are excluded by `#[cfg]` — on x86-64, you need `_v3` and `_scalar`. You don't need `_neon` or `_wasm128` (they're cfg'd out by `incant!`).
 
 ## Passthrough Mode
 
@@ -149,7 +149,7 @@ This uses `IntoConcreteToken` to check the token's actual type and dispatch acco
 ```rust
 use archmage::{arcane, incant, X64V3Token, NeonToken, Wasm128Token, SimdToken};
 
-// AVX2 variant — #[arcane] generates a stub on non-x86
+// AVX2 variant — #[arcane] cfg's this out on non-x86
 #[arcane]
 fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     use std::arch::x86_64::*;

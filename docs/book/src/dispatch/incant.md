@@ -144,7 +144,7 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 | `_wasm128_relaxed` | `Wasm128RelaxedToken` | WASM Relaxed SIMD |
 | `_scalar` | `ScalarToken` | Always required |
 
-Cross-architecture variants are excluded by `#[cfg]` — on x86-64, you need `_v3`, `_scalar`, and `_v4` if `avx512` is enabled. You don't need `_neon` or `_wasm128`.
+Cross-architecture variants are excluded by `#[cfg]` — on x86-64, you need `_v3`, `_scalar`, and `_v4` if `avx512` is enabled. You don't need `_neon` or `_wasm128` (they're cfg'd out by `incant!`).
 
 ## Passthrough Mode
 
@@ -165,7 +165,7 @@ This uses `IntoConcreteToken` to check the token's actual type and dispatch acco
 use archmage::{arcane, incant, X64V3Token, NeonToken, SimdToken};
 use magetypes::simd::f32x8;
 
-// AVX2 variant — #[arcane] generates a stub on non-x86
+// AVX2 variant — #[arcane] cfg's this out on non-x86
 #[arcane]
 fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::from_array(token, *a);

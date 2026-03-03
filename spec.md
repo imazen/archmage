@@ -121,7 +121,7 @@ HasArm64V3 → HasNeonSha3
 
 All token types are defined on all architectures. On unsupported architectures, `summon()` returns `None`. This enables cross-platform code that compiles everywhere but only dispatches on the right arch.
 
-**Cfg-out default:** `#[arcane]` and `#[rite]` only emit code on the matching architecture. On wrong architectures, no function is generated — less dead code, cleaner binaries. Code referencing the function must use `#[cfg(target_arch)]` guards or `incant!` (which cfg-gates automatically).
+**Cfg-out default:** `#[arcane]` and `#[rite]` only emit code on the matching architecture. On wrong architectures, no function is generated — less dead code, cleaner binaries. Direct *call sites* referencing the function by name must use `#[cfg(target_arch)]` guards, `stub`, or `incant!` (which cfg-gates automatically). No `#[cfg]` is needed on the function *definitions* — the macros handle that.
 
 **Stub opt-in:** `#[arcane(stub)]` and `#[rite(stub)]` generate `unreachable!()` stubs on wrong architectures. Use when cross-arch dispatch references the function without cfg guards. The stub is safe because the token can't be constructed on the wrong architecture.
 

@@ -49,7 +49,7 @@ These aliases exist so AI tools can infer behavior from the name. **Prefer the t
 | `is_x86_feature_detected!()` | Runtime | CPUID instruction |
 | `Token::summon()` | Runtime | Archmage's detection (compiles away when guaranteed) |
 
-**Tokens exist everywhere.** `Desktop64`, `Arm64`, etc. compile on all platforms—`summon()` just returns `None` on unsupported architectures. This means **you rarely need `#[cfg(target_arch)]` guards** in user code. The stubs handle cross-compilation cleanly.
+**Tokens exist everywhere.** `Desktop64`, `Arm64`, etc. compile on all platforms—`summon()` just returns `None` on unsupported architectures. `#[arcane]`/`#[rite]` cfg-gate their output to the matching architecture automatically, so you don't need `#[cfg(target_arch)]` on function definitions. `incant!` also handles cfg-gating at call sites.
 
 ### CRITICAL: How the Macros Choose Features
 
@@ -256,7 +256,7 @@ impl SimdOps for Processor {
 ### `#[arcane]`/`#[rite]`: Cross-Arch Behavior
 
 **Default (cfg-out):** On wrong architecture, no function is emitted. Less dead code.
-Code referencing the function must be `#[cfg]`-gated or use `incant!`.
+Direct *call sites* referencing the function by name must use `#[cfg]` guards, `stub`, or `incant!`. No `#[cfg]` is needed on the function *definitions* — the macros handle that.
 
 **With `stub`:** Generates unreachable stub on wrong architecture.
 Use when cross-arch dispatch references the function without cfg guards.
