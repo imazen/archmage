@@ -94,7 +94,7 @@ fn example() {
 
 ```rust
 pub fn public_api(data: &[f32]) -> f32 {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process_simd(token, data)
     } else {
         data.iter().sum()
@@ -102,7 +102,7 @@ pub fn public_api(data: &[f32]) -> f32 {
 }
 
 #[arcane]  // Boundary: called from non-SIMD code
-fn process_simd(token: Desktop64, data: &[f32]) -> f32 {
+fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
     let mut sum = 0.0;
     for chunk in data.chunks_exact(8) {
         sum += process_chunk(token, chunk.try_into().unwrap());
@@ -111,7 +111,7 @@ fn process_simd(token: Desktop64, data: &[f32]) -> f32 {
 }
 
 #[rite]  // Internal: inlines into caller's target_feature context
-fn process_chunk(token: Desktop64, chunk: &[f32; 8]) -> f32 {
+fn process_chunk(token: X64V3Token, chunk: &[f32; 8]) -> f32 {
     let v = f32x8::from_array(token, *chunk);
     v.reduce_add()
 }
@@ -147,7 +147,7 @@ The prelude re-exports `safe_unaligned_simd`, which takes references instead of 
 use archmage::prelude::*;
 
 #[arcane]
-fn load_and_square(token: Desktop64, data: &[f32; 8]) -> __m256 {
+fn load_and_square(token: X64V3Token, data: &[f32; 8]) -> __m256 {
     let v = _mm256_loadu_ps(data);  // Takes &[f32; 8], not *const f32
     _mm256_mul_ps(v, v)
 }
@@ -192,7 +192,7 @@ These prelude aliases exist for convenience but must not appear in documentation
 | Alias | Use instead |
 |-------|-------------|
 | `F32Vec`, `I32Vec`, etc. | `f32x8`, `f32x4`, `i32x8`, `i32x4` |
-| `RecommendedToken` | `Desktop64`, `Arm64`, `Wasm128Token` |
+| `RecommendedToken` | `X64V3Token`, `Arm64`, `Wasm128Token` |
 | `LANES` (outside `#[magetypes]`) | Explicit: `8`, `4`, or width in type name |
 
 These aliases pretend platforms are interchangeable. An 8-wide AVX2 algorithm is fundamentally different from a 4-wide NEON algorithm. Width-generic code belongs inside `#[magetypes]`, where `Token`, `f32xN`, and `LANES` are substitution placeholders that generate explicit implementations per platform.
@@ -216,7 +216,7 @@ if let Some(token) = X64V3Token::summon() {
 
 | Platform | Compile Flag | Effect |
 |----------|--------------|--------|
-| x86-64 AVX2 | `-Ctarget-cpu=haswell` | `Desktop64::summon()` compiles away |
+| x86-64 AVX2 | `-Ctarget-cpu=haswell` | `X64V3Token::summon()` compiles away |
 | x86-64 AVX-512 | `-Ctarget-cpu=skylake-avx512` | `Server64::summon()` compiles away |
 | AArch64 | (default target) | `Arm64::summon()` always succeeds (NEON is baseline) |
 | WASM | `--target wasm32-unknown-unknown -Ctarget-feature=+simd128` | `Wasm128Token::summon()` compiles away |

@@ -8,7 +8,7 @@ Use `#[arcane]` only at **entry points** where the token comes from the outside 
 
 ```mermaid
 flowchart LR
-    A["Your code:<br/>#[rite]<br/>fn helper(token: Desktop64, ...)"] --> B["Macro adds:<br/>#[target_feature(...)]<br/>#[inline]<br/>directly to your function"]
+    A["Your code:<br/>#[rite]<br/>fn helper(token: X64V3Token, ...)"] --> B["Macro adds:<br/>#[target_feature(...)]<br/>#[inline]<br/>directly to your function"]
 
     style A fill:#1a4a6e,color:#fff
     style B fill:#2d5a27,color:#fff
@@ -46,14 +46,14 @@ use archmage::prelude::*;
 
 // ENTRY POINT: receives token from caller
 #[arcane]
-pub fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+pub fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let products = mul_vectors(token, a, b);  // Calls #[rite] helper
     horizontal_sum(token, products)
 }
 
 // INNER HELPER: only called from #[arcane] context
 #[rite]
-fn mul_vectors(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
+fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     // safe_unaligned_simd takes references - no unsafe needed!
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
@@ -62,7 +62,7 @@ fn mul_vectors(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
 
 // INNER HELPER: only called from #[arcane] context
 #[rite]
-fn horizontal_sum(_token: Desktop64, v: __m256) -> f32 {
+fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
     let low = _mm256_castps256_ps128(sum);
@@ -79,24 +79,24 @@ fn horizontal_sum(_token: Desktop64, v: __m256) -> f32 {
 ```rust
 // Your code:
 #[rite]
-fn helper(_token: Desktop64, v: __m256) -> __m256 {
+fn helper(_token: X64V3Token, v: __m256) -> __m256 {
     _mm256_add_ps(v, v)
 }
 
 // Generated (NO wrapper function):
 #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
 #[inline]
-fn helper(_token: Desktop64, v: __m256) -> __m256 {
+fn helper(_token: X64V3Token, v: __m256) -> __m256 {
     _mm256_add_ps(v, v)
 }
 ```
 
 Compare to `#[arcane]` which creates a wrapper:
 ```rust
-fn helper(_token: Desktop64, v: __m256) -> __m256 {
+fn helper(_token: X64V3Token, v: __m256) -> __m256 {
     #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
     #[inline]
-    fn __inner(_token: Desktop64, v: __m256) -> __m256 {
+    fn __inner(_token: X64V3Token, v: __m256) -> __m256 {
         _mm256_add_ps(v, v)
     }
     unsafe { __inner(_token, v) }
@@ -133,7 +133,7 @@ If you call a `#[rite]` function from outside a `#[target_feature]` context, you
 ```rust
 #[test]
 fn test_helper() {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         // Direct call from test (no target_feature) requires unsafe
         let result = unsafe { helper(token, data) };
         assert_eq!(result, expected);
@@ -169,7 +169,7 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 
 ```rust
 #[rite]
-fn complex_op(token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f32 {
+fn complex_op(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f32 {
     let ab = mul_vectors(token, a, b);       // Calls another #[rite]
     let vc = load_vector(token, c);          // Calls another #[rite]
     let sum = add_vectors_raw(token, ab, vc); // Calls another #[rite]

@@ -456,8 +456,8 @@ Token: `X64V2Token`
 - `_mm_testnzc_si128`
 - `_mm_testz_si128`
 
-## X64V3Token / Desktop64 (AVX2, FMA) (420 intrinsics)
-Token: `X64V3Token / Desktop64`
+## X64V3Token (AVX2, FMA) (420 intrinsics)
+Token: `X64V3Token`
 
 ### Gather
 

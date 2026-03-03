@@ -17,7 +17,7 @@ For internal helpers called from other SIMD functions, use [`#[rite]`](@/archmag
 
 {% mermaid() %}
 flowchart LR
-    A["Your code:<br/>#[arcane]<br/>fn kernel(token: Desktop64, ...)"] --> B["Macro generates:<br/>__arcane_kernel (unsafe, #[target_feature])<br/>kernel (safe wrapper)"]
+    A["Your code:<br/>#[arcane]<br/>fn kernel(token: X64V3Token, ...)"] --> B["Macro generates:<br/>__arcane_kernel (unsafe, #[target_feature])<br/>kernel (safe wrapper)"]
     B --> C["Wrapper calls sibling<br/>via unsafe { __arcane_kernel(...) }"]
     C --> D["SAFETY: token proves<br/>CPU support exists"]
 
@@ -48,7 +48,7 @@ flowchart TD
 use archmage::prelude::*;
 
 #[arcane]
-fn add_vectors(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+fn add_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd takes references - fully safe inside #[arcane]!
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
@@ -70,7 +70,7 @@ fn add_vectors(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 ```rust
 // Your code:
 #[arcane]
-fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
+fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
     _mm256_add_ps(a, b)
 }
 
@@ -78,12 +78,12 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
 #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
-unsafe fn __arcane_add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
+unsafe fn __arcane_add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
     _mm256_add_ps(a, b)  // Safe inside #[target_feature]!
 }
 
 #[cfg(target_arch = "x86_64")]
-fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
+fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
     // SAFETY: Token proves CPU support was verified
     unsafe { __arcane_add(token, a, b) }
 }
@@ -100,17 +100,17 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
 // Your code (trait impl — must use nested):
 impl SimdOps for MyType {
     #[arcane(_self = MyType)]
-    fn compute(&self, token: Desktop64) -> f32 {
+    fn compute(&self, token: X64V3Token) -> f32 {
         _self.data.iter().sum()
     }
 }
 
 // Generated:
 impl SimdOps for MyType {
-    fn compute(&self, token: Desktop64) -> f32 {
+    fn compute(&self, token: X64V3Token) -> f32 {
         #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
         #[inline]
-        fn __inner(_self: &MyType, token: Desktop64) -> f32 {
+        fn __inner(_self: &MyType, token: X64V3Token) -> f32 {
             _self.data.iter().sum()
         }
         unsafe { __inner(self, token) }
@@ -127,7 +127,7 @@ impl SimdOps for MyType {
 | `X64V1Token` / `Sse2Token` | sse, sse2 (x86-64 baseline) |
 | `X64V2Token` | + sse3, ssse3, sse4.1, sse4.2, popcnt |
 | `X64CryptoToken` | V2 + pclmulqdq, aes |
-| `X64V3Token` / `Desktop64` | + avx, avx2, fma, bmi1, bmi2, f16c |
+| `X64V3Token` | + avx, avx2, fma, bmi1, bmi2, f16c |
 | `X64V3CryptoToken` | V3 + vpclmulqdq, vaes |
 | `X64V4Token` / `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl |
 | `X64V4xToken` | V4 + vpopcntdq, ifma, vbmi, vnni, vbmi2, bitalg, vpclmulqdq, gfni, vaes |
@@ -151,13 +151,13 @@ Functions with the same token type inline into each other:
 use archmage::prelude::*;
 
 #[arcane]
-fn outer(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let sum = inner(token, data);  // Inlines!
     sum * 2.0
 }
 
 #[arcane]
-fn inner(_token: Desktop64, data: &[f32; 8]) -> f32 {
+fn inner(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     // Both functions share the same #[target_feature] region
     let v = _mm256_loadu_ps(data);
     let sum = _mm256_hadd_ps(v, v);
@@ -199,11 +199,11 @@ fn v3_sum(_token: X64V3Token, data: &[f32; 8]) -> f32 {
 ```rust
 // Default: cfg'd out on non-x86 — doesn't exist
 #[arcane]
-fn process_avx2(token: Desktop64, data: &[f32]) -> f32 { ... }
+fn process_avx2(token: X64V3Token, data: &[f32]) -> f32 { ... }
 
 // With stub: unreachable stub exists on non-x86
 #[arcane(stub)]
-fn process_avx2_stubbed(token: Desktop64, data: &[f32]) -> f32 { ... }
+fn process_avx2_stubbed(token: X64V3Token, data: &[f32]) -> f32 { ... }
 ```
 
 See [Cross-Platform](@/archmage/concepts/cross-platform.md) for dispatch patterns.
@@ -225,7 +225,7 @@ Generate an `unreachable!()` stub on non-matching architectures:
 
 ```rust
 #[arcane(stub)]
-fn process(token: Desktop64, data: &[f32]) -> f32 {
+fn process(token: X64V3Token, data: &[f32]) -> f32 {
     // Real implementation on x86, unreachable stub on ARM/WASM
     data.iter().sum()
 }
@@ -239,7 +239,7 @@ Use the nested inner-function approach instead of sibling. **Required for trait 
 impl SimdOps for MyType {
     // Trait impl — must use nested (or _self = Type, which implies nested)
     #[arcane(_self = MyType)]
-    fn compute(&self, token: Desktop64) -> f32 {
+    fn compute(&self, token: X64V3Token) -> f32 {
         _self.data.iter().sum()
     }
 }
@@ -253,7 +253,7 @@ Force aggressive inlining (requires nightly):
 #![feature(target_feature_inline_always)]
 
 #[arcane(inline_always)]
-fn hot_path(token: Desktop64, data: &[f32]) -> f32 {
+fn hot_path(token: X64V3Token, data: &[f32]) -> f32 {
     // Uses #[inline(always)] instead of #[inline]
 }
 ```
@@ -264,7 +264,7 @@ fn hot_path(token: Desktop64, data: &[f32]) -> f32 {
 
 ```rust
 pub fn process(data: &mut [f32]) {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process_simd(token, data);
     } else {
         process_scalar(data);
@@ -272,7 +272,7 @@ pub fn process(data: &mut [f32]) {
 }
 
 #[arcane]
-fn process_simd(token: Desktop64, data: &mut [f32]) {
+fn process_simd(token: X64V3Token, data: &mut [f32]) {
     // SIMD implementation
 }
 

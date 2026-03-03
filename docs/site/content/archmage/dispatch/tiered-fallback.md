@@ -191,7 +191,7 @@ SIMD only helps with bulk operations. For scalar math, just use scalar math.
 
 ## Recommendations
 
-1. **Desktop64 is usually enough** for x86 — it covers 99% of modern PCs
+1. **X64V3Token is usually enough** for x86 — it covers 99% of modern PCs
 2. **NeonToken is baseline** on AArch64 — no fallback needed
 3. **Test your scalar path** — it's your safety net
 4. **Profile before adding tiers** — each tier is code to maintain

@@ -145,7 +145,7 @@ Process large arrays in SIMD-sized chunks:
 
 ```rust
 #[arcane]
-fn process_large(token: Desktop64, data: &mut [f32]) {
+fn process_large(token: X64V3Token, data: &mut [f32]) {
     // Process full chunks
     for chunk in data.chunks_exact_mut(8) {
         let v = f32x8::from_slice(token, chunk);

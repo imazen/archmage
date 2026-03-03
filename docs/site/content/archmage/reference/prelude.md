@@ -9,7 +9,7 @@ weight = 4
 
 ### Tokens
 
-`Desktop64`, `Arm64`, `ScalarToken`, `X64V1Token`, `Sse2Token`, `X64V2Token`, `X64CryptoToken`, `X64V3Token`, `X64V3CryptoToken`, `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`, `Arm64V2Token`, `Arm64V3Token`, `Wasm128Token`, `Wasm128RelaxedToken`
+`X64V3Token`, `Arm64`, `ScalarToken`, `X64V1Token`, `Sse2Token`, `X64V2Token`, `X64CryptoToken`, `X64V3CryptoToken`, `NeonToken`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`, `Arm64V2Token`, `Arm64V3Token`, `Wasm128Token`, `Wasm128RelaxedToken`
 
 With `avx512` feature: `X64V4Token`, `Server64`, `Avx512Token`, `X64V4xToken`, `Avx512Fp16Token`
 
@@ -37,7 +37,7 @@ With `avx512` feature: `HasX64V4`
 use archmage::prelude::*;
 
 #[arcane]
-fn add(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+fn add(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     let sum = _mm256_add_ps(va, vb);
@@ -47,7 +47,7 @@ fn add(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
-No individual `use` statements needed -- `Desktop64`, `_mm256_loadu_ps`, `_mm256_add_ps`, and `_mm256_storeu_ps` all come from the prelude.
+No individual `use` statements needed -- `X64V3Token`, `_mm256_loadu_ps`, `_mm256_add_ps`, and `_mm256_storeu_ps` all come from the prelude.
 
 ## magetypes Prelude (exploratory)
 

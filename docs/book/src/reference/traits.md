@@ -158,7 +158,7 @@ Only enables SSE/SSE2 (x86 baseline). Does NOT enable SSE4, AVX, or anything use
 
 Only enables AVX (NOT AVX2, NOT FMA). This is almost never what you want.
 
-**Use instead**: `X64V3Token` or `Desktop64`
+**Use instead**: `X64V3Token`
 
 ### Has512BitSimd (Deprecated)
 

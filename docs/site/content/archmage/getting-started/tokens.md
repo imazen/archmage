@@ -16,7 +16,7 @@ Tokens are the core of archmage's safety model. They're zero-sized proof types t
 | `X64V1Token` | `Sse2Token` | SSE, SSE2 (baseline) | All x86-64 |
 | `X64V2Token` | — | + SSE4.2, POPCNT | Nehalem 2008+ |
 | `X64CryptoToken` | — | V2 + PCLMULQDQ, AES-NI | Westmere 2010+ |
-| `X64V3Token` | `Desktop64` | + AVX2, FMA, BMI1, BMI2 | Haswell 2013+, Zen 1+ |
+| `X64V3Token` | — | + AVX2, FMA, BMI1, BMI2 | Haswell 2013+, Zen 1+ |
 | `X64V3CryptoToken` | — | V3 + VPCLMULQDQ, VAES | Zen 3+ 2020, Alder Lake 2021+ |
 | `X64V4Token` | `Server64`, `Avx512Token` | + AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4+ |
 | `X64V4xToken` | — | + VNNI, VBMI, etc. | Ice Lake 2019+, Zen 4+ |
@@ -43,10 +43,10 @@ Tokens are the core of archmage's safety model. They're zero-sized proof types t
 ## Summoning Tokens
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 
 // Runtime detection
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     // CPU has AVX2+FMA
     process_simd(token, data);
 } else {
@@ -60,13 +60,13 @@ if let Some(token) = Desktop64::summon() {
 Check if detection is needed:
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 
-match Desktop64::compiled_with() {
+match X64V3Token::compiled_with() {
     Some(true) => {
         // Compiled with -Ctarget-cpu=haswell or higher
         // summon() will always succeed, check is elided
-        let token = Desktop64::summon().unwrap();
+        let token = X64V3Token::summon().unwrap();
     }
     Some(false) => {
         // Wrong architecture (e.g., running on ARM)
@@ -74,7 +74,7 @@ match Desktop64::compiled_with() {
     }
     None => {
         // Runtime check needed
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             // ...
         }
     }
@@ -106,10 +106,10 @@ Tokens are:
 
 ```rust
 // Zero-sized
-assert_eq!(std::mem::size_of::<Desktop64>(), 0);
+assert_eq!(std::mem::size_of::<X64V3Token>(), 0);
 
 // Copy
-fn takes_token(token: Desktop64) {
+fn takes_token(token: X64V3Token) {
     let copy = token;  // No move, just copy
     use_both(token, copy);
 }

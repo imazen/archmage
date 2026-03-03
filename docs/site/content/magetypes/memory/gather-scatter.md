@@ -41,10 +41,10 @@ If you need hardware gather (`vgatherdps`), use raw intrinsics inside `#[arcane]
 
 ```rust
 use std::arch::x86_64::*;
-use archmage::{Desktop64, arcane};
+use archmage::{X64V3Token, arcane};
 
 #[arcane]
-fn gather_example(token: Desktop64, data: &[f32], indices: &[i32; 8]) -> [f32; 8] {
+fn gather_example(token: X64V3Token, data: &[f32], indices: &[i32; 8]) -> [f32; 8] {
     let idx = _mm256_loadu_si256(indices.as_ptr() as *const __m256i);
     let gathered = unsafe {
         _mm256_i32gather_ps::<4>(data.as_ptr(), idx)

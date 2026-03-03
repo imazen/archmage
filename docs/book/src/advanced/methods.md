@@ -8,7 +8,7 @@ Using `#[arcane]` on methods requires special handling because of how the macro 
 impl MyType {
     // This won't work as expected!
     #[arcane]
-    fn process(&self, token: Desktop64) -> f32 {
+    fn process(&self, token: X64V3Token) -> f32 {
         self.data[0]  // Error: `self` not available in inner function
     }
 }
@@ -21,14 +21,14 @@ The macro generates an inner function where `self` becomes a regular parameter.
 Use the `_self` argument and reference `_self` in your code:
 
 ```rust
-use archmage::{Desktop64, arcane};
+use archmage::{X64V3Token, arcane};
 use magetypes::simd::f32x8;
 
 struct Vector8([f32; 8]);
 
 impl Vector8 {
     #[arcane(_self = Vector8)]
-    fn magnitude(&self, token: Desktop64) -> f32 {
+    fn magnitude(&self, token: X64V3Token) -> f32 {
         // Use _self, not self
         let v = f32x8::from_array(token, _self.0);
         (v * v).reduce_add().sqrt()
@@ -43,7 +43,7 @@ impl Vector8 {
 ```rust
 impl Vector8 {
     #[arcane(_self = Vector8)]
-    fn dot(&self, token: Desktop64, other: &Self) -> f32 {
+    fn dot(&self, token: X64V3Token, other: &Self) -> f32 {
         let a = f32x8::from_array(token, _self.0);
         let b = f32x8::from_array(token, other.0);
         (a * b).reduce_add()
@@ -56,7 +56,7 @@ impl Vector8 {
 ```rust
 impl Vector8 {
     #[arcane(_self = Vector8)]
-    fn normalize(&mut self, token: Desktop64) {
+    fn normalize(&mut self, token: X64V3Token) {
         let v = f32x8::from_array(token, _self.0);
         let len = (v * v).reduce_add().sqrt();
         if len > 0.0 {
@@ -73,7 +73,7 @@ impl Vector8 {
 ```rust
 impl Vector8 {
     #[arcane(_self = Vector8)]
-    fn scaled(self, token: Desktop64, factor: f32) -> Self {
+    fn scaled(self, token: X64V3Token, factor: f32) -> Self {
         let v = f32x8::from_array(token, _self.0);
         let s = f32x8::splat(token, factor);
         Vector8((v * s).to_array())
@@ -87,12 +87,12 @@ Works with traits too:
 
 ```rust
 trait SimdOps {
-    fn double(&self, token: Desktop64) -> Self;
+    fn double(&self, token: X64V3Token) -> Self;
 }
 
 impl SimdOps for Vector8 {
     #[arcane(_self = Vector8)]
-    fn double(&self, token: Desktop64) -> Self {
+    fn double(&self, token: X64V3Token) -> Self {
         let v = f32x8::from_array(token, _self.0);
         Vector8((v + v).to_array())
     }
@@ -115,17 +115,17 @@ It's a deliberate choice to make the transformation visible.
 // You write:
 impl Vector8 {
     #[arcane(_self = Vector8)]
-    fn process(&self, token: Desktop64) -> f32 {
+    fn process(&self, token: X64V3Token) -> f32 {
         f32x8::from_array(token, _self.0).reduce_add()
     }
 }
 
 // Macro generates:
 impl Vector8 {
-    fn process(&self, token: Desktop64) -> f32 {
+    fn process(&self, token: X64V3Token) -> f32 {
         #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
         #[inline]
-        fn __inner(_self: &Vector8, token: Desktop64) -> f32 {
+        fn __inner(_self: &Vector8, token: X64V3Token) -> f32 {
             f32x8::from_array(token, _self.0).reduce_add()
         }
         unsafe { __inner(self, token) }
@@ -140,14 +140,14 @@ impl Vector8 {
 ```rust
 impl ImageProcessor {
     #[arcane(_self = ImageProcessor)]
-    fn with_brightness(self, token: Desktop64, amount: f32) -> Self {
+    fn with_brightness(self, token: X64V3Token, amount: f32) -> Self {
         let mut result = _self;
         // Process brightness...
         result
     }
 
     #[arcane(_self = ImageProcessor)]
-    fn with_contrast(self, token: Desktop64, amount: f32) -> Self {
+    fn with_contrast(self, token: X64V3Token, amount: f32) -> Self {
         let mut result = _self;
         // Process contrast...
         result
@@ -165,7 +165,7 @@ let processed = processor
 ```rust
 impl Buffer {
     #[arcane(_self = Buffer)]
-    fn process_all(&mut self, token: Desktop64) {
+    fn process_all(&mut self, token: X64V3Token) {
         for chunk in _self.data.chunks_exact_mut(8) {
             let v = f32x8::from_slice(token, chunk);
             let result = v * v;

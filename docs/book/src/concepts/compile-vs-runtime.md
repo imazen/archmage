@@ -34,13 +34,13 @@ Since Rust 1.85, the function itself isn't `unsafe`. But **calling** it from a c
 ```rust
 // You write:
 #[arcane]
-fn process(token: Desktop64, data: &[f32; 8]) -> f32 { /* ... */ }
+fn process(token: X64V3Token, data: &[f32; 8]) -> f32 { /* ... */ }
 
 // Macro generates:
-fn process(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
     #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
     #[inline]
-    fn __inner(token: Desktop64, data: &[f32; 8]) -> f32 { /* ... */ }
+    fn __inner(token: X64V3Token, data: &[f32; 8]) -> f32 { /* ... */ }
 
     // SAFETY: Token existence proves summon() succeeded
     unsafe { __inner(token, data) }
@@ -65,12 +65,12 @@ When caller and callee have the same target features, LLVM can:
 
 ```rust
 #[arcane]
-fn outer(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
     inner(token, data) * 2.0  // Inlines perfectly!
 }
 
 #[arcane]
-fn inner(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn inner(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::from_array(token, *data);
     v.reduce_add()
 }
@@ -124,16 +124,16 @@ Higher tokens can be used where lower tokens are expected:
 #[arcane]
 fn v4_kernel(token: X64V4Token, data: &[f32; 8]) -> f32 {
     // V4 → V3 is free: just passing token, same LLVM features (superset)
-    v3_sum(token, data)  // Desktop64 accepts X64V4Token
+    v3_sum(token, data)  // X64V3Token accepts X64V4Token
 }
 
 #[arcane]
-fn v3_sum(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn v3_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
     // ...
 }
 ```
 
-This works because `X64V4Token` has all the features of `Desktop64` plus more. LLVM's target features are a superset, so optimization flows freely.
+This works because `X64V4Token` has all the features of `X64V3Token` plus more. LLVM's target features are a superset, so optimization flows freely.
 
 ### Upcasting: Safe but Creates Boundary
 
@@ -161,7 +161,7 @@ This is **safe**—`as_x64v4()` returns `None` if the token doesn't support V4. 
 
 ```rust
 // #[arcane] creates a wrapper:
-fn entry(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
     #[target_feature(enable = "avx2,fma,...")]
     fn __inner(...) { ... }
     unsafe { __inner(...) }
@@ -170,23 +170,23 @@ fn entry(token: Desktop64, data: &[f32; 8]) -> f32 {
 // #[rite] is the function directly:
 #[target_feature(enable = "avx2,fma,...")]
 #[inline]
-fn helper(token: Desktop64, data: &[f32; 8]) -> f32 { ... }
+fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 { ... }
 ```
 
 Since Rust 1.85+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` helpers without `unsafe`:
 
 ```rust
 #[arcane]
-fn entry(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+fn entry(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let prod = mul_vectors(token, a, b);  // Calls #[rite], no unsafe!
     horizontal_sum(token, prod)
 }
 
 #[rite]
-fn mul_vectors(_: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> __m256 { ... }
+fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 { ... }
 
 #[rite]
-fn horizontal_sum(_: Desktop64, v: __m256) -> f32 { ... }
+fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 { ... }
 ```
 
 All three functions share the same `#[target_feature]` annotation. LLVM sees one optimization region.
@@ -228,7 +228,7 @@ fn process<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
 }
 
 // FAST: Concrete token, full optimization
-fn process(token: Desktop64, data: &[f32]) -> f32 {
+fn process(token: X64V3Token, data: &[f32]) -> f32 {
     // LLVM knows exact features, inlines everything
 }
 ```
@@ -244,7 +244,7 @@ fn maybe_avx2() {
 
 // RIGHT: Use tokens for runtime detection
 fn maybe_avx2() {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         avx2_impl(token);
     }
 }
@@ -255,20 +255,20 @@ fn maybe_avx2() {
 ```rust
 // WRONG: crosses target-feature boundary every iteration
 for chunk in data.chunks(8) {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process(token, chunk);  // #[arcane] wrapper = boundary per call
     }
 }
 
 // BETTER: summon hoisted, but still a target-feature boundary per iteration
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     for chunk in data.chunks(8) {
         process(token, chunk);  // Still calling #[arcane] each iteration
     }
 }
 
 // BEST: loop inside #[arcane], use #[rite] helpers
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     process_all(token, data);  // One boundary crossing
 }
 ```
@@ -279,7 +279,7 @@ Put the loop *inside* `#[arcane]` and use `#[rite]` for helpers. Everything insi
 
 | Operation | Time |
 |-----------|------|
-| `Desktop64::summon()` (cached) | ~1.3 ns |
+| `X64V3Token::summon()` (cached) | ~1.3 ns |
 | First call (actual detection) | ~2.6 ns |
 | With `-Ctarget-cpu=haswell` | 0 ns (compiles to `Some(token)`) |
 
@@ -289,11 +289,11 @@ Put the loop *inside* `#[arcane]` and use `#[rite]` for helpers. Everything insi
 // UNNECESSARY: Tokens exist everywhere
 #[cfg(target_arch = "x86_64")]
 {
-    if let Some(token) = Desktop64::summon() { ... }
+    if let Some(token) = X64V3Token::summon() { ... }
 }
 
 // CLEANER: Just use the token
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     // Returns None on non-x86, compiles everywhere
 }
 ```

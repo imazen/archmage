@@ -34,7 +34,7 @@ Tokens are zero-sized types that prove CPU features are available.
 | Token | Platform | Features |
 |-------|----------|----------|
 | `X64V2Token` | x86_64 | SSE4.2, POPCNT |
-| `X64V3Token` / `Desktop64` | x86_64 | AVX2, FMA, BMI2 |
+| `X64V3Token` | x86_64 | AVX2, FMA, BMI2 |
 | `X64V4Token` / `Server64` | x86_64 | AVX-512 F/BW/CD/DQ/VL |
 | `X64V4xToken` | x86_64 | + VNNI, VBMI2, etc. |
 | `NeonToken` / `Arm64` | aarch64 | NEON (always available) |
@@ -491,7 +491,7 @@ fn generic<T: SimdToken + SimdTypes>(token: T, data: &[f32]) -> f32 {
 | Pattern | Syntax | Recommended? | Notes |
 |---------|--------|--------------|-------|
 | Concrete token | `fn f(t: X64V3Token)` | ✅ | Best for most code |
-| Friendly alias | `fn f(t: Desktop64)` | ✅ | Same as X64V3Token |
+| Friendly alias | `fn f(t: X64V3Token)` | ✅ | Aliases like Sse2Token, Server64, Arm64 |
 | Feature trait | `fn f(t: impl HasX64V2)` | ⚠️ | Only SSE4.2, not AVX2 |
 | Feature trait | `fn f(t: impl HasX64V4)` | ✅ | For AVX-512 code |
 | Generic token | `fn f<T: SimdToken>(t: T)` | ❌ | **Cannot work** |

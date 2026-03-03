@@ -19,7 +19,7 @@ The 4x penalty comes from LLVM, not archmage. Read on.
 
 ## The target-feature boundary
 
-`#[arcane]` and `#[rite]` read the token type from your function signature to decide which `#[target_feature]` to emit. A function taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
+`#[arcane]` and `#[rite]` read the token type from your function signature to decide which `#[target_feature]` to emit. A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
 
 `#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This is how you cross into SIMD code without writing `unsafe` yourself — but the wrapper creates an LLVM optimization boundary. LLVM won't inline across mismatched `#[target_feature]` attributes: no load hoisting, no store sinking, no cross-iteration vectorization.
 
@@ -32,7 +32,7 @@ The boundary has nothing to do with archmage. A bare `#[target_feature]` functio
 ```rust
 // WRONG: boundary every iteration (4x slower)
 fn process_all(points: &[[f32; 8]]) {
-    let token = Desktop64::summon().unwrap();
+    let token = X64V3Token::summon().unwrap();
     for p in points {
         process_one(token, p);  // #[arcane] — boundary crossing
     }
@@ -40,13 +40,13 @@ fn process_all(points: &[[f32; 8]]) {
 
 // RIGHT: one boundary, loop inside
 fn process_all(points: &[[f32; 8]]) {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process_all_simd(token, points);  // one #[arcane] entry
     }
 }
 
 #[arcane]
-fn process_all_simd(token: Desktop64, points: &[[f32; 8]]) {
+fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     for p in points {
         process_one(token, p);  // #[rite] — inlines, no boundary
     }

@@ -19,11 +19,11 @@ Getting data from slices and arrays into SIMD registers.
 The simplest path. Magetypes handles the load internally:
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::f32x8;
 
 #[arcane]
-fn process(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::load(token, data);
     v.reduce_add()
 }
@@ -33,7 +33,7 @@ fn process(token: Desktop64, data: &[f32; 8]) -> f32 {
 
 ```rust
 #[arcane]
-fn sum_slice(token: Desktop64, data: &[f32]) -> f32 {
+fn sum_slice(token: X64V3Token, data: &[f32]) -> f32 {
     let mut total = f32x8::zero(token);
     for chunk in data.chunks_exact(8) {
         total = total + f32x8::from_slice(token, chunk);
@@ -53,11 +53,11 @@ let v = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 When working with raw intrinsics inside `#[arcane]`, use `safe_unaligned_simd` for memory operations. It takes references instead of raw pointers:
 
 ```rust
-use archmage::{Desktop64, arcane};
+use archmage::{X64V3Token, arcane};
 use std::arch::x86_64::*;
 
 #[arcane]
-fn load_and_square(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn load_and_square(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd: takes &[f32; 8], not *const f32
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
@@ -75,7 +75,7 @@ When you have a slice but the intrinsic needs an array reference, use `.first_ch
 
 ```rust
 #[arcane]
-fn load_from_slice(_token: Desktop64, data: &[f32]) -> __m256 {
+fn load_from_slice(_token: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().expect("need at least 8 elements");
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
 }
@@ -85,7 +85,7 @@ fn load_from_slice(_token: Desktop64, data: &[f32]) -> __m256 {
 
 ```rust
 #[arcane]
-fn load_via_try_into(_token: Desktop64, data: &[f32]) -> __m256 {
+fn load_via_try_into(_token: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
 }
@@ -99,7 +99,7 @@ Same patterns work for integer types. The compiler may use `vmovups` or `vmovdqu
 
 ```rust
 #[arcane]
-fn load_bytes(_token: Desktop64, data: &[u8; 32]) -> __m256i {
+fn load_bytes(_token: X64V3Token, data: &[u8; 32]) -> __m256i {
     safe_unaligned_simd::x86_64::_mm256_loadu_si256(data)
 }
 ```
@@ -115,20 +115,20 @@ let v = _mm256_load_ps(data.as_ptr());  // UB if not 32-byte aligned!
 
 // WRONG: summon() + #[arcane] boundary every iteration
 for chunk in data.chunks_exact(8) {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process(token, chunk);  // target-feature boundary per call!
     }
 }
 
 // BETTER: summon hoisted, but still a boundary per iteration
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     for chunk in data.chunks_exact(8) {
         process(token, chunk);  // still calling #[arcane] each iteration
     }
 }
 
 // BEST: loop inside #[arcane], #[rite] helpers
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     process_all(token, data);  // one boundary crossing
 }
 ```

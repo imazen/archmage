@@ -46,7 +46,7 @@ let result = a.mul_add(b, c);
 let result = a.mul_sub(b, c);
 ```
 
-On x86-64 with `Desktop64` (AVX2+FMA), these map to single `vfmadd`/`vfmsub` instructions. On ARM NEON, they use `vfmaq_f32`.
+On x86-64 with `X64V3Token` (AVX2+FMA), these map to single `vfmadd`/`vfmsub` instructions. On ARM NEON, they use `vfmaq_f32`.
 
 ## Comparisons
 
@@ -105,13 +105,13 @@ let abs = v.abs();  // |v| for each lane
 ## Example: Dot Product
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
 #[arcane]
-fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = f32x8::<Desktop64>::from_array(token, *a);
-    let vb = f32x8::<Desktop64>::from_array(token, *b);
+fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let va = f32x8::<X64V3Token>::from_array(token, *a);
+    let vb = f32x8::<X64V3Token>::from_array(token, *b);
     (va * vb).reduce_add()
 }
 ```
@@ -119,17 +119,17 @@ fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 ## Example: Vector Normalization
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
 #[arcane]
-fn normalize(token: Desktop64, v: &mut [f32; 8]) {
-    let vec = f32x8::<Desktop64>::from_array(token, *v);
+fn normalize(token: X64V3Token, v: &mut [f32; 8]) {
+    let vec = f32x8::<X64V3Token>::from_array(token, *v);
     let len_sq = (vec * vec).reduce_add();
     let len = len_sq.sqrt();
 
     if len > 0.0 {
-        let inv_len = f32x8::<Desktop64>::splat(token, 1.0 / len);
+        let inv_len = f32x8::<X64V3Token>::splat(token, 1.0 / len);
         let normalized = vec * inv_len;
         *v = normalized.to_array();
     }

@@ -13,7 +13,7 @@ All value-based intrinsics — arithmetic, comparison, shuffle, bitwise, convers
 
 ```rust
 #[arcane]
-fn example(token: Desktop64, a: __m256, b: __m256) -> __m256 {
+fn example(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
     // All safe — no `unsafe` needed:
     let sum = _mm256_add_ps(a, b);
     let product = _mm256_mul_ps(a, b);
@@ -33,13 +33,13 @@ Raw pointer operations:
 
 ```rust
 #[arcane]
-fn load_raw(_token: Desktop64, ptr: *const f32) -> __m256 {
+fn load_raw(_token: X64V3Token, ptr: *const f32) -> __m256 {
     // Raw pointer — needs unsafe
     unsafe { _mm256_loadu_ps(ptr) }
 }
 
 #[arcane]
-fn load_safe(_token: Desktop64, data: &[f32; 8]) -> __m256 {
+fn load_safe(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
     // Reference-based — no unsafe needed
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
 }
@@ -85,7 +85,7 @@ The outer function is safe. The `unsafe` call to the inner function is justified
 ```rust
 // Entry point — called from non-SIMD code
 #[arcane]
-pub fn process(token: Desktop64, data: &mut [f32]) {
+pub fn process(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         process_chunk(token, chunk.try_into().unwrap());
     }
@@ -93,7 +93,7 @@ pub fn process(token: Desktop64, data: &mut [f32]) {
 
 // Internal helper — inlines into the #[arcane] caller
 #[rite]
-fn process_chunk(_: Desktop64, chunk: &mut [f32; 8]) {
+fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
     // ... SIMD work ...
 }
 ```

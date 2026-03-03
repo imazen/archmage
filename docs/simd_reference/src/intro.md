@@ -27,5 +27,4 @@ This is the searchable reference companion to the [Archmage & Magetypes tutorial
 - `#[arcane]` = boundary function (called from non-SIMD code after `summon()`)
 - `#[rite]` = internal helper (called from within `#[arcane]` or other `#[rite]` functions)
 - `Token::summon()` = runtime CPU feature detection (returns `Option<Token>`)
-- `Desktop64` = friendly alias for `X64V3Token` (AVX2 + FMA)
 - `Arm64` = friendly alias for `NeonToken`

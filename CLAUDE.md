@@ -49,11 +49,11 @@ These aliases exist so AI tools can infer behavior from the name. **Prefer the t
 | `is_x86_feature_detected!()` | Runtime | CPUID instruction |
 | `Token::summon()` | Runtime | Archmage's detection (compiles away when guaranteed) |
 
-**Tokens exist everywhere.** `Desktop64`, `Arm64`, etc. compile on all platforms—`summon()` just returns `None` on unsupported architectures. `#[arcane]`/`#[rite]` cfg-gate their output to the matching architecture automatically, so you don't need `#[cfg(target_arch)]` on function definitions. `incant!` also handles cfg-gating at call sites.
+**Tokens exist everywhere.** `X64V3Token`, `Arm64`, etc. compile on all platforms—`summon()` just returns `None` on unsupported architectures. `#[arcane]`/`#[rite]` cfg-gate their output to the matching architecture automatically, so you don't need `#[cfg(target_arch)]` on function definitions. `incant!` also handles cfg-gating at call sites.
 
 ### CRITICAL: How the Macros Choose Features
 
-`#[arcane]` and `#[rite]` parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. A function taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
+`#[arcane]` and `#[rite]` parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
 
 `#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This wrapper is how you cross into SIMD code without writing `unsafe` yourself — but it also creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary.
 
@@ -356,7 +356,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 | **v1** | SSE, SSE2 (baseline) | `X64V1Token` / `Sse2Token` | None (always available on x86_64) |
 | **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | `X64V2Token` | `HasX64V2` |
 | **crypto** | v2 + PCLMULQDQ, AES-NI | `X64CryptoToken` | Use token directly |
-| **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` / `Desktop64` | Use token directly |
+| **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` | Use token directly |
 | **v3_crypto** | v3 + VPCLMULQDQ, VAES | `X64V3CryptoToken` | Use token directly |
 | **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` | `HasX64V4` |
 | **V4x** | + VPOPCNTDQ, IFMA, VBMI, VNNI, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | `X64V4xToken` | Use token directly |
@@ -407,7 +407,7 @@ Use `#[arcane]` only when the function is called from non-SIMD code:
 ```rust
 // Entry point (called after summon) - use #[arcane]
 #[arcane]
-pub fn process(token: Desktop64, data: &mut [f32]) {
+pub fn process(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         process_chunk(token, chunk);  // Calls #[rite]
     }
@@ -415,7 +415,7 @@ pub fn process(token: Desktop64, data: &mut [f32]) {
 
 // Internal helper (called from #[arcane] or #[rite]) - use #[rite]
 #[rite]
-fn process_chunk(_: Desktop64, chunk: &mut [f32; 8]) {
+fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
     // ...
 }
 ```
@@ -693,19 +693,18 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 | Alias | Token | What it means |
 |-------|-------|---------------|
 | `Sse2Token` | `X64V1Token` | SSE + SSE2 (x86_64 baseline — always available) |
-| `Desktop64` | `X64V3Token` | AVX2 + FMA (Haswell 2013+, Zen 1+) |
 | `Server64` | `X64V4Token` | + AVX-512 (Xeon 2017+, Zen 4+) |
 | `Arm64` | `NeonToken` | NEON (all 64-bit ARM) |
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 
 #[arcane]
-fn process(token: Desktop64, data: &mut [f32; 8]) {
+fn process(token: X64V3Token, data: &mut [f32; 8]) {
     // AVX2 + FMA intrinsics safe here
 }
 
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     process(token, &mut data);
 }
 ```
@@ -872,7 +871,7 @@ When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the
 - `X64V1Token` / `Sse2Token` - SSE + SSE2 (x86_64 baseline — always available)
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
 - `X64CryptoToken` - V2 + PCLMULQDQ + AES-NI (Westmere 2010+)
-- `X64V3Token` / `Desktop64` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
+- `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
 - `X64V3CryptoToken` - V3 + VPCLMULQDQ + VAES (Zen 3+ 2020, Alder Lake 2021+)
 - `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL (Skylake-X 2017+, Zen 4+)
 - `X64V4xToken` - + modern extensions (Ice Lake 2019+, Zen 4+)
@@ -932,10 +931,10 @@ On ARM/WASM, `f32x8` is polyfilled with two `f32x4` operations. Pick the size th
 Use `safe_unaligned_simd` directly inside `#[arcane]` functions:
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 
 #[arcane]
-fn process(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd calls are SAFE inside #[arcane]
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
@@ -995,7 +994,7 @@ These are documented semantic differences between architectures. Tests must acco
   Key insight: the overhead is from the `#[target_feature]` optimization boundary, NOT from wrappers or archmage abstractions. The cost scales with computational density (4x simple add, 6.2x DCT-8). Feature direction matters: downgrades are free (superset enables inlining), upgrades hit the boundary.
 
 - ~~**summon() caching**~~: **Implemented!** See `benches/summon_overhead.rs`. Results after adding atomic caching:
-  - `Desktop64::summon()` (cached): ~1.3 ns (was 2.6 ns — **2x faster**)
+  - `X64V3Token::summon()` (cached): ~1.3 ns (was 2.6 ns — **2x faster**)
   - `X64V4xToken::summon()` (cached): ~1.3 ns (was 7.2 ns — **6x faster**)
   - With `-Ctarget-cpu=haswell`: 0 ns (compiles away entirely)
 

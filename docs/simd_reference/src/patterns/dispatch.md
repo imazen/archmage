@@ -61,7 +61,7 @@ For more control, dispatch manually:
 
 ```rust
 pub fn process(data: &mut [f32]) {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process_avx2(token, data);
     } else {
         process_scalar(data);
@@ -83,7 +83,7 @@ Enter `#[arcane]` at the API boundary, put loops inside it, use `#[rite]` for he
 ```rust
 // WRONG: target-feature boundary every iteration (4x slower)
 fn process_all(points: &[[f32; 8]]) {
-    let token = Desktop64::summon().unwrap(); // hoisting doesn't help!
+    let token = X64V3Token::summon().unwrap(); // hoisting doesn't help!
     for p in points {
         process_one(token, p);  // #[arcane] boundary every iteration
     }
@@ -91,7 +91,7 @@ fn process_all(points: &[[f32; 8]]) {
 
 // RIGHT: one boundary, loop inside
 fn process_all(points: &[[f32; 8]]) {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process_all_simd(token, points);
     } else {
         process_all_scalar(points);
@@ -99,7 +99,7 @@ fn process_all(points: &[[f32; 8]]) {
 }
 
 #[arcane]
-fn process_all_simd(token: Desktop64, points: &[[f32; 8]]) {
+fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     for p in points {
         process_one(token, p);  // #[rite] helper, inlines
     }

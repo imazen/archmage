@@ -27,7 +27,7 @@ magetypes = "0.8"
 use archmage::prelude::*;
 
 #[arcane]
-fn dot_product(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+fn dot_product(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     let mul = _mm256_mul_ps(va, vb);
@@ -37,7 +37,7 @@ fn dot_product(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 
 fn main() {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         println!("{}", dot_product(token, &[1.0; 8], &[2.0; 8]));
     }
 }
@@ -54,21 +54,21 @@ use archmage::prelude::*;
 
 // Entry point: use #[arcane]
 #[arcane]
-fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let products = mul_vectors(token, a, b);  // Calls #[rite] helper
     horizontal_sum(token, products)
 }
 
 // Inner helper: use #[rite] (inlines into #[arcane] — features match)
 #[rite]
-fn mul_vectors(_: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
+fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     _mm256_mul_ps(va, vb)
 }
 
 #[rite]
-fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
+fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
     let low = _mm256_castps256_ps128(sum);
@@ -77,7 +77,7 @@ fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
 }
 ```
 
-Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `Desktop64` → `avx2,fma,...`. `X64V4Token` → `avx512f,avx512bw,...`. The token type *is* the feature selector.
+Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `X64V3Token` → `avx2,fma,...`. `X64V4Token` → `avx512f,avx512bw,...`. The token type *is* the feature selector.
 
 `#[arcane]` generates a sibling `#[target_feature]` function at the same scope, plus a safe wrapper. Since both functions live in the same scope, `self` and `Self` work naturally in methods — no special handling needed. The wrapper is how you cross into SIMD code without writing `unsafe` yourself, but it creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe — no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
 
@@ -102,11 +102,11 @@ Use `#[rite]` for helpers called from SIMD code. When the token type matches, `#
 ## SIMD types with `magetypes`
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 use magetypes::simd::f32x8;
 
 fn dot_product(a: &[f32], b: &[f32]) -> f32 {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let mut sum = f32x8::zero(token);
         for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
             let va = f32x8::load(token, a_chunk.try_into().unwrap());
@@ -252,7 +252,7 @@ For functions that use platform-specific SIMD types (`f32x8`, `f32x4`, etc.), wr
 | `X64V1Token` | `Sse2Token` | SSE, SSE2 (x86_64 baseline — always available) |
 | `X64V2Token` | | SSE4.2, POPCNT |
 | `X64CryptoToken` | | V2 + PCLMULQDQ, AES-NI (Westmere 2010+) |
-| `X64V3Token` | `Desktop64` | AVX2, FMA, BMI2 |
+| `X64V3Token` | — | AVX2, FMA, BMI2 |
 | `X64V3CryptoToken` | | V3 + VPCLMULQDQ, VAES (Zen 3+ 2020, Alder Lake 2021+) |
 | `X64V4Token` | `Server64` | AVX-512 (requires `avx512` feature) |
 | `NeonToken` | `Arm64` | NEON |
@@ -283,7 +283,7 @@ Together, these mean your crate should use `#![forbid(unsafe_code)]`. The `unsaf
 
 `use archmage::prelude::*` gives you:
 
-- Tokens: `Desktop64`, `Arm64`, `Arm64V2Token`, `Arm64V3Token`, `ScalarToken`, etc.
+- Tokens: `X64V3Token`, `Arm64`, `Arm64V2Token`, `Arm64V3Token`, `ScalarToken`, etc.
 - Traits: `SimdToken`, `IntoConcreteToken`, `HasX64V2`, etc.
 - Macros: `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`
 - Intrinsics: `core::arch::*` for your platform

@@ -9,17 +9,17 @@
 //! ## Quick Example
 //!
 //! ```rust,ignore
-//! use archmage::{Desktop64, SimdToken, arcane};
+//! use archmage::{X64V3Token, SimdToken, arcane};
 //! use std::arch::x86_64::*;
 //!
 //! #[arcane]
-//! fn multiply_add(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+//! fn multiply_add(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 //!     // safe_unaligned_simd calls are SAFE inside #[arcane] - no unsafe needed!
 //!     let va = safe_unaligned_simd::x86_64::_mm256_loadu_ps(a);
 //!     let vb = safe_unaligned_simd::x86_64::_mm256_loadu_ps(b);
 //!
 //!     // Value-based intrinsics are also SAFE inside #[arcane]!
-//!     // FMA is available because Desktop64 = X64V3Token = AVX2+FMA
+//!     // FMA is available because X64V3Token = X64V3Token = AVX2+FMA
 //!     let result = _mm256_fmadd_ps(va, vb, va);
 //!
 //!     let mut out = [0.0f32; 8];
@@ -28,9 +28,9 @@
 //! }
 //!
 //! fn main() {
-//!     // Desktop64: AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
+//!     // X64V3Token: AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
 //!     // CPUID check elided if compiled with -C target-cpu=native
-//!     if let Some(token) = Desktop64::summon() {
+//!     if let Some(token) = X64V3Token::summon() {
 //!         let result = multiply_add(token, &[1.0; 8], &[2.0; 8]);
 //!     }
 //! }
@@ -51,7 +51,7 @@
 //! use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
 //!
 //! #[arcane]
-//! fn load(_token: Desktop64, data: &[f32; 8]) -> __m256 {
+//! fn load(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
 //!     _mm256_loadu_ps(data)  // Safe! Takes &[f32; 8], not *const f32.
 //! }
 //! ```
@@ -67,7 +67,7 @@
 //!
 //! **The `#[arcane]` and `#[rite]` macros** read the token type from your function
 //! signature to determine which `#[target_feature]` attributes to emit. A function
-//! taking `Desktop64` gets `#[target_feature(enable = "avx2,fma,...")]`. A function
+//! taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`. A function
 //! taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
 //!
 //! Descriptive aliases are available for AI-assisted coding:
@@ -90,7 +90,7 @@
 //! within SIMD code. Passing the same token type through your call hierarchy keeps
 //! every function compiled with matching features, so LLVM inlines freely.
 //!
-//! Use concrete tokens like `Desktop64` (AVX2+FMA) or `X64V4Token` (AVX-512).
+//! Use concrete tokens like `X64V3Token` (AVX2+FMA) or `X64V4Token` (AVX-512).
 //! For generic code, use tier traits like `HasX64V2` or `HasX64V4`.
 //!
 //! ## Safety
@@ -176,7 +176,7 @@ pub use tokens::{
     Arm64V3Token,
     // x86 tier tokens
     Avx2FmaToken,
-    Desktop64,
+    X64V3Token,
     NeonAesToken,
     NeonCrcToken,
     NeonSha3Token,

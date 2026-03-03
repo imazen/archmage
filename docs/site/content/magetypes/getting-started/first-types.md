@@ -10,7 +10,7 @@ Every magetypes vector requires a token for construction. The pattern is: **writ
 Write the computation as a generic function bounded on the backend trait. The token parameter gates construction; once you have the vector, operators work without it.
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 use magetypes::simd::{
     generic::f32x8,
     backends::F32x8Backend,
@@ -31,7 +31,7 @@ fn scale_and_sum<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
 
 fn main() {
     // 4. Summon: prove the CPU supports AVX2+FMA
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
         let result = scale_and_sum(token, &data);
         println!("{}", result);  // 72.0
@@ -52,7 +52,7 @@ Tokens are zero-sized. Passing them around costs nothing at runtime. Constructio
 You don't need to summon a token every time you construct a vector. Summon once at the dispatch boundary, pass the token into generic SIMD code:
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::{
     generic::f32x8,
     backends::F32x8Backend,
@@ -67,12 +67,12 @@ fn process_data<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
 }
 
 #[arcane]
-fn process_avx2(token: Desktop64, input: &[f32; 8]) -> f32 {
+fn process_avx2(token: X64V3Token, input: &[f32; 8]) -> f32 {
     process_data(token, input)
 }
 
 fn main() {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
         let result = process_avx2(token, &data);
         println!("sum of halved values: {}", result);  // 18.0
@@ -87,7 +87,7 @@ fn main() {
 The backend type parameter determines what hardware you're targeting. The same generic function works across all of them:
 
 ```rust
-use archmage::{Desktop64, ScalarToken, SimdToken};
+use archmage::{X64V3Token, ScalarToken, SimdToken};
 use magetypes::simd::{
     generic::f32x8,
     backends::F32x8Backend,
@@ -103,7 +103,7 @@ fn dispatch_sum8(data: &[f32; 8]) -> f32 {
     let scalar = ScalarToken::new();
 
     #[cfg(target_arch = "x86_64")]
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         return sum8(token, data);
     }
 
@@ -111,7 +111,7 @@ fn dispatch_sum8(data: &[f32; 8]) -> f32 {
 }
 ```
 
-On AArch64, `NeonToken` backs the NEON implementation. On x86-64, `Desktop64` gives AVX2+FMA. On any platform, `ScalarToken` falls back to portable scalar code. The generic function `sum8` compiles correctly for each.
+On AArch64, `NeonToken` backs the NEON implementation. On x86-64, `X64V3Token` gives AVX2+FMA. On any platform, `ScalarToken` falls back to portable scalar code. The generic function `sum8` compiles correctly for each.
 
 ## Concrete Backends
 

@@ -47,21 +47,17 @@ if let Some(token) = X64CryptoToken::summon() {
 }
 ```
 
-### X64V3Token / Desktop64
+### X64V3Token
 
 **Features**: All V2 + AVX, AVX2, FMA, BMI1, BMI2, F16C, MOVBE
 
 **CPUs**: Intel Haswell (2013)+, AMD Zen 1 (2017)+
 
 ```rust
-use archmage::{X64V3Token, Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 
-// These are the same type:
-let t1: Option<X64V3Token> = X64V3Token::summon();
-let t2: Option<Desktop64> = Desktop64::summon();
+let token: Option<X64V3Token> = X64V3Token::summon();
 ```
-
-**Alias**: `Desktop64` — Friendly name for typical desktop/laptop CPUs
 
 ### X64V3CryptoToken
 
@@ -290,17 +286,17 @@ Returns:
 - `None` — Runtime check needed
 
 ```rust
-match Desktop64::compiled_with() {
+match X64V3Token::compiled_with() {
     Some(true) => {
         // summon() will always succeed, check is elided
-        let token = Desktop64::summon().unwrap();
+        let token = X64V3Token::summon().unwrap();
     }
     Some(false) => {
         // Wrong arch, use fallback
     }
     None => {
         // Need runtime check
-        if let Some(token) = Desktop64::summon() {
+        if let Some(token) = X64V3Token::summon() {
             // ...
         }
     }
@@ -312,7 +308,7 @@ match Desktop64::compiled_with() {
 Performs runtime CPU feature detection. Returns `Some(token)` if features are available.
 
 ```rust
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     // CPU supports AVX2+FMA
 }
 ```

@@ -5,10 +5,10 @@ Tokens are zero-sized proofs that the CPU supports a specific set of SIMD featur
 ## The Core API
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 
 // Runtime detection — returns Some(token) if CPU has AVX2+FMA
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     process_simd(token, &mut data);
 } else {
     process_scalar(&mut data);
@@ -36,7 +36,7 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
 | Token | Aliases | Features | CPUs |
 |-------|---------|----------|------|
 | `X64V2Token` | — | SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | Nehalem 2008+, Bulldozer 2011+ |
-| `X64V3Token` | `Desktop64`, `Avx2FmaToken` | + AVX, AVX2, FMA, BMI1, BMI2, F16C, MOVBE | Haswell 2013+, Zen 1 2017+ |
+| `X64V3Token` | — | + AVX, AVX2, FMA, BMI1, BMI2, F16C, MOVBE | Haswell 2013+, Zen 1 2017+ |
 | `X64V4Token` | `Server64`, `Avx512Token` | + AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4 2022+ |
 | `X64V4xToken` | — | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | AVX-512 FP16 | Sapphire Rapids 2023+ |
@@ -76,7 +76,7 @@ NEON is baseline on AArch64 — `NeonToken::summon()` always succeeds. Arm64V2/V
 
 ```rust
 // ~1.3 ns (cached via AtomicU8)
-if let Some(token) = Desktop64::summon() { ... }
+if let Some(token) = X64V3Token::summon() { ... }
 ```
 
 Each token has a static `AtomicU8` cache: 0 = unknown, 1 = unavailable, 2 = available. First call does the CPUID check and caches the result. Subsequent calls read the atomic.
@@ -84,7 +84,7 @@ Each token has a static `AtomicU8` cache: 0 = unknown, 1 = unavailable, 2 = avai
 ### `compiled_with()` — Compile-Time Check
 
 ```rust
-match Desktop64::compiled_with() {
+match X64V3Token::compiled_with() {
     Some(true)  => { /* compiled with -Ctarget-cpu=haswell, summon() is a no-op */ }
     Some(false) => { /* wrong architecture — token can never exist */ }
     None        => { /* need runtime check */ }
@@ -95,7 +95,7 @@ match Desktop64::compiled_with() {
 
 | Build Flags | Effect |
 |------------|--------|
-| `-Ctarget-cpu=haswell` | `Desktop64::summon()` → always `Some`, zero-cost |
+| `-Ctarget-cpu=haswell` | `X64V3Token::summon()` → always `Some`, zero-cost |
 | `-Ctarget-cpu=skylake-avx512` | `Server64::summon()` → always `Some`, zero-cost |
 | `-Ctarget-cpu=native` | All available tokens compile away |
 | Default | Runtime CPUID check, cached |
@@ -147,11 +147,11 @@ For testing, tokens can be disabled process-wide:
 
 ```rust
 // Requires `testable_dispatch` feature
-Desktop64::dangerously_disable_token_process_wide();
-assert!(Desktop64::summon().is_none());
+X64V3Token::dangerously_disable_token_process_wide();
+assert!(X64V3Token::summon().is_none());
 
 // Re-enable
-Desktop64::dangerously_enable_token_process_wide();
+X64V3Token::dangerously_enable_token_process_wide();
 ```
 
 This is for testing fallback paths. Don't use it in production.

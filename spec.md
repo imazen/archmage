@@ -23,7 +23,7 @@ Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the ty
 |-------|---------|----------|----------|
 | `X64V2Token` | — | sse3, ssse3, sse4.1, sse4.2, popcnt | Nehalem 2008+, Bulldozer 2011+ |
 | `X64CryptoToken` | — | + pclmulqdq, aes | Westmere 2010+, Bulldozer 2011+ |
-| `X64V3Token` | `Desktop64` | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt | Haswell 2013+, Zen 1 2017+ |
+| `X64V3Token` | — | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt | Haswell 2013+, Zen 1 2017+ |
 | `X64V4Token` | `Avx512Token`, `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl | Skylake-X 2017+, Zen 4 2022+ |
 | `X64V4xToken` | — | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | v4 + avx512fp16 | Sapphire Rapids 2023+ |
@@ -168,7 +168,7 @@ For safe memory access, use `safe_unaligned_simd` (accepts `&[T]`/`&mut [T]` ins
 
 ### 2.3 How `#[arcane]` and `#[rite]` Work
 
-Both macros parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. The token type *is* the feature selector — `Desktop64` maps to `avx2,fma,...`, `X64V4Token` maps to `avx512f,avx512bw,...`, and so on. This mapping is maintained in `token-registry.toml` and compiled into the proc macro via `token_to_features()`.
+Both macros parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. The token type *is* the feature selector — `X64V3Token` maps to `avx2,fma,...`, `X64V4Token` maps to `avx512f,avx512bw,...`, and so on. This mapping is maintained in `token-registry.toml` and compiled into the proc macro via `token_to_features()`.
 
 Passing the same token type through a call hierarchy means every function gets the same `#[target_feature]` attributes. LLVM sees matching targets and inlines freely — no optimization boundary. When token types mismatch (or generic bounds prevent monomorphization to a concrete type), LLVM hits a target-feature boundary and can't optimize across it, costing 4-6x (see `docs/PERFORMANCE.md`).
 
@@ -332,7 +332,7 @@ The goal is to replace 10+ independent copies of token-to-feature mappings (in m
 - Granular x86 tokens removed (Sse41Token, Avx2Token, FmaToken, etc.)
 - ARM composite tokens removed (ArmCryptoToken, ArmCrypto3Token)
 - NeonCrcToken added
-- Avx2FmaToken deprecated (use X64V3Token or Desktop64 instead)
+- Avx2FmaToken deprecated (use X64V3Token)
 - CompositeToken trait removed
 - Feature lists in `token_to_features()` are complete and correct
 - X64V3Token features fixed (was missing sse3, ssse3, sse4.1, sse4.2, popcnt, f16c, lzcnt)

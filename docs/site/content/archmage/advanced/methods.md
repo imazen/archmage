@@ -10,33 +10,33 @@ weight = 1
 For methods on your own types, `#[arcane]` works like it does on free functions:
 
 ```rust
-use archmage::{Desktop64, arcane};
+use archmage::{X64V3Token, arcane};
 
 struct Vector8([f32; 8]);
 
 impl Vector8 {
     #[arcane]
-    fn magnitude(&self, token: Desktop64) -> f32 {
+    fn magnitude(&self, token: X64V3Token) -> f32 {
         // self and Self work naturally!
         let sum: f32 = self.0.iter().map(|x| x * x).sum();
         sum.sqrt()
     }
 
     #[arcane]
-    fn scale(&mut self, token: Desktop64, factor: f32) {
+    fn scale(&mut self, token: X64V3Token, factor: f32) {
         for v in self.0.iter_mut() {
             *v *= factor;
         }
     }
 
     #[arcane]
-    fn into_sum(self, token: Desktop64) -> f32 {
+    fn into_sum(self, token: X64V3Token) -> f32 {
         self.0.iter().sum()
     }
 
     // Self in return type works too
     #[arcane]
-    fn doubled(&self, token: Desktop64) -> Self {
+    fn doubled(&self, token: X64V3Token) -> Self {
         let mut data = [0.0f32; 8];
         for i in 0..8 {
             data[i] = self.0[i] * 2.0;
@@ -46,7 +46,7 @@ impl Vector8 {
 
     // Self::CONSTANT works
     #[arcane]
-    fn with_offset(&self, token: Desktop64) -> [f32; 8] {
+    fn with_offset(&self, token: X64V3Token) -> [f32; 8] {
         let mut out = self.0;
         for v in out.iter_mut() {
             *v += Self::OFFSET;
@@ -66,13 +66,13 @@ impl Vector8 {
     #[cfg(target_arch = "x86_64")]
     #[doc(hidden)]
     #[target_feature(enable = "avx2,fma,...")]
-    unsafe fn __arcane_magnitude(&self, token: Desktop64) -> f32 {
+    unsafe fn __arcane_magnitude(&self, token: X64V3Token) -> f32 {
         let sum: f32 = self.0.iter().map(|x| x * x).sum();
         sum.sqrt()
     }
 
     #[cfg(target_arch = "x86_64")]
-    fn magnitude(&self, token: Desktop64) -> f32 {
+    fn magnitude(&self, token: X64V3Token) -> f32 {
         unsafe { self.__arcane_magnitude(token) }
     }
 }
@@ -87,24 +87,24 @@ Sibling expansion adds `__arcane_fn` to the impl block — but that method isn't
 Use `_self = Type` (which implies nested):
 
 ```rust
-use archmage::{Desktop64, arcane};
+use archmage::{X64V3Token, arcane};
 
 trait SimdOps {
-    fn compute(&self, token: Desktop64) -> f32;
-    fn transform(&self, token: Desktop64) -> Self;
+    fn compute(&self, token: X64V3Token) -> f32;
+    fn transform(&self, token: X64V3Token) -> Self;
 }
 
 struct Point { x: f32, y: f32 }
 
 impl SimdOps for Point {
     #[arcane(_self = Point)]
-    fn compute(&self, token: Desktop64) -> f32 {
+    fn compute(&self, token: X64V3Token) -> f32 {
         // Use _self, not self (nested mode renames self → _self)
         _self.x * _self.x + _self.y * _self.y
     }
 
     #[arcane(_self = Point)]
-    fn transform(&self, token: Desktop64) -> Self {
+    fn transform(&self, token: X64V3Token) -> Self {
         Point {
             x: _self.x * 2.0,
             y: _self.y * 2.0,
@@ -129,7 +129,7 @@ The name `_self` reminds you that:
 
 ```rust
 #[arcane(_self = Vector8)]
-fn dot(&self, token: Desktop64, other: &Self) -> f32 {
+fn dot(&self, token: X64V3Token, other: &Self) -> f32 {
     let a = _mm256_loadu_ps(&_self.0);
     let b = _mm256_loadu_ps(&other.0);
     // ...
@@ -140,7 +140,7 @@ fn dot(&self, token: Desktop64, other: &Self) -> f32 {
 
 ```rust
 #[arcane(_self = Vector8)]
-fn normalize(&mut self, token: Desktop64) {
+fn normalize(&mut self, token: X64V3Token) {
     // _self is &mut Vector8
     _mm256_storeu_ps(&mut _self.0, normalized);
 }
@@ -150,7 +150,7 @@ fn normalize(&mut self, token: Desktop64) {
 
 ```rust
 #[arcane(_self = Vector8)]
-fn scaled(self, token: Desktop64, factor: f32) -> Self {
+fn scaled(self, token: X64V3Token, factor: f32) -> Self {
     // _self is Vector8 (owned)
     let v = _mm256_loadu_ps(&_self.0);
     // ...
@@ -174,7 +174,7 @@ fn scaled(self, token: Desktop64, factor: f32) -> Self {
 ```rust
 impl ImageProcessor {
     #[arcane]
-    fn with_brightness(self, token: Desktop64, amount: f32) -> Self {
+    fn with_brightness(self, token: X64V3Token, amount: f32) -> Self {
         // self/Self work naturally in sibling mode
         let mut result = self;
         // Process brightness with SIMD...
@@ -192,7 +192,7 @@ let processed = processor
 ```rust
 impl Buffer {
     #[arcane]
-    fn process_all(&mut self, token: Desktop64) {
+    fn process_all(&mut self, token: X64V3Token) {
         for chunk in self.data.chunks_exact_mut(8) {
             let arr: &mut [f32; 8] = chunk.try_into().unwrap();
             let v = _mm256_loadu_ps(arr as &[f32; 8]);

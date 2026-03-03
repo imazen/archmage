@@ -39,18 +39,18 @@ let bits = mask.bitmask();  // Bit pattern of which lanes are true
 ## Example: Find Maximum Value in a Large Array
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
 #[arcane]
-fn find_max(token: Desktop64, data: &[f32]) -> f32 {
+fn find_max(token: X64V3Token, data: &[f32]) -> f32 {
     let chunks = data.chunks_exact(8);
     let remainder = chunks.remainder();
 
     // SIMD reduction over full chunks
-    let mut max_v = f32x8::<Desktop64>::splat(token, f32::NEG_INFINITY);
+    let mut max_v = f32x8::<X64V3Token>::splat(token, f32::NEG_INFINITY);
     for chunk in chunks {
-        let v = f32x8::<Desktop64>::from_slice(token, chunk);
+        let v = f32x8::<X64V3Token>::from_slice(token, chunk);
         max_v = max_v.max(v);
     }
 

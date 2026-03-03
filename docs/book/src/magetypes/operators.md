@@ -175,11 +175,11 @@ let shr_arith = a.shr_arithmetic::<1>();  // Sign-extending shift
 ## Example: Dot Product
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::f32x8;
 
 #[arcane]
-fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::from_array(token, *a);
     let vb = f32x8::from_array(token, *b);
     (va * vb).reduce_add()
@@ -190,7 +190,7 @@ fn dot_product(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 ```rust
 #[arcane]
-fn normalize(token: Desktop64, v: &mut [f32; 8]) {
+fn normalize(token: X64V3Token, v: &mut [f32; 8]) {
     let vec = f32x8::from_array(token, *v);
     let len_sq = (vec * vec).reduce_add();
     let len = len_sq.sqrt();

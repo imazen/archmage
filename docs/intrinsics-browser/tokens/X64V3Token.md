@@ -1,4 +1,4 @@
-# X64V3Token (Desktop64, Avx2FmaToken) — x86-64-v3
+# X64V3Token  — x86-64-v3
 
 Proof that AVX2 + FMA + BMI1/2 + F16C + LZCNT are available (x86-64-v3 level).
 

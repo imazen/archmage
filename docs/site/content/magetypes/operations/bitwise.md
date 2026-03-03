@@ -59,18 +59,18 @@ See [Width Conversions](@/magetypes/conversions/width.md) for `pack_u8`, `pack_i
 ## Example: Byte Threshold
 
 ```rust
-use archmage::{Desktop64, SimdToken, arcane};
+use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::{
     generic::{u8x16, i16x8},
     backends::U8x16Backend,
 };
 
 #[arcane]
-fn threshold(token: Desktop64, pixels: &mut [u8; 16], cutoff: u8) {
-    let v = u8x16::<Desktop64>::from_array(token, *pixels);
-    let threshold = u8x16::<Desktop64>::splat(token, cutoff);
-    let white = u8x16::<Desktop64>::splat(token, 255);
-    let black = u8x16::<Desktop64>::zero(token);
+fn threshold(token: X64V3Token, pixels: &mut [u8; 16], cutoff: u8) {
+    let v = u8x16::<X64V3Token>::from_array(token, *pixels);
+    let threshold = u8x16::<X64V3Token>::splat(token, cutoff);
+    let white = u8x16::<X64V3Token>::splat(token, 255);
+    let black = u8x16::<X64V3Token>::zero(token);
 
     let mask = v.simd_gt(threshold);
     let result = mask.blend(white, black);

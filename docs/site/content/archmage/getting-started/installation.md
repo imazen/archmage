@@ -64,11 +64,11 @@ RUSTFLAGS="-Ctarget-feature=+simd128" cargo build --target wasm32-unknown-unknow
 ## Verify Installation
 
 ```rust
-use archmage::{SimdToken, Desktop64, Arm64};
+use archmage::{SimdToken, X64V3Token, Arm64};
 
 fn main() {
     // Tokens compile everywhere - summon() returns None on unsupported platforms
-    match Desktop64::summon() {
+    match X64V3Token::summon() {
         Some(token) => println!("{} available!", token.name()),
         None => println!("No AVX2+FMA"),
     }

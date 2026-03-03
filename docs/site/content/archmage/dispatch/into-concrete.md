@@ -144,7 +144,7 @@ fn transform_scalar(data: &mut [f32]) {
 Callers can pass any token:
 
 ```rust
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     transform(token, &mut data);  // Uses AVX2 path
 }
 

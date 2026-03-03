@@ -17,10 +17,10 @@ flowchart TD
 ## Basic Pattern
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 
 pub fn process(data: &mut [f32]) {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process_avx2(token, data);
     } else {
         process_scalar(data);
@@ -28,7 +28,7 @@ pub fn process(data: &mut [f32]) {
 }
 
 #[arcane]
-fn process_avx2(token: Desktop64, data: &mut [f32]) {
+fn process_avx2(token: X64V3Token, data: &mut [f32]) {
     // AVX2 implementation
 }
 
@@ -44,11 +44,11 @@ fn process_scalar(data: &mut [f32]) {
 Tokens exist on all platforms. On unsupported architectures, `summon()` returns `None` and `#[arcane]` functions become unreachable stubs. You write one dispatch block:
 
 ```rust
-use archmage::{Desktop64, Arm64, Wasm128Token, SimdToken};
+use archmage::{X64V3Token, Arm64, Wasm128Token, SimdToken};
 
 pub fn process(data: &mut [f32]) {
     // Try x86 AVX2
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         return process_x86(token, data);
     }
 
@@ -67,7 +67,7 @@ pub fn process(data: &mut [f32]) {
 }
 
 #[arcane]
-fn process_x86(token: Desktop64, data: &mut [f32]) { /* ... */ }
+fn process_x86(token: X64V3Token, data: &mut [f32]) { /* ... */ }
 
 #[arcane]
 fn process_arm(token: Arm64, data: &mut [f32]) { /* ... */ }
@@ -78,7 +78,7 @@ fn process_wasm(token: Wasm128Token, data: &mut [f32]) { /* ... */ }
 fn process_scalar(data: &mut [f32]) { /* ... */ }
 ```
 
-On x86-64: `Desktop64::summon()` may succeed, others return `None`.
+On x86-64: `X64V3Token::summon()` may succeed, others return `None`.
 On ARM: `Arm64::summon()` succeeds, others return `None`.
 On WASM: `Wasm128Token::summon()` may succeed, others return `None`.
 
@@ -89,7 +89,7 @@ The `#[arcane]` functions for other architectures compile to unreachable stubsâ€
 Check from highest to lowest capability:
 
 ```rust
-use archmage::{X64V4Token, Desktop64, X64V2Token, SimdToken};
+use archmage::{X64V4Token, X64V3Token, X64V2Token, SimdToken};
 
 pub fn process(data: &mut [f32]) {
     // AVX-512 (requires avx512 feature)
@@ -99,7 +99,7 @@ pub fn process(data: &mut [f32]) {
     }
 
     // AVX2+FMA (Haswell+, Zen+)
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         return process_v3(token, data);
     }
 
@@ -133,13 +133,13 @@ Note: `#[cfg(feature = "avx512")]` is a **Cargo feature** gate (compile-time opt
 ```rust
 // WRONG - summon + dispatch every iteration
 for chunk in data.chunks_mut(8) {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         process_chunk(token, chunk);
     }
 }
 
 // BETTER - token hoisted, but still crosses target-feature boundary per iteration
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     for chunk in data.chunks_mut(8) {
         process_chunk(token, chunk);  // #[arcane] = boundary per call
     }
@@ -150,21 +150,21 @@ if let Some(token) = Desktop64::summon() {
 }
 
 // BEST - loop inside #[arcane], #[rite] helpers stay in the same LLVM region
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     process_all_chunks(token, data);
 } else {
     process_all_chunks_scalar(data);
 }
 
 #[arcane]
-fn process_all_chunks(token: Desktop64, data: &mut [f32]) {
+fn process_all_chunks(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         process_chunk(token, chunk.try_into().unwrap());  // #[rite] inlines fully!
     }
 }
 
 #[rite]
-fn process_chunk(_: Desktop64, chunk: &mut [f32; 8]) {
+fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
     // Same target features as caller â€” LLVM optimizes across both
 }
 ```
@@ -175,14 +175,14 @@ The "BETTER" pattern still calls through an `#[arcane]` wrapper each iteration. 
 
 ```rust
 // WRONG - falls through to scalar even when SIMD available
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     process_avx2(token, data);
     // Missing return!
 }
 process_scalar(data);  // Always runs!
 
 // RIGHT
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     return process_avx2(token, data);
 }
 process_scalar(data);

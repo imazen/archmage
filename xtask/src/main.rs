@@ -686,8 +686,8 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             intrinsics: BTreeMap::new(),
         },
         TierInfo {
-            name: "X64V3Token / Desktop64 (AVX2, FMA)",
-            token: "X64V3Token / Desktop64",
+            name: "X64V3Token (AVX2, FMA)",
+            token: "X64V3Token",
             features: &["avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt"],
             intrinsics: BTreeMap::new(),
         },

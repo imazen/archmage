@@ -76,7 +76,7 @@ Wider types are available as polyfills, same as ARM.
 The correct pattern is a generic function bounded by the appropriate backend trait. The type parameter `T` is satisfied at the call site by whichever token the caller holds.
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 use magetypes::simd::{
     generic::f32x8,
     backends::F32x8Backend,
@@ -99,7 +99,7 @@ fn example<T: F32x8Backend>(token: T) {
 }
 
 // Call site: summon the token, then call the generic function
-if let Some(token) = Desktop64::summon() {
+if let Some(token) = X64V3Token::summon() {
     example(token);
 }
 ```

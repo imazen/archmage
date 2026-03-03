@@ -28,7 +28,7 @@
 //! means you rarely need `#[cfg(target_arch)]` in user code.
 //!
 //! **Friendly aliases:**
-//! - [`Desktop64`] = [`X64V3Token`] — AVX2 + FMA (Haswell 2013+, Zen 1+)
+//! - [`X64V3Token`] = [`X64V3Token`] — AVX2 + FMA (Haswell 2013+, Zen 1+)
 //! - [`Server64`] = [`X64V4Token`] — + AVX-512 (with `avx512` feature)
 //! - [`Arm64`] = [`NeonToken`] — NEON (all 64-bit ARM)
 //!
@@ -62,7 +62,7 @@
 //!
 //! ```rust,ignore
 //! #[arcane]
-//! fn add(_: Desktop64, a: __m256, b: __m256) -> __m256 {
+//! fn add(_: X64V3Token, a: __m256, b: __m256) -> __m256 {
 //!     _mm256_add_ps(a, b)  // Safe! No unsafe needed.
 //! }
 //! ```
@@ -86,7 +86,7 @@
 //! use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
 //!
 //! #[arcane]
-//! fn load(_token: Desktop64, data: &[f32; 8]) -> __m256 {
+//! fn load(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
 //!     _mm256_loadu_ps(data)  // Safe! Takes a reference, not a pointer.
 //! }
 //! ```
@@ -155,7 +155,7 @@ pub use crate::tokens::{
 };
 pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
 pub use crate::tokens::{
-    Desktop64, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken, X64V3Token,
+    X64V3Token, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken, X64V3Token,
 };
 pub use crate::tokens::{Wasm128RelaxedToken, Wasm128Token};
 

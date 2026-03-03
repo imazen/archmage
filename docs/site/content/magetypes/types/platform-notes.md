@@ -62,7 +62,7 @@ Each width tier requires a minimum token:
 | 256-bit | `X64V3Token` | `NeonToken` (polyfill) | `Wasm128Token` (polyfill) |
 | 512-bit | `X64V4Token` | `NeonToken` (polyfill) | `Wasm128Token` (polyfill) |
 
-Higher tokens also work — `Desktop64` (alias for `X64V3Token`) accepts any function expecting `X64V2Token` because V3 is a superset of V2.
+Higher tokens also work — `X64V3Token` accepts any function expecting `X64V2Token` because V3 is a superset of V2.
 
 ## Backend Type Aliases
 
@@ -90,4 +90,4 @@ RUSTFLAGS="-Ctarget-cpu=native" cargo build --release
 RUSTFLAGS="-Ctarget-feature=+simd128" cargo build --target wasm32-unknown-unknown
 ```
 
-With `-Ctarget-cpu=haswell`, `Desktop64::summon()` returns `Some(true)` at compile time. The runtime check is elided entirely.
+With `-Ctarget-cpu=haswell`, `X64V3Token::summon()` returns `Some(true)` at compile time. The runtime check is elided entirely.

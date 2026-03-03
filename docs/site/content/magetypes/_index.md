@@ -38,11 +38,11 @@ fn dot_product<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 To call this from concrete code, summon a token and pass it in:
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 
 fn main() {
     // Prove CPU supports AVX2+FMA — returns None on unsupported hardware
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
         let b = [2.0f32; 8];
         let result = dot_product(token, &a, &b);

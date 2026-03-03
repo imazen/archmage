@@ -14,11 +14,11 @@ Getting data from SIMD registers back into slices and arrays.
 ## Magetypes
 
 ```rust
-use archmage::{Desktop64, arcane};
+use archmage::{X64V3Token, arcane};
 use magetypes::simd::f32x8;
 
 #[arcane]
-fn double(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn double(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::load(token, data);
     let doubled = v + v;
     doubled.to_array()
@@ -29,7 +29,7 @@ fn double(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 ```rust
 #[arcane]
-fn double_in_place(token: Desktop64, data: &mut [f32; 8]) {
+fn double_in_place(token: X64V3Token, data: &mut [f32; 8]) {
     let v = f32x8::load(token, data);
     let doubled = v + v;
     doubled.store(token, data);
@@ -42,7 +42,7 @@ fn double_in_place(token: Desktop64, data: &mut [f32; 8]) {
 use std::arch::x86_64::*;
 
 #[arcane]
-fn square(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn square(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
     let mut out = [0.0f32; 8];
@@ -57,7 +57,7 @@ When you need to write into a slice (not an array), convert the subslice first:
 
 ```rust
 #[arcane]
-fn process_slice(token: Desktop64, data: &mut [f32]) {
+fn process_slice(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         let v = f32x8::from_slice(token, chunk);
         let result = v * v;
@@ -73,7 +73,7 @@ When you need a single element (not the whole vector):
 
 ```rust
 #[arcane]
-fn first_element(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn first_element(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::load(token, data);
     v.to_array()[0]  // Extract first lane
 }

@@ -120,7 +120,7 @@ let result = v.ln_unchecked();    // Faster, UB if ≤ 0
 
 ```rust
 #[arcane]
-fn gaussian(token: Desktop64, x: &[f32; 8], sigma: f32) -> [f32; 8] {
+fn gaussian(token: X64V3Token, x: &[f32; 8], sigma: f32) -> [f32; 8] {
     let v = f32x8::from_array(token, *x);
     let sigma_v = f32x8::splat(token, sigma);
     let two = f32x8::splat(token, 2.0);
@@ -139,7 +139,7 @@ fn gaussian(token: Desktop64, x: &[f32; 8], sigma: f32) -> [f32; 8] {
 
 ```rust
 #[arcane]
-fn softmax(token: Desktop64, logits: &[f32; 8]) -> [f32; 8] {
+fn softmax(token: X64V3Token, logits: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::from_array(token, *logits);
 
     // Subtract max for numerical stability

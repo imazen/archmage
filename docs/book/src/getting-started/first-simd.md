@@ -10,7 +10,7 @@ Use `archmage::prelude::*` which includes `safe_unaligned_simd` for memory opera
 use archmage::prelude::*;
 
 #[arcane]
-fn square_f32x8(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn square_f32x8(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd takes references - fully safe!
     let v = _mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
@@ -21,7 +21,7 @@ fn square_f32x8(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 }
 
 fn main() {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let output = square_f32x8(token, &input);
         println!("{:?}", output);
@@ -37,17 +37,17 @@ fn main() {
 For the most ergonomic experience, use magetypes' vector types:
 
 ```rust
-use archmage::{Desktop64, SimdToken};
+use archmage::{X64V3Token, SimdToken};
 use magetypes::simd::f32x8;
 
-fn square_f32x8(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn square_f32x8(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::from_array(token, *data);
     let squared = v * v;  // Natural operator!
     squared.to_array()
 }
 
 fn main() {
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let output = square_f32x8(token, &input);
         println!("{:?}", output);
@@ -62,15 +62,15 @@ The macro transforms your function:
 ```rust
 // You write:
 #[arcane]
-fn square(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn square(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // body
 }
 
 // Macro generates:
-fn square(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn square(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
     #[inline]
-    fn __inner(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    fn __inner(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         // body - intrinsics are safe here!
     }
     // SAFETY: token proves CPU support
@@ -82,7 +82,7 @@ The token parameter proves you checked CPU features. The macro enables those fea
 
 ## Key Points
 
-1. **`Desktop64`** = AVX2 + FMA + BMI1 + BMI2 (Haswell 2013+, Zen 1+)
+1. **`X64V3Token`** = AVX2 + FMA + BMI1 + BMI2 (Haswell 2013+, Zen 1+)
 2. **`summon()`** does runtime CPU detection
 3. **`#[arcane]`** makes intrinsics safe inside the function (since Rust 1.85)
 4. **Token is zero-sized** — no runtime overhead passing it around

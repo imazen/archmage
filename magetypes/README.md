@@ -151,7 +151,7 @@ This works with `#![forbid(unsafe_code)]` — magetypes methods handle unsafe in
 
 ## Using with #[arcane] and #[rite]
 
-Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `Desktop64` → `avx2,fma,...`. `X64V4Token` → `avx512f,...`. The token type is the feature selector.
+Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `X64V3Token` → `avx2,fma,...`. `X64V4Token` → `avx512f,...`. The token type is the feature selector.
 
 `#[arcane]` generates a wrapper that crosses the `#[target_feature]` boundary without `unsafe` at the call site — but the wrapper itself creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary.
 
@@ -162,7 +162,7 @@ use archmage::prelude::*;
 use magetypes::simd::f32x8;
 
 #[arcane]
-pub fn dot_product(token: Desktop64, a: &[f32], b: &[f32]) -> f32 {
+pub fn dot_product(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
     let mut acc = f32x8::zero(token);
     for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
         acc = accumulate(token, acc, a_chunk, b_chunk);
@@ -171,7 +171,7 @@ pub fn dot_product(token: Desktop64, a: &[f32], b: &[f32]) -> f32 {
 }
 
 #[rite]
-fn accumulate(token: Desktop64, acc: f32x8, a: &[f32], b: &[f32]) -> f32x8 {
+fn accumulate(token: X64V3Token, acc: f32x8, a: &[f32], b: &[f32]) -> f32x8 {
     let va = f32x8::from_array(token, a.try_into().unwrap());
     let vb = f32x8::from_array(token, b.try_into().unwrap());
     va.mul_add(vb, acc)
@@ -183,7 +183,7 @@ fn accumulate(token: Desktop64, acc: f32x8, a: &[f32], b: &[f32]) -> f32x8 {
 ## Relationship to archmage
 
 `magetypes` depends on `archmage` for:
-- Token types (`Desktop64`, `Arm64`, etc.)
+- Token types (`X64V3Token`, `Arm64`, etc.)
 - The `#[arcane]` and `#[rite]` macros
 - Runtime CPU feature detection
 

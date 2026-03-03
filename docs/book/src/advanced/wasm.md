@@ -67,11 +67,11 @@ fn dot_product(token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
 Write once, run on x86, ARM, and WASM:
 
 ```rust
-use archmage::{Desktop64, NeonToken, Wasm128Token, SimdToken, incant};
+use archmage::{X64V3Token, NeonToken, Wasm128Token, SimdToken, incant};
 
 // Platform variants — #[arcane] generates stubs on non-matching architectures
 #[arcane]
-fn sum_v3(token: Desktop64, data: &[f32; 8]) -> f32 {
+fn sum_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x8;
     f32x8::from_array(token, *data).reduce_add()
 }

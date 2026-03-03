@@ -46,7 +46,7 @@ Archmage separates **proof of capability** from **use of capability**:
 use archmage::prelude::*;
 
 #[arcane]
-fn multiply(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+fn multiply(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // Safe! Token proves AVX2+FMA, safe_unaligned_simd takes references
     let a = _mm256_loadu_ps(data);
     let b = _mm256_set1_ps(2.0);
@@ -58,7 +58,7 @@ fn multiply(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 
 fn main() {
     // Runtime check happens ONCE here
-    if let Some(token) = Desktop64::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let result = multiply(token, &[1.0; 8]);
         println!("{:?}", result);
     }
@@ -67,7 +67,7 @@ fn main() {
 
 ## Key Concepts
 
-1. **Tokens** are zero-sized proof types. `Desktop64::summon()` returns `Some(token)` only if the CPU supports AVX2+FMA. See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete token-to-feature mapping.
+1. **Tokens** are zero-sized proof types. `X64V3Token::summon()` returns `Some(token)` only if the CPU supports AVX2+FMA. See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete token-to-feature mapping.
 
 2. **`#[arcane]`** generates a `#[target_feature]` inner function. Inside, SIMD intrinsics are safe (Rust 1.85+). Descriptive alias: `#[token_target_features_boundary]`.
 
@@ -81,7 +81,7 @@ fn main() {
 
 | Platform | Tokens | Register Width |
 |----------|--------|----------------|
-| x86-64 | `X64V1Token`, `X64V2Token`, `X64CryptoToken`, `X64V3Token`/`Desktop64`, `X64V3CryptoToken`, `X64V4Token`/`Server64`, `X64V4xToken`, `Avx512Fp16Token` | 128-512 bit |
+| x86-64 | `X64V1Token`, `X64V2Token`, `X64CryptoToken`, `X64V3Token`, `X64V3CryptoToken`, `X64V4Token`/`Server64`, `X64V4xToken`, `Avx512Fp16Token` | 128-512 bit |
 | AArch64 | `NeonToken`/`Arm64`, `Arm64V2Token`, `Arm64V3Token`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken` | 128 bit |
 | WASM | `Wasm128Token`, `Wasm128RelaxedToken` | 128 bit |
 

@@ -33,8 +33,8 @@ But `HasAvx2` is NOT a valid trait bound in 0.3.0. The error should show actual 
 Create `tests/arcane_trait_recognition.rs` that tests every form the macro should accept. For each supported trait/token name, define an `#[arcane]` function and verify it compiles and runs.
 
 **All token names** (from `token_to_features()`):
-- `Sse41Token`, `Sse42Token`, `AvxToken`, `Avx2Token`, `FmaToken`, `Avx2FmaToken`
-- `X64V2Token`, `X64V3Token`, `Desktop64`
+- `Sse41Token`, `Sse42Token`, `AvxToken`, `Avx2Token`, `FmaToken`, `X64V3Token`
+- `X64V2Token`, `X64V3Token`
 - `Avx512fToken`, `Avx512bwToken`, `Avx512fVlToken`, `Avx512bwVlToken`
 - `Avx512Vbmi2Token`, `Avx512Vbmi2VlToken`
 - `X64V4Token`, `Avx512Token`, `Server64`
@@ -85,7 +85,7 @@ fn bad_trait2<T: HasFma>(token: T, ...) { ... }  // HasFma not a real trait
 Add a unit test in `archmage-macros` (or integration test) that verifies:
 - Every concrete token struct exported from `archmage` has an entry in `token_to_features()`
 - Every trait exported from `archmage` has an entry in `trait_to_features()`
-- The feature sets are consistent (e.g., X64V3Token and Avx2FmaToken map to the same features)
+- The feature sets are consistent (e.g., X64V3Token and X64V3Token map to the same features)
 
 ### 5. Either add backward-compat aliases OR document migration
 
@@ -103,7 +103,7 @@ The macro would generate `#[target_feature]` correctly, and the trait bounds wou
 
 **Option B:** Add a migration guide to README.md and CHANGELOG.md documenting:
 - `HasAvx` → use `Has256BitSimd` or concrete `AvxToken`
-- `HasAvx2 + HasFma` → use concrete `X64V3Token` or `Avx2FmaToken`
+- `HasAvx2 + HasFma` → use concrete `X64V3Token` or `X64V3Token`
 - `HasAvx512f` → use `Has512BitSimd` or concrete `X64V4Token`
 - `archmage::mem::avx` → use `safe_unaligned_simd::x86_64`
 

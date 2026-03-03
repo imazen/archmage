@@ -159,7 +159,7 @@ let v = f32x8::from_bytes(token, &bytes);
 
 ```rust
 #[arcane]
-fn brighten(token: Desktop64, pixels: &mut [u8]) {
+fn brighten(token: X64V3Token, pixels: &mut [u8]) {
     // Process 32 bytes at a time
     for chunk in pixels.chunks_exact_mut(32) {
         let v = u8x32::from_slice(token, chunk);
