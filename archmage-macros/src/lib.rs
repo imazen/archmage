@@ -848,169 +848,112 @@ fn arcane_impl_nested(
 
 /// Mark a function as an arcane SIMD function.
 ///
-/// This macro enables safe use of SIMD intrinsics by generating an inner function
-/// with the appropriate `#[target_feature(enable = "...")]` attributes based on
-/// the token parameter type. The outer function calls the inner function unsafely,
-/// which is justified because the token parameter proves the features are available.
+/// This macro generates a safe wrapper around a `#[target_feature]` function.
+/// The token parameter type determines which CPU features are enabled.
 ///
-/// **The token is passed through to the inner function**, so you can call other
-/// token-taking functions from inside `#[arcane]`.
+/// # Expansion Modes
+///
+/// ## Sibling (default)
+///
+/// Generates two functions at the same scope: a `#[target_feature]` unsafe sibling
+/// and a safe wrapper. `self`/`Self` work naturally since both functions share scope.
+///
+/// ```ignore
+/// #[arcane]
+/// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { /* body */ }
+/// // Expands to (x86_64 only):
+/// #[cfg(target_arch = "x86_64")]
+/// #[doc(hidden)]
+/// #[target_feature(enable = "avx2,fma,...")]
+/// unsafe fn __arcane_process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { /* body */ }
+///
+/// #[cfg(target_arch = "x86_64")]
+/// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+///     unsafe { __arcane_process(token, data) }
+/// }
+/// ```
+///
+/// Methods work naturally:
+///
+/// ```ignore
+/// impl MyType {
+///     #[arcane]
+///     fn compute(&self, token: X64V3Token) -> f32 {
+///         self.data.iter().sum()  // self/Self just work!
+///     }
+/// }
+/// ```
+///
+/// ## Nested (`nested` or `_self = Type`)
+///
+/// Generates a nested inner function inside the original. Required for trait impls
+/// (where sibling functions would fail) and when `_self = Type` is used.
+///
+/// ```ignore
+/// impl SimdOps for MyType {
+///     #[arcane(_self = MyType)]
+///     fn compute(&self, token: X64V3Token) -> Self {
+///         // Use _self instead of self, Self replaced with MyType
+///         _self.data.iter().sum()
+///     }
+/// }
+/// ```
+///
+/// # Cross-Architecture Behavior
+///
+/// **Default (cfg-out):** On the wrong architecture, the function is not emitted
+/// at all — no stub, no dead code. Code that references it must be cfg-gated.
+///
+/// **With `stub`:** Generates an `unreachable!()` stub on wrong architectures.
+/// Use when cross-arch dispatch references the function without cfg guards.
+///
+/// ```ignore
+/// #[arcane(stub)]  // generates stub on wrong arch
+/// fn process_neon(token: NeonToken, data: &[f32]) -> f32 { ... }
+/// ```
+///
+/// `incant!` is unaffected — it already cfg-gates dispatch calls by architecture.
 ///
 /// # Token Parameter Forms
 ///
-/// The macro supports four forms of token parameters:
-///
-/// ## Concrete Token Types
-///
 /// ```ignore
+/// // Concrete token
 /// #[arcane]
-/// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-///     // AVX2 intrinsics safe here
-/// }
-/// ```
+/// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { ... }
 ///
-/// ## impl Trait Bounds
-///
-/// ```ignore
+/// // impl Trait bound
 /// #[arcane]
-/// fn process(token: impl HasX64V2, data: &[f32; 8]) -> [f32; 8] {
-///     // Accepts any token with x86-64-v2 features (SSE4.2+)
-/// }
-/// ```
+/// fn process(token: impl HasX64V2, data: &[f32; 8]) -> [f32; 8] { ... }
 ///
-/// ## Generic Type Parameters
-///
-/// ```ignore
+/// // Generic with inline or where-clause bounds
 /// #[arcane]
-/// fn process<T: HasX64V2>(token: T, data: &[f32; 8]) -> [f32; 8] {
-///     // Generic over any v2-capable token
-/// }
+/// fn process<T: HasX64V2>(token: T, data: &[f32; 8]) -> [f32; 8] { ... }
 ///
-/// // Also works with where clauses:
+/// // Wildcard
 /// #[arcane]
-/// fn process<T>(token: T, data: &[f32; 8]) -> [f32; 8]
-/// where
-///     T: HasX64V2
-/// {
-///     // ...
-/// }
+/// fn process(_: X64V3Token, data: &[f32; 8]) -> [f32; 8] { ... }
 /// ```
 ///
-/// ## Methods with Self Receivers
+/// # Options
 ///
-/// Methods with `self`, `&self`, `&mut self` receivers are supported via the
-/// `_self = Type` argument. Use `_self` in the function body instead of `self`:
-///
-/// ```ignore
-/// use archmage::{X64V3Token, arcane};
-/// use wide::f32x8;
-///
-/// trait SimdOps {
-///     fn double(&self, token: X64V3Token) -> Self;
-///     fn square(self, token: X64V3Token) -> Self;
-///     fn scale(&mut self, token: X64V3Token, factor: f32);
-/// }
-///
-/// impl SimdOps for f32x8 {
-///     #[arcane(_self = f32x8)]
-///     fn double(&self, _token: X64V3Token) -> Self {
-///         // Use _self instead of self in the body
-///         *_self + *_self
-///     }
-///
-///     #[arcane(_self = f32x8)]
-///     fn square(self, _token: X64V3Token) -> Self {
-///         _self * _self
-///     }
-///
-///     #[arcane(_self = f32x8)]
-///     fn scale(&mut self, _token: X64V3Token, factor: f32) {
-///         *_self = *_self * f32x8::splat(factor);
-///     }
-/// }
-/// ```
-///
-/// **Why `_self`?** The macro generates an inner function where `self` becomes
-/// a regular parameter named `_self`. Using `_self` in your code reminds you
-/// that you're not using the normal `self` keyword.
-///
-/// **All receiver types are supported:**
-/// - `self` (by value/move) → `_self: Type`
-/// - `&self` (shared reference) → `_self: &Type`
-/// - `&mut self` (mutable reference) → `_self: &mut Type`
-///
-/// # Multiple Trait Bounds
-///
-/// When using `impl Trait` or generic bounds with multiple traits,
-/// all required features are enabled:
-///
-/// ```ignore
-/// #[arcane]
-/// fn fma_kernel(token: impl HasX64V2 + HasNeon, data: &[f32; 8]) -> [f32; 8] {
-///     // Cross-platform: SSE4.2 on x86, NEON on ARM
-/// }
-/// ```
-///
-/// # Expansion
-///
-/// The macro expands to approximately:
-///
-/// ```ignore
-/// fn process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-///     #[target_feature(enable = "avx2")]
-///     #[inline]
-///     fn __simd_inner_process(token: Avx2Token, data: &[f32; 8]) -> [f32; 8] {
-///         let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
-///         let doubled = _mm256_add_ps(v, v);
-///         let mut out = [0.0f32; 8];
-///         unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
-///         out
-///     }
-///     // SAFETY: Calling #[target_feature] fn from non-matching context.
-///     // Token proves the required features are available.
-///     unsafe { __simd_inner_process(token, data) }
-/// }
-/// ```
-///
-/// # Profile Tokens
-///
-/// Profile tokens automatically enable all required features:
-///
-/// ```ignore
-/// #[arcane]
-/// fn kernel(token: X64V3Token, data: &mut [f32]) {
-///     // AVX2 + FMA + BMI1 + BMI2 intrinsics all safe here!
-/// }
-/// ```
+/// | Option | Effect |
+/// |--------|--------|
+/// | `stub` | Generate `unreachable!()` stub on wrong architecture |
+/// | `nested` | Use nested inner function instead of sibling |
+/// | `_self = Type` | Implies `nested`, transforms self receiver, replaces Self |
+/// | `inline_always` | Use `#[inline(always)]` (requires nightly) |
 ///
 /// # Supported Tokens
 ///
-/// - **x86_64 tiers**: `X64V2Token`, `X64V3Token` / `Desktop64` / `Avx2FmaToken`,
-///   `X64V4Token` / `Avx512Token` / `Server64`, `X64V4xToken`, `Avx512Fp16Token`
-/// - **ARM**: `NeonToken` / `Arm64`, `Arm64V2Token`, `Arm64V3Token`,
+/// - **x86_64**: `X64V2Token`, `X64V3Token`/`Desktop64`, `X64V4Token`/`Avx512Token`/`Server64`,
+///   `X64V4xToken`, `Avx512Fp16Token`, `X64CryptoToken`, `X64V3CryptoToken`
+/// - **ARM**: `NeonToken`/`Arm64`, `Arm64V2Token`, `Arm64V3Token`,
 ///   `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
 /// - **WASM**: `Wasm128Token`
 ///
 /// # Supported Trait Bounds
 ///
-/// - **x86_64 tiers**: `HasX64V2`, `HasX64V4`
-/// - **ARM**: `HasNeon`, `HasNeonAes`, `HasNeonSha3`, `HasArm64V2`, `HasArm64V3`
-///
-/// **Preferred:** Use concrete tokens (`X64V3Token`, `Desktop64`, `NeonToken`) directly.
-/// Concrete token types also work as trait bounds (e.g., `impl X64V3Token`).
-///
-/// **Not supported:** `SimdToken` and `IntoConcreteToken` cannot be used as token
-/// bounds because they don't map to any CPU features. The macro needs concrete
-/// features to generate `#[target_feature]` attributes.
-///
-/// # Options
-///
-/// ## `inline_always`
-///
-/// Use `#[inline(always)]` instead of `#[inline]` for the inner function.
-/// This can improve performance by ensuring aggressive inlining, but requires
-/// nightly Rust with `#![feature(target_feature_inline_always)]` enabled in
-/// the crate using the macro.
+/// `HasX64V2`, `HasX64V4`, `HasNeon`, `HasNeonAes`, `HasNeonSha3`, `HasArm64V2`, `HasArm64V3`
 ///
 /// ```ignore
 /// #![feature(target_feature_inline_always)]
@@ -1101,6 +1044,11 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// Calling from other contexts requires `unsafe` and the caller must ensure
 /// the CPU supports the required features.
 ///
+/// # Cross-Architecture Behavior
+///
+/// Like `#[arcane]`, defaults to cfg-out (no function on wrong arch).
+/// Use `#[rite(stub)]` to generate an unreachable stub instead.
+///
 /// # Comparison with #[arcane]
 ///
 /// | Aspect | `#[arcane]` | `#[rite]` |
@@ -1109,9 +1057,9 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// | Entry point | Yes | No |
 /// | Inlines into caller | No (barrier) | Yes |
 /// | Safe to call anywhere | Yes (with token) | Only from feature-enabled context |
+/// | `stub` param | Yes | Yes |
 #[proc_macro_attribute]
 pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // Parse optional arguments (currently just inline_always)
     let args = parse_macro_input!(attr as RiteArgs);
     let input_fn = parse_macro_input!(item as LightFn);
     rite_impl(input_fn, args)

@@ -227,30 +227,58 @@ This breaks runtime dispatch — types aren't available even if CPU supports AVX
 **Cargo features should NOT control:**
 - Whether SIMD types exist
 
-### `#[arcane]`: Cross-Arch Compilation
+### `#[arcane]`: Expansion Modes
 
-On wrong architecture, generates unreachable stub:
+**Sibling (default):** Two functions at same scope — `__arcane_fn` (unsafe, target_feature) + safe wrapper.
+`self`/`Self` work naturally. Use for free functions and inherent impl methods.
 
 ```rust
-// On ARM: stub that compiles but can't be reached
-#[cfg(not(target_arch = "x86_64"))]
-fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    unreachable!("X64V3Token cannot exist on this architecture")
+impl MyType {
+    #[arcane]
+    fn compute(&self, token: X64V3Token) -> f32 {
+        self.data.iter().sum()  // self/Self just work!
+    }
 }
 ```
 
-### `#[arcane]` with Methods
-
-Use `_self = Type` and reference `_self` in body:
+**Nested** (`nested` or `_self = Type`): Inner function inside outer. Required for trait impls
+(sibling would add methods not in trait). `_self = Type` implies nested.
 
 ```rust
-impl Processor {
+impl SimdOps for Processor {
     #[arcane(_self = Processor)]
-    fn process(&self, token: X64V3Token, data: &[f32; 8]) -> f32 {
+    fn process(&self, token: X64V3Token) -> f32 {
         _self.threshold  // Use _self, not self
     }
 }
 ```
+
+### `#[arcane]`/`#[rite]`: Cross-Arch Behavior
+
+**Default (cfg-out):** On wrong architecture, no function is emitted. Less dead code.
+Code referencing the function must be `#[cfg]`-gated or use `incant!`.
+
+**With `stub`:** Generates unreachable stub on wrong architecture.
+Use when cross-arch dispatch references the function without cfg guards.
+
+```rust
+#[arcane(stub)]  // unreachable stub on non-x86
+fn process_avx2(token: X64V3Token, data: &[f32]) -> f32 { ... }
+
+#[arcane(stub)]  // unreachable stub on non-ARM
+fn process_neon(token: NeonToken, data: &[f32]) -> f32 { ... }
+
+// Both referenced without cfg guards — stubs make this compile everywhere
+fn dispatch(data: &[f32]) -> f32 {
+    if let Some(t) = X64V3Token::summon() { process_avx2(t, data) }
+    else if let Some(t) = NeonToken::summon() { process_neon(t, data) }
+    else { data.iter().sum() }
+}
+```
+
+`incant!` is unaffected — it already cfg-gates dispatch calls.
+
+`#[rite(stub)]` works the same way for `#[rite]` functions.
 
 ### `incant!`: Dispatch Macro
 
@@ -625,7 +653,7 @@ This means we **don't need to wrap** arithmetic, shuffle, compare, bitwise, or o
 
 ## How `#[arcane]` Works
 
-The macro generates an inner function with `#[target_feature]`:
+**Sibling mode (default):** Generates a sibling `#[target_feature]` function at the same scope:
 
 ```rust
 // You write:
@@ -635,18 +663,30 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // ...
 }
 
-// Macro generates:
+// Macro generates (x86_64 only):
+#[cfg(target_arch = "x86_64")]
+#[doc(hidden)]
+#[target_feature(enable = "avx2,fma,...")]
+unsafe fn __arcane_my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let v = _mm256_setzero_ps();
+    // ...
+}
+
+#[cfg(target_arch = "x86_64")]
 fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    #[target_feature(enable = "avx2,fma")]
-    fn inner(data: &[f32; 8]) -> [f32; 8] {
-        let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
-        // ...
-    }
-    // SAFETY: Calling #[target_feature] fn from non-matching context.
-    // Token proves CPU support was verified via summon().
-    unsafe { inner(data) }
+    unsafe { __arcane_my_kernel(token, data) }
 }
 ```
+
+**Nested mode** (`nested` or `_self = Type`): Inner function inside original. Used for trait impls.
+
+| Option | Sibling | Nested | Cfg-out | Stub |
+|--------|---------|--------|---------|------|
+| `#[arcane]` | Default | - | Default | - |
+| `#[arcane(nested)]` | - | Yes | Default | - |
+| `#[arcane(stub)]` | Default | - | - | Yes |
+| `#[arcane(_self = T)]` | - | Implied | Default | - |
+| `#[arcane(nested, stub)]` | - | Yes | - | Yes |
 
 ## Friendly Aliases
 
