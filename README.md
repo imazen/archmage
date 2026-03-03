@@ -79,9 +79,11 @@ fn horizontal_sum(_: Desktop64, v: __m256) -> f32 {
 
 Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `Desktop64` → `avx2,fma,...`. `X64V4Token` → `avx512f,avx512bw,...`. The token type *is* the feature selector.
 
-`#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This is how you cross into SIMD code without writing `unsafe` yourself — but the wrapper creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe — no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
+`#[arcane]` generates a sibling `#[target_feature]` function at the same scope, plus a safe wrapper. Since both functions live in the same scope, `self` and `Self` work naturally in methods — no special handling needed. The wrapper is how you cross into SIMD code without writing `unsafe` yourself, but it creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe — no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
 
 **`#[rite]` should be your default.** Use `#[arcane]` only at the entry point (the first call from non-SIMD code), and `#[rite]` for everything inside. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
+
+For trait impls, use `#[arcane(_self = Type)]` which switches to a nested inner-function approach (sibling would add methods not in the trait definition).
 
 ### The cost of mismatched features
 
@@ -260,6 +262,8 @@ For functions that use platform-specific SIMD types (`f32x8`, `f32x4`, etc.), wr
 | `ScalarToken` | | Always available |
 
 All tokens compile on all platforms. `summon()` returns `None` on unsupported architectures. Detection is cached: ~1.3 ns after first call, 0 ns with `-Ctarget-cpu=haswell` (compiles away).
+
+By default, `#[arcane]` and `#[rite]` cfg-out functions on non-matching architectures (no dead code). Use `#[arcane(stub)]` to generate unreachable stubs when you need cross-arch dispatch without `#[cfg]` guards. `incant!` handles cfg-gating automatically.
 
 See [`token-registry.toml`](token-registry.toml) for the complete mapping of tokens to CPU features.
 

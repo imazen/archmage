@@ -117,11 +117,17 @@ HasArm64V3 → HasNeonSha3
 | NeonCrcToken | x | | | x | | | | |
 | Wasm128Token | x | | | | | | | |
 
-### 1.5 Cross-Platform Stubs
+### 1.5 Cross-Platform Behavior
 
 All token types are defined on all architectures. On unsupported architectures, `summon()` returns `None`. This enables cross-platform code that compiles everywhere but only dispatches on the right arch.
 
-Stub modules: `x86_stubs.rs`, `arm_stubs.rs`, `wasm_stubs.rs`.
+**Cfg-out default:** `#[arcane]` and `#[rite]` only emit code on the matching architecture. On wrong architectures, no function is generated — less dead code, cleaner binaries. Code referencing the function must use `#[cfg(target_arch)]` guards or `incant!` (which cfg-gates automatically).
+
+**Stub opt-in:** `#[arcane(stub)]` and `#[rite(stub)]` generate `unreachable!()` stubs on wrong architectures. Use when cross-arch dispatch references the function without cfg guards. The stub is safe because the token can't be constructed on the wrong architecture.
+
+**`incant!` is unaffected** — it wraps each tier call in `#[cfg(target_arch)]` blocks, so it works correctly with cfg'd-out functions.
+
+Stub modules for token types (not macro-generated functions): `x86_stubs.rs`, `arm_stubs.rs`, `wasm_stubs.rs`.
 
 ## 2. Safety Model
 
@@ -166,36 +172,77 @@ Both macros parse the token type from your function signature to determine which
 
 Passing the same token type through a call hierarchy means every function gets the same `#[target_feature]` attributes. LLVM sees matching targets and inlines freely — no optimization boundary. When token types mismatch (or generic bounds prevent monomorphization to a concrete type), LLVM hits a target-feature boundary and can't optimize across it, costing 4-6x (see `docs/PERFORMANCE.md`).
 
+#### Sibling Expansion (default)
+
+`#[arcane]` generates two functions at the same scope:
+
 ```rust
 // Input:
 #[arcane]
 fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = _mm256_setzero_ps();  // value-based, safe in target_feature
+    let v = _mm256_setzero_ps();
     // ...
 }
 
-// Generated:
+// Generated (x86_64 only — cfg'd out on other architectures):
+#[cfg(target_arch = "x86_64")]
+#[doc(hidden)]
+#[target_feature(enable = "sse3,ssse3,sse4.1,...,avx2,fma,...")]
+unsafe fn __arcane_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let v = _mm256_setzero_ps();
+    // ...
+}
+
+#[cfg(target_arch = "x86_64")]
 fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    #[target_feature(enable = "sse3,ssse3,sse4.1,sse4.2,popcnt,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt")]
-    unsafe fn inner(data: &[f32; 8]) -> [f32; 8] {
-        let v = _mm256_setzero_ps();
-        // ...
-    }
     // SAFETY: token existence proves CPU support was verified via summon()
-    unsafe { inner(data) }
+    unsafe { __arcane_kernel(token, data) }
 }
 ```
 
-The macro:
-1. Reads the token type from the first parameter
-2. Looks up features via `token_to_features()`
-3. Generates an inner function with `#[target_feature(enable = "...")]`
-4. Calls it unsafely (the token proves safety)
-5. Drops the token parameter from the inner function signature
+Both functions live at the same scope level. For methods, both are in the same `impl` block, so `self`, `Self`, and associated constants resolve naturally.
 
-`#[arcane]`'s wrapper is how you cross into SIMD code without writing `unsafe` yourself — but the wrapper also creates an LLVM optimization boundary. LLVM won't inline across mismatched `#[target_feature]` attributes, so each `#[arcane]` call from non-SIMD code pays a 4-6x penalty.
+#### Nested Expansion (`nested` or `_self = Type`)
 
-`#[rite]` avoids this: it applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features, LLVM inlines freely — no boundary. **`#[rite]` should be the default.** Use `#[arcane]` only at entry points (the first call from non-SIMD code), and `#[rite]` for everything called from within SIMD code.
+For trait impls (where sibling would add methods not in the trait definition), use `#[arcane(nested)]` or `#[arcane(_self = Type)]`:
+
+```rust
+impl SimdOps for MyType {
+    #[arcane(_self = MyType)]
+    fn compute(&self, token: X64V3Token) -> f32 {
+        _self.data.iter().sum()  // _self replaces self
+    }
+}
+
+// Generated:
+impl SimdOps for MyType {
+    fn compute(&self, token: X64V3Token) -> f32 {
+        #[target_feature(enable = "...")]
+        #[inline]
+        fn __inner(_self: &MyType, token: X64V3Token) -> f32 {
+            _self.data.iter().sum()
+        }
+        unsafe { __inner(self, token) }
+    }
+}
+```
+
+#### Options
+
+| Option | Effect |
+|--------|--------|
+| `#[arcane]` | Sibling expansion, cfg-out on wrong arch |
+| `#[arcane(stub)]` | Sibling expansion, unreachable stub on wrong arch |
+| `#[arcane(nested)]` | Nested inner function |
+| `#[arcane(_self = Type)]` | Implies nested, replaces `self`→`_self` |
+| `#[arcane(nested, stub)]` | Nested + stub |
+| `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
+
+#### `#[rite]`
+
+`#[rite]` applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features, LLVM inlines freely — no boundary. **`#[rite]` should be the default.** Use `#[arcane]` only at entry points (the first call from non-SIMD code), and `#[rite]` for everything called from within SIMD code.
+
+`#[rite(stub)]` generates an unreachable stub on wrong architectures (default: cfg-out).
 
 This also works with `impl Trait` bounds, generic parameters, and `_self` for trait methods.
 

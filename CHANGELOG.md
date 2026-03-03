@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+Sibling expansion, cfg-out default, macro options.
+
+**BREAKING:** `#[arcane]` and `#[rite]` now cfg-out functions on non-matching architectures by default (no unreachable stub). Code referencing these functions on wrong platforms without `#[cfg]` guards will fail to compile. **Migration:** Add `#[arcane(stub)]` / `#[rite(stub)]` to restore old behavior, or use `#[cfg(target_arch)]` guards, or use `incant!` (unaffected — already cfg-gates dispatch calls).
+
+- **Sibling expansion (default)** — `#[arcane]` now generates a sibling `__arcane_fn` with `#[target_feature]` at the same scope, plus a safe wrapper. Both functions share the `impl` block, so `self`, `Self`, and associated constants work naturally in methods. No more `_self` boilerplate for inherent methods.
+
+- **Nested expansion (opt-in)** — `#[arcane(nested)]` uses the old inner-function approach. `#[arcane(_self = Type)]` implies nested. **Required for trait impls** — sibling expansion adds `__arcane_fn` which isn't in the trait definition.
+
+- **Cfg-out default** — On wrong architectures, `#[arcane]` and `#[rite]` emit no code at all. Less dead code. `incant!` is unaffected (already cfg-gates each tier).
+
+- **`stub` param** — `#[arcane(stub)]` and `#[rite(stub)]` generate `unreachable!()` stubs on wrong architectures, restoring previous cross-platform behavior for dispatch patterns that reference functions without `#[cfg]` guards.
+
+- **LightFn (internal)** — Proc macro now parses only the function signature into AST, leaving the body as opaque `TokenStream`. Saves ~2ms per function. Token-level `Self`/`self` replacement instead of syn `Fold`.
+
 ## 0.8.3 — 2026-02-19
 
 Complete `X64CryptoToken` integration with `incant!` dispatch.

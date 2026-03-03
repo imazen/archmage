@@ -184,6 +184,24 @@ fn complex_op(token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f32
 
 All helpers inline into the caller — no target-feature boundary, one optimization region.
 
+## Cross-Architecture Behavior
+
+Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. Use `#[rite(stub)]` to generate an unreachable stub instead:
+
+```rust
+// Default: only exists on x86_64
+#[rite]
+fn helper(_token: Desktop64, v: __m256) -> __m256 {
+    _mm256_add_ps(v, v)
+}
+
+// With stub: unreachable stub on other architectures
+#[rite(stub)]
+fn helper_stubbed(_token: Desktop64, v: __m256) -> __m256 {
+    _mm256_add_ps(v, v)
+}
+```
+
 ## Inlining Behavior
 
 `#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. Calling `#[arcane]` per iteration instead costs 4x (simple adds) to 6.2x (DCT-8). See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md).

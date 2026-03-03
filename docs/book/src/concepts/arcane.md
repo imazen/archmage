@@ -8,11 +8,13 @@ For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md
 
 ## How It Works
 
+`#[arcane]` generates a sibling function with `#[target_feature]` at the same scope, plus a safe wrapper that calls it. Both functions live in the same scope, so `self` and `Self` work naturally in methods.
+
 ```mermaid
 %%{init: { 'theme': 'dark' }}%%
 flowchart LR
-    A["Your code:<br/>#[arcane]<br/>fn kernel(token: Desktop64, ...)"] --> B["Macro generates:<br/>outer fn (safe, takes token)<br/>inner fn (#[target_feature])"]
-    B --> C["Outer calls inner<br/>via unsafe { __inner(...) }"]
+    A["Your code:<br/>#[arcane]<br/>fn kernel(token: Desktop64, ...)"] --> B["Macro generates:<br/>__arcane_kernel (unsafe, #[target_feature])<br/>kernel (safe wrapper)"]
+    B --> C["Wrapper calls sibling<br/>via unsafe { __arcane_kernel(...) }"]
     C --> D["SAFETY: token proves<br/>CPU support exists"]
 
     style A fill:#2d5a27,color:#fff
@@ -57,8 +59,10 @@ fn add_vectors(_token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 
 ## What It Generates
 
+**Sibling mode (default):** Two functions at the same scope. `self`/`Self` work naturally.
+
 <details>
-<summary>Macro expansion (click to expand)</summary>
+<summary>Sibling expansion (click to expand)</summary>
 
 ```rust
 // Your code:
@@ -67,15 +71,46 @@ fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
     _mm256_add_ps(a, b)
 }
 
-// Generated:
+// Generated (x86_64 only — cfg'd out on other architectures):
+#[cfg(target_arch = "x86_64")]
+#[doc(hidden)]
+#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
+unsafe fn __arcane_add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
+    _mm256_add_ps(a, b)
+}
+
+#[cfg(target_arch = "x86_64")]
 fn add(token: Desktop64, a: __m256, b: __m256) -> __m256 {
-    #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
-    #[inline]
-    fn __inner(token: Desktop64, a: __m256, b: __m256) -> __m256 {
-        _mm256_add_ps(a, b)  // Safe inside #[target_feature]!
+    unsafe { __arcane_add(token, a, b) }
+}
+```
+
+</details>
+
+**Nested mode** (`#[arcane(nested)]` or `#[arcane(_self = Type)]`): Inner function inside the original. Required for trait impls, since sibling expansion would add methods not in the trait definition.
+
+<details>
+<summary>Nested expansion (click to expand)</summary>
+
+```rust
+// Trait impl — must use nested:
+impl SimdOps for MyType {
+    #[arcane(_self = MyType)]
+    fn compute(&self, token: Desktop64) -> f32 {
+        _self.data.iter().sum()
     }
-    // SAFETY: Token proves CPU support was verified
-    unsafe { __inner(token, a, b) }
+}
+
+// Generated:
+impl SimdOps for MyType {
+    fn compute(&self, token: Desktop64) -> f32 {
+        #[target_feature(enable = "avx2,fma,...")]
+        #[inline]
+        fn __inner(_self: &MyType, token: Desktop64) -> f32 {
+            _self.data.iter().sum()
+        }
+        unsafe { __inner(self, token) }
+    }
 }
 ```
 
@@ -148,24 +183,39 @@ fn v3_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
 }
 ```
 
-## Cross-Platform Stubs
+## Cross-Architecture Behavior
 
-On non-matching architectures, `#[arcane]` generates an unreachable stub. It compiles but can never execute — `Desktop64::summon()` returns `None` on ARM.
+**Default (cfg-out):** On non-matching architectures, no function is emitted. Code referencing it must use `#[cfg]` guards or `incant!`.
 
-<details>
-<summary>Generated stub (click to expand)</summary>
+**With `stub`:** `#[arcane(stub)]` generates an `unreachable!()` stub on wrong architectures.
+
+See [Cross-Platform](./cross-platform.md) for dispatch patterns.
+
+## Options
+
+| Option | Effect |
+|--------|--------|
+| `#[arcane]` | Sibling expansion, cfg-out on wrong arch |
+| `#[arcane(stub)]` | Sibling expansion, unreachable stub on wrong arch |
+| `#[arcane(nested)]` | Nested inner function (old behavior) |
+| `#[arcane(_self = Type)]` | Implies nested, replaces `self`→`_self` |
+| `#[arcane(nested, stub)]` | Nested + stub |
+| `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
+
+### `stub`
+
+Generate an `unreachable!()` stub on non-matching architectures:
 
 ```rust
-// On ARM, this becomes:
-#[cfg(not(target_arch = "x86_64"))]
-fn add(token: Desktop64, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    unreachable!("Desktop64 cannot exist on this architecture")
+#[arcane(stub)]
+fn process(token: Desktop64, data: &[f32]) -> f32 {
+    data.iter().sum()
 }
 ```
 
-</details>
+### `nested`
 
-## Options
+Use the nested inner-function approach. **Required for trait impls** — sibling generates `__arcane_fn` which isn't a member of the trait.
 
 ### `inline_always`
 

@@ -1,26 +1,39 @@
 +++
-title = "Cross-Platform Stubs"
+title = "Cross-Platform Behavior"
 weight = 5
 +++
 
-Archmage lets you write x86 SIMD code that compiles on ARM and vice versa. Functions become unreachable stubs on non-matching architectures.
+Archmage lets you write x86 SIMD code that compiles on ARM and vice versa. By default, functions are **cfg'd out** on non-matching architectures (no dead code). Opt into unreachable stubs with `#[arcane(stub)]` when you need cross-arch dispatch without `#[cfg]` guards.
 
-## How It Works
+## Default: Cfg-Out
 
-When you write:
+By default, `#[arcane]` and `#[rite]` only emit code on the matching architecture. On other architectures, the function simply doesn't exist.
 
 ```rust
 use archmage::prelude::*;
 
+// This function only exists on x86_64
 #[arcane]
 fn avx2_kernel(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    // x86-64 SIMD code - safe_unaligned_simd takes references
     let v = _mm256_loadu_ps(data);
     // ...
 }
 ```
 
-On **x86-64**, you get the real implementation.
+Code that references `avx2_kernel` on ARM won't compile — the function isn't there. Use `#[cfg(target_arch)]` guards or `incant!` for cross-platform dispatch.
+
+## Opt-In Stubs with `stub`
+
+`#[arcane(stub)]` generates an `unreachable!()` stub on non-matching architectures. The stub compiles but can never execute.
+
+```rust
+// With stub: exists on all architectures
+#[arcane(stub)]
+fn avx2_kernel(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
+    let v = _mm256_loadu_ps(data);
+    // ...
+}
+```
 
 On **ARM/WASM**, you get:
 
@@ -30,7 +43,7 @@ fn avx2_kernel(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
-## Why This Is Safe
+### Why Stubs Are Safe
 
 The stub can never execute because:
 
@@ -38,47 +51,67 @@ The stub can never execute because:
 2. You can't construct `Desktop64` any other way (safely)
 3. The only path to `avx2_kernel` is through a token you can't obtain
 
-```rust
-fn process(data: &[f32; 8]) -> [f32; 8] {
-    if let Some(token) = Desktop64::summon() {
-        avx2_kernel(token, data)  // Never reached on ARM
-    } else {
-        scalar_fallback(data)     // ARM takes this path
-    }
-}
-```
+### When to Use Stubs
 
-## Writing Cross-Platform Libraries
-
-Structure your code with platform-specific implementations:
+Use `#[arcane(stub)]` when you reference both x86 and ARM functions in the same dispatch block without `#[cfg]` guards:
 
 ```rust
-// Public API - works everywhere, no #[cfg] needed
-pub fn process(data: &mut [f32]) {
-    if let Some(token) = Desktop64::summon() {
-        return process_avx2(token, data);
-    }
+use archmage::{Desktop64, NeonToken, SimdToken, arcane};
 
-    if let Some(token) = NeonToken::summon() {
-        return process_neon(token, data);
-    }
-
-    process_scalar(data);
-}
-
-// #[arcane] generates unreachable stubs on non-matching architectures
-#[arcane]
+#[arcane(stub)]
 fn process_avx2(token: Desktop64, data: &mut [f32]) {
     // AVX2 implementation
 }
 
-#[arcane]
+#[arcane(stub)]
 fn process_neon(token: NeonToken, data: &mut [f32]) {
     // NEON implementation
 }
 
-fn process_scalar(data: &mut [f32]) {
-    // Works everywhere
+// Both functions referenced without #[cfg] — stubs make this compile everywhere
+pub fn process(data: &mut [f32]) {
+    if let Some(token) = Desktop64::summon() {
+        return process_avx2(token, data);
+    }
+    if let Some(token) = NeonToken::summon() {
+        return process_neon(token, data);
+    }
+    process_scalar(data);
+}
+```
+
+## Preferred: Use `incant!` or `#[cfg]`
+
+The recommended approach is to use `incant!` (which cfg-gates dispatch calls automatically) or explicit `#[cfg]` guards — no stubs needed:
+
+```rust
+use archmage::incant;
+
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn process_v3(token: archmage::X64V3Token, data: &mut [f32]) { /* ... */ }
+
+#[cfg(target_arch = "aarch64")]
+#[arcane]
+fn process_neon(token: archmage::NeonToken, data: &mut [f32]) { /* ... */ }
+
+fn process_scalar(_token: archmage::ScalarToken, data: &mut [f32]) { /* ... */ }
+
+// incant! wraps each tier call in #[cfg(target_arch)] — no stubs needed
+pub fn process(data: &mut [f32]) {
+    incant!(process(data), [v3, neon])
+}
+```
+
+## `#[rite]` Also Supports `stub`
+
+`#[rite(stub)]` works the same way for inner helpers:
+
+```rust
+#[rite(stub)]
+fn helper(token: Desktop64, val: f32) -> f32 {
+    // Real implementation on x86, unreachable stub elsewhere
+    val * 2.0
 }
 ```
 
@@ -95,21 +128,6 @@ assert!(Desktop64::summon().is_none());  // On ARM
 
 // And compiled_with() tells you:
 assert_eq!(Desktop64::compiled_with(), Some(false));  // Wrong arch
-```
-
-This enables cross-platform code without `#[cfg]` soup:
-
-```rust
-// Compiles everywhere, dispatches at runtime
-fn process<T: IntoConcreteToken>(token: T, data: &[f32]) {
-    if let Some(t) = token.as_x64v3() {
-        process_v3(t, data);
-    } else if let Some(t) = token.as_neon() {
-        process_neon(t, data);
-    } else {
-        process_scalar(data);
-    }
-}
 ```
 
 ## The ScalarToken Escape Hatch
@@ -159,3 +177,11 @@ fn test_avx2_path() {
     }
 }
 ```
+
+## Migration from Stub Default
+
+If your code previously relied on `#[arcane]` generating stubs on wrong architectures, you have two options:
+
+1. **Add `stub`**: Change `#[arcane]` to `#[arcane(stub)]` (same behavior as before)
+2. **Add `#[cfg]` guards**: Wrap cross-arch references in `#[cfg(target_arch = "...")]` (cleaner)
+3. **Use `incant!`**: Let the dispatch macro handle cfg-gating automatically (recommended)

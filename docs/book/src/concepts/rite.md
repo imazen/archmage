@@ -184,3 +184,7 @@ All helpers inline into the caller — no target-feature boundary, one optimizat
 `#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. Calling `#[arcane]` per iteration instead costs 4x (simple adds) to 6.2x (DCT-8). See the [full benchmark data](../../../PERFORMANCE.md).
 
 `#[inline(always)]` combined with `#[target_feature]` is not allowed on stable Rust, but we don't need it — `#[inline]` works perfectly.
+
+## Cross-Architecture Behavior
+
+Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. Use `#[rite(stub)]` to generate an unreachable stub instead.

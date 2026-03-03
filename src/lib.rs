@@ -75,10 +75,13 @@
 //! `#[token_target_features]` = `#[rite]`,
 //! `dispatch_variant!` = `incant!`.
 //!
-//! `#[arcane]` generates a wrapper: an outer function that calls an inner
-//! `#[target_feature]` function via `unsafe`. This wrapper is how you cross into
-//! SIMD code without writing `unsafe` yourself — but it also creates an LLVM
-//! optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]`
+//! `#[arcane]` generates a sibling `#[target_feature]` function at the same
+//! scope, plus a safe wrapper that calls it. Since both live in the same scope,
+//! `self` and `Self` work naturally in methods. For trait impls, use
+//! `#[arcane(_self = Type)]` (nested mode). On wrong architectures, functions
+//! are cfg'd out by default; use `#[arcane(stub)]` for unreachable stubs.
+//!
+//! `#[rite]` applies `#[target_feature]` + `#[inline]`
 //! directly to the function, with no wrapper and no boundary, but can only be
 //! called from code that already has matching features.
 //!
