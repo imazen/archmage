@@ -151,13 +151,15 @@ fn build_token_slots() -> Vec<TokenSlot> {
     }
 
     // AArch64 hierarchy:
-    //   Neon(0) → Aes(1), Sha3(2), Crc(3)
+    //   Neon(0) → NeonAes(1), NeonSha3(2), NeonCrc(3), Arm64V2(4) → Arm64V3(5)
     #[cfg(target_arch = "aarch64")]
     {
-        slots.push(token_slot!(crate::NeonToken, &[1, 2, 3]));
+        slots.push(token_slot!(crate::NeonToken, &[1, 2, 3, 4, 5]));
         slots.push(token_slot!(crate::NeonAesToken, &[]));
         slots.push(token_slot!(crate::NeonSha3Token, &[]));
         slots.push(token_slot!(crate::NeonCrcToken, &[]));
+        slots.push(token_slot!(crate::Arm64V2Token, &[5]));
+        slots.push(token_slot!(crate::Arm64V3Token, &[]));
     }
 
     // WASM: Wasm128Token is compile-time only (can't be disabled).

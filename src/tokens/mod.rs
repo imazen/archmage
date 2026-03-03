@@ -23,7 +23,7 @@
 //! ```rust,ignore
 //! // Force scalar fallback for benchmarking
 //! X64V3Token::dangerously_disable_token_process_wide(true)?;
-//! // All summon() calls now return None (cascades to V4, Modern, Fp16)
+//! // All summon() calls now return None (cascades to V3Crypto, V4, V4x, Fp16)
 //! assert!(X64V3Token::summon().is_none());
 //! ```
 //!
@@ -341,8 +341,8 @@ impl std::error::Error for DisableAllSimdError {}
 /// on each root token for the current architecture. Root tokens cascade to
 /// their descendants, so this disables everything:
 ///
-/// - **x86/x86_64:** `X64V2Token` (cascades to V3, V4, Modern, Fp16)
-/// - **AArch64:** `NeonToken` (cascades to Aes, Sha3, Crc)
+/// - **x86/x86_64:** `X64V2Token` (cascades to Crypto, V3, V3Crypto, V4, V4x, Fp16)
+/// - **AArch64:** `NeonToken` (cascades to NeonAes, NeonSha3, NeonCrc, Arm64V2, Arm64V3)
 ///
 /// WASM's `Wasm128Token` is excluded because `simd128` is always a compile-time
 /// decision on `wasm32` — there is no runtime detection to bypass.
@@ -371,13 +371,13 @@ pub fn dangerously_disable_tokens_except_wasm(
     #[allow(unused_mut)]
     let mut errors = alloc::vec::Vec::new();
 
-    // x86/x86_64: disable V2 (cascades to V3, V4, Modern, Fp16)
+    // x86/x86_64: disable V2 (cascades to Crypto, V3, V3Crypto, V4, V4x, Fp16)
     #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
     if let Err(e) = X64V2Token::dangerously_disable_token_process_wide(disabled) {
         errors.push(e);
     }
 
-    // AArch64: disable NEON (cascades to Aes, Sha3, Crc)
+    // AArch64: disable NEON (cascades to NeonAes, NeonSha3, NeonCrc, Arm64V2, Arm64V3)
     #[cfg(target_arch = "aarch64")]
     if let Err(e) = NeonToken::dangerously_disable_token_process_wide(disabled) {
         errors.push(e);
