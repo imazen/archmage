@@ -197,7 +197,7 @@ mod explicit_dispatch {
         sum.reduce_add() + data.chunks_exact(8).remainder().iter().sum::<f32>()
     }
 
-    #[arcane]
+    #[arcane(stub)]
     fn process_neon(token: Arm64, data: &[f32]) -> f32 {
         let mut sum = f32x4::zero(token);
         for chunk in data.chunks_exact(4) {
@@ -466,7 +466,7 @@ mod dot_product {
         sum
     }
 
-    #[arcane]
+    #[arcane(stub)]
     fn dot_neon(token: Arm64, a: &[f32], b: &[f32]) -> f32 {
         let mut acc = f32x4::zero(token);
 

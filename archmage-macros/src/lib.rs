@@ -91,7 +91,15 @@ struct ArcaneArgs {
     inline_always: bool,
     /// The concrete type to use for `self` receiver.
     /// When specified, `self`/`&self`/`&mut self` is transformed to `_self: Type`/`&Type`/`&mut Type`.
+    /// Implies `nested = true`.
     self_type: Option<Type>,
+    /// Generate an `unreachable!()` stub on the wrong architecture.
+    /// Default is false (cfg-out: no function emitted on wrong arch).
+    stub: bool,
+    /// Use nested inner function instead of sibling function.
+    /// Implied by `_self = Type`. Required for associated functions in impl blocks
+    /// that have no `self` receiver (the macro can't distinguish them from free functions).
+    nested: bool,
 }
 
 impl Parse for ArcaneArgs {
@@ -102,6 +110,8 @@ impl Parse for ArcaneArgs {
             let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
                 "inline_always" => args.inline_always = true,
+                "stub" => args.stub = true,
+                "nested" => args.nested = true,
                 "_self" => {
                     let _: Token![=] = input.parse()?;
                     args.self_type = Some(input.parse()?);
@@ -117,6 +127,11 @@ impl Parse for ArcaneArgs {
             if input.peek(Token![,]) {
                 let _: Token![,] = input.parse()?;
             }
+        }
+
+        // _self = Type implies nested (inner fn needed for Self replacement)
+        if args.self_type.is_some() {
+            args.nested = true;
         }
 
         Ok(args)
@@ -385,12 +400,17 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         .map(|arg| matches!(arg, FnArg::Receiver(_)))
         .unwrap_or(false);
 
-    // If there's a self receiver, we need _self = Type
-    if has_self_receiver && args.self_type.is_none() {
+    // Nested mode is required when _self = Type is used (for Self replacement in nested fn).
+    // In sibling mode, self/Self work naturally since both fns live in the same impl scope.
+    // However, if there's a self receiver in nested mode, we still need _self = Type.
+    if has_self_receiver && args.nested && args.self_type.is_none() {
         let msg = format!(
-            "{} with self receiver requires `_self = Type` argument.\n\
-             Example: #[{}(_self = MyType)]\n\
-             Use `_self` (not `self`) in the function body to refer to self.",
+            "{} with self receiver in nested mode requires `_self = Type` argument.\n\
+             Example: #[{}(nested, _self = MyType)]\n\
+             Use `_self` (not `self`) in the function body to refer to self.\n\
+             \n\
+             Alternatively, remove `nested` to use sibling expansion (default), \
+             which handles self/Self naturally.",
             macro_name, macro_name
         );
         return syn::Error::new_spanned(&input_fn.sig, msg)
@@ -443,7 +463,7 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
         .collect();
 
-    // Rename wildcard patterns (`_: Type`) to named params so the inner call works
+    // Rename wildcard patterns (`_: Type`) to named params so the inner/sibling call works
     let mut wild_rename_counter = 0u32;
     for arg in &mut input_fn.sig.inputs {
         if let FnArg::Typed(pat_type) = arg
@@ -461,7 +481,218 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         }
     }
 
-    // Extract function components
+    // Choose inline attribute based on args
+    let inline_attr: Attribute = if args.inline_always {
+        parse_quote!(#[inline(always)])
+    } else {
+        parse_quote!(#[inline])
+    };
+
+    if args.nested {
+        arcane_impl_nested(input_fn, &args, target_arch, token_type_name, target_feature_attrs, inline_attr)
+    } else {
+        arcane_impl_sibling(input_fn, &args, target_arch, token_type_name, target_feature_attrs, inline_attr)
+    }
+}
+
+/// Sibling expansion (default): generates two functions at the same scope level.
+///
+/// ```ignore
+/// // #[arcane] fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { body }
+/// // expands to:
+/// #[cfg(target_arch = "x86_64")]
+/// #[doc(hidden)]
+/// #[target_feature(enable = "avx2,fma,...")]
+/// #[inline]
+/// unsafe fn __arcane_process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { body }
+///
+/// #[cfg(target_arch = "x86_64")]
+/// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+///     unsafe { __arcane_process(token, data) }
+/// }
+/// ```
+///
+/// Self/self work naturally since both functions live in the same impl scope.
+fn arcane_impl_sibling(
+    input_fn: LightFn,
+    args: &ArcaneArgs,
+    target_arch: Option<&str>,
+    token_type_name: Option<String>,
+    target_feature_attrs: Vec<Attribute>,
+    inline_attr: Attribute,
+) -> TokenStream {
+    let vis = &input_fn.vis;
+    let sig = &input_fn.sig;
+    let fn_name = &sig.ident;
+    let generics = &sig.generics;
+    let where_clause = &generics.where_clause;
+    let inputs = &sig.inputs;
+    let output = &sig.output;
+    let body = &input_fn.body;
+    let attrs = &input_fn.attrs;
+
+    let sibling_name = format_ident!("__arcane_{}", fn_name);
+
+    // Detect self receiver
+    let has_self_receiver = inputs
+        .first()
+        .map(|arg| matches!(arg, FnArg::Receiver(_)))
+        .unwrap_or(false);
+
+    // Build sibling signature: same as original but with sibling name, unsafe, #[doc(hidden)]
+    // The sibling has the exact same parameters (including self receiver if present).
+    let sibling_sig_inputs = inputs;
+
+    // Build the call from wrapper to sibling
+    let sibling_call = if has_self_receiver {
+        // Method: self.__arcane_fn(other_args...)
+        let other_args: Vec<proc_macro2::TokenStream> = inputs
+            .iter()
+            .skip(1) // skip self receiver
+            .filter_map(|arg| {
+                if let FnArg::Typed(pat_type) = arg
+                    && let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref()
+                {
+                    let ident = &pat_ident.ident;
+                    Some(quote!(#ident))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        quote! { self.#sibling_name(#(#other_args),*) }
+    } else {
+        // Free function: __arcane_fn(all_args...)
+        let all_args: Vec<proc_macro2::TokenStream> = inputs
+            .iter()
+            .filter_map(|arg| {
+                if let FnArg::Typed(pat_type) = arg
+                    && let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref()
+                {
+                    let ident = &pat_ident.ident;
+                    Some(quote!(#ident))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        quote! { #sibling_name(#(#all_args),*) }
+    };
+
+    // Build stub args for suppressing unused warnings
+    let stub_args: Vec<proc_macro2::TokenStream> = inputs
+        .iter()
+        .filter_map(|arg| match arg {
+            FnArg::Typed(pat_type) => {
+                if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
+                    let ident = &pat_ident.ident;
+                    Some(quote!(#ident))
+                } else {
+                    None
+                }
+            }
+            FnArg::Receiver(_) => None, // self doesn't need _ = suppression
+        })
+        .collect();
+
+    let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
+
+    let expanded = if let Some(arch) = target_arch {
+        // Sibling function: #[doc(hidden)] #[target_feature] pub(?) unsafe fn __arcane_fn(...)
+        // Note: visibility must come before `unsafe` in Rust syntax
+        let sibling_fn = quote! {
+            #[cfg(target_arch = #arch)]
+            #[doc(hidden)]
+            #(#target_feature_attrs)*
+            #inline_attr
+            #vis unsafe fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
+                #body
+            }
+        };
+
+        // Wrapper function: fn original_name(...) { unsafe { sibling_call } }
+        let wrapper_fn = quote! {
+            #[cfg(target_arch = #arch)]
+            #(#attrs)*
+            #vis #sig {
+                // SAFETY: The token parameter proves the required CPU features are available.
+                // Calling a #[target_feature] function from a non-matching context requires
+                // unsafe because the CPU may not support those instructions. The token's
+                // existence proves summon() succeeded, so the features are available.
+                unsafe { #sibling_call }
+            }
+        };
+
+        // Optional stub for other architectures
+        let stub = if args.stub {
+            quote! {
+                #[cfg(not(target_arch = #arch))]
+                #(#attrs)*
+                #vis #sig {
+                    let _ = (#(#stub_args),*);
+                    unreachable!(
+                        "BUG: {}() was called but requires {} (target_arch = \"{}\"). \
+                         {}::summon() returns None on this architecture, so this function \
+                         is unreachable in safe code. If you used forge_token_dangerously(), \
+                         that is the bug.",
+                        stringify!(#fn_name),
+                        #token_type_str,
+                        #arch,
+                        #token_type_str,
+                    )
+                }
+            }
+        } else {
+            quote! {}
+        };
+
+        quote! {
+            #sibling_fn
+            #wrapper_fn
+            #stub
+        }
+    } else {
+        // No specific arch (trait bounds or generic) - no cfg guards, no stub needed.
+        // Still use sibling pattern for consistency.
+        let sibling_fn = quote! {
+            #[doc(hidden)]
+            #(#target_feature_attrs)*
+            #inline_attr
+            #vis unsafe fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
+                #body
+            }
+        };
+
+        let wrapper_fn = quote! {
+            #(#attrs)*
+            #vis #sig {
+                // SAFETY: The token proves the required CPU features are available.
+                unsafe { #sibling_call }
+            }
+        };
+
+        quote! {
+            #sibling_fn
+            #wrapper_fn
+        }
+    };
+
+    expanded.into()
+}
+
+/// Nested inner function expansion (opt-in via `nested` or `_self = Type`).
+///
+/// This is the original approach: generates a nested inner function inside the
+/// original function. Required when `_self = Type` is used because Self must be
+/// replaced in the nested function (where it's not in scope).
+fn arcane_impl_nested(
+    input_fn: LightFn,
+    args: &ArcaneArgs,
+    target_arch: Option<&str>,
+    token_type_name: Option<String>,
+    target_feature_attrs: Vec<Attribute>,
+    inline_attr: Attribute,
+) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
     let fn_name = &sig.ident;
@@ -529,20 +760,7 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
 
     let inner_fn_name = format_ident!("__simd_inner_{}", fn_name);
 
-    // Choose inline attribute based on args
-    // Note: #[inline(always)] + #[target_feature] requires nightly with
-    // #![feature(target_feature_inline_always)]
-    let inline_attr: Attribute = if args.inline_always {
-        parse_quote!(#[inline(always)])
-    } else {
-        parse_quote!(#[inline])
-    };
-
     // Transform output, body, and where clause to replace Self with concrete type if needed.
-    // The inner function is a nested fn where Self from the impl block is not in scope,
-    // so all Self references must be replaced with the concrete type.
-    // Uses token-level replacement — replaces `Self` ident tokens everywhere (type positions,
-    // expressions, paths) without parsing the body.
     let (inner_output, inner_body, inner_where_clause): (
         proc_macro2::TokenStream,
         proc_macro2::TokenStream,
@@ -566,10 +784,31 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         )
     };
 
-    // Generate the expanded function
-    // If we know the target arch (concrete token), generate cfg-gated real impl + stub
     let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
     let expanded = if let Some(arch) = target_arch {
+        let stub = if args.stub {
+            quote! {
+                // Stub for other architectures - the token cannot be obtained
+                #[cfg(not(target_arch = #arch))]
+                #(#attrs)*
+                #vis #sig {
+                    let _ = (#(#inner_args),*);
+                    unreachable!(
+                        "BUG: {}() was called but requires {} (target_arch = \"{}\"). \
+                         {}::summon() returns None on this architecture, so this function \
+                         is unreachable in safe code. If you used forge_token_dangerously(), \
+                         that is the bug.",
+                        stringify!(#fn_name),
+                        #token_type_str,
+                        #arch,
+                        #token_type_str,
+                    )
+                }
+            }
+        } else {
+            quote! {}
+        };
+
         quote! {
             // Real implementation for the correct architecture
             #[cfg(target_arch = #arch)]
@@ -582,31 +821,10 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
                 }
 
                 // SAFETY: The token parameter proves the required CPU features are available.
-                // Calling a #[target_feature] function from a non-matching context requires
-                // unsafe because the CPU may not support those instructions. The token's
-                // existence proves summon() succeeded, so the features are available.
                 unsafe { #inner_fn_name(#(#inner_args),*) }
             }
 
-            // Stub for other architectures - the token cannot be obtained, so this is unreachable
-            #[cfg(not(target_arch = #arch))]
-            #(#attrs)*
-            #vis #sig {
-                // This token type cannot be summoned on this architecture.
-                // If you're seeing this at runtime, there's a bug in dispatch logic
-                // or forge_token_dangerously() was used incorrectly.
-                let _ = (#(#inner_args),*); // suppress unused warnings
-                unreachable!(
-                    "BUG: {}() was called but requires {} (target_arch = \"{}\"). \
-                     {}::summon() returns None on this architecture, so this function \
-                     is unreachable in safe code. If you used forge_token_dangerously(), \
-                     that is the bug.",
-                    stringify!(#fn_name),
-                    #token_type_str,
-                    #arch,
-                    #token_type_str,
-                )
-            }
+            #stub
         }
     } else {
         // No specific arch (trait bounds or generic) - generate without cfg guards
@@ -619,8 +837,7 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
                     #inner_body
                 }
 
-                // SAFETY: Calling a #[target_feature] function from a non-matching context
-                // requires unsafe. The token proves the required CPU features are available.
+                // SAFETY: The token proves the required CPU features are available.
                 unsafe { #inner_fn_name(#(#inner_args),*) }
             }
         }
@@ -918,27 +1135,39 @@ pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStrea
 }
 
 /// Arguments for the `#[rite]` macro.
-///
-/// Currently empty - `#[inline(always)]` is not supported because
-/// `#[inline(always)]` + `#[target_feature]` requires nightly Rust.
-/// The regular `#[inline]` hint is sufficient when called from
-/// matching `#[target_feature]` contexts.
 #[derive(Default)]
 struct RiteArgs {
-    // No options currently - inline_always doesn't work on stable
+    /// Generate an `unreachable!()` stub on the wrong architecture.
+    /// Default is false (cfg-out: no function emitted on wrong arch).
+    stub: bool,
 }
 
 impl Parse for RiteArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        if !input.is_empty() {
+        let mut args = RiteArgs::default();
+
+        while !input.is_empty() {
             let ident: Ident = input.parse()?;
-            return Err(syn::Error::new(
-                ident.span(),
-                "#[rite] takes no arguments. Note: inline_always is not supported \
-                 because #[inline(always)] + #[target_feature] requires nightly Rust.",
-            ));
+            match ident.to_string().as_str() {
+                "stub" => args.stub = true,
+                other => {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        format!(
+                            "unknown rite argument: `{}`. Supported: `stub`.\n\
+                             Note: inline_always is not supported because \
+                             #[inline(always)] + #[target_feature] requires nightly Rust.",
+                            other
+                        ),
+                    ));
+                }
+            }
+            if input.peek(Token![,]) {
+                let _: Token![,] = input.parse()?;
+            }
         }
-        Ok(RiteArgs::default())
+
+        Ok(args)
     }
 }
 
@@ -985,7 +1214,6 @@ fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
         .collect();
 
     // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
-    let _ = args; // RiteArgs is currently empty but kept for future extensibility
     let inline_attr: Attribute = parse_quote!(#[inline]);
 
     // Prepend attributes to the function
@@ -994,12 +1222,27 @@ fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     new_attrs.append(&mut input_fn.attrs);
     input_fn.attrs = new_attrs;
 
-    // If we know the target arch, generate cfg-gated impl + stub
+    // If we know the target arch, generate cfg-gated impl (+ optional stub)
     if let Some(arch) = target_arch {
         let vis = &input_fn.vis;
         let sig = &input_fn.sig;
         let attrs = &input_fn.attrs;
         let body = &input_fn.body;
+
+        let stub = if args.stub {
+            quote! {
+                #[cfg(not(target_arch = #arch))]
+                #vis #sig {
+                    unreachable!(concat!(
+                        "This function requires ",
+                        #arch,
+                        " architecture"
+                    ))
+                }
+            }
+        } else {
+            quote! {}
+        };
 
         quote! {
             #[cfg(target_arch = #arch)]
@@ -1008,14 +1251,7 @@ fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
                 #body
             }
 
-            #[cfg(not(target_arch = #arch))]
-            #vis #sig {
-                unreachable!(concat!(
-                    "This function requires ",
-                    #arch,
-                    " architecture"
-                ))
-            }
+            #stub
         }
         .into()
     } else {
