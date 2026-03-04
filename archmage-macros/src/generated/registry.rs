@@ -411,6 +411,110 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
     }
 }
 
+/// Maps a token type name to its magetypes width namespace.
+///
+/// Returns the namespace name (e.g., "v3", "v4", "neon", "wasm128", "scalar").
+/// Used by `import_magetypes` to inject `use magetypes::simd::{ns}::*;`.
+pub(crate) fn token_to_magetypes_namespace(token_name: &str) -> Option<&'static str> {
+    match token_name {
+        "X64V1Token" | "Sse2Token" => Some("v3"),
+        "X64V2Token" => Some("v3"),
+        "X64CryptoToken" => Some("v3"),
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
+        "X64V3CryptoToken" => Some("v3"),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
+        "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
+        "Avx512Fp16Token" => Some("v4"),
+        "NeonToken" | "Arm64" => Some("neon"),
+        "NeonAesToken" => Some("neon"),
+        "NeonSha3Token" => Some("neon"),
+        "NeonCrcToken" => Some("neon"),
+        "Arm64V2Token" => Some("neon"),
+        "Arm64V3Token" => Some("neon"),
+        "Wasm128Token" => Some("wasm128"),
+        "Wasm128RelaxedToken" => Some("wasm128"),
+        _ => None,
+    }
+}
+
+/// Maps a trait bound name to its magetypes width namespace.
+///
+/// Returns the namespace name (e.g., "v3", "v4", "neon").
+/// Used by `import_magetypes` when a trait bound is used instead of a concrete token.
+pub(crate) fn trait_to_magetypes_namespace(trait_name: &str) -> Option<&'static str> {
+    match trait_name {
+        "Has128BitSimd" => Some("v3"),
+        "Has256BitSimd" => Some("v3"),
+        "Has512BitSimd" => Some("v4"),
+        "HasX64V2" => Some("v3"),
+        "HasX64V4" => Some("v4"),
+        "HasNeon" => Some("neon"),
+        "HasNeonAes" => Some("neon"),
+        "HasNeonSha3" => Some("neon"),
+        "HasArm64V2" => Some("neon"),
+        "HasArm64V3" => Some("neon"),
+
+        // Token types used as bounds
+        "X64V1Token" | "Sse2Token" => Some("v3"),
+        "X64V2Token" => Some("v3"),
+        "X64CryptoToken" => Some("v3"),
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
+        "X64V3CryptoToken" => Some("v3"),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
+        "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
+        "Avx512Fp16Token" => Some("v4"),
+        "NeonToken" | "Arm64" => Some("neon"),
+        "NeonAesToken" => Some("neon"),
+        "NeonSha3Token" => Some("neon"),
+        "NeonCrcToken" => Some("neon"),
+        "Arm64V2Token" => Some("neon"),
+        "Arm64V3Token" => Some("neon"),
+        "Wasm128Token" => Some("wasm128"),
+        "Wasm128RelaxedToken" => Some("wasm128"),
+
+        _ => None,
+    }
+}
+
+/// Maps a trait bound name to its target architecture.
+///
+/// Returns the architecture (e.g., "x86_64", "aarch64").
+/// Used by `import_intrinsics` when a trait bound is used instead of a concrete token.
+pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {
+    match trait_name {
+        "Has128BitSimd" => Some("x86_64"),
+        "Has256BitSimd" => Some("x86_64"),
+        "Has512BitSimd" => Some("x86_64"),
+        "HasX64V2" => Some("x86_64"),
+        "HasX64V4" => Some("x86_64"),
+        "HasNeon" => Some("aarch64"),
+        "HasNeonAes" => Some("aarch64"),
+        "HasNeonSha3" => Some("aarch64"),
+        "HasArm64V2" => Some("aarch64"),
+        "HasArm64V3" => Some("aarch64"),
+
+        // Token types used as bounds
+        "X64V1Token" | "Sse2Token" => Some("x86"),
+        "X64V2Token" => Some("x86"),
+        "X64CryptoToken" => Some("x86"),
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("x86"),
+        "X64V3CryptoToken" => Some("x86"),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some("x86"),
+        "X64V4xToken" | "Avx512ModernToken" => Some("x86"),
+        "Avx512Fp16Token" => Some("x86"),
+        "NeonToken" | "Arm64" => Some("aarch64"),
+        "NeonAesToken" => Some("aarch64"),
+        "NeonSha3Token" => Some("aarch64"),
+        "NeonCrcToken" => Some("aarch64"),
+        "Arm64V2Token" => Some("aarch64"),
+        "Arm64V3Token" => Some("aarch64"),
+        "Wasm128Token" => Some("wasm"),
+        "Wasm128RelaxedToken" => Some("wasm"),
+
+        _ => None,
+    }
+}
+
 /// All concrete token names that exist in the runtime crate.
 #[cfg(test)]
 pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[

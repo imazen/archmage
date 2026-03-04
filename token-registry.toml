@@ -32,6 +32,7 @@ features = ["sse", "sse2"]
 traits = ["Has128BitSimd"]
 display_name = "x86-64-v1"
 short_name = "v1"
+magetypes_namespace = "v3"
 doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust\nstill requires #[target_feature(enable = \"sse2\")] for SSE2 intrinsics to\nbe safe. This token provides that via `#[arcane]`.\n\nOn x86_64, summon() always returns Some."
 
 [[token]]
@@ -45,6 +46,7 @@ traits = ["HasX64V2", "Has128BitSimd"]
 parents = ["X64V1Token"]
 display_name = "x86-64-v2"
 short_name = "v2"
+magetypes_namespace = "v3"
 doc = "Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).\n\nx86-64-v2 implies: SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CX16, SAHF.\nThis is the Nehalem (2008) / Bulldozer (2011) baseline."
 
 [[token]]
@@ -59,6 +61,7 @@ traits = ["HasX64V2", "Has128BitSimd"]
 parents = ["X64V2Token"]
 display_name = "x86-64 Crypto"
 short_name = "x64_crypto"
+magetypes_namespace = "v3"
 doc = "Proof that PCLMULQDQ + AES-NI are available (on top of x86-64-v2).\n\nPCLMULQDQ and AES-NI are not part of the psABI v2 spec but ship on every\nx86-64 CPU since Westmere (2010). Original Nehalem (2008) and some VMs\n(QEMU x86-64-v2, VMware EVC Nehalem baseline) lack them.\n\nUse this token for CRC-32 folding, AES encryption, and GF(2) polynomial\narithmetic. Available on: Westmere+, Bulldozer+, Silvermont+, all Zen."
 
 [[token]]
@@ -73,6 +76,7 @@ features = [
 traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
 display_name = "x86-64-v3"
 short_name = "v3"
+magetypes_namespace = "v3"
 parents = ["X64V2Token"]
 doc = "Proof that AVX2 + FMA + BMI1/2 + F16C + LZCNT are available (x86-64-v3 level).\n\nx86-64-v3 implies all of v2 plus: AVX, AVX2, FMA, BMI1, BMI2, F16C, LZCNT, MOVBE.\nThis is the Haswell (2013) / Zen 1 (2017) baseline.\n\nThis is the most commonly targeted level for high-performance SIMD code."
 
@@ -90,6 +94,7 @@ traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
 parents = ["X64V3Token", "X64CryptoToken"]
 display_name = "x86-64-v3 Crypto"
 short_name = "v3_crypto"
+magetypes_namespace = "v3"
 doc = "Proof that AVX2 + VPCLMULQDQ + VAES are available.\n\nVPCLMULQDQ (256-bit carryless multiply) and VAES (256-bit AES) extend\nPCLMULQDQ/AES-NI to 256-bit vectors. Available without AVX-512 on:\nZen 3+ (2020), Alder Lake P-core (2021), Raptor Lake (2022).\n\nUse for 256-bit CRC-32 folding, AES-CTR/GCM, and GF(2) polynomial\narithmetic on CPUs that lack AVX-512."
 
 [[token]]
@@ -106,6 +111,7 @@ features = [
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
 display_name = "AVX-512"
 short_name = "v4"
+magetypes_namespace = "v4"
 parents = ["X64V3Token", "X64CryptoToken"]
 extraction_aliases = ["avx512"]
 doc = "Proof that AVX-512 (F + CD + VL + DQ + BW) is available.\n\nThis is the complete x86-64-v4 AVX-512 feature set, available on:\n- Intel Skylake-X (2017+), Ice Lake, Sapphire Rapids\n- AMD Zen 4+ (2022+)\n\nNote: Intel 12th-14th gen consumer CPUs do NOT have AVX-512."
@@ -127,6 +133,7 @@ features = [
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
 display_name = "x86-64-v4x"
 short_name = "v4x"
+magetypes_namespace = "v4x"
 parents = ["X64V4Token", "X64V3CryptoToken"]
 doc = "Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake / Zen 4 level).\n\nThis includes all of `X64V4Token` (F+CD+VL+DQ+BW) plus:\n- VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI\n- VPCLMULQDQ, GFNI, VAES\n\nAvailable on Intel Ice Lake (2019+), Sapphire Rapids, AMD Zen 4+.\nNOT available on Skylake-X (lacks VBMI2, VNNI, etc.)."
 
@@ -144,6 +151,7 @@ features = [
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
 display_name = "AVX-512FP16"
 short_name = "fp16"
+magetypes_namespace = "v4"
 parents = ["X64V4Token"]
 doc = "Proof that AVX-512 FP16 (half-precision) is available.\n\nAVX-512 FP16 provides native 16-bit floating-point arithmetic in 512-bit\nvectors, enabling efficient ML inference and scientific computing.\n\nAvailable on Intel Sapphire Rapids (2023+), Emerald Rapids.\nNOT available on Skylake-X, Ice Lake, AMD Zen 4."
 
@@ -157,6 +165,7 @@ features = ["neon"]
 traits = ["HasNeon", "Has128BitSimd"]
 display_name = "NEON"
 short_name = "neon"
+magetypes_namespace = "neon"
 doc = "Proof that NEON is available.\n\nNEON is available on virtually all AArch64 processors, but requires\nruntime detection via `summon()` unless compiled with `-Ctarget-feature=+neon`."
 
 [[token]]
@@ -166,6 +175,7 @@ features = ["neon", "aes"]
 traits = ["HasNeon", "HasNeonAes", "Has128BitSimd"]
 display_name = "NEON+AES"
 short_name = "neon_aes"
+magetypes_namespace = "neon"
 parents = ["NeonToken"]
 doc = "Proof that NEON + AES is available.\n\nAES extension is common on modern ARM64 devices with crypto extensions."
 
@@ -176,6 +186,7 @@ features = ["neon", "sha3"]
 traits = ["HasNeon", "HasNeonSha3", "Has128BitSimd"]
 display_name = "NEON+SHA3"
 short_name = "neon_sha3"
+magetypes_namespace = "neon"
 parents = ["NeonToken"]
 doc = "Proof that NEON + SHA3 is available.\n\nSHA3 extension is available on ARMv8.2-A and later."
 
@@ -186,6 +197,7 @@ features = ["neon", "crc"]
 traits = ["HasNeon", "Has128BitSimd"]
 display_name = "NEON+CRC"
 short_name = "neon_crc"
+magetypes_namespace = "neon"
 parents = ["NeonToken"]
 doc = "Proof that NEON + CRC is available.\n\nCRC32 extension is common on most AArch64 CPUs (part of ARMv8.1-A baseline).\nAvailable on: Cortex-A53+, Apple M1+, Graviton 1+, Snapdragon 8xx."
 
@@ -196,6 +208,7 @@ features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]
 traits = ["HasNeon", "HasNeonAes", "HasArm64V2", "Has128BitSimd"]
 display_name = "Arm64-v2"
 short_name = "arm_v2"
+magetypes_namespace = "neon"
 parents = ["NeonToken"]
 doc = "Proof that the Arm64-v2 feature set is available.\n\nArm64-v2 is archmage's second ARM tier, covering: NEON, CRC, RDM, DotProd,\nFP16, AES, SHA2. This targets the broadest modern ARM baseline.\n\nAvailable on: Cortex-A55+, Apple M1+, Graviton 2+, all post-2017 ARM chips."
 
@@ -206,6 +219,7 @@ features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma
 traits = ["HasNeon", "HasNeonAes", "HasNeonSha3", "HasArm64V2", "HasArm64V3", "Has128BitSimd"]
 display_name = "Arm64-v3"
 short_name = "arm_v3"
+magetypes_namespace = "neon"
 parents = ["Arm64V2Token"]
 doc = "Proof that the full modern ARM SIMD feature set is available (Arm64-v3).\n\nArm64-v3 adds FHM, FCMA, SHA3, I8MM, and BF16 over Arm64-v2.\nAvailable on: Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+, Cobalt 100."
 
@@ -218,6 +232,7 @@ features = ["simd128"]
 traits = ["Has128BitSimd"]
 display_name = "WASM SIMD128"
 short_name = "wasm128"
+magetypes_namespace = "wasm128"
 doc = "Proof that WASM SIMD128 is available."
 
 [[token]]
@@ -228,6 +243,7 @@ traits = ["Has128BitSimd"]
 parents = ["Wasm128Token"]
 display_name = "WASM Relaxed SIMD"
 short_name = "wasm128_relaxed"
+magetypes_namespace = "wasm128"
 doc = "Proof that WASM Relaxed SIMD is available.\n\nRelaxed SIMD (Wasm 3.0) provides 28 instructions that trade strict\ncross-platform determinism for performance: FMA, relaxed lane-select,\nrelaxed min/max, dot products, and relaxed truncation.\n\nSupported by Chrome 114+, Firefox 145+, Safari 16.4+, and Wasmtime 14+.\nStable in Rust since 1.82."
 
 # ──── Traits ────
@@ -237,63 +253,83 @@ doc = "Proof that WASM Relaxed SIMD is available.\n\nRelaxed SIMD (Wasm 3.0) pro
 
 [[trait]]
 name = "Has128BitSimd"
+arch = "x86_64"
 x86_features = ["sse", "sse2"]
+magetypes_namespace = "v3"
 doc = "Marker trait for tokens that provide 128-bit SIMD."
 
 [[trait]]
 name = "Has256BitSimd"
+arch = "x86_64"
 x86_features = ["sse", "sse2", "avx"]
 parents = ["Has128BitSimd"]
+magetypes_namespace = "v3"
 doc = "Marker trait for tokens that provide 256-bit SIMD."
 
 [[trait]]
 name = "Has512BitSimd"
+arch = "x86_64"
 x86_features = ["sse", "sse2", "avx", "avx2", "avx512f"]
 parents = ["Has256BitSimd"]
+magetypes_namespace = "v4"
 doc = "Marker trait for tokens that provide 512-bit SIMD."
 
 [[trait]]
 name = "HasX64V2"
+arch = "x86_64"
 features = ["sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b"]
+magetypes_namespace = "v3"
 doc = "Marker trait for x86-64-v2 level (Nehalem 2008+).\n\nv2 includes: SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B, LAHF-SAHF."
 
 [[trait]]
 name = "HasX64V4"
+arch = "x86_64"
 features = [
     "sse", "sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
     "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
     "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl",
 ]
 parents = ["HasX64V2"]
+magetypes_namespace = "v4"
 doc = "Marker trait for x86-64-v4 level (Skylake-X 2017+, Zen 4 2022+).\n\nv4 includes all of v3 plus: AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL.\nImplies HasX64V2."
 
 [[trait]]
 name = "HasNeon"
+arch = "aarch64"
 features = ["neon"]
+magetypes_namespace = "neon"
 doc = "Marker trait for NEON on AArch64.\n\nNEON is available on virtually all AArch64 processors."
 
 [[trait]]
 name = "HasNeonAes"
+arch = "aarch64"
 features = ["neon", "aes"]
 parents = ["HasNeon"]
+magetypes_namespace = "neon"
 doc = "Marker trait for NEON + AES.\n\nAES extension is common on modern ARM64 devices (ARMv8-A with Crypto)."
 
 [[trait]]
 name = "HasNeonSha3"
+arch = "aarch64"
 features = ["neon", "sha3"]
 parents = ["HasNeon"]
+magetypes_namespace = "neon"
 doc = "Marker trait for NEON + SHA3.\n\nSHA3 extension is available on ARMv8.2-A and later."
 
 [[trait]]
 name = "HasArm64V2"
+arch = "aarch64"
 features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]
 parents = ["HasNeon", "HasNeonAes"]
+magetypes_namespace = "neon"
 doc = "Marker trait for Arm64-v2 level.\n\nArm64-v2 includes: NEON, CRC, RDM, DotProd, FP16, AES, SHA2.\nAvailable on Cortex-A55+, Apple M1+, Graviton 2+."
 
 [[trait]]
 name = "HasArm64V3"
+arch = "aarch64"
 features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm", "bf16"]
 parents = ["HasArm64V2", "HasNeonSha3"]
+magetypes_namespace = "neon"
 doc = "Marker trait for Arm64-v3 level.\n\nArm64-v3 adds FHM, FCMA, SHA3, I8MM, BF16 over Arm64-v2.\nAvailable on Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+."
 
 # ──── Width Namespaces (simd type re-exports) ────

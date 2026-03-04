@@ -56,12 +56,20 @@ pub struct TokenDef {
     /// Doc comment for the struct.
     #[serde(default)]
     pub doc: Option<String>,
+    /// Magetypes width namespace for this token (e.g., "v3", "v4", "neon").
+    /// Used by `import_magetypes` parameter in `#[arcane]`/`#[rite]`.
+    #[serde(default)]
+    pub magetypes_namespace: Option<String>,
 }
 
 /// A trait definition.
 #[derive(Debug, Deserialize)]
 pub struct TraitDef {
     pub name: String,
+    /// Target architecture (e.g., "x86_64", "aarch64").
+    /// Used by `import_intrinsics` to determine which `core::arch::` module to import.
+    #[serde(default)]
+    pub arch: Option<String>,
     /// Features for x86 arch (used when trait is a generic bound in macro).
     #[serde(default)]
     pub x86_features: Vec<String>,
@@ -73,6 +81,10 @@ pub struct TraitDef {
     /// Doc comment for the trait.
     #[serde(default)]
     pub doc: Option<String>,
+    /// Magetypes width namespace for this trait (e.g., "v3", "neon").
+    /// Used by `import_magetypes` parameter in `#[arcane]`/`#[rite]`.
+    #[serde(default)]
+    pub magetypes_namespace: Option<String>,
 }
 
 /// A width namespace for simd type re-exports.
@@ -445,6 +457,12 @@ impl Registry {
         out.push('\n');
         self.gen_token_to_arch(&mut out);
         out.push('\n');
+        self.gen_token_to_magetypes_namespace(&mut out);
+        out.push('\n');
+        self.gen_trait_to_magetypes_namespace(&mut out);
+        out.push('\n');
+        self.gen_trait_to_arch(&mut out);
+        out.push('\n');
         self.gen_all_concrete_tokens(&mut out);
         out.push('\n');
         self.gen_all_trait_names(&mut out);
@@ -536,6 +554,100 @@ impl Registry {
             out.push_str(&format!("        {pattern} => Some(\"{target_arch}\"),\n"));
         }
 
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
+    fn gen_token_to_magetypes_namespace(&self, out: &mut String) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps a token type name to its magetypes width namespace.
+            ///
+            /// Returns the namespace name (e.g., \"v3\", \"v4\", \"neon\", \"wasm128\", \"scalar\").
+            /// Used by `import_magetypes` to inject `use magetypes::simd::{{ns}}::*;`.
+            pub(crate) fn token_to_magetypes_namespace(token_name: &str) -> Option<&'static str> {{
+                match token_name {{
+        "});
+
+        for token in &self.token {
+            if let Some(ns) = &token.magetypes_namespace {
+                let pattern = Self::match_pattern(token);
+                out.push_str(&format!("        {pattern} => Some(\"{ns}\"),\n"));
+            }
+        }
+
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
+    fn gen_trait_to_magetypes_namespace(&self, out: &mut String) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps a trait bound name to its magetypes width namespace.
+            ///
+            /// Returns the namespace name (e.g., \"v3\", \"v4\", \"neon\").
+            /// Used by `import_magetypes` when a trait bound is used instead of a concrete token.
+            pub(crate) fn trait_to_magetypes_namespace(trait_name: &str) -> Option<&'static str> {{
+                match trait_name {{
+        "});
+
+        // Traits
+        for trait_def in &self.traits {
+            if let Some(ns) = &trait_def.magetypes_namespace {
+                out.push_str(&format!(
+                    "        \"{}\" => Some(\"{ns}\"),\n",
+                    trait_def.name
+                ));
+            }
+        }
+
+        out.push('\n');
+        out.push_str("        // Token types used as bounds\n");
+
+        // Token types used as bounds (same as trait_to_features pattern)
+        for token in &self.token {
+            if let Some(ns) = &token.magetypes_namespace {
+                let pattern = Self::match_pattern(token);
+                out.push_str(&format!("        {pattern} => Some(\"{ns}\"),\n"));
+            }
+        }
+
+        out.push('\n');
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
+    fn gen_trait_to_arch(&self, out: &mut String) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps a trait bound name to its target architecture.
+            ///
+            /// Returns the architecture (e.g., \"x86_64\", \"aarch64\").
+            /// Used by `import_intrinsics` when a trait bound is used instead of a concrete token.
+            pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {{
+                match trait_name {{
+        "});
+
+        // Traits
+        for trait_def in &self.traits {
+            if let Some(arch) = &trait_def.arch {
+                out.push_str(&format!(
+                    "        \"{}\" => Some(\"{arch}\"),\n",
+                    trait_def.name
+                ));
+            }
+        }
+
+        out.push('\n');
+        out.push_str("        // Token types used as bounds\n");
+
+        // Token types used as bounds (same as other trait_to_* functions)
+        for token in &self.token {
+            let pattern = Self::match_pattern(token);
+            out.push_str(&format!("        {pattern} => Some(\"{}\"),\n", token.arch));
+        }
+
+        out.push('\n');
         out.push_str("        _ => None,\n");
         out.push_str("    }\n}\n");
     }

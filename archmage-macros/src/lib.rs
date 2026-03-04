@@ -100,6 +100,11 @@ struct ArcaneArgs {
     /// Implied by `_self = Type`. Required for associated functions in impl blocks
     /// that have no `self` receiver (the macro can't distinguish them from free functions).
     nested: bool,
+    /// Inject `use core::arch::{arch}::*;` and `use safe_unaligned_simd::{arch}::*;`.
+    import_intrinsics: bool,
+    /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
+    /// and `use magetypes::simd::backends::*;`.
+    import_magetypes: bool,
 }
 
 impl Parse for ArcaneArgs {
@@ -112,6 +117,8 @@ impl Parse for ArcaneArgs {
                 "inline_always" => args.inline_always = true,
                 "stub" => args.stub = true,
                 "nested" => args.nested = true,
+                "import_intrinsics" => args.import_intrinsics = true,
+                "import_magetypes" => args.import_magetypes = true,
                 "_self" => {
                     let _: Token![=] = input.parse()?;
                     args.self_type = Some(input.parse()?);
@@ -141,7 +148,10 @@ impl Parse for ArcaneArgs {
 // Token-to-features and trait-to-features mappings are generated from
 // token-registry.toml by xtask. Regenerate with: cargo run -p xtask -- generate
 mod generated;
-use generated::{token_to_arch, token_to_features, trait_to_features};
+use generated::{
+    token_to_arch, token_to_features, token_to_magetypes_namespace, trait_to_arch,
+    trait_to_features, trait_to_magetypes_namespace,
+};
 
 /// Result of extracting token info from a type.
 enum TokenTypeInfo {
@@ -322,6 +332,29 @@ struct TokenParamInfo {
     target_arch: Option<&'static str>,
     /// Concrete token type name (Some for concrete tokens, None for traits/generics)
     token_type_name: Option<String>,
+    /// Magetypes width namespace (e.g., "v3", "neon", "wasm128")
+    magetypes_namespace: Option<&'static str>,
+}
+
+/// Resolve magetypes namespace from a list of trait names.
+/// Returns the first matching namespace found.
+fn traits_to_magetypes_namespace(trait_names: &[String]) -> Option<&'static str> {
+    for name in trait_names {
+        if let Some(ns) = trait_to_magetypes_namespace(name) {
+            return Some(ns);
+        }
+    }
+    None
+}
+
+/// Given trait bound names, return the first matching target architecture.
+fn traits_to_arch(trait_names: &[String]) -> Option<&'static str> {
+    for name in trait_names {
+        if let Some(arch) = trait_to_arch(name) {
+            return Some(arch);
+        }
+    }
+    None
 }
 
 /// Find the first token parameter in a function signature.
@@ -338,20 +371,27 @@ fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
                 if let Some(info) = extract_token_type_info(ty) {
-                    let (features, arch, token_name) = match info {
+                    let (features, arch, token_name, mage_ns) = match info {
                         TokenTypeInfo::Concrete(ref name) => {
                             let features = token_to_features(name).map(|f| f.to_vec());
                             let arch = token_to_arch(name);
-                            (features, arch, Some(name.clone()))
+                            let ns = token_to_magetypes_namespace(name);
+                            (features, arch, Some(name.clone()), ns)
                         }
-                        TokenTypeInfo::ImplTrait(trait_names) => {
-                            (traits_to_features(&trait_names), None, None)
+                        TokenTypeInfo::ImplTrait(ref trait_names) => {
+                            let ns = traits_to_magetypes_namespace(trait_names);
+                            let arch = traits_to_arch(trait_names);
+                            (traits_to_features(trait_names), arch, None, ns)
                         }
                         TokenTypeInfo::Generic(type_name) => {
                             // Look up the generic parameter's bounds
-                            let features = find_generic_bounds(sig, &type_name)
-                                .and_then(|traits| traits_to_features(&traits));
-                            (features, None, None)
+                            let bounds = find_generic_bounds(sig, &type_name);
+                            let features = bounds.as_ref().and_then(|t| traits_to_features(t));
+                            let ns = bounds
+                                .as_ref()
+                                .and_then(|t| traits_to_magetypes_namespace(t));
+                            let arch = bounds.as_ref().and_then(|t| traits_to_arch(t));
+                            (features, arch, None, ns)
                         }
                     };
 
@@ -370,6 +410,7 @@ fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                                 features,
                                 target_arch: arch,
                                 token_type_name: token_name,
+                                magetypes_namespace: mage_ns,
                             });
                         }
                     }
@@ -388,6 +429,42 @@ enum SelfReceiver {
     Ref,
     /// `&mut self` (mutable reference)
     RefMut,
+}
+
+/// Generate import statements to prepend to a function body.
+///
+/// Returns a `TokenStream` of `use` statements based on the import flags,
+/// target architecture, and magetypes namespace.
+fn generate_imports(
+    target_arch: Option<&str>,
+    magetypes_namespace: Option<&str>,
+    import_intrinsics: bool,
+    import_magetypes: bool,
+) -> proc_macro2::TokenStream {
+    let mut imports = proc_macro2::TokenStream::new();
+
+    if import_intrinsics && let Some(arch) = target_arch {
+        let arch_ident = format_ident!("{}", arch);
+        imports.extend(quote! {
+            #[allow(unused_imports)]
+            use core::arch::#arch_ident::*;
+            #[allow(unused_imports)]
+            use safe_unaligned_simd::#arch_ident::*;
+        });
+        // ScalarToken or unknown arch: import_intrinsics is a no-op
+    }
+
+    if import_magetypes && let Some(ns) = magetypes_namespace {
+        let ns_ident = format_ident!("{}", ns);
+        imports.extend(quote! {
+            #[allow(unused_imports)]
+            use magetypes::simd::#ns_ident::*;
+            #[allow(unused_imports)]
+            use magetypes::simd::backends::*;
+        });
+    }
+
+    imports
 }
 
 /// Shared implementation for arcane/arcane macros.
@@ -424,6 +501,7 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         features,
         target_arch,
         token_type_name,
+        magetypes_namespace,
     } = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
@@ -456,6 +534,21 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
                 .into();
         }
     };
+
+    // Prepend import statements to body if requested
+    let body_imports = generate_imports(
+        target_arch,
+        magetypes_namespace,
+        args.import_intrinsics,
+        args.import_magetypes,
+    );
+    if !body_imports.is_empty() {
+        let original_body = &input_fn.body;
+        input_fn.body = quote! {
+            #body_imports
+            #original_body
+        };
+    }
 
     // Build target_feature attributes
     let target_feature_attrs: Vec<Attribute> = features
@@ -1207,6 +1300,11 @@ struct RiteArgs {
     /// Generate an `unreachable!()` stub on the wrong architecture.
     /// Default is false (cfg-out: no function emitted on wrong arch).
     stub: bool,
+    /// Inject `use core::arch::{arch}::*;` and `use safe_unaligned_simd::{arch}::*;`.
+    import_intrinsics: bool,
+    /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
+    /// and `use magetypes::simd::backends::*;`.
+    import_magetypes: bool,
 }
 
 impl Parse for RiteArgs {
@@ -1217,13 +1315,14 @@ impl Parse for RiteArgs {
             let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
                 "stub" => args.stub = true,
+                "import_intrinsics" => args.import_intrinsics = true,
+                "import_magetypes" => args.import_magetypes = true,
                 other => {
                     return Err(syn::Error::new(
                         ident.span(),
                         format!(
-                            "unknown rite argument: `{}`. Supported: `stub`.\n\
-                             Note: inline_always is not supported because \
-                             #[inline(always)] + #[target_feature] requires nightly Rust.",
+                            "unknown rite argument: `{}`. Supported: `stub`, \
+                             `import_intrinsics`, `import_magetypes`.",
                             other
                         ),
                     ));
@@ -1244,6 +1343,7 @@ fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     let TokenParamInfo {
         features,
         target_arch,
+        magetypes_namespace,
         ..
     } = match find_token_param(&input_fn.sig) {
         Some(result) => result,
@@ -1288,6 +1388,21 @@ fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     new_attrs.push(inline_attr);
     new_attrs.append(&mut input_fn.attrs);
     input_fn.attrs = new_attrs;
+
+    // Prepend import statements to body if requested
+    let body_imports = generate_imports(
+        target_arch,
+        magetypes_namespace,
+        args.import_intrinsics,
+        args.import_magetypes,
+    );
+    if !body_imports.is_empty() {
+        let original_body = &input_fn.body;
+        input_fn.body = quote! {
+            #body_imports
+            #original_body
+        };
+    }
 
     // If we know the target arch, generate cfg-gated impl (+ optional stub)
     if let Some(arch) = target_arch {
