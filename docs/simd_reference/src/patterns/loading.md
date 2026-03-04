@@ -22,7 +22,7 @@ The simplest path. Magetypes handles the load internally:
 use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::load(token, data);
     v.reduce_add()
@@ -32,7 +32,7 @@ fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
 ### From a slice
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_slice(token: X64V3Token, data: &[f32]) -> f32 {
     let mut total = f32x8::zero(token);
     for chunk in data.chunks_exact(8) {
@@ -54,9 +54,8 @@ When working with raw intrinsics inside `#[arcane]`, use `safe_unaligned_simd` f
 
 ```rust
 use archmage::{X64V3Token, arcane};
-use std::arch::x86_64::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_and_square(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd: takes &[f32; 8], not *const f32
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
@@ -74,7 +73,7 @@ When you have a slice but the intrinsic needs an array reference, use `.first_ch
 ### `.first_chunk::<N>()` (Rust 1.77+)
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_from_slice(_token: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().expect("need at least 8 elements");
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
@@ -84,7 +83,7 @@ fn load_from_slice(_token: X64V3Token, data: &[f32]) -> __m256 {
 ### `.try_into()`
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_via_try_into(_token: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
@@ -98,7 +97,7 @@ Both produce identical assembly — a bounds check followed by `vmovups`. The bo
 Same patterns work for integer types. The compiler may use `vmovups` or `vmovdqu` (functionally identical on modern CPUs):
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_bytes(_token: X64V3Token, data: &[u8; 32]) -> __m256i {
     safe_unaligned_simd::x86_64::_mm256_loadu_si256(data)
 }

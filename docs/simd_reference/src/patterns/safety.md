@@ -12,7 +12,7 @@
 All value-based intrinsics — arithmetic, comparison, shuffle, bitwise, conversion, reduction:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn example(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
     // All safe — no `unsafe` needed:
     let sum = _mm256_add_ps(a, b);
@@ -32,13 +32,13 @@ fn example(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 Raw pointer operations:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_raw(_token: X64V3Token, ptr: *const f32) -> __m256 {
     // Raw pointer — needs unsafe
     unsafe { _mm256_loadu_ps(ptr) }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_safe(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
     // Reference-based — no unsafe needed
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
@@ -51,7 +51,7 @@ The macro generates a safe outer function wrapping an unsafe inner:
 
 ```rust
 // You write:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_setzero_ps();
     // ...
@@ -84,7 +84,7 @@ The outer function is safe. The `unsafe` call to the inner function is justified
 
 ```rust
 // Entry point — called from non-SIMD code
-#[arcane]
+#[arcane(import_intrinsics)]
 pub fn process(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         process_chunk(token, chunk.try_into().unwrap());
@@ -92,7 +92,7 @@ pub fn process(token: X64V3Token, data: &mut [f32]) {
 }
 
 // Internal helper — inlines into the #[arcane] caller
-#[rite]
+#[rite(import_intrinsics)]
 fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
     // ... SIMD work ...
 }
@@ -104,11 +104,11 @@ Generic bounds create LLVM optimization barriers:
 
 ```rust
 // BAD: LLVM can't inline across the generic boundary
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process<T: HasX64V2>(token: T, data: &[f32]) -> f32 { ... }
 
 // GOOD: Full inlining, single target_feature region
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32]) -> f32 { ... }
 ```
 

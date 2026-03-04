@@ -7,7 +7,7 @@ All patterns below are verified by `just verify-asm` to produce the expected ins
 ### To array reference
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn store_to_array(_t: X64V3Token, v: __m256, out: &mut [f32; 8]) {
     safe_unaligned_simd::x86_64::_mm256_storeu_ps(out, v);
 }
@@ -18,7 +18,7 @@ fn store_to_array(_t: X64V3Token, v: __m256, out: &mut [f32; 8]) {
 ### To slice via `.first_chunk_mut()`
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn store_first_chunk_mut(_t: X64V3Token, v: __m256, out: &mut [f32]) {
     let arr: &mut [f32; 8] = out.first_chunk_mut().unwrap();
     safe_unaligned_simd::x86_64::_mm256_storeu_ps(arr, v);
@@ -32,7 +32,7 @@ fn store_first_chunk_mut(_t: X64V3Token, v: __m256, out: &mut [f32]) {
 Returning a `[f32; 8]` from an `#[arcane]` function:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_and_return(_t: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
     let doubled = _mm256_add_ps(v, v);
@@ -49,7 +49,7 @@ The compiler typically optimizes this to write directly to the caller's return s
 ```rust
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn store_f32x8(token: X64V3Token, v: f32x8, out: &mut [f32; 8]) {
     v.store(token, out);
 }

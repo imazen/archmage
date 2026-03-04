@@ -54,7 +54,7 @@ fn check_wasm_simd() {
 use archmage::{Wasm128Token, arcane};
 use magetypes::simd::f32x4;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product(token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
     let va = f32x4::from_array(token, *a);
     let vb = f32x4::from_array(token, *b);
@@ -70,13 +70,13 @@ Write once, run on x86, ARM, and WASM:
 use archmage::{X64V3Token, NeonToken, Wasm128Token, SimdToken, incant};
 
 // Platform variants — #[arcane] generates stubs on non-matching architectures
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x8;
     f32x8::from_array(token, *data).reduce_add()
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x4;
     let a = f32x4::from_slice(token, &data[0..4]);
@@ -84,7 +84,7 @@ fn sum_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
     a.reduce_add() + b.reduce_add()
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_wasm128(token: Wasm128Token, data: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x4;
     let a = f32x4::from_slice(token, &data[0..4]);
@@ -160,7 +160,7 @@ pub fn brighten_image(pixels: &mut [u8], amount: u8) {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn brighten_simd(token: Wasm128Token, pixels: &mut [u8], amount: u8) {
     let add = u8x16::splat(token, amount);
 

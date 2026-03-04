@@ -227,7 +227,7 @@ pub fn process<T: IntoConcreteToken>(token: T, data: &[f32]) {
 }
 
 // Internal implementations use concrete tokens
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_avx2(token: X64V3Token, data: &[f32]) { }
 ```
 

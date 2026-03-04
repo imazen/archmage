@@ -9,7 +9,7 @@ All three produce identical `vmovups` instructions:
 ### 1. Direct array reference (baseline)
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_array_ref(_t: X64V3Token, data: &[f32; 8]) -> __m256 {
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
 }
@@ -20,7 +20,7 @@ No conversion needed — the type already matches.
 ### 2. `.first_chunk::<8>()` (Rust 1.77+)
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_first_chunk(_t: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().unwrap();
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
@@ -32,7 +32,7 @@ Borrows the first N elements as an array reference. Panics if the slice is too s
 ### 3. `data[..8].try_into().unwrap()`
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_try_into(_t: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
@@ -68,7 +68,7 @@ This is the minimum necessary — you're asserting a runtime-sized slice has at 
 Same story for integers. `.first_chunk()` on a `&[u8]` slice produces the same `vmovdqu` as a direct `&[u8; 32]` reference:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_bytes(_t: X64V3Token, data: &[u8]) -> __m256i {
     let arr: &[u8; 32] = data.first_chunk().unwrap();
     safe_unaligned_simd::x86_64::_mm256_loadu_si256(arr)
@@ -82,7 +82,7 @@ fn load_bytes(_t: X64V3Token, data: &[u8]) -> __m256i {
 Works the same at 128-bit width:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_128(_t: X64V3Token, data: &[f32]) -> __m128 {
     let arr: &[f32; 4] = data.first_chunk().unwrap();
     safe_unaligned_simd::x86_64::_mm_loadu_ps(arr)

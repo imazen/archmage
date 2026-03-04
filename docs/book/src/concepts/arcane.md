@@ -44,7 +44,7 @@ flowchart TD
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn add_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd takes references - fully safe inside #[arcane]!
     let va = _mm256_loadu_ps(a);
@@ -66,7 +66,7 @@ fn add_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 
 ```rust
 // Your code:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
     _mm256_add_ps(a, b)
 }
@@ -95,7 +95,7 @@ fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 ```rust
 // Trait impl — must use nested:
 impl SimdOps for MyType {
-    #[arcane(_self = MyType)]
+    #[arcane(_self = MyType, import_intrinsics)]
     fn compute(&self, token: X64V3Token) -> f32 {
         _self.data.iter().sum()
     }
@@ -146,13 +146,13 @@ Functions with the same token type inline into each other:
 ```rust
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let sum = inner(token, data);  // Inlines!
     sum * 2.0
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn inner(token: X64V3Token, data: &[f32; 8]) -> f32 {
     // Both functions share the same #[target_feature] region
     // LLVM optimizes across both
@@ -168,14 +168,14 @@ Higher tokens can call functions expecting lower tokens:
 ```rust
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v4_kernel(token: X64V4Token, data: &[f32; 8]) -> f32 {
     // V4 ⊃ V3, so this works and inlines properly
     v3_sum(token, data)
     // ... could do AVX-512 specific work too ...
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v3_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
     // Actual SIMD: load 8 floats, horizontal sum
     let v = f32x8::from_array(token, *data);
@@ -207,7 +207,7 @@ See [Cross-Platform](./cross-platform.md) for dispatch patterns.
 Generate an `unreachable!()` stub on non-matching architectures:
 
 ```rust
-#[arcane(stub)]
+#[arcane(stub, import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32]) -> f32 {
     data.iter().sum()
 }
@@ -224,7 +224,7 @@ Force aggressive inlining (requires nightly):
 ```rust
 #![feature(target_feature_inline_always)]
 
-#[arcane(inline_always)]
+#[arcane(inline_always, import_intrinsics)]
 fn hot_path(token: X64V3Token, data: &[f32]) -> f32 {
     // Uses #[inline(always)] instead of #[inline]
 }
@@ -243,7 +243,7 @@ pub fn process(data: &mut [f32]) {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_simd(token: X64V3Token, data: &mut [f32]) {
     // SIMD implementation
 }
@@ -257,9 +257,8 @@ fn process_scalar(data: &mut [f32]) {
 
 ```rust
 use archmage::HasX64V2;
-use std::arch::x86_64::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn generic_impl<T: HasX64V2>(token: T, a: __m128, b: __m128) -> __m128 {
     // Works with X64V2Token, X64V3Token, X64V4Token
     // Note: generic bounds create optimization boundaries

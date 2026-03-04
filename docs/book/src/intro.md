@@ -38,7 +38,7 @@ Archmage separates **proof of capability** from **use of capability**:
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn multiply(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // Safe! Token proves AVX2+FMA, safe_unaligned_simd takes references
     let a = _mm256_loadu_ps(data);

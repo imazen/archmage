@@ -33,7 +33,7 @@ With `avx512` feature: `HasX64V4`
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn add(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
@@ -53,7 +53,7 @@ No individual `use` statements needed — `X64V3Token`, `_mm256_loadu_ps`, `_mm2
 ```rust
 use magetypes::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::from_array(token, *a);
     let vb = f32x8::from_array(token, *b);

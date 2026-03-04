@@ -94,7 +94,7 @@ pub fn sum_f32(data: &[f32]) -> f32 {
     sum_scalar(data)
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_f32x8(token: X64V3Token, data: &[f32]) -> f32 {
     let mut acc = f32x8::zero(token);
     for chunk in data.chunks_exact(8) {

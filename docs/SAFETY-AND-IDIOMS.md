@@ -44,7 +44,7 @@ You can't construct a token except through `summon()`. If you have one, the feat
 
 ```rust
 // What you write:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
     // ...
@@ -101,7 +101,7 @@ pub fn public_api(data: &[f32]) -> f32 {
     }
 }
 
-#[arcane]  // Boundary: called from non-SIMD code
+#[arcane(import_intrinsics)]  // Boundary: called from non-SIMD code
 fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
     let mut sum = 0.0;
     for chunk in data.chunks_exact(8) {
@@ -110,7 +110,7 @@ fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
     sum
 }
 
-#[rite]  // Internal: inlines into caller's target_feature context
+#[rite(import_intrinsics)]  // Internal: inlines into caller's target_feature context
 fn process_chunk(token: X64V3Token, chunk: &[f32; 8]) -> f32 {
     let v = f32x8::from_array(token, *chunk);
     v.reduce_add()
@@ -129,11 +129,11 @@ This is subtle: generic bounds create LLVM optimization barriers.
 
 ```rust
 // Generic bound prevents LLVM from inlining across the call
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process<T: HasX64V2>(token: T, data: &[f32]) -> f32 { ... }
 
 // Concrete token: full inlining, single target_feature region
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32]) -> f32 { ... }
 ```
 
@@ -146,7 +146,7 @@ The prelude re-exports `safe_unaligned_simd`, which takes references instead of 
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_and_square(token: X64V3Token, data: &[f32; 8]) -> __m256 {
     let v = _mm256_loadu_ps(data);  // Takes &[f32; 8], not *const f32
     _mm256_mul_ps(v, v)
@@ -202,7 +202,7 @@ These aliases pretend platforms are interchangeable. An 8-wide AVX2 algorithm is
 All tokens exist on all architectures. On wrong arch, `summon()` returns `None`:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn x86_kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
     // On ARM: generates unreachable!() stub
 }

@@ -34,7 +34,7 @@ fn find_closest(points: &[[f32; 8]], query: &[f32; 8]) -> usize {
 }
 
 // Entry point: #[arcane] — one boundary crossing
-#[arcane]
+#[arcane(import_intrinsics)]
 fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -> usize {
     let mut best_idx = 0;
     let mut best_dist = f32::MAX;
@@ -50,7 +50,7 @@ fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -
 }
 
 // Inner helper: #[rite] — inlines into caller, no boundary
-#[rite]
+#[rite(import_intrinsics)]
 fn distance_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::from_array(token, *a);
     let vb = f32x8::from_array(token, *b);

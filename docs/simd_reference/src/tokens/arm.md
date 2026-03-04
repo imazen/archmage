@@ -34,7 +34,7 @@ NEON is always available on AArch64. Unlike x86 where you need to check for AVX2
 On x86, FMA requires V3 (Haswell+). On ARM, FMA is part of baseline NEON:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn fma_neon(token: Arm64, a: f32x4, b: f32x4, c: f32x4) -> f32x4 {
     a.mul_add(b, c)  // Uses native vfmaq_f32
 }
@@ -47,7 +47,7 @@ NEON only has 128-bit registers. For `f32x8` and wider types, magetypes uses pol
 ```rust
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: Arm64, data: &[f32; 8]) -> f32 {
     let v = f32x8::load(token, data);  // 2× vld1q_f32 internally
     v.reduce_add()                      // 2× horizontal sum + scalar add
@@ -106,7 +106,7 @@ if let Some(token) = Arm64V2Token::summon() {
     process_v2(token, &data);
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_v2(token: Arm64V2Token, data: &[f32]) {
     // DotProd (vdotq), FP16 (vcvt), CRC, AES, SHA2 all available
     // RDM (rounding doubling multiply) for fixed-point DSP
@@ -145,7 +145,7 @@ if let Some(token) = Arm64V3Token::summon() {
     process_v3(token, &data);
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_v3(token: Arm64V3Token, data: &[f32]) {
     // I8MM (matrix multiply), BF16, SHA3, FCMA, FHM all available
     // Plus everything from V2

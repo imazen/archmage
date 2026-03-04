@@ -144,7 +144,7 @@ let (out0, out1, out2, out3) = f32x8::interleave_4ch(token, r_bright, g, b, a);
 Process large arrays in SIMD-sized chunks:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_large(token: X64V3Token, data: &mut [f32]) {
     // Process full chunks
     for chunk in data.chunks_exact_mut(8) {

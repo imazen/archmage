@@ -33,7 +33,7 @@ Since Rust 1.85, the function itself isn't `unsafe`. But **calling** it from a c
 
 ```rust
 // You write:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 { /* ... */ }
 
 // Macro generates:
@@ -64,12 +64,12 @@ When caller and callee have the same target features, LLVM can:
 - Combine operations across the call boundary
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
     inner(token, data) * 2.0  // Inlines perfectly!
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn inner(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::from_array(token, *data);
     v.reduce_add()
@@ -83,13 +83,13 @@ Both functions have `#[target_feature(enable = "avx2,fma,...")]`. LLVM sees one 
 When features differ, LLVM must be conservative:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v4_caller(token: X64V4Token, data: &[f32; 8]) -> f32 {
     // token: X64V4Token → avx512f,avx512bw,...
     v3_helper(token, data)  // Different features!
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v3_helper(token: X64V3Token, data: &[f32; 8]) -> f32 {
     // token: X64V3Token → avx2,fma,...
     // Different target_feature set = optimization boundary
@@ -103,7 +103,7 @@ This still works—V4 is a superset of V3—but LLVM can't fully inline across t
 Generics create the same problem:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn generic_impl<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
     // LLVM doesn't know what T's features are at compile time
     // Must generate conservative code that works for any HasX64V2
@@ -121,13 +121,13 @@ The compiler generates one version of this function for the trait bound, not spe
 Higher tokens can be used where lower tokens are expected:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v4_kernel(token: X64V4Token, data: &[f32; 8]) -> f32 {
     // V4 → V3 is free: just passing token, same LLVM features (superset)
     v3_sum(token, data)  // X64V3Token accepts X64V4Token
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v3_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
     // ...
 }
@@ -176,16 +176,16 @@ fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 { ... }
 Since Rust 1.85+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` helpers without `unsafe`:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn entry(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let prod = mul_vectors(token, a, b);  // Calls #[rite], no unsafe!
     horizontal_sum(token, prod)
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 { ... }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 { ... }
 ```
 

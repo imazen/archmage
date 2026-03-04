@@ -45,7 +45,7 @@ fn process_all(points: &[[f32; 8]]) {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     for p in points {
         process_one(token, p);  // #[rite] — inlines, no boundary
@@ -128,11 +128,11 @@ The `#[inline(never)]` row is the smoking gun: even inside `#[arcane]`, a generi
 #[inline(always)]
 fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
     let v = f32x8::<T>::from_array(token, *data);
-    (v + v).reduce_add()  // ~1.35 ns from #[arcane]
+    (v + v).reduce_add()  // ~1.35 ns from #[arcane(import_intrinsics)]
 }
 
 // The #[arcane] caller provides #[target_feature] — generic_sum inlines into it
-#[arcane]
+#[arcane(import_intrinsics)]
 fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
     generic_sum(token, data)  // Inlines → full AVX2 codegen
 }

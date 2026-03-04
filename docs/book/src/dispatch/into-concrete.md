@@ -123,12 +123,12 @@ pub fn transform<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn transform_avx2(token: X64V3Token, data: &mut [f32]) {
     // AVX2 implementation
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn transform_neon(token: NeonToken, data: &mut [f32]) {
     // NEON implementation
 }

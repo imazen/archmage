@@ -9,10 +9,10 @@ Choosing the right SIMD implementation at runtime.
 ```rust
 use archmage::{incant, arcane, X64V3Token, NeonToken};
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_v3(token: X64V3Token, data: &[f32; 8]) -> f32 { /* AVX2 */ }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_neon(token: NeonToken, data: &[f32; 4]) -> f32 { /* NEON */ }
 
 fn sum_scalar(data: &[f32]) -> f32 { data.iter().sum() }
@@ -98,7 +98,7 @@ fn process_all(points: &[[f32; 8]]) {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     for p in points {
         process_one(token, p);  // #[rite] helper, inlines

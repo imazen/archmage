@@ -45,14 +45,14 @@ flowchart TD
 use archmage::prelude::*;
 
 // ENTRY POINT: receives token from caller
-#[arcane]
+#[arcane(import_intrinsics)]
 pub fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let products = mul_vectors(token, a, b);  // Calls #[rite] helper
     horizontal_sum(token, products)
 }
 
 // INNER HELPER: only called from #[arcane] context
-#[rite]
+#[rite(import_intrinsics)]
 fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     // safe_unaligned_simd takes references - no unsafe needed!
     let va = _mm256_loadu_ps(a);
@@ -61,7 +61,7 @@ fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
 }
 
 // INNER HELPER: only called from #[arcane] context
-#[rite]
+#[rite(import_intrinsics)]
 fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
@@ -78,7 +78,7 @@ fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
 
 ```rust
 // Your code:
-#[rite]
+#[rite(import_intrinsics)]
 fn helper(_token: X64V3Token, v: __m256) -> __m256 {
     _mm256_add_ps(v, v)
 }
@@ -168,12 +168,12 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 `#[rite]` helpers compose naturally:
 
 ```rust
-#[rite]
+#[rite(import_intrinsics)]
 fn complex_op(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f32 {
-    let ab = mul_vectors(token, a, b);       // Calls another #[rite]
-    let vc = load_vector(token, c);          // Calls another #[rite]
-    let sum = add_vectors_raw(token, ab, vc); // Calls another #[rite]
-    horizontal_sum(token, sum)                // Calls another #[rite]
+    let ab = mul_vectors(token, a, b);       // Calls another #[rite(import_intrinsics)]
+    let vc = load_vector(token, c);          // Calls another #[rite(import_intrinsics)]
+    let sum = add_vectors_raw(token, ab, vc); // Calls another #[rite(import_intrinsics)]
+    horizontal_sum(token, sum)                // Calls another #[rite(import_intrinsics)]
 }
 ```
 

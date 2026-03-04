@@ -116,7 +116,7 @@ Every token type compiles on every architecture. On the wrong arch, `summon()` r
 
 ```rust
 // This compiles on ARM — it just can't be called
-#[arcane]
+#[arcane(import_intrinsics)]
 fn x86_kernel(token: X64V3Token, data: &[f32; 8]) -> f32 { ... }
 
 // On ARM: summon() returns None, kernel is never reached

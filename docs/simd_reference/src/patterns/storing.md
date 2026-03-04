@@ -17,7 +17,7 @@ Getting data from SIMD registers back into slices and arrays.
 use archmage::{X64V3Token, arcane};
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn double(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::load(token, data);
     let doubled = v + v;
@@ -28,7 +28,7 @@ fn double(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 ### Store into a mutable reference
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn double_in_place(token: X64V3Token, data: &mut [f32; 8]) {
     let v = f32x8::load(token, data);
     let doubled = v + v;
@@ -39,9 +39,7 @@ fn double_in_place(token: X64V3Token, data: &mut [f32; 8]) {
 ## safe_unaligned_simd
 
 ```rust
-use std::arch::x86_64::*;
-
-#[arcane]
+#[arcane(import_intrinsics)]
 fn square(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
@@ -56,7 +54,7 @@ fn square(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 When you need to write into a slice (not an array), convert the subslice first:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_slice(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         let v = f32x8::from_slice(token, chunk);
@@ -72,7 +70,7 @@ fn process_slice(token: X64V3Token, data: &mut [f32]) {
 When you need a single element (not the whole vector):
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn first_element(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::load(token, data);
     v.to_array()[0]  // Extract first lane

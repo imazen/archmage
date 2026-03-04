@@ -393,7 +393,7 @@ fn slow_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 }
 
 // CORRECT - use #[arcane] macro
-#[arcane]
+#[arcane(import_intrinsics)]
 fn fast_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::load(token, data);  // Inline SIMD instructions!
     v.exp2_lowp().to_array()

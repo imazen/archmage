@@ -56,12 +56,12 @@ use archmage::{incant, arcane};
 use magetypes::simd::f32x8;
 
 // Define variants with standard suffixes
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
     f32x8::from_array(token, *data).reduce_add()
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_neon(token: NeonToken, data: &[f32; 4]) -> f32 {
     // NEON implementation
 }
@@ -166,7 +166,7 @@ use archmage::{arcane, incant, X64V3Token, NeonToken, SimdToken};
 use magetypes::simd::f32x8;
 
 // AVX2 variant — #[arcane] cfg's this out on non-x86
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::from_array(token, *a);
     let vb = f32x8::from_array(token, *b);
@@ -174,7 +174,7 @@ fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 
 // NEON variant (128-bit, so process 4 at a time)
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     use magetypes::simd::f32x4;
     let sum1 = {

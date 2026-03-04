@@ -119,7 +119,7 @@ let result = v.ln_unchecked();    // Faster, UB if ≤ 0
 ## Example: Gaussian Function
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn gaussian(token: X64V3Token, x: &[f32; 8], sigma: f32) -> [f32; 8] {
     let v = f32x8::from_array(token, *x);
     let sigma_v = f32x8::splat(token, sigma);
@@ -138,7 +138,7 @@ fn gaussian(token: X64V3Token, x: &[f32; 8], sigma: f32) -> [f32; 8] {
 ## Example: Softmax
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn softmax(token: X64V3Token, logits: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::from_array(token, *logits);
 

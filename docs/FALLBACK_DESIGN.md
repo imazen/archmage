@@ -221,7 +221,7 @@ use archmage::{arcane, rite, X64V3Token, SimdToken};
 use magetypes::simd::f32x8;
 
 // Entry point — called from non-SIMD code
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_vectors(token: X64V3Token, input: &[[f32; 8]]) -> f32 {
     let mut sum = f32x8::zero(token);
     for arr in input {
@@ -231,7 +231,7 @@ fn process_vectors(token: X64V3Token, input: &[[f32; 8]]) -> f32 {
 }
 
 // Internal helper — inlines into #[arcane] caller
-#[rite]
+#[rite(import_intrinsics)]
 fn add_chunk(token: X64V3Token, acc: f32x8, arr: &[f32; 8]) -> f32x8 {
     let v: f32x8 = (*arr).into();
     acc + v  // Compiles to a single vaddps

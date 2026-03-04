@@ -27,7 +27,7 @@ pub fn process(data: &mut [f32]) {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_avx2(token: X64V3Token, data: &mut [f32]) {
     // AVX2 implementation
 }
@@ -66,13 +66,13 @@ pub fn process(data: &mut [f32]) {
     process_scalar(data);
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_x86(token: X64V3Token, data: &mut [f32]) { /* ... */ }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_arm(token: Arm64, data: &mut [f32]) { /* ... */ }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_wasm(token: Wasm128Token, data: &mut [f32]) { /* ... */ }
 
 fn process_scalar(data: &mut [f32]) { /* ... */ }
@@ -156,14 +156,14 @@ if let Some(token) = X64V3Token::summon() {
     process_all_chunks_scalar(data);
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_all_chunks(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         process_chunk(token, chunk.try_into().unwrap());  // #[rite] inlines fully!
     }
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
     // Same target features as caller — LLVM optimizes across both
 }

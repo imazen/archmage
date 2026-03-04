@@ -9,7 +9,7 @@ Use `archmage::prelude::*` which includes `safe_unaligned_simd` for memory opera
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn square_f32x8(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd takes references - fully safe!
     let v = _mm256_loadu_ps(data);
@@ -61,7 +61,7 @@ The macro transforms your function:
 
 ```rust
 // You write:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn square(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // body
 }

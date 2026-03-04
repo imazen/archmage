@@ -178,7 +178,7 @@ let shr_arith = a.shr_arithmetic::<1>();  // Sign-extending shift
 use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::from_array(token, *a);
     let vb = f32x8::from_array(token, *b);
@@ -189,7 +189,7 @@ fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 ## Example: Vector Normalization
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn normalize(token: X64V3Token, v: &mut [f32; 8]) {
     let vec = f32x8::from_array(token, *v);
     let len_sq = (vec * vec).reduce_add();

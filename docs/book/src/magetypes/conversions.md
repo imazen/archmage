@@ -158,7 +158,7 @@ let v = f32x8::from_bytes(token, &bytes);
 ## Conversion Example: Image Processing
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn brighten(token: X64V3Token, pixels: &mut [u8]) {
     // Process 32 bytes at a time
     for chunk in pixels.chunks_exact_mut(32) {

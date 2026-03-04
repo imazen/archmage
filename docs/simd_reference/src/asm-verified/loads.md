@@ -7,7 +7,7 @@ All patterns below are verified by `just verify-asm` to produce the expected ins
 ### From array reference (baseline)
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_array_ref(_t: X64V3Token, data: &[f32; 8]) -> __m256 {
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
 }
@@ -18,7 +18,7 @@ fn load_array_ref(_t: X64V3Token, data: &[f32; 8]) -> __m256 {
 ### From slice via `.first_chunk()`
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_first_chunk(_t: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().unwrap();
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
@@ -32,7 +32,7 @@ fn load_first_chunk(_t: X64V3Token, data: &[f32]) -> __m256 {
 ### From slice via `.try_into()`
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_try_into(_t: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
     safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
@@ -44,7 +44,7 @@ fn load_try_into(_t: X64V3Token, data: &[f32]) -> __m256 {
 ## 256-bit integer load
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_first_chunk_i(_t: X64V3Token, data: &[u8]) -> __m256i {
     let arr: &[u8; 32] = data.first_chunk().unwrap();
     safe_unaligned_simd::x86_64::_mm256_loadu_si256(arr)
@@ -56,7 +56,7 @@ fn load_first_chunk_i(_t: X64V3Token, data: &[u8]) -> __m256i {
 ## 128-bit float load
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_first_chunk_128(_t: X64V3Token, data: &[f32]) -> __m128 {
     let arr: &[f32; 4] = data.first_chunk().unwrap();
     safe_unaligned_simd::x86_64::_mm_loadu_ps(arr)
@@ -70,7 +70,7 @@ fn load_first_chunk_128(_t: X64V3Token, data: &[f32]) -> __m128 {
 ```rust
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_f32x8_from_slice(_t: X64V3Token, data: &[f32]) -> f32x8 {
     f32x8::from_slice(_t, data)
 }
