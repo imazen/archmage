@@ -119,7 +119,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
-#[rite]
+#[rite(import_intrinsics)]
 fn fast_normalize<T: F32x8Backend>(
     token: T,
     x: &mut [f32; 8],

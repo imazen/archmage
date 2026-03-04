@@ -51,9 +51,8 @@ if let Some(token) = Wasm128Token::summon() {
 
 ```rust
 use archmage::{Wasm128Token, arcane};
-use std::arch::wasm32::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product(_token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
     let va = v128_load(a.as_ptr() as *const v128);
     let vb = v128_load(b.as_ptr() as *const v128);
@@ -71,7 +70,7 @@ fn dot_product(_token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
 > ```rust
 > use magetypes::simd::{generic::f32x4, backends::wasm128};
 >
-> #[arcane]
+> #[arcane(import_intrinsics)]
 > fn dot_product(token: Wasm128Token, a: &[f32; 4], b: &[f32; 4]) -> f32 {
 >     let va = f32x4::<wasm128>::from_array(token, *a);
 >     let vb = f32x4::<wasm128>::from_array(token, *b);
@@ -116,19 +115,19 @@ For code that runs on x86, ARM, and WASM, use `incant!` with explicit tiers. On 
 ```rust
 use archmage::{arcane, incant};
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_v3(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     // AVX2: raw intrinsics or magetypes
     let v = _mm256_loadu_ps(data);
     // ... horizontal sum ...
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_neon(_token: NeonToken, data: &[f32; 8]) -> f32 {
     // Process as two halves on 128-bit NEON
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_wasm128(_token: Wasm128Token, data: &[f32; 8]) -> f32 {
     // Process as two halves on 128-bit WASM SIMD
 }

@@ -18,7 +18,7 @@ fn dispatch<T: IntoConcreteToken>(token: T, data: &[f32]) {
 }
 
 // AVX2 callee - AVX2 target settings
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_avx2(token: X64V3Token, data: &[f32]) {
     // Can't inline back into dispatch()
 }
@@ -34,22 +34,22 @@ SIMD performance depends heavily on:
 
 All of these break at target feature boundaries.
 
-## Good: `#[rite]` Helpers Inside `#[arcane]` <sub>(`#[token_target_features]` inside `#[token_target_features_boundary]`)</sub>
+## Good: `#[rite]` Inside `#[arcane]` <sub>(`#[token_target_features]` inside `#[token_target_features_boundary]`)</sub>
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn outer(token: X64V3Token, data: &[f32]) -> f32 {
     let a = step1(token, data);     // #[rite] -> inlines
     let b = step2(token, data);     // #[rite] -> inlines
     a + b
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn step1(token: X64V3Token, data: &[f32]) -> f32 {
     // Same target features as outer -> LLVM inlines freely
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn step2(token: X64V3Token, data: &[f32]) -> f32 {
     // Same -- one optimization region
 }
@@ -58,15 +58,15 @@ fn step2(token: X64V3Token, data: &[f32]) -> f32 {
 ## Good: Downcast (Higher -> Lower)
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v4_main(token: X64V4Token, data: &[f32]) -> f32 {
     // Calling V3 function with V4 token
     // V4 is superset of V3, LLVM can still optimize
-    v3_helper(token, data)
+    v3_impl(token, data)
 }
 
-#[rite]
-fn v3_helper(token: X64V3Token, data: &[f32]) -> f32 {
+#[rite(import_intrinsics)]
+fn v3_impl(token: X64V3Token, data: &[f32]) -> f32 {
     // V4's features ⊃ V3's features -> inlines properly
 }
 ```
@@ -84,7 +84,7 @@ fn generic<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn concrete(token: X64V3Token, data: &[f32]) -> f32 {
     // This has AVX2 settings
     // LLVM won't inline this into generic()
@@ -94,7 +94,7 @@ fn concrete(token: X64V3Token, data: &[f32]) -> f32 {
 ## Bad: Upcast Check in Hot Code
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32]) -> f32 {
     // WRONG: Checking for higher tier inside hot function
     for chunk in data.chunks(8) {
@@ -126,17 +126,17 @@ pub fn process(data: &[f32]) -> f32 {
 }
 
 // Each implementation is self-contained
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_v4(token: X64V4Token, data: &[f32]) -> f32 {
     // Entry point -- one boundary crossing
     let result = step1_v4(token, data);  // #[rite] inlines
     step2_v4(token, result)              // #[rite] inlines
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn step1_v4(token: X64V4Token, data: &[f32]) -> f32 { /* ... */ }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn step2_v4(token: X64V4Token, result: f32) -> f32 { /* ... */ }
 ```
 
@@ -157,7 +157,7 @@ impl Processor for V3Processor {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_v3_impl(token: X64V3Token, data: &[f32]) -> f32 {
     // Full optimization here
 }
@@ -179,7 +179,7 @@ See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/
 
 | Pattern | Inlining | Recommendation |
 |---------|----------|----------------|
-| `#[rite]` with same token | Full | Default for hot paths |
+| `#[rite(import_intrinsics)]` with same token | Full | Default for all SIMD functions |
 | Downcast (V4->V3) via `#[rite]` | Full | Safe and fast -- superset enables inlining |
 | Upgrade (V2->V3, V3->V4) | Boundary (4x) | Dispatch at entry point, not in hot code |
 | `#[arcane]` from non-SIMD code | Boundary (4-6x) | Entry point only -- one crossing |

@@ -5,15 +5,15 @@ weight = 4
 
 <sub>(alias: `#[token_target_features]`)</sub>
 
-`#[rite]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly to your function, so LLVM can inline it into any caller with matching features.
+`#[rite(import_intrinsics)]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly to your function and auto-imports architecture intrinsics, so LLVM can inline it into any caller with matching features.
 
-Use `#[arcane]` only at **entry points** where the token comes from the outside world.
+Use `#[arcane(import_intrinsics)]` only at **entry points** where the token comes from the outside world.
 
 ## How It Works
 
 {% mermaid() %}
 flowchart LR
-    A["Your code:<br/>#[rite]<br/>fn helper(token: X64V3Token, ...)"] --> B["Macro adds:<br/>#[target_feature(...)]<br/>#[inline]<br/>directly to your function"]
+    A["Your code:<br/>#[rite(import_intrinsics)]<br/>fn process(token: X64V3Token, ...)"] --> B["Macro adds:<br/>#[target_feature(...)]<br/>#[inline]<br/>+ auto-imports intrinsics"]
 
     style A fill:#1a4a6e,color:#fff
     style B fill:#2d5a27,color:#fff
@@ -24,9 +24,9 @@ No inner function. Just attributes on your function. LLVM inlines it into any ca
 {% mermaid() %}
 flowchart TD
     PUB["Public API<br/>(no SIMD features)"] --> ARC["#[arcane] entry point<br/>(creates safe wrapper)"]
-    ARC --> H1["#[rite] helper<br/>(inlines fully)"]
-    ARC --> H2["#[rite] helper<br/>(inlines fully)"]
-    H1 --> H3["#[rite] helper<br/>(inlines fully)"]
+    ARC --> H1["#[rite] fn<br/>(inlines fully)"]
+    ARC --> H2["#[rite] fn<br/>(inlines fully)"]
+    H1 --> H3["#[rite] fn<br/>(inlines fully)"]
 
     PUB -.->|"unsafe needed<br/>if calling #[rite]<br/>directly"| H1
 
@@ -41,23 +41,23 @@ flowchart TD
 
 | Caller | Use |
 |--------|-----|
-| Called from `#[arcane]` or `#[rite]` with same/compatible token | `#[rite]` |
-| Called from non-SIMD code (tests, public API, after `summon()`) | `#[arcane]` |
+| Called from `#[arcane]` or `#[rite]` with same/compatible token | `#[rite(import_intrinsics)]` |
+| Called from non-SIMD code (tests, public API, after `summon()`) | `#[arcane(import_intrinsics)]` |
 
-**Default to `#[rite]`.** Only use `#[arcane]` when you need the safe wrapper.
+**Default to `#[rite(import_intrinsics)]`.** Only use `#[arcane(import_intrinsics)]` when you need the safe wrapper.
 
 ```rust
 use archmage::prelude::*;
 
 // ENTRY POINT: receives token from caller
-#[arcane]
+#[arcane(import_intrinsics)]
 pub fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let products = mul_vectors(token, a, b);  // Calls #[rite] helper
+    let products = mul_vectors(token, a, b);  // Calls #[rite] — inlines
     horizontal_sum(token, products)
 }
 
-// INNER HELPER: only called from #[arcane] context
-#[rite]
+// Called from SIMD context — inlines into caller
+#[rite(import_intrinsics)]
 fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     // safe_unaligned_simd takes references - no unsafe needed!
     let va = _mm256_loadu_ps(a);
@@ -65,8 +65,8 @@ fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     _mm256_mul_ps(va, vb)
 }
 
-// INNER HELPER: only called from #[arcane] context
-#[rite]
+// Called from SIMD context — inlines into caller
+#[rite(import_intrinsics)]
 fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
@@ -83,15 +83,17 @@ fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
 
 ```rust
 // Your code:
-#[rite]
+#[rite(import_intrinsics)]
 fn helper(_token: X64V3Token, v: __m256) -> __m256 {
-    _mm256_add_ps(v, v)
+    _mm256_add_ps(v, v)  // In scope from import_intrinsics
 }
 
 // Generated (NO wrapper function):
 #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
 #[inline]
 fn helper(_token: X64V3Token, v: __m256) -> __m256 {
+    use core::arch::x86_64::*;
+    use safe_unaligned_simd::x86_64::*;
     _mm256_add_ps(v, v)
 }
 ```
@@ -157,23 +159,21 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 
 ## Choosing Between #[arcane] and #[rite]
 
-**Default to `#[rite]`** — only use `#[arcane]` when necessary.
+**Default to `#[rite(import_intrinsics)]`** — only use `#[arcane(import_intrinsics)]` when necessary.
 
 | Situation | Use | Why |
 |-----------|-----|-----|
-| Internal helper | `#[rite]` | Inlines into caller — no boundary |
-| Composable building blocks | `#[rite]` | Same target features = one optimization region |
-| Most SIMD functions | `#[rite]` | This should be your default |
-| Entry point (receives token from outside) | `#[arcane]` | Needs safe wrapper |
-| Public API | `#[arcane]` | Callers aren't in target_feature context |
-| Called from tests | `#[arcane]` | Tests aren't in target_feature context |
+| Any SIMD function called from SIMD code | `#[rite(import_intrinsics)]` | Inlines into caller — no boundary |
+| Entry point (receives token from outside) | `#[arcane(import_intrinsics)]` | Needs safe wrapper |
+| Public API | `#[arcane(import_intrinsics)]` | Callers aren't in target_feature context |
+| Called from tests | `#[arcane(import_intrinsics)]` | Tests aren't in target_feature context |
 
-## Composing Helpers
+## Composition
 
-`#[rite]` helpers compose naturally:
+`#[rite(import_intrinsics)]` functions compose naturally:
 
 ```rust
-#[rite]
+#[rite(import_intrinsics)]
 fn complex_op(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f32 {
     let ab = mul_vectors(token, a, b);       // Calls another #[rite]
     let vc = load_vector(token, c);          // Calls another #[rite]
@@ -182,7 +182,7 @@ fn complex_op(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f3
 }
 ```
 
-All helpers inline into the caller — no target-feature boundary, one optimization region.
+All `#[rite]` functions inline into the caller — no target-feature boundary, one optimization region.
 
 ## Cross-Architecture Behavior
 
@@ -190,13 +190,13 @@ Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by
 
 ```rust
 // Default: only exists on x86_64
-#[rite]
+#[rite(import_intrinsics)]
 fn helper(_token: X64V3Token, v: __m256) -> __m256 {
     _mm256_add_ps(v, v)
 }
 
 // With stub: unreachable stub on other architectures
-#[rite(stub)]
+#[rite(stub, import_intrinsics)]
 fn helper_stubbed(_token: X64V3Token, v: __m256) -> __m256 {
     _mm256_add_ps(v, v)
 }
@@ -217,7 +217,7 @@ fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 {
 }
 ```
 
-The recommended pattern: `#[arcane(import_intrinsics, import_magetypes)]` at the entry point, `#[rite(import_magetypes)]` on helpers. Each function imports only what it needs.
+The recommended pattern: `#[arcane(import_intrinsics)]` at the entry point, `#[rite(import_intrinsics)]` for everything else. Add `import_magetypes` when using magetypes types.
 
 See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import_intrinsics) for the full namespace mapping.
 

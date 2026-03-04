@@ -161,7 +161,7 @@ Both macros read the token type from your function signature to decide which `#[
 use archmage::prelude::*;
 use magetypes::simd::f32x8;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 pub fn dot_product(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
     let mut acc = f32x8::zero(token);
     for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
@@ -170,7 +170,7 @@ pub fn dot_product(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
     acc.reduce_add()
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn accumulate(token: X64V3Token, acc: f32x8, a: &[f32], b: &[f32]) -> f32x8 {
     let va = f32x8::from_array(token, a.try_into().unwrap());
     let vb = f32x8::from_array(token, b.try_into().unwrap());

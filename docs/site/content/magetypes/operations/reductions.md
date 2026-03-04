@@ -42,7 +42,7 @@ let bits = mask.bitmask();  // Bit pattern of which lanes are true
 use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn find_max(token: X64V3Token, data: &[f32]) -> f32 {
     let chunks = data.chunks_exact(8);
     let remainder = chunks.remainder();

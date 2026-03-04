@@ -13,9 +13,9 @@ Archmage lets you write x86 SIMD code that compiles on ARM and vice versa. `#[ar
 use archmage::prelude::*;
 
 // #[arcane] wraps output in #[cfg(target_arch = "x86_64")] — you don't need to
-#[arcane]
+#[arcane(import_intrinsics)]
 fn avx2_kernel(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = _mm256_loadu_ps(data);
+    let v = _mm256_loadu_ps(data);  // In scope from import_intrinsics
     // ...
 }
 ```
@@ -62,10 +62,10 @@ Wait — that won't compile on ARM because `process_avx2` doesn't exist. Two opt
 ### Option A: Use `stub`
 
 ```rust
-#[arcane(stub)]
+#[arcane(stub, import_intrinsics)]
 fn process_avx2(token: X64V3Token, data: &mut [f32]) { /* ... */ }
 
-#[arcane(stub)]
+#[arcane(stub, import_intrinsics)]
 fn process_neon(token: NeonToken, data: &mut [f32]) { /* ... */ }
 
 // Both referenced by name — stubs make this compile everywhere
@@ -83,10 +83,10 @@ pub fn process(data: &mut [f32]) {
 ### Option B: Guard the call site
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_avx2(token: X64V3Token, data: &mut [f32]) { /* ... */ }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_neon(token: NeonToken, data: &mut [f32]) { /* ... */ }
 
 pub fn process(data: &mut [f32]) {
@@ -114,7 +114,7 @@ pub fn process(data: &mut [f32]) {
 
 ## `#[rite]` Also Supports `stub`
 
-`#[rite(stub)]` works the same way for inner helpers:
+`#[rite(stub)]` works the same way for `#[rite]` functions:
 
 ```rust
 #[rite(stub)]

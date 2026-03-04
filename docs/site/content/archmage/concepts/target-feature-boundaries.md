@@ -5,7 +5,7 @@ weight = 2
 
 The biggest performance pitfall with SIMD isn't `summon()` cost (~1.3 ns cached) — it's calling `#[arcane]` functions from inside hot loops. Each call crosses a `#[target_feature]` boundary that LLVM can't optimize across: 4x slower in benchmarks. Token hoisting alone doesn't fix this — even with the token pre-summoned, each `#[arcane]` call still hits the boundary.
 
-The fix: enter `#[arcane]` once, put your loop inside it, and use `#[rite]` for helpers.
+The fix: enter `#[arcane(import_intrinsics)]` once, put your loop inside it, and use `#[rite(import_intrinsics)]` for helpers.
 
 {% mermaid() %}
 flowchart TD
@@ -35,7 +35,7 @@ fn find_closest(points: &[[f32; 8]], query: &[f32; 8]) -> usize {
 }
 
 // Entry point: #[arcane] — one boundary crossing
-#[arcane]
+#[arcane(import_intrinsics)]
 fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -> usize {
     let mut best_idx = 0;
     let mut best_dist = f32::MAX;
@@ -50,8 +50,8 @@ fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -
     best_idx
 }
 
-// Inner helper: #[rite] — inlines into caller, no boundary
-#[rite]
+// Called from SIMD context: #[rite] — inlines into caller, no boundary
+#[rite(import_intrinsics)]
 fn distance_simd(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
@@ -81,7 +81,7 @@ fn distance_simd(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 This is not archmage overhead. A bare `#[target_feature]` function without archmage has the same cost (verified in `benches/asm_inspection.rs` — pattern 7). The boundary is inherent to how LLVM handles `#[target_feature]`.
 
-The fix is `#[rite]`: it adds `#[target_feature]` + `#[inline]` directly, so LLVM can inline it into any caller with matching features. Everything inside one `#[arcane]` entry point shares the same LLVM target — `#[rite]` helpers inline freely.
+The fix is `#[rite(import_intrinsics)]`: it adds `#[target_feature]` + `#[inline]` directly, so LLVM can inline it into any caller with matching features. Everything inside one `#[arcane]` entry point shares the same LLVM target — `#[rite]` functions inline freely.
 
 ## With `-Ctarget-cpu=native`
 

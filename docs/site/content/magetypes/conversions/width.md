@@ -84,7 +84,7 @@ use magetypes::simd::{
     backends::I16x8Backend,
 };
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn brighten<T: I16x8Backend>(token: T, pixels: &[u8; 16], amount: i16) -> [u8; 16] {
     let v = i16x8::<T>::from_array(token, [
         pixels[0] as i16, pixels[1] as i16, pixels[2] as i16, pixels[3] as i16,

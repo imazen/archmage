@@ -57,17 +57,17 @@ These aliases exist so AI tools can infer behavior from the name. **Prefer the t
 
 `#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This wrapper is how you cross into SIMD code without writing `unsafe` yourself — but it also creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary.
 
-**`#[rite]` should be the default.** Use `#[arcane]` only at the entry point, and `#[rite]` for everything called from within SIMD code. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
+**`#[rite(import_intrinsics)]` should be the default.** Use `#[arcane(import_intrinsics)]` only at the entry point, and `#[rite(import_intrinsics)]` for everything called from within SIMD code. `import_intrinsics` auto-imports `core::arch::{arch}::*` + `safe_unaligned_simd::{arch}::*` into the function body. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
 
 ### CRITICAL: Target-Feature Boundaries (4x Performance Impact)
 
-**Enter `#[arcane]` once at the top, use `#[rite]` for everything inside.**
+**Enter `#[arcane(import_intrinsics)]` once at the top, use `#[rite(import_intrinsics)]` for everything inside.**
 
 LLVM cannot inline across mismatched `#[target_feature]` attributes. Each `#[arcane]` call from non-SIMD code creates an optimization boundary — LLVM can't hoist loads, sink stores, or vectorize across it. This costs 4-6x depending on workload (see `benches/asm_inspection.rs` and `docs/PERFORMANCE.md`). Token hoisting doesn't help — even with the token pre-summoned, calling `#[arcane]` per iteration still hits the boundary.
 
 ```rust
 // WRONG: #[arcane] boundary every iteration (4x slower)
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dist_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 { ... }
 
 fn process_all(points: &[[f32; 8]]) {
@@ -81,7 +81,7 @@ fn process_all(points: &[[f32; 8]]) {
 ```
 
 ```rust
-// RIGHT: one #[arcane] entry, #[rite] helpers inline freely
+// RIGHT: one #[arcane] entry, #[rite] functions inline freely
 fn process_all(points: &[[f32; 8]]) {
     if let Some(token) = X64V3Token::summon() {
         process_all_simd(token, points);
@@ -90,7 +90,7 @@ fn process_all(points: &[[f32; 8]]) {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     for i in 0..points.len() {
         for j in i+1..points.len() {
@@ -99,14 +99,14 @@ fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     }
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn dist_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     // Inlines into process_all_simd — same LLVM optimization region
     ...
 }
 ```
 
-**The rule:** `#[arcane]` at the entry point, `#[rite]` for everything called from SIMD code.
+**The rule:** `#[arcane(import_intrinsics)]` at the entry point, `#[rite(import_intrinsics)]` for everything called from SIMD code.
 
 ### CRITICAL: Generic Bounds Are Optimization Barriers
 
@@ -114,12 +114,12 @@ fn dist_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 ```rust
 // BAD: Generic bound prevents inlining into caller
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_generic<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
     inner_work(token, data)  // Can't inline — T could be any type
 }
 
-#[arcane]
+#[rite(import_intrinsics)]
 fn inner_work<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
     // Even with #[inline(always)], this may not inline through generic
     ...
@@ -128,12 +128,12 @@ fn inner_work<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
 
 ```rust
 // GOOD: Concrete token enables full inlining
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_concrete(token: X64V3Token, data: &[f32]) -> f32 {
     inner_work(token, data)  // Fully inlinable — concrete type
 }
 
-#[arcane]
+#[rite(import_intrinsics)]
 fn inner_work(token: X64V3Token, data: &[f32]) -> f32 {
     // Inlines into caller, single #[target_feature] region
     ...
@@ -151,15 +151,15 @@ fn inner_work(token: X64V3Token, data: &[f32]) -> f32 {
 **Downcasting is free:** Pass a higher token to a function expecting a lower one. Nested `#[arcane]` with downcasting preserves the inlining chain:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v4_kernel(token: X64V4Token, data: &mut [f32]) {
     // Can call V3 functions — V4 is a superset
-    let partial = v3_helper(token, &data[..8]);  // Downcasts, still inlines
+    let partial = v3_impl(token, &data[..8]);  // Downcasts, still inlines
     // ... AVX-512 specific work ...
 }
 
-#[arcane]
-fn v3_helper(token: X64V3Token, chunk: &[f32]) -> f32 {
+#[rite(import_intrinsics)]
+fn v3_impl(token: X64V3Token, chunk: &[f32]) -> f32 {
     // AVX2+FMA work — inlines into v4_kernel
     ...
 }
@@ -234,7 +234,7 @@ This breaks runtime dispatch — types aren't available even if CPU supports AVX
 
 ```rust
 impl MyType {
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn compute(&self, token: X64V3Token) -> f32 {
         self.data.iter().sum()  // self/Self just work!
     }
@@ -336,7 +336,7 @@ Always-available fallback. Used for:
 ```rust
 use magetypes::simd::f32x8;  // Always 8 lanes, polyfilled on ARM/WASM
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::load(token, data);
     v.reduce_add()
@@ -395,26 +395,26 @@ The M1 is the notable chip that gets V2 but not V3 (lacks i8mm/bf16). Budget 202
 
 ## CRITICAL: Documentation Examples
 
-### Prefer `#[rite]` for internal code, `#[arcane]` only at entry points
+### `#[rite(import_intrinsics)]` is the default, `#[arcane(import_intrinsics)]` only at entry points
 
-**`#[rite]` should be the default.** It adds `#[target_feature]` + `#[inline]` — LLVM inlines it into any caller with matching features.
+**`#[rite(import_intrinsics)]` should be the default.** It adds `#[target_feature]` + `#[inline]` + auto-imports intrinsics — LLVM inlines it into any caller with matching features.
 
-Use `#[arcane]` only when the function is called from non-SIMD code:
+Use `#[arcane(import_intrinsics)]` only when the function is called from non-SIMD code:
 - After `summon()` in a public API
 - From tests
 - From non-`#[target_feature]` contexts
 
 ```rust
 // Entry point (called after summon) - use #[arcane]
-#[arcane]
+#[arcane(import_intrinsics)]
 pub fn process(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
-        process_chunk(token, chunk);  // Calls #[rite]
+        process_chunk(token, chunk);  // Calls #[rite] — inlines
     }
 }
 
-// Internal helper (called from #[arcane] or #[rite]) - use #[rite]
-#[rite]
+// Called from SIMD code - use #[rite]
+#[rite(import_intrinsics)]
 fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
     // ...
 }
@@ -436,25 +436,28 @@ fn process(token: X64V3Token, data: &[f32]) -> f32 {
     unsafe { process_inner(data) }
 }
 
-// CORRECT - use #[arcane] (generates #[target_feature] + stubs on other arches)
-#[arcane]
+// CORRECT - use #[arcane] (generates #[target_feature] + auto-imports intrinsics)
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32]) -> f32 {
     // This function body is compiled with #[target_feature(enable = "avx2,fma")]
-    // Intrinsics and operators inline properly into single SIMD instructions
+    // Intrinsics auto-imported and inline properly into single SIMD instructions
     ...
 }
 ```
 
-### Use `safe_unaligned_simd` inside `#[arcane]` functions
+### `import_intrinsics` handles safe memory ops
 
-**Use `safe_unaligned_simd` directly inside `#[arcane]` functions.** The calls are safe because the target features match.
+**`import_intrinsics` brings both `core::arch` and `safe_unaligned_simd` into scope.** Memory ops like `_mm256_loadu_ps` resolve to the safe reference-based version automatically.
 
 ```rust
 // WRONG - raw pointers need unsafe
 let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
 
-// CORRECT - use safe_unaligned_simd (safe inside #[arcane])
-let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+// CORRECT - import_intrinsics makes safe_unaligned_simd available
+#[arcane(import_intrinsics)]
+fn example(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
+    _mm256_loadu_ps(data)  // Takes &[f32; 8], not *const f32
+}
 ```
 
 ## CRITICAL: Doc Example Testing (CI-Enforced)
@@ -657,9 +660,9 @@ This means we **don't need to wrap** arithmetic, shuffle, compare, bitwise, or o
 
 ```rust
 // You write:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = _mm256_setzero_ps();  // Safe!
+    let v = _mm256_setzero_ps();  // Safe! In scope from import_intrinsics.
     // ...
 }
 
@@ -668,6 +671,8 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 #[doc(hidden)]
 #[target_feature(enable = "avx2,fma,...")]
 unsafe fn __arcane_my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    use core::arch::x86_64::*;
+    use safe_unaligned_simd::x86_64::*;
     let v = _mm256_setzero_ps();
     // ...
 }
@@ -699,9 +704,9 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 ```rust
 use archmage::{X64V3Token, SimdToken, arcane};
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &mut [f32; 8]) {
-    // AVX2 + FMA intrinsics safe here
+    // AVX2 + FMA intrinsics in scope from import_intrinsics
 }
 
 if let Some(token) = X64V3Token::summon() {
@@ -915,7 +920,7 @@ pub fn process(data: &[f32; 8]) -> f32 {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_simd(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let a = f32x8::load(token, data);
     let b = f32x8::splat(token, 2.0);
@@ -933,13 +938,13 @@ Use `safe_unaligned_simd` directly inside `#[arcane]` functions:
 ```rust
 use archmage::{X64V3Token, SimdToken, arcane};
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    // safe_unaligned_simd calls are SAFE inside #[arcane]
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+    // import_intrinsics brings core::arch + safe_unaligned_simd into scope
+    let v = _mm256_loadu_ps(data);  // safe_unaligned_simd version (takes reference)
     let squared = _mm256_mul_ps(v, v);
     let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, squared);
+    _mm256_storeu_ps(&mut out, squared);  // safe_unaligned_simd version
     out
 }
 ```

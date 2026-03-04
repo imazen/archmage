@@ -14,7 +14,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_large<T: F32x8Backend>(token: T, data: &mut [f32]) {
     let (chunks, remainder) = data.split_at_mut(data.len() - data.len() % 8);
 
@@ -46,7 +46,7 @@ use magetypes::simd::{
     backends::F32x8Backend,
 };
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_array<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
     let chunks = data.chunks_exact(8);
     let remainder = chunks.remainder();

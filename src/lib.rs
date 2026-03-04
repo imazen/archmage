@@ -10,20 +10,18 @@
 //!
 //! ```rust,ignore
 //! use archmage::{X64V3Token, SimdToken, arcane};
-//! use std::arch::x86_64::*;
 //!
-//! #[arcane]
+//! #[arcane(import_intrinsics)]
 //! fn multiply_add(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-//!     // safe_unaligned_simd calls are SAFE inside #[arcane] - no unsafe needed!
-//!     let va = safe_unaligned_simd::x86_64::_mm256_loadu_ps(a);
-//!     let vb = safe_unaligned_simd::x86_64::_mm256_loadu_ps(b);
+//!     // import_intrinsics brings core::arch + safe_unaligned_simd into scope
+//!     let va = _mm256_loadu_ps(a);  // safe_unaligned_simd version (takes reference)
+//!     let vb = _mm256_loadu_ps(b);
 //!
-//!     // Value-based intrinsics are also SAFE inside #[arcane]!
-//!     // FMA is available because X64V3Token = X64V3Token = AVX2+FMA
+//!     // Value-based intrinsics are SAFE inside #[arcane]! (Rust 1.85+)
 //!     let result = _mm256_fmadd_ps(va, vb, va);
 //!
 //!     let mut out = [0.0f32; 8];
-//!     safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, result);
+//!     _mm256_storeu_ps(&mut out, result);
 //!     out
 //! }
 //!
@@ -36,27 +34,23 @@
 //! }
 //! ```
 //!
-//! ## The Prelude
+//! ## Auto-Imports
 //!
-//! `use archmage::prelude::*` gives you tokens, traits, macros, platform
-//! intrinsics, and SIMD types in one import. Value-based intrinsics like
-//! `_mm256_add_ps` are already safe inside `#[arcane]` since Rust 1.85.
-//!
-//! For safe memory operations (load/store), import them explicitly from
-//! `safe_unaligned_simd` — the names overlap with `core::arch` and
-//! can't resolve through a glob re-export:
+//! `import_intrinsics` is the recommended default — it injects `core::arch::{arch}::*`
+//! and `safe_unaligned_simd::{arch}::*` into the function body, so you don't need
+//! manual `use` statements for intrinsics:
 //!
 //! ```rust,ignore
-//! use archmage::prelude::*;
-//! use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
+//! use archmage::{X64V3Token, SimdToken, arcane};
 //!
-//! #[arcane]
+//! #[arcane(import_intrinsics)]
 //! fn load(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
 //!     _mm256_loadu_ps(data)  // Safe! Takes &[f32; 8], not *const f32.
 //! }
 //! ```
 //!
-//! See the [`prelude`] module for full documentation of what's included.
+//! The prelude (`use archmage::prelude::*`) is still available for module-level imports.
+//! See the [`prelude`] module for full documentation.
 //!
 //! ## How It Works
 //!
@@ -81,12 +75,13 @@
 //! `#[arcane(_self = Type)]` (nested mode). On wrong architectures, functions
 //! are cfg'd out by default; use `#[arcane(stub)]` for unreachable stubs.
 //!
-//! `#[rite]` applies `#[target_feature]` + `#[inline]`
+//! `#[rite(import_intrinsics)]` applies `#[target_feature]` + `#[inline]`
 //! directly to the function, with no wrapper and no boundary, but can only be
 //! called from code that already has matching features.
 //!
-//! **`#[rite]` should be your default.** Use `#[arcane]` only at entry points
-//! (the first call from non-SIMD code), and `#[rite]` for everything called from
+//! **`#[rite(import_intrinsics)]` should be your default.** Use
+//! `#[arcane(import_intrinsics)]` only at entry points (the first call from
+//! non-SIMD code), and `#[rite(import_intrinsics)]` for everything called from
 //! within SIMD code. Passing the same token type through your call hierarchy keeps
 //! every function compiled with matching features, so LLVM inlines freely.
 //!

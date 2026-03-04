@@ -40,10 +40,9 @@ This is straightforward and safe. The compiler may auto-vectorize it, but don't 
 If you need hardware gather (`vgatherdps`), use raw intrinsics inside `#[arcane]`. This is x86-specific and doesn't fit the generic backend pattern — use it only when targeting AVX2 directly:
 
 ```rust
-use std::arch::x86_64::*;
 use archmage::{X64V3Token, arcane};
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn gather_example(token: X64V3Token, data: &[f32], indices: &[i32; 8]) -> [f32; 8] {
     let idx = _mm256_loadu_si256(indices.as_ptr() as *const __m256i);
     let gathered = unsafe {

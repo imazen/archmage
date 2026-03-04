@@ -36,7 +36,7 @@ Since Rust 1.85, the function itself isn't `unsafe`. But **calling** it from a c
 
 ```rust
 // You write:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 { /* ... */ }
 
 // Macro generates:
@@ -54,7 +54,7 @@ The `unsafe` call is where we cross from "no target features" to "avx2+fma" — 
 
 ## LLVM Optimization and Feature Boundaries
 
-**Archmage is never slower than equivalent unsafe code.** When you use the right patterns (`#[rite]` helpers called from `#[arcane]`), the generated assembly is identical to hand-written `#[target_feature]` + `unsafe` code.
+**Archmage is never slower than equivalent unsafe code.** When you use the right patterns (`#[rite]` functions called from `#[arcane]`), the generated assembly is identical to hand-written `#[target_feature]` + `unsafe` code.
 
 Here's why: **LLVM's optimization passes respect `#[target_feature]` boundaries.**
 
@@ -67,13 +67,13 @@ When caller and callee have the same target features, LLVM can:
 - Combine operations across the call boundary
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
     inner(token, data) * 2.0  // Inlines perfectly!
 }
 
-#[arcane]
-fn inner(token: X64V3Token, data: &[f32; 8]) -> f32 {
+#[rite(import_intrinsics)]
+fn inner(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_loadu_ps(data);
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
@@ -90,14 +90,14 @@ Both functions have `#[target_feature(enable = "avx2,fma,...")]`. LLVM sees one 
 When features differ, LLVM must be conservative:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v4_caller(token: X64V4Token, data: &[f32; 8]) -> f32 {
     // token: X64V4Token → avx512f,avx512bw,...
-    v3_helper(token, data)  // Different features!
+    v3_impl(token, data)  // Different features!
 }
 
-#[arcane]
-fn v3_helper(token: X64V3Token, data: &[f32; 8]) -> f32 {
+#[arcane(import_intrinsics)]
+fn v3_impl(token: X64V3Token, data: &[f32; 8]) -> f32 {
     // token: X64V3Token → avx2,fma,...
     // Different target_feature set = optimization boundary
 }
@@ -110,7 +110,7 @@ This still works—V4 is a superset of V3—but LLVM can't fully inline across t
 Generics with archmage trait bounds create the same problem:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn generic_impl<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
     // LLVM doesn't know what T's features are at compile time
     // Must generate conservative code that works for any HasX64V2
@@ -148,14 +148,14 @@ fn concrete_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
 Higher tokens can be used where lower tokens are expected:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v4_kernel(token: X64V4Token, data: &[f32; 8]) -> f32 {
     // V4 → V3 is free: just passing token, same LLVM features (superset)
     v3_sum(token, data)  // X64V3Token accepts X64V4Token
 }
 
-#[arcane]
-fn v3_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
+#[rite(import_intrinsics)]
+fn v3_sum(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     // ...
 }
 ```
@@ -200,19 +200,19 @@ fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
 fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 { ... }
 ```
 
-Since Rust 1.85+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` helpers without `unsafe`:
+Since Rust 1.85+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` functions without `unsafe`:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn entry(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let prod = mul_vectors(token, a, b);  // Calls #[rite], no unsafe!
     horizontal_sum(token, prod)
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 { ... }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 { ... }
 ```
 
@@ -296,7 +296,7 @@ if let Some(token) = X64V3Token::summon() {
     }
 }
 
-// BEST: loop inside #[arcane], use #[rite] helpers
+// BEST: loop inside #[arcane], use #[rite] for everything inside
 if let Some(token) = X64V3Token::summon() {
     process_all(token, data);  // One boundary crossing
 }
@@ -304,7 +304,7 @@ if let Some(token) = X64V3Token::summon() {
 
 **The real cost isn't `summon()`** — it's the `#[target_feature]` boundary. `summon()` is a cached atomic load (~1.3 ns). But each `#[arcane]` call transitions between LLVM optimization regions: the caller has baseline features, the callee has AVX2+FMA. LLVM can't optimize across that boundary — no inlining, no constant propagation, no instruction combining.
 
-Put the loop *inside* `#[arcane]` and use `#[rite]` for helpers. Everything inside shares the same target features, so LLVM treats it as one optimization region.
+Put the loop *inside* `#[arcane]` and use `#[rite]` for everything called from SIMD code. Everything inside shares the same target features, so LLVM treats it as one optimization region.
 
 | Operation | Time |
 |-----------|------|

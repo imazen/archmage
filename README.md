@@ -26,7 +26,7 @@ magetypes = "0.8"
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
@@ -43,31 +43,31 @@ fn main() {
 }
 ```
 
-`summon()` checks CPUID. `#[arcane]` enables `#[target_feature]`, making intrinsics safe (Rust 1.85+). The prelude re-exports `safe_unaligned_simd` functions directly — `_mm256_loadu_ps` takes `&[f32; 8]`, not a raw pointer. Compile with `-C target-cpu=haswell` to elide the runtime check.
+`summon()` checks CPUID. `#[arcane(import_intrinsics)]` enables `#[target_feature]` and auto-imports architecture intrinsics + `safe_unaligned_simd` memory operations, making intrinsics safe (Rust 1.85+). `_mm256_loadu_ps` takes `&[f32; 8]`, not a raw pointer. Compile with `-C target-cpu=haswell` to elide the runtime check.
 
-## Inner helpers with `#[rite]` <sub>(alias: `#[token_target_features]`)</sub>
+## SIMD functions with `#[rite]` <sub>(alias: `#[token_target_features]`)</sub>
 
-**`#[rite]` should be your default.** Use `#[arcane]` only at entry points.
+**`#[rite(import_intrinsics)]` should be your default.** Use `#[arcane(import_intrinsics)]` only at entry points.
 
 ```rust
 use archmage::prelude::*;
 
-// Entry point: use #[arcane]
-#[arcane]
+// Entry point: use #[arcane] — safe wrapper for non-SIMD callers
+#[arcane(import_intrinsics)]
 fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let products = mul_vectors(token, a, b);  // Calls #[rite] helper
+    let products = mul_vectors(token, a, b);
     horizontal_sum(token, products)
 }
 
-// Inner helper: use #[rite] (inlines into #[arcane] — features match)
-#[rite]
+// Called from SIMD code: use #[rite] — inlines into caller, no boundary
+#[rite(import_intrinsics)]
 fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     _mm256_mul_ps(va, vb)
 }
 
-#[rite]
+#[rite(import_intrinsics)]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
@@ -81,7 +81,7 @@ Both macros read the token type from your function signature to decide which `#[
 
 `#[arcane]` generates a sibling `#[target_feature]` function at the same scope, plus a safe wrapper. Since both functions live in the same scope, `self` and `Self` work naturally in methods — no special handling needed. The wrapper is how you cross into SIMD code without writing `unsafe` yourself, but it creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary. Since Rust 1.85+, calling `#[target_feature]` functions from matching contexts is safe — no `unsafe` needed between `#[arcane]` and `#[rite]` functions.
 
-**`#[rite]` should be your default.** Use `#[arcane]` only at the entry point (the first call from non-SIMD code), and `#[rite]` for everything inside. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
+**`#[rite(import_intrinsics)]` should be your default.** Use `#[arcane(import_intrinsics)]` only at the entry point (the first call from non-SIMD code), and `#[rite(import_intrinsics)]` for everything inside. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
 
 For trait impls, use `#[arcane(_self = Type)]` which switches to a nested inner-function approach (sibling would add methods not in the trait definition).
 
@@ -97,7 +97,7 @@ Processing 1000 8-float vector additions ([full benchmark details](docs/PERFORMA
 
 The 4x penalty comes from LLVM's `#[target_feature]` optimization boundary, not from archmage. Bare `#[target_feature]` has the same cost. With real workloads (DCT-8), the boundary costs up to 6.2x.
 
-Use `#[rite]` for helpers called from SIMD code. When the token type matches, `#[rite]` emits the same `#[target_feature]` as the caller, so LLVM inlines freely — no boundary. The token flows through your call tree, keeping features consistent everywhere it goes.
+Use `#[rite(import_intrinsics)]` for any SIMD function called from SIMD code. When the token type matches, `#[rite]` emits the same `#[target_feature]` as the caller, so LLVM inlines freely — no boundary. The token flows through your call tree, keeping features consistent everywhere it goes.
 
 ## SIMD types with `magetypes`
 

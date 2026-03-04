@@ -36,7 +36,7 @@ With `avx512` feature: `HasX64V4`
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn add(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);

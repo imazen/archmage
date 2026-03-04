@@ -65,7 +65,7 @@ use magetypes::simd::{
     backends::U8x16Backend,
 };
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn threshold(token: X64V3Token, pixels: &mut [u8; 16], cutoff: u8) {
     let v = u8x16::<X64V3Token>::from_array(token, *pixels);
     let threshold = u8x16::<X64V3Token>::splat(token, cutoff);

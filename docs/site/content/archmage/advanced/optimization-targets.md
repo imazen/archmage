@@ -119,17 +119,17 @@ pub fn process(data: &mut [f32]) {
     incant!(process(data), [v3, neon, wasm128])
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_v3(token: X64V3Token, data: &mut [f32]) {
     // AVX2 + FMA implementation
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_neon(token: NeonToken, data: &mut [f32]) {
     // NEON implementation
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_wasm128(token: Wasm128Token, data: &mut [f32]) {
     // WASM SIMD128 implementation
 }

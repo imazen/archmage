@@ -108,7 +108,7 @@ let abs = v.abs();  // |v| for each lane
 use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::<X64V3Token>::from_array(token, *a);
     let vb = f32x8::<X64V3Token>::from_array(token, *b);
@@ -122,7 +122,7 @@ fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 use archmage::{X64V3Token, SimdToken, arcane};
 use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn normalize(token: X64V3Token, v: &mut [f32; 8]) {
     let vec = f32x8::<X64V3Token>::from_array(token, *v);
     let len_sq = (vec * vec).reduce_add();

@@ -137,7 +137,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn gaussian<T: F32x8Convert>(token: T, x: &[f32; 8], sigma: f32) -> [f32; 8] {
     let v = f32x8::<T>::from_array(token, *x);
     let sigma_v = f32x8::<T>::splat(token, sigma);
@@ -162,7 +162,7 @@ use magetypes::simd::{
     backends::F32x8Convert,
 };
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn softmax<T: F32x8Convert>(token: T, logits: &[f32; 8]) -> [f32; 8] {
     let v = f32x8::<T>::from_array(token, *logits);
 

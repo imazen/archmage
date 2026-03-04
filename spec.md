@@ -178,9 +178,9 @@ Passing the same token type through a call hierarchy means every function gets t
 
 ```rust
 // Input:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = _mm256_setzero_ps();
+    let v = _mm256_setzero_ps();  // In scope from import_intrinsics
     // ...
 }
 

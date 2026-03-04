@@ -5,9 +5,9 @@ weight = 3
 
 <sub>(alias: `#[token_target_features_boundary]`)</sub>
 
-`#[arcane]` creates a safe wrapper around SIMD code. Use it at **entry points**—functions called from non-SIMD code (after `summon()`, from tests, public APIs).
+`#[arcane(import_intrinsics)]` creates a safe wrapper around SIMD code and auto-imports architecture intrinsics. Use it at **entry points**—functions called from non-SIMD code (after `summon()`, from tests, public APIs).
 
-For internal helpers called from other SIMD functions, use [`#[rite]`](@/archmage/concepts/rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
+For internal helpers called from other SIMD functions, use [`#[rite(import_intrinsics)]`](@/archmage/concepts/rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
 
 > **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `safe_unaligned_simd` for those.
 
@@ -47,7 +47,7 @@ flowchart TD
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn add_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     // safe_unaligned_simd takes references - fully safe inside #[arcane]!
     let va = _mm256_loadu_ps(a);
@@ -69,9 +69,9 @@ fn add_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 
 ```rust
 // Your code:
-#[arcane]
+#[arcane(import_intrinsics)]
 fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
-    _mm256_add_ps(a, b)
+    _mm256_add_ps(a, b)  // In scope from import_intrinsics
 }
 
 // Generated (x86_64 only — cfg'd out on other architectures):
@@ -79,6 +79,8 @@ fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 #[doc(hidden)]
 #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
 unsafe fn __arcane_add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
+    use core::arch::x86_64::*;
+    use safe_unaligned_simd::x86_64::*;
     _mm256_add_ps(a, b)  // Safe inside #[target_feature]!
 }
 
@@ -150,15 +152,15 @@ Functions with the same token type inline into each other:
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let sum = inner(token, data);  // Inlines!
     sum * 2.0
 }
 
-#[arcane]
+#[rite(import_intrinsics)]
 fn inner(_token: X64V3Token, data: &[f32; 8]) -> f32 {
-    // Both functions share the same #[target_feature] region
+    // Inlines into outer — same #[target_feature] region
     let v = _mm256_loadu_ps(data);
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
@@ -173,13 +175,13 @@ fn inner(_token: X64V3Token, data: &[f32; 8]) -> f32 {
 Higher tokens can call functions expecting lower tokens:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn v4_kernel(token: X64V4Token, data: &[f32; 8]) -> f32 {
     // V4 ⊃ V3, so this works and inlines properly
     v3_sum(token, data)
 }
 
-#[arcane]
+#[rite(import_intrinsics)]
 fn v3_sum(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_loadu_ps(data);
     let sum = _mm256_hadd_ps(v, v);
@@ -198,11 +200,11 @@ fn v3_sum(_token: X64V3Token, data: &[f32; 8]) -> f32 {
 
 ```rust
 // Default: cfg'd out on non-x86 — doesn't exist
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_avx2(token: X64V3Token, data: &[f32]) -> f32 { ... }
 
 // With stub: unreachable stub exists on non-x86
-#[arcane(stub)]
+#[arcane(stub, import_intrinsics)]
 fn process_avx2_stubbed(token: X64V3Token, data: &[f32]) -> f32 { ... }
 ```
 
@@ -212,21 +214,21 @@ See [Cross-Platform](@/archmage/concepts/cross-platform.md) for dispatch pattern
 
 | Option | Effect |
 |--------|--------|
-| `#[arcane]` | Sibling expansion, cfg-out on wrong arch |
+| `#[arcane(import_intrinsics)]` | **Recommended default.** Sibling expansion + auto-import intrinsics |
+| `#[arcane(import_intrinsics, import_magetypes)]` | Also auto-import magetypes SIMD types |
+| `#[arcane]` | Sibling expansion, no auto-imports (intrinsics must be in scope) |
 | `#[arcane(stub)]` | Sibling expansion, unreachable stub on wrong arch |
 | `#[arcane(nested)]` | Nested inner function (old behavior) |
 | `#[arcane(_self = Type)]` | Implies nested, replaces `self`→`_self` |
 | `#[arcane(nested, stub)]` | Nested + stub |
 | `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
-| `#[arcane(import_intrinsics)]` | Auto-import `core::arch::{arch}::*` + `safe_unaligned_simd::{arch}::*` |
-| `#[arcane(import_magetypes)]` | Auto-import `magetypes::simd::{ns}::*` + `backends::*` |
 
 ### `stub`
 
 Generate an `unreachable!()` stub on non-matching architectures:
 
 ```rust
-#[arcane(stub)]
+#[arcane(stub, import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32]) -> f32 {
     // Real implementation on x86, unreachable stub on ARM/WASM
     data.iter().sum()
@@ -326,9 +328,9 @@ pub fn process(data: &mut [f32]) {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_simd(token: X64V3Token, data: &mut [f32]) {
-    // SIMD implementation
+    // SIMD implementation — intrinsics in scope from import_intrinsics
 }
 
 fn process_scalar(data: &mut [f32]) {
@@ -340,9 +342,8 @@ fn process_scalar(data: &mut [f32]) {
 
 ```rust
 use archmage::HasX64V2;
-use std::arch::x86_64::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn generic_impl<T: HasX64V2>(token: T, a: __m128, b: __m128) -> __m128 {
     // Works with X64V2Token, X64V3Token, X64V4Token
     // Note: generic bounds create optimization boundaries

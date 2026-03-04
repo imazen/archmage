@@ -120,7 +120,7 @@ fn takes_token(token: X64V3Token) {
 Higher tokens can be used where lower ones are expected:
 
 ```rust
-#[arcane]
+#[arcane(import_intrinsics)]
 fn needs_v3(token: X64V3Token, data: &[f32]) { /* ... */ }
 
 if let Some(v4) = X64V4Token::summon() {

@@ -66,7 +66,7 @@ fn process_data<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
     scaled.reduce_add()
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_avx2(token: X64V3Token, input: &[f32; 8]) -> f32 {
     process_data(token, input)
 }

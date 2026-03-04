@@ -45,9 +45,9 @@ Archmage separates **proof of capability** from **use of capability**:
 ```rust
 use archmage::prelude::*;
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn multiply(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    // Safe! Token proves AVX2+FMA, safe_unaligned_simd takes references
+    // Safe! Token proves AVX2+FMA. Intrinsics in scope from import_intrinsics.
     let a = _mm256_loadu_ps(data);
     let b = _mm256_set1_ps(2.0);
     let c = _mm256_mul_ps(a, b);
@@ -69,11 +69,11 @@ fn main() {
 
 1. **Tokens** are zero-sized proof types. `X64V3Token::summon()` returns `Some(token)` only if the CPU supports AVX2+FMA. See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete token-to-feature mapping.
 
-2. **`#[arcane]`** generates a `#[target_feature]` inner function. Inside, SIMD intrinsics are safe (Rust 1.85+). Descriptive alias: `#[token_target_features_boundary]`.
+2. **`#[arcane(import_intrinsics)]`** generates a `#[target_feature]` function and auto-imports intrinsics. Inside, SIMD intrinsics are safe (Rust 1.85+). Descriptive alias: `#[token_target_features_boundary]`.
 
-3. **`#[rite]`** adds `#[target_feature]` + `#[inline]` directly — no wrapper, no boundary. Descriptive alias: `#[token_target_features]`.
+3. **`#[rite(import_intrinsics)]`** adds `#[target_feature]` + `#[inline]` directly and auto-imports intrinsics — no wrapper, no boundary. Descriptive alias: `#[token_target_features]`.
 
-4. **Dispatch once, loop inside**: Call `summon()` at your API boundary, put loops inside `#[arcane]`, use `#[rite]` for helpers. Each `#[arcane]` call crosses a `#[target_feature]` boundary that LLVM can't optimize across.
+4. **Dispatch once, loop inside**: Call `summon()` at your API boundary, put loops inside `#[arcane(import_intrinsics)]`, use `#[rite(import_intrinsics)]` for everything called from SIMD code. Each `#[arcane]` call crosses a `#[target_feature]` boundary that LLVM can't optimize across.
 
 5. **`#![forbid(unsafe_code)]` compatible**: Combine archmage tokens + `#[arcane]`/`#[rite]` + `safe_unaligned_simd` for memory operations, and your downstream crate needs zero `unsafe`.
 

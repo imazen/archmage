@@ -15,27 +15,27 @@ use archmage::{X64V3Token, arcane};
 struct Vector8([f32; 8]);
 
 impl Vector8 {
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn magnitude(&self, token: X64V3Token) -> f32 {
         // self and Self work naturally!
         let sum: f32 = self.0.iter().map(|x| x * x).sum();
         sum.sqrt()
     }
 
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn scale(&mut self, token: X64V3Token, factor: f32) {
         for v in self.0.iter_mut() {
             *v *= factor;
         }
     }
 
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn into_sum(self, token: X64V3Token) -> f32 {
         self.0.iter().sum()
     }
 
     // Self in return type works too
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn doubled(&self, token: X64V3Token) -> Self {
         let mut data = [0.0f32; 8];
         for i in 0..8 {
@@ -45,7 +45,7 @@ impl Vector8 {
     }
 
     // Self::CONSTANT works
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn with_offset(&self, token: X64V3Token) -> [f32; 8] {
         let mut out = self.0;
         for v in out.iter_mut() {
@@ -97,13 +97,13 @@ trait SimdOps {
 struct Point { x: f32, y: f32 }
 
 impl SimdOps for Point {
-    #[arcane(_self = Point)]
+    #[arcane(_self = Point, import_intrinsics)]
     fn compute(&self, token: X64V3Token) -> f32 {
         // Use _self, not self (nested mode renames self → _self)
         _self.x * _self.x + _self.y * _self.y
     }
 
-    #[arcane(_self = Point)]
+    #[arcane(_self = Point, import_intrinsics)]
     fn transform(&self, token: X64V3Token) -> Self {
         Point {
             x: _self.x * 2.0,
@@ -128,7 +128,7 @@ The name `_self` reminds you that:
 #### `&self` (Shared Reference)
 
 ```rust
-#[arcane(_self = Vector8)]
+#[arcane(_self = Vector8, import_intrinsics)]
 fn dot(&self, token: X64V3Token, other: &Self) -> f32 {
     let a = _mm256_loadu_ps(&_self.0);
     let b = _mm256_loadu_ps(&other.0);
@@ -139,7 +139,7 @@ fn dot(&self, token: X64V3Token, other: &Self) -> f32 {
 #### `&mut self` (Mutable Reference)
 
 ```rust
-#[arcane(_self = Vector8)]
+#[arcane(_self = Vector8, import_intrinsics)]
 fn normalize(&mut self, token: X64V3Token) {
     // _self is &mut Vector8
     _mm256_storeu_ps(&mut _self.0, normalized);
@@ -149,7 +149,7 @@ fn normalize(&mut self, token: X64V3Token) {
 #### `self` (By Value)
 
 ```rust
-#[arcane(_self = Vector8)]
+#[arcane(_self = Vector8, import_intrinsics)]
 fn scaled(self, token: X64V3Token, factor: f32) -> Self {
     // _self is Vector8 (owned)
     let v = _mm256_loadu_ps(&_self.0);
@@ -162,10 +162,10 @@ fn scaled(self, token: X64V3Token, factor: f32) -> Self {
 
 | Context | Approach | `self`/`Self` |
 |---------|----------|---------------|
-| Inherent method (`impl MyType`) | `#[arcane]` (default sibling) | Just works |
-| Trait impl (`impl Trait for Type`) | `#[arcane(_self = Type)]` (nested) | Use `_self` |
-| Explicit nested | `#[arcane(nested)]` | Use `_self` if accessing self |
-| Free function | `#[arcane]` (default sibling) | N/A |
+| Inherent method (`impl MyType`) | `#[arcane(import_intrinsics)]` (default sibling) | Just works |
+| Trait impl (`impl Trait for Type`) | `#[arcane(_self = Type, import_intrinsics)]` (nested) | Use `_self` |
+| Explicit nested | `#[arcane(nested, import_intrinsics)]` | Use `_self` if accessing self |
+| Free function | `#[arcane(import_intrinsics)]` (default sibling) | N/A |
 
 ## Common Patterns
 
@@ -173,7 +173,7 @@ fn scaled(self, token: X64V3Token, factor: f32) -> Self {
 
 ```rust
 impl ImageProcessor {
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn with_brightness(self, token: X64V3Token, amount: f32) -> Self {
         // self/Self work naturally in sibling mode
         let mut result = self;
@@ -191,7 +191,7 @@ let processed = processor
 
 ```rust
 impl Buffer {
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn process_all(&mut self, token: X64V3Token) {
         for chunk in self.data.chunks_exact_mut(8) {
             let arr: &mut [f32; 8] = chunk.try_into().unwrap();

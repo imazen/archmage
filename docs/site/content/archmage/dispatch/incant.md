@@ -53,10 +53,9 @@ Passthrough uses `IntoConcreteToken` to check what the token actually is, withou
 
 ```rust
 use archmage::{incant, arcane};
-use std::arch::x86_64::*;
 
 // Define variants with standard suffixes
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_v3(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_loadu_ps(data);
     let sum = _mm256_hadd_ps(v, v);
@@ -150,9 +149,8 @@ This uses `IntoConcreteToken` to check the token's actual type and dispatch acco
 use archmage::{arcane, incant, X64V3Token, NeonToken, Wasm128Token, SimdToken};
 
 // AVX2 variant — #[arcane] cfg's this out on non-x86
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    use std::arch::x86_64::*;
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     let mul = _mm256_mul_ps(va, vb);
@@ -164,9 +162,8 @@ fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 
 // NEON variant (128-bit, process two halves)
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    use std::arch::aarch64::*;
     let sum1 = {
         let va = vld1q_f32(a.as_ptr());
         let vb = vld1q_f32(b.as_ptr());

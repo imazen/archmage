@@ -28,7 +28,7 @@ fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
 // 2. Concrete #[arcane] wrappers — one per tier
 //    #[arcane] needs a concrete token to know which #[target_feature] to emit.
 //    Generic bounds like F32x8Backend are unknown to it.
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_impl_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
     sum_impl(token, data)  // generic inlines here, gets AVX2+FMA
 }
@@ -61,17 +61,17 @@ fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
     f32x8::<T>::from_array(token, *data).reduce_add()
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_impl_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
     sum_impl(token, data)
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_impl_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
     sum_impl(token, data)  // polyfilled: two f32x4 ops
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn sum_impl_wasm128(token: Wasm128Token, data: &[f32; 8]) -> f32 {
     sum_impl(token, data)  // polyfilled: two f32x4 ops
 }
@@ -94,7 +94,7 @@ use archmage::{arcane, incant, ScalarToken, X64V3Token, NeonToken};
 use magetypes::simd::generic::{f32x8, f32x4};
 
 // x86-64: use f32x8 (256-bit AVX2)
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::<X64V3Token>::from_array(token, *a);
     let vb = f32x8::<X64V3Token>::from_array(token, *b);
@@ -102,7 +102,7 @@ fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 
 // AArch64: use f32x4 (128-bit NEON) — process in two halves
-#[arcane]
+#[arcane(import_intrinsics)]
 fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let sum1 = {
         let va = f32x4::<NeonToken>::from_slice(token, &a[0..4]);
