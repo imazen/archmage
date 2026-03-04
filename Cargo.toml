@@ -26,12 +26,12 @@ include = [
 ]
 
 [features]
-default = ["std", "macros", "safe_unaligned_simd"]
+default = ["std", "macros"]
 std = []
 macros = ["dep:archmage-macros"]
-safe_unaligned_simd = ["dep:safe_unaligned_simd"]
 # AVX-512 token support (Avx512Token, X64V4xToken, X64V4Token, etc.)
-avx512 = []
+# Also enables AVX-512 safe memory ops from safe_unaligned_simd.
+avx512 = ["safe_unaligned_simd/avx512"]
 # Make token disabling work even when compiled with -Ctarget-cpu=native.
 # Without this, the compiler bakes summon() into a no-op and tokens can't be
 # disabled at runtime. With this, compiled_with() returns None and summon()
@@ -43,7 +43,7 @@ testable_dispatch = []
 # Proc-macro crate for #[arcane] attribute
 archmage-macros = { version = "0.8.9", path = "archmage-macros", optional = true }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
-safe_unaligned_simd = { version = "0.2.5", optional = true }
+safe_unaligned_simd = { version = "0.2.5" }
 
 # Dev dependencies that don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
@@ -78,7 +78,7 @@ name = "generic_vs_concrete"
 harness = false
 
 [package.metadata.docs.rs]
-features = ["std", "macros", "safe_unaligned_simd", "avx512"]
+features = ["std", "macros", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]
 # Build docs for multiple targets to show all platform-specific tokens
 targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]

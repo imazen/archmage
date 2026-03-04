@@ -23,13 +23,9 @@ With `avx512` feature: `HasX64V4`
 
 `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`
 
-### Platform Intrinsics
+### Platform Intrinsics + Safe Memory Ops
 
-`core::arch::x86_64::*` on x86-64, `core::arch::aarch64::*` on AArch64, `core::arch::wasm32::*` on WASM -- the standard Rust intrinsics for your platform.
-
-### Memory Operations
-
-`safe_unaligned_simd` functions (with the `safe_unaligned_simd` feature, enabled by default). These take references instead of raw pointers -- `_mm256_loadu_ps` takes `&[f32; 8]`, not `*const f32`.
+All `core::arch` intrinsics for your platform (types, value ops, memory ops), with `safe_unaligned_simd` versions shadowing the pointer-based memory ops. Memory operations take references instead of raw pointers -- `_mm256_loadu_ps` takes `&[f32; 8]`, not `*const f32`.
 
 ## Usage
 

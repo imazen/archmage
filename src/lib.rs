@@ -13,8 +13,8 @@
 //!
 //! #[arcane(import_intrinsics)]
 //! fn multiply_add(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-//!     // import_intrinsics brings core::arch + safe_unaligned_simd into scope
-//!     let va = _mm256_loadu_ps(a);  // safe_unaligned_simd version (takes reference)
+//!     // import_intrinsics brings all intrinsics + safe memory ops into scope
+//!     let va = _mm256_loadu_ps(a);  // Takes &[f32; 8], not *const f32
 //!     let vb = _mm256_loadu_ps(b);
 //!
 //!     // Value-based intrinsics are SAFE inside #[arcane]! (Rust 1.85+)
@@ -36,9 +36,9 @@
 //!
 //! ## Auto-Imports
 //!
-//! `import_intrinsics` is the recommended default — it injects `core::arch::{arch}::*`
-//! and `safe_unaligned_simd::{arch}::*` into the function body, so you don't need
-//! manual `use` statements for intrinsics:
+//! `import_intrinsics` is the recommended default — it injects
+//! `archmage::intrinsics::{arch}::*` into the function body, giving you all
+//! platform types, value intrinsics, and safe memory ops in one import:
 //!
 //! ```rust,ignore
 //! use archmage::{X64V3Token, SimdToken, arcane};
@@ -92,11 +92,11 @@
 //!
 //! Since Rust 1.85, value-based SIMD intrinsics (arithmetic, shuffle, compare,
 //! bitwise) are safe inside `#[target_feature]` functions. Only pointer-based
-//! memory operations remain unsafe — use `safe_unaligned_simd` for those.
+//! memory operations remain unsafe — `import_intrinsics` handles this by
+//! providing safe reference-based memory ops that shadow the pointer-based ones.
 //!
 //! Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage
-//! tokens + `#[arcane]`/`#[rite]` macros + `safe_unaligned_simd` for memory
-//! operations.
+//! tokens + `#[arcane]`/`#[rite]` macros + `import_intrinsics`.
 //!
 //! ## Feature Flags
 //!
@@ -129,8 +129,11 @@ pub mod detect;
 // Core token types and traits
 pub mod tokens;
 
-// Prelude: one import for tokens, traits, macros, core::arch, and safe_unaligned_simd
+// Prelude: one import for tokens, traits, macros, and all intrinsics
 pub mod prelude;
+
+// Combined intrinsics namespace (core::arch + safe memory ops, safe wins)
+pub mod intrinsics;
 
 // Test utilities for exhaustive token permutation testing
 #[cfg(feature = "std")]

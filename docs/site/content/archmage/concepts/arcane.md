@@ -49,7 +49,7 @@ use archmage::prelude::*;
 
 #[arcane(import_intrinsics)]
 fn add_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // safe_unaligned_simd takes references - fully safe inside #[arcane]!
+    // Memory ops take references — fully safe inside #[arcane]!
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     let sum = _mm256_add_ps(va, vb);
@@ -79,8 +79,7 @@ fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 #[doc(hidden)]
 #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
 fn __arcane_add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
-    use core::arch::x86_64::*;
-    use safe_unaligned_simd::x86_64::*;
+    use archmage::intrinsics::x86_64::*;
     _mm256_add_ps(a, b)  // Safe inside #[target_feature]!
 }
 
@@ -113,8 +112,7 @@ impl SimdOps for MyType {
         #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
         #[inline]
         fn __inner(_self: &MyType, token: X64V3Token) -> f32 {
-            use core::arch::x86_64::*;
-            use safe_unaligned_simd::x86_64::*;
+            use archmage::intrinsics::x86_64::*;
             _self.data.iter().sum()
         }
         unsafe { __inner(self, token) }
@@ -306,20 +304,21 @@ fn hot_path(token: X64V3Token, data: &[f32]) -> f32 {
 Auto-imports architecture intrinsics and safe memory operations into the function body:
 
 ```rust
-// No manual `use std::arch::x86_64::*` needed!
+// No manual `use core::arch::x86_64::*` needed!
 #[arcane(import_intrinsics)]
 fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
-    let doubled = _mm256_add_ps(v, v);  // In scope from auto-import
+    let v = _mm256_loadu_ps(data);     // Safe! Takes &[f32; 8]
+    let doubled = _mm256_add_ps(v, v);
     let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, doubled);
+    _mm256_storeu_ps(&mut out, doubled);
     out
 }
 ```
 
 The macro injects:
-- `use core::arch::{arch}::*;` — all value intrinsics for the token's architecture
-- `use safe_unaligned_simd::{arch}::*;` — safe reference-based memory operations
+- `use archmage::intrinsics::{arch}::*;` — types, value intrinsics, and safe memory ops
+
+This single import combines `core::arch` (types and value ops) with `safe_unaligned_simd` (reference-based memory ops). Safe versions shadow unsafe ones automatically.
 
 The architecture is derived from the token type: `X64V3Token` → `x86_64`, `NeonToken` → `aarch64`, `Wasm128Token` → `wasm32`.
 

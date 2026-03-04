@@ -46,21 +46,6 @@ archmage = { version = "0.8", features = ["avx512"] }
 - `Avx512Fp16Token`
 - `HasX64V4` trait
 
-### `safe_unaligned_simd`
-
-Re-exports `safe_unaligned_simd` crate in the prelude.
-
-```toml
-archmage = { version = "0.8", features = ["safe_unaligned_simd"] }
-```
-
-Then use:
-
-```rust
-use archmage::prelude::*;
-// safe_unaligned_simd functions available
-```
-
 ## magetypes Features (exploratory)
 
 [Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases.
@@ -85,7 +70,7 @@ magetypes = { version = "0.8", features = ["avx512"] }
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", features = ["avx512", "safe_unaligned_simd"] }
+archmage = { version = "0.8", features = ["avx512"] }
 magetypes = { version = "0.8", features = ["avx512"] }
 ```
 

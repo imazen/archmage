@@ -57,7 +57,7 @@ These aliases exist so AI tools can infer behavior from the name. **Prefer the t
 
 `#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This wrapper is how you cross into SIMD code without writing `unsafe` yourself — but it also creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary.
 
-**`#[rite(import_intrinsics)]` should be the default.** Use `#[arcane(import_intrinsics)]` only at the entry point, and `#[rite(import_intrinsics)]` for everything called from within SIMD code. `import_intrinsics` auto-imports `core::arch::{arch}::*` + `safe_unaligned_simd::{arch}::*` into the function body. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
+**`#[rite(import_intrinsics)]` should be the default.** Use `#[arcane(import_intrinsics)]` only at the entry point, and `#[rite(import_intrinsics)]` for everything called from within SIMD code. `import_intrinsics` auto-imports `archmage::intrinsics::{arch}::*` — a combined module where `safe_unaligned_simd` memory ops shadow `core::arch` pointer-based ones. No ambiguity, no qualification needed. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
 
 ### CRITICAL: Target-Feature Boundaries (4x Performance Impact)
 
@@ -447,13 +447,13 @@ fn process(token: X64V3Token, data: &[f32]) -> f32 {
 
 ### `import_intrinsics` handles safe memory ops
 
-**`import_intrinsics` brings both `core::arch` and `safe_unaligned_simd` into scope.** Memory ops like `_mm256_loadu_ps` resolve to the safe reference-based version automatically.
+**`import_intrinsics` imports `archmage::intrinsics::{arch}::*`** — a combined module where safe memory ops shadow pointer-based ones. Memory ops like `_mm256_loadu_ps` resolve to the safe reference-based version automatically, with no ambiguity.
 
 ```rust
 // WRONG - raw pointers need unsafe
 let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
 
-// CORRECT - import_intrinsics makes safe_unaligned_simd available
+// CORRECT - import_intrinsics provides safe memory ops automatically
 #[arcane(import_intrinsics)]
 fn example(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
     _mm256_loadu_ps(data)  // Takes &[f32; 8], not *const f32
@@ -676,8 +676,7 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 #[doc(hidden)]
 #[target_feature(enable = "avx2,fma,...")]
 fn __arcane_my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    use core::arch::x86_64::*;
-    use safe_unaligned_simd::x86_64::*;
+    use archmage::intrinsics::x86_64::*;
     let v = _mm256_setzero_ps();
     // ...
 }
@@ -938,18 +937,19 @@ On ARM/WASM, `f32x8` is polyfilled with two `f32x4` operations. Pick the size th
 
 ## Safe Memory Operations
 
-Use `safe_unaligned_simd` directly inside `#[arcane]` functions:
+Safe memory ops are available automatically inside `#[arcane]`/`#[rite]` functions with `import_intrinsics`:
 
 ```rust
 use archmage::{X64V3Token, SimdToken, arcane};
 
 #[arcane(import_intrinsics)]
 fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    // import_intrinsics brings core::arch + safe_unaligned_simd into scope
-    let v = _mm256_loadu_ps(data);  // safe_unaligned_simd version (takes reference)
+    // import_intrinsics brings archmage::intrinsics::{arch}::* into scope
+    // Safe memory ops shadow pointer-based ones automatically
+    let v = _mm256_loadu_ps(data);  // Takes &[f32; 8], not *const f32
     let squared = _mm256_mul_ps(v, v);
     let mut out = [0.0f32; 8];
-    _mm256_storeu_ps(&mut out, squared);  // safe_unaligned_simd version
+    _mm256_storeu_ps(&mut out, squared);  // Takes &mut [f32; 8], not *mut f32
     out
 }
 ```

@@ -204,15 +204,14 @@ mod platform_intrinsic_tests {
 }
 
 // =============================================================================
-// Category 5: Safe memory ops — explicit imports required
+// Category 5: Safe memory ops — no explicit imports needed
 // =============================================================================
 
-#[cfg(all(target_arch = "x86_64", feature = "safe_unaligned_simd"))]
+#[cfg(target_arch = "x86_64")]
 mod safe_memory_tests {
     use archmage::prelude::*;
-    // Memory ops (load/store) overlap between core::arch and safe_unaligned_simd,
-    // so they must be imported explicitly. The prelude gives you everything else.
-    use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
+    // Safe memory ops are included in the prelude via archmage::intrinsics.
+    // No explicit imports needed — safe versions shadow pointer-based ones.
 
     #[arcane]
     fn safe_load(_token: Desktop64, data: &[f32; 8]) -> __m256 {

@@ -9,19 +9,19 @@ Let's write a function that squares 8 floats in parallel using AVX2.
 
 ## The Recommended Way
 
-Use `archmage::prelude::*` which includes `safe_unaligned_simd` for memory operations:
+Use `#[arcane(import_intrinsics)]` which auto-imports all intrinsics with safe memory ops:
 
 ```rust
 use archmage::prelude::*;
 
 #[arcane(import_intrinsics)]
 fn square_f32x8(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    // import_intrinsics brings core::arch + safe_unaligned_simd into scope
-    let v = _mm256_loadu_ps(data);   // safe_unaligned_simd version (takes reference)
+    // import_intrinsics brings types, value ops, and safe memory ops into scope
+    let v = _mm256_loadu_ps(data);   // Takes &[f32; 8], not *const f32
     let squared = _mm256_mul_ps(v, v);
 
     let mut out = [0.0f32; 8];
-    _mm256_storeu_ps(&mut out, squared);  // safe_unaligned_simd version
+    _mm256_storeu_ps(&mut out, squared);  // Takes &mut [f32; 8], not *mut f32
     out
 }
 
@@ -80,21 +80,23 @@ fn square(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // body — intrinsics in scope from import_intrinsics
 }
 
-// Macro generates:
+// Macro generates (sibling mode — the default):
+#[cfg(target_arch = "x86_64")]
+#[doc(hidden)]
+#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
+fn __arcane_square(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    use archmage::intrinsics::x86_64::*;
+    // body — intrinsics are safe here!
+}
+
+#[cfg(target_arch = "x86_64")]
 fn square(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
-    #[inline]
-    fn __inner(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        use core::arch::x86_64::*;
-        use safe_unaligned_simd::x86_64::*;
-        // body — intrinsics are safe here!
-    }
     // SAFETY: token proves CPU support
-    unsafe { __inner(token, data) }
+    unsafe { __arcane_square(token, data) }
 }
 ```
 
-The token parameter proves you checked CPU features. The macro enables those features for the inner function, making intrinsics safe to call.
+The sibling function is `fn` (not `unsafe fn`) — `#![forbid(unsafe_code)]` compatible. The token parameter proves you checked CPU features. The macro enables those features for the sibling, making intrinsics safe to call.
 
 ## Key Points
 
@@ -102,5 +104,5 @@ The token parameter proves you checked CPU features. The macro enables those fea
 2. **`summon()`** does runtime CPU detection
 3. **`#[arcane(import_intrinsics)]`** makes intrinsics safe inside the function and auto-imports them (since Rust 1.85)
 4. **Token is zero-sized** — no runtime overhead passing it around
-5. **`safe_unaligned_simd`** makes load/store safe — takes `&[f32; 8]` instead of `*const f32`
-6. **`#![forbid(unsafe_code)]` compatible** — combine archmage + `safe_unaligned_simd` and your crate needs zero `unsafe`
+5. **Memory ops take references** — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32` (via `safe_unaligned_simd`)
+6. **`#![forbid(unsafe_code)]` compatible** — archmage + `#[arcane]` macros mean your crate needs zero `unsafe`

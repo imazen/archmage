@@ -447,9 +447,7 @@ fn generate_imports(
         let arch_ident = format_ident!("{}", arch);
         imports.extend(quote! {
             #[allow(unused_imports)]
-            use core::arch::#arch_ident::*;
-            #[allow(unused_imports)]
-            use safe_unaligned_simd::#arch_ident::*;
+            use archmage::intrinsics::#arch_ident::*;
         });
         // ScalarToken or unknown arch: import_intrinsics is a no-op
     }

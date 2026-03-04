@@ -1242,6 +1242,203 @@ fn validate_registry() -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
+// Intrinsics Re-export Module Generation
+// ============================================================================
+
+/// A function extracted from safe_unaligned_simd, with its feature gate.
+struct SafeSimdFn {
+    name: String,
+    /// If Some, this function requires `#[cfg(feature = "...")]` on the re-export.
+    cfg_feature: Option<String>,
+}
+
+/// Extract function names from safe_unaligned_simd source for a given architecture.
+///
+/// Returns a sorted, deduplicated list of functions with their feature gates.
+fn extract_safe_simd_function_names(safe_simd_path: &Path, arch: &str) -> Result<Vec<SafeSimdFn>> {
+    let fn_re = Regex::new(r"pub\s+fn\s+(\w+)").expect("invalid fn regex");
+    let macro_fn_re = Regex::new(r"(?m)^\s{4}fn\s+(\w+)\(").expect("invalid macro fn regex");
+    let mut names: BTreeMap<String, Option<String>> = BTreeMap::new();
+
+    // x86 source files and their cargo feature gates (matching safe_unaligned_simd's x86.rs)
+    let x86_file_features: &[(&str, Option<&str>)] = &[
+        ("sse.rs", None),
+        ("sse2.rs", None),
+        ("avx.rs", None),
+        ("avx512f.rs", Some("avx512")),
+        ("avx512bw.rs", Some("avx512")),
+        ("avx512vbmi2.rs", Some("avx512")),
+    ];
+
+    match arch {
+        "x86_64" | "x86" => {
+            let x86_dir = safe_simd_path.join("src/x86");
+            if x86_dir.exists() {
+                for (filename, cfg_feature) in x86_file_features {
+                    let path = x86_dir.join(filename);
+                    if path.exists() {
+                        let content = fs::read_to_string(&path)?;
+                        for cap in fn_re.captures_iter(&content) {
+                            names.insert(cap[1].to_string(), cfg_feature.map(|s| s.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+        "aarch64" => {
+            let aarch64_path = safe_simd_path.join("src/aarch64.rs");
+            if aarch64_path.exists() {
+                let content = fs::read_to_string(&aarch64_path)?;
+                for cap in macro_fn_re.captures_iter(&content) {
+                    let name = &cap[1];
+                    // Filter out helper functions that aren't intrinsic wrappers
+                    if name.starts_with("vld") || name.starts_with("vst") {
+                        names.insert(name.to_string(), None);
+                    }
+                }
+            }
+        }
+        "wasm32" => {
+            let wasm_path = safe_simd_path.join("src/wasm32.rs");
+            if wasm_path.exists() {
+                let content = fs::read_to_string(&wasm_path)?;
+                for cap in fn_re.captures_iter(&content) {
+                    names.insert(cap[1].to_string(), None);
+                }
+            }
+        }
+        _ => bail!("Unknown architecture: {}", arch),
+    }
+
+    Ok(names
+        .into_iter()
+        .map(|(name, cfg_feature)| SafeSimdFn { name, cfg_feature })
+        .collect())
+}
+
+/// Generate the combined intrinsics re-export module for one architecture.
+///
+/// The module glob-imports `core::arch::{arch}::*` (all types + value intrinsics),
+/// then explicitly imports each `safe_unaligned_simd` function. Rust's name
+/// resolution makes explicit imports shadow glob imports, so the safe memory ops
+/// win without ambiguity.
+///
+/// Functions gated behind cargo features (like AVX-512) get their own
+/// `#[cfg(feature = "...")]` block.
+fn generate_intrinsics_module(arch: &str, functions: &[SafeSimdFn]) -> String {
+    use indoc::formatdoc;
+
+    // Group functions by their cfg_feature
+    let mut ungated: Vec<&str> = Vec::new();
+    let mut gated: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+
+    for f in functions {
+        match &f.cfg_feature {
+            None => ungated.push(&f.name),
+            Some(feature) => gated.entry(feature.as_str()).or_default().push(&f.name),
+        }
+    }
+
+    let mut code = formatdoc! {r#"
+        //! Combined `core::arch` + `safe_unaligned_simd` intrinsics for `{arch}`.
+        //!
+        //! **Auto-generated** by `cargo xtask generate` — do not edit manually.
+        //!
+        //! This module glob-imports all of `core::arch::{arch}` (types, value intrinsics,
+        //! and unsafe memory ops), then explicitly re-exports the safe reference-based
+        //! memory operations from `safe_unaligned_simd`. Rust's name resolution rules
+        //! make explicit imports shadow glob imports, so `_mm256_loadu_ps` etc. resolve
+        //! to the safe versions automatically.
+
+        #[allow(unused_imports)]
+        pub use core::arch::{arch}::*;
+
+    "#};
+
+    // Ungated imports
+    if !ungated.is_empty() {
+        let imports = ungated
+            .iter()
+            .map(|n| format!("    {},", n))
+            .collect::<Vec<_>>()
+            .join("\n");
+        code.push_str(&formatdoc! {r#"
+            #[allow(unused_imports)]
+            pub use safe_unaligned_simd::{arch}::{{
+            {imports}
+            }};
+
+        "#});
+    }
+
+    // Feature-gated imports
+    for (feature, names) in &gated {
+        let imports = names
+            .iter()
+            .map(|n| format!("    {},", n))
+            .collect::<Vec<_>>()
+            .join("\n");
+        code.push_str(&formatdoc! {r#"
+            #[cfg(feature = "{feature}")]
+            #[allow(unused_imports)]
+            pub use safe_unaligned_simd::{arch}::{{
+            {imports}
+            }};
+
+        "#});
+    }
+
+    code
+}
+
+/// Generate intrinsics re-export modules for all architectures.
+///
+/// Creates `src/intrinsics/generated/{x86_64,x86,aarch64,wasm32}.rs` files that
+/// combine `core::arch` and `safe_unaligned_simd` into a single namespace where
+/// safe memory ops shadow unsafe pointer-based versions.
+fn generate_intrinsics_reexport_modules() -> Result<()> {
+    println!("=== Generating Intrinsics Re-export Modules ===");
+
+    let safe_simd_path = find_safe_simd_path_simple()?;
+    let gen_dir = PathBuf::from("src/intrinsics/generated");
+    fs::create_dir_all(&gen_dir)?;
+
+    let architectures = [
+        ("x86_64", "x86_64"),
+        ("x86", "x86"), // Same functions, different arch module
+        ("aarch64", "aarch64"),
+        ("wasm32", "wasm32"),
+    ];
+
+    for (arch, source_arch) in &architectures {
+        let functions = extract_safe_simd_function_names(&safe_simd_path, source_arch)?;
+        if functions.is_empty() {
+            println!("  Warning: no functions found for {}", arch);
+            continue;
+        }
+
+        let content = generate_intrinsics_module(arch, &functions);
+        let file_path = gen_dir.join(format!("{}.rs", arch));
+        fs::write(&file_path, &content)?;
+        println!(
+            "  Wrote {} ({} functions, {} bytes)",
+            file_path.display(),
+            functions.len(),
+            content.len()
+        );
+
+        // Format generated file
+        let _ = std::process::Command::new("rustfmt")
+            .arg("--edition")
+            .arg("2024")
+            .arg(&file_path)
+            .status();
+    }
+
+    Ok(())
+}
+
 /// Generate all artifacts: SIMD types, macro registry, and documentation
 fn generate_all() -> Result<()> {
     // Purge all generated directories first to handle renamed/removed files
@@ -1249,6 +1446,7 @@ fn generate_all() -> Result<()> {
     let generated_dirs = [
         "archmage-macros/src/generated",
         "src/tokens/generated",
+        "src/intrinsics/generated",
         "magetypes/src/simd/generated",
         "magetypes/src/simd/generic/generated",
         "docs/generated",
@@ -1261,6 +1459,9 @@ fn generate_all() -> Result<()> {
         }
     }
     println!();
+
+    // Generate intrinsics re-export modules (core::arch + safe_unaligned_simd combined)
+    generate_intrinsics_reexport_modules()?;
 
     // Generate macro registry from token-registry.toml
     println!("=== Generating Macro Registry ===");

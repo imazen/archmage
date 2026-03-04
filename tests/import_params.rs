@@ -24,18 +24,18 @@ mod x86_tests {
     // Basic: #[arcane(import_intrinsics)]
     // =========================================================================
 
-    /// import_intrinsics brings core::arch::x86_64::* and safe_unaligned_simd::x86_64::*
-    /// into scope. Without this, you'd need explicit `use std::arch::x86_64::*;`.
+    /// import_intrinsics brings archmage::intrinsics::x86_64::* into scope,
+    /// which includes core::arch types/value ops + safe memory ops.
     #[arcane(import_intrinsics)]
     fn arcane_intrinsics_basic(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
         // Value intrinsics from core::arch — safe inside #[target_feature]
         let v = _mm256_setzero_ps();
         let sum = _mm256_add_ps(v, v);
-        // safe_unaligned_simd for memory ops — safe reference-based API
-        let loaded = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+        // Memory ops resolve to safe reference-based versions automatically
+        let loaded = _mm256_loadu_ps(data);
         let result = _mm256_add_ps(loaded, sum);
         let mut out = [0.0f32; 8];
-        safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, result);
+        _mm256_storeu_ps(&mut out, result);
         out
     }
 
@@ -101,10 +101,10 @@ mod x86_tests {
 
     #[rite(import_intrinsics)]
     fn rite_intrinsics(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        let loaded = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+        let loaded = _mm256_loadu_ps(data);
         let doubled = _mm256_add_ps(loaded, loaded);
         let mut out = [0.0f32; 8];
-        safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, doubled);
+        _mm256_storeu_ps(&mut out, doubled);
         out
     }
 
@@ -197,17 +197,17 @@ mod x86_tests {
 
         #[arcane(import_intrinsics, import_magetypes)]
         fn fma_then_reduce(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f32 {
-            // Use safe_unaligned_simd for loading raw __m256 values
-            let va = safe_unaligned_simd::x86_64::_mm256_loadu_ps(a);
-            let vb = safe_unaligned_simd::x86_64::_mm256_loadu_ps(b);
-            let vc = safe_unaligned_simd::x86_64::_mm256_loadu_ps(c);
+            // Memory ops take references — safe inside #[arcane]
+            let va = _mm256_loadu_ps(a);
+            let vb = _mm256_loadu_ps(b);
+            let vc = _mm256_loadu_ps(c);
 
             // Raw FMA intrinsic: a * b + c
             let fma_result = _mm256_fmadd_ps(va, vb, vc);
 
             // Store back, then use magetypes for reduction
             let mut tmp = [0.0f32; 8];
-            safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut tmp, fma_result);
+            _mm256_storeu_ps(&mut tmp, fma_result);
             let v = f32x8::load(token, &tmp);
             v.reduce_add()
         }
@@ -281,10 +281,10 @@ mod x86_tests {
     /// the architecture from the trait (HasX64V2 → x86_64).
     #[arcane(import_intrinsics)]
     fn trait_bound_impl(token: impl HasX64V2, data: &[f32; 4]) -> [f32; 4] {
-        let loaded = safe_unaligned_simd::x86_64::_mm_loadu_ps(data);
+        let loaded = _mm_loadu_ps(data);
         let doubled = _mm_add_ps(loaded, loaded);
         let mut out = [0.0f32; 4];
-        safe_unaligned_simd::x86_64::_mm_storeu_ps(&mut out, doubled);
+        _mm_storeu_ps(&mut out, doubled);
         out
     }
 
@@ -303,10 +303,10 @@ mod x86_tests {
 
     #[arcane(import_intrinsics)]
     fn generic_bound_intrinsics<T: HasX64V2>(token: T, data: &[f32; 4]) -> [f32; 4] {
-        let loaded = safe_unaligned_simd::x86_64::_mm_loadu_ps(data);
+        let loaded = _mm_loadu_ps(data);
         let negated = _mm_sub_ps(_mm_setzero_ps(), loaded);
         let mut out = [0.0f32; 4];
-        safe_unaligned_simd::x86_64::_mm_storeu_ps(&mut out, negated);
+        _mm_storeu_ps(&mut out, negated);
         out
     }
 
@@ -325,10 +325,10 @@ mod x86_tests {
 
     #[arcane(import_intrinsics)]
     fn wildcard_token(_: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+        let v = _mm256_loadu_ps(data);
         let doubled = _mm256_add_ps(v, v);
         let mut out = [0.0f32; 8];
-        safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, doubled);
+        _mm256_storeu_ps(&mut out, doubled);
         out
     }
 
@@ -424,10 +424,10 @@ mod x86_tests {
     /// import_intrinsics gives SSE/SSE2/SSE3/etc. intrinsics.
     #[arcane(import_intrinsics)]
     fn v2_intrinsics(token: X64V2Token, data: &[f32; 4]) -> [f32; 4] {
-        let loaded = safe_unaligned_simd::x86_64::_mm_loadu_ps(data);
+        let loaded = _mm_loadu_ps(data);
         let doubled = _mm_add_ps(loaded, loaded);
         let mut out = [0.0f32; 4];
-        safe_unaligned_simd::x86_64::_mm_storeu_ps(&mut out, doubled);
+        _mm_storeu_ps(&mut out, doubled);
         out
     }
 
@@ -452,10 +452,10 @@ mod x86_tests {
         /// (including AVX-512) into scope.
         #[arcane(import_intrinsics)]
         fn v4_intrinsics(token: X64V4Token, data: &[f32; 8]) -> [f32; 8] {
-            let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+            let v = _mm256_loadu_ps(data);
             let doubled = _mm256_add_ps(v, v);
             let mut out = [0.0f32; 8];
-            safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, doubled);
+            _mm256_storeu_ps(&mut out, doubled);
             out
         }
 
@@ -649,10 +649,10 @@ mod arm_tests {
     #[arcane(import_intrinsics)]
     fn neon_intrinsics(token: NeonToken, data: &[f32; 4]) -> [f32; 4] {
         // core::arch::aarch64::* in scope
-        let v = safe_unaligned_simd::aarch64::vld1q_f32(data);
+        let v = vld1q_f32(data);
         let doubled = vaddq_f32(v, v);
         let mut out = [0.0f32; 4];
-        safe_unaligned_simd::aarch64::vst1q_f32(&mut out, doubled);
+        vst1q_f32(&mut out, doubled);
         out
     }
 

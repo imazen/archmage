@@ -3,7 +3,7 @@
 //! Every test compares safe_unaligned_simd output against core::arch output
 //! bit-for-bit to verify zero semantic difference.
 
-#![cfg(all(target_arch = "x86_64", feature = "safe_unaligned_simd"))]
+#![cfg(target_arch = "x86_64")]
 
 use archmage::{Desktop64, SimdToken, X64V2Token, arcane, rite};
 use std::arch::x86_64::*;

@@ -59,7 +59,7 @@ pub fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 // Called from SIMD context — inlines into caller
 #[rite(import_intrinsics)]
 fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
-    // safe_unaligned_simd takes references - no unsafe needed!
+    // Memory ops take references — no unsafe needed!
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     _mm256_mul_ps(va, vb)
@@ -92,8 +92,7 @@ fn helper(_token: X64V3Token, v: __m256) -> __m256 {
 #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
 #[inline]
 fn helper(_token: X64V3Token, v: __m256) -> __m256 {
-    use core::arch::x86_64::*;
-    use safe_unaligned_simd::x86_64::*;
+    use archmage::intrinsics::x86_64::*;
     _mm256_add_ps(v, v)
 }
 ```

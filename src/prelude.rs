@@ -69,37 +69,25 @@
 //!
 //! ## 5. Safe memory operations
 //!
-//! When the `safe_unaligned_simd` feature is enabled (default), the prelude
-//! also re-exports `safe_unaligned_simd::{platform}::*`. These are
-//! reference-based replacements for the ~159 pointer-based load/store
-//! intrinsics. They take `&[f32; 8]` instead of `*const f32`.
+//! The prelude re-exports `safe_unaligned_simd` memory ops that shadow
+//! `core::arch`'s pointer-based versions. These take references instead of
+//! raw pointers — e.g., `_mm256_loadu_ps` takes `&[f32; 8]` instead of
+//! `*const f32`.
 //!
-//! **Ambiguous names require explicit import.** Both `core::arch` and
-//! `safe_unaligned_simd` export functions with identical names (e.g.,
-//! `_mm256_loadu_ps`). Due to Rust's glob re-export rules, these overlapping
-//! names are **not usable** through `use archmage::prelude::*` alone. You must
-//! import the safe memory ops explicitly:
+//! **Everything works unqualified:**
 //!
 //! ```rust,ignore
 //! use archmage::prelude::*;
-//! // Must import safe load/store explicitly — overlapping names are ambiguous
-//! use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
 //!
-//! #[arcane]
+//! #[arcane(import_intrinsics)]
 //! fn load(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
 //!     _mm256_loadu_ps(data)  // Safe! Takes a reference, not a pointer.
 //! }
 //! ```
 //!
-//! **What the prelude gives you without explicit import:**
-//! - All tokens, traits, and macros
-//! - SIMD types (`__m256`, `__m128i`, etc.)
-//! - Value intrinsics (`_mm256_add_ps`, `_mm256_mul_ps`, etc.) — these have
-//!   no overlap and are already safe inside `#[arcane]`
-//!
-//! **What needs explicit import:**
-//! - Load/store ops from `safe_unaligned_simd` (or use full path:
-//!   `safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)`)
+//! The combined intrinsics module uses Rust's name resolution rules: explicit
+//! `safe_unaligned_simd` re-exports shadow the glob `core::arch` imports, so
+//! memory ops always resolve to the safe versions.
 //!
 //! # How `incant!` works
 //!
@@ -127,18 +115,15 @@
 //! # Import styles
 //!
 //! ```rust,ignore
-//! // Recommended: prelude + explicit safe memory ops
+//! // Recommended: prelude gives you everything
 //! use archmage::prelude::*;
-//! use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
 //!
-//! // Or use full paths for safe memory ops (no import needed):
-//! let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+//! // Or use the combined intrinsics module directly:
+//! use archmage::intrinsics::x86_64::*;
 //!
-//! // If you need the raw unsafe pointer version:
+//! // If you need the raw unsafe pointer version explicitly:
 //! let v = unsafe { core::arch::x86_64::_mm256_loadu_ps(ptr) };
 //! ```
-
-#![allow(ambiguous_glob_reexports)]
 
 // -- Traits --
 pub use crate::tokens::HasX64V2;
@@ -167,34 +152,17 @@ pub use archmage_macros::{
     token_target_features_boundary,
 };
 
-// -- core::arch intrinsics for the current platform --
+// -- Platform intrinsics: core::arch types + value ops + safe memory ops --
+// Uses the combined intrinsics module where safe_unaligned_simd's reference-based
+// memory ops shadow core::arch's pointer-based versions automatically.
 #[cfg(target_arch = "x86_64")]
-pub use core::arch::x86_64::*;
+pub use crate::intrinsics::x86_64::*;
 
 #[cfg(target_arch = "x86")]
-pub use core::arch::x86::*;
+pub use crate::intrinsics::x86::*;
 
-#[cfg(target_arch = "aarch64")]
-pub use core::arch::aarch64::*;
+#[cfg(any(target_arch = "aarch64", target_arch = "arm64ec"))]
+pub use crate::intrinsics::aarch64::*;
 
 #[cfg(target_arch = "wasm32")]
-pub use core::arch::wasm32::*;
-
-// -- safe_unaligned_simd memory operations for the current platform --
-// These shadow the core::arch versions with the same names. For example,
-// _mm256_loadu_ps takes &[f32; 8] instead of *const f32.
-#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86_64"))]
-pub use safe_unaligned_simd::x86_64::*;
-
-#[cfg(all(feature = "safe_unaligned_simd", target_arch = "x86"))]
-pub use safe_unaligned_simd::x86::*;
-
-#[cfg(all(
-    feature = "safe_unaligned_simd",
-    any(target_arch = "aarch64", target_arch = "arm64ec")
-))]
-#[allow(unused_imports)] // All names overlap with core::arch — users import explicitly
-pub use safe_unaligned_simd::aarch64::*;
-
-#[cfg(all(feature = "safe_unaligned_simd", target_arch = "wasm32"))]
-pub use safe_unaligned_simd::wasm32::*;
+pub use crate::intrinsics::wasm32::*;

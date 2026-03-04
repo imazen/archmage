@@ -122,8 +122,7 @@ impl SimdOps for Point {
         #[target_feature(enable = "avx2,fma,...")]
         #[inline]
         fn __inner(_self: &Point, token: X64V3Token) -> f32 {
-            use core::arch::x86_64::*;
-            use safe_unaligned_simd::x86_64::*;
+            use archmage::intrinsics::x86_64::*;
             _self.x * _self.x + _self.y * _self.y
         }
         #[cfg(target_arch = "x86_64")]
