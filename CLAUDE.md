@@ -637,7 +637,7 @@ As of Rust 1.85, **value-based intrinsics are safe inside `#[target_feature]` fu
 
 ```rust
 #[target_feature(enable = "avx2")]
-unsafe fn example() {
+fn example() {
     let a = _mm256_setzero_ps();           // SAFE!
     let b = _mm256_add_ps(a, a);           // SAFE!
     let c = _mm256_fmadd_ps(a, a, a);      // SAFE!
@@ -647,12 +647,17 @@ unsafe fn example() {
 }
 ```
 
+Note: Rust 2024 edition allows safe `#[target_feature]` functions — they don't need `unsafe fn`.
+Calling them from non-matching contexts still requires `unsafe`.
+
 This means we **don't need to wrap** arithmetic, shuffle, compare, bitwise, or other value-based intrinsics. Only:
 1. **Tokens** - Prove CPU features are available
 2. **`#[arcane]` macro** - Enable `#[target_feature]` via token proof
 3. **`safe_unaligned_simd`** - Reference-based memory operations (user adds as dependency)
 
-**`#![forbid(unsafe_code)]` compatible**: Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage tokens + `#[arcane]`/`#[rite]` macros + `safe_unaligned_simd` for memory operations.
+**`#![forbid(unsafe_code)]` compatible**: Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage tokens + `#[arcane]`/`#[rite]` macros + `safe_unaligned_simd` for memory operations. The sibling `#[target_feature]` function is declared safe (Rust 2024 edition allows this), and the `unsafe` block in the wrapper is proc-macro-generated — `#![forbid(unsafe_code)]` allows `unsafe` from proc macros the same way it allows `unsafe` inside external crate code.
+
+**CRITICAL: Never generate `unsafe fn` in sibling mode.** The sibling `#[target_feature]` function MUST be `fn`, not `unsafe fn`. `#![forbid(unsafe_code)]` rejects `unsafe fn` declarations even from proc macros, but allows `unsafe` blocks from proc macros. Only the wrapper's call to the sibling needs `unsafe { ... }`.
 
 ## How `#[arcane]` Works
 
@@ -670,7 +675,7 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
 #[target_feature(enable = "avx2,fma,...")]
-unsafe fn __arcane_my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+fn __arcane_my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     use core::arch::x86_64::*;
     use safe_unaligned_simd::x86_64::*;
     let v = _mm256_setzero_ps();

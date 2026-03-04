@@ -60,7 +60,7 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
 // Macro generates:
 fn kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     #[target_feature(enable = "avx2,fma,...")]
-    unsafe fn __simd_inner_kernel(data: &[f32; 8]) -> f32 {
+    fn __simd_inner_kernel(data: &[f32; 8]) -> f32 {
         let v = _mm256_setzero_ps();  // Safe inside #[target_feature]
         // ...
     }

@@ -78,7 +78,7 @@ fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
 #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
-unsafe fn __arcane_add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
+fn __arcane_add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
     use core::arch::x86_64::*;
     use safe_unaligned_simd::x86_64::*;
     _mm256_add_ps(a, b)  // Safe inside #[target_feature]!

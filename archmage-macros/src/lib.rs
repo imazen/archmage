@@ -716,13 +716,17 @@ fn arcane_impl_wasm_safe(
 /// #[doc(hidden)]
 /// #[target_feature(enable = "avx2,fma,...")]
 /// #[inline]
-/// unsafe fn __arcane_process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { body }
+/// fn __arcane_process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { body }
 ///
 /// #[cfg(target_arch = "x86_64")]
 /// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 ///     unsafe { __arcane_process(token, data) }
 /// }
 /// ```
+///
+/// The sibling function is safe (Rust 2024 edition allows safe `#[target_feature]`
+/// functions). Only the call from the wrapper needs `unsafe` because the wrapper
+/// lacks matching target features. Compatible with `#![forbid(unsafe_code)]`.
 ///
 /// Self/self work naturally since both functions live in the same impl scope.
 fn arcane_impl_sibling(
@@ -751,8 +755,9 @@ fn arcane_impl_sibling(
         .map(|arg| matches!(arg, FnArg::Receiver(_)))
         .unwrap_or(false);
 
-    // Build sibling signature: same as original but with sibling name, unsafe, #[doc(hidden)]
-    // The sibling has the exact same parameters (including self receiver if present).
+    // Build sibling signature: same as original but with sibling name, #[doc(hidden)]
+    // NOT unsafe — Rust 2024 edition allows safe #[target_feature] functions.
+    // Only the call from non-matching context (the wrapper) needs unsafe.
     let sibling_sig_inputs = inputs;
 
     // Build the call from wrapper to sibling
@@ -810,19 +815,21 @@ fn arcane_impl_sibling(
     let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
 
     let expanded = if let Some(arch) = target_arch {
-        // Sibling function: #[doc(hidden)] #[target_feature] pub(?) unsafe fn __arcane_fn(...)
-        // Note: visibility must come before `unsafe` in Rust syntax
+        // Sibling function: #[doc(hidden)] #[target_feature] pub(?) fn __arcane_fn(...)
+        // Safe declaration — Rust 2024 allows safe #[target_feature] functions.
         let sibling_fn = quote! {
             #[cfg(target_arch = #arch)]
             #[doc(hidden)]
             #(#target_feature_attrs)*
             #inline_attr
-            #vis unsafe fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
+            #vis fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
                 #body
             }
         };
 
         // Wrapper function: fn original_name(...) { unsafe { sibling_call } }
+        // The unsafe block is needed because the sibling has #[target_feature] and
+        // the wrapper doesn't — calling across this boundary requires unsafe.
         let wrapper_fn = quote! {
             #[cfg(target_arch = #arch)]
             #(#attrs)*
@@ -870,7 +877,7 @@ fn arcane_impl_sibling(
             #[doc(hidden)]
             #(#target_feature_attrs)*
             #inline_attr
-            #vis unsafe fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
+            #vis fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
                 #body
             }
         };
@@ -1067,8 +1074,9 @@ fn arcane_impl_nested(
 ///
 /// ## Sibling (default)
 ///
-/// Generates two functions at the same scope: a `#[target_feature]` unsafe sibling
+/// Generates two functions at the same scope: a safe `#[target_feature]` sibling
 /// and a safe wrapper. `self`/`Self` work naturally since both functions share scope.
+/// Compatible with `#![forbid(unsafe_code)]`.
 ///
 /// ```ignore
 /// #[arcane]
@@ -1077,7 +1085,7 @@ fn arcane_impl_nested(
 /// #[cfg(target_arch = "x86_64")]
 /// #[doc(hidden)]
 /// #[target_feature(enable = "avx2,fma,...")]
-/// unsafe fn __arcane_process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { /* body */ }
+/// fn __arcane_process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { /* body */ }
 ///
 /// #[cfg(target_arch = "x86_64")]
 /// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {

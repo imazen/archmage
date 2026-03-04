@@ -53,7 +53,7 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
 // What the macro generates:
 fn kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     #[target_feature(enable = "avx2,fma,...")]
-    unsafe fn __inner(data: &[f32; 8]) -> f32 {
+    fn __inner(data: &[f32; 8]) -> f32 {
         let v = _mm256_setzero_ps();
         // ...
     }

@@ -188,7 +188,7 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
 #[target_feature(enable = "sse3,ssse3,sse4.1,...,avx2,fma,...")]
-unsafe fn __arcane_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+fn __arcane_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = _mm256_setzero_ps();
     // ...
 }

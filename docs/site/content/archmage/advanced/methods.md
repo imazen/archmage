@@ -66,7 +66,7 @@ impl Vector8 {
     #[cfg(target_arch = "x86_64")]
     #[doc(hidden)]
     #[target_feature(enable = "avx2,fma,...")]
-    unsafe fn __arcane_magnitude(&self, token: X64V3Token) -> f32 {
+    fn __arcane_magnitude(&self, token: X64V3Token) -> f32 {
         let sum: f32 = self.0.iter().map(|x| x * x).sum();
         sum.sqrt()
     }
