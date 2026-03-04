@@ -7,7 +7,7 @@ weight = 3
 
 `#[arcane(import_intrinsics)]` creates a safe wrapper around SIMD code and auto-imports architecture intrinsics. Use it at **entry points**—functions called from non-SIMD code (after `summon()`, from tests, public APIs).
 
-For internal helpers called from other SIMD functions, use [`#[rite(import_intrinsics)]`](@/archmage/concepts/rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
+For functions called from other SIMD code, use [`#[rite(import_intrinsics)]`](@/archmage/concepts/rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
 
 > **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `safe_unaligned_simd` for those.
 
@@ -29,9 +29,9 @@ flowchart LR
 {% mermaid() %}
 flowchart TD
     S["summon() returns Some(token)"] --> A["#[arcane] fn (entry point)"]
-    A --> R1["#[rite] helper"]
-    A --> R2["#[rite] helper"]
-    R1 --> R3["#[rite] helper"]
+    A --> R1["#[rite] fn<br/>(inlines fully)"]
+    A --> R2["#[rite] fn<br/>(inlines fully)"]
+    R1 --> R3["#[rite] fn<br/>(inlines fully)"]
 
     style S fill:#5a3d1e,color:#fff
     style A fill:#2d5a27,color:#fff
@@ -93,7 +93,7 @@ fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 
 </details>
 
-**Nested mode** (`#[arcane(nested)]` or `#[arcane(_self = Type)]`): Inner function inside the original. Required for trait impls, since sibling expansion would add methods not in the trait definition.
+**Nested mode** (`#[arcane(nested, import_intrinsics)]` or `#[arcane(_self = Type, import_intrinsics)]`): Inner function inside the original. **Required for trait impls** — sibling expansion would add `__arcane_fn` to the impl block, which isn't in the trait definition and causes a compile error.
 
 <details>
 <summary>Nested expansion (click to expand)</summary>
@@ -101,9 +101,9 @@ fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 ```rust
 // Your code (trait impl — must use nested):
 impl SimdOps for MyType {
-    #[arcane(_self = MyType)]
+    #[arcane(_self = MyType, import_intrinsics)]
     fn compute(&self, token: X64V3Token) -> f32 {
-        _self.data.iter().sum()
+        _self.data.iter().sum()  // Use _self, not self
     }
 }
 
@@ -113,12 +113,16 @@ impl SimdOps for MyType {
         #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
         #[inline]
         fn __inner(_self: &MyType, token: X64V3Token) -> f32 {
+            use core::arch::x86_64::*;
+            use safe_unaligned_simd::x86_64::*;
             _self.data.iter().sum()
         }
         unsafe { __inner(self, token) }
     }
 }
 ```
+
+The inner `fn` can't have a `self` receiver (Rust doesn't allow that in inner functions), so the macro renames `self` → `_self` with the concrete type you specified.
 
 </details>
 
@@ -216,11 +220,11 @@ See [Cross-Platform](@/archmage/concepts/cross-platform.md) for dispatch pattern
 |--------|--------|
 | `#[arcane(import_intrinsics)]` | **Recommended default.** Sibling expansion + auto-import intrinsics |
 | `#[arcane(import_intrinsics, import_magetypes)]` | Also auto-import magetypes SIMD types |
+| `#[arcane(_self = Type, import_intrinsics)]` | **For trait impls.** Nested mode, replaces `self`→`_self` |
 | `#[arcane]` | Sibling expansion, no auto-imports (intrinsics must be in scope) |
-| `#[arcane(stub)]` | Sibling expansion, unreachable stub on wrong arch |
-| `#[arcane(nested)]` | Nested inner function (old behavior) |
-| `#[arcane(_self = Type)]` | Implies nested, replaces `self`→`_self` |
-| `#[arcane(nested, stub)]` | Nested + stub |
+| `#[arcane(stub, import_intrinsics)]` | Sibling + unreachable stub on wrong arch |
+| `#[arcane(nested, import_intrinsics)]` | Nested inner function (for trait impls without `self`) |
+| `#[arcane(nested, stub, import_intrinsics)]` | Nested + stub |
 | `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
 
 ### `stub`
@@ -235,19 +239,54 @@ fn process(token: X64V3Token, data: &[f32]) -> f32 {
 }
 ```
 
-### `nested`
+### `nested` and `_self = Type`
 
-Use the nested inner-function approach instead of sibling. **Required for trait impls** — sibling expansion generates `__arcane_fn` which isn't a member of the trait.
+Use nested mode for **trait implementations**. Sibling expansion generates `__arcane_fn` as a separate method in the impl block — but that method isn't in the trait definition, so the compiler rejects it. Nested mode puts the `#[target_feature]` function *inside* the original method instead.
+
+**`_self = Type` is the recommended way** to use nested mode. It implies `nested` and also renames `self` → `_self` with the concrete type, which is required because inner `fn` items can't have a `self` receiver.
 
 ```rust
-impl SimdOps for MyType {
-    // Trait impl — must use nested (or _self = Type, which implies nested)
-    #[arcane(_self = MyType)]
-    fn compute(&self, token: X64V3Token) -> f32 {
-        _self.data.iter().sum()
+trait SimdProcessor {
+    fn process(&self, token: X64V3Token, data: &[f32; 8]) -> [f32; 8];
+    fn transform(&mut self, token: X64V3Token);
+}
+
+struct MyType {
+    scale: f32,
+    data: [f32; 8],
+}
+
+impl SimdProcessor for MyType {
+    #[arcane(_self = MyType, import_intrinsics)]
+    fn process(&self, token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+        // Use _self instead of self
+        let v = _mm256_loadu_ps(data);
+        let scale = _mm256_set1_ps(_self.scale);
+        let result = _mm256_mul_ps(v, scale);
+        let mut out = [0.0f32; 8];
+        _mm256_storeu_ps(&mut out, result);
+        out
+    }
+
+    #[arcane(_self = MyType, import_intrinsics)]
+    fn transform(&mut self, token: X64V3Token) {
+        // _self is &mut MyType here
+        let v = _mm256_loadu_ps(&_self.data);
+        let doubled = _mm256_add_ps(v, v);
+        _mm256_storeu_ps(&mut _self.data, doubled);
     }
 }
 ```
+
+**When do you need `_self`?** Only for trait impls that access `self`. For free functions and inherent methods (`impl MyType { ... }`), use the default sibling mode — `self` and `Self` work naturally.
+
+| Context | What to use |
+|---------|-------------|
+| Free function | `#[arcane(import_intrinsics)]` |
+| Inherent method (`impl MyType`) | `#[arcane(import_intrinsics)]` — `self`/`Self` just work |
+| Trait impl (`impl Trait for Type`) | `#[arcane(_self = Type, import_intrinsics)]` — use `_self` |
+
+See [Methods with #[arcane]](@/archmage/advanced/methods.md) for comprehensive examples including all receiver types (`&self`, `&mut self`, `self`).
 
 ### `inline_always`
 

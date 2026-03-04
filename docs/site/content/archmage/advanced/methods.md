@@ -80,11 +80,11 @@ impl Vector8 {
 
 Both functions are in the same `impl` block, so `self`, `Self`, and associated constants resolve correctly.
 
-## Trait Implementations (Require `nested` or `_self`)
+## Trait Implementations (Require `_self = Type`)
 
-Sibling expansion adds `__arcane_fn` to the impl block — but that method isn't in the trait definition. The compiler rejects it. **Trait impls must use `nested` mode.**
+Sibling expansion adds `__arcane_fn` to the impl block — but that method isn't in the trait definition. The compiler rejects it. **Trait impls must use nested mode** via `_self = Type`.
 
-Use `_self = Type` (which implies nested):
+`_self = Type` implies nested mode and renames `self` → `_self` with the concrete type:
 
 ```rust
 use archmage::{X64V3Token, arcane};
@@ -113,15 +113,34 @@ impl SimdOps for Point {
 }
 ```
 
+### What Gets Generated
+
+```rust
+impl SimdOps for Point {
+    fn compute(&self, token: X64V3Token) -> f32 {
+        #[cfg(target_arch = "x86_64")]
+        #[target_feature(enable = "avx2,fma,...")]
+        #[inline]
+        fn __inner(_self: &Point, token: X64V3Token) -> f32 {
+            use core::arch::x86_64::*;
+            use safe_unaligned_simd::x86_64::*;
+            _self.x * _self.x + _self.y * _self.y
+        }
+        #[cfg(target_arch = "x86_64")]
+        { unsafe { __inner(self, token) } }
+    }
+}
+```
+
+The inner `fn` can't have a `self` receiver (Rust doesn't allow that in inner function items), so the macro passes `self` as a regular parameter named `_self` with the concrete type you specified.
+
 ### Why `_self`?
 
-In nested mode, the macro creates an inner function where `self` can't be used (inner `fn` items don't have a `self` receiver). The macro renames `self` to `_self` — a regular parameter with the concrete type you specified.
-
-The name `_self` reminds you that:
+The name reminds you:
 
 1. You're not using the normal `self` keyword
-2. The macro has transformed the function
-3. You need to be explicit about the type
+2. The macro has transformed `self` into a concrete-typed parameter
+3. You need `_self = Type` to tell the macro what type `self` is
 
 ### All Receiver Types with `_self`
 
