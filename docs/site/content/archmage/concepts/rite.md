@@ -202,6 +202,25 @@ fn helper_stubbed(_token: X64V3Token, v: __m256) -> __m256 {
 }
 ```
 
+## Auto-Imports
+
+Like `#[arcane]`, `#[rite]` supports `import_intrinsics` and `import_magetypes`:
+
+```rust
+#[rite(import_intrinsics, import_magetypes)]
+fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    // core::arch::x86_64::* and magetypes::simd::v3::* both in scope
+    let v = f32x8::load(token, data);
+    let zero = _mm256_setzero_ps();
+    let _ = _mm256_add_ps(zero, zero);
+    v.reduce_add()
+}
+```
+
+The recommended pattern: `#[arcane(import_intrinsics, import_magetypes)]` at the entry point, `#[rite(import_magetypes)]` on helpers. Each function imports only what it needs.
+
+See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import_intrinsics) for the full namespace mapping.
+
 ## Inlining Behavior
 
 `#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. Calling `#[arcane]` per iteration instead costs 4x (simple adds) to 6.2x (DCT-8). See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md).

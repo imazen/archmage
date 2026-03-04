@@ -218,6 +218,8 @@ See [Cross-Platform](@/archmage/concepts/cross-platform.md) for dispatch pattern
 | `#[arcane(_self = Type)]` | Implies nested, replaces `self`→`_self` |
 | `#[arcane(nested, stub)]` | Nested + stub |
 | `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
+| `#[arcane(import_intrinsics)]` | Auto-import `core::arch::{arch}::*` + `safe_unaligned_simd::{arch}::*` |
+| `#[arcane(import_magetypes)]` | Auto-import `magetypes::simd::{ns}::*` + `backends::*` |
 
 ### `stub`
 
@@ -257,6 +259,59 @@ fn hot_path(token: X64V3Token, data: &[f32]) -> f32 {
     // Uses #[inline(always)] instead of #[inline]
 }
 ```
+
+### `import_intrinsics`
+
+Auto-imports architecture intrinsics and safe memory operations into the function body:
+
+```rust
+// No manual `use std::arch::x86_64::*` needed!
+#[arcane(import_intrinsics)]
+fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+    let doubled = _mm256_add_ps(v, v);  // In scope from auto-import
+    let mut out = [0.0f32; 8];
+    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, doubled);
+    out
+}
+```
+
+The macro injects:
+- `use core::arch::{arch}::*;` — all value intrinsics for the token's architecture
+- `use safe_unaligned_simd::{arch}::*;` — safe reference-based memory operations
+
+The architecture is derived from the token type: `X64V3Token` → `x86_64`, `NeonToken` → `aarch64`, `Wasm128Token` → `wasm32`.
+
+### `import_magetypes`
+
+Auto-imports magetypes SIMD types for the token's namespace:
+
+```rust
+// No manual `use magetypes::simd::v3::*` needed!
+#[arcane(import_magetypes)]
+fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    let v = f32x8::load(token, data);  // In scope from auto-import
+    v.reduce_add()
+}
+```
+
+The macro injects:
+- `use magetypes::simd::{ns}::*;` — pre-specialized types for the token (f32x8, i32x8, etc.)
+- `use magetypes::simd::backends::*;` — backend traits (F32x8Backend, etc.)
+
+The namespace is token-driven:
+
+| Token | Namespace | Types |
+|-------|-----------|-------|
+| `X64V1..V3Token` | `v3` | 128/256-bit native, 512-bit polyfill |
+| `X64V4Token` | `v4` | 128/256/512-bit native |
+| `X64V4xToken` | `v4x` | 128/256/512-bit native |
+| `NeonToken` / ARM | `neon` | 128-bit native, wider polyfills |
+| `Wasm128Token` | `wasm128` | 128-bit native, wider polyfills |
+
+Both options can be combined: `#[arcane(import_intrinsics, import_magetypes)]`.
+
+Works with trait bounds (`impl HasX64V2`) and generic parameters (`<T: HasNeon>`) too.
 
 ## Common Patterns
 

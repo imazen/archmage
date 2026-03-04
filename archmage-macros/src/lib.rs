@@ -1154,6 +1154,47 @@ fn arcane_impl_nested(
 /// | `nested` | Use nested inner function instead of sibling |
 /// | `_self = Type` | Implies `nested`, transforms self receiver, replaces Self |
 /// | `inline_always` | Use `#[inline(always)]` (requires nightly) |
+/// | `import_intrinsics` | Auto-import `core::arch::{arch}::*` and `safe_unaligned_simd::{arch}::*` |
+/// | `import_magetypes` | Auto-import `magetypes::simd::{ns}::*` and `magetypes::simd::backends::*` |
+///
+/// ## Auto-Imports
+///
+/// `import_intrinsics` and `import_magetypes` inject `use` statements into the
+/// function body, eliminating boilerplate. The macro derives the architecture and
+/// namespace from the token type:
+///
+/// ```ignore
+/// // Without auto-imports — lots of boilerplate:
+/// use std::arch::x86_64::*;
+/// use magetypes::simd::v3::*;
+///
+/// #[arcane]
+/// fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
+///     let v = f32x8::load(token, data);
+///     let zero = _mm256_setzero_ps();
+///     // ...
+/// }
+///
+/// // With auto-imports — clean:
+/// #[arcane(import_intrinsics, import_magetypes)]
+/// fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
+///     let v = f32x8::load(token, data);
+///     let zero = _mm256_setzero_ps();
+///     // ...
+/// }
+/// ```
+///
+/// The namespace mapping is token-driven:
+///
+/// | Token | `import_intrinsics` | `import_magetypes` |
+/// |-------|--------------------|--------------------|
+/// | `X64V1..V3Token` | `core::arch::x86_64::*` | `magetypes::simd::v3::*` |
+/// | `X64V4Token` | `core::arch::x86_64::*` | `magetypes::simd::v4::*` |
+/// | `X64V4xToken` | `core::arch::x86_64::*` | `magetypes::simd::v4x::*` |
+/// | `NeonToken` / ARM | `core::arch::aarch64::*` | `magetypes::simd::neon::*` |
+/// | `Wasm128Token` | `core::arch::wasm32::*` | `magetypes::simd::wasm128::*` |
+///
+/// Works with concrete tokens, `impl Trait` bounds, and generic parameters.
 ///
 /// # Supported Tokens
 ///
@@ -1261,6 +1302,16 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// Like `#[arcane]`, defaults to cfg-out (no function on wrong arch).
 /// Use `#[rite(stub)]` to generate an unreachable stub instead.
 ///
+/// # Options
+///
+/// | Option | Effect |
+/// |--------|--------|
+/// | `stub` | Generate `unreachable!()` stub on wrong architecture |
+/// | `import_intrinsics` | Auto-import `core::arch::{arch}::*` and `safe_unaligned_simd::{arch}::*` |
+/// | `import_magetypes` | Auto-import `magetypes::simd::{ns}::*` and `magetypes::simd::backends::*` |
+///
+/// See `#[arcane]` docs for the full namespace mapping table.
+///
 /// # Comparison with #[arcane]
 ///
 /// | Aspect | `#[arcane]` | `#[rite]` |
@@ -1270,6 +1321,8 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// | Inlines into caller | No (barrier) | Yes |
 /// | Safe to call anywhere | Yes (with token) | Only from feature-enabled context |
 /// | `stub` param | Yes | Yes |
+/// | `import_intrinsics` | Yes | Yes |
+/// | `import_magetypes` | Yes | Yes |
 #[proc_macro_attribute]
 pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as RiteArgs);
