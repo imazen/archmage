@@ -124,7 +124,7 @@ fn example(_: X64V3Token, data: &[f32; 8]) -> core::arch::x86_64::__m256 {
 }
 ```
 
-Don't use both — they import the same module. The prelude is simpler; `import_intrinsics` is more explicit.
+Both import the same combined intrinsics module — using both is just duplication. The prelude is simpler; `import_intrinsics` is more explicit.
 
 ## `#[arcane]` vs `#[rite]`: entry point vs internal
 
