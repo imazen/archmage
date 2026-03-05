@@ -318,11 +318,7 @@ fn sum_squares_matches_across_tiers() {
 
 On an AVX-512 machine, this runs 5–7 permutations (all enabled → AVX-512 only → AVX2+FMA → SSE4.2 → scalar). On a Haswell-era CPU without AVX-512, 3 permutations. Tokens the CPU doesn't have are skipped — they'd produce duplicate states.
 
-Token disabling is process-wide, so run with `--test-threads=1`:
-
-```sh
-cargo test -- --test-threads=1
-```
+Token disabling is process-wide. Both `for_each_token_permutation` and `lock_token_testing` use the same internal mutex to serialize token manipulation, so parallel tests won't interfere with each other.
 
 ### `CompileTimePolicy` and `-Ctarget-cpu`
 
@@ -339,7 +335,7 @@ For full coverage in CI, use the `testable_dispatch` feature. This makes `compil
 ```toml
 # In your CI test configuration
 [dev-dependencies]
-archmage = { version = "0.8", features = ["testable_dispatch"] }
+archmage = { version = "0.9", features = ["testable_dispatch"] }
 ```
 
 ### Enforcing full coverage via env var
@@ -370,7 +366,7 @@ fn my_dispatch_works_at_all_tiers() {
 Then in CI (with `testable_dispatch` enabled):
 
 ```sh
-ARCHMAGE_FULL_PERMUTATIONS=1 cargo test -- --test-threads=1
+ARCHMAGE_FULL_PERMUTATIONS=1 cargo test
 ```
 
 If a token is still compile-time guaranteed (you forgot the feature or have stale RUSTFLAGS), `Fail` panics with the exact flags to fix it:
@@ -384,13 +380,15 @@ x86-64-v3: compile-time guaranteed, excluded from permutations. To include it, e
 
 ### Manual single-token disable
 
-For targeted tests that only need to disable one token:
+For targeted tests that only need to disable one token, use `lock_token_testing` to serialize against parallel tests:
 
 ```rust
+use archmage::testing::lock_token_testing;
 use archmage::{X64V3Token, SimdToken};
 
 #[test]
 fn scalar_fallback_matches_simd() {
+    let _lock = lock_token_testing();
     let data = vec![1.0f32; 1024];
     let simd_result = sum_squares(&data);
 
@@ -403,22 +401,23 @@ fn scalar_fallback_matches_simd() {
 }
 ```
 
-Disabling cascades downward: disabling V2 also disables V3/V4/Modern/Fp16; disabling NEON also disables Aes/Sha3/Crc.
+Disabling cascades downward: disabling V2 also disables V3/V4/V4x/Fp16; disabling NEON also disables Aes/Sha3/Crc/Arm64V2/Arm64V3.
 
 ### Disabling all SIMD at once
 
-`dangerously_disable_tokens_except_wasm(true)` disables all SIMD tokens in one call:
+`dangerously_disable_tokens_except_wasm(true)` disables all SIMD tokens in one call. Use `lock_token_testing` to serialize:
 
 ```rust
+use archmage::testing::lock_token_testing;
 use archmage::dangerously_disable_tokens_except_wasm;
 
-// Force scalar-only execution for benchmarking
+let _lock = lock_token_testing();
 dangerously_disable_tokens_except_wasm(true).unwrap();
 let scalar_result = my_simd_function(&data);
 dangerously_disable_tokens_except_wasm(false).unwrap();
 ```
 
-This disables V2 on x86 (cascading to V3/V4/Modern/Fp16) and NEON on ARM (cascading to Aes/Sha3/Crc). V1 (`Sse2Token`) is not disabled — SSE2 is the x86_64 baseline and can't be meaningfully turned off at runtime. WASM is excluded because `simd128` is always a compile-time decision.
+This disables V2 on x86 (cascading to V3/V4/V4x/Fp16) and NEON on ARM (cascading to Aes/Sha3/Crc/Arm64V2/Arm64V3). V1 (`Sse2Token`) is not disabled — SSE2 is the x86_64 baseline and can't be meaningfully turned off at runtime. WASM is excluded because `simd128` is always a compile-time decision.
 
 ## Feature flags
 

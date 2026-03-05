@@ -28,11 +28,52 @@ fn sum_squares_matches_across_tiers() {
 
 On an AVX-512 machine, this runs 5–7 permutations (all enabled, AVX-512 only, AVX2+FMA, SSE4.2, scalar). On a Haswell-era CPU without AVX-512, 3 permutations. Tokens the CPU doesn't have are skipped — they'd produce duplicate states.
 
-Token disabling is process-wide, so run with `--test-threads=1`:
+## Concurrency and `lock_token_testing`
 
-```sh
-cargo test -- --test-threads=1
+Token disabling is process-wide — `dangerously_disable_token_process_wide` affects all threads. Both `for_each_token_permutation` and `lock_token_testing` use the same internal mutex to serialize token manipulation, so parallel tests won't interfere with each other.
+
+`for_each_token_permutation` acquires this lock automatically. Use `lock_token_testing()` when you need to call `dangerously_disable_token_process_wide` manually, or when you need stable `summon()` results while permutation tests may be running in parallel:
+
+```rust
+use archmage::testing::lock_token_testing;
+use archmage::{X64V3Token, SimdToken};
+
+#[test]
+fn scalar_fallback_matches_simd() {
+    let _lock = lock_token_testing();
+
+    let data = vec![1.0f32; 1024];
+    let simd_result = sum_squares(&data);
+
+    X64V3Token::dangerously_disable_token_process_wide(true).unwrap();
+    let scalar_result = sum_squares(&data);
+    X64V3Token::dangerously_disable_token_process_wide(false).unwrap();
+
+    assert!((simd_result - scalar_result).abs() < 1e-3);
+}
 ```
+
+`for_each_token_permutation` is reentrant — if called while the current thread holds `lock_token_testing`, it skips re-acquiring the lock. This lets you combine manual state observation with exhaustive permutation testing:
+
+```rust
+use archmage::testing::{lock_token_testing, for_each_token_permutation, CompileTimePolicy};
+use archmage::{X64V2Token, SimdToken};
+
+#[test]
+fn tokens_restored_after_permutations() {
+    let _lock = lock_token_testing();
+    let v2_available = X64V2Token::summon().is_some();
+
+    let _report = for_each_token_permutation(CompileTimePolicy::Warn, |_perm| {
+        // test body
+    });
+
+    // State is stable — no other thread can have disabled V2
+    assert_eq!(X64V2Token::summon().is_some(), v2_available);
+}
+```
+
+Without `lock_token_testing`, the `summon()` calls outside `for_each_token_permutation` could observe tokens disabled by a parallel test.
 
 ## `CompileTimePolicy` and `-Ctarget-cpu`
 
@@ -49,7 +90,7 @@ For full coverage in CI, use the `testable_dispatch` feature. This makes `compil
 ```toml
 # In your CI test configuration
 [dev-dependencies]
-archmage = { version = "0.8", features = ["testable_dispatch"] }
+archmage = { version = "0.9", features = ["testable_dispatch"] }
 ```
 
 ## Enforcing Full Coverage via Env Var
@@ -94,13 +135,15 @@ x86-64-v3: compile-time guaranteed, excluded from permutations. To include it, e
 
 ## Manual Single-Token Disable
 
-For targeted tests that only need to disable one token:
+For targeted tests that only need to disable one token, use `lock_token_testing` to serialize against parallel tests:
 
 ```rust
+use archmage::testing::lock_token_testing;
 use archmage::{X64V3Token, SimdToken};
 
 #[test]
 fn scalar_fallback_matches_simd() {
+    let _lock = lock_token_testing();
     let data = vec![1.0f32; 1024];
     let simd_result = sum_squares(&data);
 
@@ -113,4 +156,4 @@ fn scalar_fallback_matches_simd() {
 }
 ```
 
-Disabling cascades downward: disabling V2 also disables V3/V4/Modern/Fp16; disabling NEON also disables Aes/Sha3/Crc. `dangerously_disable_tokens_except_wasm(true)` disables everything at once.
+Disabling cascades downward: disabling V2 also disables V3/V4/V4x/Fp16; disabling NEON also disables Aes/Sha3/Crc/Arm64V2/Arm64V3. `dangerously_disable_tokens_except_wasm(true)` disables everything at once.
