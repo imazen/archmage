@@ -2326,23 +2326,8 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         .first()
         .is_some_and(|arg| matches!(arg, FnArg::Receiver(_)));
 
-    // Self receiver requires _self = Type
-    if has_self && args.self_type.is_none() {
-        return syn::Error::new_spanned(
-            &input_fn.sig,
-            "autoversion with self receiver requires `_self = Type` argument.\n\
-             Example: #[autoversion(_self = MyType)]\n\
-             Use `_self` (not `self`) in the function body to refer to self.\n\n\
-             Trait methods are not supported. Use the delegation pattern:\n\
-             impl Trait for Type {\n    \
-                 fn method(&self, data: &[f32]) -> f32 {\n        \
-                     self.method_impl(data) // delegate to autoversioned inherent method\n    \
-                 }\n\
-             }",
-        )
-        .to_compile_error()
-        .into();
-    }
+    // _self = Type is only needed for trait impls (nested mode in #[arcane]).
+    // For inherent methods, self/Self work naturally in sibling mode.
 
     // Find SimdToken parameter
     let token_param = match find_simd_token_param(&input_fn.sig) {
@@ -2404,9 +2389,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             *pt.ty = concrete_type;
         }
 
-        // Scalar with self: inject `let _self = self;` preamble so body's
-        // _self references resolve (non-scalar variants get this from #[arcane])
-        if tier.name == "scalar" && has_self {
+        // Scalar with _self = Type: inject `let _self = self;` preamble so body's
+        // _self references resolve (non-scalar variants get this from #[arcane(_self = Type)])
+        if tier.name == "scalar" && has_self && args.self_type.is_some() {
             let original_body = variant_fn.body.clone();
             variant_fn.body = quote!(let _self = self; #original_body);
         }
@@ -2746,14 +2731,13 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 ///
 /// # Methods with self receivers
 ///
-/// For inherent methods, pass `_self = Type` and use `_self` instead of
-/// `self` in the body:
+/// For inherent methods, `self` works naturally — no `_self` needed:
 ///
 /// ```rust,ignore
 /// impl ImageBuffer {
-///     #[autoversion(_self = ImageBuffer)]
+///     #[autoversion]
 ///     fn normalize(&mut self, token: SimdToken, gamma: f32) {
-///         for pixel in &mut _self.data {
+///         for pixel in &mut self.data {
 ///             *pixel = (*pixel / 255.0).powf(gamma);
 ///         }
 ///     }
@@ -2764,15 +2748,13 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 /// ```
 ///
 /// All receiver types work: `self`, `&self`, `&mut self`. Non-scalar variants
-/// get `#[arcane(_self = Type)]` which handles the inner-function transform.
-/// The scalar variant gets `let _self = self;` so the body's `_self`
-/// references compile without `#[arcane]`.
+/// get `#[arcane]` (sibling mode), where `self`/`Self` resolve naturally.
 ///
-/// # Trait methods
+/// # Trait methods (requires `_self = Type`)
 ///
 /// Trait methods can't use `#[autoversion]` directly because proc macro
 /// attributes on trait impl items can't expand to multiple sibling functions.
-/// Use the delegation pattern:
+/// Use the delegation pattern with `_self = Type`:
 ///
 /// ```rust,ignore
 /// trait Processor {
@@ -2792,6 +2774,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 ///     }
 /// }
 /// ```
+///
+/// `_self = Type` uses nested mode in `#[arcane]`, which is required for
+/// trait impls. Use `_self` (not `self`) in the body when using this form.
 ///
 /// # Comparison with `#[magetypes]` + `incant!`
 ///

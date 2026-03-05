@@ -56,13 +56,15 @@ fn process(_token: SimdToken, data: &[f32]) -> f32 { ... }
 
 Only generates the listed tiers plus `scalar` (always implicit). Use this when you don't need every platform, or when you want tiers beyond the defaults.
 
-### `_self = Type` (methods with self receivers)
+### Methods with self receivers
+
+For inherent methods, `self` works naturally — no special parameters needed:
 
 ```rust
 impl ImageBuffer {
-    #[autoversion(_self = ImageBuffer)]
+    #[autoversion]
     fn normalize(&mut self, _token: SimdToken, gamma: f32) {
-        for pixel in &mut _self.data {
+        for pixel in &mut self.data {
             *pixel = (*pixel / 255.0).powf(gamma);
         }
     }
@@ -72,13 +74,28 @@ impl ImageBuffer {
 buffer.normalize(2.2);
 ```
 
-Required for inherent methods with `self`, `&self`, or `&mut self`. Use `_self` (not `self`) in the body to refer to the receiver. Non-scalar variants get `#[arcane(_self = Type)]`; the scalar variant gets `let _self = self;` injected so `_self` resolves without `#[arcane]`.
+All receiver types work: `self`, `&self`, `&mut self`. The generated variants use `#[arcane]` in sibling mode, where `self`/`Self` resolve naturally.
+
+### `_self = Type` (trait method delegation)
+
+Only needed when delegating from a trait impl, which requires `#[arcane]`'s nested mode:
+
+```rust
+impl MyType {
+    #[autoversion(_self = MyType)]
+    fn compute_impl(&self, _token: SimdToken, data: &[f32]) -> f32 {
+        _self.weights.iter().zip(data).map(|(w, d)| w * d).sum()
+    }
+}
+```
+
+Use `_self` (not `self`) in the body when using this form. Non-scalar variants get `#[arcane(_self = Type)]`; the scalar variant gets `let _self = self;` injected.
 
 ### Combined: tiers + `_self`
 
 ```rust
 #[autoversion(v3, neon, _self = MyType)]
-fn compute(&self, _token: SimdToken, data: &[f32]) -> f32 {
+fn compute_impl(&self, _token: SimdToken, data: &[f32]) -> f32 {
     _self.weights.iter().zip(data).map(|(w, d)| w * d).sum()
 }
 ```
