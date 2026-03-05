@@ -572,12 +572,13 @@ CI checks (all must pass):
 6. `cargo clippy --features "std macros avx512"` — zero warnings
 7. `cargo clippy -p magetypes` (default features) — zero warnings
 8. `cargo test --features "std macros avx512"` — all tests pass
-9. `cargo fmt --check` — code is formatted
-10. `cargo doc --features "std macros avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
-11. Miri UB detection (skipped if not installed)
-12. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
-13. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
-14. **ARM64 clippy** (requires `cross` + Docker)
+9. **no_std compilation + tests** — archmage and magetypes build and test without `std`
+10. `cargo fmt --check` — code is formatted
+11. `cargo doc --features "std macros avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
+12. Miri UB detection (skipped if not installed)
+13. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
+14. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
+15. **ARM64 clippy** (requires `cross` + Docker)
 
 **Note:** Parity check reports 0 issues. All W128 types have identical APIs across x86/ARM/WASM.
 

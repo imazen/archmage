@@ -2047,7 +2047,7 @@ fn run_ci() -> Result<()> {
     println!("╚══════════════════════════════════════════════════════════════════╝\n");
 
     // Step 1: Generate all code
-    println!("┌─ Step 1/15: Regenerating code ─────────────────────────────────────┐");
+    println!("┌─ Step 1/16: Regenerating code ─────────────────────────────────────┐");
     generate_all()?;
     println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
 
@@ -2065,7 +2065,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Formatting complete ──────────────────────────────────────────────┘\n");
 
     // Step 2: Check for clean worktree
-    println!("┌─ Step 2/15: Checking for uncommitted changes ──────────────────────┐");
+    println!("┌─ Step 2/16: Checking for uncommitted changes ──────────────────────┐");
     let status = std::process::Command::new("git")
         .args(["status", "--porcelain"])
         .output()
@@ -2084,27 +2084,27 @@ fn run_ci() -> Result<()> {
     println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
 
     // Step 3-4: Validation (already done in generate_all, but let's be explicit)
-    println!("┌─ Step 3/15: Validating magetypes safety ────────────────────────────┐");
+    println!("┌─ Step 3/16: Validating magetypes safety ────────────────────────────┐");
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
     validate_magetypes_with_registry(&reg)?;
     println!("└─ Magetypes validation passed ──────────────────────────────────────┘\n");
 
-    println!("┌─ Step 4/15: Validating summon() features ──────────────────────────┐");
+    println!("┌─ Step 4/16: Validating summon() features ──────────────────────────┐");
     validate_summon(&reg)?;
     println!("└─ summon() validation passed ──────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
-    println!("┌─ Step 5/15: Checking API parity (strict) ──────────────────────────┐");
+    println!("┌─ Step 5/16: Checking API parity (strict) ──────────────────────────┐");
     check_api_parity(true)?;
     println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
 
     // Step 6: Soundness verification
-    println!("┌─ Step 6/15: Verifying intrinsic soundness ─────────────────────────┐");
+    println!("┌─ Step 6/16: Verifying intrinsic soundness ─────────────────────────┐");
     verify_intrinsic_soundness()?;
     println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
 
     // Step 7: Clippy
-    println!("┌─ Step 7/15: Running clippy ────────────────────────────────────────┐");
+    println!("┌─ Step 7/16: Running clippy ────────────────────────────────────────┐");
     let clippy = std::process::Command::new("cargo")
         .args([
             "clippy",
@@ -2123,7 +2123,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Clippy check passed ──────────────────────────────────────────────┘\n");
 
     // Step 8: Clippy with default features (catches warnings hidden by avx512)
-    println!("┌─ Step 8/15: Running clippy (default features) ─────────────────────┐");
+    println!("┌─ Step 8/16: Running clippy (default features) ─────────────────────┐");
     let clippy_default = std::process::Command::new("cargo")
         .args(["clippy", "-p", "magetypes", "--", "-D", "warnings"])
         .status()
@@ -2135,7 +2135,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Clippy check passed (default features) ───────────────────────────┘\n");
 
     // Step 9: Tests
-    println!("┌─ Step 9/15: Running tests ─────────────────────────────────────────┐");
+    println!("┌─ Step 9/16: Running tests ─────────────────────────────────────────┐");
     let tests = std::process::Command::new("cargo")
         .args(["test", "--features", "std macros avx512"])
         .status()
@@ -2145,8 +2145,106 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ All tests passed ─────────────────────────────────────────────────┘\n");
 
-    // Step 9: Format check
-    println!("┌─ Step 10/15: Checking code formatting ──────────────────────────────┐");
+    // Step 10: no_std compilation and tests
+    println!("┌─ Step 10/16: no_std compilation + tests ─────────────────────────────┐");
+    // Check archmage compiles under no_std (with macros)
+    let nostd_check = std::process::Command::new("cargo")
+        .args([
+            "check",
+            "-p",
+            "archmage",
+            "--no-default-features",
+            "--features",
+            "macros avx512",
+        ])
+        .status()
+        .context("Failed to check archmage under no_std")?;
+    if !nostd_check.success() {
+        bail!("archmage fails to compile under no_std");
+    }
+    println!("  ✓ archmage compiles under no_std");
+
+    // Check magetypes compiles under no_std
+    let nostd_magetypes = std::process::Command::new("cargo")
+        .args(["check", "-p", "magetypes", "--no-default-features"])
+        .status()
+        .context("Failed to check magetypes under no_std")?;
+    if !nostd_magetypes.success() {
+        bail!("magetypes fails to compile under no_std");
+    }
+    println!("  ✓ magetypes compiles under no_std");
+
+    // Run magetypes tests under no_std (scalar tests + skip-when-unavailable)
+    let nostd_tests = std::process::Command::new("cargo")
+        .args(["test", "-p", "magetypes", "--no-default-features"])
+        .status()
+        .context("Failed to test magetypes under no_std")?;
+    if !nostd_tests.success() {
+        bail!("magetypes tests fail under no_std");
+    }
+    println!("  ✓ magetypes tests pass under no_std");
+
+    // Run archmage tests under no_std (with macros)
+    let nostd_archmage_tests = std::process::Command::new("cargo")
+        .args([
+            "test",
+            "-p",
+            "archmage",
+            "--no-default-features",
+            "--features",
+            "macros avx512",
+        ])
+        .status()
+        .context("Failed to test archmage under no_std")?;
+    if !nostd_archmage_tests.success() {
+        bail!("archmage tests fail under no_std");
+    }
+    println!("  ✓ archmage tests pass under no_std");
+
+    // Cross-target no_std compilation (true no_std — catches std leaks the host can't)
+    // These are MANDATORY: host-target no_std checks don't catch f64::log2() etc.
+    // because libstd is always linkable on the host even without the "std" feature.
+    let nostd_targets = [
+        ("aarch64-unknown-none", "aarch64 bare metal"),
+        ("thumbv7m-none-eabi", "ARM Cortex-M (no SIMD)"),
+    ];
+    for (target, desc) in &nostd_targets {
+        // Auto-install if missing
+        let installed = std::process::Command::new("rustup")
+            .args(["target", "list", "--installed"])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains(target))
+            .unwrap_or(false);
+        if !installed {
+            println!("  Installing target {target}...");
+            let install = std::process::Command::new("rustup")
+                .args(["target", "add", target])
+                .status()
+                .context(format!("Failed to install target {target}"))?;
+            if !install.success() {
+                bail!("Failed to install target {target} — required for no_std CI");
+            }
+        }
+        let check = std::process::Command::new("cargo")
+            .args([
+                "check",
+                "-p",
+                "magetypes",
+                "--no-default-features",
+                "--target",
+                target,
+            ])
+            .status()
+            .context(format!("Failed to check magetypes for {target}"))?;
+        if !check.success() {
+            bail!("magetypes fails to compile for {target} ({desc})");
+        }
+        println!("  ✓ magetypes compiles for {target} ({desc})");
+    }
+    println!("└─ no_std checks passed ───────────────────────────────────────────────┘\n");
+
+    // Step 11: Format check
+    println!("┌─ Step 11/16: Checking code formatting ──────────────────────────────┐");
     let fmt = std::process::Command::new("cargo")
         .args(["fmt", "--", "--check"])
         .status()
@@ -2157,8 +2255,8 @@ fn run_ci() -> Result<()> {
     println!("  ✓ Code is properly formatted");
     println!("└─ Format check passed ──────────────────────────────────────────────┘\n");
 
-    // Step 11: Documentation build (catches broken doc links)
-    println!("┌─ Step 11/15: Building documentation ────────────────────────────────┐");
+    // Step 12: Documentation build (catches broken doc links)
+    println!("┌─ Step 12/16: Building documentation ────────────────────────────────┐");
     let doc = std::process::Command::new("cargo")
         .args(["doc", "--features", "std macros avx512", "--no-deps"])
         .env("RUSTDOCFLAGS", "-Dwarnings")
@@ -2170,8 +2268,8 @@ fn run_ci() -> Result<()> {
     println!("  ✓ Documentation builds cleanly");
     println!("└─ Documentation check passed ─────────────────────────────────────────┘\n");
 
-    // Step 12: Miri testing (UB detection)
-    println!("┌─ Step 12/15: Running Miri (UB detection) ──────────────────────────┐");
+    // Step 13: Miri testing (UB detection)
+    println!("┌─ Step 13/16: Running Miri (UB detection) ──────────────────────────┐");
     // Check if Miri is available
     let miri_available = std::process::Command::new("cargo")
         .args(["+nightly", "miri", "--version"])
@@ -2202,8 +2300,8 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
 
-    // Step 13: ARM64 cross-compilation + tests
-    println!("┌─ Step 13/15: ARM64 cross-compilation + tests ───────────────────┐");
+    // Step 14: ARM64 cross-compilation + tests
+    println!("┌─ Step 14/16: ARM64 cross-compilation + tests ───────────────────┐");
     let cross_ok = std::process::Command::new("cross")
         .arg("--version")
         .output()
@@ -2245,8 +2343,8 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ ARM64 cross-compilation complete ───────────────────────────────┘\n");
 
-    // Step 14: WASM cross-compilation + tests
-    println!("┌─ Step 14/15: WASM cross-compilation + tests ───────────────────┐");
+    // Step 15: WASM cross-compilation + tests
+    println!("┌─ Step 15/16: WASM cross-compilation + tests ───────────────────┐");
     let wasmtime_ok = std::process::Command::new("wasmtime")
         .arg("--version")
         .output()
@@ -2290,8 +2388,8 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ WASM cross-compilation complete ───────────────────────────────┘\n");
 
-    // Step 15: ARM64 clippy
-    println!("┌─ Step 15/15: ARM64 clippy ─────────────────────────────────────┐");
+    // Step 16: ARM64 clippy
+    println!("┌─ Step 16/16: ARM64 clippy ─────────────────────────────────────┐");
     if cross_ok && docker_ok {
         let arm_clippy = std::process::Command::new("cargo")
             .args([

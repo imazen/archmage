@@ -637,62 +637,61 @@ fn generate_f64_lowp_ops() -> String {
     formatdoc! {r#"
     /// Low-precision base-2 logarithm.
     ///
-    /// Uses scalar fallback for simplicity (only 2 lanes).
-    /// Handles edge cases correctly via std.
+    /// Uses scalar polynomial approximation (no_std compatible).
     #[inline(always)]
     pub fn log2_lowp(self) -> Self {{
         let arr = self.to_array();
-        let result = [arr[0].log2(), arr[1].log2()];
+        let result = [crate::nostd_math::log2_f64(arr[0]), crate::nostd_math::log2_f64(arr[1])];
         Self::from(result)
     }}
 
     /// Low-precision base-2 exponential (2^x).
     ///
-    /// Handles edge cases correctly via std.
+    /// Uses scalar polynomial approximation (no_std compatible).
     #[inline(always)]
     pub fn exp2_lowp(self) -> Self {{
         let arr = self.to_array();
-        let result = [arr[0].exp2(), arr[1].exp2()];
+        let result = [crate::nostd_math::exp2_f64(arr[0]), crate::nostd_math::exp2_f64(arr[1])];
         Self::from(result)
     }}
 
     /// Low-precision natural logarithm.
     ///
-    /// Handles edge cases correctly via std.
+    /// Uses scalar polynomial approximation (no_std compatible).
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {{
         let arr = self.to_array();
-        let result = [arr[0].ln(), arr[1].ln()];
+        let result = [crate::nostd_math::ln_f64(arr[0]), crate::nostd_math::ln_f64(arr[1])];
         Self::from(result)
     }}
 
     /// Low-precision natural exponential (e^x).
     ///
-    /// Handles edge cases correctly via std.
+    /// Uses scalar polynomial approximation (no_std compatible).
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {{
         let arr = self.to_array();
-        let result = [arr[0].exp(), arr[1].exp()];
+        let result = [crate::nostd_math::exp_f64(arr[0]), crate::nostd_math::exp_f64(arr[1])];
         Self::from(result)
     }}
 
     /// Low-precision base-10 logarithm.
     ///
-    /// Handles edge cases correctly via std.
+    /// Uses scalar polynomial approximation (no_std compatible).
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {{
         let arr = self.to_array();
-        let result = [arr[0].log10(), arr[1].log10()];
+        let result = [crate::nostd_math::log10_f64(arr[0]), crate::nostd_math::log10_f64(arr[1])];
         Self::from(result)
     }}
 
     /// Low-precision power function (self^n).
     ///
-    /// Handles edge cases correctly via std.
+    /// Uses scalar polynomial approximation (no_std compatible).
     #[inline(always)]
     pub fn pow_lowp(self, n: f64) -> Self {{
         let arr = self.to_array();
-        let result = [arr[0].powf(n), arr[1].powf(n)];
+        let result = [crate::nostd_math::powf_f64(arr[0], n), crate::nostd_math::powf_f64(arr[1], n)];
         Self::from(result)
     }}
 

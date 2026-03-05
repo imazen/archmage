@@ -349,6 +349,121 @@ pub fn fma(a: f64, b: f64, c: f64) -> f64 {
     a * b + c
 }
 
+// ============================================================================
+// Transcendental approximations for no_std f64 scalar fallbacks
+// ============================================================================
+
+// These match the polynomial coefficients used in the SIMD implementations
+// (x86 f64x2 log2_lowp/exp2_lowp). They are "lowp" — not bit-exact with std,
+// but good enough for the lowp tier (~1% max relative error).
+
+/// Low-precision base-2 logarithm for f64.
+///
+/// Uses the same rational polynomial as the x86 f64x2 SIMD implementation.
+/// Only valid for positive, finite, non-zero inputs.
+#[inline(always)]
+pub fn log2_f64(x: f64) -> f64 {
+    if x.is_nan() || x <= 0.0 {
+        return if x == 0.0 {
+            f64::NEG_INFINITY
+        } else {
+            f64::NAN
+        };
+    }
+    if x.is_infinite() {
+        return f64::INFINITY;
+    }
+
+    const P0: f64 = -1.850_383_340_051_831e-6;
+    const P1: f64 = 1.428_716_047_008_376;
+    const P2: f64 = 0.742_458_733_278_206;
+    const Q0: f64 = 0.990_328_142_775_907;
+    const Q1: f64 = 1.009_671_857_224_115;
+    const Q2: f64 = 0.174_093_430_036_669;
+    const OFFSET: u64 = 0x3fe6a09e667f3bcd; // 2/3 in f64 bits
+
+    let x_bits = x.to_bits() as i64;
+    let offset = OFFSET as i64;
+    let exp_bits = x_bits.wrapping_sub(offset);
+    let exp_shifted = exp_bits >> 52;
+    let mantissa_bits = x_bits - (exp_shifted << 52);
+    let mantissa = f64::from_bits(mantissa_bits as u64);
+    let exp_val = exp_shifted as f64;
+    let m = mantissa - 1.0;
+
+    let yp = P2 * m + P1;
+    let yp = yp * m + P0;
+    let yq = Q2 * m + Q1;
+    let yq = yq * m + Q0;
+
+    yp / yq + exp_val
+}
+
+/// Low-precision base-2 exponential (2^x) for f64.
+///
+/// Uses the same polynomial as the x86 f64x2 SIMD implementation.
+#[inline(always)]
+pub fn exp2_f64(x: f64) -> f64 {
+    if x.is_nan() {
+        return f64::NAN;
+    }
+    if x >= 1024.0 {
+        return f64::INFINITY;
+    }
+    if x <= -1075.0 {
+        return 0.0;
+    }
+
+    const C0: f64 = 1.0;
+    const C1: f64 = core::f64::consts::LN_2;
+    const C2: f64 = 0.240_226_506_959_101;
+    const C3: f64 = 0.055_504_108_664_822;
+    const C4: f64 = 0.009_618_129_107_629;
+
+    let x = if x < -1022.0 {
+        -1022.0
+    } else if x > 1022.0 {
+        1022.0
+    } else {
+        x
+    };
+
+    let xi = floor(x);
+    let xf = x - xi;
+
+    let poly = C4 * xf + C3;
+    let poly = poly * xf + C2;
+    let poly = poly * xf + C1;
+    let poly = poly * xf + C0;
+
+    let scale = f64::from_bits(((xi as i64 + 1023) << 52) as u64);
+    poly * scale
+}
+
+/// Low-precision natural logarithm for f64.
+#[inline(always)]
+pub fn ln_f64(x: f64) -> f64 {
+    log2_f64(x) * core::f64::consts::LN_2
+}
+
+/// Low-precision natural exponential (e^x) for f64.
+#[inline(always)]
+pub fn exp_f64(x: f64) -> f64 {
+    exp2_f64(x * core::f64::consts::LOG2_E)
+}
+
+/// Low-precision base-10 logarithm for f64.
+#[inline(always)]
+pub fn log10_f64(x: f64) -> f64 {
+    log2_f64(x) * core::f64::consts::LOG10_2
+}
+
+/// Low-precision power function (x^n) for f64.
+#[inline(always)]
+pub fn powf_f64(x: f64, n: f64) -> f64 {
+    exp2_f64(n * log2_f64(x))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

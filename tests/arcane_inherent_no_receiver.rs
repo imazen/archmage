@@ -15,7 +15,7 @@
 
 #[cfg(target_arch = "x86_64")]
 mod inherent_no_receiver {
-    use archmage::{arcane, SimdToken, X64V3Token};
+    use archmage::{SimdToken, X64V3Token, arcane};
 
     struct Encoder {
         buffer: Vec<u8>,
@@ -23,9 +23,7 @@ mod inherent_no_receiver {
 
     impl Encoder {
         fn new() -> Self {
-            Self {
-                buffer: Vec::new(),
-            }
+            Self { buffer: Vec::new() }
         }
 
         /// Associated function with #[arcane(nested)] — token first, struct

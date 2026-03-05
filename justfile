@@ -63,6 +63,15 @@ validate-tokens:
 parity:
     cargo run -p xtask -- parity
 
+# Test no_std compilation and tests for all crates
+test-nostd:
+    cargo check -p archmage --no-default-features --features "macros avx512"
+    cargo check -p magetypes --no-default-features
+    cargo test -p archmage --no-default-features --features "macros avx512"
+    cargo test -p magetypes --no-default-features
+    cargo check -p magetypes --no-default-features --target aarch64-unknown-none
+    cargo check -p magetypes --no-default-features --target thumbv7m-none-eabi
+
 # Run ALL CI checks (MUST pass before push or publish)
 ci:
     cargo run -p xtask -- ci

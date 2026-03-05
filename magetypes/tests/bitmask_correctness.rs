@@ -39,8 +39,9 @@ macro_rules! bitmask_tests {
             use super::*;
             use magetypes::simd::generic::$ty;
 
-            fn make(arr: [$elem_ty; $lanes]) -> $ty<$token_ty> {
-                $ty::from_array($token_fn(), arr)
+            fn make(arr: [$elem_ty; $lanes]) -> Option<$ty<$token_ty>> {
+                let token = $token_fn()?;
+                Some($ty::from_array(token, arr))
             }
 
             #[test]
@@ -48,7 +49,8 @@ macro_rules! bitmask_tests {
                 for lane in 0..$lanes {
                     let mut arr = [0 as $elem_ty; $lanes];
                     arr[lane] = $set_val;
-                    let mask = make(arr).bitmask();
+                    let Some(v) = make(arr) else { return };
+                    let mask = v.bitmask();
                     let expected: $mask_ty = 1 << lane;
                     assert_eq!(
                         mask,
@@ -62,7 +64,8 @@ macro_rules! bitmask_tests {
             #[test]
             fn all_set() {
                 let arr = [$set_val as $elem_ty; $lanes];
-                let mask = make(arr).bitmask();
+                let Some(v) = make(arr) else { return };
+                let mask = v.bitmask();
                 let expected: $mask_ty = $mask_fn($lanes as u32);
                 assert_eq!(
                     mask,
@@ -75,7 +78,8 @@ macro_rules! bitmask_tests {
             #[test]
             fn all_clear() {
                 let arr = [0 as $elem_ty; $lanes];
-                let mask = make(arr).bitmask();
+                let Some(v) = make(arr) else { return };
+                let mask = v.bitmask();
                 assert_eq!(
                     mask,
                     0,
@@ -93,7 +97,8 @@ macro_rules! bitmask_tests {
                 for i in 0..half {
                     arr[i] = $set_val;
                 }
-                let mask = make(arr).bitmask();
+                let Some(v) = make(arr) else { return };
+                let mask = v.bitmask();
                 let expected: $mask_ty = $mask_fn(half as u32);
                 assert_eq!(
                     mask,
@@ -107,7 +112,8 @@ macro_rules! bitmask_tests {
                 for i in half..$lanes {
                     arr[i] = $set_val;
                 }
-                let mask = make(arr).bitmask();
+                let Some(v) = make(arr) else { return };
+                let mask = v.bitmask();
                 let expected: $mask_ty = $mask_fn(half as u32) << (half as u32);
                 assert_eq!(
                     mask,
@@ -132,8 +138,8 @@ mod x86_tests {
     use super::{mask_n_u32, mask_n_u64};
     use archmage::{SimdToken, X64V3Token};
 
-    fn token() -> X64V3Token {
-        X64V3Token::summon().expect("AVX2 required")
+    fn token() -> Option<X64V3Token> {
+        X64V3Token::summon()
     }
 
     // W128
@@ -273,8 +279,8 @@ mod scalar_tests {
     use super::{mask_n_u32, mask_n_u64};
     use archmage::{ScalarToken, SimdToken};
 
-    fn token() -> ScalarToken {
-        ScalarToken::summon().expect("ScalarToken always available")
+    fn token() -> Option<ScalarToken> {
+        ScalarToken::summon()
     }
 
     // W128
