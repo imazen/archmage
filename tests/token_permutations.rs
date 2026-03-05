@@ -1,7 +1,7 @@
 //! Tests for the token permutation test helper.
 
 use archmage::SimdToken;
-use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
+use archmage::testing::{CompileTimePolicy, for_each_token_permutation, lock_token_testing};
 
 /// Verify that permutations run and the "all enabled" state is always included.
 #[test]
@@ -70,28 +70,39 @@ fn disabled_tokens_fail_summon() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn tokens_reenabled_between_permutations() {
-    // Capture availability inside the "all enabled" permutation (mutex held,
-    // all tokens reset) rather than outside, where a parallel test may have
-    // tokens disabled — making the captured value stale.
-    let mut v2_all_enabled = false;
-    let mut v3_all_enabled = false;
+    // Hold the lock for the entire test so no parallel test can disable
+    // tokens between our initial capture and the post-permutation check.
+    let _lock = lock_token_testing();
+
+    let v2_available = archmage::X64V2Token::summon().is_some();
+    let v3_available = archmage::X64V3Token::summon().is_some();
 
     let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
         if perm.disabled.is_empty() {
-            v2_all_enabled = archmage::X64V2Token::summon().is_some();
-            v3_all_enabled = archmage::X64V3Token::summon().is_some();
+            if v2_available {
+                assert!(
+                    archmage::X64V2Token::summon().is_some(),
+                    "V2 should be available in 'all enabled' permutation"
+                );
+            }
+            if v3_available {
+                assert!(
+                    archmage::X64V3Token::summon().is_some(),
+                    "V3 should be available in 'all enabled' permutation"
+                );
+            }
         }
     });
 
-    // After all permutations, tokens should be back to "all enabled" state
+    // After all permutations, tokens should be back to normal
     assert_eq!(
         archmage::X64V2Token::summon().is_some(),
-        v2_all_enabled,
+        v2_available,
         "V2 should be re-enabled after permutations"
     );
     assert_eq!(
         archmage::X64V3Token::summon().is_some(),
-        v3_all_enabled,
+        v3_available,
         "V3 should be re-enabled after permutations"
     );
     assert!(report.permutations_run >= 1);

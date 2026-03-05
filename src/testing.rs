@@ -6,11 +6,12 @@
 //! handles all fallback tiers.
 //!
 //! Token disabling is process-wide, so a mutex serializes all permutation
-//! runs. For fully correct results, run tests single-threaded:
+//! runs and manual disable/enable calls. Use [`lock_token_testing`] when
+//! calling [`dangerously_disable_token_process_wide`] directly, or when
+//! you need to observe stable `summon()` results alongside parallel
+//! permutation tests.
 //!
-//! ```sh
-//! cargo test -- --test-threads=1
-//! ```
+//! [`dangerously_disable_token_process_wide`]: crate::SimdToken::dangerously_disable_token_process_wide
 //!
 //! # Example
 //!
@@ -39,11 +40,90 @@
 //!   `testable_dispatch` feature enabled for full coverage
 
 use alloc::{format, string::String, vec::Vec};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 use crate::CompileTimeGuaranteedError;
 
 static TOKEN_PERMUTATION_MUTEX: Mutex<()> = Mutex::new(());
+
+/// Tracks which thread holds the token testing lock, enabling reentrance
+/// from `for_each_token_permutation` when the caller already holds it.
+static OWNER_THREAD: Mutex<Option<std::thread::ThreadId>> = Mutex::new(None);
+
+/// RAII guard for the token testing lock. While held, no other thread can
+/// manipulate token disable state via [`for_each_token_permutation`] or
+/// another [`lock_token_testing`] call.
+///
+/// Use this when you need to call [`dangerously_disable_token_process_wide`]
+/// manually, or when you need to observe stable token state (via `summon()`)
+/// alongside permutation tests running in parallel.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use archmage::testing::lock_token_testing;
+/// use archmage::{X64V3Token, SimdToken};
+///
+/// #[test]
+/// fn manual_disable_test() {
+///     let _lock = lock_token_testing();
+///     let baseline = my_function(&data);
+///     X64V3Token::dangerously_disable_token_process_wide(true).unwrap();
+///     let fallback = my_function(&data);
+///     X64V3Token::dangerously_disable_token_process_wide(false).unwrap();
+///     assert_eq!(baseline, fallback);
+/// }
+/// ```
+///
+/// [`dangerously_disable_token_process_wide`]: crate::SimdToken::dangerously_disable_token_process_wide
+pub struct TokenTestGuard {
+    _inner: MutexGuard<'static, ()>,
+}
+
+impl Drop for TokenTestGuard {
+    fn drop(&mut self) {
+        // Clear ownership before releasing the main mutex.
+        if let Ok(mut owner) = OWNER_THREAD.lock() {
+            *owner = None;
+        }
+    }
+}
+
+/// Acquire the process-wide token testing lock.
+///
+/// This is the same lock used internally by [`for_each_token_permutation`].
+/// Holding it ensures that no permutation test or other `lock_token_testing`
+/// caller on another thread can manipulate token disable state concurrently.
+///
+/// `for_each_token_permutation` is reentrant — if called while the current
+/// thread holds this lock, it skips locking and proceeds directly.
+///
+/// # Panics
+///
+/// Panics if the current thread already holds this lock (non-reentrant for
+/// direct callers — use `for_each_token_permutation` for reentrance).
+pub fn lock_token_testing() -> TokenTestGuard {
+    let current = std::thread::current().id();
+
+    // Check for same-thread reentrance (programming error).
+    if let Ok(owner) = OWNER_THREAD.lock() {
+        assert!(
+            *owner != Some(current),
+            "lock_token_testing: already held by the current thread"
+        );
+    }
+
+    let guard = TOKEN_PERMUTATION_MUTEX
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+
+    // Record ownership for reentrance detection.
+    if let Ok(mut owner) = OWNER_THREAD.lock() {
+        *owner = Some(current);
+    }
+
+    TokenTestGuard { _inner: guard }
+}
 
 /// What to do when a token's features are compile-time guaranteed (can't be disabled).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -239,9 +319,36 @@ pub fn for_each_token_permutation(
     policy: CompileTimePolicy,
     mut f: impl FnMut(&TokenPermutation),
 ) -> PermutationReport {
-    let _guard = TOKEN_PERMUTATION_MUTEX
+    // If the current thread already holds the lock (via lock_token_testing),
+    // skip locking to avoid deadlock. Otherwise acquire it.
+    let already_held = OWNER_THREAD
         .lock()
-        .unwrap_or_else(|e| e.into_inner());
+        .ok()
+        .is_some_and(|owner| *owner == Some(std::thread::current().id()));
+    let _guard = if already_held {
+        None
+    } else {
+        let g = TOKEN_PERMUTATION_MUTEX
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if let Ok(mut owner) = OWNER_THREAD.lock() {
+            *owner = Some(std::thread::current().id());
+        }
+        Some(g)
+    };
+    // When we acquired the lock ourselves, clear ownership on drop.
+    // (If the caller holds it via lock_token_testing, they own cleanup.)
+    struct ClearOwnerOnDrop(bool);
+    impl Drop for ClearOwnerOnDrop {
+        fn drop(&mut self) {
+            if self.0 {
+                if let Ok(mut owner) = OWNER_THREAD.lock() {
+                    *owner = None;
+                }
+            }
+        }
+    }
+    let _clear_owner = ClearOwnerOnDrop(!already_held && _guard.is_some());
 
     let slots = build_token_slots();
 
