@@ -174,6 +174,52 @@ The 4x penalty is LLVM's `#[target_feature]` boundary, not archmage overhead. Ba
 
 For trait impls, use `#[arcane(_self = Type)]` — a nested inner-function approach (since sibling would add methods not in the trait definition).
 
+## Auto-vectorization with `#[autoversion]`
+
+Don't want to write intrinsics? Write plain scalar code and let the compiler vectorize it:
+
+```rust
+use archmage::prelude::*;
+
+#[autoversion]
+fn sum_of_squares(_token: SimdToken, data: &[f32]) -> f32 {
+    let mut sum = 0.0f32;
+    for &x in data {
+        sum += x * x;
+    }
+    sum
+}
+
+// Call directly — no token needed, no unsafe:
+let result = sum_of_squares(&my_data);
+```
+
+`#[autoversion]` generates a separate copy of your function for each architecture tier — each compiled with `#[target_feature]` to unlock the auto-vectorizer — plus a runtime dispatcher that picks the best one. On x86-64 with AVX2+FMA, that loop compiles to `vfmadd231ps` (8 floats per cycle). On ARM, you get `fmla`. The `_scalar` fallback compiles without SIMD features as a safety net.
+
+The `_token: SimdToken` parameter is a placeholder — you don't use it in the body. The macro replaces it with concrete token types (`X64V3Token`, `NeonToken`, etc.) for each variant.
+
+**What gets generated** (default tiers):
+
+- `sum_of_squares_v4(token: X64V4Token, ...)` — AVX-512 (with `avx512` feature)
+- `sum_of_squares_v3(token: X64V3Token, ...)` — AVX2+FMA
+- `sum_of_squares_neon(token: NeonToken, ...)` — AArch64 NEON
+- `sum_of_squares_wasm128(token: Wasm128Token, ...)` — WASM SIMD
+- `sum_of_squares_scalar(token: ScalarToken, ...)` — no SIMD
+- `sum_of_squares(data: &[f32]) -> f32` — **dispatcher** (token param removed)
+
+Explicit tiers: `#[autoversion(v3, neon)]`. `scalar` is always implicit.
+
+For methods with `self`: `#[autoversion(_self = MyType)]` and use `_self` instead of `self` in the body. Trait methods use the delegation pattern — see the [API docs](https://docs.rs/archmage/latest/archmage/attr.autoversion.html).
+
+**When to use which:**
+
+| | `#[autoversion]` | `#[arcane]` + `#[rite]` |
+|---|---|---|
+| You write | Scalar loops | SIMD intrinsics |
+| Vectorization | Compiler auto-vectorizes | You choose the instructions |
+| Lines of code | 1 attribute | Manual variant + dispatch |
+| Best for | Simple numeric loops | Hand-tuned SIMD kernels |
+
 ## SIMD types with `magetypes`
 
 `magetypes` provides ergonomic SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators. It's an exploratory companion crate — the API may change between releases.
@@ -308,7 +354,7 @@ For manual single-token testing, `lock_token_testing()` serializes against paral
 | Feature | Default | |
 |---------|---------|---|
 | `std` | yes | Standard library (required for runtime detection) |
-| `macros` | yes | `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!` |
+| `macros` | yes | `#[arcane]`, `#[rite]`, `#[autoversion]`, `#[magetypes]`, `incant!` |
 | `avx512` | no | AVX-512 tokens (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) |
 | `testable_dispatch` | no | Makes token disabling work with `-Ctarget-cpu=native` |
 

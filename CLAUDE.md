@@ -323,10 +323,49 @@ fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
 }
 ```
 
+### `#[autoversion]`: Auto-Vectorized Dispatch
+
+Write plain scalar code with a `SimdToken` placeholder. `#[autoversion]` generates per-tier
+variants (each compiled with `#[target_feature]` via `#[arcane]`) plus a runtime dispatcher.
+The compiler auto-vectorizes each variant — no intrinsics needed.
+
+```rust
+use archmage::prelude::*;
+
+#[autoversion]
+fn sum_of_squares(_token: SimdToken, data: &[f32]) -> f32 {
+    let mut sum = 0.0f32;
+    for &x in data {
+        sum += x * x;
+    }
+    sum
+}
+
+// Call directly — no token, no unsafe:
+let result = sum_of_squares(&my_data);
+```
+
+**What gets generated:** `sum_of_squares_v4`, `_v3`, `_neon`, `_wasm128`, `_scalar` variants
+plus a `sum_of_squares(data)` dispatcher (token param removed).
+
+**Explicit tiers:** `#[autoversion(v3, neon)]`. `scalar` is always implicit.
+
+**Self receivers:** `#[autoversion(_self = MyType)]` — use `_self` in body.
+
+**Trait methods:** Can't expand to siblings. Delegate to an autoversioned inherent method.
+
+**vs `#[magetypes]` + `incant!`:**
+- `SimdToken` is replaced only in the signature (fast compile). `#[magetypes]` does full body substitution.
+- `#[autoversion]` generates its own dispatcher. `#[magetypes]` requires separate `incant!`.
+- Use `#[autoversion]` for scalar auto-vectorization. Use `#[magetypes]` + `incant!` for hand-written intrinsics.
+
+Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v4`, `v4x`, `neon`, `neon_aes`, `neon_sha3`,
+`neon_crc`, `arm_v2`, `arm_v3`, `wasm128`, `wasm128_relaxed`, `x64_crypto`, `scalar`.
+
 ### `ScalarToken`
 
 Always-available fallback. Used for:
-- `incant!()` convention (`_scalar` suffix)
+- `incant!()` and `#[autoversion]` convention (`_scalar` suffix)
 - Consistent API shape in dispatch
 
 ### Fixed-Size Types with Polyfills

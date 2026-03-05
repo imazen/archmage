@@ -50,6 +50,9 @@
 //!   so LLVM inlines it into callers with matching features. Use for functions called from `#[arcane]` context.
 //! - [`incant!`] — Dispatch macro. Routes to suffixed functions (`_v3`, `_neon`,
 //!   `_scalar`, etc.) based on platform. See [How `incant!` works](#how-incant-works).
+//! - [`autoversion`] — Auto-vectorization macro. Write plain scalar code with a
+//!   `SimdToken` placeholder; generates per-platform variants + runtime dispatcher.
+//!   No intrinsics, no SIMD types — the compiler auto-vectorizes each variant.
 //! - [`magetypes`] — Type generation macro. Expands a single function into
 //!   per-platform variants with matching `#[cfg]` guards.
 //!
@@ -148,8 +151,8 @@ pub use crate::tokens::{Wasm128RelaxedToken, Wasm128Token};
 // -- Macros --
 #[cfg(feature = "macros")]
 pub use archmage_macros::{
-    arcane, dispatch_variant, incant, magetypes, rite, simd_fn, simd_route, token_target_features,
-    token_target_features_boundary,
+    arcane, autoversion, dispatch_variant, incant, magetypes, rite, simd_fn, simd_route,
+    token_target_features, token_target_features_boundary,
 };
 
 // -- Platform intrinsics: core::arch types + value ops + safe memory ops --
