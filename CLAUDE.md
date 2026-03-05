@@ -723,7 +723,7 @@ if let Some(token) = X64V3Token::summon() {
 
 ```
 token-registry.toml          # THE source of truth for all token/trait/feature data
-spec.md                      # Architecture spec and safety model documentation
+docs/spec.md                 # Architecture spec and safety model documentation
 archmage/                    # Main crate: tokens, macros, detect
 ├── src/
 │   ├── lib.rs              # Main exports

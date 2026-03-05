@@ -11,26 +11,28 @@ Archmage uses zero-sized **capability tokens** to prove CPU features are availab
 
 Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the type itself is the proof.
 
-### 1.1 Token Registry (planned)
+### 1.1 Token Registry
 
-`token-registry.toml` is the single source of truth for all token definitions. Everything else — macro feature maps, xtask codegen, validation — derives from it. The registry schema is defined in the plan (see `melodic-skipping-pancake.md`).
+`token-registry.toml` is the single source of truth for all token definitions. Everything else — macro feature maps, xtask codegen, validation — derives from it. Run `just generate` to regenerate all derived code, `just validate-registry` to check the registry, and `just validate-tokens` to verify `summon()` checks match the registry.
 
 ### 1.2 Current Token Set
 
-#### x86_64 (5 tokens)
+#### x86_64 (8 tokens)
 
 | Token | Aliases | Features | Hardware |
 |-------|---------|----------|----------|
-| `X64V2Token` | — | sse3, ssse3, sse4.1, sse4.2, popcnt | Nehalem 2008+, Bulldozer 2011+ |
-| `X64CryptoToken` | — | + pclmulqdq, aes | Westmere 2010+, Bulldozer 2011+ |
+| `X64V1Token` | `Sse2Token` | sse, sse2 (x86_64 baseline) | All x86_64 CPUs |
+| `X64V2Token` | — | + sse3, ssse3, sse4.1, sse4.2, popcnt | Nehalem 2008+, Bulldozer 2011+ |
+| `X64CryptoToken` | — | v2 + pclmulqdq, aes | Westmere 2010+, Bulldozer 2011+ |
 | `X64V3Token` | — | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt | Haswell 2013+, Zen 1 2017+ |
+| `X64V3CryptoToken` | — | v3 + vpclmulqdq, vaes | Zen 3+ 2020, Alder Lake 2021+ |
 | `X64V4Token` | `Avx512Token`, `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl | Skylake-X 2017+, Zen 4 2022+ |
 | `X64V4xToken` | — | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | v4 + avx512fp16 | Sapphire Rapids 2023+ |
 
 Features are cumulative — each token lists ALL features it enables, not just the delta from the previous tier. This eliminates the class of bugs where "minimal" lists diverge from "cumulative" lists. LLVM deduplicates redundant features in `#[target_feature]`.
 
-The v1 level (SSE, SSE2) has no token — it's the x86_64 baseline, always available.
+`X64V1Token` / `Sse2Token` represents the x86_64 baseline (SSE + SSE2, always available). `summon()` always returns `Some` on x86_64.
 
 #### AArch64 (6 tokens)
 
@@ -60,12 +62,14 @@ SVE/SVE2 tokens are prohibited — Rust stable doesn't support SVE intrinsics.
 
 ### 1.3 Token Hierarchy
 
-Tokens form a subsumption hierarchy. Higher-tier tokens can produce lower-tier tokens:
+Tokens form a subsumption hierarchy. Higher-tier tokens can produce lower-tier tokens via `From`/`Into` conversions and extraction methods:
 
 ```
 x86_64:
-  X64V4xToken → Avx512Token (v4) → X64V3Token (v3) → X64V2Token (v2)
-  Avx512Fp16Token   → Avx512Token (v4) → X64V3Token (v3) → X64V2Token (v2)
+  X64V4xToken → X64V4Token (v4) → X64V3Token (v3) → X64V2Token (v2) → X64V1Token (v1)
+  Avx512Fp16Token → X64V4Token (v4) → X64V3Token (v3) → X64V2Token (v2) → X64V1Token (v1)
+  X64V3CryptoToken → X64V3Token (v3) → X64V2Token (v2) → X64V1Token (v1)
+  X64CryptoToken → X64V2Token (v2) → X64V1Token (v1)
 
 AArch64:
   Arm64V3Token → Arm64V2Token → NeonToken
@@ -74,16 +78,17 @@ AArch64:
   NeonCrcToken → NeonToken
 ```
 
-Extraction methods: `.v3()`, `.v2()`, `.avx512()`, `.neon()`, `.arm_v2()`.
+Extraction methods: `.v1()`, `.v2()`, `.v3()`, `.avx512()`, `.neon()`, `.arm_v2()`. Downcasting is free (zero-cost, same optimization region). Upcasting via `IntoConcreteToken` is safe but creates an LLVM optimization boundary.
 
 ### 1.4 Trait Hierarchy
 
 Traits provide generic bounds. Tokens implement the traits matching their capabilities.
 
-**Width traits:**
+**Width traits (DEPRECATED — will be removed):**
 ```
 Has512BitSimd → Has256BitSimd → Has128BitSimd
 ```
+Width traits are misleading (`Has256BitSimd` enables AVX but NOT AVX2 or FMA). Use concrete tokens or tier traits instead.
 
 **x86 tier traits:**
 ```
@@ -102,20 +107,23 @@ HasArm64V3 → HasNeonSha3
 
 **Trait implementations by token:**
 
-| Token | Has128Bit | HasX64V2 | HasX64V4 | HasNeon | HasNeonAes | HasNeonSha3 | HasArm64V2 | HasArm64V3 |
-|-------|-----------|----------|----------|---------|------------|-------------|------------|------------|
-| X64V2Token | x | x | | | | | | |
-| X64V3Token | x | x | | | | | | |
-| X64V4Token | x | x | x | | | | | |
-| X64V4xToken | x | x | x | | | | | |
-| Avx512Fp16Token | x | x | x | | | | | |
-| NeonToken | x | | | x | | | | |
-| Arm64V2Token | x | | | x | x | | x | |
-| Arm64V3Token | x | | | x | x | x | x | x |
-| NeonAesToken | x | | | x | x | | | |
-| NeonSha3Token | x | | | x | | x | | |
-| NeonCrcToken | x | | | x | | | | |
-| Wasm128Token | x | | | | | | | |
+| Token | HasX64V2 | HasX64V4 | HasNeon | HasNeonAes | HasNeonSha3 | HasArm64V2 | HasArm64V3 |
+|-------|----------|----------|---------|------------|-------------|------------|------------|
+| X64V1Token | | | | | | | |
+| X64V2Token | x | | | | | | |
+| X64CryptoToken | x | | | | | | |
+| X64V3Token | x | | | | | | |
+| X64V3CryptoToken | x | | | | | | |
+| X64V4Token | x | x | | | | | |
+| X64V4xToken | x | x | | | | | |
+| Avx512Fp16Token | x | x | | | | | |
+| NeonToken | | | x | | | | |
+| Arm64V2Token | | | x | x | | x | |
+| Arm64V3Token | | | x | x | x | x | x |
+| NeonAesToken | | | x | x | | | |
+| NeonSha3Token | | | x | | x | | |
+| NeonCrcToken | | | x | | | | |
+| Wasm128Token | | | | | | | |
 
 ### 1.5 Cross-Platform Behavior
 
@@ -296,72 +304,72 @@ This would be valuable but requires auditing all ~582 unsafe intrinsics to categ
 
 ## 4. Feature Detection
 
-### 4.1 `is_x86_feature_available!` / `is_aarch64_feature_available!`
+### 4.1 Token Detection
 
-Archmage provides detection macros that combine compile-time and runtime checks:
+Token detection combines compile-time and runtime checks:
 
-1. If the feature is enabled at compile time (via `#[target_feature]`, `-C target-cpu`, or being inside a multiversed function variant), the check is eliminated entirely.
-2. Otherwise, falls back to `std::is_x86_feature_detected!` (or architecture equivalent).
+1. `compiled_with()` — returns `Some(true)` if the feature is enabled at compile time (via `#[target_feature]`, `-Ctarget-cpu`, or being inside an `#[arcane]`/`#[rite]` function). Returns `None` if unknown at compile time.
+2. `summon()` — returns `Some(token)` if the CPU supports the required features. Uses atomic caching for fast repeated calls (~1.3 ns). When `compiled_with()` returns `Some(true)`, `summon()` compiles away entirely.
 
-This means inside a `#[multiversed]` function compiled for AVX2, `X64V3Token::summon()` compiles to a constant `Some(token)`.
+This means inside an `#[arcane]` function compiled for AVX2, `X64V3Token::summon()` compiles to a constant `Some(token)`.
 
 ### 4.2 WASM Special Case
 
 WASM SIMD128 uses compile-time detection only (`#[cfg(target_feature = "simd128")]`). There is no runtime detection mechanism.
 
-### 4.3 AArch64 NEON Special Case
+### 4.3 AArch64 NEON Detection
 
-NEON is always available on AArch64 (`NeonToken::summon()` always returns `Some`). No runtime check needed.
+NEON is virtually universal on AArch64, but `NeonToken::summon()` performs runtime detection (not a constant `Some`). This is because some AArch64 Linux kernels can disable NEON via `HWCAP` flags, and the detection mechanism is architecture-specific:
 
-## 5. QEMU CI Testing
+- **Linux/Android:** Uses `getauxval(AT_HWCAP)` via `std::arch::is_aarch64_feature_detected!`
+- **macOS:** Uses `sysctlbyname` — with Apple vendor fallback for features in the Apple target spec baseline
+- **Windows:** Uses `IsProcessorFeaturePresent` — limited feature coverage (see Known Platform Detection Issues in CLAUDE.md)
 
-QEMU user-mode emulation can trap SIMD instructions, allowing CI to test non-native feature paths:
+## 5. CI Testing
 
-- `qemu-x86_64 -cpu Haswell` for x86-64-v3 testing
-- `qemu-x86_64 -cpu Skylake-Server-v4` for AVX-512
-- `qemu-aarch64 -cpu cortex-a76` for NEON + crypto
+### Intel SDE (x86 emulation)
 
-This catches feature-detection bugs and instruction encoding errors without native hardware. Tests verify `summon()` returns `Some` and intrinsics execute correctly under emulation.
+Intel Software Development Emulator (SDE) allows testing x86 feature paths on any x86 host:
 
-## 6. Token Registry Consolidation (in progress)
+- `sde64 -p4` — Pentium 4 (SSE2 only)
+- `sde64 -nhm` — Nehalem (SSE4.2, no AVX)
+- `sde64 -hsw` — Haswell (AVX2 + FMA, no AVX-512)
+- `sde64 -skx` — Skylake-X (AVX-512)
+- `sde64 -icl` — Ice Lake (AVX-512 + extensions)
 
-The goal is to replace 10+ independent copies of token-to-feature mappings (in macros, xtask, tests, docs) with a single `token-registry.toml` that everything derives from.
+See `just test-all-cpus` for the full suite.
 
-### 6.1 Current State (post Step 1)
+### Cross-compilation (ARM + WASM)
 
-- Granular x86 tokens removed (Sse41Token, Avx2Token, FmaToken, etc.)
-- ARM composite tokens removed (ArmCryptoToken, ArmCrypto3Token)
-- NeonCrcToken added
-- Avx2FmaToken deprecated (use X64V3Token)
-- CompositeToken trait removed
-- Feature lists in `token_to_features()` are complete and correct
-- X64V3Token features fixed (was missing sse3, ssse3, sse4.1, sse4.2, popcnt, f16c, lzcnt)
+ARM testing uses `cross` (Docker-based QEMU emulation):
+- `cross test --target aarch64-unknown-linux-gnu` for AArch64
 
-### 6.2 Remaining Steps
+WASM testing uses `wasmtime`:
+- `cargo test --target wasm32-wasip1` with `-C target-feature=+simd128`
 
-- **Step 2:** Create `token-registry.toml` and xtask registry parser
-- **Step 3:** Generate `archmage-macros/src/generated_registry.rs` from TOML
-- **Step 4:** Wire xtask internals to registry
-- **Step 5:** Add `summon()`/`summon()` verification (validate source against registry)
-- **Step 7:** Housekeeping (update CLAUDE.md, justfile, bump version)
+See `just test-cross` and `just test-parity` for full cross-platform suites.
 
-### 6.3 Registry Schema
+## 6. Token Registry
+
+`token-registry.toml` is the single source of truth. All token code, macro registries, SIMD types, and documentation are generated from it via `cargo xtask generate` (aka `just generate`).
+
+### 6.1 Registry Schema
 
 The registry uses TOML with these table types:
 
-- `[[token]]` — token definitions with name, arch, aliases, features, traits, optional cargo_feature
+- `[[token]]` — token definitions with name, arch, aliases, features, traits, cargo_feature, display_name, short_name, parent, extraction_aliases, doc
 - `[[trait]]` — trait definitions with name, features, parents
 - `[[width_namespace]]` — width namespace config for simd type re-exports
 - `[[magetypes_file]]` — file-to-token validation mappings
 - `[[polyfill_w256]]` / `[[polyfill_w512]]` — polyfill platform configs
 
-See the plan file for the full schema.
+### 6.2 Validation
 
-### 6.4 Validation After Consolidation
-
-`cargo xtask validate` will verify:
+`cargo xtask validate` verifies:
 1. Generated macro code matches registry
 2. `summon()` source checks exactly the registry features
 3. Magetypes intrinsic usage is valid under gating tokens
 4. Trait hierarchy is consistent (token features ⊇ claimed trait features)
 5. Re-running `cargo xtask generate` produces identical output (idempotent)
+
+`cargo xtask parity` checks API surface parity across x86/ARM/WASM (currently 0 issues).

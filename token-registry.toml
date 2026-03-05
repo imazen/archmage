@@ -5,7 +5,7 @@
 # - xtask validation (token_provides_features)
 # - xtask codegen (width namespaces, magetypes mappings, polyfills)
 # - xtask codegen (token impls, traits, stubs)
-# - spec.md documentation
+# - docs/spec.md documentation
 #
 # LLVM deduplicates redundant features in #[target_feature] — listing
 # the full set is harmless and eliminates the class of bugs where
