@@ -114,10 +114,10 @@ fn cpu_model_name() -> String {
 
 // ── x86 CPUID brand string (all platforms) ──────────────────────────────
 
-#[cfg(target_arch = "x86_64")]
-use core::arch::x86_64::__cpuid;
 #[cfg(target_arch = "x86")]
 use core::arch::x86::__cpuid;
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::__cpuid;
 
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 fn cpuid_brand_string() -> Option<String> {
