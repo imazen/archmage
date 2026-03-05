@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.1 — 2026-03-04
+
+Generic `f32x16<T>` transcendentals and float↔int conversions.
+
+- **`F32x16Convert` trait** — new backend trait enabling bitcast and numeric conversion between `f32x16` and `i32x16`. Implemented for all backends: X64V3Token (2×256-bit polyfill), X64V4Token/X64V4xToken (native AVX-512), NeonToken (4×128-bit polyfill), Wasm128Token (4×128-bit polyfill), ScalarToken.
+
+- **Generic `f32x16<T>` transcendentals** — `pow_midp`, `log2`, `exp2`, `ln`, `exp`, `log10`, `cbrt` (all with `_lowp`/`_midp`, `_unchecked`, `_precise` variants). Same polynomial approximations as `f32x4<T>` and `f32x8<T>`, works on any backend that implements `F32x16Convert`.
+
+- **`f32x16<T>` ↔ `i32x16<T>` conversion methods** — `bitcast_to_i32`, `from_i32_bitcast`, `to_i32`, `to_i32_round`, `from_i32` on `f32x16<T>`; `bitcast_to_f32`, `to_f32` on `i32x16<T>`.
+
+- **34 new tests** covering all f32x16 transcendentals, conversions, edge cases, roundtrips, cross-backend consistency, and generic function usage.
+
 ## 0.9.0 — 2026-03-04
 
 Sibling expansion, cfg-out default, macro options, `import_intrinsics`.
