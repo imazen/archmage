@@ -1,5 +1,9 @@
 # User Feedback Log
 
+## 2026-03-04
+
+- User requested updating all remaining `safe_unaligned_simd` references in docs/ markdown files to reflect the new combined intrinsics module (`archmage::intrinsics::{arch}`) and `import_intrinsics` pattern
+
 ## 2026-03-02
 
 - User requested updating all repo documentation for sibling expansion, cfg-out default, stub param, and analyzing all dependents for breakage
