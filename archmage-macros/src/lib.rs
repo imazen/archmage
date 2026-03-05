@@ -56,6 +56,37 @@ impl ToTokens for LightFn {
     }
 }
 
+/// Build a turbofish token stream from a function's generics.
+///
+/// Collects type and const generic parameters (skipping lifetimes) and returns
+/// a `::<A, B, N, M>` turbofish fragment. Returns empty tokens if there are no
+/// type/const generics to forward.
+///
+/// This is needed when the dispatcher or wrapper calls variant/sibling functions
+/// that have const generics not inferable from argument types alone.
+fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStream {
+    let params: Vec<proc_macro2::TokenStream> = generics
+        .params
+        .iter()
+        .filter_map(|param| match param {
+            GenericParam::Type(tp) => {
+                let ident = &tp.ident;
+                Some(quote! { #ident })
+            }
+            GenericParam::Const(cp) => {
+                let ident = &cp.ident;
+                Some(quote! { #ident })
+            }
+            GenericParam::Lifetime(_) => None,
+        })
+        .collect();
+    if params.is_empty() {
+        quote! {}
+    } else {
+        quote! { ::<#(#params),*> }
+    }
+}
+
 /// Replace all `Self` identifier tokens with a concrete type in a token stream.
 ///
 /// Recurses into groups (braces, parens, brackets). Used for `#[arcane(_self = Type)]`
@@ -759,9 +790,12 @@ fn arcane_impl_sibling(
     // Only the call from non-matching context (the wrapper) needs unsafe.
     let sibling_sig_inputs = inputs;
 
+    // Build turbofish for forwarding type/const generic params to sibling
+    let turbofish = build_turbofish(generics);
+
     // Build the call from wrapper to sibling
     let sibling_call = if has_self_receiver {
-        // Method: self.__arcane_fn(other_args...)
+        // Method: self.__arcane_fn::<T, N>(other_args...)
         let other_args: Vec<proc_macro2::TokenStream> = inputs
             .iter()
             .skip(1) // skip self receiver
@@ -776,9 +810,9 @@ fn arcane_impl_sibling(
                 }
             })
             .collect();
-        quote! { self.#sibling_name(#(#other_args),*) }
+        quote! { self.#sibling_name #turbofish(#(#other_args),*) }
     } else {
-        // Free function: __arcane_fn(all_args...)
+        // Free function: __arcane_fn::<T, N>(all_args...)
         let all_args: Vec<proc_macro2::TokenStream> = inputs
             .iter()
             .filter_map(|arg| {
@@ -792,7 +826,7 @@ fn arcane_impl_sibling(
                 }
             })
             .collect();
-        quote! { #sibling_name(#(#all_args),*) }
+        quote! { #sibling_name #turbofish(#(#all_args),*) }
     };
 
     // Build stub args for suppressing unused warnings
@@ -979,6 +1013,9 @@ fn arcane_impl_nested(
 
     let inner_fn_name = format_ident!("__simd_inner_{}", fn_name);
 
+    // Build turbofish for forwarding type/const generic params to inner function
+    let turbofish = build_turbofish(generics);
+
     // Transform output, body, and where clause to replace Self with concrete type if needed.
     let (inner_output, inner_body, inner_where_clause): (
         proc_macro2::TokenStream,
@@ -1040,7 +1077,7 @@ fn arcane_impl_nested(
                 }
 
                 // SAFETY: The token parameter proves the required CPU features are available.
-                unsafe { #inner_fn_name(#(#inner_args),*) }
+                unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }
 
             #stub
@@ -1057,7 +1094,7 @@ fn arcane_impl_nested(
                 }
 
                 // SAFETY: The token proves the required CPU features are available.
-                unsafe { #inner_fn_name(#(#inner_args),*) }
+                unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }
         }
     };
@@ -2469,6 +2506,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         })
         .collect();
 
+    // Build turbofish for forwarding type/const generics to variant calls
+    let turbofish = build_turbofish(&input_fn.sig.generics);
+
     // Group non-scalar tiers by target_arch for cfg blocks
     let mut arch_groups: Vec<(Option<&str>, Vec<&&TierDescriptor>)> = Vec::new();
     for tier in &tiers {
@@ -2490,9 +2530,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             let token_path: syn::Path = syn::parse_str(tier.token_path).unwrap();
 
             let call = if has_self {
-                quote! { self.#suffixed(__t, #(#dispatch_args),*) }
+                quote! { self.#suffixed #turbofish(__t, #(#dispatch_args),*) }
             } else {
-                quote! { #suffixed(__t, #(#dispatch_args),*) }
+                quote! { #suffixed #turbofish(__t, #(#dispatch_args),*) }
             };
 
             let check = quote! {
@@ -2526,9 +2566,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // Scalar fallback (always available, no summon needed)
     let scalar_name = format_ident!("{}_scalar", fn_name);
     let scalar_call = if has_self {
-        quote! { self.#scalar_name(archmage::ScalarToken, #(#dispatch_args),*) }
+        quote! { self.#scalar_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
     } else {
-        quote! { #scalar_name(archmage::ScalarToken, #(#dispatch_args),*) }
+        quote! { #scalar_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
     };
 
     // Build dispatcher function

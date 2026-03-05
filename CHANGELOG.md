@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.2 — 2026-03-05
+
+Const generic support for `#[autoversion]` and `#[arcane]`, semver-checks CI.
+
+- **Const generic support** — `#[autoversion]`, `#[arcane]` (sibling mode), and `#[arcane]` (nested mode) now forward const generic parameters via turbofish in generated dispatch/wrapper calls. Previously, const generics that couldn't be inferred from argument types alone (e.g., `<const BPP: usize>` used only in the function body) caused `E0282: type annotations needed`. This matches `multiversion`'s `#[multiversed]` behavior.
+
+  ```rust
+  // Now works — CHUNK forwarded via turbofish in dispatcher
+  #[autoversion]
+  fn fill_row<const BPP: usize>(_token: SimdToken, data: &[u8]) { ... }
+
+  fill_row::<3>(&data); // Dispatcher calls fill_row_v3::<3>(...)
+  ```
+
+- **Semver-checks CI** — new `semver-checks.yml` workflow runs `cargo-semver-checks` on every PR for all three crates, catching accidental breaking changes before merge.
+
+- **22 new const generic tests** — covers `#[autoversion]` and `#[arcane]` with: basic const generics, body-only const generics, return-type-only, multiple const generics, mixed type+const generics, lifetimes, self receivers, `_self = Type` nested mode, explicit tiers, and direct variant calls with turbofish.
+
 ## 0.9.1 — 2026-03-05
 
 Generic `f32x16<T>` transcendentals, bitmask bug fix, `#[autoversion]` improvements.

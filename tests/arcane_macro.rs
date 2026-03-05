@@ -496,6 +496,124 @@ mod x86_tests {
             assert_eq!(v.as_array(), &[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
         }
     }
+
+    // =========================================================================
+    // Const generics with #[arcane]
+    // =========================================================================
+
+    /// Const generic in both args and return type
+    #[arcane]
+    fn fill_array<const N: usize>(token: X64V3Token, val: f32) -> [f32; N] {
+        [val; N]
+    }
+
+    #[test]
+    fn test_arcane_const_generic() {
+        if let Some(token) = X64V3Token::summon() {
+            let result: [f32; 4] = fill_array(token, 3.14);
+            assert_eq!(result, [3.14; 4]);
+        }
+    }
+
+    /// Const generic only used in body (not inferable from args alone)
+    #[arcane]
+    fn sum_chunks<const CHUNK: usize>(token: X64V3Token, data: &[f32]) -> f32 {
+        let mut total = 0.0f32;
+        for chunk in data.chunks(CHUNK) {
+            for &x in chunk {
+                total += x;
+            }
+        }
+        total
+    }
+
+    #[test]
+    fn test_arcane_const_generic_body_only() {
+        if let Some(token) = X64V3Token::summon() {
+            let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+            let result = sum_chunks::<4>(token, &data);
+            assert!(
+                (result - 36.0).abs() < 1e-6,
+                "arcane const generic: {result}"
+            );
+        }
+    }
+
+    /// Const generic with multiple const params
+    #[arcane]
+    fn tile_copy<const ROWS: usize, const COLS: usize>(
+        token: X64V3Token,
+        src: &[f32],
+    ) -> [[f32; COLS]; ROWS] {
+        let mut out = [[0.0f32; COLS]; ROWS];
+        for r in 0..ROWS {
+            for c in 0..COLS {
+                let idx = r * COLS + c;
+                if idx < src.len() {
+                    out[r][c] = src[idx];
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn test_arcane_const_generic_multiple() {
+        if let Some(token) = X64V3Token::summon() {
+            let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+            let result = tile_copy::<2, 3>(token, &data);
+            assert_eq!(result, [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        }
+    }
+
+    /// Const generic with nested mode (_self = Type)
+    struct ChunkProcessor {
+        scale: f32,
+    }
+
+    impl ChunkProcessor {
+        #[arcane(_self = ChunkProcessor)]
+        fn process_chunks<const CHUNK: usize>(&self, token: X64V3Token, data: &[f32]) -> Vec<f32> {
+            data.chunks(CHUNK)
+                .map(|c| c.iter().sum::<f32>() * _self.scale)
+                .collect()
+        }
+    }
+
+    #[test]
+    fn test_arcane_const_generic_nested_self() {
+        if let Some(token) = X64V3Token::summon() {
+            let proc = ChunkProcessor { scale: 2.0 };
+            let data = [1.0f32, 2.0, 3.0, 4.0];
+            let result = proc.process_chunks::<2>(token, &data);
+            assert_eq!(result, vec![6.0, 14.0]);
+        }
+    }
+
+    /// Const generic with lifetime + type generic
+    #[arcane]
+    fn first_elements<'a, const N: usize, T: Copy + Default>(
+        token: X64V3Token,
+        data: &'a [T],
+    ) -> [T; N] {
+        let mut out = [T::default(); N];
+        let len = N.min(data.len());
+        let mut i = 0;
+        while i < len {
+            out[i] = data[i];
+            i += 1;
+        }
+        out
+    }
+
+    #[test]
+    fn test_arcane_const_generic_with_lifetime_and_type() {
+        if let Some(token) = X64V3Token::summon() {
+            let data = [10i32, 20, 30, 40, 50];
+            let result: [i32; 3] = first_elements(token, &data);
+            assert_eq!(result, [10, 20, 30]);
+        }
+    }
 }
 
 // =============================================================================

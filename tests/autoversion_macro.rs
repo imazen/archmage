@@ -548,6 +548,258 @@ fn unit_return_type() {
 }
 
 // ============================================================================
+// Const generics
+// ============================================================================
+
+#[autoversion]
+fn sum_array<const N: usize>(_token: SimdToken, data: &[f32; N]) -> f32 {
+    let mut sum = 0.0f32;
+    for &x in data {
+        sum += x;
+    }
+    sum
+}
+
+#[test]
+fn const_generic_basic() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = sum_array(&data);
+    assert!((result - 10.0).abs() < 1e-6, "const generic: {result}");
+}
+
+#[test]
+fn const_generic_scalar_variant() {
+    let data = [1.0f32, 2.0, 3.0];
+    let result = sum_array_scalar(ScalarToken, &data);
+    assert!(
+        (result - 6.0).abs() < 1e-6,
+        "const generic scalar: {result}"
+    );
+}
+
+// Const generic only in return type (not in args)
+#[autoversion]
+fn make_zeros<const N: usize>(_token: SimdToken) -> [f32; N] {
+    [0.0f32; N]
+}
+
+#[test]
+fn const_generic_return_only() {
+    let result: [f32; 4] = make_zeros();
+    assert_eq!(result, [0.0; 4]);
+}
+
+// Multiple const generics
+#[autoversion]
+fn reshape<const M: usize, const N: usize>(_token: SimdToken, data: &[f32; M]) -> [f32; N] {
+    let mut out = [0.0f32; N];
+    let len = M.min(N);
+    // manual copy to avoid needing Copy bound shenanigans
+    let mut i = 0;
+    while i < len {
+        out[i] = data[i];
+        i += 1;
+    }
+    out
+}
+
+#[test]
+fn const_generic_multiple() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result: [f32; 2] = reshape(&data);
+    assert_eq!(result, [1.0, 2.0]);
+}
+
+// Const generic + type generic
+#[autoversion]
+fn sum_generic<const N: usize, T: Default + Copy + core::ops::Add<Output = T>>(
+    _token: SimdToken,
+    data: &[T; N],
+) -> T {
+    let mut acc = T::default();
+    let mut i = 0;
+    while i < N {
+        acc = acc + data[i];
+        i += 1;
+    }
+    acc
+}
+
+#[test]
+fn const_generic_plus_type_generic() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result: f32 = sum_generic(&data);
+    assert!((result - 10.0).abs() < 1e-6);
+}
+
+// Const generic not inferrable from args — only used in body
+#[autoversion]
+fn chunk_sum<const CHUNK: usize>(_token: SimdToken, data: &[f32]) -> f32 {
+    let mut total = 0.0f32;
+    for chunk in data.chunks(CHUNK) {
+        for &x in chunk {
+            total += x;
+        }
+    }
+    total
+}
+
+#[test]
+fn const_generic_body_only() {
+    let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let result = chunk_sum::<4>(&data);
+    assert!((result - 36.0).abs() < 1e-6, "chunk_sum: {result}");
+}
+
+// Const generic with self receiver
+struct ConstGenericBuf {
+    data: [f32; 4],
+}
+
+impl ConstGenericBuf {
+    #[autoversion]
+    fn extract<const N: usize>(&self, _token: SimdToken) -> [f32; N] {
+        let mut out = [0.0f32; N];
+        let len = N.min(4);
+        let mut i = 0;
+        while i < len {
+            out[i] = self.data[i];
+            i += 1;
+        }
+        out
+    }
+
+    #[autoversion(_self = ConstGenericBuf)]
+    fn extract_nested<const N: usize>(&self, _token: SimdToken) -> [f32; N] {
+        let mut out = [0.0f32; N];
+        let len = N.min(4);
+        let mut i = 0;
+        while i < len {
+            out[i] = _self.data[i];
+            i += 1;
+        }
+        out
+    }
+}
+
+#[test]
+fn const_generic_self_receiver() {
+    let buf = ConstGenericBuf {
+        data: [1.0, 2.0, 3.0, 4.0],
+    };
+    let result: [f32; 2] = buf.extract();
+    assert_eq!(result, [1.0, 2.0]);
+}
+
+#[test]
+fn const_generic_nested_self() {
+    let buf = ConstGenericBuf {
+        data: [1.0, 2.0, 3.0, 4.0],
+    };
+    let result: [f32; 3] = buf.extract_nested();
+    assert_eq!(result, [1.0, 2.0, 3.0]);
+}
+
+// Const generic with explicit tiers
+#[autoversion(v3, neon)]
+fn const_sum_explicit<const N: usize>(_token: SimdToken, data: &[f32; N]) -> f32 {
+    let mut s = 0.0f32;
+    let mut i = 0;
+    while i < N {
+        s += data[i];
+        i += 1;
+    }
+    s
+}
+
+#[test]
+fn const_generic_explicit_tiers() {
+    let data = [1.0f32, 2.0, 3.0];
+    let result = const_sum_explicit(&data);
+    assert!((result - 6.0).abs() < 1e-6);
+}
+
+// Const generic with lifetime
+#[autoversion]
+fn first_n_sum<'a, const N: usize>(_token: SimdToken, data: &'a [f32]) -> f32 {
+    let mut s = 0.0f32;
+    let end = N.min(data.len());
+    let mut i = 0;
+    while i < end {
+        s += data[i];
+        i += 1;
+    }
+    s
+}
+
+#[test]
+fn const_generic_with_lifetime() {
+    let data = [1.0f32, 2.0, 3.0, 4.0, 5.0];
+    let result = first_n_sum::<3>(&data);
+    assert!((result - 6.0).abs() < 1e-6);
+}
+
+// Const generic body-only with self receiver (the BPP pattern from rav1d)
+struct PixelRow {
+    data: Vec<u8>,
+}
+
+impl PixelRow {
+    #[autoversion]
+    fn fill_row<const BPP: usize>(&self, _token: SimdToken, out: &mut Vec<u8>) {
+        for chunk in self.data.chunks(BPP) {
+            out.extend_from_slice(chunk);
+        }
+    }
+
+    #[autoversion(_self = PixelRow)]
+    fn fill_row_nested<const BPP: usize>(&self, _token: SimdToken, out: &mut Vec<u8>) {
+        for chunk in _self.data.chunks(BPP) {
+            out.extend_from_slice(chunk);
+        }
+    }
+}
+
+#[test]
+fn const_generic_bpp_pattern() {
+    let row = PixelRow {
+        data: vec![1, 2, 3, 4, 5, 6],
+    };
+    let mut out = Vec::new();
+    row.fill_row::<3>(&mut out);
+    assert_eq!(out, vec![1, 2, 3, 4, 5, 6]);
+}
+
+#[test]
+fn const_generic_bpp_pattern_nested() {
+    let row = PixelRow {
+        data: vec![1, 2, 3, 4, 5, 6],
+    };
+    let mut out = Vec::new();
+    row.fill_row_nested::<2>(&mut out);
+    assert_eq!(out, vec![1, 2, 3, 4, 5, 6]);
+}
+
+// Const generic scalar variant directly callable with turbofish
+#[test]
+fn const_generic_scalar_turbofish() {
+    let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let result = chunk_sum_scalar::<4>(ScalarToken, &data);
+    assert!((result - 36.0).abs() < 1e-6);
+}
+
+// Const generic v3 variant directly callable (x86_64)
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn const_generic_v3_turbofish() {
+    if let Some(token) = X64V3Token::summon() {
+        let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let result = chunk_sum_v3::<4>(token, &data);
+        assert!((result - 36.0).abs() < 1e-6);
+    }
+}
+
+// ============================================================================
 // Consistency: plain self and _self = Type produce same results
 // ============================================================================
 
