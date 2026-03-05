@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.3 — 2026-03-05
+
+Fixed `no_std` compilation on bare-metal targets, added `no_std` CI enforcement.
+
+- **Fixed `no_std` on aarch64/WASM bare metal** — ARM and WASM `f64x2` transcendentals (`log2_lowp`, `exp2_lowp`, `ln_lowp`, `exp_lowp`, `log10_lowp`, `pow_lowp`) used `f64` inherent methods (`.log2()`, `.exp2()`, etc.) that only exist with `std`. Added scalar polynomial approximations to `nostd_math` using the same coefficients as the x86 SIMD implementations.
+
+- **Mandatory `no_std` CI checks** — CI now auto-installs and compiles against `aarch64-unknown-none` and `thumbv7m-none-eabi` targets. Host-target `--no-default-features` checks don't catch `std` leaks because libstd is always linkable on the host; cross-target checks are required to catch them.
+
+- **`just test-nostd`** — new justfile target runs `no_std` compilation checks and tests for all crates.
+
+- **Bitmask tests handle missing runtime detection** — tests now skip gracefully when `summon()` returns `None` (happens under `no_std` without `-Ctarget-cpu`) instead of panicking.
+
 ## 0.9.2 — 2026-03-05
 
 Const generic support for `#[autoversion]` and `#[arcane]`, semver-checks CI.
