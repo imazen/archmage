@@ -54,7 +54,7 @@ pub fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 // INNER HELPER: only called from #[arcane] context
 #[rite(import_intrinsics)]
 fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
-    // safe_unaligned_simd takes references - no unsafe needed!
+    // import_intrinsics provides safe memory ops - no unsafe needed!
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     _mm256_mul_ps(va, vb)

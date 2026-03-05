@@ -14,23 +14,23 @@ if let Some(token) = Wasm128Token::summon() {
     process(token, &mut data);
 }
 
-#[arcane]  // Entry point only
+#[arcane(import_intrinsics)]  // Entry point only
 fn process(token: Wasm128Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(4) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
-#[rite]  // All inner helpers
+#[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: Wasm128Token, chunk: &mut [f32; 4]) {
-    let v = safe_unaligned_simd::wasm32::v128_load(chunk);  // safe!
+    let v = v128_load(chunk);  // safe!
     let doubled = f32x4_add(v, v);  // value intrinsic (safe inside #[rite])
-    safe_unaligned_simd::wasm32::v128_store(chunk, doubled);  // safe!
+    v128_store(chunk, doubled);  // safe!
 }
 // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate.
 ```
 
-## Safe Memory Operations (safe_unaligned_simd)
+## Safe Memory Operations (via import_intrinsics)
 
 | Function | Safe Signature |
 |----------|---------------|
@@ -337,31 +337,31 @@ fn process_chunk(_: Wasm128Token, chunk: &mut [f32; 4]) {
 | `v128_or` | Performs a bitwise or of the two input 128-bit vectors, retu... |  | — |
 | `v128_xor` | Performs a bitwise xor of the two input 128-bit vectors, ret... |  | — |
 
-### Stable, Unsafe (25 intrinsics) — use safe_unaligned_simd
+### Stable, Unsafe (25 intrinsics) — use import_intrinsics for safe versions
 
 | Name | Description | Safe Variant |
 |------|-------------|--------------|
-| `i16x8_load_extend_i8x8` | Load eight 8-bit integers and sign extend each one to a 16-b... | safe_unaligned_simd::`i16x8_load_extend_i8x8` |
-| `i16x8_load_extend_u8x8` | Load eight 8-bit integers and zero extend each one to a 16-b... | safe_unaligned_simd::`i16x8_load_extend_u8x8` |
-| `i32x4_load_extend_i16x4` | Load four 16-bit integers and sign extend each one to a 32-b... | safe_unaligned_simd::`i32x4_load_extend_i16x4` |
-| `i32x4_load_extend_u16x4` | Load four 16-bit integers and zero extend each one to a 32-b... | safe_unaligned_simd::`i32x4_load_extend_u16x4` |
-| `i64x2_load_extend_i32x2` | Load two 32-bit integers and sign extend each one to a 64-bi... | safe_unaligned_simd::`i64x2_load_extend_i32x2` |
-| `i64x2_load_extend_u32x2` | Load two 32-bit integers and zero extend each one to a 64-bi... | safe_unaligned_simd::`i64x2_load_extend_u32x2` |
-| `u16x8_load_extend_u8x8` | Load eight 8-bit integers and zero extend each one to a 16-b... | safe_unaligned_simd::`u16x8_load_extend_u8x8` |
-| `u32x4_load_extend_u16x4` | Load four 16-bit integers and zero extend each one to a 32-b... | safe_unaligned_simd::`u32x4_load_extend_u16x4` |
-| `u64x2_load_extend_u32x2` | Load two 32-bit integers and zero extend each one to a 64-bi... | safe_unaligned_simd::`u64x2_load_extend_u32x2` |
-| `v128_load` | Loads a `v128` vector from the given heap address.  This int... | safe_unaligned_simd::`v128_load` |
+| `i16x8_load_extend_i8x8` | Load eight 8-bit integers and sign extend each one to a 16-b... | `i16x8_load_extend_i8x8` (safe via import_intrinsics) |
+| `i16x8_load_extend_u8x8` | Load eight 8-bit integers and zero extend each one to a 16-b... | `i16x8_load_extend_u8x8` (safe via import_intrinsics) |
+| `i32x4_load_extend_i16x4` | Load four 16-bit integers and sign extend each one to a 32-b... | `i32x4_load_extend_i16x4` (safe via import_intrinsics) |
+| `i32x4_load_extend_u16x4` | Load four 16-bit integers and zero extend each one to a 32-b... | `i32x4_load_extend_u16x4` (safe via import_intrinsics) |
+| `i64x2_load_extend_i32x2` | Load two 32-bit integers and sign extend each one to a 64-bi... | `i64x2_load_extend_i32x2` (safe via import_intrinsics) |
+| `i64x2_load_extend_u32x2` | Load two 32-bit integers and zero extend each one to a 64-bi... | `i64x2_load_extend_u32x2` (safe via import_intrinsics) |
+| `u16x8_load_extend_u8x8` | Load eight 8-bit integers and zero extend each one to a 16-b... | `u16x8_load_extend_u8x8` (safe via import_intrinsics) |
+| `u32x4_load_extend_u16x4` | Load four 16-bit integers and zero extend each one to a 32-b... | `u32x4_load_extend_u16x4` (safe via import_intrinsics) |
+| `u64x2_load_extend_u32x2` | Load two 32-bit integers and zero extend each one to a 64-bi... | `u64x2_load_extend_u32x2` (safe via import_intrinsics) |
+| `v128_load` | Loads a `v128` vector from the given heap address.  This int... | `v128_load` (safe via import_intrinsics) |
 | `v128_load16_lane` | Loads a 16-bit value from `m` and sets lane `L` of `v` to th... | — |
-| `v128_load16_splat` | Load a single element and splat to all lanes of a v128 vecto... | safe_unaligned_simd::`v128_load16_splat` |
+| `v128_load16_splat` | Load a single element and splat to all lanes of a v128 vecto... | `v128_load16_splat` (safe via import_intrinsics) |
 | `v128_load32_lane` | Loads a 32-bit value from `m` and sets lane `L` of `v` to th... | — |
-| `v128_load32_splat` | Load a single element and splat to all lanes of a v128 vecto... | safe_unaligned_simd::`v128_load32_splat` |
-| `v128_load32_zero` | Load a 32-bit element into the low bits of the vector and se... | safe_unaligned_simd::`v128_load32_zero` |
+| `v128_load32_splat` | Load a single element and splat to all lanes of a v128 vecto... | `v128_load32_splat` (safe via import_intrinsics) |
+| `v128_load32_zero` | Load a 32-bit element into the low bits of the vector and se... | `v128_load32_zero` (safe via import_intrinsics) |
 | `v128_load64_lane` | Loads a 64-bit value from `m` and sets lane `L` of `v` to th... | — |
-| `v128_load64_splat` | Load a single element and splat to all lanes of a v128 vecto... | safe_unaligned_simd::`v128_load64_splat` |
-| `v128_load64_zero` | Load a 64-bit element into the low bits of the vector and se... | safe_unaligned_simd::`v128_load64_zero` |
+| `v128_load64_splat` | Load a single element and splat to all lanes of a v128 vecto... | `v128_load64_splat` (safe via import_intrinsics) |
+| `v128_load64_zero` | Load a 64-bit element into the low bits of the vector and se... | `v128_load64_zero` (safe via import_intrinsics) |
 | `v128_load8_lane` | Loads an 8-bit value from `m` and sets lane `L` of `v` to th... | — |
-| `v128_load8_splat` | Load a single element and splat to all lanes of a v128 vecto... | safe_unaligned_simd::`v128_load8_splat` |
-| `v128_store` | Stores a `v128` vector to the given heap address.  This intr... | safe_unaligned_simd::`v128_store` |
+| `v128_load8_splat` | Load a single element and splat to all lanes of a v128 vecto... | `v128_load8_splat` (safe via import_intrinsics) |
+| `v128_store` | Stores a `v128` vector to the given heap address.  This intr... | `v128_store` (safe via import_intrinsics) |
 | `v128_store16_lane` | Stores the 16-bit value from lane `L` of `v` into `m`  This ... | — |
 | `v128_store32_lane` | Stores the 32-bit value from lane `L` of `v` into `m`  This ... | — |
 | `v128_store64_lane` | Stores the 64-bit value from lane `L` of `v` into `m`  This ... | — |

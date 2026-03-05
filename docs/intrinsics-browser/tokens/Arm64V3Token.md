@@ -14,18 +14,18 @@ if let Some(token) = Arm64V3Token::summon() {
     process(token, &mut data);
 }
 
-#[arcane]  // Entry point only
+#[arcane(import_intrinsics)]  // Entry point only
 fn process(token: Arm64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(4) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
-#[rite]  // All inner helpers
+#[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: Arm64V3Token, chunk: &mut [f32; 4]) {
-    let v = safe_unaligned_simd::aarch64::vld1q_f32(chunk);  // safe!
+    let v = vld1q_f32(chunk);  // safe!
     let doubled = vaddq_f32(v, v);  // value intrinsic (safe inside #[rite])
-    safe_unaligned_simd::aarch64::vst1q_f32(chunk, doubled);  // safe!
+    vst1q_f32(chunk, doubled);  // safe!
 }
 // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate.
 ```

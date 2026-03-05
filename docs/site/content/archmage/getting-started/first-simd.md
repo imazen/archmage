@@ -104,5 +104,5 @@ The sibling function is `fn` (not `unsafe fn`) — `#![forbid(unsafe_code)]` com
 2. **`summon()`** does runtime CPU detection
 3. **`#[arcane(import_intrinsics)]`** makes intrinsics safe inside the function and auto-imports them (since Rust 1.85)
 4. **Token is zero-sized** — no runtime overhead passing it around
-5. **Memory ops take references** — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32` (via `safe_unaligned_simd`)
-6. **`#![forbid(unsafe_code)]` compatible** — archmage + `#[arcane]` macros mean your crate needs zero `unsafe`
+5. **Memory ops take references** — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32` (via `import_intrinsics`)
+6. **`#![forbid(unsafe_code)]` compatible** — archmage + `#[arcane(import_intrinsics)]` macros mean your crate needs zero `unsafe`

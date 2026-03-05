@@ -11,7 +11,7 @@ All three produce identical `vmovups` instructions:
 ```rust
 #[arcane(import_intrinsics)]
 fn load_array_ref(_t: X64V3Token, data: &[f32; 8]) -> __m256 {
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
+    _mm256_loadu_ps(data)
 }
 ```
 
@@ -23,7 +23,7 @@ No conversion needed — the type already matches.
 #[arcane(import_intrinsics)]
 fn load_first_chunk(_t: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
+    _mm256_loadu_ps(arr)
 }
 ```
 
@@ -35,7 +35,7 @@ Borrows the first N elements as an array reference. Panics if the slice is too s
 #[arcane(import_intrinsics)]
 fn load_try_into(_t: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
+    _mm256_loadu_ps(arr)
 }
 ```
 
@@ -71,7 +71,7 @@ Same story for integers. `.first_chunk()` on a `&[u8]` slice produces the same `
 #[arcane(import_intrinsics)]
 fn load_bytes(_t: X64V3Token, data: &[u8]) -> __m256i {
     let arr: &[u8; 32] = data.first_chunk().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_loadu_si256(arr)
+    _mm256_loadu_si256(arr)
 }
 ```
 
@@ -85,7 +85,7 @@ Works the same at 128-bit width:
 #[arcane(import_intrinsics)]
 fn load_128(_t: X64V3Token, data: &[f32]) -> __m128 {
     let arr: &[f32; 4] = data.first_chunk().unwrap();
-    safe_unaligned_simd::x86_64::_mm_loadu_ps(arr)
+    _mm_loadu_ps(arr)
 }
 ```
 

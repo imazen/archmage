@@ -17,7 +17,7 @@ Every claim about generated assembly in this reference is backed by `cargo asm` 
 
 | Claim | Status |
 |-------|--------|
-| `safe_unaligned_simd::_mm256_loadu_ps` compiles to `vmovups` | Verified |
+| Safe `_mm256_loadu_ps` (via `import_intrinsics`) compiles to `vmovups` | Verified |
 | Safe and unsafe single loads produce identical ASM | Verified |
 | `#[rite]` in `#[arcane]` matches manual inline | Verified |
 

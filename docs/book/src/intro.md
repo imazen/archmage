@@ -3,7 +3,7 @@
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 > Cast primitive magics faster than any mage alive.
 
-Rust 1.85 made value-based SIMD intrinsics safe inside `#[target_feature]` functions. [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd) made memory intrinsics safe by taking references instead of raw pointers. **Archmage** fills the last gap: proving at the type level that the CPU actually supports those features, so you never call a `#[target_feature]` function on hardware that can't run it.
+Rust 1.85 made value-based SIMD intrinsics safe inside `#[target_feature]` functions. **Archmage** fills the last gap: proving at the type level that the CPU actually supports those features, so you never call a `#[target_feature]` function on hardware that can't run it. The `import_intrinsics` option on `#[arcane]`/`#[rite]` brings safe memory operations into scope alongside `core::arch` intrinsics, so memory loads and stores take references instead of raw pointers.
 
 You prove CPU feature availability once with a **capability token**, then write safe code that the compiler optimizes into raw SIMD instructions. No `unsafe` needed for the SIMD work itself.
 
@@ -40,7 +40,7 @@ use archmage::prelude::*;
 
 #[arcane(import_intrinsics)]
 fn multiply(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    // Safe! Token proves AVX2+FMA, safe_unaligned_simd takes references
+    // Safe! Token proves AVX2+FMA, import_intrinsics provides safe memory ops
     let a = _mm256_loadu_ps(data);
     let b = _mm256_set1_ps(2.0);
     let c = _mm256_mul_ps(a, b);
@@ -68,7 +68,7 @@ fn main() {
 
 4. **Dispatch once, loop inside**: Call `summon()` at your API boundary, put loops inside `#[arcane]`, use `#[rite]` for helpers. Each `#[arcane]` call crosses a `#[target_feature]` boundary that LLVM can't optimize across.
 
-5. **`#![forbid(unsafe_code)]` compatible**: Combine archmage tokens + `#[arcane]`/`#[rite]` + `safe_unaligned_simd` for memory operations, and your downstream crate needs zero `unsafe`.
+5. **`#![forbid(unsafe_code)]` compatible**: Combine archmage tokens + `#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` for safe memory operations, and your downstream crate needs zero `unsafe`.
 
 ## Supported Platforms
 

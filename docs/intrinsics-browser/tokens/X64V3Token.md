@@ -14,23 +14,23 @@ if let Some(token) = X64V3Token::summon() {
     process(token, &mut data);
 }
 
-#[arcane]  // Entry point only
+#[arcane(import_intrinsics)]  // Entry point only
 fn process(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
-#[rite]  // All inner helpers
+#[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(chunk);  // safe!
+    let v = _mm256_loadu_ps(chunk);  // safe!
     let doubled = _mm256_add_ps(v, v);    // value intrinsic (safe inside #[rite])
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(chunk, doubled);  // safe!
+    _mm256_storeu_ps(chunk, doubled);  // safe!
 }
 // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate.
 ```
 
-## Safe Memory Operations (safe_unaligned_simd)
+## Safe Memory Operations (via import_intrinsics)
 
 | Function | Safe Signature |
 |----------|---------------|
@@ -434,7 +434,7 @@ fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
 | `_tzcnt_u32` | Counts the number of trailing least significant zero bits.  ... | tzcnt | — |
 | `_tzcnt_u64` | Counts the number of trailing least significant zero bits.  ... | tzcnt | — |
 
-### Stable, Unsafe (71 intrinsics) — use safe_unaligned_simd
+### Stable, Unsafe (71 intrinsics) — use import_intrinsics for safe versions
 
 | Name | Description | Safe Variant |
 |------|-------------|--------------|
@@ -450,12 +450,12 @@ fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
 | `_mm256_load_pd` | Loads 256-bits (composed of 4 packed double-precision (64-bi... | — |
 | `_mm256_load_ps` | Loads 256-bits (composed of 8 packed single-precision (32-bi... | — |
 | `_mm256_load_si256` | Loads 256-bits of integer data from memory into result. `mem... | — |
-| `_mm256_loadu2_m128` | Loads two 128-bit values (composed of 4 packed single-precis... | safe_unaligned_simd::`_mm256_loadu2_m128` |
-| `_mm256_loadu2_m128d` | Loads two 128-bit values (composed of 2 packed double-precis... | safe_unaligned_simd::`_mm256_loadu2_m128d` |
-| `_mm256_loadu2_m128i` | Loads two 128-bit values (composed of integer data) from mem... | safe_unaligned_simd::`_mm256_loadu2_m128i` |
-| `_mm256_loadu_pd` | Loads 256-bits (composed of 4 packed double-precision (64-bi... | safe_unaligned_simd::`_mm256_loadu_pd` |
-| `_mm256_loadu_ps` | Loads 256-bits (composed of 8 packed single-precision (32-bi... | safe_unaligned_simd::`_mm256_loadu_ps` |
-| `_mm256_loadu_si256` | Loads 256-bits of integer data from memory into result. `mem... | safe_unaligned_simd::`_mm256_loadu_si256` |
+| `_mm256_loadu2_m128` | Loads two 128-bit values (composed of 4 packed single-precis... | `_mm256_loadu2_m128` (safe via import_intrinsics) |
+| `_mm256_loadu2_m128d` | Loads two 128-bit values (composed of 2 packed double-precis... | `_mm256_loadu2_m128d` (safe via import_intrinsics) |
+| `_mm256_loadu2_m128i` | Loads two 128-bit values (composed of integer data) from mem... | `_mm256_loadu2_m128i` (safe via import_intrinsics) |
+| `_mm256_loadu_pd` | Loads 256-bits (composed of 4 packed double-precision (64-bi... | `_mm256_loadu_pd` (safe via import_intrinsics) |
+| `_mm256_loadu_ps` | Loads 256-bits (composed of 8 packed single-precision (32-bi... | `_mm256_loadu_ps` (safe via import_intrinsics) |
+| `_mm256_loadu_si256` | Loads 256-bits of integer data from memory into result. `mem... | `_mm256_loadu_si256` (safe via import_intrinsics) |
 | `_mm256_mask_i32gather_epi32` | Returns values from `slice` at offsets determined by `offset... | — |
 | `_mm256_mask_i32gather_epi64` | Returns values from `slice` at offsets determined by `offset... | — |
 | `_mm256_mask_i32gather_pd` | Returns values from `slice` at offsets determined by `offset... | — |
@@ -475,12 +475,12 @@ fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
 | `_mm256_store_pd` | Stores 256-bits (composed of 4 packed double-precision (64-b... | — |
 | `_mm256_store_ps` | Stores 256-bits (composed of 8 packed single-precision (32-b... | — |
 | `_mm256_store_si256` | Stores 256-bits of integer data from `a` into memory. `mem_a... | — |
-| `_mm256_storeu2_m128` | Stores the high and low 128-bit halves (each composed of 4 p... | safe_unaligned_simd::`_mm256_storeu2_m128` |
-| `_mm256_storeu2_m128d` | Stores the high and low 128-bit halves (each composed of 2 p... | safe_unaligned_simd::`_mm256_storeu2_m128d` |
-| `_mm256_storeu2_m128i` | Stores the high and low 128-bit halves (each composed of int... | safe_unaligned_simd::`_mm256_storeu2_m128i` |
-| `_mm256_storeu_pd` | Stores 256-bits (composed of 4 packed double-precision (64-b... | safe_unaligned_simd::`_mm256_storeu_pd` |
-| `_mm256_storeu_ps` | Stores 256-bits (composed of 8 packed single-precision (32-b... | safe_unaligned_simd::`_mm256_storeu_ps` |
-| `_mm256_storeu_si256` | Stores 256-bits of integer data from `a` into memory. `mem_a... | safe_unaligned_simd::`_mm256_storeu_si256` |
+| `_mm256_storeu2_m128` | Stores the high and low 128-bit halves (each composed of 4 p... | `_mm256_storeu2_m128` (safe via import_intrinsics) |
+| `_mm256_storeu2_m128d` | Stores the high and low 128-bit halves (each composed of 2 p... | `_mm256_storeu2_m128d` (safe via import_intrinsics) |
+| `_mm256_storeu2_m128i` | Stores the high and low 128-bit halves (each composed of int... | `_mm256_storeu2_m128i` (safe via import_intrinsics) |
+| `_mm256_storeu_pd` | Stores 256-bits (composed of 4 packed double-precision (64-b... | `_mm256_storeu_pd` (safe via import_intrinsics) |
+| `_mm256_storeu_ps` | Stores 256-bits (composed of 8 packed single-precision (32-b... | `_mm256_storeu_ps` (safe via import_intrinsics) |
+| `_mm256_storeu_si256` | Stores 256-bits of integer data from `a` into memory. `mem_a... | `_mm256_storeu_si256` (safe via import_intrinsics) |
 | `_mm256_stream_load_si256` | Load 256-bits of integer data from memory into dst using a n... | — |
 | `_mm256_stream_pd` | Moves double-precision values from a 256-bit vector of ` | — |
 | `_mm256_stream_ps` | Moves single-precision floating point values from a 256-bit ... | — |

@@ -816,20 +816,20 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                         process(token, &mut data);
                     }}
 
-                    #[arcane]  // Entry point only
+                    #[arcane(import_intrinsics)]  // Entry point only
                     fn process(token: {primary_name}, data: &mut [f32]) {{
                         for chunk in data.chunks_exact_mut(16) {{
                             process_chunk(token, chunk.try_into().unwrap());
                         }}
                     }}
 
-                    #[rite]  // All inner helpers
+                    #[rite(import_intrinsics)]  // All inner helpers
                     fn process_chunk(_: {primary_name}, chunk: &mut [f32; 16]) {{
                         let v = _mm512_loadu_ps(chunk.as_ptr());  // safe inside #[rite]
                         let doubled = _mm512_add_ps(v, v);
                         _mm512_storeu_ps(chunk.as_mut_ptr(), doubled);
                     }}
-                    // Use #![forbid(unsafe_code)] with safe_unaligned_simd for memory ops."#}
+                    // Use #![forbid(unsafe_code)] — import_intrinsics provides safe memory ops."#}
             } else if token_def.features.iter().any(|f| f == "avx2") {
                 formatdoc! {r#"
                     use archmage::prelude::*;
@@ -838,18 +838,18 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                         process(token, &mut data);
                     }}
 
-                    #[arcane]  // Entry point only
+                    #[arcane(import_intrinsics)]  // Entry point only
                     fn process(token: {primary_name}, data: &mut [f32]) {{
                         for chunk in data.chunks_exact_mut(8) {{
                             process_chunk(token, chunk.try_into().unwrap());
                         }}
                     }}
 
-                    #[rite]  // All inner helpers
+                    #[rite(import_intrinsics)]  // All inner helpers
                     fn process_chunk(_: {primary_name}, chunk: &mut [f32; 8]) {{
-                        let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(chunk);  // safe!
+                        let v = _mm256_loadu_ps(chunk);  // safe!
                         let doubled = _mm256_add_ps(v, v);    // value intrinsic (safe inside #[rite])
-                        safe_unaligned_simd::x86_64::_mm256_storeu_ps(chunk, doubled);  // safe!
+                        _mm256_storeu_ps(chunk, doubled);  // safe!
                     }}
                     // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#}
             } else {
@@ -860,18 +860,18 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                         process(token, &mut data);
                     }}
 
-                    #[arcane]  // Entry point only
+                    #[arcane(import_intrinsics)]  // Entry point only
                     fn process(token: {primary_name}, data: &mut [f32]) {{
                         for chunk in data.chunks_exact_mut(4) {{
                             process_chunk(token, chunk.try_into().unwrap());
                         }}
                     }}
 
-                    #[rite]  // All inner helpers
+                    #[rite(import_intrinsics)]  // All inner helpers
                     fn process_chunk(_: {primary_name}, chunk: &mut [f32; 4]) {{
-                        let v = safe_unaligned_simd::x86_64::_mm_loadu_ps(chunk);  // safe!
+                        let v = _mm_loadu_ps(chunk);  // safe!
                         let doubled = _mm_add_ps(v, v);  // value intrinsic (safe inside #[rite])
-                        safe_unaligned_simd::x86_64::_mm_storeu_ps(chunk, doubled);  // safe!
+                        _mm_storeu_ps(chunk, doubled);  // safe!
                     }}
                     // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#}
             }
@@ -883,18 +883,18 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                 process(token, &mut data);
             }}
 
-            #[arcane]  // Entry point only
+            #[arcane(import_intrinsics)]  // Entry point only
             fn process(token: {primary_name}, data: &mut [f32]) {{
                 for chunk in data.chunks_exact_mut(4) {{
                     process_chunk(token, chunk.try_into().unwrap());
                 }}
             }}
 
-            #[rite]  // All inner helpers
+            #[rite(import_intrinsics)]  // All inner helpers
             fn process_chunk(_: {primary_name}, chunk: &mut [f32; 4]) {{
-                let v = safe_unaligned_simd::aarch64::vld1q_f32(chunk);  // safe!
+                let v = vld1q_f32(chunk);  // safe!
                 let doubled = vaddq_f32(v, v);  // value intrinsic (safe inside #[rite])
-                safe_unaligned_simd::aarch64::vst1q_f32(chunk, doubled);  // safe!
+                vst1q_f32(chunk, doubled);  // safe!
             }}
             // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#},
         "wasm32" => formatdoc! {r#"
@@ -904,18 +904,18 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                 process(token, &mut data);
             }}
 
-            #[arcane]  // Entry point only
+            #[arcane(import_intrinsics)]  // Entry point only
             fn process(token: Wasm128Token, data: &mut [f32]) {{
                 for chunk in data.chunks_exact_mut(4) {{
                     process_chunk(token, chunk.try_into().unwrap());
                 }}
             }}
 
-            #[rite]  // All inner helpers
+            #[rite(import_intrinsics)]  // All inner helpers
             fn process_chunk(_: Wasm128Token, chunk: &mut [f32; 4]) {{
-                let v = safe_unaligned_simd::wasm32::v128_load(chunk);  // safe!
+                let v = v128_load(chunk);  // safe!
                 let doubled = f32x4_add(v, v);  // value intrinsic (safe inside #[rite])
-                safe_unaligned_simd::wasm32::v128_store(chunk, doubled);  // safe!
+                v128_store(chunk, doubled);  // safe!
             }}
             // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#},
         _ => String::from("// See archmage documentation for usage examples."),
@@ -935,7 +935,7 @@ fn build_safe_ops_table(
         return String::new();
     }
 
-    let mut out = String::from("## Safe Memory Operations (safe_unaligned_simd)\n\n");
+    let mut out = String::from("## Safe Memory Operations (via import_intrinsics)\n\n");
     out.push_str("| Function | Safe Signature |\n");
     out.push_str("|----------|---------------|\n");
     for (intr, sig) in &ops {
@@ -992,7 +992,7 @@ fn build_intrinsics_tables(
 
     if !stable_unsafe.is_empty() {
         out.push_str(&format!(
-            "### Stable, Unsafe ({} intrinsics) — use safe_unaligned_simd\n\n",
+            "### Stable, Unsafe ({} intrinsics) — use import_intrinsics for safe versions\n\n",
             stable_unsafe.len()
         ));
         out.push_str("| Name | Description | Safe Variant |\n");
@@ -1000,7 +1000,7 @@ fn build_intrinsics_tables(
         for i in &stable_unsafe {
             let doc = truncate_doc(&i.doc, 60);
             let sv = if safe_variants.contains_key(&i.name) {
-                format!("safe_unaligned_simd::`{}`", i.name)
+                format!("`{}` (safe via import_intrinsics)", i.name)
             } else {
                 "—".to_string()
             };

@@ -17,11 +17,11 @@ use std::arch::x86_64::*;
 // Pattern 1: safe_unaligned_simd load in hot loop inside #[arcane]
 // =============================================================================
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn safe_load_loop_inner(_token: Desktop64, data: &[[f32; 8]]) -> f32 {
     let mut acc = _mm256_setzero_ps();
     for chunk in data {
-        let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(chunk);
+        let v = _mm256_loadu_ps(chunk);
         acc = _mm256_add_ps(acc, _mm256_mul_ps(v, v));
     }
     // Horizontal sum
@@ -44,7 +44,7 @@ pub fn safe_load_loop(token: Desktop64, data: &[[f32; 8]]) -> f32 {
 // Pattern 2: raw unsafe pointer load in hot loop inside #[arcane]
 // =============================================================================
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn unsafe_load_loop_inner(_token: Desktop64, data: &[[f32; 8]]) -> f32 {
     let mut acc = _mm256_setzero_ps();
     for chunk in data {
@@ -70,7 +70,7 @@ pub fn unsafe_load_loop(token: Desktop64, data: &[[f32; 8]]) -> f32 {
 // Pattern 3: magetypes f32x8 load in hot loop inside #[arcane]
 // =============================================================================
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn magetypes_load_loop_inner(token: Desktop64, data: &[[f32; 8]]) -> f32 {
     let mut acc = f32x8::splat(token, 0.0);
     for chunk in data {
@@ -91,14 +91,14 @@ pub fn magetypes_load_loop(token: Desktop64, data: &[[f32; 8]]) -> f32 {
 
 /// Inspect with: cargo asm safe_memory_overhead::safe_load_single
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 pub fn safe_load_single(_token: Desktop64, data: &[f32; 8]) -> __m256 {
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
+    _mm256_loadu_ps(data)
 }
 
 /// Inspect with: cargo asm safe_memory_overhead::unsafe_load_single
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 pub fn unsafe_load_single(_token: Desktop64, data: &[f32; 8]) -> __m256 {
     unsafe { _mm256_loadu_ps(data.as_ptr()) }
 }

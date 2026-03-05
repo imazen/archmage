@@ -11,7 +11,7 @@ Getting data from slices and arrays into SIMD registers.
 | `f32x8::from_slice(token, slice)` | `&[f32]` | Yes | Panics if `slice.len() < 8` |
 | `f32x8::splat(token, 1.0)` | scalar | Yes | Broadcast one value to all lanes |
 | `f32x8::zero(token)` | — | Yes | All lanes zero |
-| `_mm256_loadu_ps(data)` | `&[f32; 8]` | Yes | `safe_unaligned_simd` (reference-based) |
+| `_mm256_loadu_ps(data)` | `&[f32; 8]` | Yes | safe via `import_intrinsics` (reference-based) |
 | `_mm256_loadu_ps(ptr)` | `*const f32` | unsafe | Raw stdarch (pointer-based) |
 
 ## Magetypes (recommended)
@@ -48,20 +48,20 @@ fn sum_slice(token: X64V3Token, data: &[f32]) -> f32 {
 let v = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 ```
 
-## safe_unaligned_simd (low-level)
+## Safe memory ops (via `import_intrinsics`)
 
-When working with raw intrinsics inside `#[arcane]`, use `safe_unaligned_simd` for memory operations. It takes references instead of raw pointers:
+When working with raw intrinsics inside `#[arcane]`, `import_intrinsics` provides safe memory operations that take references instead of raw pointers:
 
 ```rust
 use archmage::{X64V3Token, arcane};
 
 #[arcane(import_intrinsics)]
 fn load_and_square(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    // safe_unaligned_simd: takes &[f32; 8], not *const f32
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+    // import_intrinsics provides safe versions: takes &[f32; 8], not *const f32
+    let v = _mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
     let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, squared);
+    _mm256_storeu_ps(&mut out, squared);
     out
 }
 ```
@@ -76,7 +76,7 @@ When you have a slice but the intrinsic needs an array reference, use `.first_ch
 #[arcane(import_intrinsics)]
 fn load_from_slice(_token: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().expect("need at least 8 elements");
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
+    _mm256_loadu_ps(arr)
 }
 ```
 
@@ -86,7 +86,7 @@ fn load_from_slice(_token: X64V3Token, data: &[f32]) -> __m256 {
 #[arcane(import_intrinsics)]
 fn load_via_try_into(_token: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
+    _mm256_loadu_ps(arr)
 }
 ```
 
@@ -99,7 +99,7 @@ Same patterns work for integer types. The compiler may use `vmovups` or `vmovdqu
 ```rust
 #[arcane(import_intrinsics)]
 fn load_bytes(_token: X64V3Token, data: &[u8; 32]) -> __m256i {
-    safe_unaligned_simd::x86_64::_mm256_loadu_si256(data)
+    _mm256_loadu_si256(data)
 }
 ```
 

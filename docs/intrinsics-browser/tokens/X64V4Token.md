@@ -14,23 +14,23 @@ if let Some(token) = X64V4Token::summon() {
     process(token, &mut data);
 }
 
-#[arcane]  // Entry point only
+#[arcane(import_intrinsics)]  // Entry point only
 fn process(token: X64V4Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(16) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
-#[rite]  // All inner helpers
+#[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
     let v = _mm512_loadu_ps(chunk.as_ptr());  // safe inside #[rite]
     let doubled = _mm512_add_ps(v, v);
     _mm512_storeu_ps(chunk.as_mut_ptr(), doubled);
 }
-// Use #![forbid(unsafe_code)] with safe_unaligned_simd for memory ops.
+// Use #![forbid(unsafe_code)] — import_intrinsics provides safe memory ops.
 ```
 
-## Safe Memory Operations (safe_unaligned_simd)
+## Safe Memory Operations (via import_intrinsics)
 
 | Function | Safe Signature |
 |----------|---------------|
@@ -3698,7 +3698,7 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm_xor_epi32` | Compute the bitwise XOR of packed 32-bit integers in a and b... | vxor | 1/1, 1/1 |
 | `_mm_xor_epi64` | Compute the bitwise XOR of packed 64-bit integers in a and b... | vxor | 1/1, 1/1 |
 
-### Stable, Unsafe (342 intrinsics) — use safe_unaligned_simd
+### Stable, Unsafe (342 intrinsics) — use import_intrinsics for safe versions
 
 | Name | Description | Safe Variant |
 |------|-------------|--------------|
@@ -3724,14 +3724,14 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm256_i64scatter_ps` | Stores 4 single-precision (32-bit) floating-point elements f... | — |
 | `_mm256_load_epi32` | Load 256-bits (composed of 8 packed 32-bit integers) from me... | — |
 | `_mm256_load_epi64` | Load 256-bits (composed of 4 packed 64-bit integers) from me... | — |
-| `_mm256_loadu_epi16` | Load 256-bits (composed of 16 packed 16-bit integers) from m... | safe_unaligned_simd::`_mm256_loadu_epi16` |
-| `_mm256_loadu_epi32` | Load 256-bits (composed of 8 packed 32-bit integers) from me... | safe_unaligned_simd::`_mm256_loadu_epi32` |
-| `_mm256_loadu_epi64` | Load 256-bits (composed of 4 packed 64-bit integers) from me... | safe_unaligned_simd::`_mm256_loadu_epi64` |
-| `_mm256_loadu_epi8` | Load 256-bits (composed of 32 packed 8-bit integers) from me... | safe_unaligned_simd::`_mm256_loadu_epi8` |
+| `_mm256_loadu_epi16` | Load 256-bits (composed of 16 packed 16-bit integers) from m... | `_mm256_loadu_epi16` (safe via import_intrinsics) |
+| `_mm256_loadu_epi32` | Load 256-bits (composed of 8 packed 32-bit integers) from me... | `_mm256_loadu_epi32` (safe via import_intrinsics) |
+| `_mm256_loadu_epi64` | Load 256-bits (composed of 4 packed 64-bit integers) from me... | `_mm256_loadu_epi64` (safe via import_intrinsics) |
+| `_mm256_loadu_epi8` | Load 256-bits (composed of 32 packed 8-bit integers) from me... | `_mm256_loadu_epi8` (safe via import_intrinsics) |
 | `_mm256_mask_compressstoreu_epi32` | Contiguously store the active 32-bit integers in a (those wi... | — |
 | `_mm256_mask_compressstoreu_epi64` | Contiguously store the active 64-bit integers in a (those wi... | — |
-| `_mm256_mask_compressstoreu_pd` | Contiguously store the active double-precision (64-bit) floa... | safe_unaligned_simd::`_mm256_mask_compressstoreu_pd` |
-| `_mm256_mask_compressstoreu_ps` | Contiguously store the active single-precision (32-bit) floa... | safe_unaligned_simd::`_mm256_mask_compressstoreu_ps` |
+| `_mm256_mask_compressstoreu_pd` | Contiguously store the active double-precision (64-bit) floa... | `_mm256_mask_compressstoreu_pd` (safe via import_intrinsics) |
+| `_mm256_mask_compressstoreu_ps` | Contiguously store the active single-precision (32-bit) floa... | `_mm256_mask_compressstoreu_ps` (safe via import_intrinsics) |
 | `_mm256_mask_cvtepi16_storeu_epi8` | Convert packed 16-bit integers in a to packed 8-bit integers... | — |
 | `_mm256_mask_cvtepi32_storeu_epi16` | Convert packed 32-bit integers in a to packed 16-bit integer... | — |
 | `_mm256_mask_cvtepi32_storeu_epi8` | Convert packed 32-bit integers in a to packed 8-bit integers... | — |
@@ -3752,8 +3752,8 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm256_mask_cvtusepi64_storeu_epi8` | Convert packed unsigned 64-bit integers in a to packed 8-bit... | — |
 | `_mm256_mask_expandloadu_epi32` | Load contiguous active 32-bit integers from unaligned memory... | — |
 | `_mm256_mask_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | — |
-| `_mm256_mask_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | safe_unaligned_simd::`_mm256_mask_expandloadu_pd` |
-| `_mm256_mask_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | safe_unaligned_simd::`_mm256_mask_expandloadu_ps` |
+| `_mm256_mask_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | `_mm256_mask_expandloadu_pd` (safe via import_intrinsics) |
+| `_mm256_mask_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | `_mm256_mask_expandloadu_ps` (safe via import_intrinsics) |
 | `_mm256_mask_i32scatter_epi32` | Stores 8 32-bit integer elements from a to memory starting a... | — |
 | `_mm256_mask_i32scatter_epi64` | Stores 4 64-bit integer elements from a to memory starting a... | — |
 | `_mm256_mask_i32scatter_pd` | Stores 4 double-precision (64-bit) floating-point elements f... | — |
@@ -3770,32 +3770,32 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm256_mask_loadu_epi32` | Load packed 32-bit integers from memory into dst using write... | — |
 | `_mm256_mask_loadu_epi64` | Load packed 64-bit integers from memory into dst using write... | — |
 | `_mm256_mask_loadu_epi8` | Load packed 8-bit integers from memory into dst using writem... | — |
-| `_mm256_mask_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | safe_unaligned_simd::`_mm256_mask_loadu_pd` |
-| `_mm256_mask_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | safe_unaligned_simd::`_mm256_mask_loadu_ps` |
+| `_mm256_mask_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | `_mm256_mask_loadu_pd` (safe via import_intrinsics) |
+| `_mm256_mask_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | `_mm256_mask_loadu_ps` (safe via import_intrinsics) |
 | `_mm256_mask_store_epi32` | Store packed 32-bit integers from a into memory using writem... | — |
 | `_mm256_mask_store_epi64` | Store packed 64-bit integers from a into memory using writem... | — |
 | `_mm256_mask_store_pd` | Store packed double-precision (64-bit) floating-point elemen... | — |
 | `_mm256_mask_store_ps` | Store packed single-precision (32-bit) floating-point elemen... | — |
-| `_mm256_mask_storeu_epi16` | Store packed 16-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm256_mask_storeu_epi16` |
-| `_mm256_mask_storeu_epi32` | Store packed 32-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm256_mask_storeu_epi32` |
-| `_mm256_mask_storeu_epi64` | Store packed 64-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm256_mask_storeu_epi64` |
-| `_mm256_mask_storeu_epi8` | Store packed 8-bit integers from a into memory using writema... | safe_unaligned_simd::`_mm256_mask_storeu_epi8` |
-| `_mm256_mask_storeu_pd` | Store packed double-precision (64-bit) floating-point elemen... | safe_unaligned_simd::`_mm256_mask_storeu_pd` |
-| `_mm256_mask_storeu_ps` | Store packed single-precision (32-bit) floating-point elemen... | safe_unaligned_simd::`_mm256_mask_storeu_ps` |
-| `_mm256_maskz_expandloadu_epi32` | Load contiguous active 32-bit integers from unaligned memory... | safe_unaligned_simd::`_mm256_maskz_expandloadu_epi32` |
-| `_mm256_maskz_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | safe_unaligned_simd::`_mm256_maskz_expandloadu_epi64` |
-| `_mm256_maskz_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | safe_unaligned_simd::`_mm256_maskz_expandloadu_pd` |
-| `_mm256_maskz_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | safe_unaligned_simd::`_mm256_maskz_expandloadu_ps` |
+| `_mm256_mask_storeu_epi16` | Store packed 16-bit integers from a into memory using writem... | `_mm256_mask_storeu_epi16` (safe via import_intrinsics) |
+| `_mm256_mask_storeu_epi32` | Store packed 32-bit integers from a into memory using writem... | `_mm256_mask_storeu_epi32` (safe via import_intrinsics) |
+| `_mm256_mask_storeu_epi64` | Store packed 64-bit integers from a into memory using writem... | `_mm256_mask_storeu_epi64` (safe via import_intrinsics) |
+| `_mm256_mask_storeu_epi8` | Store packed 8-bit integers from a into memory using writema... | `_mm256_mask_storeu_epi8` (safe via import_intrinsics) |
+| `_mm256_mask_storeu_pd` | Store packed double-precision (64-bit) floating-point elemen... | `_mm256_mask_storeu_pd` (safe via import_intrinsics) |
+| `_mm256_mask_storeu_ps` | Store packed single-precision (32-bit) floating-point elemen... | `_mm256_mask_storeu_ps` (safe via import_intrinsics) |
+| `_mm256_maskz_expandloadu_epi32` | Load contiguous active 32-bit integers from unaligned memory... | `_mm256_maskz_expandloadu_epi32` (safe via import_intrinsics) |
+| `_mm256_maskz_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | `_mm256_maskz_expandloadu_epi64` (safe via import_intrinsics) |
+| `_mm256_maskz_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | `_mm256_maskz_expandloadu_pd` (safe via import_intrinsics) |
+| `_mm256_maskz_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | `_mm256_maskz_expandloadu_ps` (safe via import_intrinsics) |
 | `_mm256_maskz_load_epi32` | Load packed 32-bit integers from memory into dst using zerom... | — |
 | `_mm256_maskz_load_epi64` | Load packed 64-bit integers from memory into dst using zerom... | — |
 | `_mm256_maskz_load_pd` | Load packed double-precision (64-bit) floating-point element... | — |
 | `_mm256_maskz_load_ps` | Load packed single-precision (32-bit) floating-point element... | — |
-| `_mm256_maskz_loadu_epi16` | Load packed 16-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm256_maskz_loadu_epi16` |
-| `_mm256_maskz_loadu_epi32` | Load packed 32-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm256_maskz_loadu_epi32` |
-| `_mm256_maskz_loadu_epi64` | Load packed 64-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm256_maskz_loadu_epi64` |
-| `_mm256_maskz_loadu_epi8` | Load packed 8-bit integers from memory into dst using zeroma... | safe_unaligned_simd::`_mm256_maskz_loadu_epi8` |
-| `_mm256_maskz_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | safe_unaligned_simd::`_mm256_maskz_loadu_pd` |
-| `_mm256_maskz_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | safe_unaligned_simd::`_mm256_maskz_loadu_ps` |
+| `_mm256_maskz_loadu_epi16` | Load packed 16-bit integers from memory into dst using zerom... | `_mm256_maskz_loadu_epi16` (safe via import_intrinsics) |
+| `_mm256_maskz_loadu_epi32` | Load packed 32-bit integers from memory into dst using zerom... | `_mm256_maskz_loadu_epi32` (safe via import_intrinsics) |
+| `_mm256_maskz_loadu_epi64` | Load packed 64-bit integers from memory into dst using zerom... | `_mm256_maskz_loadu_epi64` (safe via import_intrinsics) |
+| `_mm256_maskz_loadu_epi8` | Load packed 8-bit integers from memory into dst using zeroma... | `_mm256_maskz_loadu_epi8` (safe via import_intrinsics) |
+| `_mm256_maskz_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | `_mm256_maskz_loadu_pd` (safe via import_intrinsics) |
+| `_mm256_maskz_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | `_mm256_maskz_loadu_ps` (safe via import_intrinsics) |
 | `_mm256_mmask_i32gather_epi32` | Loads 8 32-bit integer elements from memory starting at loca... | — |
 | `_mm256_mmask_i32gather_epi64` | Loads 4 64-bit integer elements from memory starting at loca... | — |
 | `_mm256_mmask_i32gather_pd` | Loads 4 double-precision (64-bit) floating-point elements fr... | — |
@@ -3806,10 +3806,10 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm256_mmask_i64gather_ps` | Loads 4 single-precision (32-bit) floating-point elements fr... | — |
 | `_mm256_store_epi32` | Store 256-bits (composed of 8 packed 32-bit integers) from a... | — |
 | `_mm256_store_epi64` | Store 256-bits (composed of 4 packed 64-bit integers) from a... | — |
-| `_mm256_storeu_epi16` | Store 256-bits (composed of 16 packed 16-bit integers) from ... | safe_unaligned_simd::`_mm256_storeu_epi16` |
-| `_mm256_storeu_epi32` | Store 256-bits (composed of 8 packed 32-bit integers) from a... | safe_unaligned_simd::`_mm256_storeu_epi32` |
-| `_mm256_storeu_epi64` | Store 256-bits (composed of 4 packed 64-bit integers) from a... | safe_unaligned_simd::`_mm256_storeu_epi64` |
-| `_mm256_storeu_epi8` | Store 256-bits (composed of 32 packed 8-bit integers) from a... | safe_unaligned_simd::`_mm256_storeu_epi8` |
+| `_mm256_storeu_epi16` | Store 256-bits (composed of 16 packed 16-bit integers) from ... | `_mm256_storeu_epi16` (safe via import_intrinsics) |
+| `_mm256_storeu_epi32` | Store 256-bits (composed of 8 packed 32-bit integers) from a... | `_mm256_storeu_epi32` (safe via import_intrinsics) |
+| `_mm256_storeu_epi64` | Store 256-bits (composed of 4 packed 64-bit integers) from a... | `_mm256_storeu_epi64` (safe via import_intrinsics) |
+| `_mm256_storeu_epi8` | Store 256-bits (composed of 32 packed 8-bit integers) from a... | `_mm256_storeu_epi8` (safe via import_intrinsics) |
 | `_mm512_i32gather_epi32` | Gather 32-bit integers from memory using 32-bit indices. 32-... | — |
 | `_mm512_i32gather_epi64` | Gather 64-bit integers from memory using 32-bit indices. 64-... | — |
 | `_mm512_i32gather_pd` | Gather double-precision (64-bit) floating-point elements fro... | — |
@@ -3835,17 +3835,17 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm512_load_pd` | Load 512-bits (composed of 8 packed double-precision (64-bit... | — |
 | `_mm512_load_ps` | Load 512-bits (composed of 16 packed single-precision (32-bi... | — |
 | `_mm512_load_si512` | Load 512-bits of integer data from memory into dst. mem_addr... | — |
-| `_mm512_loadu_epi16` | Load 512-bits (composed of 32 packed 16-bit integers) from m... | safe_unaligned_simd::`_mm512_loadu_epi16` |
-| `_mm512_loadu_epi32` | Load 512-bits (composed of 16 packed 32-bit integers) from m... | safe_unaligned_simd::`_mm512_loadu_epi32` |
-| `_mm512_loadu_epi64` | Load 512-bits (composed of 8 packed 64-bit integers) from me... | safe_unaligned_simd::`_mm512_loadu_epi64` |
-| `_mm512_loadu_epi8` | Load 512-bits (composed of 64 packed 8-bit integers) from me... | safe_unaligned_simd::`_mm512_loadu_epi8` |
-| `_mm512_loadu_pd` | Loads 512-bits (composed of 8 packed double-precision (64-bi... | safe_unaligned_simd::`_mm512_loadu_pd` |
-| `_mm512_loadu_ps` | Loads 512-bits (composed of 16 packed single-precision (32-b... | safe_unaligned_simd::`_mm512_loadu_ps` |
-| `_mm512_loadu_si512` | Load 512-bits of integer data from memory into dst. mem_addr... | safe_unaligned_simd::`_mm512_loadu_si512` |
+| `_mm512_loadu_epi16` | Load 512-bits (composed of 32 packed 16-bit integers) from m... | `_mm512_loadu_epi16` (safe via import_intrinsics) |
+| `_mm512_loadu_epi32` | Load 512-bits (composed of 16 packed 32-bit integers) from m... | `_mm512_loadu_epi32` (safe via import_intrinsics) |
+| `_mm512_loadu_epi64` | Load 512-bits (composed of 8 packed 64-bit integers) from me... | `_mm512_loadu_epi64` (safe via import_intrinsics) |
+| `_mm512_loadu_epi8` | Load 512-bits (composed of 64 packed 8-bit integers) from me... | `_mm512_loadu_epi8` (safe via import_intrinsics) |
+| `_mm512_loadu_pd` | Loads 512-bits (composed of 8 packed double-precision (64-bi... | `_mm512_loadu_pd` (safe via import_intrinsics) |
+| `_mm512_loadu_ps` | Loads 512-bits (composed of 16 packed single-precision (32-b... | `_mm512_loadu_ps` (safe via import_intrinsics) |
+| `_mm512_loadu_si512` | Load 512-bits of integer data from memory into dst. mem_addr... | `_mm512_loadu_si512` (safe via import_intrinsics) |
 | `_mm512_mask_compressstoreu_epi32` | Contiguously store the active 32-bit integers in a (those wi... | — |
 | `_mm512_mask_compressstoreu_epi64` | Contiguously store the active 64-bit integers in a (those wi... | — |
-| `_mm512_mask_compressstoreu_pd` | Contiguously store the active double-precision (64-bit) floa... | safe_unaligned_simd::`_mm512_mask_compressstoreu_pd` |
-| `_mm512_mask_compressstoreu_ps` | Contiguously store the active single-precision (32-bit) floa... | safe_unaligned_simd::`_mm512_mask_compressstoreu_ps` |
+| `_mm512_mask_compressstoreu_pd` | Contiguously store the active double-precision (64-bit) floa... | `_mm512_mask_compressstoreu_pd` (safe via import_intrinsics) |
+| `_mm512_mask_compressstoreu_ps` | Contiguously store the active single-precision (32-bit) floa... | `_mm512_mask_compressstoreu_ps` (safe via import_intrinsics) |
 | `_mm512_mask_cvtepi16_storeu_epi8` | Convert packed 16-bit integers in a to packed 8-bit integers... | — |
 | `_mm512_mask_cvtepi32_storeu_epi16` | Convert packed 32-bit integers in a to packed 16-bit integer... | — |
 | `_mm512_mask_cvtepi32_storeu_epi8` | Convert packed 32-bit integers in a to packed 8-bit integers... | — |
@@ -3866,8 +3866,8 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm512_mask_cvtusepi64_storeu_epi8` | Convert packed unsigned 64-bit integers in a to packed 8-bit... | — |
 | `_mm512_mask_expandloadu_epi32` | Load contiguous active 32-bit integers from unaligned memory... | — |
 | `_mm512_mask_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | — |
-| `_mm512_mask_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | safe_unaligned_simd::`_mm512_mask_expandloadu_pd` |
-| `_mm512_mask_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | safe_unaligned_simd::`_mm512_mask_expandloadu_ps` |
+| `_mm512_mask_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | `_mm512_mask_expandloadu_pd` (safe via import_intrinsics) |
+| `_mm512_mask_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | `_mm512_mask_expandloadu_ps` (safe via import_intrinsics) |
 | `_mm512_mask_i32gather_epi32` | Gather 32-bit integers from memory using 32-bit indices. 32-... | — |
 | `_mm512_mask_i32gather_epi64` | Gather 64-bit integers from memory using 32-bit indices. 64-... | — |
 | `_mm512_mask_i32gather_pd` | Gather double-precision (64-bit) floating-point elements fro... | — |
@@ -3896,44 +3896,44 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm512_mask_loadu_epi32` | Load packed 32-bit integers from memory into dst using write... | — |
 | `_mm512_mask_loadu_epi64` | Load packed 64-bit integers from memory into dst using write... | — |
 | `_mm512_mask_loadu_epi8` | Load packed 8-bit integers from memory into dst using writem... | — |
-| `_mm512_mask_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | safe_unaligned_simd::`_mm512_mask_loadu_pd` |
-| `_mm512_mask_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | safe_unaligned_simd::`_mm512_mask_loadu_ps` |
+| `_mm512_mask_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | `_mm512_mask_loadu_pd` (safe via import_intrinsics) |
+| `_mm512_mask_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | `_mm512_mask_loadu_ps` (safe via import_intrinsics) |
 | `_mm512_mask_store_epi32` | Store packed 32-bit integers from a into memory using writem... | — |
 | `_mm512_mask_store_epi64` | Store packed 64-bit integers from a into memory using writem... | — |
 | `_mm512_mask_store_pd` | Store packed double-precision (64-bit) floating-point elemen... | — |
 | `_mm512_mask_store_ps` | Store packed single-precision (32-bit) floating-point elemen... | — |
-| `_mm512_mask_storeu_epi16` | Store packed 16-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm512_mask_storeu_epi16` |
-| `_mm512_mask_storeu_epi32` | Store packed 32-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm512_mask_storeu_epi32` |
-| `_mm512_mask_storeu_epi64` | Store packed 64-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm512_mask_storeu_epi64` |
-| `_mm512_mask_storeu_epi8` | Store packed 8-bit integers from a into memory using writema... | safe_unaligned_simd::`_mm512_mask_storeu_epi8` |
-| `_mm512_mask_storeu_pd` | Store packed double-precision (64-bit) floating-point elemen... | safe_unaligned_simd::`_mm512_mask_storeu_pd` |
-| `_mm512_mask_storeu_ps` | Store packed single-precision (32-bit) floating-point elemen... | safe_unaligned_simd::`_mm512_mask_storeu_ps` |
+| `_mm512_mask_storeu_epi16` | Store packed 16-bit integers from a into memory using writem... | `_mm512_mask_storeu_epi16` (safe via import_intrinsics) |
+| `_mm512_mask_storeu_epi32` | Store packed 32-bit integers from a into memory using writem... | `_mm512_mask_storeu_epi32` (safe via import_intrinsics) |
+| `_mm512_mask_storeu_epi64` | Store packed 64-bit integers from a into memory using writem... | `_mm512_mask_storeu_epi64` (safe via import_intrinsics) |
+| `_mm512_mask_storeu_epi8` | Store packed 8-bit integers from a into memory using writema... | `_mm512_mask_storeu_epi8` (safe via import_intrinsics) |
+| `_mm512_mask_storeu_pd` | Store packed double-precision (64-bit) floating-point elemen... | `_mm512_mask_storeu_pd` (safe via import_intrinsics) |
+| `_mm512_mask_storeu_ps` | Store packed single-precision (32-bit) floating-point elemen... | `_mm512_mask_storeu_ps` (safe via import_intrinsics) |
 | `_mm512_maskz_expandloadu_epi32` | Load contiguous active 32-bit integers from unaligned memory... | — |
-| `_mm512_maskz_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | safe_unaligned_simd::`_mm512_maskz_expandloadu_epi64` |
-| `_mm512_maskz_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | safe_unaligned_simd::`_mm512_maskz_expandloadu_pd` |
-| `_mm512_maskz_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | safe_unaligned_simd::`_mm512_maskz_expandloadu_ps` |
+| `_mm512_maskz_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | `_mm512_maskz_expandloadu_epi64` (safe via import_intrinsics) |
+| `_mm512_maskz_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | `_mm512_maskz_expandloadu_pd` (safe via import_intrinsics) |
+| `_mm512_maskz_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | `_mm512_maskz_expandloadu_ps` (safe via import_intrinsics) |
 | `_mm512_maskz_load_epi32` | Load packed 32-bit integers from memory into dst using zerom... | — |
 | `_mm512_maskz_load_epi64` | Load packed 64-bit integers from memory into dst using zerom... | — |
 | `_mm512_maskz_load_pd` | Load packed double-precision (64-bit) floating-point element... | — |
 | `_mm512_maskz_load_ps` | Load packed single-precision (32-bit) floating-point element... | — |
-| `_mm512_maskz_loadu_epi16` | Load packed 16-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm512_maskz_loadu_epi16` |
-| `_mm512_maskz_loadu_epi32` | Load packed 32-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm512_maskz_loadu_epi32` |
-| `_mm512_maskz_loadu_epi64` | Load packed 64-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm512_maskz_loadu_epi64` |
-| `_mm512_maskz_loadu_epi8` | Load packed 8-bit integers from memory into dst using zeroma... | safe_unaligned_simd::`_mm512_maskz_loadu_epi8` |
-| `_mm512_maskz_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | safe_unaligned_simd::`_mm512_maskz_loadu_pd` |
-| `_mm512_maskz_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | safe_unaligned_simd::`_mm512_maskz_loadu_ps` |
+| `_mm512_maskz_loadu_epi16` | Load packed 16-bit integers from memory into dst using zerom... | `_mm512_maskz_loadu_epi16` (safe via import_intrinsics) |
+| `_mm512_maskz_loadu_epi32` | Load packed 32-bit integers from memory into dst using zerom... | `_mm512_maskz_loadu_epi32` (safe via import_intrinsics) |
+| `_mm512_maskz_loadu_epi64` | Load packed 64-bit integers from memory into dst using zerom... | `_mm512_maskz_loadu_epi64` (safe via import_intrinsics) |
+| `_mm512_maskz_loadu_epi8` | Load packed 8-bit integers from memory into dst using zeroma... | `_mm512_maskz_loadu_epi8` (safe via import_intrinsics) |
+| `_mm512_maskz_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | `_mm512_maskz_loadu_pd` (safe via import_intrinsics) |
+| `_mm512_maskz_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | `_mm512_maskz_loadu_ps` (safe via import_intrinsics) |
 | `_mm512_store_epi32` | Store 512-bits (composed of 16 packed 32-bit integers) from ... | — |
 | `_mm512_store_epi64` | Store 512-bits (composed of 8 packed 64-bit integers) from a... | — |
 | `_mm512_store_pd` | Store 512-bits (composed of 8 packed double-precision (64-bi... | — |
 | `_mm512_store_ps` | Store 512-bits of integer data from a into memory. mem_addr ... | — |
 | `_mm512_store_si512` | Store 512-bits of integer data from a into memory. mem_addr ... | — |
-| `_mm512_storeu_epi16` | Store 512-bits (composed of 32 packed 16-bit integers) from ... | safe_unaligned_simd::`_mm512_storeu_epi16` |
-| `_mm512_storeu_epi32` | Store 512-bits (composed of 16 packed 32-bit integers) from ... | safe_unaligned_simd::`_mm512_storeu_epi32` |
-| `_mm512_storeu_epi64` | Store 512-bits (composed of 8 packed 64-bit integers) from a... | safe_unaligned_simd::`_mm512_storeu_epi64` |
-| `_mm512_storeu_epi8` | Store 512-bits (composed of 64 packed 8-bit integers) from a... | safe_unaligned_simd::`_mm512_storeu_epi8` |
-| `_mm512_storeu_pd` | Stores 512-bits (composed of 8 packed double-precision (64-b... | safe_unaligned_simd::`_mm512_storeu_pd` |
-| `_mm512_storeu_ps` | Stores 512-bits (composed of 16 packed single-precision (32-... | safe_unaligned_simd::`_mm512_storeu_ps` |
-| `_mm512_storeu_si512` | Store 512-bits of integer data from a into memory. mem_addr ... | safe_unaligned_simd::`_mm512_storeu_si512` |
+| `_mm512_storeu_epi16` | Store 512-bits (composed of 32 packed 16-bit integers) from ... | `_mm512_storeu_epi16` (safe via import_intrinsics) |
+| `_mm512_storeu_epi32` | Store 512-bits (composed of 16 packed 32-bit integers) from ... | `_mm512_storeu_epi32` (safe via import_intrinsics) |
+| `_mm512_storeu_epi64` | Store 512-bits (composed of 8 packed 64-bit integers) from a... | `_mm512_storeu_epi64` (safe via import_intrinsics) |
+| `_mm512_storeu_epi8` | Store 512-bits (composed of 64 packed 8-bit integers) from a... | `_mm512_storeu_epi8` (safe via import_intrinsics) |
+| `_mm512_storeu_pd` | Stores 512-bits (composed of 8 packed double-precision (64-b... | `_mm512_storeu_pd` (safe via import_intrinsics) |
+| `_mm512_storeu_ps` | Stores 512-bits (composed of 16 packed single-precision (32-... | `_mm512_storeu_ps` (safe via import_intrinsics) |
+| `_mm512_storeu_si512` | Store 512-bits of integer data from a into memory. mem_addr ... | `_mm512_storeu_si512` (safe via import_intrinsics) |
 | `_mm512_stream_load_si512` | Load 512-bits of integer data from memory into dst using a n... | — |
 | `_mm512_stream_pd` | Store 512-bits (composed of 8 packed double-precision (64-bi... | — |
 | `_mm512_stream_ps` | Store 512-bits (composed of 16 packed single-precision (32-b... | — |
@@ -3948,14 +3948,14 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm_i64scatter_ps` | Stores 2 single-precision (32-bit) floating-point elements f... | — |
 | `_mm_load_epi32` | Load 128-bits (composed of 4 packed 32-bit integers) from me... | — |
 | `_mm_load_epi64` | Load 128-bits (composed of 2 packed 64-bit integers) from me... | — |
-| `_mm_loadu_epi16` | Load 128-bits (composed of 8 packed 16-bit integers) from me... | safe_unaligned_simd::`_mm_loadu_epi16` |
-| `_mm_loadu_epi32` | Load 128-bits (composed of 4 packed 32-bit integers) from me... | safe_unaligned_simd::`_mm_loadu_epi32` |
-| `_mm_loadu_epi64` | Load 128-bits (composed of 2 packed 64-bit integers) from me... | safe_unaligned_simd::`_mm_loadu_epi64` |
-| `_mm_loadu_epi8` | Load 128-bits (composed of 16 packed 8-bit integers) from me... | safe_unaligned_simd::`_mm_loadu_epi8` |
+| `_mm_loadu_epi16` | Load 128-bits (composed of 8 packed 16-bit integers) from me... | `_mm_loadu_epi16` (safe via import_intrinsics) |
+| `_mm_loadu_epi32` | Load 128-bits (composed of 4 packed 32-bit integers) from me... | `_mm_loadu_epi32` (safe via import_intrinsics) |
+| `_mm_loadu_epi64` | Load 128-bits (composed of 2 packed 64-bit integers) from me... | `_mm_loadu_epi64` (safe via import_intrinsics) |
+| `_mm_loadu_epi8` | Load 128-bits (composed of 16 packed 8-bit integers) from me... | `_mm_loadu_epi8` (safe via import_intrinsics) |
 | `_mm_mask_compressstoreu_epi32` | Contiguously store the active 32-bit integers in a (those wi... | — |
 | `_mm_mask_compressstoreu_epi64` | Contiguously store the active 64-bit integers in a (those wi... | — |
-| `_mm_mask_compressstoreu_pd` | Contiguously store the active double-precision (64-bit) floa... | safe_unaligned_simd::`_mm_mask_compressstoreu_pd` |
-| `_mm_mask_compressstoreu_ps` | Contiguously store the active single-precision (32-bit) floa... | safe_unaligned_simd::`_mm_mask_compressstoreu_ps` |
+| `_mm_mask_compressstoreu_pd` | Contiguously store the active double-precision (64-bit) floa... | `_mm_mask_compressstoreu_pd` (safe via import_intrinsics) |
+| `_mm_mask_compressstoreu_ps` | Contiguously store the active single-precision (32-bit) floa... | `_mm_mask_compressstoreu_ps` (safe via import_intrinsics) |
 | `_mm_mask_cvtepi16_storeu_epi8` | Convert packed 16-bit integers in a to packed 8-bit integers... | — |
 | `_mm_mask_cvtepi32_storeu_epi16` | Convert packed 32-bit integers in a to packed 16-bit integer... | — |
 | `_mm_mask_cvtepi32_storeu_epi8` | Convert packed 32-bit integers in a to packed 8-bit integers... | — |
@@ -3976,8 +3976,8 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm_mask_cvtusepi64_storeu_epi8` | Convert packed unsigned 64-bit integers in a to packed 8-bit... | — |
 | `_mm_mask_expandloadu_epi32` | Load contiguous active 32-bit integers from unaligned memory... | — |
 | `_mm_mask_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | — |
-| `_mm_mask_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | safe_unaligned_simd::`_mm_mask_expandloadu_pd` |
-| `_mm_mask_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | safe_unaligned_simd::`_mm_mask_expandloadu_ps` |
+| `_mm_mask_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | `_mm_mask_expandloadu_pd` (safe via import_intrinsics) |
+| `_mm_mask_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | `_mm_mask_expandloadu_ps` (safe via import_intrinsics) |
 | `_mm_mask_i32scatter_epi32` | Stores 4 32-bit integer elements from a to memory starting a... | — |
 | `_mm_mask_i32scatter_epi64` | Stores 2 64-bit integer elements from a to memory starting a... | — |
 | `_mm_mask_i32scatter_pd` | Stores 2 double-precision (64-bit) floating-point elements f... | — |
@@ -3996,36 +3996,36 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm_mask_loadu_epi32` | Load packed 32-bit integers from memory into dst using write... | — |
 | `_mm_mask_loadu_epi64` | Load packed 64-bit integers from memory into dst using write... | — |
 | `_mm_mask_loadu_epi8` | Load packed 8-bit integers from memory into dst using writem... | — |
-| `_mm_mask_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | safe_unaligned_simd::`_mm_mask_loadu_pd` |
-| `_mm_mask_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | safe_unaligned_simd::`_mm_mask_loadu_ps` |
+| `_mm_mask_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | `_mm_mask_loadu_pd` (safe via import_intrinsics) |
+| `_mm_mask_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | `_mm_mask_loadu_ps` (safe via import_intrinsics) |
 | `_mm_mask_store_epi32` | Store packed 32-bit integers from a into memory using writem... | — |
 | `_mm_mask_store_epi64` | Store packed 64-bit integers from a into memory using writem... | — |
 | `_mm_mask_store_pd` | Store packed double-precision (64-bit) floating-point elemen... | — |
 | `_mm_mask_store_ps` | Store packed single-precision (32-bit) floating-point elemen... | — |
 | `_mm_mask_store_sd` | Store a double-precision (64-bit) floating-point element fro... | — |
 | `_mm_mask_store_ss` | Store a single-precision (32-bit) floating-point element fro... | — |
-| `_mm_mask_storeu_epi16` | Store packed 16-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm_mask_storeu_epi16` |
-| `_mm_mask_storeu_epi32` | Store packed 32-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm_mask_storeu_epi32` |
-| `_mm_mask_storeu_epi64` | Store packed 64-bit integers from a into memory using writem... | safe_unaligned_simd::`_mm_mask_storeu_epi64` |
-| `_mm_mask_storeu_epi8` | Store packed 8-bit integers from a into memory using writema... | safe_unaligned_simd::`_mm_mask_storeu_epi8` |
-| `_mm_mask_storeu_pd` | Store packed double-precision (64-bit) floating-point elemen... | safe_unaligned_simd::`_mm_mask_storeu_pd` |
-| `_mm_mask_storeu_ps` | Store packed single-precision (32-bit) floating-point elemen... | safe_unaligned_simd::`_mm_mask_storeu_ps` |
-| `_mm_maskz_expandloadu_epi32` | Load contiguous active 32-bit integers from unaligned memory... | safe_unaligned_simd::`_mm_maskz_expandloadu_epi32` |
-| `_mm_maskz_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | safe_unaligned_simd::`_mm_maskz_expandloadu_epi64` |
-| `_mm_maskz_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | safe_unaligned_simd::`_mm_maskz_expandloadu_pd` |
-| `_mm_maskz_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | safe_unaligned_simd::`_mm_maskz_expandloadu_ps` |
+| `_mm_mask_storeu_epi16` | Store packed 16-bit integers from a into memory using writem... | `_mm_mask_storeu_epi16` (safe via import_intrinsics) |
+| `_mm_mask_storeu_epi32` | Store packed 32-bit integers from a into memory using writem... | `_mm_mask_storeu_epi32` (safe via import_intrinsics) |
+| `_mm_mask_storeu_epi64` | Store packed 64-bit integers from a into memory using writem... | `_mm_mask_storeu_epi64` (safe via import_intrinsics) |
+| `_mm_mask_storeu_epi8` | Store packed 8-bit integers from a into memory using writema... | `_mm_mask_storeu_epi8` (safe via import_intrinsics) |
+| `_mm_mask_storeu_pd` | Store packed double-precision (64-bit) floating-point elemen... | `_mm_mask_storeu_pd` (safe via import_intrinsics) |
+| `_mm_mask_storeu_ps` | Store packed single-precision (32-bit) floating-point elemen... | `_mm_mask_storeu_ps` (safe via import_intrinsics) |
+| `_mm_maskz_expandloadu_epi32` | Load contiguous active 32-bit integers from unaligned memory... | `_mm_maskz_expandloadu_epi32` (safe via import_intrinsics) |
+| `_mm_maskz_expandloadu_epi64` | Load contiguous active 64-bit integers from unaligned memory... | `_mm_maskz_expandloadu_epi64` (safe via import_intrinsics) |
+| `_mm_maskz_expandloadu_pd` | Load contiguous active double-precision (64-bit) floating-po... | `_mm_maskz_expandloadu_pd` (safe via import_intrinsics) |
+| `_mm_maskz_expandloadu_ps` | Load contiguous active single-precision (32-bit) floating-po... | `_mm_maskz_expandloadu_ps` (safe via import_intrinsics) |
 | `_mm_maskz_load_epi32` | Load packed 32-bit integers from memory into dst using zerom... | — |
 | `_mm_maskz_load_epi64` | Load packed 64-bit integers from memory into dst using zerom... | — |
 | `_mm_maskz_load_pd` | Load packed double-precision (64-bit) floating-point element... | — |
 | `_mm_maskz_load_ps` | Load packed single-precision (32-bit) floating-point element... | — |
 | `_mm_maskz_load_sd` | Load a double-precision (64-bit) floating-point element from... | — |
 | `_mm_maskz_load_ss` | Load a single-precision (32-bit) floating-point element from... | — |
-| `_mm_maskz_loadu_epi16` | Load packed 16-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm_maskz_loadu_epi16` |
-| `_mm_maskz_loadu_epi32` | Load packed 32-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm_maskz_loadu_epi32` |
-| `_mm_maskz_loadu_epi64` | Load packed 64-bit integers from memory into dst using zerom... | safe_unaligned_simd::`_mm_maskz_loadu_epi64` |
-| `_mm_maskz_loadu_epi8` | Load packed 8-bit integers from memory into dst using zeroma... | safe_unaligned_simd::`_mm_maskz_loadu_epi8` |
-| `_mm_maskz_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | safe_unaligned_simd::`_mm_maskz_loadu_pd` |
-| `_mm_maskz_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | safe_unaligned_simd::`_mm_maskz_loadu_ps` |
+| `_mm_maskz_loadu_epi16` | Load packed 16-bit integers from memory into dst using zerom... | `_mm_maskz_loadu_epi16` (safe via import_intrinsics) |
+| `_mm_maskz_loadu_epi32` | Load packed 32-bit integers from memory into dst using zerom... | `_mm_maskz_loadu_epi32` (safe via import_intrinsics) |
+| `_mm_maskz_loadu_epi64` | Load packed 64-bit integers from memory into dst using zerom... | `_mm_maskz_loadu_epi64` (safe via import_intrinsics) |
+| `_mm_maskz_loadu_epi8` | Load packed 8-bit integers from memory into dst using zeroma... | `_mm_maskz_loadu_epi8` (safe via import_intrinsics) |
+| `_mm_maskz_loadu_pd` | Load packed double-precision (64-bit) floating-point element... | `_mm_maskz_loadu_pd` (safe via import_intrinsics) |
+| `_mm_maskz_loadu_ps` | Load packed single-precision (32-bit) floating-point element... | `_mm_maskz_loadu_ps` (safe via import_intrinsics) |
 | `_mm_mmask_i32gather_epi32` | Loads 4 32-bit integer elements from memory starting at loca... | — |
 | `_mm_mmask_i32gather_epi64` | Loads 2 64-bit integer elements from memory starting at loca... | — |
 | `_mm_mmask_i32gather_pd` | Loads 2 double-precision (64-bit) floating-point elements fr... | — |
@@ -4036,10 +4036,10 @@ fn process_chunk(_: X64V4Token, chunk: &mut [f32; 16]) {
 | `_mm_mmask_i64gather_ps` | Loads 2 single-precision (32-bit) floating-point elements fr... | — |
 | `_mm_store_epi32` | Store 128-bits (composed of 4 packed 32-bit integers) from a... | — |
 | `_mm_store_epi64` | Store 128-bits (composed of 2 packed 64-bit integers) from a... | — |
-| `_mm_storeu_epi16` | Store 128-bits (composed of 8 packed 16-bit integers) from a... | safe_unaligned_simd::`_mm_storeu_epi16` |
-| `_mm_storeu_epi32` | Store 128-bits (composed of 4 packed 32-bit integers) from a... | safe_unaligned_simd::`_mm_storeu_epi32` |
-| `_mm_storeu_epi64` | Store 128-bits (composed of 2 packed 64-bit integers) from a... | safe_unaligned_simd::`_mm_storeu_epi64` |
-| `_mm_storeu_epi8` | Store 128-bits (composed of 16 packed 8-bit integers) from a... | safe_unaligned_simd::`_mm_storeu_epi8` |
+| `_mm_storeu_epi16` | Store 128-bits (composed of 8 packed 16-bit integers) from a... | `_mm_storeu_epi16` (safe via import_intrinsics) |
+| `_mm_storeu_epi32` | Store 128-bits (composed of 4 packed 32-bit integers) from a... | `_mm_storeu_epi32` (safe via import_intrinsics) |
+| `_mm_storeu_epi64` | Store 128-bits (composed of 2 packed 64-bit integers) from a... | `_mm_storeu_epi64` (safe via import_intrinsics) |
+| `_mm_storeu_epi8` | Store 128-bits (composed of 16 packed 8-bit integers) from a... | `_mm_storeu_epi8` (safe via import_intrinsics) |
 | `_store_mask16` | Store 16-bit mask to memory | — |
 | `_store_mask32` | Store 32-bit mask from a into memory | — |
 | `_store_mask64` | Store 64-bit mask from a into memory | — |

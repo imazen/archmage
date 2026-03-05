@@ -243,4 +243,4 @@ fn add_chunk(token: X64V3Token, acc: f32x8, arr: &[f32; 8]) -> f32x8 {
 As of Rust 1.85+, value-based intrinsics (arithmetic, comparison, shuffle, etc.) are safe
 inside `#[target_feature]` functions. The `unsafe` blocks in the examples above (Category C)
 reflect the pre-1.85 style. Inside `#[arcane]`/`#[rite]` functions, only memory operations
-(raw pointers) still require `unsafe`. Use `safe_unaligned_simd` for memory ops.
+(raw pointers) still require `unsafe`. Use `import_intrinsics` for safe memory ops.

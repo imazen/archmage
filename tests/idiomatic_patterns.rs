@@ -34,13 +34,13 @@
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_concrete_token {
+    use archmage::intrinsics::x86_64::*;
     use archmage::{Desktop64, SimdToken, X64V3Token, arcane};
-    use core::arch::x86_64::*;
 
     /// Basic function with concrete X64V3Token
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn sum_f32x8(token: X64V3Token, data: &[f32; 8]) -> f32 {
-        let v = unsafe { _mm256_loadu_ps(data.as_ptr()) };
+        let v = _mm256_loadu_ps(data);
         // Horizontal sum using AVX
         let sum1 = _mm256_hadd_ps(v, v);
         let sum2 = _mm256_hadd_ps(sum1, sum1);
@@ -51,14 +51,14 @@ mod pattern_concrete_token {
     }
 
     /// Using Desktop64 alias (same as X64V3Token)
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn fma_f32x8(token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
-        let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
-        let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
-        let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
+        let va = _mm256_loadu_ps(a);
+        let vb = _mm256_loadu_ps(b);
+        let vc = _mm256_loadu_ps(c);
         let result = _mm256_fmadd_ps(va, vb, vc);
         let mut out = [0.0f32; 8];
-        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+        _mm256_storeu_ps(&mut out, result);
         out
     }
 
@@ -101,14 +101,14 @@ mod pattern_concrete_token {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_feature_traits {
+    use archmage::intrinsics::x86_64::*;
     use archmage::{HasX64V2, SimdToken, X64V2Token, X64V3Token, arcane};
     #[cfg(feature = "avx512")]
     use archmage::{HasX64V4, X64V4Token};
-    use core::arch::x86_64::*;
 
     /// Function accepting any token with HasX64V2 (SSE4.2 + POPCNT)
     /// WARNING: This only enables SSE4.2 features, NOT AVX2/FMA!
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn popcnt_array(token: impl HasX64V2, data: &[u64; 4]) -> u32 {
         // SSE4.2 popcnt is available
         let mut count = 0u32;
@@ -119,23 +119,23 @@ mod pattern_feature_traits {
     }
 
     /// Generic with inline bounds - same as impl Trait
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn sum_sse<T: HasX64V2>(token: T, data: &[f32; 4]) -> f32 {
         // Only SSE features available here, not AVX
-        let v = unsafe { _mm_loadu_ps(data.as_ptr()) };
+        let v = _mm_loadu_ps(data);
         let sum1 = _mm_hadd_ps(v, v);
         let sum2 = _mm_hadd_ps(sum1, sum1);
         _mm_cvtss_f32(sum2)
     }
 
     /// Generic with where clause
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn dot_sse<T>(token: T, a: &[f32; 4], b: &[f32; 4]) -> f32
     where
         T: HasX64V2,
     {
-        let va = unsafe { _mm_loadu_ps(a.as_ptr()) };
-        let vb = unsafe { _mm_loadu_ps(b.as_ptr()) };
+        let va = _mm_loadu_ps(a);
+        let vb = _mm_loadu_ps(b);
         // SSE4.1 dot product
         let dp = _mm_dp_ps::<0xFF>(va, vb);
         _mm_cvtss_f32(dp)
@@ -191,37 +191,37 @@ mod pattern_feature_traits {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_width_traits_deprecated {
+    use archmage::intrinsics::x86_64::*;
     use archmage::{Has256BitSimd, SimdToken, X64V3Token, arcane};
-    use core::arch::x86_64::*;
 
     /// ⚠️ DEPRECATED: Using Has256BitSimd
     /// This only enables AVX (not AVX2/FMA), so FMA intrinsics may not optimize!
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn add_f32x8_deprecated(token: impl Has256BitSimd, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-        let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
-        let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
+        let va = _mm256_loadu_ps(a);
+        let vb = _mm256_loadu_ps(b);
         // This works because _mm256_add_ps only needs AVX
         let result = _mm256_add_ps(va, vb);
         let mut out = [0.0f32; 8];
-        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+        _mm256_storeu_ps(&mut out, result);
         out
     }
 
     /// ✅ CORRECT: Use X64V3Token for AVX2+FMA
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn fma_f32x8_correct(
         token: X64V3Token,
         a: &[f32; 8],
         b: &[f32; 8],
         c: &[f32; 8],
     ) -> [f32; 8] {
-        let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
-        let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
-        let vc = unsafe { _mm256_loadu_ps(c.as_ptr()) };
+        let va = _mm256_loadu_ps(a);
+        let vb = _mm256_loadu_ps(b);
+        let vc = _mm256_loadu_ps(c);
         // FMA is guaranteed available with X64V3Token
         let result = _mm256_fmadd_ps(va, vb, vc);
         let mut out = [0.0f32; 8];
-        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+        _mm256_storeu_ps(&mut out, result);
         out
     }
 
@@ -249,8 +249,8 @@ mod pattern_width_traits_deprecated {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_self_receiver {
+    use archmage::intrinsics::x86_64::*;
     use archmage::{HasX64V2, SimdToken, X64V3Token, arcane};
-    use core::arch::x86_64::*;
 
     /// A wrapper type for SIMD operations
     #[derive(Clone, Copy, Debug, PartialEq)]
@@ -268,32 +268,32 @@ mod pattern_self_receiver {
 
     impl SimdOps for Vec8f32 {
         /// &self → _self is &Vec8f32
-        #[arcane(_self = Vec8f32)]
+        #[arcane(_self = Vec8f32, import_intrinsics)]
         fn double(&self, _token: X64V3Token) -> Self {
-            let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
+            let v = _mm256_loadu_ps(&_self.0);
             let doubled = _mm256_add_ps(v, v);
             let mut out = [0.0f32; 8];
-            unsafe { _mm256_storeu_ps(out.as_mut_ptr(), doubled) };
+            _mm256_storeu_ps(&mut out, doubled);
             Vec8f32(out)
         }
 
         /// self (owned) → _self is Vec8f32
-        #[arcane(_self = Vec8f32)]
+        #[arcane(_self = Vec8f32, import_intrinsics)]
         fn square(self, _token: X64V3Token) -> Self {
-            let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
+            let v = _mm256_loadu_ps(&_self.0);
             let squared = _mm256_mul_ps(v, v);
             let mut out = [0.0f32; 8];
-            unsafe { _mm256_storeu_ps(out.as_mut_ptr(), squared) };
+            _mm256_storeu_ps(&mut out, squared);
             Vec8f32(out)
         }
 
         /// &mut self → _self is &mut Vec8f32
-        #[arcane(_self = Vec8f32)]
+        #[arcane(_self = Vec8f32, import_intrinsics)]
         fn scale(&mut self, _token: X64V3Token, factor: f32) {
-            let v = unsafe { _mm256_loadu_ps(_self.0.as_ptr()) };
+            let v = _mm256_loadu_ps(&_self.0);
             let scale = _mm256_set1_ps(factor);
             let scaled = _mm256_mul_ps(v, scale);
-            unsafe { _mm256_storeu_ps(_self.0.as_mut_ptr(), scaled) };
+            _mm256_storeu_ps(&mut _self.0, scaled);
         }
     }
 
@@ -334,26 +334,26 @@ mod pattern_self_receiver {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_token_passthrough {
+    use archmage::intrinsics::x86_64::*;
     use archmage::{SimdToken, X64V3Token, arcane};
-    use core::arch::x86_64::*;
 
     /// Low-level helper
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn add_vectors(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
         _mm256_add_ps(a, b)
     }
 
     /// Low-level helper
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn mul_vectors(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
         _mm256_mul_ps(a, b)
     }
 
     /// High-level function that calls helpers
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-        let va = unsafe { _mm256_loadu_ps(a.as_ptr()) };
-        let vb = unsafe { _mm256_loadu_ps(b.as_ptr()) };
+        let va = _mm256_loadu_ps(a);
+        let vb = _mm256_loadu_ps(b);
 
         // Call helper - token passthrough
         let product = mul_vectors(token, va, vb);
@@ -368,9 +368,9 @@ mod pattern_token_passthrough {
     }
 
     /// Another example: composing multiple helpers
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn polynomial(token: X64V3Token, x: &[f32; 8], a: f32, b: f32, c: f32) -> [f32; 8] {
-        let vx = unsafe { _mm256_loadu_ps(x.as_ptr()) };
+        let vx = _mm256_loadu_ps(x);
         let va = _mm256_set1_ps(a);
         let vb = _mm256_set1_ps(b);
         let vc = _mm256_set1_ps(c);
@@ -383,7 +383,7 @@ mod pattern_token_passthrough {
         let result = add_vectors(token, ax2_plus_bx, vc);
 
         let mut out = [0.0f32; 8];
-        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), result) };
+        _mm256_storeu_ps(&mut out, result);
         out
     }
 
@@ -421,18 +421,18 @@ mod pattern_token_passthrough {
 mod pattern_manual_dispatch_x86 {
     #[cfg(feature = "avx512")]
     use archmage::X64V4Token;
+    use archmage::intrinsics::x86_64::*;
     use archmage::{SimdToken, X64V3Token, arcane};
-    use core::arch::x86_64::*;
 
     /// AVX2+FMA implementation
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn sum_v3(token: X64V3Token, data: &[f32]) -> f32 {
         let mut acc = _mm256_setzero_ps();
         let chunks = data.chunks_exact(8);
         let remainder = chunks.remainder();
 
         for chunk in chunks {
-            let v = unsafe { _mm256_loadu_ps(chunk.as_ptr()) };
+            let v = _mm256_loadu_ps(chunk.first_chunk().unwrap());
             acc = _mm256_add_ps(acc, v);
         }
 
@@ -533,15 +533,15 @@ mod pattern_magetypes {
 
 #[cfg(target_arch = "x86_64")]
 mod pattern_separate_platforms_x86 {
+    use archmage::intrinsics::x86_64::*;
     use archmage::{SimdToken, X64V3Token, arcane};
-    use core::arch::x86_64::*;
 
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn process_x86(token: X64V3Token, data: &mut [f32]) {
         for chunk in data.chunks_exact_mut(8) {
-            let v = unsafe { _mm256_loadu_ps(chunk.as_ptr()) };
+            let v = _mm256_loadu_ps(chunk.first_chunk().unwrap());
             let processed = _mm256_mul_ps(v, v); // Square
-            unsafe { _mm256_storeu_ps(chunk.as_mut_ptr(), processed) };
+            _mm256_storeu_ps(chunk.first_chunk_mut().unwrap(), processed);
         }
     }
 
@@ -557,15 +557,15 @@ mod pattern_separate_platforms_x86 {
 
 #[cfg(target_arch = "aarch64")]
 mod pattern_separate_platforms_arm {
+    use archmage::intrinsics::aarch64::*;
     use archmage::{NeonToken, SimdToken, arcane};
-    use core::arch::aarch64::*;
 
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn process_arm(token: NeonToken, data: &mut [f32]) {
         for chunk in data.chunks_exact_mut(4) {
-            let v = unsafe { vld1q_f32(chunk.as_ptr()) };
+            let v = vld1q_f32(chunk.first_chunk().unwrap());
             let processed = vmulq_f32(v, v); // Square
-            unsafe { vst1q_f32(chunk.as_mut_ptr(), processed) };
+            vst1q_f32(chunk.first_chunk_mut().unwrap(), processed);
         }
     }
 
@@ -618,20 +618,20 @@ mod pattern_separate_platforms_arm {
 mod pattern_token_extraction {
     #[cfg(feature = "avx512")]
     use archmage::X64V4Token;
+    use archmage::intrinsics::x86_64::*;
     use archmage::{SimdToken, X64V2Token, X64V3Token, arcane};
-    use core::arch::x86_64::*;
 
     /// Requires only SSE4.2
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn sse_operation(token: X64V2Token, data: &[f32; 4]) -> f32 {
-        let v = unsafe { _mm_loadu_ps(data.as_ptr()) };
+        let v = _mm_loadu_ps(data);
         let sum = _mm_hadd_ps(v, v);
         let sum = _mm_hadd_ps(sum, sum);
         _mm_cvtss_f32(sum)
     }
 
     /// Uses AVX2 but can fall back to SSE
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn flexible_sum(token: X64V3Token, data: &[f32; 4]) -> f32 {
         // Extract v2 token from v3 token
         let v2_token = token.v2();
@@ -642,7 +642,7 @@ mod pattern_token_extraction {
     }
 
     #[cfg(feature = "avx512")]
-    #[arcane]
+    #[arcane(import_intrinsics)]
     pub fn avx512_with_fallback(token: X64V4Token, data: &[f32; 4]) -> f32 {
         // X64V4Token can extract to v3 or v2
         let v3_token = token.v3();

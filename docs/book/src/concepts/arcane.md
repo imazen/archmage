@@ -4,7 +4,7 @@
 
 For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
 
-> **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `safe_unaligned_simd` for those.
+> **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `import_intrinsics` to get safe memory ops that take references instead of raw pointers.
 
 ## How It Works
 
@@ -46,7 +46,7 @@ use archmage::prelude::*;
 
 #[arcane(import_intrinsics)]
 fn add_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    // safe_unaligned_simd takes references - fully safe inside #[arcane]!
+    // import_intrinsics provides safe memory ops - fully safe inside #[arcane]!
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     let sum = _mm256_add_ps(va, vb);

@@ -13,7 +13,7 @@
 
 **Zero overhead.** Archmage generates identical assembly to hand-written unsafe code. The safety abstractions exist only at compile time—at runtime, you get raw SIMD instructions. Calling an `#[arcane]` function costs exactly the same as calling a bare `#[target_feature]` function directly.
 
-**Zero `unsafe`.** Crates using archmage + magetypes + safe_unaligned_simd are required to use\* `#![forbid(unsafe_code)]`. There is no reason to write `unsafe` in SIMD code anymore.
+**Zero `unsafe`.** Crates using archmage + magetypes are required to use\* `#![forbid(unsafe_code)]`. There is no reason to write `unsafe` in SIMD code anymore.
 
 ```toml
 [dependencies]
@@ -43,7 +43,7 @@ fn main() {
 }
 ```
 
-`summon()` checks CPUID. `#[arcane(import_intrinsics)]` enables `#[target_feature]` and auto-imports architecture intrinsics + `safe_unaligned_simd` memory operations, making intrinsics safe (Rust 1.85+). `_mm256_loadu_ps` takes `&[f32; 8]`, not a raw pointer. Compile with `-C target-cpu=haswell` to elide the runtime check.
+`summon()` checks CPUID. `#[arcane(import_intrinsics)]` enables `#[target_feature]` and auto-imports architecture intrinsics + safe memory operations, making intrinsics safe (Rust 1.85+). `_mm256_loadu_ps` takes `&[f32; 8]`, not a raw pointer. Compile with `-C target-cpu=haswell` to elide the runtime check.
 
 ## SIMD functions with `#[rite]` <sub>(alias: `#[token_target_features]`)</sub>
 
@@ -275,7 +275,7 @@ Archmage's safety rests on three pillars, all enabled by Rust 1.85+:
 
 2. **Calling a `#[target_feature]` function from another function with matching features is safe.** No `unsafe` needed between `#[arcane]` and `#[rite]` functions — LLVM knows the features match.
 
-3. **`safe_unaligned_simd` makes memory operations safe.** It shadows pointer-based load/store intrinsics with reference-based alternatives (e.g., `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`).
+3. **`import_intrinsics` makes memory operations safe.** It brings reference-based alternatives into scope that shadow pointer-based load/store intrinsics (e.g., `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`).
 
 Together, these mean your crate should use `#![forbid(unsafe_code)]`. The `unsafe` lives inside archmage's generated wrappers, not in your code. If you find yourself writing `unsafe` in a crate that uses archmage, something has gone wrong.
 
@@ -286,8 +286,7 @@ Together, these mean your crate should use `#![forbid(unsafe_code)]`. The `unsaf
 - Tokens: `X64V3Token`, `Arm64`, `Arm64V2Token`, `Arm64V3Token`, `ScalarToken`, etc.
 - Traits: `SimdToken`, `IntoConcreteToken`, `HasX64V2`, etc.
 - Macros: `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`
-- Intrinsics: `core::arch::*` for your platform
-- Memory ops: `safe_unaligned_simd` functions (reference-based, no raw pointers)
+- Intrinsics: all platform intrinsics + safe memory ops (reference-based, no raw pointers)
 
 ## Testing SIMD dispatch paths
 
@@ -427,7 +426,6 @@ This disables V2 on x86 (cascading to V3/V4/Modern/Fp16) and NEON on ARM (cascad
 |---------|---------|---|
 | `std` | yes | Standard library |
 | `macros` | yes | `#[arcane]`, `#[magetypes]`, `incant!` |
-| `safe_unaligned_simd` | yes | Re-exports via prelude |
 | `avx512` | no | AVX-512 tokens |
 | `testable_dispatch` | no | Makes token disabling work with `-Ctarget-cpu=native` |
 
@@ -437,4 +435,4 @@ MIT OR Apache-2.0
 
 ---
 
-<sub>\* OK, `#![forbid(unsafe_code)]` isn't technically *enforced* by archmage. But with `#[arcane]`/`#[rite]` handling `#[target_feature]`, `safe_unaligned_simd` handling memory ops, and Rust 1.85+ making value intrinsics safe — there's genuinely nothing left that needs `unsafe` in your SIMD code. If your crate uses archmage and still has `unsafe` blocks, that's a code smell, not a necessity.</sub>
+<sub>\* OK, `#![forbid(unsafe_code)]` isn't technically *enforced* by archmage. But with `#[arcane]`/`#[rite]` handling `#[target_feature]`, `import_intrinsics` providing safe memory ops, and Rust 1.85+ making value intrinsics safe — there's genuinely nothing left that needs `unsafe` in your SIMD code. If your crate uses archmage and still has `unsafe` blocks, that's a code smell, not a necessity.</sub>

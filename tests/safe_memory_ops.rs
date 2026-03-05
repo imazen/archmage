@@ -12,14 +12,14 @@ use std::arch::x86_64::*;
 // Correctness: safe == unsafe, bit-for-bit
 // =============================================================================
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn safe_loadu_ps_256(_token: Desktop64, data: &[f32; 8]) -> __m256 {
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
+    _mm256_loadu_ps(data)
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn safe_storeu_ps_256(_token: Desktop64, v: __m256, out: &mut [f32; 8]) {
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(out, v)
+    _mm256_storeu_ps(out, v)
 }
 
 #[test]
@@ -56,9 +56,9 @@ fn safe_storeu_ps_256_matches_unsafe() {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn safe_loadu_si256(_token: Desktop64, data: &[u8; 32]) -> __m256i {
-    safe_unaligned_simd::x86_64::_mm256_loadu_si256(data)
+    _mm256_loadu_si256(data)
 }
 
 #[test]
@@ -79,9 +79,9 @@ fn safe_loadu_si256_matches_unsafe() {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn safe_loadu_ps_128(_token: X64V2Token, data: &[f32; 4]) -> __m128 {
-    safe_unaligned_simd::x86_64::_mm_loadu_ps(data)
+    _mm_loadu_ps(data)
 }
 
 #[test]
@@ -102,9 +102,9 @@ fn safe_loadu_ps_128_matches_unsafe() {
     }
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn safe_loadu_pd_128(_token: X64V2Token, data: &[f64; 2]) -> __m128d {
-    safe_unaligned_simd::x86_64::_mm_loadu_pd(data)
+    _mm_loadu_pd(data)
 }
 
 #[test]
@@ -131,14 +131,14 @@ fn safe_loadu_pd_128_matches_unsafe() {
 
 /// A real FMA algorithm with ZERO unsafe blocks.
 /// Loads, computes, stores — all safe.
-#[arcane]
+#[arcane(import_intrinsics)]
 fn fma_no_unsafe(_token: Desktop64, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
-    let va = safe_unaligned_simd::x86_64::_mm256_loadu_ps(a);
-    let vb = safe_unaligned_simd::x86_64::_mm256_loadu_ps(b);
-    let vc = safe_unaligned_simd::x86_64::_mm256_loadu_ps(c);
+    let va = _mm256_loadu_ps(a);
+    let vb = _mm256_loadu_ps(b);
+    let vc = _mm256_loadu_ps(c);
     let result = _mm256_fmadd_ps(va, vb, vc);
     let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, result);
+    _mm256_storeu_ps(&mut out, result);
     out
 }
 
@@ -155,16 +155,16 @@ fn arcane_function_with_zero_unsafe_blocks() {
 }
 
 /// Inner #[rite] helper also with zero unsafe.
-#[rite]
+#[rite(import_intrinsics)]
 fn square_rite(_token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+    let v = _mm256_loadu_ps(data);
     let sq = _mm256_mul_ps(v, v);
     let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, sq);
+    _mm256_storeu_ps(&mut out, sq);
     out
 }
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn square_outer(token: Desktop64, data: &[f32; 8]) -> [f32; 8] {
     square_rite(token, data)
 }
@@ -182,11 +182,11 @@ fn rite_helper_with_zero_unsafe() {
 // Loop correctness
 // =============================================================================
 
-#[arcane]
+#[arcane(import_intrinsics)]
 fn process_loop(_token: Desktop64, chunks: &[[f32; 8]]) -> Vec<f32> {
     let mut results = Vec::with_capacity(chunks.len());
     for chunk in chunks {
-        let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(chunk);
+        let v = _mm256_loadu_ps(chunk);
         let squared = _mm256_mul_ps(v, v);
         // Horizontal sum via shuffle+add
         let hi = _mm256_extractf128_ps::<1>(squared);

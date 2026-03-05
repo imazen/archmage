@@ -100,7 +100,7 @@ struct ArcaneArgs {
     /// Implied by `_self = Type`. Required for associated functions in impl blocks
     /// that have no `self` receiver (the macro can't distinguish them from free functions).
     nested: bool,
-    /// Inject `use core::arch::{arch}::*;` and `use safe_unaligned_simd::{arch}::*;`.
+    /// Inject `use archmage::intrinsics::{arch}::*;` (includes safe memory ops).
     import_intrinsics: bool,
     /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
     /// and `use magetypes::simd::backends::*;`.
@@ -1160,7 +1160,7 @@ fn arcane_impl_nested(
 /// | `nested` | Use nested inner function instead of sibling |
 /// | `_self = Type` | Implies `nested`, transforms self receiver, replaces Self |
 /// | `inline_always` | Use `#[inline(always)]` (requires nightly) |
-/// | `import_intrinsics` | Auto-import `core::arch::{arch}::*` and `safe_unaligned_simd::{arch}::*` |
+/// | `import_intrinsics` | Auto-import `archmage::intrinsics::{arch}::*` (includes safe memory ops) |
 /// | `import_magetypes` | Auto-import `magetypes::simd::{ns}::*` and `magetypes::simd::backends::*` |
 ///
 /// ## Auto-Imports
@@ -1194,11 +1194,11 @@ fn arcane_impl_nested(
 ///
 /// | Token | `import_intrinsics` | `import_magetypes` |
 /// |-------|--------------------|--------------------|
-/// | `X64V1..V3Token` | `core::arch::x86_64::*` | `magetypes::simd::v3::*` |
-/// | `X64V4Token` | `core::arch::x86_64::*` | `magetypes::simd::v4::*` |
-/// | `X64V4xToken` | `core::arch::x86_64::*` | `magetypes::simd::v4x::*` |
-/// | `NeonToken` / ARM | `core::arch::aarch64::*` | `magetypes::simd::neon::*` |
-/// | `Wasm128Token` | `core::arch::wasm32::*` | `magetypes::simd::wasm128::*` |
+/// | `X64V1..V3Token` | `archmage::intrinsics::x86_64::*` | `magetypes::simd::v3::*` |
+/// | `X64V4Token` | `archmage::intrinsics::x86_64::*` | `magetypes::simd::v4::*` |
+/// | `X64V4xToken` | `archmage::intrinsics::x86_64::*` | `magetypes::simd::v4x::*` |
+/// | `NeonToken` / ARM | `archmage::intrinsics::aarch64::*` | `magetypes::simd::neon::*` |
+/// | `Wasm128Token` | `archmage::intrinsics::wasm32::*` | `magetypes::simd::wasm128::*` |
 ///
 /// Works with concrete tokens, `impl Trait` bounds, and generic parameters.
 ///
@@ -1313,7 +1313,7 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// | Option | Effect |
 /// |--------|--------|
 /// | `stub` | Generate `unreachable!()` stub on wrong architecture |
-/// | `import_intrinsics` | Auto-import `core::arch::{arch}::*` and `safe_unaligned_simd::{arch}::*` |
+/// | `import_intrinsics` | Auto-import `archmage::intrinsics::{arch}::*` (includes safe memory ops) |
 /// | `import_magetypes` | Auto-import `magetypes::simd::{ns}::*` and `magetypes::simd::backends::*` |
 ///
 /// See `#[arcane]` docs for the full namespace mapping table.
@@ -1359,7 +1359,7 @@ struct RiteArgs {
     /// Generate an `unreachable!()` stub on the wrong architecture.
     /// Default is false (cfg-out: no function emitted on wrong arch).
     stub: bool,
-    /// Inject `use core::arch::{arch}::*;` and `use safe_unaligned_simd::{arch}::*;`.
+    /// Inject `use archmage::intrinsics::{arch}::*;` (includes safe memory ops).
     import_intrinsics: bool,
     /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
     /// and `use magetypes::simd::backends::*;`.

@@ -14,20 +14,20 @@ if let Some(token) = Avx512Fp16Token::summon() {
     process(token, &mut data);
 }
 
-#[arcane]  // Entry point only
+#[arcane(import_intrinsics)]  // Entry point only
 fn process(token: Avx512Fp16Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(16) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
-#[rite]  // All inner helpers
+#[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: Avx512Fp16Token, chunk: &mut [f32; 16]) {
     let v = _mm512_loadu_ps(chunk.as_ptr());  // safe inside #[rite]
     let doubled = _mm512_add_ps(v, v);
     _mm512_storeu_ps(chunk.as_mut_ptr(), doubled);
 }
-// Use #![forbid(unsafe_code)] with safe_unaligned_simd for memory ops.
+// Use #![forbid(unsafe_code)] — import_intrinsics provides safe memory ops.
 ```
 
 

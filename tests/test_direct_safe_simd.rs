@@ -1,15 +1,15 @@
 //! Test: Value intrinsics are SAFE inside #[arcane] (Rust 1.85+)
 //!
 //! Key insight: Inside #[target_feature], value-based intrinsics are safe.
-//! Only pointer-based ops (load/store) still need unsafe.
+//! Memory ops are safe too when using import_intrinsics (reference-based).
 
 #![cfg(target_arch = "x86_64")]
 
+use archmage::intrinsics::x86_64::__m256;
 use archmage::{Desktop64, SimdToken, arcane};
-use std::arch::x86_64::*;
 
 // Value intrinsics - ALL SAFE inside #[arcane], no unsafe needed!
-#[arcane]
+#[arcane(import_intrinsics)]
 fn test_value_intrinsics(_token: Desktop64, a: __m256, b: __m256) -> __m256 {
     let sum = _mm256_add_ps(a, b);
     let prod = _mm256_mul_ps(sum, sum);
@@ -17,17 +17,17 @@ fn test_value_intrinsics(_token: Desktop64, a: __m256, b: __m256) -> __m256 {
     _mm256_sqrt_ps(blended)
 }
 
-// Reference-based load via safe_unaligned_simd - also safe!
-#[arcane]
+// Reference-based load via import_intrinsics - safe, no qualification needed!
+#[arcane(import_intrinsics)]
 fn test_safe_load(_token: Desktop64, data: &[f32; 8]) -> __m256 {
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
+    _mm256_loadu_ps(data)
 }
 
 #[test]
 fn test_value_ops_are_safe() {
     if let Some(token) = Desktop64::summon() {
-        let a = unsafe { _mm256_set1_ps(2.0) };
-        let b = unsafe { _mm256_set1_ps(3.0) };
+        let a = unsafe { std::arch::x86_64::_mm256_set1_ps(2.0) };
+        let b = unsafe { std::arch::x86_64::_mm256_set1_ps(3.0) };
         let _ = test_value_intrinsics(token, a, b);
     }
 }

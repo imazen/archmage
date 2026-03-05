@@ -99,15 +99,13 @@ mod pattern2_correct {
 }
 
 // ============================================================================
-// Pattern 4: Memory Operations via safe_unaligned_simd
+// Pattern 4: Memory Operations via import_intrinsics
 // ============================================================================
 
 mod pattern4 {
     use super::*;
-    // Explicit import of safe version (shadows core::arch)
-    use safe_unaligned_simd::x86_64::_mm256_loadu_ps;
 
-    #[arcane]
+    #[arcane(import_intrinsics)]
     fn load_and_square_intrinsics(token: X64V3Token, data: &[f32; 8]) -> __m256 {
         let v = _mm256_loadu_ps(data);
         _mm256_mul_ps(v, v)

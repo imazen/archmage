@@ -4,14 +4,14 @@ Let's write a function that squares 8 floats in parallel using AVX2.
 
 ## The Recommended Way
 
-Use `archmage::prelude::*` which includes `safe_unaligned_simd` for memory operations:
+Use `#[arcane(import_intrinsics)]` which auto-imports all intrinsics with safe memory ops:
 
 ```rust
 use archmage::prelude::*;
 
 #[arcane(import_intrinsics)]
 fn square_f32x8(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    // safe_unaligned_simd takes references - fully safe!
+    // import_intrinsics provides safe memory ops - fully safe!
     let v = _mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
 
@@ -86,5 +86,5 @@ The token parameter proves you checked CPU features. The macro enables those fea
 2. **`summon()`** does runtime CPU detection
 3. **`#[arcane]`** makes intrinsics safe inside the function (since Rust 1.85)
 4. **Token is zero-sized** — no runtime overhead passing it around
-5. **`safe_unaligned_simd`** makes load/store safe — takes `&[f32; 8]` instead of `*const f32`
-6. **`#![forbid(unsafe_code)]` compatible** — combine archmage + `safe_unaligned_simd` and your crate needs zero `unsafe`
+5. **Safe memory ops via `import_intrinsics`** — load/store take `&[f32; 8]` instead of `*const f32`
+6. **`#![forbid(unsafe_code)]` compatible** — combine archmage + `#[arcane(import_intrinsics)]` and your crate needs zero `unsafe`

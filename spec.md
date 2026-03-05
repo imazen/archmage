@@ -164,7 +164,7 @@ Only pointer-based operations remain unsafe:
 - Gather/scatter operations
 - Prefetch instructions
 
-For safe memory access, use `safe_unaligned_simd` (accepts `&[T]`/`&mut [T]` instead of raw pointers).
+For safe memory access, use `import_intrinsics` which provides reference-based alternatives (accepts `&[T; N]`/`&mut [T; N]` instead of raw pointers).
 
 ### 2.3 How `#[arcane]` and `#[rite]` Work
 
@@ -261,7 +261,7 @@ Takes `*const T` or `*mut T`, dereferences it. Includes:
 - **Masked:** `_mm*_maskload_*`, `_mm*_maskstore_*`
 - **Prefetch:** `_mm_prefetch`
 
-**Wrappable safely** via the `safe_unaligned_simd` pattern: accept `&[T]` or `&[T; N]` instead of `*const T`, validate bounds at the reference level, pass `.as_ptr()` to the intrinsic.
+**Wrappable safely** via reference-based wrappers: accept `&[T; N]` instead of `*const T`, validate bounds at the reference level, pass `.as_ptr()` to the intrinsic. These are provided by `import_intrinsics`.
 
 ### 3.2 Category 2: Implicit Memory Access (~37 intrinsics)
 
@@ -288,7 +288,7 @@ Modifies CPU state beyond just computing a value.
 
 Should the registry or CSV gain a `safety_reason` column (`pointer_deref` | `implicit_memory` | `state_mutation`) to enable:
 
-1. Automatic generation of `safe_unaligned_simd`-style wrappers for Category 1
+1. Automatic generation of reference-based safe wrappers for Category 1
 2. Validation that magetypes never exposes Category 2/3 without explicit `unsafe`
 3. Documentation of WHY each intrinsic is unsafe
 

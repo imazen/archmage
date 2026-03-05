@@ -2,7 +2,7 @@
 
 Authoritative reference for understanding and teaching archmage. Read before writing docs or examples.
 
-> **`#![forbid(unsafe_code)]` compatible.** Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage tokens + `#[arcane]`/`#[rite]` macros + `safe_unaligned_simd` for memory operations. The `unsafe` lives inside archmage's generated code, not yours.
+> **`#![forbid(unsafe_code)]` compatible.** Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage tokens + `#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` macros. The `unsafe` lives inside archmage's generated code, not yours.
 
 > **Descriptive aliases.** `#[token_target_features_boundary]` = `#[arcane]`, `#[token_target_features]` = `#[rite]`, `dispatch_variant!` = `incant!`. These help AI tools and newcomers infer what the macros do from the name alone.
 
@@ -139,9 +139,9 @@ fn process(token: X64V3Token, data: &[f32]) -> f32 { ... }
 
 `#[target_feature]` changes LLVM's compilation target for that function. Generic callers and concrete callees have mismatched targets, preventing optimization across the boundary. Downcasting (V4 -> V3) is free. Dispatch once at the entry point.
 
-### Memory operations via `safe_unaligned_simd`
+### Memory operations via `import_intrinsics`
 
-The prelude re-exports `safe_unaligned_simd`, which takes references instead of raw pointers:
+`import_intrinsics` brings safe memory ops into scope — they take references instead of raw pointers:
 
 ```rust
 use archmage::prelude::*;
@@ -153,7 +153,7 @@ fn load_and_square(token: X64V3Token, data: &[f32; 8]) -> __m256 {
 }
 ```
 
-For high-level code, prefer magetypes (which uses `safe_unaligned_simd` internally).
+For high-level code, prefer magetypes (which uses safe memory ops internally).
 
 ## The Soundness Invariant
 
@@ -174,14 +174,14 @@ When explaining archmage:
 5. `#[arcane]` at the boundary, `#[rite]` for everything else
 6. Enter `#[arcane]` once, `#[rite]` for everything inside
 7. Concrete tokens optimize better than trait bounds
-8. `safe_unaligned_simd` (in prelude) for memory operations
+8. `import_intrinsics` provides safe memory operations (references, not pointers)
 9. magetypes provides high-level SIMD types
 
 When showing examples:
 
 1. Show the simple path first (magetypes + `#[arcane]`)
 2. Explain what the macro generates (for understanding)
-3. Memory ops use `safe_unaligned_simd`, not raw pointers
+3. Memory ops use references (via `import_intrinsics`), not raw pointers
 4. Include the `summon()` call in context
 5. Show `#[rite]` for any function called from SIMD code
 

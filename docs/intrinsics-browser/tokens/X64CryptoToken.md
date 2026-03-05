@@ -14,18 +14,18 @@ if let Some(token) = X64CryptoToken::summon() {
     process(token, &mut data);
 }
 
-#[arcane]  // Entry point only
+#[arcane(import_intrinsics)]  // Entry point only
 fn process(token: X64CryptoToken, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(4) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
-#[rite]  // All inner helpers
+#[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: X64CryptoToken, chunk: &mut [f32; 4]) {
-    let v = safe_unaligned_simd::x86_64::_mm_loadu_ps(chunk);  // safe!
+    let v = _mm_loadu_ps(chunk);  // safe!
     let doubled = _mm_add_ps(v, v);  // value intrinsic (safe inside #[rite])
-    safe_unaligned_simd::x86_64::_mm_storeu_ps(chunk, doubled);  // safe!
+    _mm_storeu_ps(chunk, doubled);  // safe!
 }
 // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate.
 ```

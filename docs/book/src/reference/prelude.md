@@ -26,7 +26,7 @@ With `avx512` feature: `HasX64V4`
 
 ### Memory Operations
 
-`safe_unaligned_simd` functions (with the `safe_unaligned_simd` feature, enabled by default). These take references instead of raw pointers — `_mm256_loadu_ps` takes `&[f32; 8]`, not `*const f32`.
+Safe memory operations that take references instead of raw pointers -- `_mm256_loadu_ps` takes `&[f32; 8]`, not `*const f32`. These are also available inside `#[arcane(import_intrinsics)]` and `#[rite(import_intrinsics)]` functions.
 
 ## Usage
 

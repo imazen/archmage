@@ -8,7 +8,7 @@ Getting data from SIMD registers back into slices and arrays.
 |---------|--------|----------------------|-------|
 | `v.to_array()` | `[f32; N]` | Yes | Returns owned array |
 | `v.store(token, &mut array)` | writes to `&mut [f32; N]` | Yes | Preferred for magetypes |
-| `_mm256_storeu_ps(&mut arr, v)` | writes to `&mut [f32; 8]` | Yes | `safe_unaligned_simd` |
+| `_mm256_storeu_ps(&mut arr, v)` | writes to `&mut [f32; 8]` | Yes | safe via `import_intrinsics` |
 | `_mm256_storeu_ps(ptr, v)` | writes to `*mut f32` | unsafe | Raw stdarch |
 
 ## Magetypes
@@ -36,15 +36,15 @@ fn double_in_place(token: X64V3Token, data: &mut [f32; 8]) {
 }
 ```
 
-## safe_unaligned_simd
+## Safe memory ops (via `import_intrinsics`)
 
 ```rust
 #[arcane(import_intrinsics)]
 fn square(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+    let v = _mm256_loadu_ps(data);
     let squared = _mm256_mul_ps(v, v);
     let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, squared);
+    _mm256_storeu_ps(&mut out, squared);
     out
 }
 ```

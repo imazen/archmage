@@ -105,7 +105,7 @@ The macro would generate `#[target_feature]` correctly, and the trait bounds wou
 - `HasAvx` → use `Has256BitSimd` or concrete `AvxToken`
 - `HasAvx2 + HasFma` → use concrete `X64V3Token` or `X64V3Token`
 - `HasAvx512f` → use `Has512BitSimd` or concrete `X64V4Token`
-- `archmage::mem::avx` → use `safe_unaligned_simd::x86_64`
+- `archmage::mem::avx` → use `archmage::intrinsics::x86_64` (via `import_intrinsics`)
 
 ## Priority
 

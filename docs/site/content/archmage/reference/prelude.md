@@ -25,7 +25,7 @@ With `avx512` feature: `HasX64V4`
 
 ### Platform Intrinsics + Safe Memory Ops
 
-All `core::arch` intrinsics for your platform (types, value ops, memory ops), with `safe_unaligned_simd` versions shadowing the pointer-based memory ops. Memory operations take references instead of raw pointers -- `_mm256_loadu_ps` takes `&[f32; 8]`, not `*const f32`.
+All `core::arch` intrinsics for your platform (types, value ops, memory ops), with safe versions shadowing the pointer-based memory ops. Memory operations take references instead of raw pointers -- `_mm256_loadu_ps` takes `&[f32; 8]`, not `*const f32`. These are also available inside `#[arcane(import_intrinsics)]` and `#[rite(import_intrinsics)]` functions.
 
 ## Usage
 

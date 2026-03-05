@@ -5,7 +5,7 @@
 1. **Tokens prove CPU features exist.** You can't construct one without `summon()` succeeding.
 2. **`#[arcane]` generates `#[target_feature]` code.** The macro wraps your function body in an inner function with the right target features enabled.
 3. **Inside `#[target_feature]`, most intrinsics are safe.** Rust 1.85+ made value-based intrinsics safe in this context.
-4. **Only memory operations need `unsafe`.** Raw pointer loads/stores, or use `safe_unaligned_simd` to avoid `unsafe` entirely.
+4. **Only memory operations need `unsafe`.** Raw pointer loads/stores, or use `import_intrinsics` to get safe memory ops that take references instead of raw pointers.
 
 ## What's safe inside `#[arcane]`
 
@@ -27,7 +27,7 @@ fn example(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 }
 ```
 
-## What still needs `unsafe` (or `safe_unaligned_simd`)
+## What still needs `unsafe` (or safe memory ops via `import_intrinsics`)
 
 Raw pointer operations:
 
@@ -40,8 +40,8 @@ fn load_raw(_token: X64V3Token, ptr: *const f32) -> __m256 {
 
 #[arcane(import_intrinsics)]
 fn load_safe(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
-    // Reference-based — no unsafe needed
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
+    // Reference-based — no unsafe needed (import_intrinsics provides safe versions)
+    _mm256_loadu_ps(data)
 }
 ```
 

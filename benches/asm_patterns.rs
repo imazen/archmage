@@ -16,25 +16,25 @@ use std::arch::x86_64::*;
 
 /// Baseline: load from array reference → vmovups
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_array_ref(_t: Desktop64, data: &[f32; 8]) -> __m256 {
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(data)
+    _mm256_loadu_ps(data)
 }
 
 /// Slice via .first_chunk() → should produce same vmovups
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
+    _mm256_loadu_ps(arr)
 }
 
 /// Slice via try_into → should produce same vmovups
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_try_into(_t: Desktop64, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
+    _mm256_loadu_ps(arr)
 }
 
 // ============================================================================
@@ -43,10 +43,10 @@ fn load_try_into(_t: Desktop64, data: &[f32]) -> __m256 {
 
 /// Integer load via first_chunk → vmovdqu
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_first_chunk_i(_t: Desktop64, data: &[u8]) -> __m256i {
     let arr: &[u8; 32] = data.first_chunk().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_loadu_si256(arr)
+    _mm256_loadu_si256(arr)
 }
 
 // ============================================================================
@@ -55,10 +55,10 @@ fn load_first_chunk_i(_t: Desktop64, data: &[u8]) -> __m256i {
 
 /// 128-bit first_chunk → vmovups (128-bit)
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_first_chunk_128(_t: Desktop64, data: &[f32]) -> __m128 {
     let arr: &[f32; 4] = data.first_chunk().unwrap();
-    safe_unaligned_simd::x86_64::_mm_loadu_ps(arr)
+    _mm_loadu_ps(arr)
 }
 
 // ============================================================================
@@ -67,10 +67,10 @@ fn load_first_chunk_128(_t: Desktop64, data: &[f32]) -> __m128 {
 
 /// Store via first_chunk_mut → vmovups (store)
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 fn store_first_chunk_mut(_t: Desktop64, v: __m256, out: &mut [f32]) {
     let arr: &mut [f32; 8] = out.first_chunk_mut().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(arr, v);
+    _mm256_storeu_ps(arr, v);
 }
 
 // ============================================================================
@@ -79,7 +79,7 @@ fn store_first_chunk_mut(_t: Desktop64, v: __m256, out: &mut [f32]) {
 
 /// magetypes from_slice → should produce vmovups
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_f32x8_from_slice(_t: Desktop64, data: &[f32]) -> __m256 {
     use magetypes::simd::f32x8;
     let v = f32x8::from_slice(_t, data);
@@ -88,7 +88,7 @@ fn load_f32x8_from_slice(_t: Desktop64, data: &[f32]) -> __m256 {
 
 /// magetypes load via first_chunk → should produce vmovups
 #[unsafe(no_mangle)]
-#[arcane]
+#[arcane(import_intrinsics)]
 fn load_f32x8_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
     use magetypes::simd::f32x8;
     let arr: &[f32; 8] = data.first_chunk().unwrap();

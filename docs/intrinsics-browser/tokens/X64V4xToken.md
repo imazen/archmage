@@ -14,23 +14,23 @@ if let Some(token) = X64V4xToken::summon() {
     process(token, &mut data);
 }
 
-#[arcane]  // Entry point only
+#[arcane(import_intrinsics)]  // Entry point only
 fn process(token: X64V4xToken, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(16) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
-#[rite]  // All inner helpers
+#[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
     let v = _mm512_loadu_ps(chunk.as_ptr());  // safe inside #[rite]
     let doubled = _mm512_add_ps(v, v);
     _mm512_storeu_ps(chunk.as_mut_ptr(), doubled);
 }
-// Use #![forbid(unsafe_code)] with safe_unaligned_simd for memory ops.
+// Use #![forbid(unsafe_code)] — import_intrinsics provides safe memory ops.
 ```
 
-## Safe Memory Operations (safe_unaligned_simd)
+## Safe Memory Operations (via import_intrinsics)
 
 | Function | Safe Signature |
 |----------|---------------|
@@ -337,7 +337,7 @@ fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
 | `_mm_shrdv_epi32` | Concatenate packed 32-bit integers in b and a producing an i... | vpshrdvd | — |
 | `_mm_shrdv_epi64` | Concatenate packed 64-bit integers in b and a producing an i... | vpshrdvq | — |
 
-### Stable, Unsafe (18 intrinsics) — use safe_unaligned_simd
+### Stable, Unsafe (18 intrinsics) — use import_intrinsics for safe versions
 
 | Name | Description | Safe Variant |
 |------|-------------|--------------|
@@ -346,18 +346,18 @@ fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
 | `_mm256_mask_expandloadu_epi16` | Load contiguous active 16-bit integers from unaligned memory... | — |
 | `_mm256_mask_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | — |
 | `_mm256_maskz_expandloadu_epi16` | Load contiguous active 16-bit integers from unaligned memory... | — |
-| `_mm256_maskz_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | safe_unaligned_simd::`_mm256_maskz_expandloadu_epi8` |
+| `_mm256_maskz_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | `_mm256_maskz_expandloadu_epi8` (safe via import_intrinsics) |
 | `_mm512_mask_compressstoreu_epi16` | Contiguously store the active 16-bit integers in a (those wi... | — |
 | `_mm512_mask_compressstoreu_epi8` | Contiguously store the active 8-bit integers in a (those wit... | — |
 | `_mm512_mask_expandloadu_epi16` | Load contiguous active 16-bit integers from unaligned memory... | — |
 | `_mm512_mask_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | — |
 | `_mm512_maskz_expandloadu_epi16` | Load contiguous active 16-bit integers from unaligned memory... | — |
-| `_mm512_maskz_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | safe_unaligned_simd::`_mm512_maskz_expandloadu_epi8` |
+| `_mm512_maskz_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | `_mm512_maskz_expandloadu_epi8` (safe via import_intrinsics) |
 | `_mm_mask_compressstoreu_epi16` | Contiguously store the active 16-bit integers in a (those wi... | — |
 | `_mm_mask_compressstoreu_epi8` | Contiguously store the active 8-bit integers in a (those wit... | — |
 | `_mm_mask_expandloadu_epi16` | Load contiguous active 16-bit integers from unaligned memory... | — |
 | `_mm_mask_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | — |
-| `_mm_maskz_expandloadu_epi16` | Load contiguous active 16-bit integers from unaligned memory... | safe_unaligned_simd::`_mm_maskz_expandloadu_epi16` |
-| `_mm_maskz_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | safe_unaligned_simd::`_mm_maskz_expandloadu_epi8` |
+| `_mm_maskz_expandloadu_epi16` | Load contiguous active 16-bit integers from unaligned memory... | `_mm_maskz_expandloadu_epi16` (safe via import_intrinsics) |
+| `_mm_maskz_expandloadu_epi8` | Load contiguous active 8-bit integers from unaligned memory ... | `_mm_maskz_expandloadu_epi8` (safe via import_intrinsics) |
 
 

@@ -9,7 +9,7 @@ weight = 3
 
 For functions called from other SIMD code, use [`#[rite(import_intrinsics)]`](@/archmage/concepts/rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
 
-> **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `safe_unaligned_simd` for those.
+> **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `import_intrinsics` to get safe memory ops that take references instead of raw pointers.
 
 ## How It Works
 
@@ -318,7 +318,7 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 The macro injects:
 - `use archmage::intrinsics::{arch}::*;` — types, value intrinsics, and safe memory ops
 
-This single import combines `core::arch` (types and value ops) with `safe_unaligned_simd` (reference-based memory ops). Safe versions shadow unsafe ones automatically.
+This single import combines `core::arch` types and value ops with reference-based safe memory ops. Safe versions shadow unsafe pointer-based ones automatically.
 
 The architecture is derived from the token type: `X64V3Token` → `x86_64`, `NeonToken` → `aarch64`, `Wasm128Token` → `wasm32`.
 

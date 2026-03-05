@@ -45,7 +45,7 @@ archmage = { version = "0.8", features = ["avx512"] }
 
 ### `safe_unaligned_simd`
 
-Re-exports `safe_unaligned_simd` crate in the prelude.
+Re-exports `safe_unaligned_simd` crate in the prelude. Note that `import_intrinsics` on `#[arcane]`/`#[rite]` automatically provides safe memory ops without needing this feature or the prelude.
 
 ```toml
 archmage = { version = "0.8", features = ["safe_unaligned_simd"] }
@@ -55,7 +55,7 @@ Then use:
 
 ```rust
 use archmage::prelude::*;
-// safe_unaligned_simd functions available
+// safe memory operations available
 ```
 
 ## magetypes Features
@@ -84,7 +84,7 @@ magetypes = { version = "0.8", features = ["avx512"] }
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", features = ["avx512", "safe_unaligned_simd"] }
+archmage = { version = "0.8", features = ["avx512"] }
 magetypes = { version = "0.8", features = ["avx512"] }
 ```
 

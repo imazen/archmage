@@ -19,8 +19,6 @@ fn main() {
 use archmage::prelude::*;
 #[cfg(target_arch = "x86_64")]
 use magetypes::simd::{f32x8, i32x8};
-#[cfg(target_arch = "x86_64")]
-use safe_unaligned_simd::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
 
 // ============================================================================
 // COMPARISON: Raw Intrinsics vs Magetypes

@@ -9,7 +9,7 @@ All patterns below are verified by `just verify-asm` to produce the expected ins
 ```rust
 #[arcane(import_intrinsics)]
 fn store_to_array(_t: X64V3Token, v: __m256, out: &mut [f32; 8]) {
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(out, v);
+    _mm256_storeu_ps(out, v);
 }
 ```
 
@@ -21,7 +21,7 @@ fn store_to_array(_t: X64V3Token, v: __m256, out: &mut [f32; 8]) {
 #[arcane(import_intrinsics)]
 fn store_first_chunk_mut(_t: X64V3Token, v: __m256, out: &mut [f32]) {
     let arr: &mut [f32; 8] = out.first_chunk_mut().unwrap();
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(arr, v);
+    _mm256_storeu_ps(arr, v);
 }
 ```
 
@@ -34,10 +34,10 @@ Returning a `[f32; 8]` from an `#[arcane]` function:
 ```rust
 #[arcane(import_intrinsics)]
 fn load_and_return(_t: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = safe_unaligned_simd::x86_64::_mm256_loadu_ps(data);
+    let v = _mm256_loadu_ps(data);
     let doubled = _mm256_add_ps(v, v);
     let mut out = [0.0f32; 8];
-    safe_unaligned_simd::x86_64::_mm256_storeu_ps(&mut out, doubled);
+    _mm256_storeu_ps(&mut out, doubled);
     out
 }
 ```

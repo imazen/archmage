@@ -14,23 +14,23 @@ if let Some(token) = X64V1Token::summon() {
     process(token, &mut data);
 }
 
-#[arcane]  // Entry point only
+#[arcane(import_intrinsics)]  // Entry point only
 fn process(token: X64V1Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(4) {
         process_chunk(token, chunk.try_into().unwrap());
     }
 }
 
-#[rite]  // All inner helpers
+#[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
-    let v = safe_unaligned_simd::x86_64::_mm_loadu_ps(chunk);  // safe!
+    let v = _mm_loadu_ps(chunk);  // safe!
     let doubled = _mm_add_ps(v, v);  // value intrinsic (safe inside #[rite])
-    safe_unaligned_simd::x86_64::_mm_storeu_ps(chunk, doubled);  // safe!
+    _mm_storeu_ps(chunk, doubled);  // safe!
 }
 // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate.
 ```
 
-## Safe Memory Operations (safe_unaligned_simd)
+## Safe Memory Operations (via import_intrinsics)
 
 | Function | Safe Signature |
 |----------|---------------|
@@ -346,7 +346,7 @@ fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
 | `_mm_xor_ps` | Bitwise exclusive OR of packed single-precision (32-bit) flo... | xorps | 1/1, 1/1 |
 | `_mm_xor_si128` | Computes the bitwise XOR of 128 bits (representing integer d... | xorps | 1/1, 1/1 |
 
-### Stable, Unsafe (57 intrinsics) — use safe_unaligned_simd
+### Stable, Unsafe (57 intrinsics) — use import_intrinsics for safe versions
 
 | Name | Description | Safe Variant |
 |------|-------------|--------------|
@@ -360,26 +360,26 @@ fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
 | `_MM_SET_ROUNDING_MODE` | See | — |
 | `_mm_clflush` | Invalidates and flushes the cache line that contains `p` fro... | — |
 | `_mm_getcsr` | Gets the unsigned 32-bit value of the MXCSR control and stat... | — |
-| `_mm_load1_pd` | Loads a double-precision (64-bit) floating-point element fro... | safe_unaligned_simd::`_mm_load1_pd` |
-| `_mm_load1_ps` | Construct a `__m128` by duplicating the value read from `p` ... | safe_unaligned_simd::`_mm_load1_ps` |
+| `_mm_load1_pd` | Loads a double-precision (64-bit) floating-point element fro... | `_mm_load1_pd` (safe via import_intrinsics) |
+| `_mm_load1_ps` | Construct a `__m128` by duplicating the value read from `p` ... | `_mm_load1_ps` (safe via import_intrinsics) |
 | `_mm_load_pd` | Loads 128-bits (composed of 2 packed double-precision (64-bi... | — |
-| `_mm_load_pd1` | Loads a double-precision (64-bit) floating-point element fro... | safe_unaligned_simd::`_mm_load_pd1` |
+| `_mm_load_pd1` | Loads a double-precision (64-bit) floating-point element fro... | `_mm_load_pd1` (safe via import_intrinsics) |
 | `_mm_load_ps` | Loads four `f32` values from *aligned* memory into a `__m128... | — |
-| `_mm_load_ps1` | Alias for | safe_unaligned_simd::`_mm_load_ps1` |
-| `_mm_load_sd` | Loads a 64-bit double-precision value to the low element of ... | safe_unaligned_simd::`_mm_load_sd` |
+| `_mm_load_ps1` | Alias for | `_mm_load_ps1` (safe via import_intrinsics) |
+| `_mm_load_sd` | Loads a 64-bit double-precision value to the low element of ... | `_mm_load_sd` (safe via import_intrinsics) |
 | `_mm_load_si128` | Loads 128-bits of integer data from memory into a new vector... | — |
-| `_mm_load_ss` | Construct a `__m128` with the lowest element read from `p` a... | safe_unaligned_simd::`_mm_load_ss` |
-| `_mm_loadh_pd` | Loads a double-precision value into the high-order bits of a... | safe_unaligned_simd::`_mm_loadh_pd` |
-| `_mm_loadl_epi64` | Loads 64-bit integer from memory into first element of retur... | safe_unaligned_simd::`_mm_loadl_epi64` |
-| `_mm_loadl_pd` | Loads a double-precision value into the low-order bits of a ... | safe_unaligned_simd::`_mm_loadl_pd` |
+| `_mm_load_ss` | Construct a `__m128` with the lowest element read from `p` a... | `_mm_load_ss` (safe via import_intrinsics) |
+| `_mm_loadh_pd` | Loads a double-precision value into the high-order bits of a... | `_mm_loadh_pd` (safe via import_intrinsics) |
+| `_mm_loadl_epi64` | Loads 64-bit integer from memory into first element of retur... | `_mm_loadl_epi64` (safe via import_intrinsics) |
+| `_mm_loadl_pd` | Loads a double-precision value into the low-order bits of a ... | `_mm_loadl_pd` (safe via import_intrinsics) |
 | `_mm_loadr_pd` | Loads 2 double-precision (64-bit) floating-point elements fr... | — |
 | `_mm_loadr_ps` | Loads four `f32` values from aligned memory into a `__m128` ... | — |
-| `_mm_loadu_pd` | Loads 128-bits (composed of 2 packed double-precision (64-bi... | safe_unaligned_simd::`_mm_loadu_pd` |
-| `_mm_loadu_ps` | Loads four `f32` values from memory into a `__m128`. There a... | safe_unaligned_simd::`_mm_loadu_ps` |
-| `_mm_loadu_si128` | Loads 128-bits of integer data from memory into a new vector... | safe_unaligned_simd::`_mm_loadu_si128` |
-| `_mm_loadu_si16` | Loads unaligned 16-bits of integer data from memory into new... | safe_unaligned_simd::`_mm_loadu_si16` |
-| `_mm_loadu_si32` | Loads unaligned 32-bits of integer data from memory into new... | safe_unaligned_simd::`_mm_loadu_si32` |
-| `_mm_loadu_si64` | Loads unaligned 64-bits of integer data from memory into new... | safe_unaligned_simd::`_mm_loadu_si64` |
+| `_mm_loadu_pd` | Loads 128-bits (composed of 2 packed double-precision (64-bi... | `_mm_loadu_pd` (safe via import_intrinsics) |
+| `_mm_loadu_ps` | Loads four `f32` values from memory into a `__m128`. There a... | `_mm_loadu_ps` (safe via import_intrinsics) |
+| `_mm_loadu_si128` | Loads 128-bits of integer data from memory into a new vector... | `_mm_loadu_si128` (safe via import_intrinsics) |
+| `_mm_loadu_si16` | Loads unaligned 16-bits of integer data from memory into new... | `_mm_loadu_si16` (safe via import_intrinsics) |
+| `_mm_loadu_si32` | Loads unaligned 32-bits of integer data from memory into new... | `_mm_loadu_si32` (safe via import_intrinsics) |
+| `_mm_loadu_si64` | Loads unaligned 64-bits of integer data from memory into new... | `_mm_loadu_si64` (safe via import_intrinsics) |
 | `_mm_maskmoveu_si128` | Conditionally store 8-bit integer elements from `a` into mem... | — |
 | `_mm_setcsr` | Sets the MXCSR register with the 32-bit unsigned integer val... | — |
 | `_mm_store1_pd` | Stores the lower double-precision (64-bit) floating-point el... | — |
@@ -388,20 +388,20 @@ fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
 | `_mm_store_pd1` | Stores the lower double-precision (64-bit) floating-point el... | — |
 | `_mm_store_ps` | Stores four 32-bit floats into *aligned* memory.  If the poi... | — |
 | `_mm_store_ps1` | Alias for | — |
-| `_mm_store_sd` | Stores the lower 64 bits of a 128-bit vector of ` | safe_unaligned_simd::`_mm_store_sd` |
+| `_mm_store_sd` | Stores the lower 64 bits of a 128-bit vector of ` | `_mm_store_sd` (safe via import_intrinsics) |
 | `_mm_store_si128` | Stores 128-bits of integer data from `a` into memory.  `mem_... | — |
-| `_mm_store_ss` | Stores the lowest 32 bit float of `a` into memory.  This int... | safe_unaligned_simd::`_mm_store_ss` |
-| `_mm_storeh_pd` | Stores the upper 64 bits of a 128-bit vector of ` | safe_unaligned_simd::`_mm_storeh_pd` |
-| `_mm_storel_epi64` | Stores the lower 64-bit integer `a` to a memory location.  `... | safe_unaligned_simd::`_mm_storel_epi64` |
-| `_mm_storel_pd` | Stores the lower 64 bits of a 128-bit vector of ` | safe_unaligned_simd::`_mm_storel_pd` |
+| `_mm_store_ss` | Stores the lowest 32 bit float of `a` into memory.  This int... | `_mm_store_ss` (safe via import_intrinsics) |
+| `_mm_storeh_pd` | Stores the upper 64 bits of a 128-bit vector of ` | `_mm_storeh_pd` (safe via import_intrinsics) |
+| `_mm_storel_epi64` | Stores the lower 64-bit integer `a` to a memory location.  `... | `_mm_storel_epi64` (safe via import_intrinsics) |
+| `_mm_storel_pd` | Stores the lower 64 bits of a 128-bit vector of ` | `_mm_storel_pd` (safe via import_intrinsics) |
 | `_mm_storer_pd` | Stores 2 double-precision (64-bit) floating-point elements f... | — |
 | `_mm_storer_ps` | Stores four 32-bit floats into *aligned* memory in reverse o... | — |
-| `_mm_storeu_pd` | Stores 128-bits (composed of 2 packed double-precision (64-b... | safe_unaligned_simd::`_mm_storeu_pd` |
-| `_mm_storeu_ps` | Stores four 32-bit floats into memory. There are no restrict... | safe_unaligned_simd::`_mm_storeu_ps` |
-| `_mm_storeu_si128` | Stores 128-bits of integer data from `a` into memory.  `mem_... | safe_unaligned_simd::`_mm_storeu_si128` |
-| `_mm_storeu_si16` | Store 16-bit integer from the first element of a into memory... | safe_unaligned_simd::`_mm_storeu_si16` |
-| `_mm_storeu_si32` | Store 32-bit integer from the first element of a into memory... | safe_unaligned_simd::`_mm_storeu_si32` |
-| `_mm_storeu_si64` | Store 64-bit integer from the first element of a into memory... | safe_unaligned_simd::`_mm_storeu_si64` |
+| `_mm_storeu_pd` | Stores 128-bits (composed of 2 packed double-precision (64-b... | `_mm_storeu_pd` (safe via import_intrinsics) |
+| `_mm_storeu_ps` | Stores four 32-bit floats into memory. There are no restrict... | `_mm_storeu_ps` (safe via import_intrinsics) |
+| `_mm_storeu_si128` | Stores 128-bits of integer data from `a` into memory.  `mem_... | `_mm_storeu_si128` (safe via import_intrinsics) |
+| `_mm_storeu_si16` | Store 16-bit integer from the first element of a into memory... | `_mm_storeu_si16` (safe via import_intrinsics) |
+| `_mm_storeu_si32` | Store 32-bit integer from the first element of a into memory... | `_mm_storeu_si32` (safe via import_intrinsics) |
+| `_mm_storeu_si64` | Store 64-bit integer from the first element of a into memory... | `_mm_storeu_si64` (safe via import_intrinsics) |
 | `_mm_stream_pd` | Stores a 128-bit floating point vector of ` | — |
 | `_mm_stream_ps` | Stores `a` into the memory at `mem_addr` using a non-tempora... | — |
 | `_mm_stream_si128` | Stores a 128-bit integer vector to a 128-bit aligned memory ... | — |
