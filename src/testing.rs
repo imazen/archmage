@@ -341,10 +341,10 @@ pub fn for_each_token_permutation(
     struct ClearOwnerOnDrop(bool);
     impl Drop for ClearOwnerOnDrop {
         fn drop(&mut self) {
-            if self.0 {
-                if let Ok(mut owner) = OWNER_THREAD.lock() {
-                    *owner = None;
-                }
+            if self.0
+                && let Ok(mut owner) = OWNER_THREAD.lock()
+            {
+                *owner = None;
             }
         }
     }
