@@ -110,15 +110,13 @@ jobs:
       - name: Soundness verification
         run: cargo run -p xtask -- soundness
 
-      - name: Verify all crates package correctly
+      - name: Verify archmage-macros packages correctly
         run: |
-          # archmage-macros has no workspace deps, so full dry-run works
+          # Only dry-run archmage-macros (no workspace deps).
+          # archmage and magetypes can't be dry-run or packaged here because
+          # they depend on archmage-macros at the new version, which isn't on
+          # crates.io yet. The actual publish job handles dependency ordering.
           cargo publish -p archmage-macros --dry-run
-          # archmage and magetypes depend on unpublished workspace members,
-          # so --dry-run fails on index resolution. Use --no-verify to skip
-          # the build step (already tested above) and just verify packaging.
-          cargo package -p archmage --no-verify
-          cargo package -p magetypes --no-verify
 
   # ==========================================================================
   # Publish crates in dependency order (sequential steps)
