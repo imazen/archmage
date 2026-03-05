@@ -8,6 +8,11 @@ description = "Proc-macros for archmage SIMD capability tokens"
 repository = "https://github.com/imazen/archmage"
 keywords = ["simd", "macro", "avx", "neon"]
 categories = ["development-tools::procedural-macro-helpers"]
+include = [
+    "src/**",
+    "Cargo.toml",
+    "LICENSE*",
+]
 
 [lib]
 proc-macro = true

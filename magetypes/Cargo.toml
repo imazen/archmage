@@ -9,6 +9,14 @@ repository = "https://github.com/imazen/archmage"
 documentation = "https://docs.rs/magetypes"
 keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
+include = [
+    "src/**",
+    "benches/**",
+    "tests/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE*",
+]
 
 [features]
 # bytemuck is NOT default - it bypasses token-gated construction safety
