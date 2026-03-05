@@ -530,7 +530,8 @@ jobs:
       fail-fast: false
       matrix:
         cpu:
-          - { name: "Pentium 4 (SSE2)", flag: "-p4" }
+          # Pentium 4 (-p4) removed: SDE's Pentium 4 model is 32-bit only
+          # and cannot run 64-bit test binaries.
           - { name: "Nehalem (SSE4.2)", flag: "-nhm" }
           - { name: "Haswell (AVX2+FMA)", flag: "-hsw" }
           - { name: "Skylake-X (AVX-512)", flag: "-skx" }

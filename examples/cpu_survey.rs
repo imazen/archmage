@@ -114,17 +114,22 @@ fn cpu_model_name() -> String {
 
 // ── x86 CPUID brand string (all platforms) ──────────────────────────────
 
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::__cpuid;
+#[cfg(target_arch = "x86")]
+use core::arch::x86::__cpuid;
+
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 fn cpuid_brand_string() -> Option<String> {
     // Check if extended CPUID leaves 0x80000002..0x80000004 are supported
-    let max_ext = unsafe { core::arch::x86_64::__cpuid(0x80000000) }.eax;
+    let max_ext = unsafe { __cpuid(0x80000000) }.eax;
     if max_ext < 0x80000004 {
         return None;
     }
 
     let mut brand = [0u8; 48];
     for (i, leaf) in (0x80000002u32..=0x80000004).enumerate() {
-        let result = unsafe { core::arch::x86_64::__cpuid(leaf) };
+        let result = unsafe { __cpuid(leaf) };
         let offset = i * 16;
         brand[offset..offset + 4].copy_from_slice(&result.eax.to_le_bytes());
         brand[offset + 4..offset + 8].copy_from_slice(&result.ebx.to_le_bytes());

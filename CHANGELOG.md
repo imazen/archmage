@@ -30,6 +30,8 @@ Sibling expansion, cfg-out default, macro options.
 
   - **74 unit tests** — argument parsing, `SimdToken` parameter discovery, tier resolution, AST replacement for all known tiers, dispatcher parameter removal and wildcard renaming, tier descriptor properties, suffix_path.
 
+- **MSRV 1.89** — required for stabilized target features and intrinsics. On x86, Rust 1.89 stabilizes `avx512fp16`, `sm3`, `sm4`, `kl`, and `widekl` target features, plus additional AVX-512 intrinsics and target features. These are needed for archmage's token-to-feature mappings and `#[target_feature]` attributes emitted by `#[arcane]`.
+
 ## 0.8.3 — 2026-02-19
 
 Complete `X64CryptoToken` integration with `incant!` dispatch.
