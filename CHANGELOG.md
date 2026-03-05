@@ -16,6 +16,20 @@ Sibling expansion, cfg-out default, macro options.
 
 - **LightFn (internal)** — Proc macro now parses only the function signature into AST, leaving the body as opaque `TokenStream`. Saves ~2ms per function. Token-level `Self`/`self` replacement instead of syn `Fold`.
 
+- **`#[autoversion]`** — new single-attribute macro that generates architecture-specific function variants *and* a runtime dispatcher from one annotated function. Write a plain scalar loop with a `SimdToken` placeholder parameter; `#[autoversion]` clones it per tier (v4, v3, neon, wasm128, scalar by default), replaces `SimdToken` with each concrete token type in the signature, wraps non-scalar variants in `#[arcane]` for `#[target_feature]`, and emits a dispatcher function (same name, `SimdToken` param removed) that calls the best variant at runtime via `Token::summon()`.
+
+  - **Signature-only replacement** — only the `SimdToken` type annotation in the parameter list is swapped. The function body is never reparsed (uses `LightFn`'s opaque body), keeping compile times low. Compare with `#[magetypes]` which does full text substitution including the body.
+
+  - **Explicit tiers** — `#[autoversion(v3, v4, v4x, neon, arm_v2, wasm128)]`. `scalar` is always appended implicitly. Unknown tier names produce a compile error. Tiers are sorted by dispatch priority automatically.
+
+  - **Self receivers** — `#[autoversion(_self = Type)]` supports inherent methods with `self`/`&self`/`&mut self`. Non-scalar variants get `#[arcane(_self = Type)]`; the scalar variant gets `let _self = self;` prepended so the body's `_self` references resolve without `#[arcane]`.
+
+  - **Trait method delegation** — trait impl methods can't expand to multiple siblings, so `#[autoversion]` can't be used directly on them. Documented delegation pattern: trait method calls an autoversioned inherent method.
+
+  - **Generated variants are real siblings** — individually callable, `incant!`-compatible, with `#[cfg(target_arch)]` and `#[cfg(feature)]` guards matching each tier.
+
+  - **74 unit tests** — argument parsing, `SimdToken` parameter discovery, tier resolution, AST replacement for all known tiers, dispatcher parameter removal and wildcard renaming, tier descriptor properties, suffix_path.
+
 ## 0.8.3 — 2026-02-19
 
 Complete `X64CryptoToken` integration with `incant!` dispatch.

@@ -16,6 +16,7 @@ use syn::{
 /// Only the signature is fully parsed into an AST — the body tokens are collected
 /// without building any AST nodes (no expressions, statements, or patterns parsed).
 /// This saves ~2ms per function invocation at 100 lines of code.
+#[derive(Clone)]
 struct LightFn {
     attrs: Vec<Attribute>,
     vis: syn::Visibility,
@@ -2241,6 +2242,578 @@ fn gen_incant_entry(
 }
 
 // =============================================================================
+// autoversion - combined variant generation + dispatch
+// =============================================================================
+
+/// Arguments to the `#[autoversion]` macro.
+struct AutoversionArgs {
+    /// The concrete type to use for `self` receiver (inherent methods only).
+    self_type: Option<Type>,
+    /// Explicit tier names (None = default tiers).
+    tiers: Option<Vec<String>>,
+}
+
+impl Parse for AutoversionArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut self_type = None;
+        let mut tier_names = Vec::new();
+
+        while !input.is_empty() {
+            let ident: Ident = input.parse()?;
+            if ident == "_self" {
+                let _: Token![=] = input.parse()?;
+                self_type = Some(input.parse()?);
+            } else {
+                // Treat as tier name — validated later by resolve_tiers
+                tier_names.push(ident.to_string());
+            }
+            if input.peek(Token![,]) {
+                let _: Token![,] = input.parse()?;
+            }
+        }
+
+        Ok(AutoversionArgs {
+            self_type,
+            tiers: if tier_names.is_empty() {
+                None
+            } else {
+                Some(tier_names)
+            },
+        })
+    }
+}
+
+/// Information about the `SimdToken` parameter found in a function signature.
+struct SimdTokenParamInfo {
+    /// Index of the parameter in `sig.inputs`
+    index: usize,
+    /// The parameter identifier
+    #[allow(dead_code)]
+    ident: Ident,
+}
+
+/// Find the `SimdToken` parameter in a function signature.
+///
+/// Searches all typed parameters for one whose type path ends in `SimdToken`.
+/// Returns the parameter index and identifier, or `None` if not found.
+fn find_simd_token_param(sig: &Signature) -> Option<SimdTokenParamInfo> {
+    for (i, arg) in sig.inputs.iter().enumerate() {
+        if let FnArg::Typed(PatType { pat, ty, .. }) = arg
+            && let Type::Path(type_path) = ty.as_ref()
+            && let Some(seg) = type_path.path.segments.last()
+            && seg.ident == "SimdToken"
+        {
+            let ident = match pat.as_ref() {
+                syn::Pat::Ident(pi) => pi.ident.clone(),
+                syn::Pat::Wild(w) => Ident::new("__autoversion_token", w.underscore_token.span),
+                _ => continue,
+            };
+            return Some(SimdTokenParamInfo { index: i, ident });
+        }
+    }
+    None
+}
+
+/// Core implementation for `#[autoversion]`.
+///
+/// Generates suffixed SIMD variants (like `#[magetypes]`) and a runtime
+/// dispatcher function (like `incant!`) from a single annotated function.
+fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream {
+    // Check for self receiver
+    let has_self = input_fn
+        .sig
+        .inputs
+        .first()
+        .is_some_and(|arg| matches!(arg, FnArg::Receiver(_)));
+
+    // Self receiver requires _self = Type
+    if has_self && args.self_type.is_none() {
+        return syn::Error::new_spanned(
+            &input_fn.sig,
+            "autoversion with self receiver requires `_self = Type` argument.\n\
+             Example: #[autoversion(_self = MyType)]\n\
+             Use `_self` (not `self`) in the function body to refer to self.\n\n\
+             Trait methods are not supported. Use the delegation pattern:\n\
+             impl Trait for Type {\n    \
+                 fn method(&self, data: &[f32]) -> f32 {\n        \
+                     self.method_impl(data) // delegate to autoversioned inherent method\n    \
+                 }\n\
+             }",
+        )
+        .to_compile_error()
+        .into();
+    }
+
+    // Find SimdToken parameter
+    let token_param = match find_simd_token_param(&input_fn.sig) {
+        Some(p) => p,
+        None => {
+            return syn::Error::new_spanned(
+                &input_fn.sig,
+                "autoversion requires a `SimdToken` parameter.\n\
+                 Example: fn process(token: SimdToken, data: &[f32]) -> f32 { ... }\n\n\
+                 SimdToken is the dispatch placeholder — autoversion replaces it \
+                 with concrete token types and generates a runtime dispatcher.",
+            )
+            .to_compile_error()
+            .into();
+        }
+    };
+
+    // Resolve tiers
+    let tier_names: Vec<String> = match &args.tiers {
+        Some(names) => names.clone(),
+        None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
+    };
+    let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span()) {
+        Ok(t) => t,
+        Err(e) => return e.to_compile_error().into(),
+    };
+
+    // Strip #[arcane] / #[rite] to prevent double-wrapping
+    input_fn
+        .attrs
+        .retain(|attr| !attr.path().is_ident("arcane") && !attr.path().is_ident("rite"));
+
+    let fn_name = &input_fn.sig.ident;
+    let vis = input_fn.vis.clone();
+
+    // Move attrs to dispatcher only; variants get no user attrs
+    let fn_attrs: Vec<Attribute> = input_fn.attrs.drain(..).collect();
+
+    // =========================================================================
+    // Generate suffixed variants
+    // =========================================================================
+    //
+    // AST manipulation only — we clone the parsed LightFn and swap the token
+    // param's type annotation. No serialize/reparse round-trip. The body is
+    // never touched unless _self = Type requires a `let _self = self;`
+    // preamble on the scalar variant.
+
+    let mut variants = Vec::new();
+
+    for tier in &tiers {
+        let mut variant_fn = input_fn.clone();
+
+        // Rename: process → process_v3
+        variant_fn.sig.ident = format_ident!("{}_{}", fn_name, tier.suffix);
+
+        // Replace SimdToken param type with concrete token type
+        let concrete_type: Type = syn::parse_str(tier.token_path).unwrap();
+        if let FnArg::Typed(pt) = &mut variant_fn.sig.inputs[token_param.index] {
+            *pt.ty = concrete_type;
+        }
+
+        // Scalar with self: inject `let _self = self;` preamble so body's
+        // _self references resolve (non-scalar variants get this from #[arcane])
+        if tier.name == "scalar" && has_self {
+            let original_body = variant_fn.body.clone();
+            variant_fn.body = quote!(let _self = self; #original_body);
+        }
+
+        // cfg guard
+        let cfg_guard = match (tier.target_arch, tier.cargo_feature) {
+            (Some(arch), Some(feature)) => {
+                quote! { #[cfg(all(target_arch = #arch, feature = #feature))] }
+            }
+            (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
+            (None, Some(feature)) => quote! { #[cfg(feature = #feature)] },
+            (None, None) => quote! {},
+        };
+
+        if tier.name != "scalar" {
+            // Non-scalar: add #[arcane] (with _self if needed)
+            let arcane_attr = if let Some(ref self_type) = args.self_type {
+                quote! { #[archmage::arcane(_self = #self_type)] }
+            } else {
+                quote! { #[archmage::arcane] }
+            };
+            variants.push(quote! {
+                #cfg_guard
+                #arcane_attr
+                #variant_fn
+            });
+        } else {
+            variants.push(quote! {
+                #cfg_guard
+                #variant_fn
+            });
+        }
+    }
+
+    // =========================================================================
+    // Generate dispatcher (adapted from gen_incant_entry)
+    // =========================================================================
+
+    // Build dispatcher inputs: original params minus SimdToken
+    let mut dispatcher_inputs: Vec<FnArg> = input_fn.sig.inputs.iter().cloned().collect();
+    dispatcher_inputs.remove(token_param.index);
+
+    // Rename wildcard params so we can pass them as arguments
+    let mut wild_counter = 0u32;
+    for arg in &mut dispatcher_inputs {
+        if let FnArg::Typed(pat_type) = arg
+            && matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_))
+        {
+            let ident = format_ident!("__autoversion_wild_{}", wild_counter);
+            wild_counter += 1;
+            *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+                attrs: vec![],
+                by_ref: None,
+                mutability: None,
+                ident,
+                subpat: None,
+            });
+        }
+    }
+
+    // Collect argument idents for dispatch calls (exclude self receiver)
+    let dispatch_args: Vec<Ident> = dispatcher_inputs
+        .iter()
+        .filter_map(|arg| {
+            if let FnArg::Typed(PatType { pat, .. }) = arg
+                && let syn::Pat::Ident(pi) = pat.as_ref()
+            {
+                return Some(pi.ident.clone());
+            }
+            None
+        })
+        .collect();
+
+    // Group non-scalar tiers by target_arch for cfg blocks
+    let mut arch_groups: Vec<(Option<&str>, Vec<&&TierDescriptor>)> = Vec::new();
+    for tier in &tiers {
+        if tier.name == "scalar" {
+            continue;
+        }
+        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == tier.target_arch) {
+            group.1.push(tier);
+        } else {
+            arch_groups.push((tier.target_arch, vec![tier]));
+        }
+    }
+
+    let mut dispatch_arms = Vec::new();
+    for (target_arch, group_tiers) in &arch_groups {
+        let mut tier_checks = Vec::new();
+        for tier in group_tiers {
+            let suffixed = format_ident!("{}_{}", fn_name, tier.suffix);
+            let token_path: syn::Path = syn::parse_str(tier.token_path).unwrap();
+
+            let call = if has_self {
+                quote! { self.#suffixed(__t, #(#dispatch_args),*) }
+            } else {
+                quote! { #suffixed(__t, #(#dispatch_args),*) }
+            };
+
+            let check = quote! {
+                if let Some(__t) = #token_path::summon() {
+                    break '__dispatch #call;
+                }
+            };
+
+            if let Some(feat) = tier.cargo_feature {
+                tier_checks.push(quote! {
+                    #[cfg(feature = #feat)]
+                    { #check }
+                });
+            } else {
+                tier_checks.push(check);
+            }
+        }
+
+        let inner = quote! { #(#tier_checks)* };
+
+        if let Some(arch) = target_arch {
+            dispatch_arms.push(quote! {
+                #[cfg(target_arch = #arch)]
+                { #inner }
+            });
+        } else {
+            dispatch_arms.push(inner);
+        }
+    }
+
+    // Scalar fallback (always available, no summon needed)
+    let scalar_name = format_ident!("{}_scalar", fn_name);
+    let scalar_call = if has_self {
+        quote! { self.#scalar_name(archmage::ScalarToken, #(#dispatch_args),*) }
+    } else {
+        quote! { #scalar_name(archmage::ScalarToken, #(#dispatch_args),*) }
+    };
+
+    // Build dispatcher function
+    let dispatcher_inputs_punct: syn::punctuated::Punctuated<FnArg, Token![,]> =
+        dispatcher_inputs.into_iter().collect();
+    let output = &input_fn.sig.output;
+    let generics = &input_fn.sig.generics;
+    let where_clause = &generics.where_clause;
+
+    let dispatcher = quote! {
+        #(#fn_attrs)*
+        #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+            '__dispatch: {
+                use archmage::SimdToken;
+                #(#dispatch_arms)*
+                #scalar_call
+            }
+        }
+    };
+
+    let expanded = quote! {
+        #dispatcher
+        #(#variants)*
+    };
+
+    expanded.into()
+}
+
+/// Let the compiler auto-vectorize scalar code for each architecture.
+///
+/// Write a plain scalar function with a `SimdToken` placeholder parameter.
+/// `#[autoversion]` generates architecture-specific copies — each compiled
+/// with different `#[target_feature]` flags via `#[arcane]` — plus a runtime
+/// dispatcher that calls the best one the CPU supports.
+///
+/// You don't touch intrinsics, don't import SIMD types, don't think about
+/// lane widths. The compiler's auto-vectorizer does the work; you give it
+/// permission via `#[target_feature]`, which `#[autoversion]` handles.
+///
+/// # The simple win
+///
+/// ```rust,ignore
+/// use archmage::SimdToken;
+///
+/// #[autoversion]
+/// fn sum_of_squares(_token: SimdToken, data: &[f32]) -> f32 {
+///     let mut sum = 0.0f32;
+///     for &x in data {
+///         sum += x * x;
+///     }
+///     sum
+/// }
+///
+/// // Call directly — no token, no unsafe:
+/// let result = sum_of_squares(&my_data);
+/// ```
+///
+/// The `_token` parameter is never used in the body. It exists so the macro
+/// knows where to substitute concrete token types. Each generated variant
+/// gets `#[arcane]` → `#[target_feature(enable = "avx2,fma,...")]`, which
+/// unlocks the compiler's auto-vectorizer for that feature set.
+///
+/// On x86-64 with the `_v3` variant (AVX2+FMA), that loop compiles to
+/// `vfmadd231ps` — fused multiply-add on 8 floats per cycle. On aarch64
+/// with NEON, you get `fmla`. The `_scalar` fallback compiles without any
+/// SIMD target features, as a safety net for unknown hardware.
+///
+/// # Chunks + remainder
+///
+/// The classic data-processing pattern works naturally:
+///
+/// ```rust,ignore
+/// #[autoversion]
+/// fn normalize(_token: SimdToken, data: &mut [f32], scale: f32) {
+///     // Compiler auto-vectorizes this — no manual SIMD needed.
+///     // On v3, this becomes vdivps + vmulps on 8 floats at a time.
+///     for x in data.iter_mut() {
+///         *x = (*x - 128.0) * scale;
+///     }
+/// }
+/// ```
+///
+/// If you want explicit control over chunk boundaries (e.g., for
+/// accumulator patterns), that works too:
+///
+/// ```rust,ignore
+/// #[autoversion]
+/// fn dot_product(_token: SimdToken, a: &[f32], b: &[f32]) -> f32 {
+///     let n = a.len().min(b.len());
+///     let mut sum = 0.0f32;
+///     for i in 0..n {
+///         sum += a[i] * b[i];
+///     }
+///     sum
+/// }
+/// ```
+///
+/// The compiler decides the chunk size based on the target features of each
+/// variant (8 floats for AVX2, 4 for NEON, 1 for scalar).
+///
+/// # What gets generated
+///
+/// With default tiers, `#[autoversion] fn process(_t: SimdToken, data: &[f32]) -> f32`
+/// expands to:
+///
+/// - `process_v4(token: X64V4Token, ...)` — AVX-512 (behind `#[cfg(feature = "avx512")]`)
+/// - `process_v3(token: X64V3Token, ...)` — AVX2+FMA
+/// - `process_neon(token: NeonToken, ...)` — aarch64 NEON
+/// - `process_wasm128(token: Wasm128Token, ...)` — WASM SIMD
+/// - `process_scalar(token: ScalarToken, ...)` — no SIMD, always available
+/// - `process(data: &[f32]) -> f32` — **dispatcher** (SimdToken param removed)
+///
+/// Each non-scalar variant is wrapped in `#[arcane]` (for `#[target_feature]`)
+/// and `#[cfg(target_arch = ...)]`. The dispatcher does runtime CPU feature
+/// detection via `Token::summon()` and calls the best match. When compiled
+/// with `-C target-cpu=native`, the detection is elided by the compiler.
+///
+/// The suffixed variants are real, visible sibling functions. You can call
+/// them individually, and they work with `incant!` for manual dispatch.
+///
+/// # SimdToken replacement
+///
+/// `#[autoversion]` replaces the `SimdToken` type annotation in the function
+/// signature with the concrete token type for each variant (e.g.,
+/// `archmage::X64V3Token`). Only the parameter's type changes — the function
+/// body is never reparsed, which keeps compile times low.
+///
+/// The token variable (whatever you named it — `token`, `_token`, `_t`)
+/// keeps working in the body because its type comes from the signature.
+/// So `f32x8::from_array(token, ...)` works — `token` is now an `X64V3Token`
+/// which satisfies the same trait bounds as `SimdToken`.
+///
+/// `#[magetypes]` takes a different approach: it replaces the text `Token`
+/// everywhere in the function — signature and body — via string substitution.
+/// Use `#[magetypes]` when you need body-level type substitution (e.g.,
+/// `Token`-dependent constants or type aliases that differ per variant).
+/// Use `#[autoversion]` when you want compiler auto-vectorization of scalar
+/// code with zero boilerplate.
+///
+/// # Benchmarking
+///
+/// Measure the speedup with a side-by-side comparison. The generated
+/// `_scalar` variant serves as the baseline; the dispatcher picks the
+/// best available:
+///
+/// ```rust,ignore
+/// use criterion::{Criterion, black_box, criterion_group, criterion_main};
+/// use archmage::SimdToken;
+///
+/// #[autoversion]
+/// fn sum_squares(_token: SimdToken, data: &[f32]) -> f32 {
+///     data.iter().map(|&x| x * x).fold(0.0f32, |a, b| a + b)
+/// }
+///
+/// fn bench(c: &mut Criterion) {
+///     let data: Vec<f32> = (0..4096).map(|i| i as f32 * 0.01).collect();
+///     let mut group = c.benchmark_group("sum_squares");
+///
+///     // Dispatched — picks best available at runtime
+///     group.bench_function("dispatched", |b| {
+///         b.iter(|| sum_squares(black_box(&data)))
+///     });
+///
+///     // Scalar baseline — no target_feature, no auto-vectorization
+///     group.bench_function("scalar", |b| {
+///         b.iter(|| sum_squares_scalar(archmage::ScalarToken, black_box(&data)))
+///     });
+///
+///     // Specific tier (useful for isolating which tier wins)
+///     #[cfg(target_arch = "x86_64")]
+///     if let Some(t) = archmage::X64V3Token::summon() {
+///         group.bench_function("v3_avx2_fma", |b| {
+///             b.iter(|| sum_squares_v3(t, black_box(&data)));
+///         });
+///     }
+///
+///     group.finish();
+/// }
+///
+/// criterion_group!(benches, bench);
+/// criterion_main!(benches);
+/// ```
+///
+/// For a tight numeric loop on x86-64, the `_v3` variant (AVX2+FMA)
+/// typically runs 4-8x faster than `_scalar` because `#[target_feature]`
+/// unlocks auto-vectorization that the baseline build can't use.
+///
+/// # Explicit tiers
+///
+/// ```rust,ignore
+/// #[autoversion(v3, v4, v4x, neon, arm_v2, wasm128)]
+/// fn process(_token: SimdToken, data: &[f32]) -> f32 {
+///     // ...
+/// }
+/// ```
+///
+/// `scalar` is always included implicitly.
+///
+/// Default tiers (when no list given): `v4`, `v3`, `neon`, `wasm128`, `scalar`.
+///
+/// Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v4`, `v4x`, `neon`,
+/// `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
+/// `wasm128_relaxed`, `x64_crypto`, `scalar`.
+///
+/// # Methods with self receivers
+///
+/// For inherent methods, pass `_self = Type` and use `_self` instead of
+/// `self` in the body:
+///
+/// ```rust,ignore
+/// impl ImageBuffer {
+///     #[autoversion(_self = ImageBuffer)]
+///     fn normalize(&mut self, token: SimdToken, gamma: f32) {
+///         for pixel in &mut _self.data {
+///             *pixel = (*pixel / 255.0).powf(gamma);
+///         }
+///     }
+/// }
+///
+/// // Call normally — no token:
+/// buffer.normalize(2.2);
+/// ```
+///
+/// All receiver types work: `self`, `&self`, `&mut self`. Non-scalar variants
+/// get `#[arcane(_self = Type)]` which handles the inner-function transform.
+/// The scalar variant gets `let _self = self;` so the body's `_self`
+/// references compile without `#[arcane]`.
+///
+/// # Trait methods
+///
+/// Trait methods can't use `#[autoversion]` directly because proc macro
+/// attributes on trait impl items can't expand to multiple sibling functions.
+/// Use the delegation pattern:
+///
+/// ```rust,ignore
+/// trait Processor {
+///     fn process(&self, data: &[f32]) -> f32;
+/// }
+///
+/// impl Processor for MyType {
+///     fn process(&self, data: &[f32]) -> f32 {
+///         self.process_impl(data) // delegate to autoversioned method
+///     }
+/// }
+///
+/// impl MyType {
+///     #[autoversion(_self = MyType)]
+///     fn process_impl(&self, token: SimdToken, data: &[f32]) -> f32 {
+///         _self.weights.iter().zip(data).map(|(w, d)| w * d).sum()
+///     }
+/// }
+/// ```
+///
+/// # Comparison with `#[magetypes]` + `incant!`
+///
+/// | | `#[autoversion]` | `#[magetypes]` + `incant!` |
+/// |---|---|---|
+/// | Placeholder | `SimdToken` | `Token` |
+/// | Generates variants | Yes | Yes (magetypes) |
+/// | Generates dispatcher | Yes | No (you write `incant!`) |
+/// | Best for | Scalar auto-vectorization | Explicit SIMD with typed vectors |
+/// | Lines of code | 1 attribute | 2+ (magetypes + incant + arcane) |
+///
+/// Use `#[autoversion]` for scalar loops you want auto-vectorized. Use
+/// `#[magetypes]` + `incant!` when you need `f32x8`, `u8x32`, and
+/// hand-tuned SIMD code per architecture
+#[proc_macro_attribute]
+pub fn autoversion(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AutoversionArgs);
+    let input_fn = parse_macro_input!(item as LightFn);
+    autoversion_impl(input_fn, args)
+}
+
+// =============================================================================
 // Unit tests for token/trait recognition maps
 // =============================================================================
 
@@ -2249,6 +2822,7 @@ mod tests {
     use super::*;
 
     use super::generated::{ALL_CONCRETE_TOKENS, ALL_TRAIT_NAMES};
+    use syn::{ItemFn, ReturnType};
 
     #[test]
     fn every_concrete_token_is_in_token_to_features() {
@@ -2491,6 +3065,806 @@ mod tests {
         assert!(
             v3_features.len() > v2_features.len(),
             "HasArm64V3 should have more features than HasArm64V2"
+        );
+    }
+
+    // =========================================================================
+    // autoversion — argument parsing
+    // =========================================================================
+
+    #[test]
+    fn autoversion_args_empty() {
+        let args: AutoversionArgs = syn::parse_str("").unwrap();
+        assert!(args.self_type.is_none());
+        assert!(args.tiers.is_none());
+    }
+
+    #[test]
+    fn autoversion_args_single_tier() {
+        let args: AutoversionArgs = syn::parse_str("v3").unwrap();
+        assert!(args.self_type.is_none());
+        assert_eq!(args.tiers.as_ref().unwrap(), &["v3"]);
+    }
+
+    #[test]
+    fn autoversion_args_tiers_only() {
+        let args: AutoversionArgs = syn::parse_str("v3, v4, neon").unwrap();
+        assert!(args.self_type.is_none());
+        let tiers = args.tiers.unwrap();
+        assert_eq!(tiers, vec!["v3", "v4", "neon"]);
+    }
+
+    #[test]
+    fn autoversion_args_many_tiers() {
+        let args: AutoversionArgs =
+            syn::parse_str("v1, v2, v3, v4, v4x, neon, arm_v2, wasm128").unwrap();
+        assert_eq!(
+            args.tiers.unwrap(),
+            vec!["v1", "v2", "v3", "v4", "v4x", "neon", "arm_v2", "wasm128"]
+        );
+    }
+
+    #[test]
+    fn autoversion_args_trailing_comma() {
+        let args: AutoversionArgs = syn::parse_str("v3, v4,").unwrap();
+        assert_eq!(args.tiers.as_ref().unwrap(), &["v3", "v4"]);
+    }
+
+    #[test]
+    fn autoversion_args_self_only() {
+        let args: AutoversionArgs = syn::parse_str("_self = MyType").unwrap();
+        assert!(args.self_type.is_some());
+        assert!(args.tiers.is_none());
+    }
+
+    #[test]
+    fn autoversion_args_self_and_tiers() {
+        let args: AutoversionArgs = syn::parse_str("_self = MyType, v3, neon").unwrap();
+        assert!(args.self_type.is_some());
+        let tiers = args.tiers.unwrap();
+        assert_eq!(tiers, vec!["v3", "neon"]);
+    }
+
+    #[test]
+    fn autoversion_args_tiers_then_self() {
+        // _self can appear after tier names
+        let args: AutoversionArgs = syn::parse_str("v3, neon, _self = MyType").unwrap();
+        assert!(args.self_type.is_some());
+        let tiers = args.tiers.unwrap();
+        assert_eq!(tiers, vec!["v3", "neon"]);
+    }
+
+    #[test]
+    fn autoversion_args_self_with_path_type() {
+        let args: AutoversionArgs = syn::parse_str("_self = crate::MyType").unwrap();
+        assert!(args.self_type.is_some());
+        assert!(args.tiers.is_none());
+    }
+
+    #[test]
+    fn autoversion_args_self_with_generic_type() {
+        let args: AutoversionArgs = syn::parse_str("_self = Vec<u8>").unwrap();
+        assert!(args.self_type.is_some());
+        let ty_str = args.self_type.unwrap().to_token_stream().to_string();
+        assert!(ty_str.contains("Vec"), "Expected Vec<u8>, got: {}", ty_str);
+    }
+
+    #[test]
+    fn autoversion_args_self_trailing_comma() {
+        let args: AutoversionArgs = syn::parse_str("_self = MyType,").unwrap();
+        assert!(args.self_type.is_some());
+        assert!(args.tiers.is_none());
+    }
+
+    // =========================================================================
+    // autoversion — find_simd_token_param
+    // =========================================================================
+
+    #[test]
+    fn find_simd_token_param_first_position() {
+        let f: ItemFn =
+            syn::parse_str("fn process(token: SimdToken, data: &[f32]) -> f32 {}").unwrap();
+        let param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(param.index, 0);
+        assert_eq!(param.ident, "token");
+    }
+
+    #[test]
+    fn find_simd_token_param_second_position() {
+        let f: ItemFn =
+            syn::parse_str("fn process(data: &[f32], token: SimdToken) -> f32 {}").unwrap();
+        let param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(param.index, 1);
+        assert_eq!(param.ident, "token");
+    }
+
+    #[test]
+    fn find_simd_token_param_underscore_prefix() {
+        let f: ItemFn =
+            syn::parse_str("fn process(_token: SimdToken, data: &[f32]) -> f32 {}").unwrap();
+        let param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(param.index, 0);
+        assert_eq!(param.ident, "_token");
+    }
+
+    #[test]
+    fn find_simd_token_param_wildcard() {
+        let f: ItemFn = syn::parse_str("fn process(_: SimdToken, data: &[f32]) -> f32 {}").unwrap();
+        let param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(param.index, 0);
+        assert_eq!(param.ident, "__autoversion_token");
+    }
+
+    #[test]
+    fn find_simd_token_param_not_found() {
+        let f: ItemFn = syn::parse_str("fn process(data: &[f32]) -> f32 {}").unwrap();
+        assert!(find_simd_token_param(&f.sig).is_none());
+    }
+
+    #[test]
+    fn find_simd_token_param_no_params() {
+        let f: ItemFn = syn::parse_str("fn process() {}").unwrap();
+        assert!(find_simd_token_param(&f.sig).is_none());
+    }
+
+    #[test]
+    fn find_simd_token_param_concrete_token_not_matched() {
+        // autoversion looks specifically for SimdToken, not concrete tokens
+        let f: ItemFn =
+            syn::parse_str("fn process(token: X64V3Token, data: &[f32]) -> f32 {}").unwrap();
+        assert!(find_simd_token_param(&f.sig).is_none());
+    }
+
+    #[test]
+    fn find_simd_token_param_scalar_token_not_matched() {
+        let f: ItemFn =
+            syn::parse_str("fn process(token: ScalarToken, data: &[f32]) -> f32 {}").unwrap();
+        assert!(find_simd_token_param(&f.sig).is_none());
+    }
+
+    #[test]
+    fn find_simd_token_param_among_many() {
+        let f: ItemFn = syn::parse_str(
+            "fn process(a: i32, b: f64, token: SimdToken, c: &str, d: bool) -> f32 {}",
+        )
+        .unwrap();
+        let param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(param.index, 2);
+        assert_eq!(param.ident, "token");
+    }
+
+    #[test]
+    fn find_simd_token_param_with_generics() {
+        let f: ItemFn =
+            syn::parse_str("fn process<T: Clone>(token: SimdToken, data: &[T]) -> T {}").unwrap();
+        let param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(param.index, 0);
+        assert_eq!(param.ident, "token");
+    }
+
+    #[test]
+    fn find_simd_token_param_with_where_clause() {
+        let f: ItemFn = syn::parse_str(
+            "fn process<T>(token: SimdToken, data: &[T]) -> T where T: Copy + Default {}",
+        )
+        .unwrap();
+        let param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(param.index, 0);
+    }
+
+    #[test]
+    fn find_simd_token_param_with_lifetime() {
+        let f: ItemFn =
+            syn::parse_str("fn process<'a>(token: SimdToken, data: &'a [f32]) -> &'a f32 {}")
+                .unwrap();
+        let param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(param.index, 0);
+    }
+
+    // =========================================================================
+    // autoversion — tier resolution
+    // =========================================================================
+
+    #[test]
+    fn autoversion_default_tiers_all_resolve() {
+        let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        assert!(!tiers.is_empty());
+        // scalar should be present
+        assert!(tiers.iter().any(|t| t.name == "scalar"));
+    }
+
+    #[test]
+    fn autoversion_scalar_always_appended() {
+        let names = vec!["v3".to_string(), "neon".to_string()];
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        assert!(
+            tiers.iter().any(|t| t.name == "scalar"),
+            "scalar must be auto-appended"
+        );
+    }
+
+    #[test]
+    fn autoversion_scalar_not_duplicated() {
+        let names = vec!["v3".to_string(), "scalar".to_string()];
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        let scalar_count = tiers.iter().filter(|t| t.name == "scalar").count();
+        assert_eq!(scalar_count, 1, "scalar must not be duplicated");
+    }
+
+    #[test]
+    fn autoversion_tiers_sorted_by_priority() {
+        let names = vec!["neon".to_string(), "v4".to_string(), "v3".to_string()];
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        // v4 (priority 40) > v3 (30) > neon (20) > scalar (0)
+        let priorities: Vec<u32> = tiers.iter().map(|t| t.priority).collect();
+        for window in priorities.windows(2) {
+            assert!(
+                window[0] >= window[1],
+                "Tiers not sorted by priority: {:?}",
+                priorities
+            );
+        }
+    }
+
+    #[test]
+    fn autoversion_unknown_tier_errors() {
+        let names = vec!["v3".to_string(), "avx9000".to_string()];
+        let result = resolve_tiers(&names, proc_macro2::Span::call_site());
+        match result {
+            Ok(_) => panic!("Expected error for unknown tier 'avx9000'"),
+            Err(e) => {
+                let err_msg = e.to_string();
+                assert!(
+                    err_msg.contains("avx9000"),
+                    "Error should mention unknown tier: {}",
+                    err_msg
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn autoversion_all_known_tiers_resolve() {
+        // Every tier in ALL_TIERS should be findable
+        for tier in ALL_TIERS {
+            assert!(
+                find_tier(tier.name).is_some(),
+                "Tier '{}' should be findable by name",
+                tier.name
+            );
+        }
+    }
+
+    #[test]
+    fn autoversion_default_tier_list_is_sensible() {
+        // Defaults should cover x86, ARM, WASM, and scalar
+        let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+
+        let has_x86 = tiers.iter().any(|t| t.target_arch == Some("x86_64"));
+        let has_arm = tiers.iter().any(|t| t.target_arch == Some("aarch64"));
+        let has_wasm = tiers.iter().any(|t| t.target_arch == Some("wasm32"));
+        let has_scalar = tiers.iter().any(|t| t.name == "scalar");
+
+        assert!(has_x86, "Default tiers should include an x86_64 tier");
+        assert!(has_arm, "Default tiers should include an aarch64 tier");
+        assert!(has_wasm, "Default tiers should include a wasm32 tier");
+        assert!(has_scalar, "Default tiers should include scalar");
+    }
+
+    // =========================================================================
+    // autoversion — variant replacement (AST manipulation)
+    // =========================================================================
+
+    /// Mirrors what `autoversion_impl` does for a single variant: parse an
+    /// ItemFn (for test convenience), rename it, swap the SimdToken param
+    /// type, optionally inject the `_self` preamble for scalar+self.
+    fn do_variant_replacement(func: &str, tier_name: &str, has_self: bool) -> ItemFn {
+        let mut f: ItemFn = syn::parse_str(func).unwrap();
+        let fn_name = f.sig.ident.to_string();
+
+        let tier = find_tier(tier_name).unwrap();
+
+        // Rename
+        f.sig.ident = format_ident!("{}_{}", fn_name, tier.suffix);
+
+        // Find and replace SimdToken param type
+        let token_idx = find_simd_token_param(&f.sig)
+            .unwrap_or_else(|| panic!("No SimdToken param in: {}", func))
+            .index;
+        let concrete_type: Type = syn::parse_str(tier.token_path).unwrap();
+        if let FnArg::Typed(pt) = &mut f.sig.inputs[token_idx] {
+            *pt.ty = concrete_type;
+        }
+
+        // Scalar + self: inject preamble
+        if tier_name == "scalar" && has_self {
+            let preamble: syn::Stmt = syn::parse_quote!(let _self = self;);
+            f.block.stmts.insert(0, preamble);
+        }
+
+        f
+    }
+
+    #[test]
+    fn variant_replacement_v3_renames_function() {
+        let f = do_variant_replacement(
+            "fn process(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+            "v3",
+            false,
+        );
+        assert_eq!(f.sig.ident, "process_v3");
+    }
+
+    #[test]
+    fn variant_replacement_v3_replaces_token_type() {
+        let f = do_variant_replacement(
+            "fn process(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+            "v3",
+            false,
+        );
+        let first_param_ty = match &f.sig.inputs[0] {
+            FnArg::Typed(pt) => pt.ty.to_token_stream().to_string(),
+            _ => panic!("Expected typed param"),
+        };
+        assert!(
+            first_param_ty.contains("X64V3Token"),
+            "Expected X64V3Token, got: {}",
+            first_param_ty
+        );
+    }
+
+    #[test]
+    fn variant_replacement_neon_produces_valid_fn() {
+        let f = do_variant_replacement(
+            "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+            "neon",
+            false,
+        );
+        assert_eq!(f.sig.ident, "compute_neon");
+        let first_param_ty = match &f.sig.inputs[0] {
+            FnArg::Typed(pt) => pt.ty.to_token_stream().to_string(),
+            _ => panic!("Expected typed param"),
+        };
+        assert!(
+            first_param_ty.contains("NeonToken"),
+            "Expected NeonToken, got: {}",
+            first_param_ty
+        );
+    }
+
+    #[test]
+    fn variant_replacement_wasm128_produces_valid_fn() {
+        let f = do_variant_replacement(
+            "fn compute(_t: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+            "wasm128",
+            false,
+        );
+        assert_eq!(f.sig.ident, "compute_wasm128");
+    }
+
+    #[test]
+    fn variant_replacement_scalar_produces_valid_fn() {
+        let f = do_variant_replacement(
+            "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+            "scalar",
+            false,
+        );
+        assert_eq!(f.sig.ident, "compute_scalar");
+        let first_param_ty = match &f.sig.inputs[0] {
+            FnArg::Typed(pt) => pt.ty.to_token_stream().to_string(),
+            _ => panic!("Expected typed param"),
+        };
+        assert!(
+            first_param_ty.contains("ScalarToken"),
+            "Expected ScalarToken, got: {}",
+            first_param_ty
+        );
+    }
+
+    #[test]
+    fn variant_replacement_v4_produces_valid_fn() {
+        let f = do_variant_replacement(
+            "fn transform(token: SimdToken, data: &mut [f32]) { }",
+            "v4",
+            false,
+        );
+        assert_eq!(f.sig.ident, "transform_v4");
+        let first_param_ty = match &f.sig.inputs[0] {
+            FnArg::Typed(pt) => pt.ty.to_token_stream().to_string(),
+            _ => panic!("Expected typed param"),
+        };
+        assert!(
+            first_param_ty.contains("X64V4Token"),
+            "Expected X64V4Token, got: {}",
+            first_param_ty
+        );
+    }
+
+    #[test]
+    fn variant_replacement_v4x_produces_valid_fn() {
+        let f = do_variant_replacement(
+            "fn transform(token: SimdToken, data: &mut [f32]) { }",
+            "v4x",
+            false,
+        );
+        assert_eq!(f.sig.ident, "transform_v4x");
+    }
+
+    #[test]
+    fn variant_replacement_arm_v2_produces_valid_fn() {
+        let f = do_variant_replacement(
+            "fn transform(token: SimdToken, data: &mut [f32]) { }",
+            "arm_v2",
+            false,
+        );
+        assert_eq!(f.sig.ident, "transform_arm_v2");
+    }
+
+    #[test]
+    fn variant_replacement_preserves_generics() {
+        let f = do_variant_replacement(
+            "fn process<T: Copy + Default>(token: SimdToken, data: &[T]) -> T { T::default() }",
+            "v3",
+            false,
+        );
+        assert_eq!(f.sig.ident, "process_v3");
+        // Generic params should still be present
+        assert!(
+            !f.sig.generics.params.is_empty(),
+            "Generics should be preserved"
+        );
+    }
+
+    #[test]
+    fn variant_replacement_preserves_where_clause() {
+        let f = do_variant_replacement(
+            "fn process<T>(token: SimdToken, data: &[T]) -> T where T: Copy + Default { T::default() }",
+            "v3",
+            false,
+        );
+        assert!(
+            f.sig.generics.where_clause.is_some(),
+            "Where clause should be preserved"
+        );
+    }
+
+    #[test]
+    fn variant_replacement_preserves_return_type() {
+        let f = do_variant_replacement(
+            "fn process(token: SimdToken, data: &[f32]) -> Vec<f32> { vec![] }",
+            "neon",
+            false,
+        );
+        let ret = f.sig.output.to_token_stream().to_string();
+        assert!(
+            ret.contains("Vec"),
+            "Return type should be preserved, got: {}",
+            ret
+        );
+    }
+
+    #[test]
+    fn variant_replacement_preserves_multiple_params() {
+        let f = do_variant_replacement(
+            "fn process(token: SimdToken, a: &[f32], b: &[f32], scale: f32) -> f32 { 0.0 }",
+            "v3",
+            false,
+        );
+        // SimdToken → X64V3Token, plus the 3 other params
+        assert_eq!(f.sig.inputs.len(), 4);
+    }
+
+    #[test]
+    fn variant_replacement_preserves_no_return_type() {
+        let f = do_variant_replacement(
+            "fn transform(token: SimdToken, data: &mut [f32]) { }",
+            "v3",
+            false,
+        );
+        assert!(
+            matches!(f.sig.output, ReturnType::Default),
+            "No return type should remain as Default"
+        );
+    }
+
+    #[test]
+    fn variant_replacement_preserves_lifetime_params() {
+        let f = do_variant_replacement(
+            "fn process<'a>(token: SimdToken, data: &'a [f32]) -> &'a [f32] { data }",
+            "v3",
+            false,
+        );
+        assert!(!f.sig.generics.params.is_empty());
+    }
+
+    #[test]
+    fn variant_replacement_scalar_self_injects_preamble() {
+        let f = do_variant_replacement(
+            "fn method(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+            "scalar",
+            true, // has_self
+        );
+        assert_eq!(f.sig.ident, "method_scalar");
+
+        // First statement should be `let _self = self;`
+        let body_str = f.block.to_token_stream().to_string();
+        assert!(
+            body_str.contains("let _self = self"),
+            "Scalar+self variant should have _self preamble, got: {}",
+            body_str
+        );
+    }
+
+    #[test]
+    fn variant_replacement_all_default_tiers_produce_valid_fns() {
+        let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+
+        for tier in &tiers {
+            let f = do_variant_replacement(
+                "fn process(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+                tier.name,
+                false,
+            );
+            let expected_name = format!("process_{}", tier.suffix);
+            assert_eq!(
+                f.sig.ident.to_string(),
+                expected_name,
+                "Tier '{}' should produce function '{}'",
+                tier.name,
+                expected_name
+            );
+        }
+    }
+
+    #[test]
+    fn variant_replacement_all_known_tiers_produce_valid_fns() {
+        for tier in ALL_TIERS {
+            let f = do_variant_replacement(
+                "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+                tier.name,
+                false,
+            );
+            let expected_name = format!("compute_{}", tier.suffix);
+            assert_eq!(
+                f.sig.ident.to_string(),
+                expected_name,
+                "Tier '{}' should produce function '{}'",
+                tier.name,
+                expected_name
+            );
+        }
+    }
+
+    #[test]
+    fn variant_replacement_no_simdtoken_remains() {
+        for tier in ALL_TIERS {
+            let f = do_variant_replacement(
+                "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+                tier.name,
+                false,
+            );
+            let full_str = f.to_token_stream().to_string();
+            assert!(
+                !full_str.contains("SimdToken"),
+                "Tier '{}' variant still contains 'SimdToken': {}",
+                tier.name,
+                full_str
+            );
+        }
+    }
+
+    // =========================================================================
+    // autoversion — cfg guard and tier descriptor properties
+    // =========================================================================
+
+    #[test]
+    fn tier_v3_targets_x86_64() {
+        let tier = find_tier("v3").unwrap();
+        assert_eq!(tier.target_arch, Some("x86_64"));
+        assert_eq!(tier.cargo_feature, None);
+    }
+
+    #[test]
+    fn tier_v4_requires_avx512_feature() {
+        let tier = find_tier("v4").unwrap();
+        assert_eq!(tier.target_arch, Some("x86_64"));
+        assert_eq!(tier.cargo_feature, Some("avx512"));
+    }
+
+    #[test]
+    fn tier_v4x_requires_avx512_feature() {
+        let tier = find_tier("v4x").unwrap();
+        assert_eq!(tier.cargo_feature, Some("avx512"));
+    }
+
+    #[test]
+    fn tier_neon_targets_aarch64() {
+        let tier = find_tier("neon").unwrap();
+        assert_eq!(tier.target_arch, Some("aarch64"));
+        assert_eq!(tier.cargo_feature, None);
+    }
+
+    #[test]
+    fn tier_wasm128_targets_wasm32() {
+        let tier = find_tier("wasm128").unwrap();
+        assert_eq!(tier.target_arch, Some("wasm32"));
+        assert_eq!(tier.cargo_feature, None);
+    }
+
+    #[test]
+    fn tier_scalar_has_no_guards() {
+        let tier = find_tier("scalar").unwrap();
+        assert_eq!(tier.target_arch, None);
+        assert_eq!(tier.cargo_feature, None);
+        assert_eq!(tier.priority, 0);
+    }
+
+    #[test]
+    fn tier_priorities_are_consistent() {
+        // Higher-capability tiers within the same arch should have higher priority
+        let v2 = find_tier("v2").unwrap();
+        let v3 = find_tier("v3").unwrap();
+        let v4 = find_tier("v4").unwrap();
+        assert!(v4.priority > v3.priority);
+        assert!(v3.priority > v2.priority);
+
+        let neon = find_tier("neon").unwrap();
+        let arm_v2 = find_tier("arm_v2").unwrap();
+        let arm_v3 = find_tier("arm_v3").unwrap();
+        assert!(arm_v3.priority > arm_v2.priority);
+        assert!(arm_v2.priority > neon.priority);
+
+        // scalar is lowest
+        let scalar = find_tier("scalar").unwrap();
+        assert!(neon.priority > scalar.priority);
+        assert!(v2.priority > scalar.priority);
+    }
+
+    // =========================================================================
+    // autoversion — dispatcher structure
+    // =========================================================================
+
+    #[test]
+    fn dispatcher_param_removal_free_fn() {
+        // Simulate what autoversion_impl does: remove the SimdToken param
+        let f: ItemFn =
+            syn::parse_str("fn process(token: SimdToken, data: &[f32], scale: f32) -> f32 { 0.0 }")
+                .unwrap();
+
+        let token_param = find_simd_token_param(&f.sig).unwrap();
+        let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
+        dispatcher_inputs.remove(token_param.index);
+
+        // Should have 2 params remaining: data, scale
+        assert_eq!(dispatcher_inputs.len(), 2);
+
+        // Neither should be SimdToken
+        for arg in &dispatcher_inputs {
+            if let FnArg::Typed(pt) = arg {
+                let ty_str = pt.ty.to_token_stream().to_string();
+                assert!(
+                    !ty_str.contains("SimdToken"),
+                    "SimdToken should be removed from dispatcher, found: {}",
+                    ty_str
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn dispatcher_param_removal_token_only() {
+        let f: ItemFn = syn::parse_str("fn process(token: SimdToken) -> f32 { 0.0 }").unwrap();
+
+        let token_param = find_simd_token_param(&f.sig).unwrap();
+        let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
+        dispatcher_inputs.remove(token_param.index);
+
+        // No params left — dispatcher takes no arguments
+        assert_eq!(dispatcher_inputs.len(), 0);
+    }
+
+    #[test]
+    fn dispatcher_param_removal_token_last() {
+        let f: ItemFn =
+            syn::parse_str("fn process(data: &[f32], scale: f32, token: SimdToken) -> f32 { 0.0 }")
+                .unwrap();
+
+        let token_param = find_simd_token_param(&f.sig).unwrap();
+        assert_eq!(token_param.index, 2);
+
+        let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
+        dispatcher_inputs.remove(token_param.index);
+
+        assert_eq!(dispatcher_inputs.len(), 2);
+    }
+
+    #[test]
+    fn dispatcher_dispatch_args_extraction() {
+        // Test that we correctly extract idents for the dispatch call
+        let f: ItemFn =
+            syn::parse_str("fn process(data: &[f32], scale: f32) -> f32 { 0.0 }").unwrap();
+
+        let dispatch_args: Vec<String> = f
+            .sig
+            .inputs
+            .iter()
+            .filter_map(|arg| {
+                if let FnArg::Typed(PatType { pat, .. }) = arg {
+                    if let syn::Pat::Ident(pi) = pat.as_ref() {
+                        return Some(pi.ident.to_string());
+                    }
+                }
+                None
+            })
+            .collect();
+
+        assert_eq!(dispatch_args, vec!["data", "scale"]);
+    }
+
+    #[test]
+    fn dispatcher_wildcard_params_get_renamed() {
+        let f: ItemFn = syn::parse_str("fn process(_: &[f32], _: f32) -> f32 { 0.0 }").unwrap();
+
+        let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
+
+        let mut wild_counter = 0u32;
+        for arg in &mut dispatcher_inputs {
+            if let FnArg::Typed(pat_type) = arg {
+                if matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_)) {
+                    let ident = format_ident!("__autoversion_wild_{}", wild_counter);
+                    wild_counter += 1;
+                    *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+                        attrs: vec![],
+                        by_ref: None,
+                        mutability: None,
+                        ident,
+                        subpat: None,
+                    });
+                }
+            }
+        }
+
+        // Both wildcards should be renamed
+        assert_eq!(wild_counter, 2);
+
+        let names: Vec<String> = dispatcher_inputs
+            .iter()
+            .filter_map(|arg| {
+                if let FnArg::Typed(PatType { pat, .. }) = arg {
+                    if let syn::Pat::Ident(pi) = pat.as_ref() {
+                        return Some(pi.ident.to_string());
+                    }
+                }
+                None
+            })
+            .collect();
+
+        assert_eq!(names, vec!["__autoversion_wild_0", "__autoversion_wild_1"]);
+    }
+
+    // =========================================================================
+    // autoversion — suffix_path (reused in dispatch)
+    // =========================================================================
+
+    #[test]
+    fn suffix_path_simple() {
+        let path: syn::Path = syn::parse_str("process").unwrap();
+        let suffixed = suffix_path(&path, "v3");
+        assert_eq!(suffixed.to_token_stream().to_string(), "process_v3");
+    }
+
+    #[test]
+    fn suffix_path_qualified() {
+        let path: syn::Path = syn::parse_str("module::process").unwrap();
+        let suffixed = suffix_path(&path, "neon");
+        let s = suffixed.to_token_stream().to_string();
+        assert!(
+            s.contains("process_neon"),
+            "Expected process_neon, got: {}",
+            s
         );
     }
 }
