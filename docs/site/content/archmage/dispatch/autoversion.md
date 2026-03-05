@@ -159,6 +159,8 @@ flowchart TD
 
 The dispatcher uses labeled blocks (`'__dispatch: { ... break '__dispatch result; }`) rather than `return`, so it works as an expression and can be embedded in larger functions.
 
+Variants are always private — only the dispatcher gets the original function's visibility. Within the same module, you can call variants directly for testing or benchmarking.
+
 Variants for other architectures are excluded at compile time by `#[cfg(target_arch)]`. On x86-64, only `_v4`, `_v3`, and `_scalar` are compiled.
 
 ## SimdToken Replacement

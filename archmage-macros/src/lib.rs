@@ -814,14 +814,15 @@ fn arcane_impl_sibling(
     let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
 
     let expanded = if let Some(arch) = target_arch {
-        // Sibling function: #[doc(hidden)] #[target_feature] pub(?) fn __arcane_fn(...)
+        // Sibling function: #[doc(hidden)] #[target_feature] fn __arcane_fn(...)
+        // Always private — only the wrapper is user-visible.
         // Safe declaration — Rust 2024 allows safe #[target_feature] functions.
         let sibling_fn = quote! {
             #[cfg(target_arch = #arch)]
             #[doc(hidden)]
             #(#target_feature_attrs)*
             #inline_attr
-            #vis fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
+            fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
                 #body
             }
         };
@@ -871,12 +872,12 @@ fn arcane_impl_sibling(
         }
     } else {
         // No specific arch (trait bounds or generic) - no cfg guards, no stub needed.
-        // Still use sibling pattern for consistency.
+        // Still use sibling pattern for consistency. Sibling is always private.
         let sibling_fn = quote! {
             #[doc(hidden)]
             #(#target_feature_attrs)*
             #inline_attr
-            #vis fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
+            fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
                 #body
             }
         };
@@ -2380,6 +2381,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     for tier in &tiers {
         let mut variant_fn = input_fn.clone();
 
+        // Variants are always private — only the dispatcher is public.
+        variant_fn.vis = syn::Visibility::Inherited;
+
         // Rename: process → process_v3
         variant_fn.sig.ident = format_ident!("{}_{}", fn_name, tier.suffix);
 
@@ -2642,8 +2646,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 /// detection via `Token::summon()` and calls the best match. When compiled
 /// with `-C target-cpu=native`, the detection is elided by the compiler.
 ///
-/// The suffixed variants are real, visible sibling functions. You can call
-/// them individually, and they work with `incant!` for manual dispatch.
+/// The suffixed variants are private sibling functions — only the dispatcher
+/// is public. Within the same module, you can call them directly for testing
+/// or benchmarking.
 ///
 /// # SimdToken replacement
 ///
