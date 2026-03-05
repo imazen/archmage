@@ -1,0 +1,191 @@
+name: Publish to crates.io
+
+on:
+  release:
+    types: [published]
+
+env:
+  CARGO_TERM_COLOR: always
+  CI: true
+  FEATURES: "std macros avx512"
+
+jobs:
+  # ==========================================================================
+  # Verify tags and versions
+  # ==========================================================================
+  check-tags:
+    name: Check Release Tags
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "::error::Release tag '$TAG' does not match expected format v{version}"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing version: $VERSION"
+
+      - name: Verify all required tags exist and match
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          FIRST_COMMIT=""
+          for TAG in "v${VERSION}" "archmage-macros-v${VERSION}" "magetypes-v${VERSION}"; do
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              COMMIT=$(git rev-parse "$TAG")
+              echo "✓ $TAG -> $COMMIT"
+              if [ -z "$FIRST_COMMIT" ]; then
+                FIRST_COMMIT="$COMMIT"
+              elif [ "$COMMIT" != "$FIRST_COMMIT" ]; then
+                echo "::error::Tag $TAG points to $COMMIT, expected $FIRST_COMMIT"
+                exit 1
+              fi
+            else
+              echo "::error::Tag $TAG is MISSING"
+              echo "Required: v${VERSION}, archmage-macros-v${VERSION}, magetypes-v${VERSION}"
+              exit 1
+            fi
+          done
+
+      - name: Verify Cargo.toml versions match tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          for CRATE in "." "archmage-macros" "magetypes"; do
+            TOML_VERSION=$(grep '^version' "$CRATE/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            if [ "$TOML_VERSION" != "$VERSION" ]; then
+              echo "::error::$CRATE/Cargo.toml version ($TOML_VERSION) does not match tag ($VERSION)"
+              exit 1
+            fi
+            echo "✓ $CRATE/Cargo.toml: $TOML_VERSION"
+          done
+
+  # ==========================================================================
+  # Run generation check + clippy + tests before publishing
+  # ==========================================================================
+  pre-publish-check:
+    name: Pre-publish Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Generate and verify clean
+        run: |
+          cargo run -p xtask -- generate
+          if ! git diff --exit-code; then
+            echo "::error::Generated code differs from committed code!"
+            exit 1
+          fi
+
+      - name: Clippy
+        run: cargo clippy --features "${{ env.FEATURES }}" -- -D warnings
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Tests
+        run: cargo test --features "${{ env.FEATURES }}"
+
+      - name: Validate safety
+        run: cargo run -p xtask -- validate
+
+      - name: Soundness verification
+        run: cargo run -p xtask -- soundness
+
+      # Verify leaf crate packages cleanly (no registry deps)
+      - name: Verify archmage-macros packages
+        run: cargo publish -p archmage-macros --dry-run
+
+      # Verify package file lists for dependent crates
+      - name: Verify package contents
+        run: |
+          echo "=== archmage-macros ==="
+          cargo package --list -p archmage-macros
+          echo ""
+          echo "=== archmage ==="
+          cargo package --list -p archmage 2>/dev/null || echo "(skipped — dep not on registry yet)"
+          echo ""
+          echo "=== magetypes ==="
+          cargo package --list -p magetypes 2>/dev/null || echo "(skipped — dep not on registry yet)"
+
+  # ==========================================================================
+  # Publish crates in dependency order (sequential steps)
+  # archmage-macros -> archmage -> magetypes
+  #
+  # TO ACTIVATE: Replace --dry-run with real publish:
+  #   1. Add CARGO_REGISTRY_TOKEN secret to the "crates-io" environment
+  #   2. Remove --dry-run from each cargo publish command
+  #   3. Uncomment the CARGO_REGISTRY_TOKEN env lines
+  #   4. Uncomment the index wait steps
+  # ==========================================================================
+  publish:
+    name: Publish Crates
+    runs-on: ubuntu-latest
+    needs: [check-tags, pre-publish-check]
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Publish archmage-macros
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p archmage-macros --dry-run
+
+      # - name: Wait for archmage-macros index update
+      #   run: |
+      #     VERSION="${{ needs.check-tags.outputs.version }}"
+      #     echo "Waiting for archmage-macros $VERSION to appear in index..."
+      #     for i in $(seq 1 30); do
+      #       if cargo search archmage-macros 2>/dev/null | grep -q "\"$VERSION\""; then
+      #         echo "✓ archmage-macros $VERSION found in index"
+      #         break
+      #       fi
+      #       echo "  Attempt $i/30 — not yet, waiting 10s..."
+      #       sleep 10
+      #     done
+
+      - name: Publish archmage
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p archmage --dry-run
+
+      # - name: Wait for archmage index update
+      #   run: |
+      #     VERSION="${{ needs.check-tags.outputs.version }}"
+      #     echo "Waiting for archmage $VERSION to appear in index..."
+      #     for i in $(seq 1 30); do
+      #       if cargo search archmage 2>/dev/null | grep -q "\"$VERSION\""; then
+      #         echo "✓ archmage $VERSION found in index"
+      #         break
+      #       fi
+      #       echo "  Attempt $i/30 — not yet, waiting 10s..."
+      #       sleep 10
+      #     done
+
+      - name: Publish magetypes
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p magetypes --dry-run
