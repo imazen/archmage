@@ -37,10 +37,10 @@ Miss a feature check and you get undefined behavior on older CPUs. Wrap everythi
 ## The solution
 
 ```rust
-use archmage::prelude::*;
+use archmage::prelude::*;  // tokens, traits, macros, intrinsics, safe memory ops
 
 // X64V3Token = AVX2 + FMA (Haswell 2013+, Zen 1+)
-#[arcane(import_intrinsics)]
+#[arcane]
 fn multiply(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let a = _mm256_loadu_ps(data);          // safe: takes &[f32; 8], not *const f32
     let b = _mm256_set1_ps(2.0);            // safe: inside #[target_feature]
@@ -79,7 +79,7 @@ This means the only `unsafe` left in SIMD code is: (a) the one call site where y
 │   summon() ──→ Token ──→ #[arcane] fn ──→ #[rite] fn      │
 │    (CPUID)    (proof)   (entry point)   (inlines freely)  │
 │                              │                             │
-│                     import_intrinsics                      │
+│                   prelude / import_intrinsics               │
 │                    ┌────────┴────────┐                     │
 │                    │ core::arch    safe_unaligned_simd     │
 │                    │ (value ops    (memory ops             │
@@ -96,31 +96,57 @@ Three pieces eliminate the remaining `unsafe`:
 
 2. **`#[arcane]` / `#[rite]`** read the token type from your function signature and generate `#[target_feature(enable = "avx2,fma,...")]`. The `#[arcane]` macro generates the `unsafe` call to cross the `#[target_feature]` boundary *inside its own generated code* — your crate never writes `unsafe`. `#[rite]` functions called from matching `#[target_feature]` contexts don't need `unsafe` at all (Rust 1.85+). Both macros handle `#[cfg(target_arch)]` gating automatically.
 
-3. **`import_intrinsics`** brings `archmage::intrinsics::{arch}::*` into scope — a combined module where [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd) (by [okaneco](https://github.com/okaneco)) memory ops shadow `core::arch`'s pointer-based versions. `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`. Same function names, safe signatures.
+3. **Safe memory ops** from [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd) (by [okaneco](https://github.com/okaneco)) shadow `core::arch`'s pointer-based versions. `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`. Same function names, safe signatures. These are included in the prelude, or you can use `#[arcane(import_intrinsics)]` to scope them to a single function.
 
 All tokens compile on all platforms. On the wrong architecture, `summon()` returns `None`. You rarely need `#[cfg(target_arch)]` in your code.
 
+### Import styles
+
+`use archmage::prelude::*` imports everything — tokens, traits, macros, all platform intrinsics, and safe memory ops. The examples in this README use the prelude for brevity:
+
+```rust
+use archmage::prelude::*;
+
+#[arcane]  // intrinsics already in scope from prelude
+fn example(_: X64V3Token, data: &[f32; 8]) -> __m256 {
+    _mm256_loadu_ps(data)
+}
+```
+
+If you don't want thousands of intrinsic names at module scope, use selective imports with `import_intrinsics` to scope them to the function body:
+
+```rust
+use archmage::{X64V3Token, SimdToken, arcane};
+
+#[arcane(import_intrinsics)]  // injects intrinsics inside this function only
+fn example(_: X64V3Token, data: &[f32; 8]) -> core::arch::x86_64::__m256 {
+    _mm256_loadu_ps(data)  // in scope from import_intrinsics
+}
+```
+
+Don't use both — they import the same module. The prelude is simpler; `import_intrinsics` is more explicit.
+
 ## `#[arcane]` vs `#[rite]`: entry point vs internal
 
-**`#[rite(import_intrinsics)]` should be your default.** Use `#[arcane(import_intrinsics)]` only at the entry point — the first call from non-SIMD code.
+**`#[rite]` should be your default.** Use `#[arcane]` only at the entry point — the first call from non-SIMD code.
 
 ```rust
 use archmage::prelude::*;
 
 // Entry point: #[arcane] — safe wrapper for non-SIMD callers
-#[arcane(import_intrinsics)]
+#[arcane]
 fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let products = mul_vectors(token, a, b);
     horizontal_sum(token, products)
 }
 
 // Called from SIMD code: #[rite] — inlines into caller, no boundary
-#[rite(import_intrinsics)]
+#[rite]
 fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
 }
 
-#[rite(import_intrinsics)]
+#[rite]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
@@ -170,7 +196,7 @@ fn dot_product(a: &[f32], b: &[f32]) -> f32 {
     }
 }
 
-#[arcane(import_intrinsics)]
+#[arcane]
 fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
     let mut sum = f32x8::zero(token);
     for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
