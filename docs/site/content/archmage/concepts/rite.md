@@ -218,7 +218,7 @@ fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 {
 
 The recommended pattern: `#[arcane(import_intrinsics)]` at the entry point, `#[rite(import_intrinsics)]` for everything else. Add `import_magetypes` when using magetypes types.
 
-See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import_intrinsics) for the full namespace mapping.
+See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import-intrinsics) for the full namespace mapping.
 
 ## Inlining Behavior
 
