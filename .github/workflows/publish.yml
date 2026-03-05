@@ -110,31 +110,12 @@ jobs:
       - name: Soundness verification
         run: cargo run -p xtask -- soundness
 
-      # Verify leaf crate packages cleanly (no registry deps)
       - name: Verify archmage-macros packages
         run: cargo publish -p archmage-macros --dry-run
-
-      # Verify package file lists for dependent crates
-      - name: Verify package contents
-        run: |
-          echo "=== archmage-macros ==="
-          cargo package --list -p archmage-macros
-          echo ""
-          echo "=== archmage ==="
-          cargo package --list -p archmage 2>/dev/null || echo "(skipped — dep not on registry yet)"
-          echo ""
-          echo "=== magetypes ==="
-          cargo package --list -p magetypes 2>/dev/null || echo "(skipped — dep not on registry yet)"
 
   # ==========================================================================
   # Publish crates in dependency order (sequential steps)
   # archmage-macros -> archmage -> magetypes
-  #
-  # TO ACTIVATE: Replace --dry-run with real publish:
-  #   1. Add CARGO_REGISTRY_TOKEN secret to the "crates-io" environment
-  #   2. Remove --dry-run from each cargo publish command
-  #   3. Uncomment the CARGO_REGISTRY_TOKEN env lines
-  #   4. Uncomment the index wait steps
   # ==========================================================================
   publish:
     name: Publish Crates
@@ -153,40 +134,44 @@ jobs:
       - name: Publish archmage-macros
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p archmage-macros --dry-run
+        run: cargo publish -p archmage-macros
 
-      # - name: Wait for archmage-macros index update
-      #   run: |
-      #     VERSION="${{ needs.check-tags.outputs.version }}"
-      #     echo "Waiting for archmage-macros $VERSION to appear in index..."
-      #     for i in $(seq 1 30); do
-      #       if cargo search archmage-macros 2>/dev/null | grep -q "\"$VERSION\""; then
-      #         echo "✓ archmage-macros $VERSION found in index"
-      #         break
-      #       fi
-      #       echo "  Attempt $i/30 — not yet, waiting 10s..."
-      #       sleep 10
-      #     done
+      - name: Wait for archmage-macros index update
+        run: |
+          VERSION="${{ needs.check-tags.outputs.version }}"
+          echo "Waiting for archmage-macros $VERSION to appear in index..."
+          for i in $(seq 1 30); do
+            if cargo search archmage-macros 2>/dev/null | grep -q "\"$VERSION\""; then
+              echo "✓ archmage-macros $VERSION found in index"
+              exit 0
+            fi
+            echo "  Attempt $i/30 — not yet, waiting 10s..."
+            sleep 10
+          done
+          echo "::error::Timed out waiting for archmage-macros $VERSION in index"
+          exit 1
 
       - name: Publish archmage
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p archmage --dry-run
+        run: cargo publish -p archmage
 
-      # - name: Wait for archmage index update
-      #   run: |
-      #     VERSION="${{ needs.check-tags.outputs.version }}"
-      #     echo "Waiting for archmage $VERSION to appear in index..."
-      #     for i in $(seq 1 30); do
-      #       if cargo search archmage 2>/dev/null | grep -q "\"$VERSION\""; then
-      #         echo "✓ archmage $VERSION found in index"
-      #         break
-      #       fi
-      #       echo "  Attempt $i/30 — not yet, waiting 10s..."
-      #       sleep 10
-      #     done
+      - name: Wait for archmage index update
+        run: |
+          VERSION="${{ needs.check-tags.outputs.version }}"
+          echo "Waiting for archmage $VERSION to appear in index..."
+          for i in $(seq 1 30); do
+            if cargo search archmage 2>/dev/null | grep -q "\"$VERSION\""; then
+              echo "✓ archmage $VERSION found in index"
+              exit 0
+            fi
+            echo "  Attempt $i/30 — not yet, waiting 10s..."
+            sleep 10
+          done
+          echo "::error::Timed out waiting for archmage $VERSION in index"
+          exit 1
 
       - name: Publish magetypes
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p magetypes --dry-run
+        run: cargo publish -p magetypes
