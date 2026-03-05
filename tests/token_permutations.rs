@@ -70,32 +70,30 @@ fn disabled_tokens_fail_summon() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn tokens_reenabled_between_permutations() {
-    let v2_available = archmage::X64V2Token::summon().is_some();
-    let v3_available = archmage::X64V3Token::summon().is_some();
+    // Capture availability inside the "all enabled" permutation (mutex held,
+    // all tokens reset) rather than outside, where a parallel test may have
+    // tokens disabled — making the captured value stale.
+    let mut v2_all_enabled = false;
+    let mut v3_all_enabled = false;
 
     let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
         if perm.disabled.is_empty() {
-            // In the "all enabled" permutation, tokens should match initial state.
-            // (This permutation might not run first, but tokens are re-enabled
-            // between permutations, so it should still match.)
-            if v2_available {
-                assert!(
-                    archmage::X64V2Token::summon().is_some(),
-                    "V2 should be available in 'all enabled' permutation"
-                );
-            }
-            if v3_available {
-                assert!(
-                    archmage::X64V3Token::summon().is_some(),
-                    "V3 should be available in 'all enabled' permutation"
-                );
-            }
+            v2_all_enabled = archmage::X64V2Token::summon().is_some();
+            v3_all_enabled = archmage::X64V3Token::summon().is_some();
         }
     });
 
-    // After all permutations, tokens should be back to normal
-    assert_eq!(archmage::X64V2Token::summon().is_some(), v2_available);
-    assert_eq!(archmage::X64V3Token::summon().is_some(), v3_available);
+    // After all permutations, tokens should be back to "all enabled" state
+    assert_eq!(
+        archmage::X64V2Token::summon().is_some(),
+        v2_all_enabled,
+        "V2 should be re-enabled after permutations"
+    );
+    assert_eq!(
+        archmage::X64V3Token::summon().is_some(),
+        v3_all_enabled,
+        "V3 should be re-enabled after permutations"
+    );
     assert!(report.permutations_run >= 1);
 }
 
