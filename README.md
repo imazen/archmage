@@ -209,7 +209,7 @@ The `_token: SimdToken` parameter is a placeholder — you don't use it in the b
 
 Explicit tiers: `#[autoversion(v3, neon)]`. `scalar` is always implicit.
 
-For methods with `self`: `#[autoversion(_self = MyType)]` and use `_self` instead of `self` in the body. Trait methods use the delegation pattern — see the [API docs](https://docs.rs/archmage/latest/archmage/attr.autoversion.html).
+For methods with `self`: `#[autoversion(_self = MyType)]` and use `_self` instead of `self` in the body. Trait methods use the delegation pattern. See the [full parameter reference](https://imazen.github.io/archmage/archmage/dispatch/autoversion/) or the [API docs](https://docs.rs/archmage/latest/archmage/attr.autoversion.html).
 
 **When to use which:**
 
