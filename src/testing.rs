@@ -7,11 +7,9 @@
 //!
 //! Token disabling is process-wide, so a mutex serializes all permutation
 //! runs and manual disable/enable calls. Use [`lock_token_testing`] when
-//! calling [`dangerously_disable_token_process_wide`] directly, or when
+//! calling `dangerously_disable_token_process_wide` directly, or when
 //! you need to observe stable `summon()` results alongside parallel
 //! permutation tests.
-//!
-//! [`dangerously_disable_token_process_wide`]: crate::SimdToken::dangerously_disable_token_process_wide
 //!
 //! # Example
 //!
@@ -54,7 +52,7 @@ static OWNER_THREAD: Mutex<Option<std::thread::ThreadId>> = Mutex::new(None);
 /// manipulate token disable state via [`for_each_token_permutation`] or
 /// another [`lock_token_testing`] call.
 ///
-/// Use this when you need to call [`dangerously_disable_token_process_wide`]
+/// Use this when you need to call `dangerously_disable_token_process_wide`
 /// manually, or when you need to observe stable token state (via `summon()`)
 /// alongside permutation tests running in parallel.
 ///
@@ -74,8 +72,6 @@ static OWNER_THREAD: Mutex<Option<std::thread::ThreadId>> = Mutex::new(None);
 ///     assert_eq!(baseline, fallback);
 /// }
 /// ```
-///
-/// [`dangerously_disable_token_process_wide`]: crate::SimdToken::dangerously_disable_token_process_wide
 pub struct TokenTestGuard {
     _inner: MutexGuard<'static, ()>,
 }

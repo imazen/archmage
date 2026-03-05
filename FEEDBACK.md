@@ -2,6 +2,7 @@
 
 ## 2026-03-04
 
+- User reported broken CI docs build (broken doc links in testing.rs). Also requested adding doc build check to `just ci` to prevent publishing without testing docs.
 - User requested updating all remaining `safe_unaligned_simd` references in docs/ markdown files to reflect the new combined intrinsics module (`archmage::intrinsics::{arch}`) and `import_intrinsics` pattern
 
 ## 2026-03-02

@@ -247,6 +247,10 @@ verify-asm-update:
 # Documentation
 # ============================================================================
 
+# Check rustdoc builds cleanly (catches broken doc links)
+doc-check:
+    RUSTDOCFLAGS="-Dwarnings" cargo doc --features "std macros avx512" --no-deps
+
 # Build the documentation site (Zola)
 docs:
     cd docs/site && zola build -o ../../target/site

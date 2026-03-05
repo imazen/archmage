@@ -2031,13 +2031,15 @@ fn check_api_parity(strict: bool) -> Result<()> {
 /// 4. Validate summon() feature checks
 /// 5. Check API parity (strict - fails on any issues)
 /// 6. Intrinsic soundness verification
-/// 7. Run clippy
-/// 8. Run tests
-/// 9. Check formatting
-/// 10. Miri (UB detection)
-/// 11. ARM64 cross-compilation + tests (requires cross + Docker)
-/// 12. WASM cross-compilation + tests (requires wasmtime)
-/// 13. ARM64 clippy
+/// 7. Run clippy (with avx512)
+/// 8. Run clippy (default features)
+/// 9. Run tests
+/// 10. Check formatting
+/// 11. Build documentation (catches broken doc links, -Dwarnings)
+/// 12. Miri (UB detection)
+/// 13. ARM64 cross-compilation + tests (requires cross + Docker)
+/// 14. WASM cross-compilation + tests (requires wasmtime)
+/// 15. ARM64 clippy
 fn run_ci() -> Result<()> {
     println!("╔══════════════════════════════════════════════════════════════════╗");
     println!("║                    ARCHMAGE CI CHECK                             ║");
@@ -2045,7 +2047,7 @@ fn run_ci() -> Result<()> {
     println!("╚══════════════════════════════════════════════════════════════════╝\n");
 
     // Step 1: Generate all code
-    println!("┌─ Step 1/14: Regenerating code ─────────────────────────────────────┐");
+    println!("┌─ Step 1/15: Regenerating code ─────────────────────────────────────┐");
     generate_all()?;
     println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
 
@@ -2063,7 +2065,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Formatting complete ──────────────────────────────────────────────┘\n");
 
     // Step 2: Check for clean worktree
-    println!("┌─ Step 2/14: Checking for uncommitted changes ──────────────────────┐");
+    println!("┌─ Step 2/15: Checking for uncommitted changes ──────────────────────┐");
     let status = std::process::Command::new("git")
         .args(["status", "--porcelain"])
         .output()
@@ -2082,27 +2084,27 @@ fn run_ci() -> Result<()> {
     println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
 
     // Step 3-4: Validation (already done in generate_all, but let's be explicit)
-    println!("┌─ Step 3/14: Validating magetypes safety ────────────────────────────┐");
+    println!("┌─ Step 3/15: Validating magetypes safety ────────────────────────────┐");
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
     validate_magetypes_with_registry(&reg)?;
     println!("└─ Magetypes validation passed ──────────────────────────────────────┘\n");
 
-    println!("┌─ Step 4/14: Validating summon() features ──────────────────────────┐");
+    println!("┌─ Step 4/15: Validating summon() features ──────────────────────────┐");
     validate_summon(&reg)?;
     println!("└─ summon() validation passed ──────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
-    println!("┌─ Step 5/14: Checking API parity (strict) ──────────────────────────┐");
+    println!("┌─ Step 5/15: Checking API parity (strict) ──────────────────────────┐");
     check_api_parity(true)?;
     println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
 
     // Step 6: Soundness verification
-    println!("┌─ Step 6/14: Verifying intrinsic soundness ─────────────────────────┐");
+    println!("┌─ Step 6/15: Verifying intrinsic soundness ─────────────────────────┐");
     verify_intrinsic_soundness()?;
     println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
 
     // Step 7: Clippy
-    println!("┌─ Step 7/14: Running clippy ────────────────────────────────────────┐");
+    println!("┌─ Step 7/15: Running clippy ────────────────────────────────────────┐");
     let clippy = std::process::Command::new("cargo")
         .args([
             "clippy",
@@ -2121,7 +2123,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Clippy check passed ──────────────────────────────────────────────┘\n");
 
     // Step 8: Clippy with default features (catches warnings hidden by avx512)
-    println!("┌─ Step 8/14: Running clippy (default features) ─────────────────────┐");
+    println!("┌─ Step 8/15: Running clippy (default features) ─────────────────────┐");
     let clippy_default = std::process::Command::new("cargo")
         .args(["clippy", "-p", "magetypes", "--", "-D", "warnings"])
         .status()
@@ -2133,7 +2135,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Clippy check passed (default features) ───────────────────────────┘\n");
 
     // Step 9: Tests
-    println!("┌─ Step 9/14: Running tests ─────────────────────────────────────────┐");
+    println!("┌─ Step 9/15: Running tests ─────────────────────────────────────────┐");
     let tests = std::process::Command::new("cargo")
         .args(["test", "--features", "std macros avx512"])
         .status()
@@ -2144,7 +2146,7 @@ fn run_ci() -> Result<()> {
     println!("└─ All tests passed ─────────────────────────────────────────────────┘\n");
 
     // Step 9: Format check
-    println!("┌─ Step 10/14: Checking code formatting ──────────────────────────────┐");
+    println!("┌─ Step 10/15: Checking code formatting ──────────────────────────────┐");
     let fmt = std::process::Command::new("cargo")
         .args(["fmt", "--", "--check"])
         .status()
@@ -2155,8 +2157,21 @@ fn run_ci() -> Result<()> {
     println!("  ✓ Code is properly formatted");
     println!("└─ Format check passed ──────────────────────────────────────────────┘\n");
 
-    // Step 10: Miri testing (UB detection)
-    println!("┌─ Step 11/14: Running Miri (UB detection) ──────────────────────────┐");
+    // Step 11: Documentation build (catches broken doc links)
+    println!("┌─ Step 11/15: Building documentation ────────────────────────────────┐");
+    let doc = std::process::Command::new("cargo")
+        .args(["doc", "--features", "std macros avx512", "--no-deps"])
+        .env("RUSTDOCFLAGS", "-Dwarnings")
+        .status()
+        .context("Failed to run cargo doc")?;
+    if !doc.success() {
+        bail!("Documentation build failed (broken doc links or rustdoc warnings)");
+    }
+    println!("  ✓ Documentation builds cleanly");
+    println!("└─ Documentation check passed ─────────────────────────────────────────┘\n");
+
+    // Step 12: Miri testing (UB detection)
+    println!("┌─ Step 12/15: Running Miri (UB detection) ──────────────────────────┐");
     // Check if Miri is available
     let miri_available = std::process::Command::new("cargo")
         .args(["+nightly", "miri", "--version"])
@@ -2187,8 +2202,8 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
 
-    // Step 11: ARM64 cross-compilation + tests
-    println!("┌─ Step 12/14: ARM64 cross-compilation + tests ───────────────────┐");
+    // Step 13: ARM64 cross-compilation + tests
+    println!("┌─ Step 13/15: ARM64 cross-compilation + tests ───────────────────┐");
     let cross_ok = std::process::Command::new("cross")
         .arg("--version")
         .output()
@@ -2230,8 +2245,8 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ ARM64 cross-compilation complete ───────────────────────────────┘\n");
 
-    // Step 12: WASM cross-compilation + tests
-    println!("┌─ Step 13/14: WASM cross-compilation + tests ───────────────────┐");
+    // Step 14: WASM cross-compilation + tests
+    println!("┌─ Step 14/15: WASM cross-compilation + tests ───────────────────┐");
     let wasmtime_ok = std::process::Command::new("wasmtime")
         .arg("--version")
         .output()
@@ -2275,8 +2290,8 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ WASM cross-compilation complete ───────────────────────────────┘\n");
 
-    // Step 13: ARM64 clippy
-    println!("┌─ Step 14/14: ARM64 clippy ─────────────────────────────────────┐");
+    // Step 15: ARM64 clippy
+    println!("┌─ Step 15/15: ARM64 clippy ─────────────────────────────────────┐");
     if cross_ok && docker_ok {
         let arm_clippy = std::process::Command::new("cargo")
             .args([
