@@ -4,10 +4,12 @@
 
 use super::F32x4Backend;
 use super::F32x8Backend;
+use super::F32x16Backend;
 use super::F64x2Backend;
 use super::F64x4Backend;
 use super::I32x4Backend;
 use super::I32x8Backend;
+use super::I32x16Backend;
 use super::I64x2Backend;
 use super::I64x4Backend;
 use super::U32x4Backend;
@@ -53,6 +55,28 @@ pub trait F32x8Convert: F32x8Backend + I32x8Backend + SimdToken + Sealed + Copy 
 
     /// Convert i32x8 to f32x8.
     fn convert_i32_to_f32(a: <Self as I32x8Backend>::Repr) -> <Self as F32x8Backend>::Repr;
+}
+
+/// Conversions between f32x16 and i32x16 representations.
+///
+/// Requires both `F32x16Backend` and `I32x16Backend` to be implemented.
+pub trait F32x16Convert:
+    F32x16Backend + I32x16Backend + SimdToken + Sealed + Copy + 'static
+{
+    /// Bitcast f32x16 to i32x16 (reinterpret bits, no conversion).
+    fn bitcast_f32_to_i32(a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
+
+    /// Bitcast i32x16 to f32x16 (reinterpret bits, no conversion).
+    fn bitcast_i32_to_f32(a: <Self as I32x16Backend>::Repr) -> <Self as F32x16Backend>::Repr;
+
+    /// Convert f32x16 to i32x16 with truncation toward zero.
+    fn convert_f32_to_i32(a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
+
+    /// Convert f32x16 to i32x16 with rounding to nearest.
+    fn convert_f32_to_i32_round(a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
+
+    /// Convert i32x16 to f32x16.
+    fn convert_i32_to_f32(a: <Self as I32x16Backend>::Repr) -> <Self as F32x16Backend>::Repr;
 }
 
 /// Bitcast conversions between u32x4 and i32x4 representations.

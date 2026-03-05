@@ -4010,6 +4010,34 @@ impl F32x8Convert for archmage::X64V3Token {
 }
 
 #[cfg(target_arch = "x86_64")]
+impl F32x16Convert for archmage::X64V3Token {
+    #[inline(always)]
+    fn bitcast_f32_to_i32(a: [__m256; 2]) -> [__m256i; 2] {
+        unsafe { [_mm256_castps_si256(a[0]), _mm256_castps_si256(a[1])] }
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_f32(a: [__m256i; 2]) -> [__m256; 2] {
+        unsafe { [_mm256_castsi256_ps(a[0]), _mm256_castsi256_ps(a[1])] }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32(a: [__m256; 2]) -> [__m256i; 2] {
+        unsafe { [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])] }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_round(a: [__m256; 2]) -> [__m256i; 2] {
+        unsafe { [_mm256_cvtps_epi32(a[0]), _mm256_cvtps_epi32(a[1])] }
+    }
+
+    #[inline(always)]
+    fn convert_i32_to_f32(a: [__m256i; 2]) -> [__m256; 2] {
+        unsafe { [_mm256_cvtepi32_ps(a[0]), _mm256_cvtepi32_ps(a[1])] }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
 impl U32x4Bitcast for archmage::X64V3Token {
     #[inline(always)]
     fn bitcast_u32_to_i32(a: __m128i) -> __m128i {

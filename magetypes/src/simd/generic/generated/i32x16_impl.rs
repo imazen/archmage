@@ -451,6 +451,38 @@ impl<T: I32x16Backend> core::fmt::Debug for i32x16<T> {
 }
 
 // ============================================================================
+// Cross-type conversions (available when T implements conversion traits)
+// ============================================================================
+
+impl<T: crate::simd::backends::F32x16Convert> i32x16<T> {
+    /// Bitcast to f32x16 (reinterpret bits, no conversion).
+    #[inline(always)]
+    pub fn bitcast_to_f32(self) -> super::f32x16<T> {
+        super::f32x16::from_repr_unchecked(T::bitcast_i32_to_f32(self.0))
+    }
+
+    /// Convert to f32x16 (numeric conversion).
+    #[inline(always)]
+    pub fn to_f32(self) -> super::f32x16<T> {
+        super::f32x16::from_repr_unchecked(T::convert_i32_to_f32(self.0))
+    }
+
+    // ====== Backward-compatible aliases (old generated API names) ======
+
+    /// Alias for [`bitcast_to_f32`](Self::bitcast_to_f32).
+    #[inline(always)]
+    pub fn bitcast_f32x16(self) -> super::f32x16<T> {
+        self.bitcast_to_f32()
+    }
+
+    /// Alias for [`to_f32`](Self::to_f32).
+    #[inline(always)]
+    pub fn to_f32x16(self) -> super::f32x16<T> {
+        self.to_f32()
+    }
+}
+
+// ============================================================================
 // Platform-specific implementation info
 // ============================================================================
 

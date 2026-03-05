@@ -64,3 +64,4 @@
 - 2026-02-26: Added #[inline(always)] to all generic function definitions in documentation files under docs/site/content/
 - 2026-02-28: User requested CI test for testable_dispatch + CompileTimePolicy::Fail. Fixed V1 codegen to respect testable_dispatch (compiled_with/summon were unconditional), added test + CI job + justfile target.
 2026-03-01: User requested research on unstable Rust target features across architectures
+- User reported f32x16::pow_midp() missing from generic layer (2026-03-04)

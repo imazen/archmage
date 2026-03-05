@@ -853,7 +853,7 @@ fn generate_backends_mod(
     code.push_str("pub use popcnt::*;\n\n");
 
     // Conversion and bitcast traits (float/i32/u32/i64)
-    code.push_str("mod convert;\npub use convert::{F32x4Convert, F32x8Convert, U32x4Bitcast, U32x8Bitcast, I64x2Bitcast, I64x4Bitcast};\n\n");
+    code.push_str("mod convert;\npub use convert::{F32x4Convert, F32x8Convert, F32x16Convert, U32x4Bitcast, U32x8Bitcast, I64x2Bitcast, I64x4Bitcast};\n\n");
 
     // Additional conversion traits (i8↔u8, i16↔u16, u64↔i64 bitcasts)
     code.push_str("mod convert_int;\npub use convert_int::{I8x16Bitcast, I8x32Bitcast, I16x8Bitcast, I16x16Bitcast, U64x2Bitcast, U64x4Bitcast};\n\n");
@@ -971,7 +971,52 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     );
     code.push_str(&generate_popcnt_impls(w512_types));
 
+    // F32x16Convert impls for V4 and V4x (native 512-bit)
+    code.push_str(
+        "\n// ============================================================================\n",
+    );
+    code.push_str("// F32x16Convert — native AVX-512 conversions\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
+    for token in ["X64V4Token", "X64V4xToken"] {
+        code.push_str(&generate_x86_v4_f32x16_convert(token));
+    }
+
     code
+}
+
+fn generate_x86_v4_f32x16_convert(token: &str) -> String {
+    formatdoc! {r#"
+        #[cfg(target_arch = "x86_64")]
+        impl F32x16Convert for archmage::{token} {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: __m512) -> __m512i {{
+                unsafe {{ _mm512_castps_si512(a) }}
+            }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: __m512i) -> __m512 {{
+                unsafe {{ _mm512_castsi512_ps(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: __m512) -> __m512i {{
+                unsafe {{ _mm512_cvttps_epi32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: __m512) -> __m512i {{
+                unsafe {{ _mm512_cvtps_epi32(a) }}
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: __m512i) -> __m512 {{
+                unsafe {{ _mm512_cvtepi32_ps(a) }}
+            }}
+        }}
+
+    "#}
 }
 
 // ============================================================================
@@ -3083,10 +3128,12 @@ fn generate_convert_traits() -> String {
         use super::sealed::Sealed;
         use super::F32x4Backend;
         use super::F32x8Backend;
+        use super::F32x16Backend;
         use super::F64x2Backend;
         use super::F64x4Backend;
         use super::I32x4Backend;
         use super::I32x8Backend;
+        use super::I32x16Backend;
         use super::I64x2Backend;
         use super::I64x4Backend;
         use super::U32x4Backend;
@@ -3131,6 +3178,26 @@ fn generate_convert_traits() -> String {
 
             /// Convert i32x8 to f32x8.
             fn convert_i32_to_f32(a: <Self as I32x8Backend>::Repr) -> <Self as F32x8Backend>::Repr;
+        }}
+
+        /// Conversions between f32x16 and i32x16 representations.
+        ///
+        /// Requires both `F32x16Backend` and `I32x16Backend` to be implemented.
+        pub trait F32x16Convert: F32x16Backend + I32x16Backend + SimdToken + Sealed + Copy + 'static {{
+            /// Bitcast f32x16 to i32x16 (reinterpret bits, no conversion).
+            fn bitcast_f32_to_i32(a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
+
+            /// Bitcast i32x16 to f32x16 (reinterpret bits, no conversion).
+            fn bitcast_i32_to_f32(a: <Self as I32x16Backend>::Repr) -> <Self as F32x16Backend>::Repr;
+
+            /// Convert f32x16 to i32x16 with truncation toward zero.
+            fn convert_f32_to_i32(a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
+
+            /// Convert f32x16 to i32x16 with rounding to nearest.
+            fn convert_f32_to_i32_round(a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
+
+            /// Convert i32x16 to f32x16.
+            fn convert_i32_to_f32(a: <Self as I32x16Backend>::Repr) -> <Self as F32x16Backend>::Repr;
         }}
 
         /// Bitcast conversions between u32x4 and i32x4 representations.
@@ -3485,6 +3552,34 @@ fn generate_x86_convert_impls(token: &str) -> String {
             #[inline(always)]
             fn convert_i32_to_f32(a: __m256i) -> __m256 {{
                 unsafe {{ _mm256_cvtepi32_ps(a) }}
+            }}
+        }}
+
+        #[cfg(target_arch = "x86_64")]
+        impl F32x16Convert for archmage::{token} {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: [__m256; 2]) -> [__m256i; 2] {{
+                unsafe {{ [_mm256_castps_si256(a[0]), _mm256_castps_si256(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: [__m256i; 2]) -> [__m256; 2] {{
+                unsafe {{ [_mm256_castsi256_ps(a[0]), _mm256_castsi256_ps(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: [__m256; 2]) -> [__m256i; 2] {{
+                unsafe {{ [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: [__m256; 2]) -> [__m256i; 2] {{
+                unsafe {{ [_mm256_cvtps_epi32(a[0]), _mm256_cvtps_epi32(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: [__m256i; 2]) -> [__m256; 2] {{
+                unsafe {{ [_mm256_cvtepi32_ps(a[0]), _mm256_cvtepi32_ps(a[1])] }}
             }}
         }}
 
@@ -3884,7 +3979,7 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
 fn generate_scalar_convert_impls() -> String {
     let mut code = String::new();
 
-    for lanes in [4, 8] {
+    for lanes in [4, 8, 16] {
         let f_array = format!("[f32; {lanes}]");
         let i_array = format!("[i32; {lanes}]");
         let trait_name = format!("F32x{lanes}Convert");
@@ -4488,6 +4583,34 @@ fn generate_neon_convert_impls() -> String {
         }}
 
         #[cfg(target_arch = "aarch64")]
+        impl F32x16Convert for archmage::NeonToken {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
+                unsafe {{ [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1]), vreinterpretq_s32_f32(a[2]), vreinterpretq_s32_f32(a[3])] }}
+            }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: [int32x4_t; 4]) -> [float32x4_t; 4] {{
+                unsafe {{ [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1]), vreinterpretq_f32_s32(a[2]), vreinterpretq_f32_s32(a[3])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
+                unsafe {{ [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1]), vcvtq_s32_f32(a[2]), vcvtq_s32_f32(a[3])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
+                unsafe {{ [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1]), vcvtnq_s32_f32(a[2]), vcvtnq_s32_f32(a[3])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: [int32x4_t; 4]) -> [float32x4_t; 4] {{
+                unsafe {{ [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1]), vcvtq_f32_s32(a[2]), vcvtq_f32_s32(a[3])] }}
+            }}
+        }}
+
+        #[cfg(target_arch = "aarch64")]
         impl U32x4Bitcast for archmage::NeonToken {{
             #[inline(always)]
             fn bitcast_u32_to_i32(a: uint32x4_t) -> int32x4_t {{
@@ -4907,6 +5030,35 @@ fn generate_wasm_convert_impls() -> String {
             #[inline(always)]
             fn convert_i32_to_f32(a: [v128; 2]) -> [v128; 2] {{
                 [f32x4_convert_i32x4(a[0]), f32x4_convert_i32x4(a[1])]
+            }}
+        }}
+
+        #[cfg(target_arch = "wasm32")]
+        impl F32x16Convert for archmage::Wasm128Token {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(a: [v128; 4]) -> [v128; 4] {{ a }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(a: [v128; 4]) -> [v128; 4] {{ a }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(a: [v128; 4]) -> [v128; 4] {{
+                [i32x4_trunc_sat_f32x4(a[0]), i32x4_trunc_sat_f32x4(a[1]), i32x4_trunc_sat_f32x4(a[2]), i32x4_trunc_sat_f32x4(a[3])]
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(a: [v128; 4]) -> [v128; 4] {{
+                [
+                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[0])),
+                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[1])),
+                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[2])),
+                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[3])),
+                ]
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(a: [v128; 4]) -> [v128; 4] {{
+                [f32x4_convert_i32x4(a[0]), f32x4_convert_i32x4(a[1]), f32x4_convert_i32x4(a[2]), f32x4_convert_i32x4(a[3])]
             }}
         }}
 

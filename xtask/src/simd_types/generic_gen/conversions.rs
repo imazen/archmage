@@ -8,13 +8,35 @@ use super::{elem_prefix, lane_count, uppercase_first, x86_int_type_for_name};
 // f32 <-> i32 conversions (full numeric + bitcast)
 // ============================================================================
 
-/// Generate f32->i32 conversions on the float type (f32x4 or f32x8).
+/// Generate f32->i32 conversions on the float type (f32x4, f32x8, or f32x16).
 ///
 /// Generates: bitcast_to_i32, from_i32_bitcast, to_i32, to_i32_round, from_i32,
-/// plus backward-compatible aliases.
+/// plus backward-compatible aliases. Ref/mut bitcast aliases are only generated
+/// for types that have block_ops (f32x4, f32x8).
 pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> String {
     let lanes = lane_count(src);
     let int_type = format!("i32x{lanes}");
+
+    // block_ops ref/mut aliases only exist for types with block_ops files
+    let has_block_ops = matches!(src, "f32x4" | "f32x8");
+    let ref_aliases = if has_block_ops {
+        formatdoc! {r#"
+
+            /// Alias for [`bitcast_ref_i32`](Self::bitcast_ref_i32) (from block_ops).
+            #[inline(always)]
+            pub fn bitcast_ref_{int_type}(&self) -> &super::{int_type}<T> {{
+                self.bitcast_ref_i32()
+            }}
+
+            /// Alias for [`bitcast_mut_i32`](Self::bitcast_mut_i32) (from block_ops).
+            #[inline(always)]
+            pub fn bitcast_mut_{int_type}(&mut self) -> &mut super::{int_type}<T> {{
+                self.bitcast_mut_i32()
+            }}
+        "#}
+    } else {
+        String::new()
+    };
 
     formatdoc! {r#"
         // ============================================================================
@@ -77,18 +99,7 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
             pub fn from_{int_type}(token: T, v: super::{int_type}<T>) -> Self {{
                 Self::from_i32(token, v)
             }}
-
-            /// Alias for [`bitcast_ref_i32`](Self::bitcast_ref_i32) (from block_ops).
-            #[inline(always)]
-            pub fn bitcast_ref_{int_type}(&self) -> &super::{int_type}<T> {{
-                self.bitcast_ref_i32()
-            }}
-
-            /// Alias for [`bitcast_mut_i32`](Self::bitcast_mut_i32) (from block_ops).
-            #[inline(always)]
-            pub fn bitcast_mut_{int_type}(&mut self) -> &mut super::{int_type}<T> {{
-                self.bitcast_mut_i32()
-            }}
+            {ref_aliases}
         }}
     "#}
 }

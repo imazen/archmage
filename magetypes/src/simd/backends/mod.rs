@@ -103,7 +103,8 @@ pub use popcnt::*;
 
 mod convert;
 pub use convert::{
-    F32x4Convert, F32x8Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast, U32x8Bitcast,
+    F32x4Convert, F32x8Convert, F32x16Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast,
+    U32x8Bitcast,
 };
 
 mod convert_int;

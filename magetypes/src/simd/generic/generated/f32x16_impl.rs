@@ -507,6 +507,68 @@ impl<T: F32x16Backend> core::fmt::Debug for f32x16<T> {
 }
 
 // ============================================================================
+// Cross-type conversions (available when T implements conversion traits)
+// ============================================================================
+
+impl<T: crate::simd::backends::F32x16Convert> f32x16<T> {
+    /// Bitcast to i32x16 (reinterpret bits, no conversion).
+    #[inline(always)]
+    pub fn bitcast_to_i32(self) -> super::i32x16<T> {
+        super::i32x16::from_repr_unchecked(T::bitcast_f32_to_i32(self.0))
+    }
+
+    /// Create from i32x16 via bitcast (reinterpret bits, no conversion).
+    #[inline(always)]
+    pub fn from_i32_bitcast(_: T, v: super::i32x16<T>) -> Self {
+        Self(T::bitcast_i32_to_f32(v.into_repr()), PhantomData)
+    }
+
+    /// Convert to i32x16 with truncation toward zero.
+    #[inline(always)]
+    pub fn to_i32(self) -> super::i32x16<T> {
+        super::i32x16::from_repr_unchecked(T::convert_f32_to_i32(self.0))
+    }
+
+    /// Convert to i32x16 with rounding to nearest.
+    #[inline(always)]
+    pub fn to_i32_round(self) -> super::i32x16<T> {
+        super::i32x16::from_repr_unchecked(T::convert_f32_to_i32_round(self.0))
+    }
+
+    /// Create from i32x16 via numeric conversion.
+    #[inline(always)]
+    pub fn from_i32(_: T, v: super::i32x16<T>) -> Self {
+        Self(T::convert_i32_to_f32(v.into_repr()), PhantomData)
+    }
+
+    // ====== Backward-compatible aliases (old generated API names) ======
+
+    /// Alias for [`bitcast_to_i32`](Self::bitcast_to_i32).
+    #[inline(always)]
+    pub fn bitcast_i32x16(self) -> super::i32x16<T> {
+        self.bitcast_to_i32()
+    }
+
+    /// Alias for [`to_i32`](Self::to_i32).
+    #[inline(always)]
+    pub fn to_i32x16(self) -> super::i32x16<T> {
+        self.to_i32()
+    }
+
+    /// Alias for [`to_i32_round`](Self::to_i32_round).
+    #[inline(always)]
+    pub fn to_i32x16_round(self) -> super::i32x16<T> {
+        self.to_i32_round()
+    }
+
+    /// Alias for [`from_i32`](Self::from_i32).
+    #[inline(always)]
+    pub fn from_i32x16(token: T, v: super::i32x16<T>) -> Self {
+        Self::from_i32(token, v)
+    }
+}
+
+// ============================================================================
 // Platform-specific implementation info
 // ============================================================================
 

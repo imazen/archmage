@@ -8458,6 +8458,118 @@ impl F32x8Convert for archmage::ScalarToken {
     }
 }
 
+impl F32x16Convert for archmage::ScalarToken {
+    #[inline(always)]
+    fn bitcast_f32_to_i32(a: [f32; 16]) -> [i32; 16] {
+        [
+            a[0].to_bits() as i32,
+            a[1].to_bits() as i32,
+            a[2].to_bits() as i32,
+            a[3].to_bits() as i32,
+            a[4].to_bits() as i32,
+            a[5].to_bits() as i32,
+            a[6].to_bits() as i32,
+            a[7].to_bits() as i32,
+            a[8].to_bits() as i32,
+            a[9].to_bits() as i32,
+            a[10].to_bits() as i32,
+            a[11].to_bits() as i32,
+            a[12].to_bits() as i32,
+            a[13].to_bits() as i32,
+            a[14].to_bits() as i32,
+            a[15].to_bits() as i32,
+        ]
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_f32(a: [i32; 16]) -> [f32; 16] {
+        [
+            f32::from_bits(a[0] as u32),
+            f32::from_bits(a[1] as u32),
+            f32::from_bits(a[2] as u32),
+            f32::from_bits(a[3] as u32),
+            f32::from_bits(a[4] as u32),
+            f32::from_bits(a[5] as u32),
+            f32::from_bits(a[6] as u32),
+            f32::from_bits(a[7] as u32),
+            f32::from_bits(a[8] as u32),
+            f32::from_bits(a[9] as u32),
+            f32::from_bits(a[10] as u32),
+            f32::from_bits(a[11] as u32),
+            f32::from_bits(a[12] as u32),
+            f32::from_bits(a[13] as u32),
+            f32::from_bits(a[14] as u32),
+            f32::from_bits(a[15] as u32),
+        ]
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32(a: [f32; 16]) -> [i32; 16] {
+        [
+            a[0] as i32,
+            a[1] as i32,
+            a[2] as i32,
+            a[3] as i32,
+            a[4] as i32,
+            a[5] as i32,
+            a[6] as i32,
+            a[7] as i32,
+            a[8] as i32,
+            a[9] as i32,
+            a[10] as i32,
+            a[11] as i32,
+            a[12] as i32,
+            a[13] as i32,
+            a[14] as i32,
+            a[15] as i32,
+        ]
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_round(a: [f32; 16]) -> [i32; 16] {
+        [
+            f32_round(a[0]) as i32,
+            f32_round(a[1]) as i32,
+            f32_round(a[2]) as i32,
+            f32_round(a[3]) as i32,
+            f32_round(a[4]) as i32,
+            f32_round(a[5]) as i32,
+            f32_round(a[6]) as i32,
+            f32_round(a[7]) as i32,
+            f32_round(a[8]) as i32,
+            f32_round(a[9]) as i32,
+            f32_round(a[10]) as i32,
+            f32_round(a[11]) as i32,
+            f32_round(a[12]) as i32,
+            f32_round(a[13]) as i32,
+            f32_round(a[14]) as i32,
+            f32_round(a[15]) as i32,
+        ]
+    }
+
+    #[inline(always)]
+    fn convert_i32_to_f32(a: [i32; 16]) -> [f32; 16] {
+        [
+            a[0] as f32,
+            a[1] as f32,
+            a[2] as f32,
+            a[3] as f32,
+            a[4] as f32,
+            a[5] as f32,
+            a[6] as f32,
+            a[7] as f32,
+            a[8] as f32,
+            a[9] as f32,
+            a[10] as f32,
+            a[11] as f32,
+            a[12] as f32,
+            a[13] as f32,
+            a[14] as f32,
+            a[15] as f32,
+        ]
+    }
+}
+
 impl U32x4Bitcast for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_u32_to_i32(a: [u32; 4]) -> [i32; 4] {

@@ -3892,6 +3892,69 @@ impl F32x8Convert for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
+impl F32x16Convert for archmage::NeonToken {
+    #[inline(always)]
+    fn bitcast_f32_to_i32(a: [float32x4_t; 4]) -> [int32x4_t; 4] {
+        unsafe {
+            [
+                vreinterpretq_s32_f32(a[0]),
+                vreinterpretq_s32_f32(a[1]),
+                vreinterpretq_s32_f32(a[2]),
+                vreinterpretq_s32_f32(a[3]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_f32(a: [int32x4_t; 4]) -> [float32x4_t; 4] {
+        unsafe {
+            [
+                vreinterpretq_f32_s32(a[0]),
+                vreinterpretq_f32_s32(a[1]),
+                vreinterpretq_f32_s32(a[2]),
+                vreinterpretq_f32_s32(a[3]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32(a: [float32x4_t; 4]) -> [int32x4_t; 4] {
+        unsafe {
+            [
+                vcvtq_s32_f32(a[0]),
+                vcvtq_s32_f32(a[1]),
+                vcvtq_s32_f32(a[2]),
+                vcvtq_s32_f32(a[3]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_round(a: [float32x4_t; 4]) -> [int32x4_t; 4] {
+        unsafe {
+            [
+                vcvtnq_s32_f32(a[0]),
+                vcvtnq_s32_f32(a[1]),
+                vcvtnq_s32_f32(a[2]),
+                vcvtnq_s32_f32(a[3]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn convert_i32_to_f32(a: [int32x4_t; 4]) -> [float32x4_t; 4] {
+        unsafe {
+            [
+                vcvtq_f32_s32(a[0]),
+                vcvtq_f32_s32(a[1]),
+                vcvtq_f32_s32(a[2]),
+                vcvtq_f32_s32(a[3]),
+            ]
+        }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
 impl U32x4Bitcast for archmage::NeonToken {
     #[inline(always)]
     fn bitcast_u32_to_i32(a: uint32x4_t) -> int32x4_t {

@@ -3252,6 +3252,49 @@ impl F32x8Convert for archmage::Wasm128Token {
 }
 
 #[cfg(target_arch = "wasm32")]
+impl F32x16Convert for archmage::Wasm128Token {
+    #[inline(always)]
+    fn bitcast_f32_to_i32(a: [v128; 4]) -> [v128; 4] {
+        a
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_f32(a: [v128; 4]) -> [v128; 4] {
+        a
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32(a: [v128; 4]) -> [v128; 4] {
+        [
+            i32x4_trunc_sat_f32x4(a[0]),
+            i32x4_trunc_sat_f32x4(a[1]),
+            i32x4_trunc_sat_f32x4(a[2]),
+            i32x4_trunc_sat_f32x4(a[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_round(a: [v128; 4]) -> [v128; 4] {
+        [
+            i32x4_trunc_sat_f32x4(f32x4_nearest(a[0])),
+            i32x4_trunc_sat_f32x4(f32x4_nearest(a[1])),
+            i32x4_trunc_sat_f32x4(f32x4_nearest(a[2])),
+            i32x4_trunc_sat_f32x4(f32x4_nearest(a[3])),
+        ]
+    }
+
+    #[inline(always)]
+    fn convert_i32_to_f32(a: [v128; 4]) -> [v128; 4] {
+        [
+            f32x4_convert_i32x4(a[0]),
+            f32x4_convert_i32x4(a[1]),
+            f32x4_convert_i32x4(a[2]),
+            f32x4_convert_i32x4(a[3]),
+        ]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
 impl U32x4Bitcast for archmage::Wasm128Token {
     #[inline(always)]
     fn bitcast_u32_to_i32(a: v128) -> v128 {

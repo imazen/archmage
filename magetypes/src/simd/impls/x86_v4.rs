@@ -4149,3 +4149,63 @@ impl u64x8PopcntBackend for archmage::X64V4xToken {
         unsafe { _mm512_popcnt_epi64(a) }
     }
 }
+
+// ============================================================================
+// F32x16Convert — native AVX-512 conversions
+// ============================================================================
+
+#[cfg(target_arch = "x86_64")]
+impl F32x16Convert for archmage::X64V4Token {
+    #[inline(always)]
+    fn bitcast_f32_to_i32(a: __m512) -> __m512i {
+        unsafe { _mm512_castps_si512(a) }
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_f32(a: __m512i) -> __m512 {
+        unsafe { _mm512_castsi512_ps(a) }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32(a: __m512) -> __m512i {
+        unsafe { _mm512_cvttps_epi32(a) }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_round(a: __m512) -> __m512i {
+        unsafe { _mm512_cvtps_epi32(a) }
+    }
+
+    #[inline(always)]
+    fn convert_i32_to_f32(a: __m512i) -> __m512 {
+        unsafe { _mm512_cvtepi32_ps(a) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl F32x16Convert for archmage::X64V4xToken {
+    #[inline(always)]
+    fn bitcast_f32_to_i32(a: __m512) -> __m512i {
+        unsafe { _mm512_castps_si512(a) }
+    }
+
+    #[inline(always)]
+    fn bitcast_i32_to_f32(a: __m512i) -> __m512 {
+        unsafe { _mm512_castsi512_ps(a) }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32(a: __m512) -> __m512i {
+        unsafe { _mm512_cvttps_epi32(a) }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_round(a: __m512) -> __m512i {
+        unsafe { _mm512_cvtps_epi32(a) }
+    }
+
+    #[inline(always)]
+    fn convert_i32_to_f32(a: __m512i) -> __m512 {
+        unsafe { _mm512_cvtepi32_ps(a) }
+    }
+}

@@ -466,11 +466,17 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
     // 512-bit section
     code.push_str("\n// 512-bit generic wrapper types\n");
 
-    // W512 mod declarations (alphabetical)
+    // W512 mod declarations (alphabetical, plus transcendentals)
     let mut w512_names: Vec<String> = w512.iter().map(|t| t.name()).collect();
     w512_names.sort();
-    for name in &w512_names {
-        code.push_str(&format!("mod {name}_impl;\n"));
+    let mut w512_mods: Vec<String> = w512_names
+        .iter()
+        .map(|name| format!("{name}_impl"))
+        .collect();
+    w512_mods.push("transcendentals_f32x16".to_string());
+    w512_mods.sort();
+    for mod_name in &w512_mods {
+        code.push_str(&format!("mod {mod_name};\n"));
     }
 
     // W512 pub use declarations (specific order:

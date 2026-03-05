@@ -1,7 +1,7 @@
 //! Generator for `magetypes/src/simd/generic/generated/` — the strategy-pattern wrapper types.
 //!
-//! Generates all 41 files: 30 `*_impl.rs`, 8 `block_ops_*.rs`,
-//! 2 `transcendentals_*.rs`, and 1 `mod.rs`.
+//! Generates all 42 files: 30 `*_impl.rs`, 8 `block_ops_*.rs`,
+//! 3 `transcendentals_*.rs`, and 1 `mod.rs`.
 
 mod block_ops;
 mod conversions;
@@ -226,6 +226,19 @@ pub(crate) fn all_conversions() -> Vec<Conversion> {
             _in_backends: true,
             gen_fn: gen_f32_i32_convert_on_int,
         },
+        // f32x16 <-> i32x16
+        Conversion {
+            src: "f32x16",
+            trait_bound: "F32x16Convert",
+            _in_backends: true,
+            gen_fn: gen_f32_i32_convert_on_float,
+        },
+        Conversion {
+            src: "i32x16",
+            trait_bound: "F32x16Convert",
+            _in_backends: true,
+            gen_fn: gen_f32_i32_convert_on_int,
+        },
         // i8 <-> u8 bitcasts
         Conversion {
             src: "i8x16",
@@ -349,7 +362,7 @@ pub fn generate_generic_files() -> BTreeMap<String, String> {
         files.insert(path, content);
     }
 
-    // Generate 2 transcendentals files
+    // Generate 3 transcendentals files
     files.insert(
         "generic/generated/transcendentals_f32x4.rs".to_string(),
         transcendentals::gen_transcendentals(
@@ -370,6 +383,17 @@ pub fn generate_generic_files() -> BTreeMap<String, String> {
             "F32x8Backend",
             "F32x8Convert",
             "I32x8Backend",
+        ),
+    );
+    files.insert(
+        "generic/generated/transcendentals_f32x16.rs".to_string(),
+        transcendentals::gen_transcendentals(
+            "f32x16",
+            "i32x16",
+            16,
+            "F32x16Backend",
+            "F32x16Convert",
+            "I32x16Backend",
         ),
     );
 

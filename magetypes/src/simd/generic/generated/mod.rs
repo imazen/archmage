@@ -78,6 +78,7 @@ mod i16x32_impl;
 mod i32x16_impl;
 mod i64x8_impl;
 mod i8x64_impl;
+mod transcendentals_f32x16;
 mod u16x32_impl;
 mod u32x16_impl;
 mod u64x8_impl;
