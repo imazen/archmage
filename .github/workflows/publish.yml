@@ -110,8 +110,15 @@ jobs:
       - name: Soundness verification
         run: cargo run -p xtask -- soundness
 
-      - name: Verify archmage-macros packages
-        run: cargo publish -p archmage-macros --dry-run
+      - name: Verify all crates package correctly
+        run: |
+          # archmage-macros has no workspace deps, so full dry-run works
+          cargo publish -p archmage-macros --dry-run
+          # archmage and magetypes depend on unpublished workspace members,
+          # so --dry-run fails on index resolution. Use --no-verify to skip
+          # the build step (already tested above) and just verify packaging.
+          cargo package -p archmage --no-verify
+          cargo package -p magetypes --no-verify
 
   # ==========================================================================
   # Publish crates in dependency order (sequential steps)
@@ -134,18 +141,24 @@ jobs:
       - name: Publish archmage-macros
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p archmage-macros
+        run: |
+          VERSION="${{ needs.check-tags.outputs.version }}"
+          if cargo search archmage-macros 2>/dev/null | grep -q "\"$VERSION\""; then
+            echo "✓ archmage-macros $VERSION already published, skipping"
+          else
+            cargo publish -p archmage-macros
+          fi
 
       - name: Wait for archmage-macros index update
         run: |
           VERSION="${{ needs.check-tags.outputs.version }}"
           echo "Waiting for archmage-macros $VERSION to appear in index..."
-          for i in $(seq 1 30); do
+          for i in $(seq 1 60); do
             if cargo search archmage-macros 2>/dev/null | grep -q "\"$VERSION\""; then
               echo "✓ archmage-macros $VERSION found in index"
               exit 0
             fi
-            echo "  Attempt $i/30 — not yet, waiting 10s..."
+            echo "  Attempt $i/60 — not yet, waiting 10s..."
             sleep 10
           done
           echo "::error::Timed out waiting for archmage-macros $VERSION in index"
@@ -154,18 +167,24 @@ jobs:
       - name: Publish archmage
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p archmage
+        run: |
+          VERSION="${{ needs.check-tags.outputs.version }}"
+          if cargo search archmage 2>/dev/null | grep -q "\"$VERSION\""; then
+            echo "✓ archmage $VERSION already published, skipping"
+          else
+            cargo publish -p archmage
+          fi
 
       - name: Wait for archmage index update
         run: |
           VERSION="${{ needs.check-tags.outputs.version }}"
           echo "Waiting for archmage $VERSION to appear in index..."
-          for i in $(seq 1 30); do
+          for i in $(seq 1 60); do
             if cargo search archmage 2>/dev/null | grep -q "\"$VERSION\""; then
               echo "✓ archmage $VERSION found in index"
               exit 0
             fi
-            echo "  Attempt $i/30 — not yet, waiting 10s..."
+            echo "  Attempt $i/60 — not yet, waiting 10s..."
             sleep 10
           done
           echo "::error::Timed out waiting for archmage $VERSION in index"
@@ -174,4 +193,10 @@ jobs:
       - name: Publish magetypes
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p magetypes
+        run: |
+          VERSION="${{ needs.check-tags.outputs.version }}"
+          if cargo search magetypes 2>/dev/null | grep -q "\"$VERSION\""; then
+            echo "✓ magetypes $VERSION already published, skipping"
+          else
+            cargo publish -p magetypes
+          fi
