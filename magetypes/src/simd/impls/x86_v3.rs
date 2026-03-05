@@ -3215,8 +3215,10 @@ impl I16x16Backend for archmage::X64V3Token {
     fn bitmask(a: __m256i) -> u32 {
         unsafe {
             let shifted = _mm256_srai_epi16::<15>(a);
-            let packed = _mm256_packs_epi16(shifted, shifted);
-            (_mm256_movemask_epi8(packed) & 0xFFFF) as u32
+            let lo = _mm256_castsi256_si128(shifted);
+            let hi = _mm256_extracti128_si256::<1>(shifted);
+            let packed = _mm_packs_epi16(lo, hi);
+            (_mm_movemask_epi8(packed) as u32) & 0xFFFF
         }
     }
 }
@@ -3577,8 +3579,10 @@ impl U16x16Backend for archmage::X64V3Token {
     fn bitmask(a: __m256i) -> u32 {
         unsafe {
             let shifted = _mm256_srai_epi16::<15>(a);
-            let packed = _mm256_packs_epi16(shifted, shifted);
-            (_mm256_movemask_epi8(packed) & 0xFFFF) as u32
+            let lo = _mm256_castsi256_si128(shifted);
+            let hi = _mm256_extracti128_si256::<1>(shifted);
+            let packed = _mm_packs_epi16(lo, hi);
+            (_mm_movemask_epi8(packed) as u32) & 0xFFFF
         }
     }
 }

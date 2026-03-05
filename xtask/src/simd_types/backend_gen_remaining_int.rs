@@ -1020,10 +1020,22 @@ fn generate_x86_int_boolean(ty: &IntVecType) -> String {
             } else {
                 "-1_i32".to_string()
             };
-            let bitmask_mask = if ty.width_bits == 128 {
-                "0xFF"
+            let bitmask_body = if ty.width_bits == 128 {
+                formatdoc! {r#"
+                    let shifted = _mm_srai_epi16::<15>(a);
+                    let packed = _mm_packs_epi16(shifted, shifted);
+                    (_mm_movemask_epi8(packed) & 0xFF) as u32
+                "#}
             } else {
-                "0xFFFF"
+                // 256-bit: _mm256_packs_epi16 interleaves within 128-bit lanes,
+                // so extract halves first, then use 128-bit pack for correct order.
+                formatdoc! {r#"
+                    let shifted = _mm256_srai_epi16::<15>(a);
+                    let lo = _mm256_castsi256_si128(shifted);
+                    let hi = _mm256_extracti128_si256::<1>(shifted);
+                    let packed = _mm_packs_epi16(lo, hi);
+                    (_mm_movemask_epi8(packed) as u32) & 0xFFFF
+                "#}
             };
             formatdoc! {r#"
 
@@ -1042,9 +1054,7 @@ fn generate_x86_int_boolean(ty: &IntVecType) -> String {
             #[inline(always)]
             fn bitmask(a: {inner}) -> u32 {{
                 unsafe {{
-                    let shifted = {p}_srai_epi16::<15>(a);
-                    let packed = {p}_packs_epi16(shifted, shifted);
-                    ({p}_movemask_epi8(packed) & {bitmask_mask}) as u32
+                    {bitmask_body}
                 }}
             }}
             "#}

@@ -564,14 +564,15 @@ fn generate_bitmask_body(ty: &SimdType, prefix: &str) -> String {
                 format!("unsafe {{ {prefix}_movemask_epi8(self.0) as u32 }}")
             }
             ElementType::I16 | ElementType::U16 => {
+                // _mm256_packs_epi16 interleaves within 128-bit lanes,
+                // so extract halves first, then use 128-bit pack for correct order.
                 formatdoc! {"
                     unsafe {{
                     let shifted = _mm256_srai_epi16::<15>(self.0);
-                    let packed = _mm256_packs_epi16(shifted, shifted);
-                    // packs interleaves, need to extract
-                    let lo = _mm256_castsi256_si128(packed);
-                    let hi = _mm256_extracti128_si256::<1>(packed);
-                    ((_mm_movemask_epi8(lo) & 0xFF) | ((_mm_movemask_epi8(hi) & 0xFF) << 8)) as u32
+                    let lo = _mm256_castsi256_si128(shifted);
+                    let hi = _mm256_extracti128_si256::<1>(shifted);
+                    let packed = _mm_packs_epi16(lo, hi);
+                    (_mm_movemask_epi8(packed) as u32) & 0xFFFF
                     }}"
                 }
             }

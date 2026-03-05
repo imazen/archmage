@@ -4075,11 +4075,10 @@ impl i16x16 {
     pub fn bitmask(self) -> u32 {
         unsafe {
             let shifted = _mm256_srai_epi16::<15>(self.0);
-            let packed = _mm256_packs_epi16(shifted, shifted);
-            // packs interleaves, need to extract
-            let lo = _mm256_castsi256_si128(packed);
-            let hi = _mm256_extracti128_si256::<1>(packed);
-            ((_mm_movemask_epi8(lo) & 0xFF) | ((_mm_movemask_epi8(hi) & 0xFF) << 8)) as u32
+            let lo = _mm256_castsi256_si128(shifted);
+            let hi = _mm256_extracti128_si256::<1>(shifted);
+            let packed = _mm_packs_epi16(lo, hi);
+            (_mm_movemask_epi8(packed) as u32) & 0xFFFF
         }
     }
 
@@ -4787,11 +4786,10 @@ impl u16x16 {
     pub fn bitmask(self) -> u32 {
         unsafe {
             let shifted = _mm256_srai_epi16::<15>(self.0);
-            let packed = _mm256_packs_epi16(shifted, shifted);
-            // packs interleaves, need to extract
-            let lo = _mm256_castsi256_si128(packed);
-            let hi = _mm256_extracti128_si256::<1>(packed);
-            ((_mm_movemask_epi8(lo) & 0xFF) | ((_mm_movemask_epi8(hi) & 0xFF) << 8)) as u32
+            let lo = _mm256_castsi256_si128(shifted);
+            let hi = _mm256_extracti128_si256::<1>(shifted);
+            let packed = _mm_packs_epi16(lo, hi);
+            (_mm_movemask_epi8(packed) as u32) & 0xFFFF
         }
     }
 

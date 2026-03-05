@@ -203,7 +203,10 @@ mod into_concrete {
             unsafe { X64CryptoToken::forge_token_dangerously() }
         };
         assert!(token.as_x64_crypto().is_some());
-        assert!(token.as_x64v2().is_none(), "Crypto is not V2 (different type)");
+        assert!(
+            token.as_x64v2().is_none(),
+            "Crypto is not V2 (different type)"
+        );
         assert!(token.as_x64v3().is_none());
         assert!(token.as_neon().is_none());
     }
@@ -216,7 +219,10 @@ mod into_concrete {
             unsafe { X64V3CryptoToken::forge_token_dangerously() }
         };
         assert!(token.as_x64v3_crypto().is_some());
-        assert!(token.as_x64v3().is_none(), "V3Crypto is not V3 (different type)");
+        assert!(
+            token.as_x64v3().is_none(),
+            "V3Crypto is not V3 (different type)"
+        );
         assert!(token.as_x64_crypto().is_none());
         assert!(token.as_neon().is_none());
     }
@@ -229,7 +235,10 @@ mod into_concrete {
             unsafe { Arm64V2Token::forge_token_dangerously() }
         };
         assert!(token.as_arm_v2().is_some());
-        assert!(token.as_neon().is_none(), "Arm64V2 is not Neon (different type)");
+        assert!(
+            token.as_neon().is_none(),
+            "Arm64V2 is not Neon (different type)"
+        );
         assert!(token.as_arm_v3().is_none());
         assert!(token.as_x64v3().is_none());
     }
@@ -242,7 +251,10 @@ mod into_concrete {
             unsafe { Arm64V3Token::forge_token_dangerously() }
         };
         assert!(token.as_arm_v3().is_some());
-        assert!(token.as_arm_v2().is_none(), "Arm64V3 is not Arm64V2 (different type)");
+        assert!(
+            token.as_arm_v2().is_none(),
+            "Arm64V3 is not Arm64V2 (different type)"
+        );
         assert!(token.as_neon().is_none());
         assert!(token.as_x64v3().is_none());
     }
@@ -255,7 +267,10 @@ mod into_concrete {
             unsafe { Wasm128RelaxedToken::forge_token_dangerously() }
         };
         assert!(token.as_wasm128_relaxed().is_some());
-        assert!(token.as_wasm128().is_none(), "Relaxed is not base Wasm128 (different type)");
+        assert!(
+            token.as_wasm128().is_none(),
+            "Relaxed is not base Wasm128 (different type)"
+        );
         assert!(token.as_neon().is_none());
     }
 
@@ -358,7 +373,10 @@ mod x64v1 {
     #[test]
     fn sse2token_is_v1() {
         assert_eq!(Sse2Token::compiled_with(), X64V1Token::compiled_with());
-        assert_eq!(Sse2Token::summon().is_some(), X64V1Token::summon().is_some());
+        assert_eq!(
+            Sse2Token::summon().is_some(),
+            X64V1Token::summon().is_some()
+        );
         assert_eq!(Sse2Token::NAME, X64V1Token::NAME);
     }
 }
@@ -375,14 +393,20 @@ mod crypto_tokens {
     fn crypto_features_contain_aes_and_pclmulqdq() {
         let features = X64CryptoToken::TARGET_FEATURES;
         assert!(features.contains("aes"), "Crypto should have aes");
-        assert!(features.contains("pclmulqdq"), "Crypto should have pclmulqdq");
+        assert!(
+            features.contains("pclmulqdq"),
+            "Crypto should have pclmulqdq"
+        );
     }
 
     #[test]
     fn v3crypto_features_contain_vaes_and_vpclmulqdq() {
         let features = X64V3CryptoToken::TARGET_FEATURES;
         assert!(features.contains("vaes"), "V3Crypto should have vaes");
-        assert!(features.contains("vpclmulqdq"), "V3Crypto should have vpclmulqdq");
+        assert!(
+            features.contains("vpclmulqdq"),
+            "V3Crypto should have vpclmulqdq"
+        );
         // Also contains V3 features
         assert!(features.contains("avx2"), "V3Crypto should have avx2");
         assert!(features.contains("fma"), "V3Crypto should have fma");
@@ -393,7 +417,10 @@ mod crypto_tokens {
         // If V3Crypto is available, V3 and Crypto should also be
         if X64V3CryptoToken::summon().is_some() {
             assert!(X64V3Token::summon().is_some(), "V3Crypto implies V3");
-            assert!(X64CryptoToken::summon().is_some(), "V3Crypto implies Crypto");
+            assert!(
+                X64CryptoToken::summon().is_some(),
+                "V3Crypto implies Crypto"
+            );
         }
         // If Crypto is available, V2 should also be
         if X64CryptoToken::summon().is_some() {
