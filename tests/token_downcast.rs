@@ -356,8 +356,12 @@ mod x64v1 {
 
     #[test]
     fn v1_compiled_with_always_true_on_x86_64() {
-        // SSE2 is the x86_64 baseline — always compile-time guaranteed
+        // SSE2 is the x86_64 baseline — always compile-time guaranteed.
+        // With testable_dispatch, compiled_with() returns None to force runtime detection.
+        #[cfg(not(feature = "testable_dispatch"))]
         assert_eq!(X64V1Token::compiled_with(), Some(true));
+        #[cfg(feature = "testable_dispatch")]
+        assert_eq!(X64V1Token::compiled_with(), None);
     }
 
     #[test]

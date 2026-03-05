@@ -125,6 +125,7 @@ macro_rules! bitmask_tests {
 // ============================================================================
 #[cfg(test)]
 #[cfg(target_arch = "x86_64")]
+#[cfg(not(miri))]
 mod x86_tests {
     use super::*;
     #[allow(unused_imports)]
