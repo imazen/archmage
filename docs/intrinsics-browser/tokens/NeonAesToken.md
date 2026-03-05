@@ -8,7 +8,7 @@ Proof that NEON + AES is available.
 ## Usage
 
 ```rust
-use archmage::{NeonAesToken, SimdToken};
+use archmage::prelude::*;
 
 if let Some(token) = NeonAesToken::summon() {
     process(token, &mut data);

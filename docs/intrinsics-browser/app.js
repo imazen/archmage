@@ -408,7 +408,7 @@
     detailContent.innerHTML = `
       <h2>${escHtml(i.n)}</h2>
       <div class="detail-grid">
-        <div class="detail-field"><span class="detail-label">Module</span><span class="detail-value"><code>${escHtml(archModule)}</code>${hasWrapper ? ` · <code>safe_unaligned_simd::${escHtml(archMod)}</code>` : ''}<br><span style="opacity: 0.6; font-size: 0.6875rem;">auto-imported by <code>#[rite(import_intrinsics)]</code></span></span></div>
+        <div class="detail-field"><span class="detail-label">Module</span><span class="detail-value"><code>${escHtml(archModule)}</code>${hasWrapper ? ` · <code>safe_unaligned_simd::${escHtml(archMod)}</code>` : ''}<br><span style="opacity: 0.6; font-size: 0.6875rem;">or <code>archmage::prelude</code></span></span></div>
         <div class="detail-field"><span class="detail-label">Token</span><span class="detail-value">${escHtml(tokenDisplay)}</span></div>
         <div class="detail-field"><span class="detail-label">Features</span><span class="detail-value">${escHtml(i.f || '—')}</span></div>
         <div class="detail-field"><span class="detail-label">Instruction</span><span class="detail-value">${escHtml(i.ins || '—')}</span></div>
@@ -429,18 +429,18 @@
   function buildUsageExample(i, token) {
     if (!token) return '';
     const tn = token.name;
-    const imports = `use archmage::{${tn}, SimdToken};`;
+    const prelude = 'use archmage::prelude::*;';
     let code;
     if (i.u) {
       const sv = allData.safeVariants[i.n];
       if (sv) {
-        // import_intrinsics shadows this intrinsic with the safe version
-        code = `${imports}\n// ${i.n} is safe via import_intrinsics (safe_unaligned_simd shadows core::arch)\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
+        // Prelude shadows this intrinsic with the safe version
+        code = `${prelude}\n// ${i.n} is safe via prelude (safe_unaligned_simd shadows core::arch)\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
       } else {
-        code = `${imports}\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+        code = `${prelude}\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
       }
     } else {
-      code = `${imports}\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
+      code = `${prelude}\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
     }
     return `<div class="detail-code"><div class="code-label">Usage with archmage</div><pre>${escHtml(code)}</pre></div>`;
   }

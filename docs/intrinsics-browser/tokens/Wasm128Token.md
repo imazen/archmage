@@ -8,7 +8,7 @@ Proof that WASM SIMD128 is available.
 ## Usage
 
 ```rust
-use archmage::{Wasm128Token, SimdToken};
+use archmage::prelude::*;
 
 if let Some(token) = Wasm128Token::summon() {
     process(token, &mut data);

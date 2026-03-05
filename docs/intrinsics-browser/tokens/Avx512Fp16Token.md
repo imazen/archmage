@@ -8,7 +8,7 @@ Proof that AVX-512 FP16 (half-precision) is available.
 ## Usage
 
 ```rust
-use archmage::{Avx512Fp16Token, SimdToken};
+use archmage::prelude::*;
 
 if let Some(token) = Avx512Fp16Token::summon() {
     process(token, &mut data);

@@ -8,7 +8,7 @@ Proof that SSE + SSE2 are available (x86-64-v1 baseline level).
 ## Usage
 
 ```rust
-use archmage::{X64V1Token, SimdToken};
+use archmage::prelude::*;
 
 if let Some(token) = X64V1Token::summon() {
     process(token, &mut data);

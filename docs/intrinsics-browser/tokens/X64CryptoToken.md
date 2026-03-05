@@ -8,7 +8,7 @@ Proof that PCLMULQDQ + AES-NI are available (on top of x86-64-v2).
 ## Usage
 
 ```rust
-use archmage::{X64CryptoToken, SimdToken};
+use archmage::prelude::*;
 
 if let Some(token) = X64CryptoToken::summon() {
     process(token, &mut data);

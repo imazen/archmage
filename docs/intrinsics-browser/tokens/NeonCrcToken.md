@@ -8,7 +8,7 @@ Proof that NEON + CRC is available.
 ## Usage
 
 ```rust
-use archmage::{NeonCrcToken, SimdToken};
+use archmage::prelude::*;
 
 if let Some(token) = NeonCrcToken::summon() {
     process(token, &mut data);
