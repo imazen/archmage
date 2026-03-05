@@ -32,6 +32,9 @@ macros = ["dep:archmage-macros"]
 # AVX-512 token support (Avx512Token, X64V4xToken, X64V4Token, etc.)
 # Also enables AVX-512 safe memory ops from safe_unaligned_simd.
 avx512 = ["safe_unaligned_simd/avx512"]
+# Backwards-compat: safe_unaligned_simd is now always included (no longer optional).
+# This feature exists so `features = ["safe_unaligned_simd"]` doesn't break.
+safe_unaligned_simd = []
 # Make token disabling work even when compiled with -Ctarget-cpu=native.
 # Without this, the compiler bakes summon() into a no-op and tokens can't be
 # disabled at runtime. With this, compiled_with() returns None and summon()
