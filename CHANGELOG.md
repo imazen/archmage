@@ -1,8 +1,16 @@
 # Changelog
 
-## 0.9.1 — 2026-03-04
+## 0.9.1 — 2026-03-05
 
-Generic `f32x16<T>` transcendentals and float↔int conversions.
+Generic `f32x16<T>` transcendentals, bitmask bug fix, `#[autoversion]` improvements.
+
+- **Fixed i16x16/u16x16 bitmask** — `_mm256_packs_epi16` lane interleaving caused lanes 8-15 to be dropped on x86_64. The fix uses per-lane `_mm256_extract_epi16` + manual bit assembly, matching the pattern used for other element sizes.
+
+- **`#[autoversion]` self receiver fix** — inherent methods with `self`/`&self`/`&mut self` now work without `_self = Type`. The `_self` parameter is only needed for trait impl delegation (nested mode). Previously, `#[autoversion]` incorrectly required `_self` for all self receivers.
+
+- **Generated functions are private** — `#[autoversion]` variants and `#[arcane]` sibling functions no longer inherit the user's visibility. Only the dispatcher (for `#[autoversion]`) or the safe wrapper (for `#[arcane]`) gets the original visibility. This prevents leaking internal implementation functions.
+
+- **`#[autoversion]` reference page** — comprehensive documentation at `docs/site/content/archmage/dispatch/autoversion.md` covering all parameters, tier tables, dispatch flow, and usage patterns.
 
 - **`F32x16Convert` trait** — new backend trait enabling bitcast and numeric conversion between `f32x16` and `i32x16`. Implemented for all backends: X64V3Token (2×256-bit polyfill), X64V4Token/X64V4xToken (native AVX-512), NeonToken (4×128-bit polyfill), Wasm128Token (4×128-bit polyfill), ScalarToken.
 
@@ -10,7 +18,11 @@ Generic `f32x16<T>` transcendentals and float↔int conversions.
 
 - **`f32x16<T>` ↔ `i32x16<T>` conversion methods** — `bitcast_to_i32`, `from_i32_bitcast`, `to_i32`, `to_i32_round`, `from_i32` on `f32x16<T>`; `bitcast_to_f32`, `to_f32` on `i32x16<T>`.
 
-- **34 new tests** covering all f32x16 transcendentals, conversions, edge cases, roundtrips, cross-backend consistency, and generic function usage.
+- **Comprehensive bitmask tests** — correctness tests for all 24 generic SIMD integer types (W128/W256/W512, signed/unsigned, 8/16/32/64-bit) covering individual lanes, cross-boundary patterns, all-set, and all-clear.
+
+- **30 `#[autoversion]` integration tests** — plain self receivers, owned self, explicit tiers, wildcards, tuple/Option returns, in-place mutation, scalar/v3 variant direct calls.
+
+- **34 f32x16 tests** covering transcendentals, conversions, edge cases, roundtrips, cross-backend consistency, and generic function usage.
 
 ## 0.9.0 — 2026-03-04
 
@@ -40,11 +52,11 @@ Sibling expansion, cfg-out default, macro options, `import_intrinsics`.
 
   - **Explicit tiers** — `#[autoversion(v3, v4, v4x, neon, arm_v2, wasm128)]`. `scalar` is always appended implicitly. Unknown tier names produce a compile error. Tiers are sorted by dispatch priority automatically.
 
-  - **Self receivers** — `#[autoversion(_self = Type)]` supports inherent methods with `self`/`&self`/`&mut self`. Non-scalar variants get `#[arcane(_self = Type)]`; the scalar variant gets `let _self = self;` prepended so the body's `_self` references resolve without `#[arcane]`.
+  - **Self receivers** — inherent methods with `self`/`&self`/`&mut self` work naturally (fixed in 0.9.1 — originally required `_self = Type`). For trait impl delegation, use `#[autoversion(_self = Type)]` with `_self` in the body.
 
   - **Trait method delegation** — trait impl methods can't expand to multiple siblings, so `#[autoversion]` can't be used directly on them. Documented delegation pattern: trait method calls an autoversioned inherent method.
 
-  - **Generated variants are real siblings** — individually callable, `incant!`-compatible, with `#[cfg(target_arch)]` and `#[cfg(feature)]` guards matching each tier.
+  - **Generated variants are private** — individually callable within the module, `incant!`-compatible, with `#[cfg(target_arch)]` and `#[cfg(feature)]` guards matching each tier. Only the dispatcher inherits the user's visibility.
 
   - **74 unit tests** — argument parsing, `SimdToken` parameter discovery, tier resolution, AST replacement for all known tiers, dispatcher parameter removal and wildcard renaming, tier descriptor properties, suffix_path.
 
