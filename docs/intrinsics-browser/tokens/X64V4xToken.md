@@ -8,7 +8,7 @@ Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake / Zen 
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{X64V4xToken, SimdToken};
 
 if let Some(token) = X64V4xToken::summon() {
     process(token, &mut data);

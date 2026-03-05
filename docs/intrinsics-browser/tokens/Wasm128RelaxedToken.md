@@ -8,7 +8,7 @@ Proof that WASM Relaxed SIMD is available.
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{Wasm128Token, SimdToken};
 
 if let Some(token) = Wasm128Token::summon() {
     process(token, &mut data);

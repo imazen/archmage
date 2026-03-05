@@ -8,7 +8,7 @@ Proof that NEON is available.
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{NeonToken, SimdToken};
 
 if let Some(token) = NeonToken::summon() {
     process(token, &mut data);

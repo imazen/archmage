@@ -8,7 +8,7 @@ Proof that the full modern ARM SIMD feature set is available (Arm64-v3).
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{Arm64V3Token, SimdToken};
 
 if let Some(token) = Arm64V3Token::summon() {
     process(token, &mut data);

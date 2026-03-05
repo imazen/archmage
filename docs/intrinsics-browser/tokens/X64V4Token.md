@@ -8,7 +8,7 @@ Proof that AVX-512 (F + CD + VL + DQ + BW) is available.
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{X64V4Token, SimdToken};
 
 if let Some(token) = X64V4Token::summon() {
     process(token, &mut data);

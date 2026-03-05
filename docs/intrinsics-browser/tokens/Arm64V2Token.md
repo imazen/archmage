@@ -8,7 +8,7 @@ Proof that the Arm64-v2 feature set is available.
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{Arm64V2Token, SimdToken};
 
 if let Some(token) = Arm64V2Token::summon() {
     process(token, &mut data);

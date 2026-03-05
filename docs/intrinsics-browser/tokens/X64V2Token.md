@@ -8,7 +8,7 @@ Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{X64V2Token, SimdToken};
 
 if let Some(token) = X64V2Token::summon() {
     process(token, &mut data);

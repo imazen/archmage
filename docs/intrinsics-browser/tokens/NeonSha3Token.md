@@ -8,7 +8,7 @@ Proof that NEON + SHA3 is available.
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{NeonSha3Token, SimdToken};
 
 if let Some(token) = NeonSha3Token::summon() {
     process(token, &mut data);

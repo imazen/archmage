@@ -8,7 +8,7 @@ Proof that AVX2 + VPCLMULQDQ + VAES are available.
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{X64V3CryptoToken, SimdToken};
 
 if let Some(token) = X64V3CryptoToken::summon() {
     process(token, &mut data);

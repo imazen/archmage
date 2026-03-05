@@ -8,7 +8,7 @@ Proof that AVX2 + FMA + BMI1/2 + F16C + LZCNT are available (x86-64-v3 level).
 ## Usage
 
 ```rust
-use archmage::prelude::*;
+use archmage::{X64V3Token, SimdToken};
 
 if let Some(token) = X64V3Token::summon() {
     process(token, &mut data);

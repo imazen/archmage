@@ -810,7 +810,7 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
         "x86_64" => {
             if token_def.features.iter().any(|f| f.starts_with("avx512")) {
                 formatdoc! {r#"
-                    use archmage::prelude::*;
+                    use archmage::{{{primary_name}, SimdToken}};
 
                     if let Some(token) = {primary_name}::summon() {{
                         process(token, &mut data);
@@ -832,7 +832,7 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                     // Use #![forbid(unsafe_code)] — import_intrinsics provides safe memory ops."#}
             } else if token_def.features.iter().any(|f| f == "avx2") {
                 formatdoc! {r#"
-                    use archmage::prelude::*;
+                    use archmage::{{{primary_name}, SimdToken}};
 
                     if let Some(token) = {primary_name}::summon() {{
                         process(token, &mut data);
@@ -854,7 +854,7 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                     // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#}
             } else {
                 formatdoc! {r#"
-                    use archmage::prelude::*;
+                    use archmage::{{{primary_name}, SimdToken}};
 
                     if let Some(token) = {primary_name}::summon() {{
                         process(token, &mut data);
@@ -877,7 +877,7 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
             }
         }
         "aarch64" => formatdoc! {r#"
-            use archmage::prelude::*;
+            use archmage::{{{primary_name}, SimdToken}};
 
             if let Some(token) = {primary_name}::summon() {{
                 process(token, &mut data);
@@ -898,7 +898,7 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
             }}
             // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#},
         "wasm32" => formatdoc! {r#"
-            use archmage::prelude::*;
+            use archmage::{{Wasm128Token, SimdToken}};
 
             if let Some(token) = Wasm128Token::summon() {{
                 process(token, &mut data);
