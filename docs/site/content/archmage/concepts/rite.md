@@ -5,15 +5,37 @@ weight = 4
 
 <sub>(alias: `#[token_target_features]`)</sub>
 
-`#[rite(import_intrinsics)]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly to your function and auto-imports architecture intrinsics, so LLVM can inline it into any caller with matching features.
+`#[rite]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly to your function, so LLVM can inline it into any caller with matching features.
 
 Use `#[arcane(import_intrinsics)]` only at **entry points** where the token comes from the outside world.
+
+## Two Modes
+
+`#[rite]` works in two modes — **token-based** and **tier-based**:
+
+```rust
+// Token-based: token parameter determines features
+#[rite(import_intrinsics)]
+fn helper(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
+    _mm256_loadu_ps(data)
+}
+
+// Tier-based: tier name determines features, no token needed
+#[rite(v3, import_intrinsics)]
+fn helper(data: &[f32; 8]) -> __m256 {
+    _mm256_loadu_ps(data)
+}
+```
+
+Both generate identical code — same `#[target_feature]`, same `#[inline]`, same `#[cfg(target_arch)]`. The tier-based form just saves you from threading a token parameter through internal helpers.
+
+**Use tier-based** (`#[rite(v3)]`) when the function doesn't need the token for anything else. **Use token-based** when you pass the token to other functions or magetypes constructors.
 
 ## How It Works
 
 {% mermaid() %}
 flowchart LR
-    A["Your code:<br/>#[rite(import_intrinsics)]<br/>fn process(token: X64V3Token, ...)"] --> B["Macro adds:<br/>#[target_feature(...)]<br/>#[inline]<br/>+ auto-imports intrinsics"]
+    A["Your code:<br/>#[rite(v3, import_intrinsics)]<br/>fn process(data: &[f32; 8])"] --> B["Macro adds:<br/>#[target_feature(...)]<br/>#[inline]<br/>+ auto-imports intrinsics"]
 
     style A fill:#1a4a6e,color:#fff
     style B fill:#2d5a27,color:#fff
@@ -41,10 +63,10 @@ flowchart TD
 
 | Caller | Use |
 |--------|-----|
-| Called from `#[arcane]` or `#[rite]` with same/compatible token | `#[rite(import_intrinsics)]` |
+| Called from `#[arcane]` or `#[rite]` with same/compatible features | `#[rite(v3, import_intrinsics)]` or `#[rite(import_intrinsics)]` with token |
 | Called from non-SIMD code (tests, public API, after `summon()`) | `#[arcane(import_intrinsics)]` |
 
-**Default to `#[rite(import_intrinsics)]`.** Only use `#[arcane(import_intrinsics)]` when you need the safe wrapper.
+**Default to `#[rite]`.** Only use `#[arcane]` when you need the safe wrapper.
 
 ```rust
 use archmage::prelude::*;
@@ -52,20 +74,17 @@ use archmage::prelude::*;
 // ENTRY POINT: receives token from caller
 #[arcane(import_intrinsics)]
 pub fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let products = mul_vectors(token, a, b);  // Calls #[rite] — inlines
-    horizontal_sum(token, products)
+    let products = mul_vectors(a, b);       // tier-based — no token needed
+    horizontal_sum(token, products)          // token-based — passes token on
 }
 
-// Called from SIMD context — inlines into caller
-#[rite(import_intrinsics)]
-fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
-    // Memory ops take references — no unsafe needed!
-    let va = _mm256_loadu_ps(a);
-    let vb = _mm256_loadu_ps(b);
-    _mm256_mul_ps(va, vb)
+// Tier-based: no token parameter, just specify the tier
+#[rite(v3, import_intrinsics)]
+fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 {
+    _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
 }
 
-// Called from SIMD context — inlines into caller
+// Token-based: same behavior, token threaded through
 #[rite(import_intrinsics)]
 fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
@@ -79,17 +98,18 @@ fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
 ## What It Generates
 
 <details>
-<summary>Macro expansion (click to expand)</summary>
+<summary>Token-based expansion (click to expand)</summary>
 
 ```rust
 // Your code:
 #[rite(import_intrinsics)]
 fn helper(_token: X64V3Token, v: __m256) -> __m256 {
-    _mm256_add_ps(v, v)  // In scope from import_intrinsics
+    _mm256_add_ps(v, v)
 }
 
 // Generated (NO wrapper function):
-#[target_feature(enable = "avx2,fma,bmi1,bmi2")]
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
 #[inline]
 fn helper(_token: X64V3Token, v: __m256) -> __m256 {
     use archmage::intrinsics::x86_64::*;
@@ -97,10 +117,38 @@ fn helper(_token: X64V3Token, v: __m256) -> __m256 {
 }
 ```
 
-Compare to `#[arcane]` which creates a wrapper:
+</details>
+
+<details>
+<summary>Tier-based expansion (click to expand)</summary>
+
+```rust
+// Your code:
+#[rite(v3, import_intrinsics)]
+fn helper(v: __m256) -> __m256 {
+    _mm256_add_ps(v, v)
+}
+
+// Generated — identical attributes, no token parameter:
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
+#[inline]
+fn helper(v: __m256) -> __m256 {
+    use archmage::intrinsics::x86_64::*;
+    _mm256_add_ps(v, v)
+}
+```
+
+The tier name (`v3`) maps to the same features as `X64V3Token`. No token appears in the generated code.
+
+</details>
+
+<details>
+<summary>Compare to #[arcane] which creates a wrapper</summary>
+
 ```rust
 fn helper(_token: X64V3Token, v: __m256) -> __m256 {
-    #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
+    #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
     #[inline]
     fn __inner(_token: X64V3Token, v: __m256) -> __m256 {
         _mm256_add_ps(v, v)
@@ -158,26 +206,74 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 
 ## Choosing Between #[arcane] and #[rite]
 
-**Default to `#[rite(import_intrinsics)]`** — only use `#[arcane(import_intrinsics)]` when necessary.
+**Default to `#[rite]`** — only use `#[arcane]` when necessary.
 
 | Situation | Use | Why |
 |-----------|-----|-----|
-| Any SIMD function called from SIMD code | `#[rite(import_intrinsics)]` | Inlines into caller — no boundary |
+| Internal helper, doesn't need token | `#[rite(v3, import_intrinsics)]` | Cleanest — no token threading |
+| Internal helper, passes token to magetypes | `#[rite(import_intrinsics)]` with token | Token needed for magetypes constructors |
 | Entry point (receives token from outside) | `#[arcane(import_intrinsics)]` | Needs safe wrapper |
 | Public API | `#[arcane(import_intrinsics)]` | Callers aren't in target_feature context |
 | Called from tests | `#[arcane(import_intrinsics)]` | Tests aren't in target_feature context |
 
+## When to Use Tier-Based vs Token-Based
+
+| Situation | Recommended |
+|-----------|------------|
+| Pure intrinsics helper (no magetypes, no forwarding) | `#[rite(v3)]` — cleaner, no token to thread |
+| Uses magetypes types (`f32x8::load(token, ...)`) | `#[rite]` with token — magetypes needs the token |
+| Passes token to other token-based `#[rite]` functions | `#[rite]` with token — already have it |
+| Deep in a call chain, token is just passed through unused | `#[rite(v3)]` — drop the ceremony |
+
+Both produce identical machine code. The choice is about API clarity.
+
+## Tier Names
+
+The tier name maps to the same features as the corresponding token. All `incant!` tier names work:
+
+| Tier | Token | Architecture | Features |
+|------|-------|-------------|----------|
+| `v1` | `X64V1Token` | x86_64 | SSE, SSE2 (baseline) |
+| `v2` | `X64V2Token` | x86_64 | + SSE4.2, POPCNT |
+| `v3` | `X64V3Token` | x86_64 | + AVX2, FMA, BMI2 |
+| `v4` / `avx512` | `X64V4Token` | x86_64 | + AVX-512 |
+| `v4x` | `X64V4xToken` | x86_64 | + modern AVX-512 extensions |
+| `neon` | `NeonToken` | aarch64 | NEON |
+| `arm_v2` | `Arm64V2Token` | aarch64 | + CRC, RDM, DotProd, FP16 |
+| `arm_v3` | `Arm64V3Token` | aarch64 | + SHA3, I8MM, BF16 |
+| `wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
+| `x64_crypto` | `X64CryptoToken` | x86_64 | V2 + PCLMULQDQ, AES-NI |
+| `v3_crypto` | `X64V3CryptoToken` | x86_64 | V3 + VPCLMULQDQ, VAES |
+
+These are the same tier names used by `incant!` and `#[autoversion]`.
+
 ## Composition
 
-`#[rite(import_intrinsics)]` functions compose naturally:
+`#[rite]` functions compose naturally — both token-based and tier-based:
 
 ```rust
-#[rite(import_intrinsics)]
-fn complex_op(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> f32 {
-    let ab = mul_vectors(token, a, b);       // Calls another #[rite]
-    let vc = load_vector(token, c);          // Calls another #[rite]
-    let sum = add_vectors_raw(token, ab, vc); // Calls another #[rite]
-    horizontal_sum(token, sum)                // Calls another #[rite]
+// Tier-based helpers — no tokens needed
+#[rite(v3, import_intrinsics)]
+fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 {
+    _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
+}
+
+#[rite(v3, import_intrinsics)]
+fn load_vector(c: &[f32; 8]) -> __m256 {
+    _mm256_loadu_ps(c)
+}
+
+#[rite(v3, import_intrinsics)]
+fn add_raw(a: __m256, b: __m256) -> __m256 {
+    _mm256_add_ps(a, b)
+}
+
+// Compose them — no tokens threaded through
+#[rite(v3, import_intrinsics)]
+fn complex_op(a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> __m256 {
+    let ab = mul_vectors(a, b);
+    let vc = load_vector(c);
+    add_raw(ab, vc)
 }
 ```
 
@@ -185,43 +281,74 @@ All `#[rite]` functions inline into the caller — no target-feature boundary, o
 
 ## Cross-Architecture Behavior
 
-Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. Use `#[rite(stub)]` to generate an unreachable stub instead:
+Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. Use `stub` to generate an unreachable stub instead. Both modes work with token-based and tier-based:
 
 ```rust
 // Default: only exists on x86_64
-#[rite(import_intrinsics)]
-fn helper(_token: X64V3Token, v: __m256) -> __m256 {
+#[rite(v3, import_intrinsics)]
+fn helper(v: __m256) -> __m256 {
     _mm256_add_ps(v, v)
 }
 
 // With stub: unreachable stub on other architectures
-#[rite(stub, import_intrinsics)]
-fn helper_stubbed(_token: X64V3Token, v: __m256) -> __m256 {
+#[rite(v3, stub, import_intrinsics)]
+fn helper_stubbed(v: __m256) -> __m256 {
     _mm256_add_ps(v, v)
 }
 ```
 
 ## Auto-Imports
 
-Like `#[arcane]`, `#[rite]` supports `import_intrinsics` and `import_magetypes`:
+`#[rite]` supports `import_intrinsics` and `import_magetypes`. Both work with tier-based and token-based modes:
 
 ```rust
-#[rite(import_intrinsics, import_magetypes)]
-fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 {
+// Tier-based with auto-imports
+#[rite(v3, import_intrinsics, import_magetypes)]
+fn helper(data: &[f32; 8]) -> f32 {
     // core::arch::x86_64::* and magetypes::simd::v3::* both in scope
+    let v = _mm256_loadu_ps(data);
+    let _ = _mm256_add_ps(v, v);
+    0.0
+}
+
+// Token-based with auto-imports (same behavior)
+#[rite(import_intrinsics, import_magetypes)]
+fn helper_with_token(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::load(token, data);
-    let zero = _mm256_setzero_ps();
-    let _ = _mm256_add_ps(zero, zero);
     v.reduce_add()
 }
 ```
 
-The recommended pattern: `#[arcane(import_intrinsics)]` at the entry point, `#[rite(import_intrinsics)]` for everything else. Add `import_magetypes` when using magetypes types.
+The recommended pattern: `#[arcane(import_intrinsics)]` at the entry point, `#[rite(v3, import_intrinsics)]` for everything else.
 
 See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import-intrinsics) for the full namespace mapping.
 
 ## Inlining Behavior
 
-`#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. Calling `#[arcane]` per iteration instead costs 4x (simple adds) to 6.2x (DCT-8). See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md).
+`#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. This applies equally to token-based and tier-based `#[rite]` — both emit the same `#[inline]` attribute.
+
+Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. Calling `#[arcane]` per iteration instead costs 4x (simple adds) to 6.2x (DCT-8). See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md).
 
 `#[inline(always)]` combined with `#[target_feature]` is not allowed on stable Rust, but we don't need it — `#[inline]` works perfectly.
+
+## Options Reference
+
+All options combine freely. Order doesn't matter.
+
+| Option | Effect |
+|--------|--------|
+| `v3`, `neon`, `v4`, ... | Tier name — sets features without token parameter |
+| `import_intrinsics` | Injects `use archmage::intrinsics::{arch}::*` (safe memory ops) |
+| `import_magetypes` | Injects magetypes SIMD type imports |
+| `stub` | Generates `unreachable!()` stub on wrong architecture |
+
+**Examples:**
+
+```rust
+#[rite(v3)]                                    // tier only
+#[rite(v3, import_intrinsics)]                 // tier + safe intrinsics
+#[rite(v3, import_intrinsics, stub)]           // tier + safe intrinsics + cross-arch stub
+#[rite(v3, import_intrinsics, import_magetypes)] // tier + everything
+#[rite(import_intrinsics)]                     // token-based (reads token from params)
+#[rite(stub)]                                  // token-based + cross-arch stub
+```

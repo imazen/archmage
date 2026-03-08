@@ -130,22 +130,25 @@ Both import the same combined intrinsics module — using both is just duplicati
 
 **`#[rite]` should be your default.** Use `#[arcane]` only at the entry point — the first call from non-SIMD code.
 
+`#[rite]` works two ways: **token-based** (reads the token from your parameter) or **tier-based** (you specify the tier directly, no token needed):
+
 ```rust
 use archmage::prelude::*;
 
 // Entry point: #[arcane] — safe wrapper for non-SIMD callers
 #[arcane]
 fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let products = mul_vectors(token, a, b);
-    horizontal_sum(token, products)
+    let products = mul_vectors(a, b);       // tier-based — no token!
+    horizontal_sum(token, products)          // token-based — passes token
 }
 
-// Called from SIMD code: #[rite] — inlines into caller, no boundary
-#[rite]
-fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
+// Tier-based #[rite]: specify tier, no token parameter
+#[rite(v3)]
+fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
 }
 
+// Token-based #[rite]: reads features from token type
 #[rite]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
@@ -156,9 +159,9 @@ fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
 }
 ```
 
-Both macros read the token type to decide which `#[target_feature]` to emit. `X64V3Token` → `avx2,fma,...`. `X64V4Token` → `avx512f,avx512bw,...`. The token type *is* the feature selector.
+Both forms generate identical `#[target_feature]` attributes. `#[rite(v3)]` and `#[rite]` with an `X64V3Token` parameter produce the same code. Tier names: `v1`, `v2`, `v3`, `v4`, `neon`, `arm_v2`, `wasm128`, etc. — the same names used by `incant!`.
 
-**Why two macros?** `#[arcane]` generates a safe wrapper that crosses the `#[target_feature]` boundary — LLVM can't optimize across it. `#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into the caller. Same token type = same features = no boundary.
+**Why two macros?** `#[arcane]` generates a safe wrapper that crosses the `#[target_feature]` boundary — LLVM can't optimize across it. `#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into the caller. Same features = no boundary.
 
 Processing 1000 8-float vector additions ([full benchmark details](docs/PERFORMANCE.md)):
 
@@ -170,7 +173,7 @@ Processing 1000 8-float vector additions ([full benchmark details](docs/PERFORMA
 
 The 4x penalty is LLVM's `#[target_feature]` boundary, not archmage overhead. Bare `#[target_feature]` without archmage has the same cost. With real workloads (DCT-8), the boundary costs up to 6.2x.
 
-**The rule:** `#[arcane]` once at the entry point, `#[rite]` for everything called from SIMD code. Pass the same token type through your call tree so features stay consistent.
+**The rule:** `#[arcane]` once at the entry point, `#[rite]` for everything called from SIMD code.
 
 For trait impls, use `#[arcane(_self = Type)]` — a nested inner-function approach (since sibling would add methods not in the trait definition).
 

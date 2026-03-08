@@ -92,6 +92,8 @@ fn example() {
 
 `#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into callers with matching features. `#[arcane]` generates an inner `#[target_feature]` function called from a safe outer function (needed when transitioning from non-SIMD code — this crossing is the target-feature boundary).
 
+`#[rite]` works two ways: **token-based** (`#[rite]` with a token parameter) and **tier-based** (`#[rite(v3)]` with no token). Both generate identical `#[target_feature]` attributes. Use tier-based when the token is just being threaded through unused.
+
 ```rust
 pub fn public_api(data: &[f32]) -> f32 {
     if let Some(token) = X64V3Token::summon() {
@@ -105,15 +107,20 @@ pub fn public_api(data: &[f32]) -> f32 {
 fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
     let mut sum = 0.0;
     for chunk in data.chunks_exact(8) {
-        sum += process_chunk(token, chunk.try_into().unwrap());
+        sum += process_chunk(chunk.try_into().unwrap());  // no token needed!
     }
     sum
 }
 
-#[rite(import_intrinsics)]  // Internal: inlines into caller's target_feature context
-fn process_chunk(token: X64V3Token, chunk: &[f32; 8]) -> f32 {
-    let v = f32x8::from_array(token, *chunk);
-    v.reduce_add()
+#[rite(v3, import_intrinsics)]  // Tier-based: inlines, no token parameter
+fn process_chunk(chunk: &[f32; 8]) -> f32 {
+    let v = _mm256_loadu_ps(chunk);
+    // horizontal sum...
+    let sum = _mm256_hadd_ps(v, v);
+    let sum = _mm256_hadd_ps(sum, sum);
+    let low = _mm256_castps256_ps128(sum);
+    let high = _mm256_extractf128_ps::<1>(sum);
+    _mm_cvtss_f32(_mm_add_ss(low, high))
 }
 ```
 
@@ -172,10 +179,11 @@ When explaining archmage:
 3. `#[arcane]` generates `#[target_feature]` code
 4. Inside `#[target_feature]`, most intrinsics are safe (Rust 1.85+)
 5. `#[arcane]` at the boundary, `#[rite]` for everything else
-6. Enter `#[arcane]` once, `#[rite]` for everything inside
-7. Concrete tokens optimize better than trait bounds
-8. `import_intrinsics` provides safe memory operations (references, not pointers)
-9. magetypes provides high-level SIMD types
+6. `#[rite(v3)]` — tier-based: no token parameter, same codegen
+7. Enter `#[arcane]` once, `#[rite]` for everything inside
+8. Concrete tokens optimize better than trait bounds
+9. `import_intrinsics` provides safe memory operations (references, not pointers)
+10. magetypes provides high-level SIMD types
 
 When showing examples:
 
@@ -183,7 +191,7 @@ When showing examples:
 2. Explain what the macro generates (for understanding)
 3. Memory ops use references (via `import_intrinsics`), not raw pointers
 4. Include the `summon()` call in context
-5. Show `#[rite]` for any function called from SIMD code
+5. Show `#[rite(v3)]` for internal helpers, `#[rite]` with token when passing tokens to magetypes
 
 ## Banned from Docs
 

@@ -5,7 +5,7 @@ weight = 2
 
 The biggest performance pitfall with SIMD isn't `summon()` cost (~1.3 ns cached) — it's calling `#[arcane]` functions from inside hot loops. Each call crosses a `#[target_feature]` boundary that LLVM can't optimize across: 4x slower in benchmarks. Token hoisting alone doesn't fix this — even with the token pre-summoned, each `#[arcane]` call still hits the boundary.
 
-The fix: enter `#[arcane(import_intrinsics)]` once, put your loop inside it, and use `#[rite(import_intrinsics)]` for helpers.
+The fix: enter `#[arcane(import_intrinsics)]` once, put your loop inside it, and use `#[rite(v3, import_intrinsics)]` (or `#[rite(import_intrinsics)]` with a token) for helpers.
 
 {% mermaid() %}
 flowchart TD
@@ -41,7 +41,7 @@ fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -
     let mut best_dist = f32::MAX;
 
     for (i, point) in points.iter().enumerate() {
-        let d = distance_simd(token, point, query);  // #[rite] inlines here
+        let d = distance_simd(point, query);  // #[rite(v3)] inlines here — no token
         if d < best_dist {
             best_dist = d;
             best_idx = i;
@@ -50,9 +50,9 @@ fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -
     best_idx
 }
 
-// Called from SIMD context: #[rite] — inlines into caller, no boundary
-#[rite(import_intrinsics)]
-fn distance_simd(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+// Called from SIMD context: #[rite(v3)] — inlines into caller, no token needed
+#[rite(v3, import_intrinsics)]
+fn distance_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     let diff = _mm256_sub_ps(va, vb);
@@ -81,7 +81,7 @@ fn distance_simd(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 This is not archmage overhead. A bare `#[target_feature]` function without archmage has the same cost (verified in `benches/asm_inspection.rs` — pattern 7). The boundary is inherent to how LLVM handles `#[target_feature]`.
 
-The fix is `#[rite(import_intrinsics)]`: it adds `#[target_feature]` + `#[inline]` directly, so LLVM can inline it into any caller with matching features. Everything inside one `#[arcane]` entry point shares the same LLVM target — `#[rite]` functions inline freely.
+The fix is `#[rite]`: it adds `#[target_feature]` + `#[inline]` directly, so LLVM can inline it into any caller with matching features. Use `#[rite(v3, import_intrinsics)]` to specify the tier without a token parameter, or `#[rite(import_intrinsics)]` with a token. Everything inside one `#[arcane]` entry point shares the same LLVM target — `#[rite]` functions inline freely.
 
 ## With `-Ctarget-cpu=native`
 

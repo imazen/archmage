@@ -27,7 +27,7 @@ The 4x penalty comes from LLVM, not archmage. Read on.
 
 The boundary has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. `#[arcane]` just makes the wrapper safe; the boundary is LLVM's.
 
-**The fix:** use `#[arcane]` once at your API entry point, and `#[rite]` for everything called from within SIMD code. Pass the same token type through your call hierarchy — the macros emit the same `#[target_feature]` on every function that takes it. LLVM sees matching targets, inlines freely, and there's no boundary.
+**The fix:** use `#[arcane]` once at your API entry point, and `#[rite]` for everything called from within SIMD code. Use `#[rite(v3)]` for helpers that don't need the token, or pass the token through for magetypes. LLVM sees matching targets, inlines freely, and there's no boundary.
 
 ```rust
 // WRONG: boundary every iteration (4x slower)
@@ -38,7 +38,7 @@ fn process_all(points: &[[f32; 8]]) {
     }
 }
 
-// RIGHT: one boundary, loop inside
+// RIGHT: one boundary, loop inside, tier-based helpers
 fn process_all(points: &[[f32; 8]]) {
     if let Some(token) = X64V3Token::summon() {
         process_all_simd(token, points);  // one #[arcane] entry
@@ -46,10 +46,15 @@ fn process_all(points: &[[f32; 8]]) {
 }
 
 #[arcane(import_intrinsics)]
-fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
+fn process_all_simd(_token: X64V3Token, points: &[[f32; 8]]) {
     for p in points {
-        process_one(token, p);  // #[rite] — inlines, no boundary
+        process_one(p);  // #[rite(v3)] — inlines, no boundary, no token
     }
+}
+
+#[rite(v3, import_intrinsics)]
+fn process_one(p: &[f32; 8]) {
+    // ...
 }
 ```
 
@@ -163,7 +168,7 @@ These are distilled from the benchmark data above.
 
 1. **Enter `#[arcane]` once.** Put loops inside it. Each call from non-SIMD code crosses the boundary.
 
-2. **Use `#[rite]` for everything inside.** `#[rite]` adds `#[target_feature]` + `#[inline]` directly. LLVM inlines it into any caller with matching features. No boundary.
+2. **Use `#[rite]` for everything inside.** `#[rite]` adds `#[target_feature]` + `#[inline]` directly. LLVM inlines it into any caller with matching features. No boundary. Use `#[rite(v3)]` to skip the token parameter, or `#[rite]` with a token when you need it for magetypes.
 
 3. **Never call `#[arcane]` from `#[arcane]`.** Use `#[rite]` for functions called from SIMD code. `#[arcane]` creates a wrapper that re-crosses the boundary.
 

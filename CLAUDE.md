@@ -33,7 +33,7 @@ These aliases exist so AI tools can infer behavior from the name. **Prefer the t
 | Thematic | Descriptive Alias | What it does |
 |----------|------------------|--------------|
 | `#[arcane]` | `#[token_target_features_boundary]` | Generates safe `#[target_feature]` wrapper (entry point) |
-| `#[rite]` | `#[token_target_features]` | Adds `#[target_feature]` + `#[inline]` directly (internal helper) |
+| `#[rite]` / `#[rite(v3)]` | `#[token_target_features]` | Adds `#[target_feature]` + `#[inline]` directly (internal helper). Tier-based: `#[rite(v3)]` — no token param needed |
 | `incant!` | `dispatch_variant!` | Runtime dispatch to architecture-specific variants |
 
 ## Reference: CPU Features, Detection, and Dispatch
@@ -53,11 +53,16 @@ These aliases exist so AI tools can infer behavior from the name. **Prefer the t
 
 ### CRITICAL: How the Macros Choose Features
 
-`#[arcane]` and `#[rite]` parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
+`#[arcane]` and `#[rite]` determine features in two ways:
+
+1. **Token-based** (default): Parse the token type from the function signature. `X64V3Token` → `#[target_feature(enable = "avx2,fma,...")]`.
+2. **Tier-based** (`#[rite(v3)]` only): The tier name specifies the features directly. No token parameter needed.
+
+Both produce identical `#[target_feature]` attributes. The token type or tier name *is* the feature selector.
 
 `#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This wrapper is how you cross into SIMD code without writing `unsafe` yourself — but it also creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary.
 
-**`#[rite(import_intrinsics)]` should be the default.** Use `#[arcane(import_intrinsics)]` only at the entry point, and `#[rite(import_intrinsics)]` for everything called from within SIMD code. `import_intrinsics` auto-imports `archmage::intrinsics::{arch}::*` — a combined module where `safe_unaligned_simd` memory ops shadow `core::arch` pointer-based ones. No ambiguity, no qualification needed. Passing the same token type through your call hierarchy keeps every function compiled with matching features, so LLVM inlines freely.
+**`#[rite]` should be the default.** Use `#[arcane(import_intrinsics)]` only at the entry point. For internal helpers, use `#[rite(v3, import_intrinsics)]` (tier-based, no token parameter) or `#[rite(import_intrinsics)]` (token-based). Both produce identical code. `import_intrinsics` auto-imports `archmage::intrinsics::{arch}::*` — a combined module where `safe_unaligned_simd` memory ops shadow `core::arch` pointer-based ones. No ambiguity, no qualification needed.
 
 ### CRITICAL: Target-Feature Boundaries (4x Performance Impact)
 
@@ -81,7 +86,7 @@ fn process_all(points: &[[f32; 8]]) {
 ```
 
 ```rust
-// RIGHT: one #[arcane] entry, #[rite] functions inline freely
+// RIGHT: one #[arcane] entry, #[rite(v3)] functions inline freely
 fn process_all(points: &[[f32; 8]]) {
     if let Some(token) = X64V3Token::summon() {
         process_all_simd(token, points);
@@ -91,22 +96,22 @@ fn process_all(points: &[[f32; 8]]) {
 }
 
 #[arcane(import_intrinsics)]
-fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
+fn process_all_simd(_token: X64V3Token, points: &[[f32; 8]]) {
     for i in 0..points.len() {
         for j in i+1..points.len() {
-            dist_simd(token, &points[i], &points[j]); // #[rite] inlines here
+            dist_simd(&points[i], &points[j]); // #[rite(v3)] — no token
         }
     }
 }
 
-#[rite(import_intrinsics)]
-fn dist_simd(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+#[rite(v3, import_intrinsics)]
+fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
     // Inlines into process_all_simd — same LLVM optimization region
     ...
 }
 ```
 
-**The rule:** `#[arcane(import_intrinsics)]` at the entry point, `#[rite(import_intrinsics)]` for everything called from SIMD code.
+**The rule:** `#[arcane(import_intrinsics)]` at the entry point, `#[rite(v3, import_intrinsics)]` for everything called from SIMD code (or `#[rite(import_intrinsics)]` with a token when using magetypes).
 
 ### CRITICAL: Generic Bounds Are Optimization Barriers
 
@@ -434,9 +439,11 @@ The M1 is the notable chip that gets V2 but not V3 (lacks i8mm/bf16). Budget 202
 
 ## CRITICAL: Documentation Examples
 
-### `#[rite(import_intrinsics)]` is the default, `#[arcane(import_intrinsics)]` only at entry points
+### `#[rite]` is the default, `#[arcane]` only at entry points
 
-**`#[rite(import_intrinsics)]` should be the default.** It adds `#[target_feature]` + `#[inline]` + auto-imports intrinsics — LLVM inlines it into any caller with matching features.
+**`#[rite]` should be the default.** It adds `#[target_feature]` + `#[inline]` — LLVM inlines it into any caller with matching features.
+
+**Two modes:** `#[rite(v3, import_intrinsics)]` (tier-based, no token needed) or `#[rite(import_intrinsics)]` (token-based, reads token from params). Both produce identical code.
 
 Use `#[arcane(import_intrinsics)]` only when the function is called from non-SIMD code:
 - After `summon()` in a public API
@@ -448,13 +455,19 @@ Use `#[arcane(import_intrinsics)]` only when the function is called from non-SIM
 #[arcane(import_intrinsics)]
 pub fn process(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
-        process_chunk(token, chunk);  // Calls #[rite] — inlines
+        process_chunk(chunk);  // Calls #[rite(v3)] — inlines, no token
     }
 }
 
-// Called from SIMD code - use #[rite]
+// Called from SIMD code - use #[rite] with tier name
+#[rite(v3, import_intrinsics)]
+fn process_chunk(chunk: &mut [f32; 8]) {
+    // ...
+}
+
+// Or with token (when you need to pass it to magetypes)
 #[rite(import_intrinsics)]
-fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
+fn process_chunk_with_token(_: X64V3Token, chunk: &mut [f32; 8]) {
     // ...
 }
 ```

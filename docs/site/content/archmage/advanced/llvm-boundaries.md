@@ -39,19 +39,22 @@ All of these break at target feature boundaries.
 ```rust
 #[arcane(import_intrinsics)]
 fn outer(token: X64V3Token, data: &[f32]) -> f32 {
-    let a = step1(token, data);     // #[rite] -> inlines
-    let b = step2(token, data);     // #[rite] -> inlines
+    let a = step1(data);     // #[rite(v3)] -> inlines, no token needed
+    let b = step2(data);     // #[rite(v3)] -> inlines, no token needed
     a + b
 }
 
-#[rite(import_intrinsics)]
-fn step1(token: X64V3Token, data: &[f32]) -> f32 {
+// Tier-based: specify features via tier name
+#[rite(v3, import_intrinsics)]
+fn step1(data: &[f32]) -> f32 {
     // Same target features as outer -> LLVM inlines freely
+    0.0
 }
 
-#[rite(import_intrinsics)]
-fn step2(token: X64V3Token, data: &[f32]) -> f32 {
+#[rite(v3, import_intrinsics)]
+fn step2(data: &[f32]) -> f32 {
     // Same -- one optimization region
+    0.0
 }
 ```
 
@@ -127,17 +130,17 @@ pub fn process(data: &[f32]) -> f32 {
 
 // Each implementation is self-contained
 #[arcane(import_intrinsics)]
-fn process_v4(token: X64V4Token, data: &[f32]) -> f32 {
+fn process_v4(_token: X64V4Token, data: &[f32]) -> f32 {
     // Entry point -- one boundary crossing
-    let result = step1_v4(token, data);  // #[rite] inlines
-    step2_v4(token, result)              // #[rite] inlines
+    let result = step1_v4(data);  // #[rite(v4)] inlines — no token
+    step2_v4(result)              // #[rite(v4)] inlines — no token
 }
 
-#[rite(import_intrinsics)]
-fn step1_v4(token: X64V4Token, data: &[f32]) -> f32 { /* ... */ }
+#[rite(v4, import_intrinsics)]
+fn step1_v4(data: &[f32]) -> f32 { /* ... */ 0.0 }
 
-#[rite(import_intrinsics)]
-fn step2_v4(token: X64V4Token, result: f32) -> f32 { /* ... */ }
+#[rite(v4, import_intrinsics)]
+fn step2_v4(result: f32) -> f32 { /* ... */ result }
 ```
 
 ## Pattern: Trait with Concrete Impls
@@ -179,7 +182,7 @@ See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/
 
 | Pattern | Inlining | Recommendation |
 |---------|----------|----------------|
-| `#[rite(import_intrinsics)]` with same token | Full | Default for all SIMD functions |
+| `#[rite(v3, import_intrinsics)]` or `#[rite]` with same token | Full | Default for all SIMD functions |
 | Downcast (V4->V3) via `#[rite]` | Full | Safe and fast -- superset enables inlining |
 | Upgrade (V2->V3, V3->V4) | Boundary (4x) | Dispatch at entry point, not in hot code |
 | `#[arcane]` from non-SIMD code | Boundary (4-6x) | Entry point only -- one crossing |

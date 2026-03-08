@@ -98,11 +98,36 @@ fn square(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 The sibling function is `fn` (not `unsafe fn`) — `#![forbid(unsafe_code)]` compatible. The token parameter proves you checked CPU features. The macro enables those features for the sibling, making intrinsics safe to call.
 
+## Adding Helpers
+
+For functions called from within SIMD code, use `#[rite]` instead of `#[arcane]`. You can specify the tier directly instead of taking a token parameter:
+
+```rust
+use archmage::prelude::*;
+
+#[arcane(import_intrinsics)]
+fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let v = _mm256_loadu_ps(data);
+    let squared = square(v);     // #[rite(v3)] — inlines, no token needed
+    let mut out = [0.0f32; 8];
+    _mm256_storeu_ps(&mut out, squared);
+    out
+}
+
+// Tier-based: specify features via tier name, no token parameter
+#[rite(v3, import_intrinsics)]
+fn square(v: __m256) -> __m256 {
+    _mm256_mul_ps(v, v)
+}
+```
+
+`#[rite(v3)]` generates the same `#[target_feature]` as taking an `X64V3Token` parameter. Use it when the function doesn't need the token for anything else.
+
 ## Key Points
 
 1. **`X64V3Token`** = AVX2 + FMA + BMI1 + BMI2 (Haswell 2013+, Zen 1+)
 2. **`summon()`** does runtime CPU detection
-3. **`#[arcane(import_intrinsics)]`** makes intrinsics safe inside the function and auto-imports them (since Rust 1.85)
+3. **`#[arcane(import_intrinsics)]`** at entry points, **`#[rite(v3, import_intrinsics)]`** for internal helpers
 4. **Token is zero-sized** — no runtime overhead passing it around
 5. **Memory ops take references** — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32` (via `import_intrinsics`)
-6. **`#![forbid(unsafe_code)]` compatible** — archmage + `#[arcane(import_intrinsics)]` macros mean your crate needs zero `unsafe`
+6. **`#![forbid(unsafe_code)]` compatible** — archmage + `#[arcane]`/`#[rite]` macros mean your crate needs zero `unsafe`
