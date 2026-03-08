@@ -463,6 +463,8 @@ impl Registry {
         out.push('\n');
         self.gen_trait_to_arch(&mut out);
         out.push('\n');
+        self.gen_tier_to_canonical_token(&mut out);
+        out.push('\n');
         self.gen_all_concrete_tokens(&mut out);
         out.push('\n');
         self.gen_all_trait_names(&mut out);
@@ -648,6 +650,37 @@ impl Registry {
         }
 
         out.push('\n');
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
+    fn gen_tier_to_canonical_token(&self, out: &mut String) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps a tier short name to its canonical token type name.
+            ///
+            /// Used by `#[rite(v3)]` to resolve the tier to a token without
+            /// requiring a token parameter in the function signature.
+            pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {{
+                match tier_name {{
+        "});
+
+        for token in &self.token {
+            if let Some(short) = &token.short_name {
+                out.push_str(&format!(
+                    "        \"{short}\" => Some(\"{}\"),\n",
+                    token.name
+                ));
+                // Also add extraction_aliases (e.g., "avx512" for v4)
+                for alias in &token.extraction_aliases {
+                    out.push_str(&format!(
+                        "        \"{alias}\" => Some(\"{}\"),\n",
+                        token.name
+                    ));
+                }
+            }
+        }
+
         out.push_str("        _ => None,\n");
         out.push_str("    }\n}\n");
     }

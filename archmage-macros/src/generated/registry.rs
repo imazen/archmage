@@ -515,6 +515,33 @@ pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {
     }
 }
 
+/// Maps a tier short name to its canonical token type name.
+///
+/// Used by `#[rite(v3)]` to resolve the tier to a token without
+/// requiring a token parameter in the function signature.
+pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {
+    match tier_name {
+        "v1" => Some("X64V1Token"),
+        "v2" => Some("X64V2Token"),
+        "x64_crypto" => Some("X64CryptoToken"),
+        "v3" => Some("X64V3Token"),
+        "v3_crypto" => Some("X64V3CryptoToken"),
+        "v4" => Some("X64V4Token"),
+        "avx512" => Some("X64V4Token"),
+        "v4x" => Some("X64V4xToken"),
+        "fp16" => Some("Avx512Fp16Token"),
+        "neon" => Some("NeonToken"),
+        "neon_aes" => Some("NeonAesToken"),
+        "neon_sha3" => Some("NeonSha3Token"),
+        "neon_crc" => Some("NeonCrcToken"),
+        "arm_v2" => Some("Arm64V2Token"),
+        "arm_v3" => Some("Arm64V3Token"),
+        "wasm128" => Some("Wasm128Token"),
+        "wasm128_relaxed" => Some("Wasm128RelaxedToken"),
+        _ => None,
+    }
+}
+
 /// All concrete token names that exist in the runtime crate.
 #[cfg(test)]
 pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[

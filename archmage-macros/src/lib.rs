@@ -181,8 +181,8 @@ impl Parse for ArcaneArgs {
 // token-registry.toml by xtask. Regenerate with: cargo run -p xtask -- generate
 mod generated;
 use generated::{
-    token_to_arch, token_to_features, token_to_magetypes_namespace, trait_to_arch,
-    trait_to_features, trait_to_magetypes_namespace,
+    tier_to_canonical_token, token_to_arch, token_to_features, token_to_magetypes_namespace,
+    trait_to_arch, trait_to_features, trait_to_magetypes_namespace,
 };
 
 /// Result of extracting token info from a type.
@@ -1403,6 +1403,10 @@ struct RiteArgs {
     /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
     /// and `use magetypes::simd::backends::*;`.
     import_magetypes: bool,
+    /// Tier specified directly (e.g., `#[rite(v3)]`).
+    /// Stored as the canonical token name (e.g., "X64V3Token").
+    /// When set, the function does not need a token parameter.
+    tier_token: Option<String>,
 }
 
 impl Parse for RiteArgs {
@@ -1416,14 +1420,25 @@ impl Parse for RiteArgs {
                 "import_intrinsics" => args.import_intrinsics = true,
                 "import_magetypes" => args.import_magetypes = true,
                 other => {
-                    return Err(syn::Error::new(
-                        ident.span(),
-                        format!(
-                            "unknown rite argument: `{}`. Supported: `stub`, \
-                             `import_intrinsics`, `import_magetypes`.",
-                            other
-                        ),
-                    ));
+                    if let Some(canonical) = tier_to_canonical_token(other) {
+                        if args.tier_token.is_some() {
+                            return Err(syn::Error::new(
+                                ident.span(),
+                                "multiple tier names specified in #[rite]",
+                            ));
+                        }
+                        args.tier_token = Some(String::from(canonical));
+                    } else {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            format!(
+                                "unknown rite argument: `{}`. Supported: tier names \
+                                 (v1, v2, v3, v4, neon, arm_v2, wasm128, ...), \
+                                 `stub`, `import_intrinsics`, `import_magetypes`.",
+                                other
+                            ),
+                        ));
+                    }
                 }
             }
             if input.peek(Token![,]) {
@@ -1437,38 +1452,56 @@ impl Parse for RiteArgs {
 
 /// Implementation for the `#[rite]` macro.
 fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
-    // Find the token parameter and its features
+    // Resolve features: either from tier name or from token parameter
     let TokenParamInfo {
         features,
         target_arch,
         magetypes_namespace,
         ..
-    } = match find_token_param(&input_fn.sig) {
-        Some(result) => result,
-        None => {
-            // Check for specific misuse: featureless traits like SimdToken
-            if let Some(trait_name) = diagnose_featureless_token(&input_fn.sig) {
-                let msg = format!(
-                    "`{trait_name}` cannot be used as a token bound in #[rite] \
-                     because it doesn't specify any CPU features.\n\
-                     \n\
-                     #[rite] needs concrete features to generate #[target_feature]. \
-                     Use a concrete token or a feature trait:\n\
-                     \n\
-                     Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...\n\
-                     Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ..."
-                );
+    } = if let Some(ref tier_token) = args.tier_token {
+        // Tier specified directly (e.g., #[rite(v3)]) — no token param needed
+        let features = token_to_features(tier_token)
+            .expect("tier_to_canonical_token returned invalid token name")
+            .to_vec();
+        let target_arch = token_to_arch(tier_token);
+        let magetypes_namespace = token_to_magetypes_namespace(tier_token);
+        TokenParamInfo {
+            ident: Ident::new("_", proc_macro2::Span::call_site()),
+            features,
+            target_arch,
+            token_type_name: Some(tier_token.clone()),
+            magetypes_namespace,
+        }
+    } else {
+        match find_token_param(&input_fn.sig) {
+            Some(result) => result,
+            None => {
+                // Check for specific misuse: featureless traits like SimdToken
+                if let Some(trait_name) = diagnose_featureless_token(&input_fn.sig) {
+                    let msg = format!(
+                        "`{trait_name}` cannot be used as a token bound in #[rite] \
+                         because it doesn't specify any CPU features.\n\
+                         \n\
+                         #[rite] needs concrete features to generate #[target_feature]. \
+                         Use a concrete token, a feature trait, or a tier name:\n\
+                         \n\
+                         Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...\n\
+                         Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ...\n\
+                         Tier names:      #[rite(v3)], #[rite(neon)], #[rite(v4)], ..."
+                    );
+                    return syn::Error::new_spanned(&input_fn.sig, msg)
+                        .to_compile_error()
+                        .into();
+                }
+                let msg = "rite requires a token parameter or a tier name. Supported forms:\n\
+                     - Tier name: `#[rite(v3)]`, `#[rite(neon)]`\n\
+                     - Concrete: `token: X64V3Token`\n\
+                     - impl Trait: `token: impl HasX64V2`\n\
+                     - Generic: `fn foo<T: HasX64V2>(token: T, ...)`";
                 return syn::Error::new_spanned(&input_fn.sig, msg)
                     .to_compile_error()
                     .into();
             }
-            let msg = "rite requires a token parameter. Supported forms:\n\
-                 - Concrete: `token: X64V3Token`\n\
-                 - impl Trait: `token: impl HasX64V2`\n\
-                 - Generic: `fn foo<T: HasX64V2>(token: T, ...)`";
-            return syn::Error::new_spanned(&input_fn.sig, msg)
-                .to_compile_error()
-                .into();
         }
     };
 

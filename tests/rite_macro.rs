@@ -115,6 +115,114 @@ fn test_rite_complex() {
     }
 }
 
+// ============================================================================
+// Tier-based #[rite(v3)] — no token parameter needed
+// ============================================================================
+
+// Helper with tier name instead of token parameter
+#[rite(v3)]
+fn add_vectors_tierless(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    unsafe {
+        let va = _mm256_loadu_ps(a.as_ptr());
+        let vb = _mm256_loadu_ps(b.as_ptr());
+        let sum = _mm256_add_ps(va, vb);
+        let mut out = [0.0f32; 8];
+        _mm256_storeu_ps(out.as_mut_ptr(), sum);
+        out
+    }
+}
+
+// Tier + import_intrinsics — safe memory ops, no token param
+#[rite(v3, import_intrinsics)]
+fn mul_vectors_tierless(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    let va = _mm256_loadu_ps(a);
+    let vb = _mm256_loadu_ps(b);
+    let prod = _mm256_mul_ps(va, vb);
+    let mut out = [0.0f32; 8];
+    _mm256_storeu_ps(&mut out, prod);
+    out
+}
+
+// Entry point calling tier-based #[rite] helpers
+#[arcane]
+fn dot_product_tierless(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let products = mul_vectors_tierless(a, b); // no token needed!
+    unsafe {
+        let v = _mm256_loadu_ps(products.as_ptr());
+        horizontal_sum(token, v)
+    }
+}
+
+#[test]
+fn test_rite_tier_basic() {
+    if X64V3Token::summon().is_some() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let b = [1.0f32; 8];
+
+        let sum = unsafe { add_vectors_tierless(&a, &b) };
+        assert_eq!(sum, [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+    }
+}
+
+#[test]
+fn test_rite_tier_import_intrinsics() {
+    if X64V3Token::summon().is_some() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let b = [2.0f32; 8];
+
+        let products = unsafe { mul_vectors_tierless(&a, &b) };
+        assert_eq!(products, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+    }
+}
+
+#[test]
+fn test_rite_tier_from_arcane() {
+    if let Some(token) = X64V3Token::summon() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let b = [2.0f32; 8];
+
+        let result = dot_product_tierless(token, &a, &b);
+        assert_eq!(result, 72.0);
+    }
+}
+
+// Tier with stub — generates unreachable stub on wrong arch
+#[rite(v3, stub)]
+fn negate_tierless(a: &[f32; 8]) -> [f32; 8] {
+    let zero = _mm256_setzero_ps();
+    unsafe {
+        let va = _mm256_loadu_ps(a.as_ptr());
+        let neg = _mm256_sub_ps(zero, va);
+        let mut out = [0.0f32; 8];
+        _mm256_storeu_ps(out.as_mut_ptr(), neg);
+        out
+    }
+}
+
+// V2 tier — SSE4.2 level (128-bit)
+#[rite(v2)]
+fn popcount_tierless(val: i32) -> i32 {
+    // POPCNT is available at v2 — safe inside #[target_feature] (Rust 1.85+)
+    core::arch::x86_64::_popcnt32(val)
+}
+
+#[test]
+fn test_rite_tier_v2() {
+    if archmage::X64V2Token::summon().is_some() {
+        let result = unsafe { popcount_tierless(0b1010_1010) };
+        assert_eq!(result, 4);
+    }
+}
+
+#[test]
+fn test_rite_tier_stub() {
+    if X64V3Token::summon().is_some() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let result = unsafe { negate_tierless(&a) };
+        assert_eq!(result, [-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0]);
+    }
+}
+
 // Wildcard token parameter: `_: TokenType` should be accepted
 #[rite]
 fn scale_vector(_: X64V3Token, a: &[f32; 8], factor: f32) -> [f32; 8] {
