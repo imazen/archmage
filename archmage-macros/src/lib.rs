@@ -56,6 +56,17 @@ impl ToTokens for LightFn {
     }
 }
 
+/// Filter out `#[inline]`, `#[inline(always)]`, `#[inline(never)]` from attributes.
+///
+/// Used to prevent duplicate inline attributes when the macro adds its own.
+/// Duplicate `#[inline]` is a warning that will become a hard error.
+fn filter_inline_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
+    attrs
+        .iter()
+        .filter(|attr| !attr.path().is_ident("inline"))
+        .collect()
+}
+
 /// Build a turbofish token stream from a function's generics.
 ///
 /// Collects type and const generic parameters (skipping lifetimes) and returns
@@ -680,10 +691,10 @@ fn arcane_impl_wasm_safe(
         input_fn.body.clone()
     };
 
-    // Prepend target_feature + inline attrs
+    // Prepend target_feature + inline attrs, filtering user #[inline] to avoid duplicates
     let mut new_attrs = target_feature_attrs;
     new_attrs.push(inline_attr);
-    for attr in attrs {
+    for attr in filter_inline_attrs(attrs) {
         new_attrs.push(attr.clone());
     }
 
@@ -775,7 +786,9 @@ fn arcane_impl_sibling(
     let inputs = &sig.inputs;
     let output = &sig.output;
     let body = &input_fn.body;
-    let attrs = &input_fn.attrs;
+    // Filter out user #[inline] attrs to avoid duplicates (will become a hard error).
+    // The wrapper gets #[inline(always)] unconditionally — it's a trivial unsafe { sibling() }.
+    let attrs = filter_inline_attrs(&input_fn.attrs);
 
     let sibling_name = format_ident!("__arcane_{}", fn_name);
 
@@ -867,6 +880,7 @@ fn arcane_impl_sibling(
         let wrapper_fn = quote! {
             #[cfg(target_arch = #arch)]
             #(#attrs)*
+            #[inline(always)]
             #vis #sig {
                 // SAFETY: The token parameter proves the required CPU features are available.
                 // Calling a #[target_feature] function from a non-matching context requires
@@ -918,6 +932,7 @@ fn arcane_impl_sibling(
 
         let wrapper_fn = quote! {
             #(#attrs)*
+            #[inline(always)]
             #vis #sig {
                 // SAFETY: The token proves the required CPU features are available.
                 unsafe { #sibling_call }
@@ -954,7 +969,8 @@ fn arcane_impl_nested(
     let inputs = &sig.inputs;
     let output = &sig.output;
     let body = &input_fn.body;
-    let attrs = &input_fn.attrs;
+    // Filter out user #[inline] attrs to avoid duplicates (will become a hard error).
+    let attrs = filter_inline_attrs(&input_fn.attrs);
 
     // Determine self receiver type if present
     let self_receiver_kind: Option<SelfReceiver> = inputs.first().and_then(|arg| match arg {
@@ -1069,6 +1085,7 @@ fn arcane_impl_nested(
             // Real implementation for the correct architecture
             #[cfg(target_arch = #arch)]
             #(#attrs)*
+            #[inline(always)]
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
@@ -1086,6 +1103,7 @@ fn arcane_impl_nested(
         // No specific arch (trait bounds or generic) - generate without cfg guards
         quote! {
             #(#attrs)*
+            #[inline(always)]
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
@@ -1529,10 +1547,12 @@ fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
     let inline_attr: Attribute = parse_quote!(#[inline]);
 
-    // Prepend attributes to the function
+    // Prepend attributes to the function, filtering user #[inline] to avoid duplicates
     let mut new_attrs = target_feature_attrs;
     new_attrs.push(inline_attr);
-    new_attrs.append(&mut input_fn.attrs);
+    for attr in filter_inline_attrs(&input_fn.attrs) {
+        new_attrs.push(attr.clone());
+    }
     input_fn.attrs = new_attrs;
 
     // Prepend import statements to body if requested
@@ -1633,7 +1653,9 @@ fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
 
         let mut new_attrs = target_feature_attrs;
         new_attrs.push(inline_attr);
-        new_attrs.append(&mut variant_fn.attrs);
+        for attr in filter_inline_attrs(&variant_fn.attrs) {
+            new_attrs.push(attr.clone());
+        }
         variant_fn.attrs = new_attrs;
 
         // Prepend import statements if requested

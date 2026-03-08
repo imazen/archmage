@@ -197,4 +197,24 @@ mod sibling_tests {
             assert_eq!(t, Point { x: 6.0, y: 8.0 });
         }
     }
+
+    // --- User #[inline(always)] stripped to avoid duplicate attribute warning ---
+
+    #[inline(always)]
+    #[arcane]
+    fn user_inline_fn(token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
+        let mut out = [0.0f32; 4];
+        for i in 0..4 {
+            out[i] = data[i] + 1.0;
+        }
+        out
+    }
+
+    #[test]
+    fn user_inline_always_no_duplicate() {
+        if let Some(token) = X64V3Token::summon() {
+            let result = user_inline_fn(token, &[1.0, 2.0, 3.0, 4.0]);
+            assert_eq!(result, [2.0, 3.0, 4.0, 5.0]);
+        }
+    }
 }
