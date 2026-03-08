@@ -53,16 +53,19 @@ These aliases exist so AI tools can infer behavior from the name. **Prefer the t
 
 ### CRITICAL: How the Macros Choose Features
 
-`#[arcane]` and `#[rite]` determine features in two ways:
+`#[arcane]` and `#[rite]` determine features in three ways:
 
 1. **Token-based** (default): Parse the token type from the function signature. `X64V3Token` → `#[target_feature(enable = "avx2,fma,...")]`.
-2. **Tier-based** (`#[rite(v3)]` only): The tier name specifies the features directly. No token parameter needed.
+2. **Tier-based** (`#[rite(v3)]`): The tier name specifies the features directly. No token parameter needed.
+3. **Multi-tier** (`#[rite(v3, v4, neon)]`): Generates a suffixed variant for each tier (`fn_v3`, `fn_v4`, `fn_neon`), each with its own `#[target_feature]` and `#[cfg(target_arch)]`.
 
-Both produce identical `#[target_feature]` attributes. The token type or tier name *is* the feature selector.
+Single-tier and token-based produce identical `#[target_feature]` attributes. Multi-tier produces multiple functions — one per tier, each compiled with different features. The token form can be easier to remember if you already have the token in scope.
 
 `#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This wrapper is how you cross into SIMD code without writing `unsafe` yourself — but it also creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary.
 
-**`#[rite]` should be the default.** Use `#[arcane(import_intrinsics)]` only at the entry point. For internal helpers, use `#[rite(v3, import_intrinsics)]` (tier-based, no token parameter) or `#[rite(import_intrinsics)]` (token-based). Both produce identical code. `import_intrinsics` auto-imports `archmage::intrinsics::{arch}::*` — a combined module where `safe_unaligned_simd` memory ops shadow `core::arch` pointer-based ones. No ambiguity, no qualification needed.
+**`#[rite]` should be the default.** Use `#[arcane(import_intrinsics)]` only at the entry point. For internal helpers, use `#[rite(v3, import_intrinsics)]` (tier-based, no token parameter) or `#[rite(import_intrinsics)]` (token-based). For multi-tier auto-vectorization, use `#[rite(v3, v4, neon)]`. `import_intrinsics` auto-imports `archmage::intrinsics::{arch}::*` — a combined module where `safe_unaligned_simd` memory ops shadow `core::arch` pointer-based ones. No ambiguity, no qualification needed.
+
+Multi-tier variants are safe to call from matching `#[arcane]` or `#[rite]` contexts — since Rust 1.85, `#[target_feature]` functions can safely call other `#[target_feature]` functions when the caller has matching or superset features.
 
 ### CRITICAL: Target-Feature Boundaries (4x Performance Impact)
 
@@ -443,7 +446,12 @@ The M1 is the notable chip that gets V2 but not V3 (lacks i8mm/bf16). Budget 202
 
 **`#[rite]` should be the default.** It adds `#[target_feature]` + `#[inline]` — LLVM inlines it into any caller with matching features.
 
-**Two modes:** `#[rite(v3, import_intrinsics)]` (tier-based, no token needed) or `#[rite(import_intrinsics)]` (token-based, reads token from params). Both produce identical code.
+**Three modes:**
+- `#[rite(v3, import_intrinsics)]` — tier-based, no token needed
+- `#[rite(import_intrinsics)]` — token-based, reads token from params
+- `#[rite(v3, v4, neon, import_intrinsics)]` — multi-tier, generates suffixed variants (`fn_v3`, `fn_v4`, `fn_neon`)
+
+Single-tier and token-based produce identical code. The token form can be easier to remember if you already have it in scope. Multi-tier generates one copy per tier, each compiled with different features.
 
 Use `#[arcane(import_intrinsics)]` only when the function is called from non-SIMD code:
 - After `summon()` in a public API
@@ -469,6 +477,13 @@ fn process_chunk(chunk: &mut [f32; 8]) {
 #[rite(import_intrinsics)]
 fn process_chunk_with_token(_: X64V3Token, chunk: &mut [f32; 8]) {
     // ...
+}
+
+// Multi-tier: generates process_v3() and process_v4() from one body
+#[rite(v3, v4, import_intrinsics)]
+fn process_multi(data: &[f32; 4]) -> f32 {
+    // Each variant compiled with different #[target_feature]
+    data.iter().sum()
 }
 ```
 

@@ -130,7 +130,7 @@ Both import the same combined intrinsics module — using both is just duplicati
 
 **`#[rite]` should be your default.** Use `#[arcane]` only at the entry point — the first call from non-SIMD code.
 
-`#[rite]` works two ways: **token-based** (reads the token from your parameter) or **tier-based** (you specify the tier directly, no token needed):
+`#[rite]` works three ways:
 
 ```rust
 use archmage::prelude::*;
@@ -159,9 +159,38 @@ fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
 }
 ```
 
-Both forms generate identical `#[target_feature]` attributes. `#[rite(v3)]` and `#[rite]` with an `X64V3Token` parameter produce the same code. Tier names: `v1`, `v2`, `v3`, `v4`, `neon`, `arm_v2`, `wasm128`, etc. — the same names used by `incant!`.
+Both `#[rite(v3)]` and `#[rite]` with an `X64V3Token` parameter produce identical `#[target_feature]` output. The tier-based form is shorter; the token form can be easier to remember if you already have the token in scope.
 
-**Why two macros?** `#[arcane]` generates a safe wrapper that crosses the `#[target_feature]` boundary — LLVM can't optimize across it. `#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into the caller. Same features = no boundary.
+### Multi-tier `#[rite]`
+
+When you specify multiple tiers, `#[rite]` generates a suffixed variant for each:
+
+```rust
+use archmage::prelude::*;
+
+// Generates process_v3() and process_v4() — each with correct #[target_feature]
+#[rite(v3, v4)]
+fn process(data: &[f32; 4]) -> f32 {
+    data[0] + data[1] + data[2] + data[3]
+}
+```
+
+Call the suffixed variant from a matching `#[arcane]` or `#[rite]` context — since Rust 1.85, a `#[target_feature]` function can safely call another `#[target_feature]` function when both have matching (or superset) features:
+
+```rust
+#[arcane]
+fn entry(token: X64V3Token, data: &[f32; 4]) -> f32 {
+    process_v3(data)  // safe — caller has V3 features, callee needs V3
+}
+```
+
+This is useful when writing a single function body that should be compiled for multiple tiers — the compiler applies different `#[target_feature]` attributes to each copy, and LLVM auto-vectorizes each variant with the available instructions.
+
+Tier names: `v1`, `v2`, `v3`, `v4`, `neon`, `arm_v2`, `wasm128`, etc. — the same names used by `incant!`.
+
+### Why two macros?
+
+`#[arcane]` generates a safe wrapper that crosses the `#[target_feature]` boundary — LLVM can't optimize across it. `#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into the caller. Same features = no boundary.
 
 Processing 1000 8-float vector additions ([full benchmark details](docs/PERFORMANCE.md)):
 

@@ -1057,3 +1057,200 @@ fn test_rite_tier_lifetime_generic() {
         assert_eq!(mask, 0b1010_1010_u32 as i32);
     }
 }
+
+// =============================================================================
+// Multi-tier #[rite] — generates suffixed variants
+// =============================================================================
+
+// --- Multi-tier generates v1 and v3 variants from one function ---
+
+#[rite(v1, v3)]
+fn sum_array(data: &[f32; 4]) -> f32 {
+    data[0] + data[1] + data[2] + data[3]
+}
+
+#[test]
+fn test_rite_multi_tier_v1_v3() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    // V1 always available on x86_64
+    let r1 = unsafe { sum_array_v1(&data) };
+    assert_eq!(r1, 10.0);
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { sum_array_v3(&data) };
+        assert_eq!(r3, 10.0);
+    }
+}
+
+// --- Multi-tier with import_intrinsics ---
+
+#[rite(v2, v3, import_intrinsics)]
+fn multi_tier_loadu(data: &[f32; 4]) -> f32 {
+    // _mm_loadu_ps + _mm_hadd_ps work on both v2 (SSE4.2) and v3 (AVX2)
+    let v = _mm_loadu_ps(data);
+    let sum = _mm_hadd_ps(v, v);
+    let sum = _mm_hadd_ps(sum, sum);
+    _mm_cvtss_f32(sum)
+}
+
+#[test]
+fn test_rite_multi_tier_import_intrinsics() {
+    use archmage::X64V2Token;
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+
+    // v2 variant
+    if X64V2Token::summon().is_some() {
+        let r2 = unsafe { multi_tier_loadu_v2(&data) };
+        assert_eq!(r2, 10.0);
+    }
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_loadu_v3(&data) };
+        assert_eq!(r3, 10.0);
+    }
+}
+
+// --- Multi-tier with stub ---
+
+#[rite(v1, v3, stub)]
+fn multi_tier_stub_fn(x: f32, y: f32) -> f32 {
+    x * y + 1.0
+}
+
+#[test]
+fn test_rite_multi_tier_stub() {
+    // Both should be callable on x86_64
+    let r1 = unsafe { multi_tier_stub_fn_v1(3.0, 4.0) };
+    assert_eq!(r1, 13.0);
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_stub_fn_v3(3.0, 4.0) };
+        assert_eq!(r3, 13.0);
+    }
+}
+
+// --- Multi-tier called from #[arcane] (the primary use case) ---
+
+#[rite(v2, v3)]
+fn inner_scale(data: &[f32; 4], factor: f32) -> [f32; 4] {
+    [
+        data[0] * factor,
+        data[1] * factor,
+        data[2] * factor,
+        data[3] * factor,
+    ]
+}
+
+#[arcane]
+fn process_with_multi_tier(_token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
+    // From inside #[arcane(v3)], calling a #[rite] v3 variant is safe — features match
+    inner_scale_v3(data, 2.0)
+}
+
+#[test]
+fn test_rite_multi_tier_called_from_arcane() {
+    if let Some(token) = X64V3Token::summon() {
+        let data = [1.0f32, 2.0, 3.0, 4.0];
+        let result = process_with_multi_tier(token, &data);
+        assert_eq!(result, [2.0, 4.0, 6.0, 8.0]);
+    }
+}
+
+// --- Multi-tier with avx512 feature ---
+
+#[cfg(feature = "avx512")]
+mod multi_tier_avx512 {
+    use archmage::{SimdToken, X64V3Token, X64V4Token, rite};
+
+    #[rite(v3, v4)]
+    fn add_pair(a: f32, b: f32) -> f32 {
+        a + b
+    }
+
+    #[test]
+    fn test_multi_tier_v3_v4() {
+        if X64V3Token::summon().is_some() {
+            let r3 = unsafe { add_pair_v3(3.0, 4.0) };
+            assert_eq!(r3, 7.0);
+        }
+        if X64V4Token::summon().is_some() {
+            let r4 = unsafe { add_pair_v4(3.0, 4.0) };
+            assert_eq!(r4, 7.0);
+        }
+    }
+
+    // Multi-tier with import_intrinsics across v3/v4
+    #[rite(v3, v4, import_intrinsics)]
+    fn multi_tier_intrinsics_v3_v4(data: &[f32; 4]) -> f32 {
+        let v = _mm_loadu_ps(data);
+        let sum = _mm_hadd_ps(v, v);
+        let sum = _mm_hadd_ps(sum, sum);
+        _mm_cvtss_f32(sum)
+    }
+
+    #[test]
+    fn test_multi_tier_intrinsics_v3_v4() {
+        let data = [10.0f32, 20.0, 30.0, 40.0];
+        if X64V3Token::summon().is_some() {
+            let r3 = unsafe { multi_tier_intrinsics_v3_v4_v3(&data) };
+            assert_eq!(r3, 100.0);
+        }
+        if X64V4Token::summon().is_some() {
+            let r4 = unsafe { multi_tier_intrinsics_v3_v4_v4(&data) };
+            assert_eq!(r4, 100.0);
+        }
+    }
+}
+
+// --- Verify that multi-tier preserves visibility ---
+
+mod multi_tier_visibility {
+    use archmage::rite;
+
+    #[rite(v1, v3)]
+    pub fn public_multi(x: f32) -> f32 {
+        x * 2.0
+    }
+
+    #[rite(v1, v3)]
+    pub(crate) fn crate_multi(x: f32) -> f32 {
+        x * 3.0
+    }
+}
+
+#[test]
+fn test_multi_tier_visibility() {
+    // pub variants should be accessible
+    let r1 = unsafe { multi_tier_visibility::public_multi_v1(5.0) };
+    assert_eq!(r1, 10.0);
+
+    let r2 = unsafe { multi_tier_visibility::crate_multi_v1(5.0) };
+    assert_eq!(r2, 15.0);
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_visibility::public_multi_v3(5.0) };
+        assert_eq!(r3, 10.0);
+    }
+}
+
+// --- Verify multi-tier with return types ---
+
+#[rite(v1, v3)]
+fn multi_tier_returns_tuple(a: f32, b: f32) -> (f32, f32) {
+    (a + b, a * b)
+}
+
+#[rite(v1, v3)]
+fn multi_tier_returns_bool(x: f32) -> bool {
+    x > 0.0
+}
+
+#[test]
+fn test_multi_tier_return_types() {
+    let (sum, prod) = unsafe { multi_tier_returns_tuple_v1(3.0, 4.0) };
+    assert_eq!(sum, 7.0);
+    assert_eq!(prod, 12.0);
+
+    assert!(unsafe { multi_tier_returns_bool_v1(1.0) });
+    assert!(!unsafe { multi_tier_returns_bool_v1(-1.0) });
+}

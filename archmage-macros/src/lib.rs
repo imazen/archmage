@@ -181,8 +181,8 @@ impl Parse for ArcaneArgs {
 // token-registry.toml by xtask. Regenerate with: cargo run -p xtask -- generate
 mod generated;
 use generated::{
-    tier_to_canonical_token, token_to_arch, token_to_features, token_to_magetypes_namespace,
-    trait_to_arch, trait_to_features, trait_to_magetypes_namespace,
+    canonical_token_to_tier_suffix, tier_to_canonical_token, token_to_arch, token_to_features,
+    token_to_magetypes_namespace, trait_to_arch, trait_to_features, trait_to_magetypes_namespace,
 };
 
 /// Result of extracting token info from a type.
@@ -1308,28 +1308,34 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// a safe boundary, `#[rite]` adds `#[target_feature]` and `#[inline]` directly.
 /// LLVM inlines it into any caller with matching features — no boundary crossing.
 ///
-/// # When to Use
+/// # Three Modes
 ///
-/// Use `#[rite]` for helper functions that are **only** called from within
-/// `#[arcane]` functions with matching or superset token types:
-///
+/// **Token-based:** Reads the token type from the function signature.
 /// ```ignore
-/// use archmage::{arcane, rite, X64V3Token};
-///
-/// #[arcane]
-/// fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
-///     // helper inlines — same target features, no boundary
-///     helper(token, data) * 2.0
-/// }
-///
 /// #[rite]
-/// fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 {
-///     // Just has #[target_feature(enable = "avx2,fma,...")]
-///     // Called from #[arcane] context, so features are guaranteed
-///     let v = f32x8::from_array(token, *data);
-///     v.reduce_add()
-/// }
+/// fn helper(_: X64V3Token, v: __m256) -> __m256 { _mm256_add_ps(v, v) }
 /// ```
+///
+/// **Tier-based:** Specify the tier name directly, no token parameter needed.
+/// ```ignore
+/// #[rite(v3)]
+/// fn helper(v: __m256) -> __m256 { _mm256_add_ps(v, v) }
+/// ```
+///
+/// Both produce identical code. The token form can be easier to remember if
+/// you already have the token in scope.
+///
+/// **Multi-tier:** Specify multiple tiers to generate suffixed variants.
+/// ```ignore
+/// #[rite(v3, v4)]
+/// fn process(data: &[f32; 4]) -> f32 { data.iter().sum() }
+/// // Generates: process_v3() and process_v4()
+/// ```
+///
+/// Each variant gets its own `#[target_feature]` and `#[cfg(target_arch)]`.
+/// Since Rust 1.85, calling these from a matching `#[arcane]` or `#[rite]`
+/// context is safe — no `unsafe` needed when the caller has matching or
+/// superset features.
 ///
 /// # Safety
 ///
@@ -1351,6 +1357,7 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 ///
 /// | Option | Effect |
 /// |--------|--------|
+/// | tier name(s) | `v3`, `neon`, etc. One = single function; multiple = suffixed variants |
 /// | `stub` | Generate `unreachable!()` stub on wrong architecture |
 /// | `import_intrinsics` | Auto-import `archmage::intrinsics::{arch}::*` (includes safe memory ops) |
 /// | `import_magetypes` | Auto-import `magetypes::simd::{ns}::*` and `magetypes::simd::backends::*` |
@@ -1365,6 +1372,7 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// | Entry point | Yes | No |
 /// | Inlines into caller | No (barrier) | Yes |
 /// | Safe to call anywhere | Yes (with token) | Only from feature-enabled context |
+/// | Multi-tier variants | No | Yes (`#[rite(v3, v4, neon)]`) |
 /// | `stub` param | Yes | Yes |
 /// | `import_intrinsics` | Yes | Yes |
 /// | `import_magetypes` | Yes | Yes |
@@ -1403,10 +1411,11 @@ struct RiteArgs {
     /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
     /// and `use magetypes::simd::backends::*;`.
     import_magetypes: bool,
-    /// Tier specified directly (e.g., `#[rite(v3)]`).
-    /// Stored as the canonical token name (e.g., "X64V3Token").
-    /// When set, the function does not need a token parameter.
-    tier_token: Option<String>,
+    /// Tiers specified directly (e.g., `#[rite(v3)]` or `#[rite(v3, v4, neon)]`).
+    /// Stored as canonical token names (e.g., "X64V3Token").
+    /// Single tier: generates one function (no suffix, no token parameter needed).
+    /// Multiple tiers: generates suffixed variants (e.g., `fn_v3`, `fn_v4`, `fn_neon`).
+    tier_tokens: Vec<String>,
 }
 
 impl Parse for RiteArgs {
@@ -1421,13 +1430,7 @@ impl Parse for RiteArgs {
                 "import_magetypes" => args.import_magetypes = true,
                 other => {
                     if let Some(canonical) = tier_to_canonical_token(other) {
-                        if args.tier_token.is_some() {
-                            return Err(syn::Error::new(
-                                ident.span(),
-                                "multiple tier names specified in #[rite]",
-                            ));
-                        }
-                        args.tier_token = Some(String::from(canonical));
+                        args.tier_tokens.push(String::from(canonical));
                     } else {
                         return Err(syn::Error::new(
                             ident.span(),
@@ -1451,14 +1454,25 @@ impl Parse for RiteArgs {
 }
 
 /// Implementation for the `#[rite]` macro.
-fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
+fn rite_impl(input_fn: LightFn, args: RiteArgs) -> TokenStream {
+    // Multi-tier mode: generate suffixed variants for each tier
+    if args.tier_tokens.len() > 1 {
+        return rite_multi_tier_impl(input_fn, &args);
+    }
+
+    // Single-tier or token-param mode
+    rite_single_impl(input_fn, args)
+}
+
+/// Generate a single `#[rite]` function (single tier or token-param mode).
+fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     // Resolve features: either from tier name or from token parameter
     let TokenParamInfo {
         features,
         target_arch,
         magetypes_namespace,
         ..
-    } = if let Some(ref tier_token) = args.tier_token {
+    } = if let Some(tier_token) = args.tier_tokens.first() {
         // Tier specified directly (e.g., #[rite(v3)]) — no token param needed
         let features = token_to_features(tier_token)
             .expect("tier_to_canonical_token returned invalid token name")
@@ -1495,6 +1509,7 @@ fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
                 }
                 let msg = "rite requires a token parameter or a tier name. Supported forms:\n\
                      - Tier name: `#[rite(v3)]`, `#[rite(neon)]`\n\
+                     - Multi-tier: `#[rite(v3, v4, neon)]` (generates suffixed variants)\n\
                      - Concrete: `token: X64V3Token`\n\
                      - impl Trait: `token: impl HasX64V2`\n\
                      - Generic: `fn foo<T: HasX64V2>(token: T, ...)`";
@@ -1571,6 +1586,105 @@ fn rite_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
         // No specific arch (trait bounds) - just emit the annotated function
         quote!(#input_fn).into()
     }
+}
+
+/// Generate multiple suffixed `#[rite]` variants for multi-tier mode.
+///
+/// `#[rite(v3, v4, neon)]` on `fn process(...)` generates:
+/// - `fn process_v3(...)` with `#[target_feature(enable = "avx2,fma,...")]`
+/// - `fn process_v4(...)` with `#[target_feature(enable = "avx512f,...")]`
+/// - `fn process_neon(...)` with `#[target_feature(enable = "neon")]`
+///
+/// Each variant is cfg-gated to its architecture and gets `#[inline]`.
+fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
+    let fn_name = &input_fn.sig.ident;
+    let mut variants = proc_macro2::TokenStream::new();
+
+    for tier_token in &args.tier_tokens {
+        let features = match token_to_features(tier_token) {
+            Some(f) => f,
+            None => {
+                return syn::Error::new_spanned(
+                    &input_fn.sig,
+                    format!("unknown token `{tier_token}` in multi-tier #[rite]"),
+                )
+                .to_compile_error()
+                .into();
+            }
+        };
+        let target_arch = token_to_arch(tier_token);
+        let magetypes_namespace = token_to_magetypes_namespace(tier_token);
+        let suffix = canonical_token_to_tier_suffix(tier_token)
+            .expect("canonical token must have a tier suffix");
+
+        // Build suffixed function name
+        let suffixed_ident = format_ident!("{}_{}", fn_name, suffix);
+
+        // Clone and rename the function
+        let mut variant_fn = input_fn.clone();
+        variant_fn.sig.ident = suffixed_ident;
+
+        // Build target_feature attributes
+        let target_feature_attrs: Vec<Attribute> = features
+            .iter()
+            .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
+            .collect();
+        let inline_attr: Attribute = parse_quote!(#[inline]);
+
+        let mut new_attrs = target_feature_attrs;
+        new_attrs.push(inline_attr);
+        new_attrs.append(&mut variant_fn.attrs);
+        variant_fn.attrs = new_attrs;
+
+        // Prepend import statements if requested
+        let body_imports = generate_imports(
+            target_arch,
+            magetypes_namespace,
+            args.import_intrinsics,
+            args.import_magetypes,
+        );
+        if !body_imports.is_empty() {
+            let original_body = &variant_fn.body;
+            variant_fn.body = quote! {
+                #body_imports
+                #original_body
+            };
+        }
+
+        // Emit cfg-gated variant
+        if let Some(arch) = target_arch {
+            let vis = &variant_fn.vis;
+            let sig = &variant_fn.sig;
+            let attrs = &variant_fn.attrs;
+            let body = &variant_fn.body;
+
+            variants.extend(quote! {
+                #[cfg(target_arch = #arch)]
+                #(#attrs)*
+                #vis #sig {
+                    #body
+                }
+            });
+
+            if args.stub {
+                variants.extend(quote! {
+                    #[cfg(not(target_arch = #arch))]
+                    #vis #sig {
+                        unreachable!(concat!(
+                            "This function requires ",
+                            #arch,
+                            " architecture"
+                        ))
+                    }
+                });
+            }
+        } else {
+            // No specific arch — just emit the annotated function
+            variants.extend(quote!(#variant_fn));
+        }
+    }
+
+    variants.into()
 }
 
 // =============================================================================

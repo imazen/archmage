@@ -92,7 +92,7 @@ fn example() {
 
 `#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into callers with matching features. `#[arcane]` generates an inner `#[target_feature]` function called from a safe outer function (needed when transitioning from non-SIMD code — this crossing is the target-feature boundary).
 
-`#[rite]` works two ways: **token-based** (`#[rite]` with a token parameter) and **tier-based** (`#[rite(v3)]` with no token). Both generate identical `#[target_feature]` attributes. Use tier-based when the token is just being threaded through unused.
+`#[rite]` works three ways: **token-based** (`#[rite]` with a token parameter), **tier-based** (`#[rite(v3)]` with no token), and **multi-tier** (`#[rite(v3, v4, neon)]` generating suffixed variants). Token-based and tier-based produce identical code — the token form can be easier to remember if you already have the token. Multi-tier generates one function per tier (`fn_v3`, `fn_v4`, `fn_neon`), each compiled with different features. Use tier-based when the token is just being threaded through unused. Use multi-tier when you want the same body compiled for multiple architectures.
 
 ```rust
 pub fn public_api(data: &[f32]) -> f32 {

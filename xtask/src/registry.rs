@@ -465,6 +465,8 @@ impl Registry {
         out.push('\n');
         self.gen_tier_to_canonical_token(&mut out);
         out.push('\n');
+        self.gen_canonical_token_to_tier_suffix(&mut out);
+        out.push('\n');
         self.gen_all_concrete_tokens(&mut out);
         out.push('\n');
         self.gen_all_trait_names(&mut out);
@@ -678,6 +680,28 @@ impl Registry {
                         token.name
                     ));
                 }
+            }
+        }
+
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
+    fn gen_canonical_token_to_tier_suffix(&self, out: &mut String) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps a canonical token type name to its tier suffix.
+            ///
+            /// Used by `#[rite(v3, v4, neon)]` to generate suffixed function names
+            /// (e.g., `fn_v3`, `fn_v4`, `fn_neon`).
+            pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'static str> {{
+                match token_name {{
+        "});
+
+        for token in &self.token {
+            if let Some(short) = &token.short_name {
+                let pattern = Self::match_pattern(token);
+                out.push_str(&format!("        {pattern} => Some(\"{short}\"),\n"));
             }
         }
 

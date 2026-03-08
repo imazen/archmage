@@ -9,27 +9,34 @@ weight = 4
 
 Use `#[arcane(import_intrinsics)]` only at **entry points** where the token comes from the outside world.
 
-## Two Modes
+## Three Modes
 
-`#[rite]` works in two modes — **token-based** and **tier-based**:
+`#[rite]` works in three modes:
 
 ```rust
-// Token-based: token parameter determines features
+// 1. Token-based: token parameter determines features
 #[rite(import_intrinsics)]
 fn helper(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
     _mm256_loadu_ps(data)
 }
 
-// Tier-based: tier name determines features, no token needed
+// 2. Tier-based (single): tier name determines features, no token needed
 #[rite(v3, import_intrinsics)]
 fn helper(data: &[f32; 8]) -> __m256 {
     _mm256_loadu_ps(data)
 }
+
+// 3. Multi-tier: generates suffixed variants for each tier
+#[rite(v3, v4, import_intrinsics)]
+fn helper(data: &[f32; 8]) -> __m256 {
+    _mm256_loadu_ps(data)
+}
+// Produces: helper_v3() and helper_v4()
 ```
 
-Both generate identical code — same `#[target_feature]`, same `#[inline]`, same `#[cfg(target_arch)]`. The tier-based form just saves you from threading a token parameter through internal helpers.
+Single-tier and token-based generate one function with identical attributes. Multi-tier generates a suffixed copy of the function for each tier, each compiled with different `#[target_feature]` attributes.
 
-**Use tier-based** (`#[rite(v3)]`) when the function doesn't need the token for anything else. **Use token-based** when you pass the token to other functions or magetypes constructors.
+**Use tier-based** (`#[rite(v3)]`) when the function doesn't need the token for anything else. **Use token-based** when you pass the token to other functions or magetypes constructors. The token form can be easier to remember if you already have the token in scope — but both produce identical machine code.
 
 ## How It Works
 
@@ -144,6 +151,47 @@ The tier name (`v3`) maps to the same features as `X64V3Token`. No token appears
 </details>
 
 <details>
+<summary>Multi-tier expansion (click to expand)</summary>
+
+```rust
+// Your code:
+#[rite(v3, v4, import_intrinsics)]
+fn process(data: &[f32; 4]) -> f32 {
+    let v = _mm_loadu_ps(data);
+    let sum = _mm_hadd_ps(v, v);
+    let sum = _mm_hadd_ps(sum, sum);
+    _mm_cvtss_f32(sum)
+}
+
+// Generated — two suffixed variants:
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
+#[inline]
+fn process_v3(data: &[f32; 4]) -> f32 {
+    use archmage::intrinsics::x86_64::*;
+    let v = _mm_loadu_ps(data);
+    let sum = _mm_hadd_ps(v, v);
+    let sum = _mm_hadd_ps(sum, sum);
+    _mm_cvtss_f32(sum)
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx512f,avx512bw,...")]
+#[inline]
+fn process_v4(data: &[f32; 4]) -> f32 {
+    use archmage::intrinsics::x86_64::*;
+    let v = _mm_loadu_ps(data);
+    let sum = _mm_hadd_ps(v, v);
+    let sum = _mm_hadd_ps(sum, sum);
+    _mm_cvtss_f32(sum)
+}
+```
+
+The original function name disappears — only the suffixed variants exist. Each is compiled with different `#[target_feature]` attributes, so LLVM auto-vectorizes each with the available instructions for that tier.
+
+</details>
+
+<details>
 <summary>Compare to #[arcane] which creates a wrapper</summary>
 
 ```rust
@@ -158,6 +206,69 @@ fn helper(_token: X64V3Token, v: __m256) -> __m256 {
 ```
 
 </details>
+
+## Multi-Tier `#[rite]`
+
+When you specify more than one tier, `#[rite]` generates a separate suffixed function for each:
+
+```rust
+use archmage::prelude::*;
+
+// One function body, three compiled variants
+#[rite(v3, v4, neon)]
+fn scale(data: &[f32; 4], factor: f32) -> [f32; 4] {
+    [
+        data[0] * factor,
+        data[1] * factor,
+        data[2] * factor,
+        data[3] * factor,
+    ]
+}
+// Generates: scale_v3(), scale_v4(), scale_neon()
+```
+
+Each variant gets:
+- Its own `#[target_feature]` (v3 gets AVX2+FMA, v4 gets AVX-512, neon gets NEON)
+- `#[cfg(target_arch)]` gating (v3/v4 get `x86_64`, neon gets `aarch64`)
+- `#[inline]` for inlining into callers
+
+### Calling from `#[arcane]`
+
+The primary use case is calling the right variant from within SIMD code:
+
+```rust
+#[arcane(import_intrinsics)]
+fn entry(token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
+    scale_v3(data, 2.0)  // Safe! Caller has V3 features, callee needs V3
+}
+```
+
+Since Rust 1.85, a `#[target_feature]` function can safely call another `#[target_feature]` function when the caller has matching or superset features. The `#[arcane]` wrapper gives the caller V3 features, so calling `scale_v3()` (which also needs V3) requires no `unsafe`.
+
+### When to use multi-tier
+
+Multi-tier is useful when:
+- You want LLVM to auto-vectorize the same scalar loop at different feature levels
+- You're writing `incant!`-style dispatch helpers without `#[magetypes]`
+- You need variants of a utility function for different platforms
+
+For intrinsics-heavy code where each tier uses different instructions, write separate functions per tier instead.
+
+### Multi-tier with options
+
+All options (`import_intrinsics`, `import_magetypes`, `stub`) work with multi-tier:
+
+```rust
+#[rite(v3, v4, import_intrinsics, stub)]
+fn process(data: &[f32; 4]) -> f32 {
+    let v = _mm_loadu_ps(data);
+    let sum = _mm_hadd_ps(v, v);
+    let sum = _mm_hadd_ps(sum, sum);
+    _mm_cvtss_f32(sum)
+}
+// Generates: process_v3(), process_v4() on x86_64
+//            + unreachable stubs on other architectures
+```
 
 ## Why This Works (Rust 1.85+)
 
@@ -180,6 +291,8 @@ fn inner_mul(data: &[f32; 8]) -> f32 { /* ... */ }
 
 The caller's features (`avx2,fma`) are a superset of the callee's (`avx2`), so the compiler knows the call is safe.
 
+This applies equally to multi-tier variants. When `process_v3()` is called from an `#[arcane]` function with V3 features, or from another `#[rite(v3)]` function, the call is safe because the features match.
+
 ## Direct Calls Require Unsafe
 
 If you call a `#[rite]` function from outside a `#[target_feature]` context, you need `unsafe`:
@@ -197,6 +310,8 @@ fn test_helper() {
 
 This is correct—the test function doesn't have `#[target_feature]`, so the compiler can't verify safety at compile time. The `unsafe` block says "I checked at runtime via `summon()`."
 
+The same applies to multi-tier variants — calling `process_v3()` from a test or non-SIMD context requires `unsafe`.
+
 ## Benefits
 
 1. **No target-feature boundary**: Inlines into callers with matching features
@@ -212,6 +327,7 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 |-----------|-----|-----|
 | Internal helper, doesn't need token | `#[rite(v3, import_intrinsics)]` | Cleanest — no token threading |
 | Internal helper, passes token to magetypes | `#[rite(import_intrinsics)]` with token | Token needed for magetypes constructors |
+| Multi-tier auto-vectorization | `#[rite(v3, v4, neon)]` | One body, multiple compiled variants |
 | Entry point (receives token from outside) | `#[arcane(import_intrinsics)]` | Needs safe wrapper |
 | Public API | `#[arcane(import_intrinsics)]` | Callers aren't in target_feature context |
 | Called from tests | `#[arcane(import_intrinsics)]` | Tests aren't in target_feature context |
@@ -224,8 +340,9 @@ This is correct—the test function doesn't have `#[target_feature]`, so the com
 | Uses magetypes types (`f32x8::load(token, ...)`) | `#[rite]` with token — magetypes needs the token |
 | Passes token to other token-based `#[rite]` functions | `#[rite]` with token — already have it |
 | Deep in a call chain, token is just passed through unused | `#[rite(v3)]` — drop the ceremony |
+| Same body should compile for multiple tiers | `#[rite(v3, v4)]` — generates suffixed variants |
 
-Both produce identical machine code. The choice is about API clarity.
+Both single-tier and token-based produce identical machine code. Multi-tier produces one copy per tier, each compiled with different features. The choice is about what you need.
 
 ## Tier Names
 
@@ -281,7 +398,7 @@ All `#[rite]` functions inline into the caller — no target-feature boundary, o
 
 ## Cross-Architecture Behavior
 
-Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. Use `stub` to generate an unreachable stub instead. Both modes work with token-based and tier-based:
+Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. Use `stub` to generate an unreachable stub instead. Both modes work with all `#[rite]` forms:
 
 ```rust
 // Default: only exists on x86_64
@@ -297,9 +414,18 @@ fn helper_stubbed(v: __m256) -> __m256 {
 }
 ```
 
+For multi-tier, each variant gets its own cfg guard and optional stub:
+
+```rust
+#[rite(v3, neon, stub)]
+fn portable_helper(x: f32, y: f32) -> f32 { x + y }
+// process_v3() on x86_64, process_neon() on aarch64
+// unreachable stubs for the other architecture
+```
+
 ## Auto-Imports
 
-`#[rite]` supports `import_intrinsics` and `import_magetypes`. Both work with tier-based and token-based modes:
+`#[rite]` supports `import_intrinsics` and `import_magetypes`. Both work with all modes:
 
 ```rust
 // Tier-based with auto-imports
@@ -325,7 +451,7 @@ See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import-intrinsics) for t
 
 ## Inlining Behavior
 
-`#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. This applies equally to token-based and tier-based `#[rite]` — both emit the same `#[inline]` attribute.
+`#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. This applies equally to all `#[rite]` modes — token-based, tier-based, and multi-tier variants all emit the same `#[inline]` attribute.
 
 Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. Calling `#[arcane]` per iteration instead costs 4x (simple adds) to 6.2x (DCT-8). See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md).
 
@@ -337,7 +463,7 @@ All options combine freely. Order doesn't matter.
 
 | Option | Effect |
 |--------|--------|
-| `v3`, `neon`, `v4`, ... | Tier name — sets features without token parameter |
+| `v3`, `neon`, `v4`, ... | Tier name — sets features (one = single function, multiple = suffixed variants) |
 | `import_intrinsics` | Injects `use archmage::intrinsics::{arch}::*` (safe memory ops) |
 | `import_magetypes` | Injects magetypes SIMD type imports |
 | `stub` | Generates `unreachable!()` stub on wrong architecture |
@@ -345,10 +471,11 @@ All options combine freely. Order doesn't matter.
 **Examples:**
 
 ```rust
-#[rite(v3)]                                    // tier only
-#[rite(v3, import_intrinsics)]                 // tier + safe intrinsics
-#[rite(v3, import_intrinsics, stub)]           // tier + safe intrinsics + cross-arch stub
-#[rite(v3, import_intrinsics, import_magetypes)] // tier + everything
+#[rite(v3)]                                    // single tier
+#[rite(v3, import_intrinsics)]                 // single tier + safe intrinsics
+#[rite(v3, v4, neon)]                          // multi-tier (generates _v3, _v4, _neon)
+#[rite(v3, v4, import_intrinsics)]             // multi-tier + safe intrinsics
+#[rite(v3, v4, import_intrinsics, stub)]       // multi-tier + intrinsics + stubs
 #[rite(import_intrinsics)]                     // token-based (reads token from params)
 #[rite(stub)]                                  // token-based + cross-arch stub
 ```

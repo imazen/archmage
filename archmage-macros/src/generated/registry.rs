@@ -542,6 +542,32 @@ pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {
     }
 }
 
+/// Maps a canonical token type name to its tier suffix.
+///
+/// Used by `#[rite(v3, v4, neon)]` to generate suffixed function names
+/// (e.g., `fn_v3`, `fn_v4`, `fn_neon`).
+pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'static str> {
+    match token_name {
+        "X64V1Token" | "Sse2Token" => Some("v1"),
+        "X64V2Token" => Some("v2"),
+        "X64CryptoToken" => Some("x64_crypto"),
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
+        "X64V3CryptoToken" => Some("v3_crypto"),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
+        "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
+        "Avx512Fp16Token" => Some("fp16"),
+        "NeonToken" | "Arm64" => Some("neon"),
+        "NeonAesToken" => Some("neon_aes"),
+        "NeonSha3Token" => Some("neon_sha3"),
+        "NeonCrcToken" => Some("neon_crc"),
+        "Arm64V2Token" => Some("arm_v2"),
+        "Arm64V3Token" => Some("arm_v3"),
+        "Wasm128Token" => Some("wasm128"),
+        "Wasm128RelaxedToken" => Some("wasm128_relaxed"),
+        _ => None,
+    }
+}
+
 /// All concrete token names that exist in the runtime crate.
 #[cfg(test)]
 pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[

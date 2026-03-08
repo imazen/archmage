@@ -21,7 +21,7 @@ With `avx512` feature: `HasX64V4`
 
 ### Macros
 
-`#[arcane]`, `#[rite]` / `#[rite(v3)]`, `#[magetypes]`, `incant!`
+`#[arcane]`, `#[rite]` / `#[rite(v3)]` / `#[rite(v3, v4, neon)]`, `#[magetypes]`, `incant!`
 
 ### Platform Intrinsics + Safe Memory Ops
 
