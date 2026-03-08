@@ -2,7 +2,7 @@
 
 The biggest performance pitfall with SIMD isn't `summon()` cost (~1.3 ns cached) — it's calling `#[arcane]` functions from inside hot loops. Each call crosses a `#[target_feature]` boundary that LLVM can't optimize across: 4x slower in benchmarks. Token hoisting alone doesn't fix this — even with the token pre-summoned, each `#[arcane]` call still hits the boundary.
 
-The fix: enter `#[arcane]` once, put your loop inside it, and use `#[rite]` for helpers.
+The fix: enter `#[arcane]` once, put your loop inside it, and use `#[rite]` for helpers. `#[rite]` works in three modes: token-based, tier-based (`#[rite(v3)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants).
 
 ```mermaid
 %%{init: { 'theme': 'dark' }}%%

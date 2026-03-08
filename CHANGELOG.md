@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### `#[rite]` multi-tier support
+
+`#[rite]` now supports three modes:
+
+- **Token-based** (`#[rite]`): reads the token type from the function signature (existing behavior)
+- **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token parameter needed (existing behavior)
+- **Multi-tier** (`#[rite(v3, v4, neon)]`): generates a suffixed variant for each tier (`fn_v3`, `fn_v4`, `fn_neon`), each with its own `#[target_feature]` and `#[cfg(target_arch)]`
+
+Multi-tier lets you write one function body and get per-tier compiled variants. Each variant is safe to call from matching `#[arcane]` or `#[rite]` contexts (Rust 1.85+). Single-tier behavior is unchanged — no suffix is added.
+
+```rust
+#[rite(v3, v4, neon)]
+fn scale(data: &[f32; 4], factor: f32) -> [f32; 4] {
+    [data[0] * factor, data[1] * factor, data[2] * factor, data[3] * factor]
+}
+// Generates: scale_v3(), scale_v4(), scale_neon()
+```
+
 ## 0.9.3 — 2026-03-05
 
 Fixed `no_std` compilation on bare-metal targets, added `no_std` CI enforcement.

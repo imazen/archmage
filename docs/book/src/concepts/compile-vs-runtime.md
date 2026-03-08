@@ -157,7 +157,11 @@ This is **safe**—`as_x64v4()` returns `None` if the token doesn't support V4. 
 
 ## The `#[rite]` Optimization
 
-`#[rite]` exists to stay inside the same `#[target_feature]` optimization region:
+`#[rite]` exists to stay inside the same `#[target_feature]` optimization region. It works in three modes:
+
+- **Token-based** (`#[rite]`): reads the token from the function signature
+- **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token needed
+- **Multi-tier** (`#[rite(v3, v4, neon)]`): generates suffixed variants (`fn_v3`, `fn_v4`, `fn_neon`)
 
 ```rust
 // #[arcane] creates a wrapper:
@@ -170,20 +174,20 @@ fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
 // #[rite] is the function directly:
 #[target_feature(enable = "avx2,fma,...")]
 #[inline]
-fn helper(token: X64V3Token, data: &[f32; 8]) -> f32 { ... }
+fn helper(data: &[f32; 8]) -> f32 { ... }  // Tier-based — no token needed
 ```
 
-Since Rust 1.85+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` helpers without `unsafe`:
+Since Rust 1.85+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` functions without `unsafe`:
 
 ```rust
 #[arcane(import_intrinsics)]
 fn entry(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let prod = mul_vectors(token, a, b);  // Calls #[rite], no unsafe!
-    horizontal_sum(token, prod)
+    let prod = mul_vectors(a, b);       // #[rite(v3)] — no token, no unsafe!
+    horizontal_sum(token, prod)         // #[rite] with token — also fine
 }
 
-#[rite(import_intrinsics)]
-fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 { ... }
+#[rite(v3, import_intrinsics)]
+fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 { ... }
 
 #[rite(import_intrinsics)]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 { ... }

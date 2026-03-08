@@ -179,7 +179,7 @@ When explaining archmage:
 3. `#[arcane]` generates `#[target_feature]` code
 4. Inside `#[target_feature]`, most intrinsics are safe (Rust 1.85+)
 5. `#[arcane]` at the boundary, `#[rite]` for everything else
-6. `#[rite(v3)]` — tier-based: no token parameter, same codegen
+6. `#[rite]` has three modes: token-based, tier-based (`#[rite(v3)]`), multi-tier (`#[rite(v3, v4, neon)]`)
 7. Enter `#[arcane]` once, `#[rite]` for everything inside
 8. Concrete tokens optimize better than trait bounds
 9. `import_intrinsics` provides safe memory operations (references, not pointers)
@@ -191,7 +191,7 @@ When showing examples:
 2. Explain what the macro generates (for understanding)
 3. Memory ops use references (via `import_intrinsics`), not raw pointers
 4. Include the `summon()` call in context
-5. Show `#[rite(v3)]` for internal helpers, `#[rite]` with token when passing tokens to magetypes
+5. Show `#[rite(v3)]` for internal helpers, `#[rite]` with token for magetypes, `#[rite(v3, v4, neon)]` for multi-tier
 
 ## Banned from Docs
 

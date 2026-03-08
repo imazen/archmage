@@ -5,7 +5,7 @@ weight = 2
 
 The biggest performance pitfall with SIMD isn't `summon()` cost (~1.3 ns cached) — it's calling `#[arcane]` functions from inside hot loops. Each call crosses a `#[target_feature]` boundary that LLVM can't optimize across: 4x slower in benchmarks. Token hoisting alone doesn't fix this — even with the token pre-summoned, each `#[arcane]` call still hits the boundary.
 
-The fix: enter `#[arcane(import_intrinsics)]` once, put your loop inside it, and use `#[rite(v3, import_intrinsics)]` (or `#[rite(import_intrinsics)]` with a token) for helpers.
+The fix: enter `#[arcane(import_intrinsics)]` once, put your loop inside it, and use `#[rite]` for helpers. `#[rite]` works in three modes: token-based (`#[rite(import_intrinsics)]`), tier-based (`#[rite(v3, import_intrinsics)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants).
 
 {% mermaid() %}
 flowchart TD

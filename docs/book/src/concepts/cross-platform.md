@@ -4,7 +4,7 @@ Archmage lets you write x86 SIMD code that compiles on ARM and vice versa. `#[ar
 
 ## Default: Cfg-Out
 
-`#[arcane]` and `#[rite]` only emit code on the matching architecture. On other architectures, no function is generated — no dead code, no stubs.
+`#[arcane]` and `#[rite]` only emit code on the matching architecture. On other architectures, no function is generated — no dead code, no stubs. This applies to all `#[rite]` modes (token-based, tier-based, and multi-tier). For multi-tier `#[rite(v3, v4, neon)]`, each variant gets its own `#[cfg(target_arch)]` guard.
 
 ```rust
 use archmage::prelude::*;

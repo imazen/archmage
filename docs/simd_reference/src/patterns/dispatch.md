@@ -78,7 +78,7 @@ pub fn process(data: &mut [f32]) {
 
 ## Enter `#[arcane]` Once
 
-Enter `#[arcane]` at the API boundary, put loops inside it, use `#[rite]` for helpers:
+Enter `#[arcane]` at the API boundary, put loops inside it, use `#[rite]` for helpers (token-based, tier-based, or multi-tier):
 
 ```rust
 // WRONG: target-feature boundary every iteration (4x slower)

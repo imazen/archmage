@@ -163,9 +163,10 @@ fn process_all_chunks(token: X64V3Token, data: &mut [f32]) {
     }
 }
 
-#[rite(import_intrinsics)]
-fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
+#[rite(v3, import_intrinsics)]
+fn process_chunk(chunk: &mut [f32; 8]) {
     // Same target features as caller — LLVM optimizes across both
+    // Tier-based: no token needed. Also works with token param or multi-tier.
 }
 ```
 

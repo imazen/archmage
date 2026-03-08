@@ -80,20 +80,20 @@ The outer function is safe. The `unsafe` call to the inner function is justified
 | Overhead | 4-6x in hot loop ([details](../../../PERFORMANCE.md)) | Zero (inlines) |
 | Use for | Entry points (from non-SIMD code) | Internal helpers (from SIMD code) |
 
-**Rule of thumb:** `#[arcane]` at the boundary, `#[rite]` for everything else.
+**Rule of thumb:** `#[arcane]` at the boundary, `#[rite]` for everything else. `#[rite]` works in three modes: token-based (`#[rite]`), tier-based (`#[rite(v3)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants).
 
 ```rust
 // Entry point — called from non-SIMD code
 #[arcane(import_intrinsics)]
 pub fn process(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
-        process_chunk(token, chunk.try_into().unwrap());
+        process_chunk(chunk.try_into().unwrap());  // no token needed
     }
 }
 
-// Internal helper — inlines into the #[arcane] caller
-#[rite(import_intrinsics)]
-fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
+// Internal helper — tier-based, inlines into the #[arcane] caller
+#[rite(v3, import_intrinsics)]
+fn process_chunk(chunk: &mut [f32; 8]) {
     // ... SIMD work ...
 }
 ```

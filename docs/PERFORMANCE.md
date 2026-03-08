@@ -19,11 +19,11 @@ The 4x penalty comes from LLVM, not archmage. Read on.
 
 ## The target-feature boundary
 
-`#[arcane]` and `#[rite]` read the token type from your function signature to decide which `#[target_feature]` to emit. A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`. A function taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
+`#[arcane]` reads the token type from your function signature to decide which `#[target_feature]` to emit. `#[rite]` does the same in three modes: token-based (reads the parameter), tier-based (`#[rite(v3)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants). A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`.
 
 `#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This is how you cross into SIMD code without writing `unsafe` yourself — but the wrapper creates an LLVM optimization boundary. LLVM won't inline across mismatched `#[target_feature]` attributes: no load hoisting, no store sinking, no cross-iteration vectorization.
 
-`#[rite]` applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features (from its own `#[arcane]` or `#[rite]`), LLVM inlines freely — no boundary.
+`#[rite]` applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features (from its own `#[arcane]` or `#[rite]`), LLVM inlines freely — no boundary. Use `#[rite(v3)]` for tier-based (no token), `#[rite]` with a token parameter, or `#[rite(v3, v4, neon)]` to generate suffixed variants for each tier.
 
 The boundary has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. `#[arcane]` just makes the wrapper safe; the boundary is LLVM's.
 
@@ -168,7 +168,7 @@ These are distilled from the benchmark data above.
 
 1. **Enter `#[arcane]` once.** Put loops inside it. Each call from non-SIMD code crosses the boundary.
 
-2. **Use `#[rite]` for everything inside.** `#[rite]` adds `#[target_feature]` + `#[inline]` directly. LLVM inlines it into any caller with matching features. No boundary. Use `#[rite(v3)]` to skip the token parameter, or `#[rite]` with a token when you need it for magetypes.
+2. **Use `#[rite]` for everything inside.** `#[rite]` adds `#[target_feature]` + `#[inline]` directly. LLVM inlines it into any caller with matching features. No boundary. Use `#[rite(v3)]` for tier-based (no token), `#[rite]` with a token for magetypes, or `#[rite(v3, v4, neon)]` for multi-tier suffixed variants.
 
 3. **Never call `#[arcane]` from `#[arcane]`.** Use `#[rite]` for functions called from SIMD code. `#[arcane]` creates a wrapper that re-crosses the boundary.
 

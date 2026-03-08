@@ -36,6 +36,8 @@ All of these break at target feature boundaries.
 
 ## Good: `#[rite]` Inside `#[arcane]` <sub>(`#[token_target_features]` inside `#[token_target_features_boundary]`)</sub>
 
+`#[rite]` works in three modes: token-based (`#[rite]`), tier-based (`#[rite(v3)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants). All three inline into callers with matching features.
+
 ```rust
 #[arcane(import_intrinsics)]
 fn outer(token: X64V3Token, data: &[f32]) -> f32 {

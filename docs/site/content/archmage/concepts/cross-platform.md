@@ -114,11 +114,11 @@ pub fn process(data: &mut [f32]) {
 
 ## `#[rite]` Also Supports `stub`
 
-`#[rite(stub)]` works the same way for `#[rite]` functions:
+`#[rite(stub)]` works the same way for `#[rite]` functions. This applies to all three `#[rite]` modes — token-based, tier-based (`#[rite(v3, stub)]`), and multi-tier (`#[rite(v3, v4, neon, stub)]` — each variant gets its own stub on wrong architectures):
 
 ```rust
-#[rite(stub)]
-fn helper(token: X64V3Token, val: f32) -> f32 {
+#[rite(v3, stub)]
+fn helper(val: f32) -> f32 {
     val * 2.0
 }
 ```

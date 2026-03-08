@@ -59,10 +59,12 @@
 //! See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml)
 //! for the complete mapping of tokens to CPU features.
 //!
-//! **The `#[arcane]` and `#[rite]` macros** read the token type from your function
-//! signature to determine which `#[target_feature]` attributes to emit. A function
-//! taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`. A function
-//! taking `X64V4Token` gets AVX-512 features. The token type *is* the feature selector.
+//! **The `#[arcane]` and `#[rite]` macros** determine which `#[target_feature]`
+//! attributes to emit. `#[arcane]` reads the token type from the function
+//! signature. `#[rite]` works in three modes: token-based (reads the token
+//! parameter), tier-based (`#[rite(v3)]` — no token needed), or multi-tier
+//! (`#[rite(v3, v4, neon)]` — generates suffixed variants `fn_v3`, `fn_v4`,
+//! `fn_neon`).
 //!
 //! Descriptive aliases are available for AI-assisted coding:
 //! `#[token_target_features_boundary]` = `#[arcane]`,
@@ -75,15 +77,17 @@
 //! `#[arcane(_self = Type)]` (nested mode). On wrong architectures, functions
 //! are cfg'd out by default; use `#[arcane(stub)]` for unreachable stubs.
 //!
-//! `#[rite(import_intrinsics)]` applies `#[target_feature]` + `#[inline]`
-//! directly to the function, with no wrapper and no boundary, but can only be
-//! called from code that already has matching features.
+//! `#[rite]` applies `#[target_feature]` + `#[inline]` directly to the
+//! function, with no wrapper and no boundary. It works in three modes:
+//! - **Token-based** (`#[rite]`): reads the token from the function signature
+//! - **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token needed
+//! - **Multi-tier** (`#[rite(v3, v4, neon)]`): generates a suffixed copy for each tier
 //!
-//! **`#[rite(import_intrinsics)]` should be your default.** Use
-//! `#[arcane(import_intrinsics)]` only at entry points (the first call from
-//! non-SIMD code), and `#[rite(import_intrinsics)]` for everything called from
-//! within SIMD code. Passing the same token type through your call hierarchy keeps
-//! every function compiled with matching features, so LLVM inlines freely.
+//! **`#[rite]` should be your default.** Use `#[arcane]` only at entry points
+//! (the first call from non-SIMD code). Token-based and tier-based produce
+//! identical output — the token form can be easier to remember if you already
+//! have the token in scope. Multi-tier generates one function per tier, each
+//! compiled with different `#[target_feature]` attributes.
 //!
 //! Use concrete tokens like `X64V3Token` (AVX2+FMA) or `X64V4Token` (AVX-512).
 //! For generic code, use tier traits like `HasX64V2` or `HasX64V4`.

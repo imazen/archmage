@@ -71,9 +71,9 @@ fn main() {
 
 2. **`#[arcane(import_intrinsics)]`** generates a `#[target_feature]` function and auto-imports intrinsics. Inside, SIMD intrinsics are safe (Rust 1.85+). Descriptive alias: `#[token_target_features_boundary]`.
 
-3. **`#[rite(import_intrinsics)]`** adds `#[target_feature]` + `#[inline]` directly and auto-imports intrinsics — no wrapper, no boundary. Descriptive alias: `#[token_target_features]`.
+3. **`#[rite]`** adds `#[target_feature]` + `#[inline]` directly — no wrapper, no boundary. Three modes: token-based (`#[rite(import_intrinsics)]`), tier-based (`#[rite(v3, import_intrinsics)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants `fn_v3`, `fn_v4`, `fn_neon`). Descriptive alias: `#[token_target_features]`.
 
-4. **Dispatch once, loop inside**: Call `summon()` at your API boundary, put loops inside `#[arcane(import_intrinsics)]`, use `#[rite(import_intrinsics)]` for everything called from SIMD code. Each `#[arcane]` call crosses a `#[target_feature]` boundary that LLVM can't optimize across.
+4. **Dispatch once, loop inside**: Call `summon()` at your API boundary, put loops inside `#[arcane(import_intrinsics)]`, use `#[rite]` for everything called from SIMD code (token-based, tier-based, or multi-tier). Each `#[arcane]` call crosses a `#[target_feature]` boundary that LLVM can't optimize across.
 
 5. **`#![forbid(unsafe_code)]` compatible**: Combine archmage tokens + `#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` for safe memory operations, and your downstream crate needs zero `unsafe`.
 

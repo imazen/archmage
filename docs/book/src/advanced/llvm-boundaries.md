@@ -33,21 +33,23 @@ All of these break at target feature boundaries.
 
 ## Good: `#[rite]` Helpers Inside `#[arcane]` <sub>(`#[token_target_features]` inside `#[token_target_features_boundary]`)</sub>
 
+`#[rite]` works in three modes: token-based (`#[rite]`), tier-based (`#[rite(v3)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants). All three inline into callers with matching features.
+
 ```rust
 #[arcane(import_intrinsics)]
 fn outer(token: X64V3Token, data: &[f32]) -> f32 {
-    let a = step1(token, data);     // #[rite] → inlines
-    let b = step2(token, data);     // #[rite] → inlines
+    let a = step1(data);     // #[rite(v3)] → inlines, no token needed
+    let b = step2(data);     // #[rite(v3)] → inlines, no token needed
     a + b
 }
 
-#[rite(import_intrinsics)]
-fn step1(token: X64V3Token, data: &[f32]) -> f32 {
+#[rite(v3, import_intrinsics)]
+fn step1(data: &[f32]) -> f32 {
     // Same target features as outer → LLVM inlines freely
 }
 
-#[rite(import_intrinsics)]
-fn step2(token: X64V3Token, data: &[f32]) -> f32 {
+#[rite(v3, import_intrinsics)]
+fn step2(data: &[f32]) -> f32 {
     // Same — one optimization region
 }
 ```

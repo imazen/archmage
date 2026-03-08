@@ -7,7 +7,7 @@ weight = 3
 
 `#[arcane(import_intrinsics)]` creates a safe wrapper around SIMD code and auto-imports architecture intrinsics. Use it at **entry points**—functions called from non-SIMD code (after `summon()`, from tests, public APIs).
 
-For functions called from other SIMD code, use [`#[rite]`](@/archmage/concepts/rite.md) instead — it inlines into the caller, avoiding the target-feature boundary. Use `#[rite(v3, import_intrinsics)]` with a tier name (no token needed) or `#[rite(import_intrinsics)]` with a token parameter.
+For functions called from other SIMD code, use [`#[rite]`](@/archmage/concepts/rite.md) instead — it inlines into the caller, avoiding the target-feature boundary. `#[rite]` works in three modes: token-based (`#[rite(import_intrinsics)]`), tier-based (`#[rite(v3, import_intrinsics)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon, import_intrinsics)]` — generates suffixed variants).
 
 > **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `import_intrinsics` to get safe memory ops that take references instead of raw pointers.
 

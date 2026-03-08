@@ -25,6 +25,6 @@ This is the searchable reference companion to the [Archmage & Magetypes tutorial
 ## Conventions
 
 - `#[arcane]` = boundary function (called from non-SIMD code after `summon()`)
-- `#[rite]` = internal helper (called from within `#[arcane]` or other `#[rite]` functions)
+- `#[rite]` = internal helper (called from within `#[arcane]` or other `#[rite]` functions). Three modes: token-based, tier-based (`#[rite(v3)]`), multi-tier (`#[rite(v3, v4, neon)]`)
 - `Token::summon()` = runtime CPU feature detection (returns `Option<Token>`)
 - `Arm64` = friendly alias for `NeonToken`

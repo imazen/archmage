@@ -250,6 +250,14 @@ impl SimdOps for MyType {
 
 `#[rite]` applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features, LLVM inlines freely — no boundary. **`#[rite]` should be the default.** Use `#[arcane]` only at entry points (the first call from non-SIMD code), and `#[rite]` for everything called from within SIMD code.
 
+`#[rite]` works in three modes:
+
+1. **Token-based** (`#[rite]`): reads the token type from the function signature
+2. **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token parameter needed
+3. **Multi-tier** (`#[rite(v3, v4, neon)]`): generates a suffixed variant for each tier (`fn_v3`, `fn_v4`, `fn_neon`), each with its own `#[target_feature]` and `#[cfg(target_arch)]`
+
+Token-based and tier-based produce identical output. Multi-tier generates one function per tier. Since Rust 1.85+, all variants are safe to call from matching `#[arcane]` or `#[rite]` contexts.
+
 `#[rite(stub)]` generates an unreachable stub on wrong architectures (default: cfg-out).
 
 This also works with `impl Trait` bounds, generic parameters, and `_self` for trait methods.

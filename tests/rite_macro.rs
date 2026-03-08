@@ -1623,17 +1623,11 @@ fn multi_tier_result(x: f32) -> Result<f32, &'static str> {
 #[test]
 fn test_rite_multi_tier_result() {
     assert_eq!(unsafe { multi_tier_result_v1(4.0) }, Ok(2.0));
-    assert_eq!(
-        unsafe { multi_tier_result_v1(-1.0) },
-        Err("negative input")
-    );
+    assert_eq!(unsafe { multi_tier_result_v1(-1.0) }, Err("negative input"));
 
     if X64V3Token::summon().is_some() {
         assert_eq!(unsafe { multi_tier_result_v3(9.0) }, Ok(3.0));
-        assert_eq!(
-            unsafe { multi_tier_result_v3(-1.0) },
-            Err("negative input")
-        );
+        assert_eq!(unsafe { multi_tier_result_v3(-1.0) }, Err("negative input"));
     }
 }
 

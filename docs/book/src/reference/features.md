@@ -22,7 +22,7 @@ archmage = { version = "0.8", default-features = false }
 
 ### `macros` (default)
 
-Enables procedural macros: `#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`, etc.
+Enables procedural macros: `#[arcane]`, `#[rite]` (token-based, tier-based, and multi-tier modes), `#[magetypes]`, `incant!`, etc.
 
 ```toml
 # Disable macros (rare)

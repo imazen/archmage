@@ -18,7 +18,7 @@ With `avx512` feature: `HasX64V4`
 
 ### Macros
 
-`#[arcane]`, `#[rite]`, `#[magetypes]`, `incant!`
+`#[arcane]`, `#[rite]` (token-based, tier-based, and multi-tier), `#[magetypes]`, `incant!`
 
 ### Platform Intrinsics
 

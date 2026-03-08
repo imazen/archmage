@@ -151,11 +151,9 @@ This works with `#![forbid(unsafe_code)]` — magetypes methods handle unsafe in
 
 ## Using with #[arcane] and #[rite]
 
-Both macros read the token type from your function signature to decide which `#[target_feature]` to emit. `X64V3Token` → `avx2,fma,...`. `X64V4Token` → `avx512f,...`. The token type is the feature selector.
+`#[arcane]` reads the token type from the signature to emit `#[target_feature]`. It generates a wrapper that crosses the boundary without `unsafe` at the call site — but the wrapper creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary. It works in three modes: token-based (`#[rite]`), tier-based (`#[rite(v3)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants).
 
-`#[arcane]` generates a wrapper that crosses the `#[target_feature]` boundary without `unsafe` at the call site — but the wrapper itself creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary.
-
-**`#[rite]` should be your default.** Use `#[arcane]` only at the entry point (the first call from non-SIMD code), and `#[rite]` for everything called from within SIMD code. Passing the same token through your call hierarchy keeps features consistent, so LLVM inlines freely. Both are compatible with `#![forbid(unsafe_code)]`.
+**`#[rite]` should be your default.** Use `#[arcane]` only at the entry point (the first call from non-SIMD code), and `#[rite]` for everything called from within SIMD code. Both are compatible with `#![forbid(unsafe_code)]`.
 
 ```rust
 use archmage::prelude::*;
