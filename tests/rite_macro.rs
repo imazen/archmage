@@ -1254,3 +1254,634 @@ fn test_multi_tier_return_types() {
     assert!(unsafe { multi_tier_returns_bool_v1(1.0) });
     assert!(!unsafe { multi_tier_returns_bool_v1(-1.0) });
 }
+
+// --- Multi-tier: both variants produce the same result ---
+
+#[rite(v1, v2, v3)]
+fn three_tier_dot(a: &[f32; 4], b: &[f32; 4]) -> f32 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]
+}
+
+#[test]
+fn test_rite_multi_tier_three_tiers_agree() {
+    let a = [1.0f32, 2.0, 3.0, 4.0];
+    let b = [5.0f32, 6.0, 7.0, 8.0];
+    let expected = 70.0; // 5 + 12 + 21 + 32
+
+    let r1 = unsafe { three_tier_dot_v1(&a, &b) };
+    assert_eq!(r1, expected);
+
+    if archmage::X64V2Token::summon().is_some() {
+        let r2 = unsafe { three_tier_dot_v2(&a, &b) };
+        assert_eq!(r2, expected);
+    }
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { three_tier_dot_v3(&a, &b) };
+        assert_eq!(r3, expected);
+    }
+}
+
+// --- Multi-tier with generic type parameters ---
+
+#[rite(v1, v3)]
+fn multi_tier_generic_add<T: core::ops::Add<Output = T> + Copy>(a: T, b: T) -> T {
+    a + b
+}
+
+#[test]
+fn test_rite_multi_tier_generic() {
+    let r1 = unsafe { multi_tier_generic_add_v1(10i32, 20i32) };
+    assert_eq!(r1, 30);
+
+    let r1f = unsafe { multi_tier_generic_add_v1(1.5f64, 2.5f64) };
+    assert_eq!(r1f, 4.0);
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_generic_add_v3(10i32, 20i32) };
+        assert_eq!(r3, 30);
+    }
+}
+
+// --- Multi-tier with const generics ---
+
+#[rite(v1, v3)]
+fn multi_tier_const_generic<const N: usize>(data: &[f32; N]) -> f32
+where
+    [(); N]:,
+{
+    let mut sum = 0.0f32;
+    for x in data {
+        sum += x;
+    }
+    sum
+}
+
+#[test]
+fn test_rite_multi_tier_const_generic() {
+    let data3 = [1.0f32, 2.0, 3.0];
+    let data5 = [1.0f32, 2.0, 3.0, 4.0, 5.0];
+
+    let r1_3 = unsafe { multi_tier_const_generic_v1(&data3) };
+    assert_eq!(r1_3, 6.0);
+
+    let r1_5 = unsafe { multi_tier_const_generic_v1(&data5) };
+    assert_eq!(r1_5, 15.0);
+
+    if X64V3Token::summon().is_some() {
+        let r3_3 = unsafe { multi_tier_const_generic_v3(&data3) };
+        assert_eq!(r3_3, 6.0);
+    }
+}
+
+// --- Multi-tier with lifetime parameters ---
+
+#[rite(v1, v3)]
+fn multi_tier_lifetime<'a>(data: &'a [f32]) -> &'a f32 {
+    &data[0]
+}
+
+#[test]
+fn test_rite_multi_tier_lifetime() {
+    let data = [42.0f32, 1.0, 2.0];
+    let r1 = unsafe { multi_tier_lifetime_v1(&data) };
+    assert_eq!(*r1, 42.0);
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_lifetime_v3(&data) };
+        assert_eq!(*r3, 42.0);
+    }
+}
+
+// --- Multi-tier preserves user attributes ---
+
+#[rite(v1, v3)]
+#[allow(unused_variables)]
+fn multi_tier_with_attrs(x: f32, y: f32) -> f32 {
+    let unused = x * 2.0; // should not warn
+    y
+}
+
+#[test]
+fn test_rite_multi_tier_preserves_attrs() {
+    let r1 = unsafe { multi_tier_with_attrs_v1(1.0, 2.0) };
+    assert_eq!(r1, 2.0);
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_with_attrs_v3(1.0, 2.0) };
+        assert_eq!(r3, 2.0);
+    }
+}
+
+// --- Multi-tier with mutable references ---
+
+#[rite(v1, v3)]
+fn multi_tier_mutate(data: &mut [f32; 4], factor: f32) {
+    data[0] *= factor;
+    data[1] *= factor;
+    data[2] *= factor;
+    data[3] *= factor;
+}
+
+#[test]
+fn test_rite_multi_tier_mutate() {
+    let mut data = [1.0f32, 2.0, 3.0, 4.0];
+    unsafe { multi_tier_mutate_v1(&mut data, 3.0) };
+    assert_eq!(data, [3.0, 6.0, 9.0, 12.0]);
+
+    if X64V3Token::summon().is_some() {
+        let mut data2 = [1.0f32, 2.0, 3.0, 4.0];
+        unsafe { multi_tier_mutate_v3(&mut data2, 3.0) };
+        assert_eq!(data2, [3.0, 6.0, 9.0, 12.0]);
+    }
+}
+
+// --- Multi-tier: #[rite] calling another #[rite] variant ---
+
+#[rite(v1, v3)]
+fn multi_tier_helper_square(x: f32) -> f32 {
+    x * x
+}
+
+#[rite(v3)]
+fn caller_uses_v3_variant(data: &[f32; 4]) -> f32 {
+    // Calling multi_tier_helper_square_v3 from a #[rite(v3)] context — safe!
+    multi_tier_helper_square_v3(data[0])
+        + multi_tier_helper_square_v3(data[1])
+        + multi_tier_helper_square_v3(data[2])
+        + multi_tier_helper_square_v3(data[3])
+}
+
+#[arcane]
+fn entry_for_multi_tier_chain(_token: X64V3Token, data: &[f32; 4]) -> f32 {
+    caller_uses_v3_variant(data)
+}
+
+#[test]
+fn test_rite_multi_tier_rite_calls_rite() {
+    if let Some(token) = X64V3Token::summon() {
+        let data = [1.0f32, 2.0, 3.0, 4.0];
+        let result = entry_for_multi_tier_chain(token, &data);
+        assert_eq!(result, 30.0); // 1 + 4 + 9 + 16
+    }
+}
+
+// --- Multi-tier with intrinsics that exercise real SIMD ---
+
+#[rite(v2, v3, import_intrinsics)]
+fn multi_tier_simd_add(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
+    let va = _mm_loadu_ps(a);
+    let vb = _mm_loadu_ps(b);
+    let sum = _mm_add_ps(va, vb);
+    let mut out = [0.0f32; 4];
+    _mm_storeu_ps(&mut out, sum);
+    out
+}
+
+#[test]
+fn test_rite_multi_tier_real_simd() {
+    let a = [1.0f32, 2.0, 3.0, 4.0];
+    let b = [10.0f32, 20.0, 30.0, 40.0];
+
+    if archmage::X64V2Token::summon().is_some() {
+        let r2 = unsafe { multi_tier_simd_add_v2(&a, &b) };
+        assert_eq!(r2, [11.0, 22.0, 33.0, 44.0]);
+    }
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_simd_add_v3(&a, &b) };
+        assert_eq!(r3, [11.0, 22.0, 33.0, 44.0]);
+    }
+}
+
+// --- Multi-tier with v3 intrinsics (256-bit) ---
+
+#[rite(v3, import_intrinsics)]
+fn single_tier_256bit_mul(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
+    let va = _mm256_loadu_ps(a);
+    let vb = _mm256_loadu_ps(b);
+    let prod = _mm256_mul_ps(va, vb);
+    let mut out = [0.0f32; 8];
+    _mm256_storeu_ps(&mut out, prod);
+    out
+}
+
+// Separate v3-only multi-tier that uses 256-bit intrinsics
+// (only v3 variant uses AVX2, so this is a single-arch multi-tier)
+#[rite(v3, import_intrinsics)]
+fn multi_tier_256bit_fma(a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
+    let va = _mm256_loadu_ps(a);
+    let vb = _mm256_loadu_ps(b);
+    let vc = _mm256_loadu_ps(c);
+    let result = _mm256_fmadd_ps(va, vb, vc);
+    let mut out = [0.0f32; 8];
+    _mm256_storeu_ps(&mut out, result);
+    out
+}
+
+#[test]
+fn test_rite_single_tier_256bit_ops() {
+    if X64V3Token::summon().is_some() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let b = [2.0f32; 8];
+        let c = [10.0f32; 8];
+
+        let mul = unsafe { single_tier_256bit_mul(&a, &b) };
+        assert_eq!(mul, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+
+        let fma = unsafe { multi_tier_256bit_fma(&a, &b, &c) };
+        // a*b+c = [12, 14, 16, 18, 20, 22, 24, 26]
+        assert_eq!(fma, [12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0]);
+    }
+}
+
+// --- Multi-tier: #[arcane] calling the v2 variant (downgrade) ---
+
+#[rite(v1, v2, v3)]
+fn multi_tier_downgrade_target(x: f32) -> f32 {
+    x.abs() + 1.0
+}
+
+#[arcane]
+fn entry_calls_v2_from_v3(_token: X64V3Token) -> f32 {
+    // V3 caller can safely call V2 (downgrade — superset features)
+    multi_tier_downgrade_target_v2(-5.0)
+}
+
+#[arcane]
+fn entry_calls_v1_from_v3(_token: X64V3Token) -> f32 {
+    // V3 caller can safely call V1 (downgrade — superset features)
+    multi_tier_downgrade_target_v1(-7.0)
+}
+
+#[test]
+fn test_rite_multi_tier_downgrade_from_arcane() {
+    if let Some(token) = X64V3Token::summon() {
+        assert_eq!(entry_calls_v2_from_v3(token), 6.0);
+        assert_eq!(entry_calls_v1_from_v3(token), 8.0);
+    }
+}
+
+// --- Multi-tier: verify each variant is independently callable ---
+
+#[rite(v1, v2, v3)]
+fn multi_tier_identity(x: i32) -> i32 {
+    x
+}
+
+#[test]
+fn test_rite_multi_tier_all_variants_callable() {
+    // V1 always available
+    assert_eq!(unsafe { multi_tier_identity_v1(42) }, 42);
+    assert_eq!(unsafe { multi_tier_identity_v1(-1) }, -1);
+    assert_eq!(unsafe { multi_tier_identity_v1(0) }, 0);
+
+    if archmage::X64V2Token::summon().is_some() {
+        assert_eq!(unsafe { multi_tier_identity_v2(42) }, 42);
+        assert_eq!(unsafe { multi_tier_identity_v2(-1) }, -1);
+    }
+
+    if X64V3Token::summon().is_some() {
+        assert_eq!(unsafe { multi_tier_identity_v3(42) }, 42);
+        assert_eq!(unsafe { multi_tier_identity_v3(i32::MAX) }, i32::MAX);
+        assert_eq!(unsafe { multi_tier_identity_v3(i32::MIN) }, i32::MIN);
+    }
+}
+
+// --- Multi-tier with complex body (loops, branches) ---
+
+#[rite(v1, v3)]
+fn multi_tier_complex_body(data: &[f32], threshold: f32) -> usize {
+    let mut count = 0;
+    for &x in data {
+        if x > threshold {
+            count += 1;
+        }
+    }
+    count
+}
+
+#[test]
+fn test_rite_multi_tier_complex_body() {
+    let data = [1.0f32, 5.0, 3.0, 7.0, 2.0, 6.0, 4.0, 8.0];
+
+    let r1 = unsafe { multi_tier_complex_body_v1(&data, 4.0) };
+    assert_eq!(r1, 4); // 5, 7, 6, 8
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_complex_body_v3(&data, 4.0) };
+        assert_eq!(r3, 4);
+    }
+}
+
+// --- Multi-tier with multiple return values via out params ---
+
+#[rite(v1, v3)]
+fn multi_tier_out_params(input: &[f32; 4], min_out: &mut f32, max_out: &mut f32) {
+    *min_out = input[0];
+    *max_out = input[0];
+    for &x in &input[1..] {
+        if x < *min_out {
+            *min_out = x;
+        }
+        if x > *max_out {
+            *max_out = x;
+        }
+    }
+}
+
+#[test]
+fn test_rite_multi_tier_out_params() {
+    let input = [3.0f32, 1.0, 4.0, 2.0];
+    let mut min = 0.0f32;
+    let mut max = 0.0f32;
+
+    unsafe { multi_tier_out_params_v1(&input, &mut min, &mut max) };
+    assert_eq!(min, 1.0);
+    assert_eq!(max, 4.0);
+
+    if X64V3Token::summon().is_some() {
+        let mut min3 = 0.0f32;
+        let mut max3 = 0.0f32;
+        unsafe { multi_tier_out_params_v3(&input, &mut min3, &mut max3) };
+        assert_eq!(min3, 1.0);
+        assert_eq!(max3, 4.0);
+    }
+}
+
+// --- Multi-tier with Result return type ---
+
+#[rite(v1, v3)]
+fn multi_tier_result(x: f32) -> Result<f32, &'static str> {
+    if x >= 0.0 {
+        Ok(x.sqrt())
+    } else {
+        Err("negative input")
+    }
+}
+
+#[test]
+fn test_rite_multi_tier_result() {
+    assert_eq!(unsafe { multi_tier_result_v1(4.0) }, Ok(2.0));
+    assert_eq!(
+        unsafe { multi_tier_result_v1(-1.0) },
+        Err("negative input")
+    );
+
+    if X64V3Token::summon().is_some() {
+        assert_eq!(unsafe { multi_tier_result_v3(9.0) }, Ok(3.0));
+        assert_eq!(
+            unsafe { multi_tier_result_v3(-1.0) },
+            Err("negative input")
+        );
+    }
+}
+
+// --- Multi-tier with Option return type ---
+
+#[rite(v1, v3)]
+fn multi_tier_option(data: &[f32], idx: usize) -> Option<f32> {
+    data.get(idx).copied()
+}
+
+#[test]
+fn test_rite_multi_tier_option() {
+    let data = [10.0f32, 20.0, 30.0];
+    assert_eq!(unsafe { multi_tier_option_v1(&data, 1) }, Some(20.0));
+    assert_eq!(unsafe { multi_tier_option_v1(&data, 5) }, None);
+
+    if X64V3Token::summon().is_some() {
+        assert_eq!(unsafe { multi_tier_option_v3(&data, 0) }, Some(10.0));
+        assert_eq!(unsafe { multi_tier_option_v3(&data, 99) }, None);
+    }
+}
+
+// --- Multi-tier: struct methods with self receivers ---
+
+mod multi_tier_methods {
+    use archmage::rite;
+
+    pub struct Accumulator {
+        pub value: f32,
+    }
+
+    impl Accumulator {
+        #[rite(v1, v3)]
+        pub fn add(&self, x: f32) -> f32 {
+            self.value + x
+        }
+
+        #[rite(v1, v3)]
+        pub fn scale(&self, factor: f32) -> Accumulator {
+            Accumulator {
+                value: self.value * factor,
+            }
+        }
+
+        #[rite(v1, v3)]
+        pub fn accumulate(&mut self, x: f32) {
+            self.value += x;
+        }
+    }
+}
+
+#[test]
+fn test_rite_multi_tier_self_receiver() {
+    use multi_tier_methods::Accumulator;
+
+    let acc = Accumulator { value: 10.0 };
+    assert_eq!(unsafe { acc.add_v1(5.0) }, 15.0);
+
+    let scaled = unsafe { acc.scale_v1(3.0) };
+    assert_eq!(scaled.value, 30.0);
+
+    let mut acc2 = Accumulator { value: 0.0 };
+    unsafe { acc2.accumulate_v1(5.0) };
+    unsafe { acc2.accumulate_v1(3.0) };
+    assert_eq!(acc2.value, 8.0);
+
+    if X64V3Token::summon().is_some() {
+        let acc3 = Accumulator { value: 100.0 };
+        assert_eq!(unsafe { acc3.add_v3(50.0) }, 150.0);
+
+        let mut acc4 = Accumulator { value: 0.0 };
+        unsafe { acc4.accumulate_v3(7.0) };
+        assert_eq!(acc4.value, 7.0);
+    }
+}
+
+// --- Multi-tier: closure-like patterns (function pointers) ---
+
+#[rite(v1, v3)]
+fn multi_tier_apply(data: &mut [f32; 4], f: fn(f32) -> f32) {
+    for x in data.iter_mut() {
+        *x = f(*x);
+    }
+}
+
+fn double(x: f32) -> f32 {
+    x * 2.0
+}
+fn negate(x: f32) -> f32 {
+    -x
+}
+
+#[test]
+fn test_rite_multi_tier_fn_pointer() {
+    let mut data = [1.0f32, 2.0, 3.0, 4.0];
+    unsafe { multi_tier_apply_v1(&mut data, double) };
+    assert_eq!(data, [2.0, 4.0, 6.0, 8.0]);
+
+    unsafe { multi_tier_apply_v1(&mut data, negate) };
+    assert_eq!(data, [-2.0, -4.0, -6.0, -8.0]);
+
+    if X64V3Token::summon().is_some() {
+        let mut data2 = [10.0f32, 20.0, 30.0, 40.0];
+        unsafe { multi_tier_apply_v3(&mut data2, double) };
+        assert_eq!(data2, [20.0, 40.0, 60.0, 80.0]);
+    }
+}
+
+// --- Multi-tier: verify both tiers agree on edge cases ---
+
+#[rite(v1, v3)]
+fn multi_tier_edge_cases(x: f32) -> f32 {
+    if x.is_nan() {
+        -1.0
+    } else if x.is_infinite() {
+        if x > 0.0 { 1.0 } else { -2.0 }
+    } else if x == 0.0 {
+        0.0
+    } else {
+        x.signum()
+    }
+}
+
+#[test]
+fn test_rite_multi_tier_edge_cases_agree() {
+    let cases = [
+        (0.0f32, 0.0),
+        (1.0, 1.0),
+        (-1.0, -1.0),
+        (f32::NAN, -1.0),
+        (f32::INFINITY, 1.0),
+        (f32::NEG_INFINITY, -2.0),
+        (42.0, 1.0),
+        (-0.001, -1.0),
+    ];
+
+    for (input, expected) in cases {
+        let r1 = unsafe { multi_tier_edge_cases_v1(input) };
+        assert_eq!(r1, expected, "v1 failed for input {input}");
+    }
+
+    if X64V3Token::summon().is_some() {
+        for (input, expected) in cases {
+            let r3 = unsafe { multi_tier_edge_cases_v3(input) };
+            assert_eq!(r3, expected, "v3 failed for input {input}");
+        }
+    }
+}
+
+// --- Multi-tier: large body that should auto-vectorize differently ---
+
+#[rite(v1, v3)]
+fn multi_tier_sum_of_squares(data: &[f32]) -> f32 {
+    let mut sum = 0.0f32;
+    for &x in data {
+        sum += x * x;
+    }
+    sum
+}
+
+#[test]
+fn test_rite_multi_tier_auto_vectorizable() {
+    let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
+    let expected: f32 = data.iter().map(|x| x * x).sum();
+
+    let r1 = unsafe { multi_tier_sum_of_squares_v1(&data) };
+    assert!((r1 - expected).abs() < 0.01, "v1: {r1} != {expected}");
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_sum_of_squares_v3(&data) };
+        assert!((r3 - expected).abs() < 0.01, "v3: {r3} != {expected}");
+    }
+}
+
+// --- Multi-tier: works with slices of different lengths ---
+
+#[rite(v1, v3)]
+fn multi_tier_slice_ops(data: &[u8]) -> u32 {
+    let mut sum = 0u32;
+    for &b in data {
+        sum += b as u32;
+    }
+    sum
+}
+
+#[test]
+fn test_rite_multi_tier_byte_slice() {
+    let data: Vec<u8> = (0..=255).collect();
+    let expected: u32 = (0..=255u32).sum(); // 32640
+
+    let r1 = unsafe { multi_tier_slice_ops_v1(&data) };
+    assert_eq!(r1, expected);
+
+    if X64V3Token::summon().is_some() {
+        let r3 = unsafe { multi_tier_slice_ops_v3(&data) };
+        assert_eq!(r3, expected);
+    }
+
+    // Empty slice
+    assert_eq!(unsafe { multi_tier_slice_ops_v1(&[]) }, 0);
+}
+
+// --- Multi-tier: verify no name collision with existing functions ---
+
+fn manually_written_v1(x: f32) -> f32 {
+    x + 100.0
+}
+
+#[rite(v2, v3)]
+fn manually_written(x: f32) -> f32 {
+    x + 200.0
+}
+
+#[test]
+fn test_rite_multi_tier_no_collision_with_manual() {
+    // Manually written _v1 exists alongside generated _v2/_v3
+    let manual = manually_written_v1(1.0);
+    assert_eq!(manual, 101.0);
+
+    if archmage::X64V2Token::summon().is_some() {
+        let generated = unsafe { manually_written_v2(1.0) };
+        assert_eq!(generated, 201.0);
+    }
+}
+
+// --- Multi-tier: combined with single-tier in same scope ---
+
+#[rite(v3)]
+fn single_tier_helper(x: f32) -> f32 {
+    x * x
+}
+
+#[rite(v1, v3)]
+fn multi_tier_uses_single(data: &[f32; 4]) -> f32 {
+    data[0] + data[1] + data[2] + data[3]
+}
+
+#[test]
+fn test_rite_multi_tier_coexists_with_single() {
+    if X64V3Token::summon().is_some() {
+        let s = unsafe { single_tier_helper(5.0) };
+        assert_eq!(s, 25.0);
+
+        let m = unsafe { multi_tier_uses_single_v3(&[1.0, 2.0, 3.0, 4.0]) };
+        assert_eq!(m, 10.0);
+    }
+
+    // v1 variant also works
+    let m1 = unsafe { multi_tier_uses_single_v1(&[10.0, 20.0, 30.0, 40.0]) };
+    assert_eq!(m1, 100.0);
+}
