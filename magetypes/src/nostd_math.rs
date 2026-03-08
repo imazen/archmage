@@ -420,13 +420,7 @@ pub fn exp2_f64(x: f64) -> f64 {
     const C3: f64 = 0.055_504_108_664_822;
     const C4: f64 = 0.009_618_129_107_629;
 
-    let x = if x < -1022.0 {
-        -1022.0
-    } else if x > 1022.0 {
-        1022.0
-    } else {
-        x
-    };
+    let x = x.clamp(-1022.0, 1022.0);
 
     let xi = floor(x);
     let xf = x - xi;
