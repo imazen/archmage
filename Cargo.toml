@@ -26,9 +26,11 @@ include = [
 ]
 
 [features]
-default = ["std", "macros"]
+default = ["std"]
 std = []
-macros = ["dep:archmage-macros"]
+# Backwards-compat: macros are now always included. This feature exists so
+# `features = ["macros"]` doesn't break.
+macros = []
 # AVX-512 token support (Avx512Token, X64V4xToken, X64V4Token, etc.)
 # Also enables AVX-512 safe memory ops from safe_unaligned_simd.
 avx512 = ["safe_unaligned_simd/avx512"]
@@ -43,8 +45,8 @@ safe_unaligned_simd = []
 testable_dispatch = []
 
 [dependencies]
-# Proc-macro crate for #[arcane] attribute
-archmage-macros = { version = "0.9.3", path = "archmage-macros", optional = true }
+# Proc-macro crate for #[arcane], #[rite], #[autoversion], incant!, etc.
+archmage-macros = { version = "0.9.3", path = "archmage-macros" }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
 safe_unaligned_simd = { version = "0.2.5" }
 
@@ -81,7 +83,7 @@ name = "generic_vs_concrete"
 harness = false
 
 [package.metadata.docs.rs]
-features = ["std", "macros", "avx512"]
+features = ["std", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]
 # Build docs for multiple targets to show all platform-specific tokens
 targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]

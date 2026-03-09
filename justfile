@@ -5,7 +5,7 @@ default: test
 
 # Run all tests (excludes sleef which requires nightly)
 test:
-    cargo test --features "std macros avx512"
+    cargo test --features "std avx512"
 
 # Run tests with all features (requires nightly for sleef)
 test-nightly:
@@ -13,7 +13,7 @@ test-nightly:
 
 # Run clippy (excludes sleef which requires nightly)
 lint:
-    cargo clippy --features "std macros avx512" -- -D warnings
+    cargo clippy --features "std avx512" -- -D warnings
 
 # Format code
 fmt:
@@ -65,9 +65,9 @@ parity:
 
 # Test no_std compilation and tests for all crates
 test-nostd:
-    cargo check -p archmage --no-default-features --features "macros avx512"
+    cargo check -p archmage --no-default-features --features "avx512"
     cargo check -p magetypes --no-default-features
-    cargo test -p archmage --no-default-features --features "macros avx512"
+    cargo test -p archmage --no-default-features --features "avx512"
     cargo test -p magetypes --no-default-features
     cargo check -p magetypes --no-default-features --target aarch64-unknown-none
     cargo check -p magetypes --no-default-features --target thumbv7m-none-eabi
@@ -81,7 +81,7 @@ all: ci
 
 # Test testable_dispatch with CompileTimePolicy::Fail (must not panic)
 test-dispatch:
-    cargo test --features "std macros avx512 testable_dispatch" --test token_permutations -- --test-threads=1
+    cargo test --features "std avx512 testable_dispatch" --test token_permutations -- --test-threads=1
 
 # ============================================================================
 # Parity tests (cross-architecture + polyfill vs native)
@@ -186,11 +186,11 @@ clippy-all: clippy-x86_64 clippy-aarch64 clippy-i686
 
 # Test x86 crypto token intrinsics (PCLMULQDQ, AES-NI, VPCLMULQDQ, VAES)
 test-crypto:
-    cargo test --features "std macros" --test x86_crypto_intrinsics
+    cargo test --features "std" --test x86_crypto_intrinsics
 
 # Test AVX-512 FP16 token (hierarchy only — intrinsics are nightly-only)
 test-fp16:
-    cargo test --features "std macros avx512" --test avx512fp16_intrinsics
+    cargo test --features "std avx512" --test avx512fp16_intrinsics
 
 # Test ARM feature-specific intrinsics (via QEMU/cross)
 test-arm-features:
@@ -258,7 +258,7 @@ verify-asm-update:
 
 # Check rustdoc builds cleanly (catches broken doc links)
 doc-check:
-    RUSTDOCFLAGS="-Dwarnings" cargo doc --features "std macros avx512" --no-deps
+    RUSTDOCFLAGS="-Dwarnings" cargo doc --features "std avx512" --no-deps
 
 # Build the documentation site (Zola)
 docs:

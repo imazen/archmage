@@ -105,8 +105,9 @@
 //! ## Feature Flags
 //!
 //! - `std` (default): Enable std library support
-//! - `macros` (default): Enable `#[arcane]` attribute macro (alias: `#[arcane]`)
 //! - `avx512`: AVX-512 token support
+//!
+//! Macros (`#[arcane]`, `#[rite]`, `incant!`, etc.) are always available.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -119,8 +120,6 @@ extern crate std;
 extern crate alloc;
 
 // Re-export macros from archmage-macros
-#[cfg(feature = "macros")]
-#[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
 pub use archmage_macros::{
     arcane, autoversion, dispatch_variant, incant, magetypes, rite, simd_fn, simd_route,
     token_target_features, token_target_features_boundary,

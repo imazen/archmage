@@ -60,7 +60,7 @@ fn process_one(p: &[f32; 8]) {
 
 ## Benchmark results
 
-All benchmarks from `cargo bench --bench asm_inspection --features "std macros avx512"`, run on x86-64 with AVX-512 support. Source: [`benches/asm_inspection.rs`](../benches/asm_inspection.rs).
+All benchmarks from `cargo bench --bench asm_inspection --features "std avx512"`, run on x86-64 with AVX-512 support. Source: [`benches/asm_inspection.rs`](../benches/asm_inspection.rs).
 
 ### Simple vector add (1000 iterations, 8-float add)
 
@@ -182,10 +182,10 @@ These are distilled from the benchmark data above.
 
 ```bash
 # Simple vector add + DCT-8
-cargo bench --bench asm_inspection --features "std macros"
+cargo bench --bench asm_inspection --features "std"
 
 # Cross-token nesting (needs avx512 feature + AVX-512 hardware)
-cargo bench --bench asm_inspection --features "std macros avx512"
+cargo bench --bench asm_inspection --features "std avx512"
 ```
 
 Results will vary by CPU. The *ratios* between patterns are stable: archmage always matches bare `#[target_feature]` on the same workload. The boundary multiplier itself (4x on simple adds, 6.2x on DCT-8) depends on how much optimization LLVM loses when it can't inline — denser workloads lose more.

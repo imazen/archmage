@@ -43,7 +43,7 @@ just verify-asm
 just verify-asm-update
 
 # Inspect a specific function's ASM
-cargo asm -p archmage --bench asm_patterns --features "std macros avx512" \
+cargo asm -p archmage --bench asm_patterns --features "std avx512" \
     "asm_patterns::load_first_chunk::__simd_inner_load_first_chunk"
 ```
 

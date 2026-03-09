@@ -9,14 +9,14 @@
 //!   6. Generic #[inline(always)] called from inside #[arcane] — guaranteed inline
 //!
 //! Run:
-//!   cargo bench --bench generic_vs_concrete --features "std macros"
+//!   cargo bench --bench generic_vs_concrete --features "std"
 //!
 //! Inspect assembly:
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" generic_no_target_feature
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" generic_inside_arcane
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" concrete_v3_in_arcane
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" generic_noinline_inside_arcane
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std macros" generic_inline_always_inside_arcane
+//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_no_target_feature
+//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_inside_arcane
+//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" concrete_v3_in_arcane
+//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_noinline_inside_arcane
+//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_inline_always_inside_arcane
 
 #![cfg(target_arch = "x86_64")]
 #![allow(dead_code)]

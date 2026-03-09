@@ -44,7 +44,7 @@ Both crates support `no_std` with `alloc`:
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", default-features = false, features = ["macros"] }
+archmage = { version = "0.8", default-features = false }
 magetypes = { version = "0.8", default-features = false }
 ```
 

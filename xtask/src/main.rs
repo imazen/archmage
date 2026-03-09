@@ -2109,7 +2109,7 @@ fn run_ci() -> Result<()> {
         .args([
             "clippy",
             "--features",
-            "std macros avx512",
+            "std avx512",
             "--",
             "-D",
             "warnings",
@@ -2137,7 +2137,7 @@ fn run_ci() -> Result<()> {
     // Step 9: Tests
     println!("┌─ Step 9/16: Running tests ─────────────────────────────────────────┐");
     let tests = std::process::Command::new("cargo")
-        .args(["test", "--features", "std macros avx512"])
+        .args(["test", "--features", "std avx512"])
         .status()
         .context("Failed to run tests")?;
     if !tests.success() {
@@ -2258,7 +2258,7 @@ fn run_ci() -> Result<()> {
     // Step 12: Documentation build (catches broken doc links)
     println!("┌─ Step 12/16: Building documentation ────────────────────────────────┐");
     let doc = std::process::Command::new("cargo")
-        .args(["doc", "--features", "std macros avx512", "--no-deps"])
+        .args(["doc", "--features", "std avx512", "--no-deps"])
         .env("RUSTDOCFLAGS", "-Dwarnings")
         .status()
         .context("Failed to run cargo doc")?;
@@ -2322,7 +2322,7 @@ fn run_ci() -> Result<()> {
                 "--target",
                 "aarch64-unknown-linux-gnu",
                 "--features",
-                "std macros",
+                "std",
             ])
             .status()
             .context("Failed to run cross test for ARM64")?;
@@ -2397,7 +2397,7 @@ fn run_ci() -> Result<()> {
                 "--target",
                 "aarch64-unknown-linux-gnu",
                 "--features",
-                "std macros",
+                "std",
                 "--",
                 "-D",
                 "warnings",

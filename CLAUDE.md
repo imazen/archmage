@@ -597,12 +597,12 @@ CI checks (all must pass):
 3. `cargo xtask validate` — intrinsic safety + summon() feature verification
 4. `cargo xtask parity` — parity check (0 issues remaining)
 5. Intrinsic soundness verification
-6. `cargo clippy --features "std macros avx512"` — zero warnings
+6. `cargo clippy --features "std avx512"` — zero warnings
 7. `cargo clippy -p magetypes` (default features) — zero warnings
-8. `cargo test --features "std macros avx512"` — all tests pass
+8. `cargo test --features "std avx512"` — all tests pass
 9. **no_std compilation + tests** — archmage and magetypes build and test without `std`
 10. `cargo fmt --check` — code is formatted
-11. `cargo doc --features "std macros avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
+11. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
 12. Miri UB detection (skipped if not installed)
 13. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
 14. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)

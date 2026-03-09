@@ -3,7 +3,7 @@
 //! Each function is `#[unsafe(no_mangle)]` + `#[arcane]` so `cargo asm` can find it.
 //! Verified by `scripts/verify-asm.sh`.
 //!
-//! Run: cargo asm -p archmage --bench asm_patterns --features "std macros avx512"
+//! Run: cargo asm -p archmage --bench asm_patterns --features "std avx512"
 
 #![cfg(target_arch = "x86_64")]
 

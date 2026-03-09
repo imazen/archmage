@@ -37,7 +37,7 @@ get_asm() {
     local bench="$1"
     local symbol="$2"
     cargo asm -p archmage --bench "$bench" \
-        --features "std macros avx512" \
+        --features "std avx512" \
         "$symbol" 2>/dev/null \
         | grep -v '^\(warning:\|Compiling\|Finished\|Try one\)' \
         | grep -v '^$' || true

@@ -7,7 +7,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  FEATURES: "std macros avx512"
+  FEATURES: "std avx512"
 
 jobs:
   bench:

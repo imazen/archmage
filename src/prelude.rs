@@ -152,7 +152,6 @@ pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V
 pub use crate::tokens::{Wasm128RelaxedToken, Wasm128Token};
 
 // -- Macros --
-#[cfg(feature = "macros")]
 pub use archmage_macros::{
     arcane, autoversion, dispatch_variant, incant, magetypes, rite, simd_fn, simd_route,
     token_target_features, token_target_features_boundary,

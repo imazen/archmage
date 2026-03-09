@@ -386,9 +386,10 @@ For manual single-token testing, `lock_token_testing()` serializes against paral
 | Feature | Default | |
 |---------|---------|---|
 | `std` | yes | Standard library (required for runtime detection) |
-| `macros` | yes | `#[arcane]`, `#[rite]`, `#[autoversion]`, `#[magetypes]`, `incant!` |
 | `avx512` | no | AVX-512 tokens (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) |
 | `testable_dispatch` | no | Makes token disabling work with `-Ctarget-cpu=native` |
+
+Macros (`#[arcane]`, `#[rite]`, `#[autoversion]`, `#[magetypes]`, `incant!`) are always available.
 
 ## Acknowledgments
 

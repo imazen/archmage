@@ -23,15 +23,6 @@ Disable for `no_std`:
 archmage = { version = "0.8", default-features = false }
 ```
 
-### `macros` (default)
-
-Enables procedural macros: `#[arcane]`, `#[rite]` (token-based, tier-based, and multi-tier modes), `#[magetypes]`, `incant!`, etc.
-
-```toml
-# Disable macros (rare)
-archmage = { version = "0.8", default-features = false, features = ["std"] }
-```
-
 ### `avx512`
 
 Enables AVX-512 tokens and 512-bit types.
@@ -78,7 +69,7 @@ magetypes = { version = "0.8", features = ["avx512"] }
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", default-features = false, features = ["macros"] }
+archmage = { version = "0.8", default-features = false }
 magetypes = { version = "0.8", default-features = false }
 ```
 
