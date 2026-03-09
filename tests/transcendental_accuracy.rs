@@ -1019,3 +1019,229 @@ fn accuracy_direct_vs_generic_parity() {
         );
     }
 }
+
+/// Regional accuracy breakdown: show max ULP by input region for key functions.
+/// Not an assertion test — just prints a table for analysis.
+#[test]
+fn accuracy_regional_breakdown() {
+    let Some(token) = X64V3Token::summon() else {
+        return;
+    };
+
+    println!("\n=== Regional accuracy breakdown (max ULP by input region) ===\n");
+
+    // Define regions for exp2
+    let exp2_regions: &[(&str, Vec<f32>)] = &[
+        (
+            "near-zero [-0.01, 0.01]",
+            (-100..=100).map(|i| i as f32 / 10000.0).collect(),
+        ),
+        (
+            "small [-1, 1]",
+            (-100..=100).map(|i| i as f32 / 100.0).collect(),
+        ),
+        (
+            "medium [-10, 10]",
+            (-100..=100).map(|i| i as f32 / 10.0).collect(),
+        ),
+        (
+            "large [-50, 50]",
+            (-500..=500).map(|i| i as f32 / 10.0).collect(),
+        ),
+        (
+            "near-overflow [100, 127]",
+            (1000..=1270).map(|i| i as f32 / 10.0).collect(),
+        ),
+        (
+            "near-underflow [-126, -100]",
+            (-1260..=-1000).map(|i| i as f32 / 10.0).collect(),
+        ),
+        (
+            "fractional near .0",
+            (0..100).map(|i| i as f32 + 0.001).collect(),
+        ),
+        (
+            "fractional near .5",
+            (0..100).map(|i| i as f32 + 0.499).collect(),
+        ),
+        (
+            "fractional near .5+",
+            (0..100).map(|i| i as f32 + 0.501).collect(),
+        ),
+        (
+            "fractional near 1.0",
+            (0..100).map(|i| i as f32 + 0.999).collect(),
+        ),
+    ];
+
+    println!("  exp2_midp:");
+    println!(
+        "  {:30} {:>8} {:>12} {:>6}",
+        "Region", "Max ULP", "Max Rel Err", "Count"
+    );
+    println!(
+        "  {:30} {:>8} {:>12} {:>6}",
+        "------", "-------", "-----------", "-----"
+    );
+    for (name, inputs) in exp2_regions {
+        let valid: Vec<f32> = inputs
+            .iter()
+            .copied()
+            .filter(|&v| v >= -126.0 && v < 128.0)
+            .collect();
+        if valid.is_empty() {
+            continue;
+        }
+        let mut max_ulp = 0u32;
+        let mut max_rel = 0.0f32;
+        for chunk in valid.chunks(8) {
+            let mut arr = [0.0f32; 8];
+            arr[..chunk.len()].copy_from_slice(chunk);
+            let got = eval_f32x8(token, &arr, "exp2_midp", 0.0);
+            for i in 0..chunk.len() {
+                let expected = chunk[i].exp2();
+                let ulp = ulp_distance(got[i], expected);
+                let rel = relative_error(got[i], expected);
+                max_ulp = max_ulp.max(ulp);
+                if rel.is_finite() {
+                    max_rel = max_rel.max(rel);
+                }
+            }
+        }
+        println!(
+            "  {:30} {:>8} {:>12.2e} {:>6}",
+            name,
+            max_ulp,
+            max_rel,
+            valid.len()
+        );
+    }
+
+    // Define regions for log2
+    let log2_regions: &[(&str, Vec<f32>)] = &[
+        (
+            "near-one [0.99, 1.01]",
+            (990..=1010).map(|i| i as f32 / 1000.0).collect(),
+        ),
+        (
+            "small [0.001, 0.1]",
+            (1..=100).map(|i| i as f32 / 1000.0).collect(),
+        ),
+        (
+            "medium [0.1, 10]",
+            (1..=100).map(|i| i as f32 / 10.0).collect(),
+        ),
+        (
+            "large [10, 1e6]",
+            (0..100)
+                .map(|i| 10.0f32.powf(1.0 + i as f32 * 5.0 / 99.0))
+                .collect(),
+        ),
+        (
+            "very large [1e6, 1e38]",
+            (0..100)
+                .map(|i| 10.0f32.powf(6.0 + i as f32 * 32.0 / 99.0))
+                .collect(),
+        ),
+        (
+            "tiny [1e-38, 0.001]",
+            (0..100)
+                .map(|i| 10.0f32.powf(-38.0 + i as f32 * 35.0 / 99.0))
+                .collect(),
+        ),
+    ];
+
+    println!("\n  log2_midp:");
+    println!(
+        "  {:30} {:>8} {:>12} {:>6}",
+        "Region", "Max ULP", "Max Rel Err", "Count"
+    );
+    println!(
+        "  {:30} {:>8} {:>12} {:>6}",
+        "------", "-------", "-----------", "-----"
+    );
+    for (name, inputs) in log2_regions {
+        let valid: Vec<f32> = inputs
+            .iter()
+            .copied()
+            .filter(|&v| v > 0.0 && v.is_finite() && v >= f32::MIN_POSITIVE)
+            .collect();
+        if valid.is_empty() {
+            continue;
+        }
+        let mut max_ulp = 0u32;
+        let mut max_rel = 0.0f32;
+        for chunk in valid.chunks(8) {
+            let mut arr = [1.0f32; 8];
+            arr[..chunk.len()].copy_from_slice(chunk);
+            let got = eval_f32x8(token, &arr, "log2_midp", 0.0);
+            for i in 0..chunk.len() {
+                let expected = chunk[i].log2();
+                let ulp = ulp_distance(got[i], expected);
+                let rel = relative_error(got[i], expected);
+                max_ulp = max_ulp.max(ulp);
+                if rel.is_finite() {
+                    max_rel = max_rel.max(rel);
+                }
+            }
+        }
+        println!(
+            "  {:30} {:>8} {:>12.2e} {:>6}",
+            name,
+            max_ulp,
+            max_rel,
+            valid.len()
+        );
+    }
+
+    // pow_midp regional breakdown by exponent
+    let pow_bases: Vec<f32> = (0..100)
+        .map(|i| 10.0f32.powf(-3.0 + i as f32 * 6.0 / 99.0))
+        .collect();
+
+    println!("\n  pow_midp (by exponent):");
+    println!(
+        "  {:30} {:>8} {:>12} {:>6}",
+        "Exponent", "Max ULP", "Max Rel Err", "Count"
+    );
+    println!(
+        "  {:30} {:>8} {:>12} {:>6}",
+        "--------", "-------", "-----------", "-----"
+    );
+    for &exp in &[0.5f32, 1.0, 2.0, 2.5, 3.0, 0.333, -1.0, -0.5, 0.45, 7.0] {
+        let valid: Vec<f32> = pow_bases
+            .iter()
+            .copied()
+            .filter(|&v| {
+                let r = v.powf(exp);
+                r.is_finite() && r > f32::MIN_POSITIVE && r != 0.0
+            })
+            .collect();
+        if valid.is_empty() {
+            continue;
+        }
+        let mut max_ulp = 0u32;
+        let mut max_rel = 0.0f32;
+        for chunk in valid.chunks(8) {
+            let mut arr = [1.0f32; 8];
+            arr[..chunk.len()].copy_from_slice(chunk);
+            let got = eval_f32x8(token, &arr, "pow_midp", exp);
+            for i in 0..chunk.len() {
+                let expected = chunk[i].powf(exp);
+                let ulp = ulp_distance(got[i], expected);
+                let rel = relative_error(got[i], expected);
+                max_ulp = max_ulp.max(ulp);
+                if rel.is_finite() {
+                    max_rel = max_rel.max(rel);
+                }
+            }
+        }
+        println!(
+            "  {:30} {:>8} {:>12.2e} {:>6}",
+            format!("n = {exp}"),
+            max_ulp,
+            max_rel,
+            valid.len()
+        );
+    }
+}

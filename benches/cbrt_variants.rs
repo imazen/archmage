@@ -26,6 +26,16 @@ fn simd_cbrt_midp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 }
 
 #[arcane]
+fn simd_exp2_lowp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    f32x8::from_array(token, *data).exp2_lowp().to_array()
+}
+
+#[arcane]
+fn simd_exp2_midp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    f32x8::from_array(token, *data).exp2_midp().to_array()
+}
+
+#[arcane]
 fn simd_pow_lowp(token: X64V3Token, data: &[f32; 8], n: f32) -> [f32; 8] {
     f32x8::from_array(token, *data).pow_lowp(n).to_array()
 }
@@ -213,5 +223,72 @@ fn bench_pow_variants(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_cbrt_variants, bench_pow_variants);
+fn bench_exp2_variants(c: &mut Criterion) {
+    let single = [-100.0f32, -10.0, -1.0, -0.01, 0.01, 1.0, 10.0, 100.0];
+
+    let mut group = c.benchmark_group("exp2_single_8");
+
+    if let Some(token) = X64V3Token::summon() {
+        group.bench_function("simd_lowp", |b| {
+            b.iter(|| simd_exp2_lowp(token, black_box(&single)))
+        });
+        group.bench_function("simd_midp", |b| {
+            b.iter(|| simd_exp2_midp(token, black_box(&single)))
+        });
+    }
+
+    group.bench_function("scalar_exp2", |b| {
+        b.iter(|| {
+            let s = black_box(&single);
+            core::array::from_fn::<f32, 8, _>(|i| s[i].exp2())
+        })
+    });
+    group.finish();
+
+    // Bulk: 1024 values across [-120, 120]
+    let bulk_data: Vec<[f32; 8]> = (0..128)
+        .map(|i| {
+            core::array::from_fn(|j| -120.0 + (i * 8 + j) as f32 * 240.0 / 1024.0)
+        })
+        .collect();
+
+    let mut group = c.benchmark_group("exp2_bulk_1024");
+
+    if let Some(token) = X64V3Token::summon() {
+        group.bench_function("simd_lowp", |b| {
+            b.iter(|| {
+                let mut sum = 0.0f32;
+                for chunk in &bulk_data {
+                    let r = simd_exp2_lowp(token, black_box(chunk));
+                    sum += r[0];
+                }
+                sum
+            })
+        });
+        group.bench_function("simd_midp", |b| {
+            b.iter(|| {
+                let mut sum = 0.0f32;
+                for chunk in &bulk_data {
+                    let r = simd_exp2_midp(token, black_box(chunk));
+                    sum += r[0];
+                }
+                sum
+            })
+        });
+    }
+
+    group.bench_function("scalar_exp2", |b| {
+        b.iter(|| {
+            let mut sum = 0.0f32;
+            for chunk in &bulk_data {
+                let s = black_box(chunk);
+                sum += s[0].exp2();
+            }
+            sum
+        })
+    });
+    group.finish();
+}
+
+criterion_group!(benches, bench_cbrt_variants, bench_pow_variants, bench_exp2_variants);
 criterion_main!(benches);
