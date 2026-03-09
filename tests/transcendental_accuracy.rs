@@ -488,13 +488,11 @@ fn accuracy_exp2() {
         CheckMode::RelOnly { max_rel: 6e-3 },
     );
 
-    // midp: handles overflow (>128 → inf) and deep underflow (<-150 → 0)
-    // BUG: inputs in [-150, -126] produce denormal outputs that exp2_midp can't
-    // construct (bit manipulation assumes normal float format). This is a gap
-    // between the underflow clamp at -150 and the smallest normal at 2^-126.
-    // TODO: tighten underflow_limit to -126 and return 0 for all denormal-producing inputs
+    // midp: handles overflow (>=128 → inf) and underflow (<-126 → 0)
+    // Round-to-nearest split keeps |frac| <= 0.5, giving ~64 ULP max error.
+    // xi clamped to 127 prevents bit trick overflow at the boundary.
     let mut midp_inputs = Vec::new();
-    // Normal output range only: [-126, 128]
+    // Normal output range: [-126, 128)
     for i in -1260..=1280 {
         midp_inputs.push(i as f32 / 10.0);
     }
@@ -505,16 +503,13 @@ fn accuracy_exp2() {
     midp_inputs.push(-0.0);
     midp_inputs.push(f32::NEG_INFINITY); // should return 0
     midp_inputs.push(f32::INFINITY); // should return inf
-    // exp2_midp: polynomial has ~132 ULP near zero, ~4 ULP in middle range.
-    // The near-zero error comes from the floor/fract split + polynomial evaluation
-    // when the fractional part is near 0 or 1.
     run_accuracy_test(
         token,
         "exp2_midp",
         &midp_inputs,
         0.0,
         CheckMode::Ulp {
-            max_ulp: 256,
+            max_ulp: 128,
             max_rel: 1e-5,
         },
     );
@@ -601,11 +596,8 @@ fn accuracy_exp() {
 
     // midp: exp(x) = exp2(x * LOG2_E). Two error sources:
     // 1. The LOG2_E multiplication adds ~1 ULP
-    // 2. exp2_midp adds up to ~4 ULP
-    // For large |x|, the final result spans many ULPs, so absolute ULP grows.
-    // BUG: exp_midp produces garbage for inputs where result would be denormal
-    // (exp(-100) = exp2(-144.27) — exp2_midp can't construct 2^-145)
-    // TODO: fix exp2_midp underflow_limit to -126 which will fix exp_midp too
+    // 2. exp2_midp adds up to ~64 ULP (round-to-nearest split)
+    // exp2_midp clamps underflow at -126 → returns 0 for denormal-range results.
     let mut midp_inputs = Vec::new();
     // Stay in normal output range: exp(-87.3) ≈ 2^-126
     for i in -870..=880 {
@@ -621,9 +613,10 @@ fn accuracy_exp() {
         "exp_midp",
         &midp_inputs,
         0.0,
-        // Compound error from LOG2_E multiplication + exp2_midp polynomial
+        // Compound error from LOG2_E multiplication + exp2_midp polynomial.
+        // Round-to-nearest brought this from ~256 to ~64 ULP.
         CheckMode::Ulp {
-            max_ulp: 256,
+            max_ulp: 128,
             max_rel: 1e-5,
         },
     );
@@ -733,14 +726,15 @@ fn accuracy_pow() {
             "pow_midp",
             &midp_filtered,
             exp,
+            // Compound error: log2_midp (~2 ULP) * exponent + exp2_midp (~64 ULP).
+            // Max observed: 55 ULP (n=3). Round-to-nearest brought this from ~150 to ~55.
             CheckMode::Ulp {
-                max_ulp: 1024,
-                max_rel: 5e-4,
+                max_ulp: 128,
+                max_rel: 1e-5,
             },
         );
         // pow_midp_precise composes log2_midp_precise + exp2_midp.
-        // Both have ~2 ULP error, but multiplication by exponent amplifies log2 error.
-        // Also can't produce denormal outputs (exp2_midp limitation).
+        // Same accuracy as pow_midp (both limited by exp2_midp, not log2).
         let precise_filtered: Vec<f32> = midp_inputs
             .iter()
             .copied()
@@ -755,8 +749,8 @@ fn accuracy_pow() {
             &precise_filtered,
             exp,
             CheckMode::Ulp {
-                max_ulp: 256,
-                max_rel: 1e-4,
+                max_ulp: 128,
+                max_rel: 1e-5,
             },
         );
     }

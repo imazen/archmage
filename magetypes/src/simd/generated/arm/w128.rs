@@ -944,7 +944,9 @@ impl f32x4 {
         unsafe {
             let x = self.0;
 
-            let xi = vrndmq_f32(x);
+            // Round-to-nearest keeps |frac| <= 0.5 (vs floor's [0,1))
+            // Clamp xi to 127 so the bit trick (n+127)<<23 doesn't overflow
+            let xi = vminq_f32(vrndnq_f32(x), vdupq_n_f32(127.0));
             let xf = vsubq_f32(x, xi);
 
             // Horner's method with 6 coefficients
@@ -981,7 +983,7 @@ impl f32x4 {
             let exp_result = Self(x_clamped).exp2_midp_unchecked().0;
 
             let is_underflow = vcltq_f32(x, vdupq_n_f32(-126.0));
-            let is_overflow = vcgtq_f32(x, vdupq_n_f32(128.0));
+            let is_overflow = vcgeq_f32(x, vdupq_n_f32(128.0));
 
             let zero = vdupq_n_f32(0.0);
             let inf = vdupq_n_f32(f32::INFINITY);

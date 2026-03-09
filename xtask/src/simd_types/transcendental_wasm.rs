@@ -351,6 +351,7 @@ fn generate_f32_transcendentals() -> String {
         /// **Warning**: Clamps to finite range. Does not return inf for overflow.
         #[inline(always)]
         pub fn exp2_midp_unchecked(self) -> Self {{
+        // Taylor coefficients of 2^x = e^(x*ln2) around 0
         const C0: f32 = 1.0;
         const C1: f32 = 0.693_147_180_559_945;
         const C2: f32 = 0.240_226_506_959_101;
@@ -359,11 +360,10 @@ fn generate_f32_transcendentals() -> String {
         const C5: f32 = 0.001_333_355_814_497;
         const C6: f32 = 0.000_154_035_303_933;
 
-        let x = f32x4_pmax(self.0, f32x4_splat(-126.0));
-        let x = f32x4_pmin(x, f32x4_splat(126.0));
-
-        let xi = f32x4_floor(x);
-        let xf = f32x4_sub(x, xi);
+        // Round-to-nearest keeps |frac| <= 0.5 (vs floor's [0,1))
+        // Clamp xi to 127 so the bit trick (n+127)<<23 doesn't overflow
+        let xi = f32x4_min(f32x4_nearest(self.0), f32x4_splat(127.0));
+        let xf = f32x4_sub(self.0, xi);
 
         // Horner's method with 6 coefficients
         let poly = f32x4_add(f32x4_mul(f32x4_splat(C6), xf), f32x4_splat(C5));
