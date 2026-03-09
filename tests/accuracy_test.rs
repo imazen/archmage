@@ -18,11 +18,6 @@ fn simd_cbrt_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
 }
 
 #[arcane]
-fn simd_cbrt_fast(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    f32x8::load(token, input).cbrt_fast().to_array()
-}
-
-#[arcane]
 fn simd_cbrt_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).cbrt_midp().to_array()
 }
@@ -445,7 +440,7 @@ fn run_cbrt_test(
     stats
 }
 
-/// Compare cbrt_lowp and cbrt_fast against cbrt_midp (not just std::cbrt).
+/// Compare cbrt_lowp against cbrt_midp (not just std::cbrt).
 fn run_cbrt_vs_midp(
     name: &'static str,
     token: X64V3Token,
@@ -514,19 +509,12 @@ fn test_cbrt_all_variants_comprehensive() {
     midp_stats.print();
     midp_stats.assert_max_ulp(4);
 
-    let fast_stats = run_cbrt_test("cbrt_fast", token, simd_cbrt_fast, &working_range);
-    fast_stats.print();
-    fast_stats.assert_max_ulp(4);
-
     let lowp_stats = run_cbrt_test("cbrt_lowp", token, simd_cbrt_lowp, &working_range);
     lowp_stats.print();
     // lowp has ~15 bits precision, so expect up to ~256 ULP
     lowp_stats.assert_max_ulp(512);
 
-    println!("\n=== cbrt_fast/lowp vs cbrt_midp (parity check, working range) ===\n");
-
-    let fast_vs_midp = run_cbrt_vs_midp("fast vs midp", token, simd_cbrt_fast, &working_range);
-    fast_vs_midp.print();
+    println!("\n=== cbrt_lowp vs cbrt_midp (parity check, working range) ===\n");
 
     let lowp_vs_midp = run_cbrt_vs_midp("lowp vs midp", token, simd_cbrt_lowp, &working_range);
     lowp_vs_midp.print();
@@ -541,8 +529,6 @@ fn test_cbrt_all_variants_comprehensive() {
     if !extremes.is_empty() {
         let midp_ext = run_cbrt_test("midp (extreme)", token, simd_cbrt_midp, &extremes);
         midp_ext.print();
-        let fast_ext = run_cbrt_test("fast (extreme)", token, simd_cbrt_fast, &extremes);
-        fast_ext.print();
         let lowp_ext = run_cbrt_test("lowp (extreme)", token, simd_cbrt_lowp, &extremes);
         lowp_ext.print();
     }
@@ -557,8 +543,6 @@ fn test_cbrt_all_variants_comprehensive() {
     if !denormals_only.is_empty() {
         let midp_denorm = run_cbrt_test("midp (denorm)", token, simd_cbrt_midp, &denormals_only);
         midp_denorm.print();
-        let fast_denorm = run_cbrt_test("fast (denorm)", token, simd_cbrt_fast, &denormals_only);
-        fast_denorm.print();
         let lowp_denorm = run_cbrt_test("lowp (denorm)", token, simd_cbrt_lowp, &denormals_only);
         lowp_denorm.print();
     }
@@ -568,54 +552,78 @@ fn test_cbrt_all_variants_comprehensive() {
     // Zero handling
     let zeros = [0.0f32, -0.0, 0.0, -0.0, 0.0, -0.0, 0.0, -0.0];
     let lowp_z = simd_cbrt_lowp(token, &zeros);
-    let fast_z = simd_cbrt_fast(token, &zeros);
     let midp_z = simd_cbrt_midp(token, &zeros);
-    println!("cbrt(0.0):  lowp={:e}  fast={:e}  midp={:e}  std={:e}", lowp_z[0], fast_z[0], midp_z[0], 0.0f32.cbrt());
-    println!("cbrt(-0.0): lowp={:e}  fast={:e}  midp={:e}  std={:e}", lowp_z[1], fast_z[1], midp_z[1], (-0.0f32).cbrt());
+    println!(
+        "cbrt(0.0):  lowp={:e}  midp={:e}  std={:e}",
+        lowp_z[0],
+        midp_z[0],
+        0.0f32.cbrt()
+    );
+    println!(
+        "cbrt(-0.0): lowp={:e}  midp={:e}  std={:e}",
+        lowp_z[1],
+        midp_z[1],
+        (-0.0f32).cbrt()
+    );
 
     // NaN handling
     let nans = [f32::NAN; 8];
     let lowp_n = simd_cbrt_lowp(token, &nans);
-    let fast_n = simd_cbrt_fast(token, &nans);
     let midp_n = simd_cbrt_midp(token, &nans);
     println!(
-        "cbrt(NaN):  lowp={}  fast={}  midp={}  (should be NaN)",
+        "cbrt(NaN):  lowp={}  midp={}  (should be NaN)",
         lowp_n[0].is_nan(),
-        fast_n[0].is_nan(),
         midp_n[0].is_nan()
     );
 
     // Inf handling
-    let infs = [f32::INFINITY, f32::NEG_INFINITY, f32::INFINITY, f32::NEG_INFINITY,
-                f32::INFINITY, f32::NEG_INFINITY, f32::INFINITY, f32::NEG_INFINITY];
+    let infs = [
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+    ];
     let lowp_i = simd_cbrt_lowp(token, &infs);
-    let fast_i = simd_cbrt_fast(token, &infs);
     let midp_i = simd_cbrt_midp(token, &infs);
     println!(
-        "cbrt(+inf): lowp={:e}  fast={:e}  midp={:e}  std={:e}",
-        lowp_i[0], fast_i[0], midp_i[0], f32::INFINITY.cbrt()
+        "cbrt(+inf): lowp={:e}  midp={:e}  std={:e}",
+        lowp_i[0],
+        midp_i[0],
+        f32::INFINITY.cbrt()
     );
     println!(
-        "cbrt(-inf): lowp={:e}  fast={:e}  midp={:e}  std={:e}",
-        lowp_i[1], fast_i[1], midp_i[1], f32::NEG_INFINITY.cbrt()
+        "cbrt(-inf): lowp={:e}  midp={:e}  std={:e}",
+        lowp_i[1],
+        midp_i[1],
+        f32::NEG_INFINITY.cbrt()
     );
 
     // Denormal spot check
-    let denorms = [1e-40f32, 1e-42, 1e-44, f32::from_bits(1), f32::from_bits(100), f32::from_bits(10000), 1e-39, 1e-41];
+    let denorms = [
+        1e-40f32,
+        1e-42,
+        1e-44,
+        f32::from_bits(1),
+        f32::from_bits(100),
+        f32::from_bits(10000),
+        1e-39,
+        1e-41,
+    ];
     let midp_d = simd_cbrt_midp(token, &denorms);
-    let fast_d = simd_cbrt_fast(token, &denorms);
     let lowp_d = simd_cbrt_lowp(token, &denorms);
     println!("\nDenormal inputs (no denormal handling in any base variant):");
     for i in 0..4 {
         let expected = denorms[i].cbrt();
         println!(
-            "  cbrt({:e}): std={:e}  midp={:e}({}ulp)  fast={:e}({}ulp)  lowp={:e}({}ulp)",
+            "  cbrt({:e}): std={:e}  midp={:e}({}ulp)  lowp={:e}({}ulp)",
             denorms[i],
             expected,
             midp_d[i],
             ulp_distance(expected, midp_d[i]).map_or("NaN".to_string(), |u| u.to_string()),
-            fast_d[i],
-            ulp_distance(expected, fast_d[i]).map_or("NaN".to_string(), |u| u.to_string()),
             lowp_d[i],
             ulp_distance(expected, lowp_d[i]).map_or("NaN".to_string(), |u| u.to_string()),
         );

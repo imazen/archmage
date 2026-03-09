@@ -928,9 +928,16 @@ impl f32x4 {
 
     /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
     ///
-    /// Uses Kahan's initial approximation followed by 1 Halley iteration.
-    /// Fastest cbrt variant — 1 division vs 3 for `cbrt_midp`.
-    /// Suitable for perceptual color (Oklab/XYB) targeting 8-bit output.
+    /// Uses Kahan's bit-hack initial approximation followed by 1 Halley
+    /// iteration. Max error ~259 ULP vs `std::f32::cbrt`, uniform across
+    /// all magnitudes (1e-38..1e38). Average ~58 ULP, median ~40 ULP.
+    ///
+    /// Fastest cbrt variant — 1.8x faster than `cbrt_midp` (1 division
+    /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
+    /// output, or any context where ~4.5 decimal digits suffice.
+    ///
+    /// Does not handle zero, denormals, or infinity — use
+    /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_lowp(self) -> Self {
         let x = self.0;
@@ -959,13 +966,20 @@ impl f32x4 {
         Self(v128_or(y, sign))
     }
 
-    /// Fast cube root (full f32 precision, ~24+ bits).
+    /// Mid-precision cube root (max 3 ULP vs `std::f32::cbrt`).
     ///
-    /// Uses Kahan's initial approximation followed by 2 Halley iterations.
-    /// Each Halley step triples precision: ~5 → ~15 → ~45 bits.
-    /// Uses 2 divisions vs 3 for `cbrt_midp`, with equal or better accuracy.
+    /// Uses Kahan's bit-hack initial approximation followed by 2 Halley
+    /// iterations. Each Halley step triples precision: ~5 → ~15 → ~45
+    /// bits, saturating f32's 24-bit mantissa. Error is uniform across
+    /// all magnitudes (1e-38..1e38): max 3 ULP, average 0.47 ULP.
+    ///
+    /// Uses 2 divisions (vs 3 for Newton-Raphson at equivalent accuracy),
+    /// making it ~35% faster at equal or better precision.
+    ///
+    /// Does not handle zero, denormals, or infinity — use
+    /// `cbrt_midp_precise` for those.
     #[inline(always)]
-    pub fn cbrt_fast(self) -> Self {
+    pub fn cbrt_midp(self) -> Self {
         let x = self.0;
 
         let abs_x = f32x4_abs(x);
@@ -994,49 +1008,10 @@ impl f32x4 {
         Self(v128_or(y, sign))
     }
 
-    /// Mid-precision cube root (~1 ULP max error).
+    /// Mid-precision cube root with denormal and zero handling (max 3 ULP).
     ///
-    /// Uses scalar extraction for initial guess + Newton-Raphson.
-    /// Handles negative values correctly (returns -cbrt(|x|)).
-    ///
-    /// Does not handle denormals. Use `cbrt_midp_precise()` if denormal support is needed.
-    #[inline(always)]
-    pub fn cbrt_midp(self) -> Self {
-        const TWO_THIRDS: f32 = 0.666_666_627;
-
-        let x = self.0;
-
-        // Save sign and work with absolute value
-        let abs_x = f32x4_abs(x);
-        let sign_mask = f32x4_splat(-0.0);
-        let sign = v128_and(x, sign_mask);
-
-        // Extract to scalar for initial approximation
-        let arr: [f32; 4] = unsafe { core::mem::transmute(abs_x) };
-        let approx: [f32; 4] = [
-            f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
-            f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
-            f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
-            f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
-        ];
-        let mut y: v128 = unsafe { core::mem::transmute(approx) };
-
-        // Newton-Raphson iterations: y = y * (2/3 + x/(3*y^3))
-        for _ in 0..3 {
-            let y2 = f32x4_mul(y, y);
-            let y3 = f32x4_mul(y2, y);
-            let term = f32x4_div(abs_x, f32x4_mul(f32x4_splat(3.0), y3));
-            y = f32x4_mul(y, f32x4_add(f32x4_splat(TWO_THIRDS), term));
-        }
-
-        // Restore sign
-        Self(v128_or(y, sign))
-    }
-
-    /// Mid-precision cube root with denormal handling (~1 ULP max error).
-    ///
-    /// Handles negative values correctly (returns -cbrt(|x|)).
-    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`.
+    /// Wraps `cbrt_midp()` with denormal scaling and zero masking.
+    /// Handles all edge cases including denormals, zeros, and negative values.
     #[inline(always)]
     pub fn cbrt_midp_precise(self) -> Self {
         const SCALE_UP: f32 = 16777216.0; // 2^24

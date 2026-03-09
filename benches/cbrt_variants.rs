@@ -1,4 +1,4 @@
-//! Benchmarks comparing cbrt variants: lowp (1 Halley), fast (2 Halley), midp (3 Newton)
+//! Benchmarks comparing cbrt variants: lowp (1 Halley), midp (2 Halley)
 //!
 //! Run:
 //!   cargo bench --bench cbrt_variants --features "std"
@@ -21,11 +21,6 @@ fn simd_cbrt_lowp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 }
 
 #[arcane]
-fn simd_cbrt_fast(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    f32x8::from_array(token, *data).cbrt_fast().to_array()
-}
-
-#[arcane]
 fn simd_cbrt_midp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     f32x8::from_array(token, *data).cbrt_midp().to_array()
 }
@@ -37,45 +32,12 @@ fn scalar_cbrt(data: &[f32; 8]) -> [f32; 8] {
 
 // Scalar Kahan + 1 Halley (matches lowp)
 fn scalar_cbrt_lowp(data: &[f32; 8]) -> [f32; 8] {
-    core::array::from_fn(|i| {
-        let x = data[i];
-        let sign = x.signum();
-        let ax = x.abs();
-        let mut y = f32::from_bits((ax.to_bits() / 3) + 0x2a508c2d);
-        let y3 = y * y * y;
-        y *= (y3 + 2.0 * ax) / (2.0 * y3 + ax);
-        sign * y
-    })
+    core::array::from_fn(|i| magetypes::nostd_math::cbrt_lowp_f32(data[i]))
 }
 
-// Scalar Kahan + 2 Halley (matches fast)
-fn scalar_cbrt_fast(data: &[f32; 8]) -> [f32; 8] {
-    core::array::from_fn(|i| {
-        let x = data[i];
-        let sign = x.signum();
-        let ax = x.abs();
-        let mut y = f32::from_bits((ax.to_bits() / 3) + 0x2a508c2d);
-        for _ in 0..2 {
-            let y3 = y * y * y;
-            y *= (y3 + 2.0 * ax) / (2.0 * y3 + ax);
-        }
-        sign * y
-    })
-}
-
-// Scalar Kahan + 3 Newton (matches midp)
+// Scalar Kahan + 2 Halley (matches midp)
 fn scalar_cbrt_midp(data: &[f32; 8]) -> [f32; 8] {
-    core::array::from_fn(|i| {
-        let x = data[i];
-        let sign = x.signum();
-        let ax = x.abs();
-        let mut y = f32::from_bits((ax.to_bits() / 3) + 0x2a508c2d);
-        for _ in 0..3 {
-            let y3 = y * y * y;
-            y *= 0.666_666_6 + ax / (3.0 * y3);
-        }
-        sign * y
-    })
+    core::array::from_fn(|i| magetypes::nostd_math::cbrt_midp_f32(data[i]))
 }
 
 // ============================================================================
@@ -86,9 +48,7 @@ fn make_test_data() -> Vec<[f32; 8]> {
     (0..128)
         .map(|i| {
             let base = i as f32 / 128.0;
-            core::array::from_fn(|j| {
-                10.0f32.powf(-4.0 + (base + j as f32 / 1024.0) * 8.0)
-            })
+            core::array::from_fn(|j| 10.0f32.powf(-4.0 + (base + j as f32 / 1024.0) * 8.0))
         })
         .collect()
 }
@@ -101,13 +61,10 @@ fn bench_cbrt_variants(c: &mut Criterion) {
 
     // Single f32x8 benchmarks
     if let Some(token) = X64V3Token::summon() {
-        group.bench_function("simd_lowp_1halley", |b| {
+        group.bench_function("simd_lowp", |b| {
             b.iter(|| simd_cbrt_lowp(token, black_box(&single)))
         });
-        group.bench_function("simd_fast_2halley", |b| {
-            b.iter(|| simd_cbrt_fast(token, black_box(&single)))
-        });
-        group.bench_function("simd_midp_3newton", |b| {
+        group.bench_function("simd_midp", |b| {
             b.iter(|| simd_cbrt_midp(token, black_box(&single)))
         });
     }
@@ -115,13 +72,10 @@ fn bench_cbrt_variants(c: &mut Criterion) {
     group.bench_function("scalar_std_cbrt", |b| {
         b.iter(|| scalar_cbrt(black_box(&single)))
     });
-    group.bench_function("scalar_lowp_1halley", |b| {
+    group.bench_function("scalar_lowp", |b| {
         b.iter(|| scalar_cbrt_lowp(black_box(&single)))
     });
-    group.bench_function("scalar_fast_2halley", |b| {
-        b.iter(|| scalar_cbrt_fast(black_box(&single)))
-    });
-    group.bench_function("scalar_midp_3newton", |b| {
+    group.bench_function("scalar_midp", |b| {
         b.iter(|| scalar_cbrt_midp(black_box(&single)))
     });
     group.finish();
@@ -130,7 +84,7 @@ fn bench_cbrt_variants(c: &mut Criterion) {
     let mut group = c.benchmark_group("cbrt_bulk_1024");
 
     if let Some(token) = X64V3Token::summon() {
-        group.bench_function("simd_lowp_1halley", |b| {
+        group.bench_function("simd_lowp", |b| {
             b.iter(|| {
                 let mut sum = 0.0f32;
                 for chunk in &data {
@@ -140,17 +94,7 @@ fn bench_cbrt_variants(c: &mut Criterion) {
                 sum
             })
         });
-        group.bench_function("simd_fast_2halley", |b| {
-            b.iter(|| {
-                let mut sum = 0.0f32;
-                for chunk in &data {
-                    let r = simd_cbrt_fast(token, black_box(chunk));
-                    sum += r[0];
-                }
-                sum
-            })
-        });
-        group.bench_function("simd_midp_3newton", |b| {
+        group.bench_function("simd_midp", |b| {
             b.iter(|| {
                 let mut sum = 0.0f32;
                 for chunk in &data {
@@ -172,7 +116,7 @@ fn bench_cbrt_variants(c: &mut Criterion) {
             sum
         })
     });
-    group.bench_function("scalar_lowp_1halley", |b| {
+    group.bench_function("scalar_lowp", |b| {
         b.iter(|| {
             let mut sum = 0.0f32;
             for chunk in &data {
@@ -182,17 +126,7 @@ fn bench_cbrt_variants(c: &mut Criterion) {
             sum
         })
     });
-    group.bench_function("scalar_fast_2halley", |b| {
-        b.iter(|| {
-            let mut sum = 0.0f32;
-            for chunk in &data {
-                let r = scalar_cbrt_fast(black_box(chunk));
-                sum += r[0];
-            }
-            sum
-        })
-    });
-    group.bench_function("scalar_midp_3newton", |b| {
+    group.bench_function("scalar_midp", |b| {
         b.iter(|| {
             let mut sum = 0.0f32;
             for chunk in &data {

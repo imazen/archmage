@@ -558,9 +558,16 @@ fn generate_f32_cbrt_ops() -> String {
     formatdoc! {r#"
     /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
     ///
-    /// Uses Kahan's initial approximation followed by 1 Halley iteration.
-    /// Fastest cbrt variant — 1 division vs 3 for `cbrt_midp`.
-    /// Suitable for perceptual color (Oklab/XYB) targeting 8-bit output.
+    /// Uses Kahan's bit-hack initial approximation followed by 1 Halley
+    /// iteration. Max error ~259 ULP vs `std::f32::cbrt`, uniform across
+    /// all magnitudes (1e-38..1e38). Average ~58 ULP, median ~40 ULP.
+    ///
+    /// Fastest cbrt variant — 1.8x faster than `cbrt_midp` (1 division
+    /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
+    /// output, or any context where ~4.5 decimal digits suffice.
+    ///
+    /// Does not handle zero, denormals, or infinity — use
+    /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_lowp(self) -> Self {{
         unsafe {{
@@ -597,13 +604,20 @@ fn generate_f32_cbrt_ops() -> String {
         }}
     }}
 
-    /// Fast cube root (full f32 precision, ~24+ bits).
+    /// Mid-precision cube root (max 3 ULP vs `std::f32::cbrt`).
     ///
-    /// Uses Kahan's initial approximation followed by 2 Halley iterations.
-    /// Each Halley step triples precision: ~5 → ~15 → ~45 bits.
-    /// Uses 2 divisions vs 3 for `cbrt_midp`, with equal or better accuracy.
+    /// Uses Kahan's bit-hack initial approximation followed by 2 Halley
+    /// iterations. Each Halley step triples precision: ~5 → ~15 → ~45
+    /// bits, saturating f32's 24-bit mantissa. Error is uniform across
+    /// all magnitudes (1e-38..1e38): max 3 ULP, average 0.47 ULP.
+    ///
+    /// Uses 2 divisions (vs 3 for Newton-Raphson at equivalent accuracy),
+    /// making it ~35% faster at equal or better precision.
+    ///
+    /// Does not handle zero, denormals, or infinity — use
+    /// `cbrt_midp_precise` for those.
     #[inline(always)]
-    pub fn cbrt_fast(self) -> Self {{
+    pub fn cbrt_midp(self) -> Self {{
         unsafe {{
             let x = self.0;
 
@@ -640,57 +654,10 @@ fn generate_f32_cbrt_ops() -> String {
         }}
     }}
 
-    /// Mid-precision cube root (~1 ULP max error).
+    /// Mid-precision cube root with denormal and zero handling (max 3 ULP).
     ///
-    /// Uses scalar extraction for initial guess + Newton-Raphson.
-    /// Handles negative values correctly (returns -cbrt(|x|)).
-    ///
-    /// Does not handle denormals. Use `cbrt_midp_precise()` if denormal support is needed.
-    #[inline(always)]
-    pub fn cbrt_midp(self) -> Self {{
-        const TWO_THIRDS: f32 = 0.666_666_627;
-
-        unsafe {{
-            let x = self.0;
-
-            // Save sign and work with absolute value
-            let abs_x = vabsq_f32(x);
-            let sign_mask = vdupq_n_f32(-0.0);
-            let sign = vreinterpretq_f32_u32(vandq_u32(
-                vreinterpretq_u32_f32(x),
-                vreinterpretq_u32_f32(sign_mask),
-            ));
-
-            // Extract to scalar for initial approximation
-            let arr: [f32; 4] = core::mem::transmute(abs_x);
-            let approx: [f32; 4] = [
-                f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
-                f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
-                f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
-                f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
-            ];
-            let mut y = vld1q_f32(approx.as_ptr());
-
-            // Newton-Raphson iterations: y = y * (2/3 + x/(3*y^3))
-            for _ in 0..3 {{
-                let y2 = vmulq_f32(y, y);
-                let y3 = vmulq_f32(y2, y);
-                let term = vdivq_f32(abs_x, vmulq_f32(vdupq_n_f32(3.0), y3));
-                y = vmulq_f32(y, vaddq_f32(vdupq_n_f32(TWO_THIRDS), term));
-            }}
-
-            // Restore sign
-            Self(vreinterpretq_f32_u32(vorrq_u32(
-                vreinterpretq_u32_f32(y),
-                vreinterpretq_u32_f32(sign),
-            )))
-        }}
-    }}
-
-    /// Mid-precision cube root with denormal handling (~1 ULP max error).
-    ///
-    /// Handles negative values correctly (returns -cbrt(|x|)).
-    /// Handles all edge cases including denormals. About 67% slower than `cbrt_midp()`.
+    /// Wraps `cbrt_midp()` with denormal scaling and zero masking.
+    /// Handles all edge cases including denormals, zeros, and negative values.
     #[inline(always)]
     pub fn cbrt_midp_precise(self) -> Self {{
         unsafe {{
