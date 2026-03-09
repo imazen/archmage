@@ -566,7 +566,7 @@ fn generate_f32_cbrt_ops() -> String {
     /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
     /// output, or any context where ~4.5 decimal digits suffice.
     ///
-    /// Does not handle zero, denormals, or infinity — use
+    /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_lowp(self) -> Self {{
@@ -597,10 +597,14 @@ fn generate_f32_cbrt_ops() -> String {
             let den = vaddq_f32(vmulq_f32(two, y3), abs_x);
             y = vmulq_f32(y, vdivq_f32(num, den));
 
-            Self(vreinterpretq_f32_u32(vorrq_u32(
+            let result = vreinterpretq_f32_u32(vorrq_u32(
                 vreinterpretq_u32_f32(y),
                 vreinterpretq_u32_f32(sign),
-            )))
+            ));
+
+            // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+            let is_zero = vceqq_f32(x, vdupq_n_f32(0.0));
+            Self(vbslq_f32(is_zero, x, result))
         }}
     }}
 
@@ -614,7 +618,7 @@ fn generate_f32_cbrt_ops() -> String {
     /// Uses 2 divisions (vs 3 for Newton-Raphson at equivalent accuracy),
     /// making it ~35% faster at equal or better precision.
     ///
-    /// Does not handle zero, denormals, or infinity — use
+    /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_midp(self) -> Self {{
@@ -647,10 +651,14 @@ fn generate_f32_cbrt_ops() -> String {
                 y = vmulq_f32(y, vdivq_f32(num, den));
             }}
 
-            Self(vreinterpretq_f32_u32(vorrq_u32(
+            let result = vreinterpretq_f32_u32(vorrq_u32(
                 vreinterpretq_u32_f32(y),
                 vreinterpretq_u32_f32(sign),
-            )))
+            ));
+
+            // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+            let is_zero = vceqq_f32(x, vdupq_n_f32(0.0));
+            Self(vbslq_f32(is_zero, x, result))
         }}
     }}
 

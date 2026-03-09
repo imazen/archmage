@@ -232,9 +232,20 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Mid-precision base-2 exponential with clamping.
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {
-        self.max(splat_f32::<T>(-126.0))
-            .min(splat_f32::<T>(126.0))
-            .exp2_midp_unchecked()
+        let underflow_limit = splat_f32::<T>(-150.0);
+        let overflow_limit = splat_f32::<T>(128.0);
+
+        // Clamp to prevent overflow in intermediate calculations
+        let clamped = self.max(underflow_limit).min(overflow_limit);
+        let result = clamped.exp2_midp_unchecked();
+
+        // Handle edge cases: large negative → 0, large positive → inf
+        let is_underflow = self.simd_lt(underflow_limit);
+        let is_overflow = self.simd_gt(overflow_limit);
+        let zero = splat_f32::<T>(0.0);
+        let inf = splat_f32::<T>(f32::INFINITY);
+        let result = Self::blend(is_underflow, zero, result);
+        Self::blend(is_overflow, inf, result)
     }
 
     /// Mid-precision base-2 exponential with full edge case handling.
@@ -326,7 +337,7 @@ impl<T: F32x4Convert> f32x4<T> {
     /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
     /// output, or any context where ~4.5 decimal digits suffice.
     ///
-    /// Does not handle zero, denormals, or infinity — use
+    /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_lowp(self) -> Self {
@@ -348,7 +359,11 @@ impl<T: F32x4Convert> f32x4<T> {
         let y3 = y * y * y;
         y *= (y3 + two * abs_x) / (two * y3 + abs_x);
 
-        y | sign
+        let result = y | sign;
+
+        // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+        let is_zero = self.simd_eq(splat_f32::<T>(0.0));
+        Self::blend(is_zero, self, result)
     }
 
     /// Mid-precision cube root (max 3 ULP vs `std::f32::cbrt`).
@@ -361,7 +376,7 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Uses 2 divisions (vs 3 for Newton-Raphson at equivalent accuracy),
     /// making it ~35% faster at equal or better precision.
     ///
-    /// Does not handle zero, denormals, or infinity — use
+    /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_midp(self) -> Self {
@@ -384,7 +399,11 @@ impl<T: F32x4Convert> f32x4<T> {
             y *= (y3 + two * abs_x) / (two * y3 + abs_x);
         }
 
-        y | sign
+        let result = y | sign;
+
+        // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+        let is_zero = self.simd_eq(splat_f32::<T>(0.0));
+        Self::blend(is_zero, self, result)
     }
 
     /// Mid-precision cube root with denormal and zero handling (max 3 ULP).
@@ -407,6 +426,6 @@ impl<T: F32x4Convert> f32x4<T> {
         let scaled_result = result * splat_f32::<T>(1.0 / 256.0);
         let result = Self::blend(is_denorm, scaled_result, result);
 
-        Self::blend(is_zero, zero, result)
+        Self::blend(is_zero, self, result)
     }
 }

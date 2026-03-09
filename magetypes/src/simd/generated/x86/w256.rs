@@ -982,7 +982,7 @@ impl f32x8 {
     /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
     /// output, or any context where ~4.5 decimal digits suffice.
     ///
-    /// Does not handle zero, denormals, or infinity — use
+    /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_lowp(self) -> Self {
@@ -1014,7 +1014,12 @@ impl f32x8 {
             let den = _mm256_add_ps(_mm256_mul_ps(two, y3), abs_x);
             y = _mm256_mul_ps(y, _mm256_div_ps(num, den));
 
-            Self(_mm256_or_ps(y, sign))
+            let result = _mm256_or_ps(y, sign);
+            // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(x, _mm256_setzero_ps());
+            let result = _mm256_blendv_ps(result, x, is_zero);
+
+            Self(result)
         }
     }
 
@@ -1028,7 +1033,7 @@ impl f32x8 {
     /// Uses 2 divisions (vs 3 for Newton-Raphson at equivalent accuracy),
     /// making it ~35% faster at equal or better precision.
     ///
-    /// Does not handle zero, denormals, or infinity — use
+    /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_midp(self) -> Self {
@@ -1062,8 +1067,13 @@ impl f32x8 {
                 y = _mm256_mul_ps(y, _mm256_div_ps(num, den));
             }
 
-            // Restore sign
-            Self(_mm256_or_ps(y, sign))
+            // Restore sign and mask zeros
+            let result = _mm256_or_ps(y, sign);
+            // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(x, _mm256_setzero_ps());
+            let result = _mm256_blendv_ps(result, x, is_zero);
+
+            Self(result)
         }
     }
 
@@ -1081,12 +1091,15 @@ impl f32x8 {
 
             let abs_x = _mm256_andnot_ps(_mm256_set1_ps(-0.0), self.0);
             let is_denorm = _mm256_cmp_ps::<_CMP_LT_OQ>(abs_x, _mm256_set1_ps(DENORM_LIMIT));
+            // Exclude zeros from denormal handling (cbrt_midp handles zeros via zero mask)
+            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, _mm256_setzero_ps());
+            let is_denorm = _mm256_andnot_ps(is_zero, is_denorm);
 
             // Scale up denormals
             let scaled_x = _mm256_mul_ps(self.0, _mm256_set1_ps(SCALE_UP));
             let x_for_cbrt = _mm256_blendv_ps(self.0, scaled_x, is_denorm);
 
-            // Compute cbrt with edge case handling
+            // Compute cbrt (includes zero masking)
             let result = Self(x_for_cbrt).cbrt_midp();
 
             // Scale down results from denormal inputs

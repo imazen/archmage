@@ -540,6 +540,22 @@ fn generate_f32_cbrt_ops(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix:
     let lanes = ty.lanes();
     let lane_indices = (0..lanes).collect::<Vec<_>>();
 
+    // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero input)
+    // Must use mask ops for AVX-512, blendv for SSE/AVX
+    let zero_mask_code = if ty.width == SimdWidth::W512 {
+        formatdoc! {r#"
+            // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+            let is_zero = {prefix}_cmp_{suffix}_mask::<_CMP_EQ_OQ>(x, {prefix}_setzero_{suffix}());
+            let result = {prefix}_mask_blend_{suffix}(is_zero, result, x);
+        "#}
+    } else {
+        formatdoc! {r#"
+            // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+            let is_zero = {prefix}_cmp_{suffix}::<_CMP_EQ_OQ>(x, {prefix}_setzero_{suffix}());
+            let result = {prefix}_blendv_{suffix}(result, x, is_zero);
+        "#}
+    };
+
     // Helper: generate the scalar initial approximation block
     let approx_block = |lane_indices: &[usize]| -> String {
         let mut s = String::new();
@@ -563,7 +579,7 @@ fn generate_f32_cbrt_ops(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix:
     /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
     /// output, or any context where ~4.5 decimal digits suffice.
     ///
-    /// Does not handle zero, denormals, or infinity — use
+    /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_lowp(self) -> Self {{
@@ -590,7 +606,9 @@ fn generate_f32_cbrt_ops(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix:
             let den = {prefix}_add_{suffix}({prefix}_mul_{suffix}(two, y3), abs_x);
             y = {prefix}_mul_{suffix}(y, {prefix}_div_{suffix}(num, den));
 
-            Self({prefix}_or_{suffix}(y, sign))
+            let result = {prefix}_or_{suffix}(y, sign);
+            {zero_mask_code}
+            Self(result)
         }}
     }}
 
@@ -608,7 +626,7 @@ fn generate_f32_cbrt_ops(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix:
     /// Uses 2 divisions (vs 3 for Newton-Raphson at equivalent accuracy),
     /// making it ~35% faster at equal or better precision.
     ///
-    /// Does not handle zero, denormals, or infinity — use
+    /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_midp(self) -> Self {{
@@ -637,8 +655,10 @@ fn generate_f32_cbrt_ops(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix:
                 y = {prefix}_mul_{suffix}(y, {prefix}_div_{suffix}(num, den));
             }}
 
-            // Restore sign
-            Self({prefix}_or_{suffix}(y, sign))
+            // Restore sign and mask zeros
+            let result = {prefix}_or_{suffix}(y, sign);
+            {zero_mask_code}
+            Self(result)
         }}
     }}
 
@@ -661,12 +681,15 @@ fn generate_f32_cbrt_ops(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix:
 
             let abs_x = {prefix}_andnot_{suffix}({prefix}_set1_{suffix}(-0.0), self.0);
             let is_denorm = {prefix}_cmp_{suffix}_mask::<_CMP_LT_OQ>(abs_x, {prefix}_set1_{suffix}(DENORM_LIMIT));
+            // Exclude zeros from denormal handling (cbrt_midp handles zeros via zero mask)
+            let is_zero = {prefix}_cmp_{suffix}_mask::<_CMP_EQ_OQ>(self.0, {prefix}_setzero_{suffix}());
+            let is_denorm = is_denorm & !is_zero;
 
             // Scale up denormals
             let scaled_x = {prefix}_mul_{suffix}(self.0, {prefix}_set1_{suffix}(SCALE_UP));
             let x_for_cbrt = {prefix}_mask_blend_{suffix}(is_denorm, self.0, scaled_x);
 
-            // Compute cbrt with edge case handling
+            // Compute cbrt (includes zero masking)
             let result = Self(x_for_cbrt).cbrt_midp();
 
             // Scale down results from denormal inputs
@@ -692,12 +715,15 @@ fn generate_f32_cbrt_ops(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix:
 
             let abs_x = {prefix}_andnot_{suffix}({prefix}_set1_{suffix}(-0.0), self.0);
             let is_denorm = {prefix}_cmp_{suffix}::<_CMP_LT_OQ>(abs_x, {prefix}_set1_{suffix}(DENORM_LIMIT));
+            // Exclude zeros from denormal handling (cbrt_midp handles zeros via zero mask)
+            let is_zero = {prefix}_cmp_{suffix}::<_CMP_EQ_OQ>(self.0, {prefix}_setzero_{suffix}());
+            let is_denorm = {prefix}_andnot_{suffix}(is_zero, is_denorm);
 
             // Scale up denormals
             let scaled_x = {prefix}_mul_{suffix}(self.0, {prefix}_set1_{suffix}(SCALE_UP));
             let x_for_cbrt = {prefix}_blendv_{suffix}(self.0, scaled_x, is_denorm);
 
-            // Compute cbrt with edge case handling
+            // Compute cbrt (includes zero masking)
             let result = Self(x_for_cbrt).cbrt_midp();
 
             // Scale down results from denormal inputs

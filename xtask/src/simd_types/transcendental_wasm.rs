@@ -519,7 +519,7 @@ fn generate_f32_transcendentals() -> String {
         /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
         /// output, or any context where ~4.5 decimal digits suffice.
         ///
-        /// Does not handle zero, denormals, or infinity — use
+        /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
         /// `cbrt_midp_precise` for those.
         #[inline(always)]
         pub fn cbrt_lowp(self) -> Self {{
@@ -546,7 +546,11 @@ fn generate_f32_transcendentals() -> String {
         let den = f32x4_add(f32x4_mul(two, y3), abs_x);
         y = f32x4_mul(y, f32x4_div(num, den));
 
-        Self(v128_or(y, sign))
+        let result = v128_or(y, sign);
+
+        // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+        let is_zero = f32x4_eq(x, f32x4_splat(0.0));
+        Self(v128_bitselect(x, result, is_zero))
         }}
 
         /// Mid-precision cube root (max 3 ULP vs `std::f32::cbrt`).
@@ -559,7 +563,7 @@ fn generate_f32_transcendentals() -> String {
         /// Uses 2 divisions (vs 3 for Newton-Raphson at equivalent accuracy),
         /// making it ~35% faster at equal or better precision.
         ///
-        /// Does not handle zero, denormals, or infinity — use
+        /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
         /// `cbrt_midp_precise` for those.
         #[inline(always)]
         pub fn cbrt_midp(self) -> Self {{
@@ -588,7 +592,11 @@ fn generate_f32_transcendentals() -> String {
             y = f32x4_mul(y, f32x4_div(num, den));
         }}
 
-        Self(v128_or(y, sign))
+        let result = v128_or(y, sign);
+
+        // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
+        let is_zero = f32x4_eq(x, f32x4_splat(0.0));
+        Self(v128_bitselect(x, result, is_zero))
         }}
 
         /// Mid-precision cube root with denormal and zero handling (max 3 ULP).

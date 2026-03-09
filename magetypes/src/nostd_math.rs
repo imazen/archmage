@@ -476,7 +476,9 @@ pub fn cbrt_lowp_f32(x: f32) -> f32 {
     let mut y = f32::from_bits((ax.to_bits() / 3) + 0x2a50_8c2d);
     let y3 = y * y * y;
     y *= (y3 + 2.0 * ax) / (2.0 * y3 + ax);
-    sign * y
+    // Zero masking: bit hack gives garbage for zero, but ax==0 check
+    // compiles to cmov (branchless) preserving auto-vectorizability.
+    if ax == 0.0 { x } else { sign * y }
 }
 
 /// Mid-precision scalar cube root (max 3 ULP vs `std::f32::cbrt`).
@@ -486,7 +488,7 @@ pub fn cbrt_lowp_f32(x: f32) -> f32 {
 /// bits, saturating f32's 24-bit mantissa. Error is uniform across
 /// all magnitudes (1e-38..1e38): max 3 ULP, average 0.47 ULP.
 ///
-/// Does not handle zero, denormals, or infinity correctly.
+/// Returns ±0 for ±0. Does not handle denormals or infinity correctly.
 #[inline(always)]
 pub fn cbrt_midp_f32(x: f32) -> f32 {
     let sign = x.signum();
@@ -496,7 +498,9 @@ pub fn cbrt_midp_f32(x: f32) -> f32 {
         let y3 = y * y * y;
         y *= (y3 + 2.0 * ax) / (2.0 * y3 + ax);
     }
-    sign * y
+    // Zero masking: bit hack gives garbage for zero, but ax==0 check
+    // compiles to cmov (branchless) preserving auto-vectorizability.
+    if ax == 0.0 { x } else { sign * y }
 }
 
 #[cfg(test)]
