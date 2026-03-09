@@ -393,7 +393,7 @@ fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
 | `_wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
 | `_scalar` | `ScalarToken` | any | No SIMD (always available) |
 
-By default, `incant!` tries `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon])`.
+By default, `incant!` tries `_v4` (if the `avx512` feature is enabled), `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon])`.
 
 ## Runtime dispatch with `incant!` <sub>(alias: `dispatch_variant!`)</sub>
 
