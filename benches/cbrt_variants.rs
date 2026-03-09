@@ -1,9 +1,9 @@
-//! Benchmarks comparing cbrt variants: lowp (1 Halley), midp (2 Halley)
+//! Benchmarks comparing cbrt and pow variants.
 //!
 //! Run:
 //!   cargo bench --bench cbrt_variants --features "std"
 //!
-//! Also benchmarks scalar cbrt for reference.
+//! Also benchmarks scalar cbrt/pow for reference.
 
 #![cfg(target_arch = "x86_64")]
 
@@ -23,6 +23,16 @@ fn simd_cbrt_lowp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 #[arcane]
 fn simd_cbrt_midp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     f32x8::from_array(token, *data).cbrt_midp().to_array()
+}
+
+#[arcane]
+fn simd_pow_lowp(token: X64V3Token, data: &[f32; 8], n: f32) -> [f32; 8] {
+    f32x8::from_array(token, *data).pow_lowp(n).to_array()
+}
+
+#[arcane]
+fn simd_pow_midp(token: X64V3Token, data: &[f32; 8], n: f32) -> [f32; 8] {
+    f32x8::from_array(token, *data).pow_midp(n).to_array()
 }
 
 // Scalar reference: std cbrt
@@ -139,5 +149,69 @@ fn bench_cbrt_variants(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_cbrt_variants);
+fn bench_pow_variants(c: &mut Criterion) {
+    let data = make_test_data();
+    let single = [0.001f32, 0.1, 0.5, 2.0, 10.0, 100.0, 1000.0, 1e6];
+    let exponent = 2.5f32;
+
+    let mut group = c.benchmark_group("pow_single_8");
+
+    if let Some(token) = X64V3Token::summon() {
+        group.bench_function("simd_lowp", |b| {
+            b.iter(|| simd_pow_lowp(token, black_box(&single), black_box(exponent)))
+        });
+        group.bench_function("simd_midp", |b| {
+            b.iter(|| simd_pow_midp(token, black_box(&single), black_box(exponent)))
+        });
+    }
+
+    group.bench_function("scalar_powf", |b| {
+        b.iter(|| {
+            let s = black_box(&single);
+            let n = black_box(exponent);
+            core::array::from_fn::<f32, 8, _>(|i| s[i].powf(n))
+        })
+    });
+    group.finish();
+
+    let mut group = c.benchmark_group("pow_bulk_1024");
+
+    if let Some(token) = X64V3Token::summon() {
+        group.bench_function("simd_lowp", |b| {
+            b.iter(|| {
+                let mut sum = 0.0f32;
+                for chunk in &data {
+                    let r = simd_pow_lowp(token, black_box(chunk), black_box(exponent));
+                    sum += r[0];
+                }
+                sum
+            })
+        });
+        group.bench_function("simd_midp", |b| {
+            b.iter(|| {
+                let mut sum = 0.0f32;
+                for chunk in &data {
+                    let r = simd_pow_midp(token, black_box(chunk), black_box(exponent));
+                    sum += r[0];
+                }
+                sum
+            })
+        });
+    }
+
+    group.bench_function("scalar_powf", |b| {
+        b.iter(|| {
+            let mut sum = 0.0f32;
+            let n = black_box(exponent);
+            for chunk in &data {
+                let s = black_box(chunk);
+                sum += s[0].powf(n);
+            }
+            sum
+        })
+    });
+    group.finish();
+}
+
+criterion_group!(benches, bench_cbrt_variants, bench_pow_variants);
 criterion_main!(benches);
