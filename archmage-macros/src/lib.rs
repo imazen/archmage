@@ -1764,7 +1764,7 @@ fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
 ///
 /// // Or with matching explicit tiers:
 /// pub fn process_api(data: &[f32]) -> f32 {
-///     incant!(process(data), [v1, v3, neon])
+///     incant!(process(data), [v1, v3, neon, scalar])
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -2190,13 +2190,15 @@ impl Parse for IncantInput {
 /// ```rust,ignore
 /// // Only dispatch to v1, v3, neon, and scalar
 /// pub fn api(data: &[f32]) -> f32 {
-///     incant!(process(data), [v1, v3, neon])
+///     incant!(process(data), [v1, v3, neon, scalar])
 /// }
 /// ```
 ///
-/// `scalar` is always included implicitly. Unknown tier names cause a
-/// compile error. Tiers are automatically sorted into correct dispatch
-/// order (highest priority first).
+/// `scalar` must be listed explicitly — `incant!` always emits a
+/// `fn_scalar()` call as the final fallback, and requiring it in the
+/// tier list ensures you've acknowledged this path exists. Unknown
+/// tier names cause a compile error. Tiers are automatically sorted
+/// into correct dispatch order (highest priority first).
 ///
 /// Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
 /// `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
@@ -2216,7 +2218,7 @@ impl Parse for IncantInput {
 ///
 /// ```rust,ignore
 /// fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-///     incant!(process(data) with token, [v3, neon])
+///     incant!(process(data) with token, [v3, neon, scalar])
 /// }
 /// ```
 ///
@@ -2281,6 +2283,23 @@ fn incant_impl(input: IncantInput) -> TokenStream {
         .as_ref()
         .map(|(_, span)| *span)
         .unwrap_or(last_segment_span);
+
+    // When the user specifies explicit tiers, require `scalar` in the list.
+    // This forces acknowledgment that a scalar fallback path exists and must
+    // be implemented. Default tiers (no bracket list) always include scalar.
+    if let Some((names, span)) = &input.tiers
+        && !names.iter().any(|n| n == "scalar")
+    {
+        return syn::Error::new(
+            *span,
+            "explicit tier list must include `scalar`. \
+             incant! always dispatches to fn_scalar() as the final fallback, \
+             so `scalar` must appear in the tier list to acknowledge this. \
+             Example: [v3, neon, scalar]",
+        )
+        .to_compile_error()
+        .into();
+    }
 
     let tiers = match resolve_tiers(&tier_names, error_span) {
         Ok(t) => t,

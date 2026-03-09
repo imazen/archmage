@@ -104,7 +104,7 @@
 //! `_scalar`. You can specify explicit tiers:
 //!
 //! ```rust,ignore
-//! incant!(func(data), [v1, v3, neon])  // only these tiers + scalar
+//! incant!(func(data), [v1, v3, neon, scalar])  // explicit tiers (scalar required)
 //! ```
 //!
 //! Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,

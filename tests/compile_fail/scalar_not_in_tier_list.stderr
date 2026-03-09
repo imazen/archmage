@@ -1,0 +1,5 @@
+error: explicit tier list must include `scalar`. incant! always dispatches to fn_scalar() as the final fallback, so `scalar` must appear in the tier list to acknowledge this. Example: [v3, neon, scalar]
+  --> tests/compile_fail/scalar_not_in_tier_list.rs:17:32
+   |
+17 |     let _ = incant!(add(1, 2), [v3]);
+   |                                ^^^^

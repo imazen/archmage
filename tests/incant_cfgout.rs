@@ -70,7 +70,7 @@ mod explicit_tiers {
     use archmage::incant;
 
     fn add_explicit(a: f32, b: f32) -> f32 {
-        incant!(add(a, b), [v3, neon])
+        incant!(add(a, b), [v3, neon, scalar])
     }
 
     #[test]
@@ -89,7 +89,7 @@ mod scalar_fallback {
     }
 
     fn trivial_dispatched(x: f32) -> f32 {
-        incant!(trivial(x), [])
+        incant!(trivial(x), [scalar])
     }
 
     #[test]

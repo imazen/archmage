@@ -2106,14 +2106,7 @@ fn run_ci() -> Result<()> {
     // Step 7: Clippy
     println!("┌─ Step 7/16: Running clippy ────────────────────────────────────────┐");
     let clippy = std::process::Command::new("cargo")
-        .args([
-            "clippy",
-            "--features",
-            "std avx512",
-            "--",
-            "-D",
-            "warnings",
-        ])
+        .args(["clippy", "--features", "std avx512", "--", "-D", "warnings"])
         .status()
         .context("Failed to run clippy")?;
     if !clippy.success() {

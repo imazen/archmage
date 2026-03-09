@@ -393,7 +393,7 @@ fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
 | `_wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
 | `_scalar` | `ScalarToken` | any | No SIMD (always available) |
 
-By default, `incant!` tries `_v4` (if the `avx512` feature is enabled), `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon])`.
+By default, `incant!` tries `_v4` (if the `avx512` feature is enabled), `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon, scalar])`. When you specify explicit tiers, `scalar` must be in the list — this ensures you've acknowledged the fallback path.
 
 ## Runtime dispatch with `incant!` <sub>(alias: `dispatch_variant!`)</sub>
 
@@ -421,13 +421,13 @@ fn sum_squares_scalar(_token: archmage::ScalarToken, data: &[f32]) -> f32 {
 
 /// Dispatches to the best available at runtime.
 fn sum_squares(data: &[f32]) -> f32 {
-    incant!(sum_squares(data), [v3])
+    incant!(sum_squares(data), [v3, scalar])
 }
 ```
 
 Each variant's first parameter is the matching token type — `_v3` takes `X64V3Token`, `_neon` takes `NeonToken`, etc.
 
-**`_scalar` is mandatory.** `incant!` always emits an unconditional call to `fn_scalar(ScalarToken, ...)` as the final fallback. If the `_scalar` function doesn't exist, you get a compile error — not a runtime failure. This is intentional: every dispatch chain must have a fallback that works on any CPU.
+**`_scalar` is mandatory.** `incant!` always emits an unconditional call to `fn_scalar(ScalarToken, ...)` as the final fallback. If the `_scalar` function doesn't exist, you get a compile error — not a runtime failure. When specifying explicit tiers (e.g., `[v3, neon, scalar]`), `scalar` must appear in the list — omitting it is also a compile error. Both checks are intentional: every dispatch chain must have a fallback that works on any CPU, and the tier list must acknowledge it.
 
 `incant!` wraps each tier's call in `#[cfg(target_arch)]` and `#[cfg(feature)]` guards, so you only define variants for architectures you target. With no explicit tier list, `incant!` dispatches to `v3`, `neon`, `wasm128`, and `scalar` by default (plus `v4` if the `avx512` feature is enabled).
 

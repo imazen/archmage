@@ -38,7 +38,7 @@ These suffixed functions are exactly what `incant!` expects:
 
 ```rust
 pub fn process(data: &[f32]) -> f32 {
-    incant!(process(data), [v3, neon, wasm128])
+    incant!(process(data), [v3, neon, wasm128, scalar])
 }
 ```
 

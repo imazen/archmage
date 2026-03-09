@@ -137,7 +137,7 @@ fn sum_scalar(_token: ScalarToken, data: &[f32; 8]) -> f32 {
 }
 
 pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum(data), [v3, neon, wasm128])
+    incant!(sum(data), [v3, neon, wasm128, scalar])
 }
 ```
 

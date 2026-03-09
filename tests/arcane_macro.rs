@@ -820,7 +820,7 @@ mod alias_tests {
     }
 
     fn sum_aliased(data: &[f32]) -> f32 {
-        dispatch_variant!(sum_aliased(data), [v3])
+        dispatch_variant!(sum_aliased(data), [v3, scalar])
     }
 
     #[test]

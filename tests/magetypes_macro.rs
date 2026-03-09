@@ -320,7 +320,7 @@ mod generic_magetypes_dispatch {
     }
 
     pub fn sum(data: &[f32; 8]) -> f32 {
-        incant!(sum_impl(data), [v3])
+        incant!(sum_impl(data), [v3, scalar])
     }
 
     #[test]

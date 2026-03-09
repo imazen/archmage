@@ -35,7 +35,7 @@ fn process_neon(token: archmage::NeonToken, data: &mut [f32]) { /* NEON */ }
 fn process_scalar(_token: archmage::ScalarToken, data: &mut [f32]) { /* fallback */ }
 
 pub fn process(data: &mut [f32]) {
-    incant!(process(data), [v3, neon])
+    incant!(process(data), [v3, neon, scalar])
 }
 ```
 
@@ -105,7 +105,7 @@ pub fn process(data: &mut [f32]) {
 ```rust
 // No #[cfg], no stubs, no ceremony
 pub fn process(data: &mut [f32]) {
-    incant!(process(data), [v3, neon])
+    incant!(process(data), [v3, neon, scalar])
 }
 ```
 

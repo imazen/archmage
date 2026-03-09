@@ -35,7 +35,7 @@ NEON is baseline on all AArch64 processors. In practice, `NeonToken::summon()` s
 
 NEON gives you 128-bit vectors. That's half the width of AVX2, but ARM's register file is deeper (32 x 128-bit registers vs x86's 16 x 256-bit), and NEON instructions have good throughput. For many workloads, a NEON implementation gets you 80% of the AVX2 speedup.
 
-If you use `incant!` with `[v3, neon]`, you cover x86 and ARM with two implementations plus a scalar fallback. That's the sweet spot for most libraries.
+If you use `incant!` with `[v3, neon, scalar]`, you cover x86 and ARM with two implementations plus a scalar fallback. That's the sweet spot for most libraries.
 
 ### AVX-512 third
 
@@ -116,7 +116,7 @@ For most libraries, this is all you need:
 use archmage::{arcane, incant};
 
 pub fn process(data: &mut [f32]) {
-    incant!(process(data), [v3, neon, wasm128])
+    incant!(process(data), [v3, neon, wasm128, scalar])
 }
 
 #[arcane(import_intrinsics)]
@@ -143,7 +143,7 @@ Three SIMD implementations + scalar covers every platform. Add `v4` when you hav
 
 ```rust
 pub fn process(data: &mut [f32]) {
-    incant!(process(data), [v4, v3, neon, wasm128])
+    incant!(process(data), [v4, v3, neon, wasm128, scalar])
 }
 ```
 

@@ -11,7 +11,7 @@ weight = 2
 
 {% mermaid() %}
 flowchart TD
-    CALL["incant!(process(data), [v3, neon, wasm128])"] --> V3{"X64V3Token::summon()?<br/>(x86)"}
+    CALL["incant!(process(data), [v3, neon, wasm128, scalar])"] --> V3{"X64V3Token::summon()?<br/>(x86)"}
     V3 -->|Some| PV3["process_v3(token, data)"]
     V3 -->|None / wrong arch| NEON{"NeonToken::summon()?<br/>(aarch64)"}
     NEON -->|Some| PN["process_neon(token, data)"]
@@ -32,7 +32,7 @@ Variants for other architectures are excluded by `#[cfg(target_arch)]` at compil
 
 {% mermaid() %}
 flowchart TD
-    CALL["incant!(process(data)<br/>with token, [v3, neon, wasm128])"] --> CHECK3{"token.as_x64v3()?"}
+    CALL["incant!(process(data)<br/>with token, [v3, neon, wasm128, scalar])"] --> CHECK3{"token.as_x64v3()?"}
     CHECK3 -->|Some| PV3["process_v3(v3_token, data)"]
     CHECK3 -->|None| CHECKN{"token.as_neon()?"}
     CHECKN -->|Some| PN["process_neon(neon_token, data)"]
@@ -71,7 +71,7 @@ fn sum_scalar(data: &[f32; 8]) -> f32 {
 
 // Dispatch with explicit tier list
 pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum(data), [v3, neon, wasm128])
+    incant!(sum(data), [v3, neon, wasm128, scalar])
     // Tries: sum_v3 → sum_neon → sum_wasm128 → sum_scalar
 }
 ```
@@ -82,7 +82,7 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 <summary>Macro expansion (click to expand)</summary>
 
 ```rust
-// incant!(process(data), [v3, neon, wasm128]) expands to approximately:
+// incant!(process(data), [v3, neon, wasm128, scalar]) expands to approximately:
 {
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = X64V3Token::summon() {
@@ -107,7 +107,7 @@ pub fn sum(data: &[f32; 8]) -> f32 {
 
 ## Tier Suffixes
 
-Always specify which tiers your function supports. The `_scalar` suffix is always implicit — you don't include `scalar` in the tier list, but you must define `fn_scalar(...)`.
+Always specify which tiers your function supports. Include `scalar` in the tier list — it is required, not implicit. You must also define `fn_scalar(...)`.
 
 | Suffix | Token | Platform |
 |--------|-------|----------|
@@ -126,7 +126,7 @@ Always specify which tiers your function supports. The `_scalar` suffix is alway
 | `_arm_v3` | `Arm64V3Token` | AArch64 full modern |
 | `_wasm128` | `Wasm128Token` | WASM SIMD128 |
 | `_wasm128_relaxed` | `Wasm128RelaxedToken` | WASM Relaxed SIMD |
-| `_scalar` | `ScalarToken` | Always required (implicit) |
+| `_scalar` | `ScalarToken` | Always required (must be listed explicitly) |
 
 Cross-architecture variants are excluded by `#[cfg]` — on x86-64, you need `_v3` and `_scalar`. You don't need `_neon` or `_wasm128` (they're cfg'd out by `incant!`).
 
@@ -137,7 +137,7 @@ When you already have a token and want to dispatch to specialized variants:
 ```rust
 fn outer<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
     // Passthrough: token already obtained, dispatch to best variant
-    incant!(process(data) with token, [v3, neon, wasm128])
+    incant!(process(data) with token, [v3, neon, wasm128, scalar])
 }
 ```
 
@@ -184,7 +184,7 @@ fn dot_product_scalar(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 // Public API — explicit tiers
 pub fn dot_product(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    incant!(dot_product(a, b), [v3, neon, wasm128])
+    incant!(dot_product(a, b), [v3, neon, wasm128, scalar])
 }
 ```
 
@@ -194,7 +194,7 @@ When you have both AVX-512 and AVX2 implementations:
 
 ```rust
 pub fn process(data: &mut [f32]) -> f32 {
-    incant!(process(data), [v4, v3, neon, wasm128])
+    incant!(process(data), [v4, v3, neon, wasm128, scalar])
     // Tries: process_v4 → process_v3 → process_neon → process_wasm128 → process_scalar
 }
 ```

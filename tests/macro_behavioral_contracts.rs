@@ -389,7 +389,7 @@ mod incant_contracts {
 
     // Explicit tiers
     fn compute_explicit(data: &[f32]) -> f32 {
-        incant!(compute(data), [v3, neon])
+        incant!(compute(data), [v3, neon, scalar])
     }
 
     #[test]

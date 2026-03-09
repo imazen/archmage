@@ -39,7 +39,7 @@ fn sum_impl_scalar(token: ScalarToken, data: &[f32; 8]) -> f32 {
 
 // 3. incant! dispatches to the best available variant at runtime
 pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum_impl(data), [v3])
+    incant!(sum_impl(data), [v3, scalar])
 }
 ```
 
@@ -81,7 +81,7 @@ fn sum_impl_scalar(token: ScalarToken, data: &[f32; 8]) -> f32 {
 }
 
 pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum_impl(data), [v3, neon, wasm128])
+    incant!(sum_impl(data), [v3, neon, wasm128, scalar])
 }
 ```
 
@@ -122,11 +122,11 @@ fn dot_product_scalar(_token: ScalarToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 
 pub fn dot_product(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    incant!(dot_product(a, b), [v3, neon])
+    incant!(dot_product(a, b), [v3, neon, scalar])
 }
 ```
 
-When the algorithm is the same on every platform, the generic pattern from the previous section is cleaner. When you need platform-tuned implementations, write concrete variants and list the tiers explicitly. Scalar is always implicit — `incant!` falls back to it automatically.
+When the algorithm is the same on every platform, the generic pattern from the previous section is cleaner. When you need platform-tuned implementations, write concrete variants and list the tiers explicitly. Include `scalar` in the tier list — it must be listed explicitly.
 
 ## The #[magetypes] Macro
 
@@ -144,7 +144,7 @@ fn validate(token: Token, threshold: f32) -> bool {
 // Generates: validate_v3, validate_neon, validate_wasm128, validate_scalar
 // Ready for incant!:
 pub fn validate(threshold: f32) -> bool {
-    incant!(validate(threshold), [v3, neon, wasm128])
+    incant!(validate(threshold), [v3, neon, wasm128, scalar])
 }
 ```
 
@@ -160,7 +160,7 @@ When you already have a token and want to dispatch to specialized variants witho
 use archmage::{incant, IntoConcreteToken};
 
 fn process_inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-    incant!(compute(data) with token, [v3, neon, wasm128])
+    incant!(compute(data) with token, [v3, neon, wasm128, scalar])
     // Uses IntoConcreteToken to check what the token actually is
 }
 ```

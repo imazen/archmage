@@ -309,14 +309,14 @@ pub fn sum(data: &[f32]) -> f32 {
 
 ```rust
 pub fn sum(data: &[f32]) -> f32 {
-    incant!(sum(data), [v1, v3, neon])
+    incant!(sum(data), [v1, v3, neon, scalar])
 }
 // Requires: sum_v1, sum_v3, sum_neon, sum_scalar
 ```
 
 Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`,
 `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
-Scalar is always implicit.
+Scalar is always required in explicit tier lists — omitting it is a compile error.
 
 **Passthrough mode** (already have token):
 
@@ -327,7 +327,7 @@ fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
 
 // With explicit tiers:
 fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-    incant!(process(data) with token, [v3, neon])
+    incant!(process(data) with token, [v3, neon, scalar])
 }
 ```
 
