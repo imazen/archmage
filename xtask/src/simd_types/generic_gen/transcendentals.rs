@@ -248,9 +248,12 @@ pub(super) fn gen_transcendentals(
             }}
 
             /// Mid-precision base-2 exponential with clamping.
+            ///
+            /// Returns 0 for x < -126 (denormal results can't be constructed),
+            /// inf for x > 128.
             #[inline(always)]
             pub fn exp2_midp(self) -> Self {{
-                let underflow_limit = splat_f32::<T>(-150.0);
+                let underflow_limit = splat_f32::<T>(-126.0);
                 let overflow_limit = splat_f32::<T>(128.0);
 
                 // Clamp to prevent overflow in intermediate calculations

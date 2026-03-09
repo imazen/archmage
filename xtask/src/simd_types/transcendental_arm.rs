@@ -149,7 +149,7 @@ fn generate_f32_lowp_ops() -> String {
 
     /// Low-precision base-2 exponential (~5.5e-3 max relative error).
     ///
-    /// Handles edge cases: exp2(x > 128) = +inf, exp2(x < -150) = 0,
+    /// Handles edge cases: exp2(x > 128) = +inf, exp2(x < -126) = 0,
     /// exp2(NaN) = NaN.
     #[inline(always)]
     pub fn exp2_lowp(self) -> Self {{
@@ -157,7 +157,7 @@ fn generate_f32_lowp_ops() -> String {
 
         unsafe {{
             let is_overflow = vcgeq_f32(self.0, vdupq_n_f32(128.0));
-            let is_underflow = vcltq_f32(self.0, vdupq_n_f32(-150.0));
+            let is_underflow = vcltq_f32(self.0, vdupq_n_f32(-126.0));
             let is_nan = vmvnq_u32(vceqq_f32(self.0, self.0));
 
             let pos_inf = vdupq_n_f32(f32::INFINITY);
@@ -409,7 +409,7 @@ fn generate_f32_lowp_ops() -> String {
 
     /// Mid-precision base-2 exponential (~2 ULP max error).
     ///
-    /// Handles edge cases: exp2(x > 128) = +inf, exp2(x < -150) = 0,
+    /// Handles edge cases: exp2(x > 128) = +inf, exp2(x < -126) = 0,
     /// exp2(NaN) = NaN.
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {{
@@ -417,12 +417,12 @@ fn generate_f32_lowp_ops() -> String {
             let x = self.0;
 
             // Clamp to prevent overflow in intermediate calculations
-            let x_clamped = vmaxq_f32(x, vdupq_n_f32(-150.0));
+            let x_clamped = vmaxq_f32(x, vdupq_n_f32(-126.0));
             let x_clamped = vminq_f32(x_clamped, vdupq_n_f32(128.0));
 
             let exp_result = Self(x_clamped).exp2_midp_unchecked().0;
 
-            let is_underflow = vcltq_f32(x, vdupq_n_f32(-150.0));
+            let is_underflow = vcltq_f32(x, vdupq_n_f32(-126.0));
             let is_overflow = vcgtq_f32(x, vdupq_n_f32(128.0));
 
             let zero = vdupq_n_f32(0.0);

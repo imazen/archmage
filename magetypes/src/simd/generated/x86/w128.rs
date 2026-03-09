@@ -785,9 +785,10 @@ impl f32x4 {
         }
     }
 
-    /// Mid-precision base-2 exponential (~2 ULP max error) with edge case handling.
+    /// Mid-precision base-2 exponential with edge case handling.
     ///
-    /// Returns 0 for large negative, inf for large positive, correct results for inf/NaN.
+    /// Returns 0 for x < -126 (including denormal results), inf for x > 128.
+    /// Correct for inf/NaN inputs.
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {
         unsafe {
@@ -795,15 +796,17 @@ impl f32x4 {
             let zero = _mm_setzero_ps();
             let inf = _mm_set1_ps(f32::INFINITY);
 
-            // Clamp to prevent overflow in intermediate calculations
-            let x_clamped = _mm_max_ps(x, _mm_set1_ps(-150.0));
+            // Clamp to valid range for the bit-trick 2^n construction.
+            // floor(x) must be >= -126 (bias trick: (n+127)<<23 requires n >= -126).
+            // Inputs below -126 would produce denormal results that we can't construct.
+            let x_clamped = _mm_max_ps(x, _mm_set1_ps(-126.0));
             let x_clamped = _mm_min_ps(x_clamped, _mm_set1_ps(128.0));
 
             // Compute exp2 for clamped values
             let exp_result = Self(x_clamped).exp2_midp_unchecked().0;
 
             // Handle edge cases
-            let underflow = _mm_cmp_ps::<_CMP_LT_OQ>(x, _mm_set1_ps(-150.0));
+            let underflow = _mm_cmp_ps::<_CMP_LT_OQ>(x, _mm_set1_ps(-126.0));
             let overflow = _mm_cmp_ps::<_CMP_GT_OQ>(x, _mm_set1_ps(128.0));
 
             let result = _mm_blendv_ps(exp_result, zero, underflow);

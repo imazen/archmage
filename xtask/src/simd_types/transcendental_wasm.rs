@@ -143,7 +143,7 @@ fn generate_f32_transcendentals() -> String {
 
         /// Low-precision base-2 exponential (~5.5e-3 max relative error).
         ///
-        /// Handles edge cases: exp2(x > 128) = +inf, exp2(x < -150) = 0,
+        /// Handles edge cases: exp2(x > 128) = +inf, exp2(x < -126) = 0,
         /// exp2(NaN) = NaN.
         #[inline(always)]
         pub fn exp2_lowp(self) -> Self {{
@@ -151,7 +151,7 @@ fn generate_f32_transcendentals() -> String {
 
         // Edge case masks
         let is_overflow = f32x4_ge(self.0, f32x4_splat(128.0));
-        let is_underflow = f32x4_lt(self.0, f32x4_splat(-150.0));
+        let is_underflow = f32x4_lt(self.0, f32x4_splat(-126.0));
         let is_nan = v128_not(f32x4_eq(self.0, self.0));
 
         let pos_inf = f32x4_splat(f32::INFINITY);
@@ -382,14 +382,14 @@ fn generate_f32_transcendentals() -> String {
 
         /// Mid-precision base-2 exponential (~8e-6 max relative error).
         ///
-        /// Handles edge cases: exp2(x > 128) = +inf, exp2(x < -150) = 0,
+        /// Handles edge cases: exp2(x > 128) = +inf, exp2(x < -126) = 0,
         /// exp2(NaN) = NaN.
         #[inline(always)]
         pub fn exp2_midp(self) -> Self {{
         let result = self.exp2_midp_unchecked();
 
         let is_overflow = f32x4_ge(self.0, f32x4_splat(128.0));
-        let is_underflow = f32x4_lt(self.0, f32x4_splat(-150.0));
+        let is_underflow = f32x4_lt(self.0, f32x4_splat(-126.0));
         let is_nan = v128_not(f32x4_eq(self.0, self.0));
 
         let pos_inf = f32x4_splat(f32::INFINITY);

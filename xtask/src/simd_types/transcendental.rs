@@ -493,9 +493,10 @@ fn generate_f32_log2_midp(ty: &SimdType, prefix: &str, suffix: &str, _int_suffix
 fn generate_f32_exp2_midp(ty: &SimdType, prefix: &str, suffix: &str) -> String {
     if ty.width == SimdWidth::W512 {
         formatdoc! {r#"
-    /// Mid-precision base-2 exponential (~2 ULP max error) with edge case handling.
+    /// Mid-precision base-2 exponential with edge case handling.
     ///
-    /// Returns 0 for large negative, inf for large positive, correct results for inf/NaN.
+    /// Returns 0 for x < -126 (including denormal results), inf for x > 128.
+    /// Correct for inf/NaN inputs.
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {{
         unsafe {{
@@ -503,15 +504,17 @@ fn generate_f32_exp2_midp(ty: &SimdType, prefix: &str, suffix: &str) -> String {
             let zero = {prefix}_setzero_{suffix}();
             let inf = {prefix}_set1_{suffix}(f32::INFINITY);
 
-            // Clamp to prevent overflow in intermediate calculations
-            let x_clamped = {prefix}_max_{suffix}(x, {prefix}_set1_{suffix}(-150.0));
+            // Clamp to valid range for the bit-trick 2^n construction.
+            // floor(x) must be >= -126 (bias trick: (n+127)<<23 requires n >= -126).
+            // Inputs below -126 would produce denormal results that we can't construct.
+            let x_clamped = {prefix}_max_{suffix}(x, {prefix}_set1_{suffix}(-126.0));
             let x_clamped = {prefix}_min_{suffix}(x_clamped, {prefix}_set1_{suffix}(128.0));
 
             // Compute exp2 for clamped values
             let exp_result = Self(x_clamped).exp2_midp_unchecked().0;
 
             // Handle edge cases with AVX-512 mask operations
-            let underflow = {prefix}_cmp_{suffix}_mask::<_CMP_LT_OQ>(x, {prefix}_set1_{suffix}(-150.0));
+            let underflow = {prefix}_cmp_{suffix}_mask::<_CMP_LT_OQ>(x, {prefix}_set1_{suffix}(-126.0));
             let overflow = {prefix}_cmp_{suffix}_mask::<_CMP_GT_OQ>(x, {prefix}_set1_{suffix}(128.0));
 
             let result = {prefix}_mask_blend_{suffix}(underflow, exp_result, zero);
@@ -524,9 +527,10 @@ fn generate_f32_exp2_midp(ty: &SimdType, prefix: &str, suffix: &str) -> String {
 "#}
     } else {
         formatdoc! {r#"
-    /// Mid-precision base-2 exponential (~2 ULP max error) with edge case handling.
+    /// Mid-precision base-2 exponential with edge case handling.
     ///
-    /// Returns 0 for large negative, inf for large positive, correct results for inf/NaN.
+    /// Returns 0 for x < -126 (including denormal results), inf for x > 128.
+    /// Correct for inf/NaN inputs.
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {{
         unsafe {{
@@ -534,15 +538,17 @@ fn generate_f32_exp2_midp(ty: &SimdType, prefix: &str, suffix: &str) -> String {
             let zero = {prefix}_setzero_{suffix}();
             let inf = {prefix}_set1_{suffix}(f32::INFINITY);
 
-            // Clamp to prevent overflow in intermediate calculations
-            let x_clamped = {prefix}_max_{suffix}(x, {prefix}_set1_{suffix}(-150.0));
+            // Clamp to valid range for the bit-trick 2^n construction.
+            // floor(x) must be >= -126 (bias trick: (n+127)<<23 requires n >= -126).
+            // Inputs below -126 would produce denormal results that we can't construct.
+            let x_clamped = {prefix}_max_{suffix}(x, {prefix}_set1_{suffix}(-126.0));
             let x_clamped = {prefix}_min_{suffix}(x_clamped, {prefix}_set1_{suffix}(128.0));
 
             // Compute exp2 for clamped values
             let exp_result = Self(x_clamped).exp2_midp_unchecked().0;
 
             // Handle edge cases
-            let underflow = {prefix}_cmp_{suffix}::<_CMP_LT_OQ>(x, {prefix}_set1_{suffix}(-150.0));
+            let underflow = {prefix}_cmp_{suffix}::<_CMP_LT_OQ>(x, {prefix}_set1_{suffix}(-126.0));
             let overflow = {prefix}_cmp_{suffix}::<_CMP_GT_OQ>(x, {prefix}_set1_{suffix}(128.0));
 
             let result = {prefix}_blendv_{suffix}(exp_result, zero, underflow);
