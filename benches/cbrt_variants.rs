@@ -247,9 +247,7 @@ fn bench_exp2_variants(c: &mut Criterion) {
 
     // Bulk: 1024 values across [-120, 120]
     let bulk_data: Vec<[f32; 8]> = (0..128)
-        .map(|i| {
-            core::array::from_fn(|j| -120.0 + (i * 8 + j) as f32 * 240.0 / 1024.0)
-        })
+        .map(|i| core::array::from_fn(|j| -120.0 + (i * 8 + j) as f32 * 240.0 / 1024.0))
         .collect();
 
     let mut group = c.benchmark_group("exp2_bulk_1024");
@@ -290,5 +288,10 @@ fn bench_exp2_variants(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_cbrt_variants, bench_pow_variants, bench_exp2_variants);
+criterion_group!(
+    benches,
+    bench_cbrt_variants,
+    bench_pow_variants,
+    bench_exp2_variants
+);
 criterion_main!(benches);

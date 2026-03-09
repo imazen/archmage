@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.5 — 2026-03-09
 
 ### Transcendental accuracy improvements
 

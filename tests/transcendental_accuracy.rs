@@ -936,7 +936,9 @@ fn accuracy_log_edge_cases() {
 
     // exp2_midp in the denormal output range [-150, -126] should return 0 (not garbage)
     // This was a bug: the bit trick (n+127)<<23 produces garbage for n < -126
-    let denormal_range = [-127.0f32, -128.0, -130.0, -140.0, -150.0, -200.0, -126.5, -126.1];
+    let denormal_range = [
+        -127.0f32, -128.0, -130.0, -140.0, -150.0, -200.0, -126.5, -126.1,
+    ];
     let got = eval_f32x8(token, &denormal_range, "exp2_midp", 0.0);
     for (i, &g) in got.iter().enumerate() {
         assert!(
@@ -948,7 +950,9 @@ fn accuracy_log_edge_cases() {
     println!("  exp2_midp([-127..-200]) = 0 ✓ (denormal range)");
 
     // exp(-100) should also return 0 now (was returning -4.3e33!)
-    let deep_neg = [-100.0f32, -90.0, -88.0, -87.5, -100.0, -120.0, -200.0, -500.0];
+    let deep_neg = [
+        -100.0f32, -90.0, -88.0, -87.5, -100.0, -120.0, -200.0, -500.0,
+    ];
     let got = eval_f32x8(token, &deep_neg, "exp_midp", 0.0);
     for (i, &g) in got.iter().enumerate() {
         let expected = deep_neg[i].exp();
