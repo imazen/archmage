@@ -68,23 +68,23 @@ Rust 1.85 (Feb 2025) changed the rules for `#[target_feature]` functions:
 ```
   Rust's #[target_feature] call rules (1.85+, 2024 edition)
 
-  ┌─────────────────────────┐         ┌─────────────────────────┐
-  │  fn normal_code()       │         │ #[target_feature(avx2)] │
-  │                         │── ? ──▶ │ fn simd_work()          │
-  │  (no target features)   │         │                         │
-  └─────────────────────────┘         └──────────┬──────────────┘
-                                                 │
-          Calling simd_work() from               │ safe
-          normal_code() requires                 │ (same or
-          unsafe { }. The caller                 ▼ superset)
-          has fewer features.          ┌─────────────────────────┐
-                                       │ #[target_feature(avx2)] │
-                                       │ fn simd_helper()        │
-                                       │                         │
-                                       └─────────────────────────┘
+  ┌─────────────────────────┐         ┌──────────────────────────────┐
+  │  fn normal_code()       │ unsafe  │ #[target_feature(avx2, fma)] │
+  │                         │────────▶│ fn simd_work()               │
+  │  (no target features)   │         │                              │
+  └─────────────────────────┘         └──────────────┬───────────────┘
+                                                     │
+          Calling simd_work() from                   │ safe
+          normal_code() requires                     │ (subset of
+          unsafe { }. The caller                     ▼ caller's features)
+          has fewer features.          ┌──────────────────────────────┐
+                                       │ #[target_feature(avx2)]      │
+                                       │ fn simd_helper()             │
+                                       │                              │
+                                       └──────────────────────────────┘
 
-  Same features or superset? Safe call between them. No unsafe needed.
-  Fewer features in caller?  Rust requires an unsafe block.
+  Caller has same or superset features? Safe call. No unsafe needed.
+  Caller has fewer features?            Rust requires an unsafe block.
 ```
 
 Inside a `#[target_feature]` function, **value-based intrinsics are safe** — `_mm256_add_ps`, shuffles, compares, anything that doesn't touch a pointer. Only pointer-based memory ops (`_mm256_loadu_ps(ptr)`) remain unsafe.
@@ -200,26 +200,19 @@ Plain `#[inline(always)]` functions with no macro also work — if they inline i
 
 **`#[rite]` should be your default.** Use `#[arcane]` only at the entry point — the first call from non-SIMD code.
 
-`#[rite]` works three ways:
+### Two `#[rite]` syntaxes — same output
 
 ```rust
 use archmage::prelude::*;
 
-// Entry point: #[arcane] — safe wrapper for non-SIMD callers
-#[arcane]
-fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let products = mul_vectors(a, b);       // tier-based — no token!
-    horizontal_sum(token, products)          // token-based — passes token
-}
-
-// Tier-based #[rite]: specify tier, no token parameter
-#[rite(v3)]
+// Tier-based: specify the tier name, no token parameter needed
+#[rite(v3, import_intrinsics)]
 fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
 }
 
-// Token-based #[rite]: reads features from token type
-#[rite]
+// Token-based: reads features from the token type in the signature
+#[rite(import_intrinsics)]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
@@ -229,34 +222,21 @@ fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
 }
 ```
 
-Both `#[rite(v3)]` and `#[rite]` with an `X64V3Token` parameter produce identical `#[target_feature]` output. The tier-based form is shorter; the token form can be easier to remember if you already have the token in scope.
+Both produce identical `#[target_feature(enable = "avx2,fma,...")]` output. The tier-based form is shorter; the token form is handy when you already have the token in scope.
 
-### Multi-tier `#[rite]`
-
-When you specify multiple tiers, `#[rite]` generates a suffixed variant for each:
+### `#[arcane]` at the entry point
 
 ```rust
 use archmage::prelude::*;
 
-// Generates process_v3() and process_v4() — each with correct #[target_feature]
-#[rite(v3, v4)]
-fn process(data: &[f32; 4]) -> f32 {
-    data[0] + data[1] + data[2] + data[3]
+#[arcane(import_intrinsics)]
+fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let products = mul_vectors(a, b);       // #[rite(v3)] — no token needed
+    horizontal_sum(token, products)          // #[rite] — reads token type
 }
 ```
 
-Call the suffixed variant from a matching `#[arcane]` or `#[rite]` context — since Rust 1.85, a `#[target_feature]` function can safely call another `#[target_feature]` function when both have matching (or superset) features:
-
-```rust
-#[arcane]
-fn entry(token: X64V3Token, data: &[f32; 4]) -> f32 {
-    process_v3(data)  // safe — caller has V3 features, callee needs V3
-}
-```
-
-This is useful when writing a single function body that should be compiled for multiple tiers — the compiler applies different `#[target_feature]` attributes to each copy, and LLVM auto-vectorizes each variant with the available instructions.
-
-Tier names: `v1`, `v2`, `v3`, `v4`, `neon`, `arm_v2`, `wasm128`, etc. — the same names used by `incant!`.
+`#[arcane]` generates an `#[inline(always)]` wrapper that crosses the `#[target_feature]` boundary via `unsafe` — internally, in generated code your crate never sees. From inside, you call `#[rite]` functions freely (same features = safe call).
 
 ### Why two macros?
 
@@ -275,6 +255,35 @@ The 4x penalty is LLVM's `#[target_feature]` boundary, not archmage overhead. Ba
 **The rule:** `#[arcane]` once at the entry point, `#[rite]` for everything called from SIMD code.
 
 For trait impls, use `#[arcane(_self = Type)]` — a nested inner-function approach (since sibling would add methods not in the trait definition).
+
+### Multi-tier `#[rite]` (rare)
+
+Occasionally you have scalar code called from inside SIMD functions where `#[inline(always)]` isn't viable and you don't want `#[autoversion]`'s dispatch overhead. In that case, give `#[rite]` multiple tiers and it generates a suffixed variant for each:
+
+```rust
+use archmage::prelude::*;
+
+// Generates normalize_v3() and normalize_neon() —
+// each compiled with different #[target_feature], auto-vectorized separately
+#[rite(v3, neon)]
+fn normalize(data: &mut [f32]) {
+    let max = data.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    if max != 0.0 {
+        for x in data.iter_mut() { *x /= max; }
+    }
+}
+```
+
+Call the matching suffixed variant from an `#[arcane]` or `#[rite]` context:
+
+```rust
+#[arcane(import_intrinsics)]
+fn process(token: X64V3Token, data: &mut [f32]) {
+    normalize_v3(data);  // safe — caller has V3 features, callee needs V3
+}
+```
+
+These are `#[target_feature]` functions — you can't call them from non-SIMD code or dispatch them via `incant!`. They're for internal use within a SIMD call chain.
 
 ## Auto-vectorization with `#[autoversion]`
 
@@ -357,6 +366,24 @@ fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
 ```
 
 `f32x8` wraps `__m256` on x86 with AVX2. On ARM/WASM, it's polyfilled with two `f32x4` operations — same API, automatic fallback. The `#[arcane]` wrapper lets LLVM optimize the entire loop as a single SIMD region.
+
+## Tier naming conventions
+
+`incant!` and `#[autoversion]` dispatch to suffixed functions — `fn_v3`, `fn_neon`, `fn_scalar`, etc. These suffixes correspond to tokens:
+
+| Suffix | Token | Arch | Key features |
+|--------|-------|------|------|
+| `_v1` | `X64V1Token` | x86_64 | SSE2 (baseline) |
+| `_v2` | `X64V2Token` | x86_64 | + SSE4.2, POPCNT |
+| `_v3` | `X64V3Token` | x86_64 | + AVX2, FMA, BMI2 |
+| `_v4` | `X64V4Token` | x86_64 | + AVX-512 |
+| `_neon` | `NeonToken` | aarch64 | NEON |
+| `_arm_v2` | `Arm64V2Token` | aarch64 | + CRC, RDM, DotProd, AES, SHA2 |
+| `_arm_v3` | `Arm64V3Token` | aarch64 | + SHA3, I8MM, BF16 |
+| `_wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
+| `_scalar` | `ScalarToken` | any | No SIMD (always available) |
+
+`incant!(sum(data))` looks for `sum_v3`, `sum_neon`, `sum_wasm128`, and `sum_scalar` by default. You can restrict to specific tiers: `incant!(sum(data), [v3, neon])`.
 
 ## Runtime dispatch with `incant!` <sub>(alias: `dispatch_variant!`)</sub>
 
