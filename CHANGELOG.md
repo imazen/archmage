@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.9.4 — 2026-03-08
+
+Multi-tier `#[rite]`, `#[inline(always)]` wrappers, improved cbrt, docs overhaul.
+
 ### `#[rite]` multi-tier support
 
 `#[rite]` now supports three modes:
@@ -10,7 +14,7 @@
 - **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token parameter needed (existing behavior)
 - **Multi-tier** (`#[rite(v3, v4, neon)]`): generates a suffixed variant for each tier (`fn_v3`, `fn_v4`, `fn_neon`), each with its own `#[target_feature]` and `#[cfg(target_arch)]`
 
-Multi-tier lets you write one function body and get per-tier compiled variants. Each variant is safe to call from matching `#[arcane]` or `#[rite]` contexts (Rust 1.85+). Single-tier behavior is unchanged — no suffix is added.
+Multi-tier lets you write one function body and get per-tier compiled variants — like `#[autoversion]` but for internal SIMD functions (no dispatcher generated). Each variant is safe to call from matching `#[arcane]` or `#[rite]` contexts (Rust 1.85+). Single-tier behavior is unchanged — no suffix is added.
 
 ```rust
 #[rite(v3, v4, neon)]
@@ -19,6 +23,37 @@ fn scale(data: &[f32; 4], factor: f32) -> [f32; 4] {
 }
 // Generates: scale_v3(), scale_v4(), scale_neon()
 ```
+
+### `#[inline(always)]` on `#[arcane]` wrappers
+
+`#[arcane]` now generates `#[inline(always)]` on the safe wrapper function. Previously the wrapper had no inline hint, which could prevent LLVM from inlining the dispatch trampoline. If you had `#[inline(always)]` on the function yourself, the macro strips it to avoid the duplicate-attribute warning (which Rust is phasing into a hard error).
+
+### `incant!` explicit tiers: `scalar` recommended
+
+When using explicit tier lists with `incant!`, always include `scalar`: `incant!(sum(data), [v3, neon, scalar])`. This documents the mandatory fallback path. Currently `scalar` is auto-appended if omitted for backwards compatibility; this will become a compile error in v1.0.
+
+### Improved `cbrt` (cube root)
+
+- `cbrt_midp` now uses 2-iteration Halley refinement (was Newton-Raphson). ~2 ULP max error across the full f32 range, down from ~4 ULP.
+- `cbrt_lowp` uses 1-iteration Halley. ~22 ULP max error, faster than midp.
+- Added `cbrt_lowp`/`cbrt_midp` with `_unchecked` and `_precise` variants.
+- All variants handle negative inputs, zero, NaN, and infinity correctly.
+- Added scalar `ScalarToken` implementations for all cbrt variants.
+
+### `macros` feature is now always-on
+
+The `macros` cargo feature is now a no-op — macros (`#[arcane]`, `#[rite]`, `incant!`, etc.) are always available. The feature flag still exists so `features = ["macros"]` doesn't break existing code.
+
+### Documentation overhaul
+
+- **README**: safety model diagram showing Rust's `#[target_feature]` call rules and how archmage makes dispatch sound. Macro selection flowchart (`#[arcane]` vs `#[rite]` vs `#[autoversion]` vs `incant!`). Tier naming conventions table. Both `#[rite]` syntaxes with code examples. Expanded testing section with `testable_dispatch`, `CompileTimePolicy`, and `lock_token_testing()`.
+- **All docs**: updated `incant!` examples to include `scalar` in explicit tier lists.
+
+### Other fixes
+
+- Use `f64::clamp()` instead of manual min/max pattern.
+- User `#[inline(always)]` on `#[arcane]`/`#[rite]` functions no longer causes duplicate attribute warnings.
+- `#[rite]` strips user `#[inline]` attributes to avoid conflicts with its own `#[inline]`.
 
 ## 0.9.3 — 2026-03-05
 

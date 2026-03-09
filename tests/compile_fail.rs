@@ -42,7 +42,6 @@ fn ui_tests() {
     // incant! always emits fn_scalar — missing _scalar function = compile error
     t.compile_fail("tests/compile_fail/missing_scalar.rs");
 
-
     // incant! with explicit tiers requires `scalar` in the list
     // (gated behind REQUIRE_EXPLICIT_SCALAR, currently false — re-enable in v1.0)
     // t.compile_fail("tests/compile_fail/scalar_not_in_tier_list.rs");
