@@ -203,7 +203,8 @@ Plain `#[inline(always)]` functions with no macro also work — if they inline i
 ### Two `#[rite]` syntaxes — same output
 
 ```rust
-use archmage::prelude::*;
+use archmage::{X64V3Token, rite};
+use core::arch::x86_64::__m256;
 
 // Tier-based: specify the tier name, no token parameter needed
 #[rite(v3, import_intrinsics)]
@@ -227,12 +228,19 @@ Both produce identical `#[target_feature(enable = "avx2,fma,...")]` output. The 
 ### `#[arcane]` at the entry point
 
 ```rust
-use archmage::prelude::*;
+use archmage::{X64V3Token, SimdToken, arcane};
 
 #[arcane(import_intrinsics)]
 fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let products = mul_vectors(a, b);       // #[rite(v3)] — no token needed
     horizontal_sum(token, products)          // #[rite] — reads token type
+}
+
+fn main() {
+    if let Some(token) = X64V3Token::summon() {
+        let result = dot_product(token, &[1.0; 8], &[2.0; 8]);
+        println!("{result}");
+    }
 }
 ```
 
@@ -277,7 +285,9 @@ fn normalize(data: &mut [f32]) {
 Call the matching suffixed variant from an `#[arcane]` or `#[rite]` context:
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[arcane]
 fn process(token: X64V3Token, data: &mut [f32]) {
     normalize_v3(data);  // safe — caller has V3 features, callee needs V3
 }
@@ -369,7 +379,7 @@ fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
 
 ## Tier naming conventions
 
-`incant!` and `#[autoversion]` dispatch to suffixed functions — `fn_v3`, `fn_neon`, `fn_scalar`, etc. These suffixes correspond to tokens:
+`incant!` and `#[autoversion]` dispatch to suffixed functions. `incant!(sum(data))` calls `sum_v3`, `sum_neon`, etc. These suffixes correspond to tokens:
 
 | Suffix | Token | Arch | Key features |
 |--------|-------|------|------|
@@ -383,7 +393,7 @@ fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
 | `_wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
 | `_scalar` | `ScalarToken` | any | No SIMD (always available) |
 
-`incant!(sum(data))` looks for `sum_v3`, `sum_neon`, `sum_wasm128`, and `sum_scalar` by default. You can restrict to specific tiers: `incant!(sum(data), [v3, neon])`.
+By default, `incant!` tries `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon])`.
 
 ## Runtime dispatch with `incant!` <sub>(alias: `dispatch_variant!`)</sub>
 
