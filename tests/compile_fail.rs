@@ -38,4 +38,7 @@ fn ui_tests() {
 
     // Macro rejects featureless traits (SimdToken, IntoConcreteToken)
     t.compile_fail("tests/compile_fail/featureless_simdtoken.rs");
+
+    // incant! always emits fn_scalar — missing _scalar function = compile error
+    t.compile_fail("tests/compile_fail/missing_scalar.rs");
 }

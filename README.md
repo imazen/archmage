@@ -425,7 +425,9 @@ fn sum_squares(data: &[f32]) -> f32 {
 }
 ```
 
-Each variant's first parameter is the matching token type — `_v3` takes `X64V3Token`, `_neon` takes `NeonToken`, etc. A `_scalar` variant (taking `ScalarToken`) is always required as the fallback.
+Each variant's first parameter is the matching token type — `_v3` takes `X64V3Token`, `_neon` takes `NeonToken`, etc.
+
+**`_scalar` is mandatory.** `incant!` always emits an unconditional call to `fn_scalar(ScalarToken, ...)` as the final fallback. If the `_scalar` function doesn't exist, you get a compile error — not a runtime failure. This is intentional: every dispatch chain must have a fallback that works on any CPU.
 
 `incant!` wraps each tier's call in `#[cfg(target_arch)]` and `#[cfg(feature)]` guards, so you only define variants for architectures you target. With no explicit tier list, `incant!` dispatches to `v3`, `neon`, `wasm128`, and `scalar` by default (plus `v4` if the `avx512` feature is enabled).
 
@@ -455,7 +457,7 @@ See [`token-registry.toml`](token-registry.toml) for the complete mapping of tok
 
 ## Testing SIMD dispatch paths
 
-`for_each_token_permutation` tests every `incant!` dispatch path on your native hardware — no cross-compilation needed. It disables tokens one at a time, running your closure at each tier from "all SIMD enabled" down to "scalar only":
+`for_each_token_permutation` tests every `incant!` dispatch path on your native hardware — no cross-compilation needed. It disables tokens one at a time, running your closure at each combination from "all SIMD enabled" down to "scalar only":
 
 ```rust
 use archmage::testing::{for_each_token_permutation, CompileTimePolicy};
@@ -477,16 +479,49 @@ fn sum_squares_matches_across_tiers() {
 }
 ```
 
-On an AVX-512 machine this runs 5–7 permutations; on Haswell, 3. Tokens the CPU doesn't have are skipped.
+On an AVX-512 machine this runs 5–7 permutations; on Haswell, 3. Tokens the CPU doesn't have are skipped automatically.
 
-If you compiled with `-Ctarget-cpu=native`, the compiler bakes feature detection into the binary and tokens can't be disabled at runtime. Use the `testable_dispatch` feature to force runtime detection in CI:
+### The `testable_dispatch` feature
+
+When you compile with `-Ctarget-cpu=native` (or `-Ctarget-cpu=haswell`, etc.), Rust bakes the feature checks into the binary at compile time. `X64V3Token::summon()` compiles to a constant `Some(token)` — it can't be disabled at runtime, and `for_each_token_permutation` can't test fallback paths.
+
+The `testable_dispatch` feature forces runtime detection even when compile-time detection would succeed. Enable it in dev-dependencies for full permutation coverage:
 
 ```toml
 [dev-dependencies]
 archmage = { version = "0.9", features = ["testable_dispatch"] }
 ```
 
-For manual single-token testing, `lock_token_testing()` serializes against parallel tests. See the [testing docs](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/) for `CompileTimePolicy::Fail`, env-var integration, and `dangerously_disable_token_process_wide`.
+`CompileTimePolicy` controls what happens when a token can't be disabled:
+
+| Policy | Behavior |
+|--------|----------|
+| `Warn` | Skip the token, collect a warning in the report |
+| `WarnStderr` | Same, plus print each warning to stderr |
+| `Fail` | Panic — use in CI with `testable_dispatch` where full coverage is expected |
+
+### Serializing parallel tests with `lock_token_testing()`
+
+Token disabling is process-wide — if `cargo test` runs tests in parallel, one test disabling `X64V3Token` would break another test that expects it to be available. `for_each_token_permutation` acquires an internal mutex automatically. If you need to disable tokens manually (via `dangerously_disable_token_process_wide`), wrap your test in `lock_token_testing()` to serialize against other permutation tests:
+
+```rust
+use archmage::testing::lock_token_testing;
+use archmage::{X64V3Token, SimdToken};
+
+#[test]
+fn manual_disable_test() {
+    let _lock = lock_token_testing();
+    let baseline = my_function(&data);
+    X64V3Token::dangerously_disable_token_process_wide(true).unwrap();
+    let fallback = my_function(&data);
+    X64V3Token::dangerously_disable_token_process_wide(false).unwrap();
+    assert_eq!(baseline, fallback);
+}
+```
+
+The lock is reentrant — `for_each_token_permutation` called from within a `lock_token_testing` scope works without deadlock.
+
+For the full testing API, see the [testing docs](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/).
 
 ## Feature flags
 

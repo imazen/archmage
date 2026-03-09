@@ -1,0 +1,5 @@
+error[E0425]: cannot find function `add_scalar` in this scope
+  --> tests/compile_fail/missing_scalar.rs:15:21
+   |
+15 |     let _ = incant!(add(1, 2));
+   |                     ^^^ not found in this scope
