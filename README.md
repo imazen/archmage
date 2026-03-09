@@ -127,9 +127,9 @@ Archmage makes the boundary crossing **sound** by tying it to runtime CPU detect
   └────────────────────────────────────────────────────────────┘
 ```
 
-**Tokens are grouped by common CPU tiers.** `X64V3Token` covers AVX2+FMA+BMI2 — the set that Haswell (2013) and Zen 1+ share. `NeonToken` covers AArch64 NEON. `Arm64V2Token` covers CRC+RDM+DotProd+FP16+AES+SHA2 — the set that Apple M1, Cortex-A55+, and Graviton 2+ share. You pick a tier, not individual features. `summon()` checks all features in the tier atomically; it either succeeds (every feature present) or returns `None`.
+**Tokens are grouped by common CPU tiers.** `X64V3Token` covers AVX2+FMA+BMI2 — the set that Haswell (2013) and Zen 1+ share. `NeonToken` covers AArch64 NEON. `Arm64V2Token` covers CRC+RDM+DotProd+FP16+AES+SHA2 — the set that Apple M1, Cortex-A55+, and Graviton 2+ share. You pick a tier, not individual features. `summon()` checks all features in the tier atomically; it either succeeds (every feature present) or returns `None`. The token is zero-sized — passing it costs nothing. Detection is cached (~1.3 ns), or compiles away entirely with `-Ctarget-cpu=haswell`.
 
-**`#[arcane]` is the trampoline.** It generates a sibling function with `#[target_feature(enable = "avx2,fma,...")]` and an `#[inline(always)]` wrapper that calls it through `unsafe`. The macro generates the `unsafe` block, not you. Since the token's existence proves the features are present, the call is sound. From inside the `#[arcane]` function, you can use intrinsics directly (value ops are safe) and call `#[rite]` functions with matching features (safe under Rust 1.85+).
+**`#[arcane]` is the trampoline.** It generates a sibling function with `#[target_feature(enable = "avx2,fma,...")]` and an `#[inline(always)]` wrapper that calls it through `unsafe`. The macro generates the `unsafe` block, not you. Since the token's existence proves the features are present, the call is sound. From inside the `#[arcane]` function, you can use intrinsics directly (value ops are safe) and call `#[rite]` functions with matching features (safe under Rust 1.85+). Both macros handle `#[cfg(target_arch)]` gating automatically.
 
 **[`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd)** (by [okaneco](https://github.com/okaneco)) closes the memory gap. It shadows `core::arch`'s pointer-based load/store functions with reference-based versions — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`. Same names, safe signatures. Archmage re-exports these through `import_intrinsics`, so the safe versions are in scope automatically.
 
@@ -483,10 +483,9 @@ For manual single-token testing, `lock_token_testing()` serializes against paral
 | Feature | Default | |
 |---------|---------|---|
 | `std` | yes | Standard library (required for runtime detection) |
+| `macros` | yes | No-op (macros are always available). Kept for backwards compatibility |
 | `avx512` | no | AVX-512 tokens (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) |
 | `testable_dispatch` | no | Makes token disabling work with `-Ctarget-cpu=native` |
-
-Macros (`#[arcane]`, `#[rite]`, `#[autoversion]`, `#[magetypes]`, `incant!`) are always available.
 
 ## Acknowledgments
 
