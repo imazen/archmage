@@ -2061,6 +2061,10 @@ const ALL_TIERS: &[TierDescriptor] = &[
 /// Default tiers (backwards-compatible with pre-explicit behavior).
 const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
 
+/// Whether `incant!` requires `scalar` in explicit tier lists.
+/// Currently false for backwards compatibility. Flip to true in v1.0.
+const REQUIRE_EXPLICIT_SCALAR: bool = false;
+
 /// Look up a tier by name, returning an error on unknown names.
 fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
     ALL_TIERS.iter().find(|t| t.name == name)
@@ -2194,11 +2198,12 @@ impl Parse for IncantInput {
 /// }
 /// ```
 ///
-/// `scalar` must be listed explicitly — `incant!` always emits a
-/// `fn_scalar()` call as the final fallback, and requiring it in the
-/// tier list ensures you've acknowledged this path exists. Unknown
-/// tier names cause a compile error. Tiers are automatically sorted
-/// into correct dispatch order (highest priority first).
+/// Always include `scalar` in explicit tier lists — `incant!` always
+/// emits a `fn_scalar()` call as the final fallback, and listing it
+/// documents this dependency. Currently auto-appended if omitted;
+/// will become a compile error in v1.0. Unknown tier names cause a
+/// compile error. Tiers are automatically sorted into correct
+/// dispatch order (highest priority first).
 ///
 /// Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
 /// `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
@@ -2287,7 +2292,9 @@ fn incant_impl(input: IncantInput) -> TokenStream {
     // When the user specifies explicit tiers, require `scalar` in the list.
     // This forces acknowledgment that a scalar fallback path exists and must
     // be implemented. Default tiers (no bracket list) always include scalar.
-    if let Some((names, span)) = &input.tiers
+    // TODO(v1.0): flip REQUIRE_EXPLICIT_SCALAR to true
+    if REQUIRE_EXPLICIT_SCALAR
+        && let Some((names, span)) = &input.tiers
         && !names.iter().any(|n| n == "scalar")
     {
         return syn::Error::new(

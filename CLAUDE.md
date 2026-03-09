@@ -316,7 +316,7 @@ pub fn sum(data: &[f32]) -> f32 {
 
 Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`,
 `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
-Scalar is always required in explicit tier lists — omitting it is a compile error.
+Always include `scalar` in explicit tier lists. Currently auto-appended if omitted; will become a compile error in v1.0.
 
 **Passthrough mode** (already have token):
 
@@ -1062,6 +1062,8 @@ These are documented semantic differences between architectures. Tests must acco
 - Tracked as a known Rust std_detect limitation
 
 ### Long-Term
+
+- **v1.0: Require `scalar` in explicit `incant!` tier lists.** Flip `REQUIRE_EXPLICIT_SCALAR` to `true` in `archmage-macros/src/lib.rs`. Re-enable the `scalar_not_in_tier_list` compile-fail test in `tests/compile_fail.rs`. Currently `scalar` is auto-appended for backwards compatibility; all our own code already includes it explicitly.
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
