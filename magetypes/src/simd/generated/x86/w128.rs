@@ -942,6 +942,78 @@ impl f32x4 {
         unsafe { Self(_mm_mul_ps(self.log2_midp_precise().0, _mm_set1_ps(LOG10_2))) }
     }
 
+    /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
+    ///
+    /// Uses Kahan's initial approximation followed by 1 Halley iteration.
+    /// Fastest cbrt variant — 1 division vs 3 for `cbrt_midp`.
+    /// Suitable for perceptual color (Oklab/XYB) targeting 8-bit output.
+    #[inline(always)]
+    pub fn cbrt_lowp(self) -> Self {
+        unsafe {
+            let x = self.0;
+
+            let sign_mask = _mm_set1_ps(-0.0);
+            let sign = _mm_and_ps(x, sign_mask);
+            let abs_x = _mm_andnot_ps(sign_mask, x);
+
+            let arr: [f32; 4] = core::mem::transmute(abs_x);
+            let approx: [f32; 4] = [
+                f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
+            ];
+            let mut y = _mm_loadu_ps(approx.as_ptr());
+
+            // Halley iteration: y *= (y³ + 2x) / (2y³ + x)
+            // Compute ratio first to avoid intermediate overflow.
+            let two = _mm_set1_ps(2.0);
+            let y3 = _mm_mul_ps(_mm_mul_ps(y, y), y);
+            let num = _mm_add_ps(y3, _mm_mul_ps(two, abs_x));
+            let den = _mm_add_ps(_mm_mul_ps(two, y3), abs_x);
+            y = _mm_mul_ps(y, _mm_div_ps(num, den));
+
+            Self(_mm_or_ps(y, sign))
+        }
+    }
+
+    /// Fast cube root (full f32 precision, ~24+ bits).
+    ///
+    /// Uses Kahan's initial approximation followed by 2 Halley iterations.
+    /// Each Halley step triples precision: ~5 → ~15 → ~45 bits.
+    /// Uses 2 divisions vs 3 for `cbrt_midp`, with equal or better accuracy.
+    #[inline(always)]
+    pub fn cbrt_fast(self) -> Self {
+        unsafe {
+            let x = self.0;
+
+            let sign_mask = _mm_set1_ps(-0.0);
+            let sign = _mm_and_ps(x, sign_mask);
+            let abs_x = _mm_andnot_ps(sign_mask, x);
+
+            let arr: [f32; 4] = core::mem::transmute(abs_x);
+            let approx: [f32; 4] = [
+                f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
+            ];
+            let mut y = _mm_loadu_ps(approx.as_ptr());
+
+            // 2 Halley iterations: y *= (y³ + 2x) / (2y³ + x)
+            // Compute ratio first to avoid intermediate overflow.
+            let two = _mm_set1_ps(2.0);
+            for _ in 0..2 {
+                let y3 = _mm_mul_ps(_mm_mul_ps(y, y), y);
+                let num = _mm_add_ps(y3, _mm_mul_ps(two, abs_x));
+                let den = _mm_add_ps(_mm_mul_ps(two, y3), abs_x);
+                y = _mm_mul_ps(y, _mm_div_ps(num, den));
+            }
+
+            Self(_mm_or_ps(y, sign))
+        }
+    }
+
     /// Mid-precision cube root (~1 ULP max error).
     ///
     /// Uses scalar extraction for initial guess + Newton-Raphson.

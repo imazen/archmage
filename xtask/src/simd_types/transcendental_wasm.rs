@@ -509,6 +509,74 @@ fn generate_f32_transcendentals() -> String {
 
         // ========== Cube Root ==========
 
+        /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
+        ///
+        /// Uses Kahan's initial approximation followed by 1 Halley iteration.
+        /// Fastest cbrt variant — 1 division vs 3 for `cbrt_midp`.
+        /// Suitable for perceptual color (Oklab/XYB) targeting 8-bit output.
+        #[inline(always)]
+        pub fn cbrt_lowp(self) -> Self {{
+        let x = self.0;
+
+        let abs_x = f32x4_abs(x);
+        let sign_mask = f32x4_splat(-0.0);
+        let sign = v128_and(x, sign_mask);
+
+        let arr: [f32; 4] = unsafe {{ core::mem::transmute(abs_x) }};
+        let approx: [f32; 4] = [
+            f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
+        ];
+        let mut y: v128 = unsafe {{ core::mem::transmute(approx) }};
+
+        // Halley iteration: y *= (y³ + 2x) / (2y³ + x)
+        // Compute ratio first to avoid intermediate overflow.
+        let two = f32x4_splat(2.0);
+        let y3 = f32x4_mul(f32x4_mul(y, y), y);
+        let num = f32x4_add(y3, f32x4_mul(two, abs_x));
+        let den = f32x4_add(f32x4_mul(two, y3), abs_x);
+        y = f32x4_mul(y, f32x4_div(num, den));
+
+        Self(v128_or(y, sign))
+        }}
+
+        /// Fast cube root (full f32 precision, ~24+ bits).
+        ///
+        /// Uses Kahan's initial approximation followed by 2 Halley iterations.
+        /// Each Halley step triples precision: ~5 → ~15 → ~45 bits.
+        /// Uses 2 divisions vs 3 for `cbrt_midp`, with equal or better accuracy.
+        #[inline(always)]
+        pub fn cbrt_fast(self) -> Self {{
+        let x = self.0;
+
+        let abs_x = f32x4_abs(x);
+        let sign_mask = f32x4_splat(-0.0);
+        let sign = v128_and(x, sign_mask);
+
+        let arr: [f32; 4] = unsafe {{ core::mem::transmute(abs_x) }};
+        let approx: [f32; 4] = [
+            f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
+            f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
+        ];
+        let mut y: v128 = unsafe {{ core::mem::transmute(approx) }};
+
+        // 2 Halley iterations: y *= (y³ + 2x) / (2y³ + x)
+        // Compute ratio first to avoid intermediate overflow.
+        let two = f32x4_splat(2.0);
+        for _ in 0..2 {{
+            let y3 = f32x4_mul(f32x4_mul(y, y), y);
+            let num = f32x4_add(y3, f32x4_mul(two, abs_x));
+            let den = f32x4_add(f32x4_mul(two, y3), abs_x);
+            y = f32x4_mul(y, f32x4_div(num, den));
+        }}
+
+        Self(v128_or(y, sign))
+        }}
+
         /// Mid-precision cube root (~1 ULP max error).
         ///
         /// Uses scalar extraction for initial guess + Newton-Raphson.

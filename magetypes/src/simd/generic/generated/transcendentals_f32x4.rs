@@ -316,6 +316,64 @@ impl<T: F32x4Convert> f32x4<T> {
         self.pow_midp(n)
     }
 
+    /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
+    ///
+    /// Uses Kahan's initial approximation followed by 1 Halley iteration.
+    /// Fastest cbrt variant — 1 division vs 3 for `cbrt_midp`.
+    /// Suitable for perceptual color (Oklab/XYB) targeting 8-bit output.
+    #[inline(always)]
+    pub fn cbrt_lowp(self) -> Self {
+        const MAGIC: u32 = 0x2a50_8c2d;
+
+        let sign_mask = splat_f32::<T>(-0.0);
+        let sign = self & sign_mask;
+        let abs_x = self.abs();
+
+        let abs_arr = abs_x.to_array();
+        let approx_arr: [f32; 4] =
+            core::array::from_fn(|i| f32::from_bits((abs_arr[i].to_bits() / 3) + MAGIC));
+        let mut y = f32x4::from_repr_unchecked(<T as F32x4Backend>::from_array(approx_arr));
+
+        // Halley iteration: y *= (y³ + 2x) / (2y³ + x)
+        // Compute ratio first to avoid intermediate overflow.
+        // Triples bits of precision: ~5 → ~15
+        let two = splat_f32::<T>(2.0);
+        let y3 = y * y * y;
+        y *= (y3 + two * abs_x) / (two * y3 + abs_x);
+
+        y | sign
+    }
+
+    /// Fast cube root (full f32 precision, ~24+ bits).
+    ///
+    /// Uses Kahan's initial approximation followed by 2 Halley iterations.
+    /// Each Halley step triples precision: ~5 → ~15 → ~45 bits.
+    /// Uses 2 divisions vs 3 for `cbrt_midp`, with equal or better accuracy.
+    #[inline(always)]
+    pub fn cbrt_fast(self) -> Self {
+        const MAGIC: u32 = 0x2a50_8c2d;
+
+        let sign_mask = splat_f32::<T>(-0.0);
+        let sign = self & sign_mask;
+        let abs_x = self.abs();
+
+        let abs_arr = abs_x.to_array();
+        let approx_arr: [f32; 4] =
+            core::array::from_fn(|i| f32::from_bits((abs_arr[i].to_bits() / 3) + MAGIC));
+        let mut y = f32x4::from_repr_unchecked(<T as F32x4Backend>::from_array(approx_arr));
+
+        // 2 Halley iterations: y *= (y³ + 2x) / (2y³ + x)
+        // Compute ratio first to avoid intermediate overflow.
+        // Triples bits each step: ~5 → ~15 → ~45
+        let two = splat_f32::<T>(2.0);
+        for _ in 0..2 {
+            let y3 = y * y * y;
+            y *= (y3 + two * abs_x) / (two * y3 + abs_x);
+        }
+
+        y | sign
+    }
+
     /// Mid-precision cube root.
     ///
     /// Uses Kahan's initial approximation via bit manipulation followed

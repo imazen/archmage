@@ -13,6 +13,16 @@ use magetypes::simd::f32x8;
 // ============================================================================
 
 #[arcane]
+fn simd_cbrt_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
+    f32x8::load(token, input).cbrt_lowp().to_array()
+}
+
+#[arcane]
+fn simd_cbrt_fast(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
+    f32x8::load(token, input).cbrt_fast().to_array()
+}
+
+#[arcane]
 fn simd_cbrt_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
     f32x8::load(token, input).cbrt_midp().to_array()
 }
@@ -275,6 +285,138 @@ fn test_cbrt_midp_brute_force() {
     stats.finalize();
     stats.print();
     stats.assert_max_rel_err(1e-6); // ~2 ULP for f32
+}
+
+// ============================================================================
+// cbrt_lowp and cbrt_fast tests
+// ============================================================================
+
+#[test]
+#[cfg(target_arch = "x86_64")]
+fn test_cbrt_lowp_brute_force() {
+    let Some(token) = X64V3Token::summon() else {
+        eprintln!("AVX2+FMA not available, skipping test");
+        return;
+    };
+
+    let mut stats = AccuracyStats::new("cbrt_lowp");
+
+    let test_values: Vec<f32> = (0..1_000_000)
+        .map(|i| {
+            let t = i as f32 / 1_000_000.0;
+            10.0f32.powf(-37.0 + t * 74.0)
+        })
+        .collect();
+
+    for chunk in test_values.chunks(8) {
+        if chunk.len() < 8 {
+            continue;
+        }
+        let arr: &[f32; 8] = chunk.try_into().unwrap();
+        let result = simd_cbrt_lowp(token, arr);
+        for (i, &x) in arr.iter().enumerate() {
+            let expected = x.cbrt();
+            stats.update(x, expected, result[i]);
+        }
+    }
+
+    // Negative values
+    let negative_values: Vec<f32> = (0..1_000_000)
+        .map(|i| {
+            let t = i as f32 / 1_000_000.0;
+            -10.0f32.powf(-37.0 + t * 74.0)
+        })
+        .collect();
+
+    for chunk in negative_values.chunks(8) {
+        if chunk.len() < 8 {
+            continue;
+        }
+        let arr: &[f32; 8] = chunk.try_into().unwrap();
+        let result = simd_cbrt_lowp(token, arr);
+        for (i, &x) in arr.iter().enumerate() {
+            let expected = x.cbrt();
+            stats.update(x, expected, result[i]);
+        }
+    }
+
+    stats.finalize();
+    stats.print();
+    // lowp: 1 Halley iteration gives ~15 bits, expect ~1e-4 max relative error
+    stats.assert_max_rel_err(1e-3);
+}
+
+#[test]
+#[cfg(target_arch = "x86_64")]
+fn test_cbrt_fast_brute_force() {
+    let Some(token) = X64V3Token::summon() else {
+        eprintln!("AVX2+FMA not available, skipping test");
+        return;
+    };
+
+    let mut stats = AccuracyStats::new("cbrt_fast");
+
+    let test_values: Vec<f32> = (0..1_000_000)
+        .map(|i| {
+            let t = i as f32 / 1_000_000.0;
+            10.0f32.powf(-37.0 + t * 74.0)
+        })
+        .collect();
+
+    for chunk in test_values.chunks(8) {
+        if chunk.len() < 8 {
+            continue;
+        }
+        let arr: &[f32; 8] = chunk.try_into().unwrap();
+        let result = simd_cbrt_fast(token, arr);
+        for (i, &x) in arr.iter().enumerate() {
+            let expected = x.cbrt();
+            stats.update(x, expected, result[i]);
+        }
+    }
+
+    // Negative values
+    let negative_values: Vec<f32> = (0..1_000_000)
+        .map(|i| {
+            let t = i as f32 / 1_000_000.0;
+            -10.0f32.powf(-37.0 + t * 74.0)
+        })
+        .collect();
+
+    for chunk in negative_values.chunks(8) {
+        if chunk.len() < 8 {
+            continue;
+        }
+        let arr: &[f32; 8] = chunk.try_into().unwrap();
+        let result = simd_cbrt_fast(token, arr);
+        for (i, &x) in arr.iter().enumerate() {
+            let expected = x.cbrt();
+            stats.update(x, expected, result[i]);
+        }
+    }
+
+    // Near-zero values
+    let near_zero: Vec<f32> = (-100_000..100_000)
+        .map(|i| i as f32 * 1e-10)
+        .filter(|&x| x != 0.0)
+        .collect();
+
+    for chunk in near_zero.chunks(8) {
+        if chunk.len() < 8 {
+            continue;
+        }
+        let arr: &[f32; 8] = chunk.try_into().unwrap();
+        let result = simd_cbrt_fast(token, arr);
+        for (i, &x) in arr.iter().enumerate() {
+            let expected = x.cbrt();
+            stats.update(x, expected, result[i]);
+        }
+    }
+
+    stats.finalize();
+    stats.print();
+    // fast: 2 Halley iterations should match or beat midp (~1e-6)
+    stats.assert_max_rel_err(1e-6);
 }
 
 // ============================================================================

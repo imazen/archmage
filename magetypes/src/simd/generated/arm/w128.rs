@@ -1092,6 +1092,90 @@ impl f32x4 {
         unsafe { Self(vmulq_f32(self.log2_midp_precise().0, vdupq_n_f32(n))).exp2_midp() }
     }
 
+    /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
+    ///
+    /// Uses Kahan's initial approximation followed by 1 Halley iteration.
+    /// Fastest cbrt variant — 1 division vs 3 for `cbrt_midp`.
+    /// Suitable for perceptual color (Oklab/XYB) targeting 8-bit output.
+    #[inline(always)]
+    pub fn cbrt_lowp(self) -> Self {
+        unsafe {
+            let x = self.0;
+
+            let abs_x = vabsq_f32(x);
+            let sign_mask = vdupq_n_f32(-0.0);
+            let sign = vreinterpretq_f32_u32(vandq_u32(
+                vreinterpretq_u32_f32(x),
+                vreinterpretq_u32_f32(sign_mask),
+            ));
+
+            let arr: [f32; 4] = core::mem::transmute(abs_x);
+            let approx: [f32; 4] = [
+                f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
+            ];
+            let mut y = vld1q_f32(approx.as_ptr());
+
+            // Halley iteration: y *= (y³ + 2x) / (2y³ + x)
+            // Compute ratio first to avoid intermediate overflow.
+            let two = vdupq_n_f32(2.0);
+            let y3 = vmulq_f32(vmulq_f32(y, y), y);
+            let num = vaddq_f32(y3, vmulq_f32(two, abs_x));
+            let den = vaddq_f32(vmulq_f32(two, y3), abs_x);
+            y = vmulq_f32(y, vdivq_f32(num, den));
+
+            Self(vreinterpretq_f32_u32(vorrq_u32(
+                vreinterpretq_u32_f32(y),
+                vreinterpretq_u32_f32(sign),
+            )))
+        }
+    }
+
+    /// Fast cube root (full f32 precision, ~24+ bits).
+    ///
+    /// Uses Kahan's initial approximation followed by 2 Halley iterations.
+    /// Each Halley step triples precision: ~5 → ~15 → ~45 bits.
+    /// Uses 2 divisions vs 3 for `cbrt_midp`, with equal or better accuracy.
+    #[inline(always)]
+    pub fn cbrt_fast(self) -> Self {
+        unsafe {
+            let x = self.0;
+
+            let abs_x = vabsq_f32(x);
+            let sign_mask = vdupq_n_f32(-0.0);
+            let sign = vreinterpretq_f32_u32(vandq_u32(
+                vreinterpretq_u32_f32(x),
+                vreinterpretq_u32_f32(sign_mask),
+            ));
+
+            let arr: [f32; 4] = core::mem::transmute(abs_x);
+            let approx: [f32; 4] = [
+                f32::from_bits((arr[0].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[1].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[2].to_bits() / 3) + 0x2a508c2d),
+                f32::from_bits((arr[3].to_bits() / 3) + 0x2a508c2d),
+            ];
+            let mut y = vld1q_f32(approx.as_ptr());
+
+            // 2 Halley iterations: y *= (y³ + 2x) / (2y³ + x)
+            // Compute ratio first to avoid intermediate overflow.
+            let two = vdupq_n_f32(2.0);
+            for _ in 0..2 {
+                let y3 = vmulq_f32(vmulq_f32(y, y), y);
+                let num = vaddq_f32(y3, vmulq_f32(two, abs_x));
+                let den = vaddq_f32(vmulq_f32(two, y3), abs_x);
+                y = vmulq_f32(y, vdivq_f32(num, den));
+            }
+
+            Self(vreinterpretq_f32_u32(vorrq_u32(
+                vreinterpretq_u32_f32(y),
+                vreinterpretq_u32_f32(sign),
+            )))
+        }
+    }
+
     /// Mid-precision cube root (~1 ULP max error).
     ///
     /// Uses scalar extraction for initial guess + Newton-Raphson.
