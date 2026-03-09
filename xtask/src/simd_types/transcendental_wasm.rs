@@ -231,11 +231,14 @@ fn generate_f32_transcendentals() -> String {
 
         /// Low-precision power function (self^n).
         ///
-        /// Computed as `exp2_lowp(n * log2_lowp(self))`.
+        /// Computed as `exp2_lowp(n * log2_lowp(self))`. Returns 0 for zero input.
         /// Note: Only valid for positive self values.
         #[inline(always)]
         pub fn pow_lowp(self, n: f32) -> Self {{
-        Self(f32x4_mul(self.log2_lowp().0, f32x4_splat(n))).exp2_lowp()
+        let result = Self(f32x4_mul(self.log2_lowp().0, f32x4_splat(n))).exp2_lowp();
+        // Zero masking: pow(0, n) = 0 for n > 0
+        let is_zero = f32x4_eq(self.0, f32x4_splat(0.0));
+        Self(v128_bitselect(f32x4_splat(0.0), result.0, is_zero))
         }}
 
         // ========== Mid-Precision Transcendental Operations ==========

@@ -131,10 +131,13 @@ impl<T: F32x8Convert> f32x8<T> {
         self.log10_lowp()
     }
 
-    /// Low-precision power function: `self^n`.
+    /// Low-precision power function: `self^n`. Returns 0 for zero input.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        (self.log2_lowp() * splat_f32::<T>(n)).exp2_lowp()
+        let result = (self.log2_lowp() * splat_f32::<T>(n)).exp2_lowp();
+        // Zero masking: pow(0, n) = 0 for n > 0
+        let is_zero = self.simd_eq(splat_f32::<T>(0.0));
+        Self::blend(is_zero, splat_f32::<T>(0.0), result)
     }
 
     /// Low-precision power function, no edge case handling.

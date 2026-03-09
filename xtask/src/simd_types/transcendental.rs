@@ -38,6 +38,24 @@ fn generate_f32_lowp_ops(ty: &SimdType, prefix: &str, suffix: &str, int_suffix: 
         format!("{prefix}_floor_{suffix}(x)")
     };
 
+    // Zero masking for pow_lowp: pow(0, n) must return 0 for n > 0.
+    // log2_lowp(0) returns -127 (not -inf), so exp2_lowp doesn't underflow to zero.
+    let pow_zero_mask = if ty.width == SimdWidth::W512 {
+        formatdoc! {r#"
+            // Zero masking: pow(0, n) = 0 for n > 0
+            let is_zero = {prefix}_cmp_{suffix}_mask::<_CMP_EQ_OQ>(self.0, {prefix}_setzero_{suffix}());
+            let result = {prefix}_mask_blend_{suffix}(is_zero, result.0, {prefix}_setzero_{suffix}());
+            Self(result)
+        "#}
+    } else {
+        formatdoc! {r#"
+            // Zero masking: pow(0, n) = 0 for n > 0
+            let is_zero = {prefix}_cmp_{suffix}::<_CMP_EQ_OQ>(self.0, {prefix}_setzero_{suffix}());
+            let result = {prefix}_blendv_{suffix}(result.0, {prefix}_setzero_{suffix}(), is_zero);
+            Self(result)
+        "#}
+    };
+
     formatdoc! {r#"
     /// Low-precision base-2 logarithm (~7.7e-5 max relative error).
     ///
@@ -149,12 +167,14 @@ fn generate_f32_lowp_ops(ty: &SimdType, prefix: &str, suffix: &str, int_suffix: 
 
     /// Low-precision power function (self^n).
     ///
-    /// Computed as `exp2_lowp(n * log2_lowp(self))`. For higher precision, use `pow_midp()`.
+    /// Computed as `exp2_lowp(n * log2_lowp(self))`. Returns 0 for zero input.
+    /// For higher precision, use `pow_midp()`.
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {{
         unsafe {{
-            Self({prefix}_mul_{suffix}(self.log2_lowp().0, {prefix}_set1_{suffix}(n))).exp2_lowp()
+            let result = Self({prefix}_mul_{suffix}(self.log2_lowp().0, {prefix}_set1_{suffix}(n))).exp2_lowp();
+            {pow_zero_mask}
         }}
     }}
 

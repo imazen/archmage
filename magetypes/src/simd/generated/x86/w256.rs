@@ -612,11 +612,18 @@ impl f32x8 {
 
     /// Low-precision power function (self^n).
     ///
-    /// Computed as `exp2_lowp(n * log2_lowp(self))`. For higher precision, use `pow_midp()`.
+    /// Computed as `exp2_lowp(n * log2_lowp(self))`. Returns 0 for zero input.
+    /// For higher precision, use `pow_midp()`.
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        unsafe { Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(n))).exp2_lowp() }
+        unsafe {
+            let result = Self(_mm256_mul_ps(self.log2_lowp().0, _mm256_set1_ps(n))).exp2_lowp();
+            // Zero masking: pow(0, n) = 0 for n > 0
+            let is_zero = _mm256_cmp_ps::<_CMP_EQ_OQ>(self.0, _mm256_setzero_ps());
+            let result = _mm256_blendv_ps(result.0, _mm256_setzero_ps(), is_zero);
+            Self(result)
+        }
     }
 
     /// Low-precision base-2 logarithm - unchecked variant.

@@ -468,6 +468,36 @@ mod pow_zero {
         }
     }
 
+    /// pow_lowp(0, positive_n) should be 0
+    #[test]
+    fn pow_lowp_zero_to_positive() {
+        let Some(t) = X64V3Token::summon() else {
+            return;
+        };
+        let zeros = [0.0f32; 8];
+        for n in [0.5, 1.0, 2.0, 3.0, 10.0] {
+            let result = direct_pow_lowp(t, &zeros, n);
+            for (i, &v) in result.iter().enumerate() {
+                assert_zero(v, &format!("pow_lowp(0, {n})[{i}]"));
+            }
+        }
+    }
+
+    /// pow_lowp generic(0, positive_n) should be 0
+    #[test]
+    fn generic_pow_lowp_zero_to_positive() {
+        let Some(t) = X64V3Token::summon() else {
+            return;
+        };
+        let zeros = [0.0f32; 8];
+        for n in [0.5, 1.0, 2.0, 3.0, 10.0] {
+            let result = generic_pow_lowp(t, &zeros, n);
+            for (i, &v) in result.iter().enumerate() {
+                assert_zero(v, &format!("generic_pow_lowp(0, {n})[{i}]"));
+            }
+        }
+    }
+
     /// pow(0, positive_n) should be 0 — precise variant
     #[test]
     fn pow_midp_precise_zero_to_positive() {

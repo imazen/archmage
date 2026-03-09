@@ -252,12 +252,15 @@ fn generate_f32_lowp_ops() -> String {
 
     /// Low-precision power function (self^n).
     ///
-    /// Computed as `exp2_lowp(n * log2_lowp(self))`.
+    /// Computed as `exp2_lowp(n * log2_lowp(self))`. Returns 0 for zero input.
     /// Note: Only valid for positive self values.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {{
         unsafe {{
-            Self(vmulq_f32(self.log2_lowp().0, vdupq_n_f32(n))).exp2_lowp()
+            let result = Self(vmulq_f32(self.log2_lowp().0, vdupq_n_f32(n))).exp2_lowp();
+            // Zero masking: pow(0, n) = 0 for n > 0
+            let is_zero = vceqq_f32(self.0, vdupq_n_f32(0.0));
+            Self(vbslq_f32(is_zero, vdupq_n_f32(0.0), result.0))
         }}
     }}
 
