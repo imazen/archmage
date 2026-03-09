@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Transcendental accuracy improvements
+
+- **`exp2_midp`: floor → round-to-nearest split** — Splitting the input into integer and fractional parts now uses round-to-nearest instead of floor, keeping |frac| ≤ 0.5 instead of [0, 1). This eliminates the accuracy hot spot near integer boundaries where the polynomial was evaluating at frac ≈ 1.0. The integer part is clamped to 127 to prevent the `(n+127)<<23` bit trick from overflowing. Accuracy is now uniform across all input regions (1 ULP for evenly-spaced inputs, 63 ULP worst case overall). Applied on all platforms (x86, ARM, WASM, generic).
+
+- **`exp2_midp` overflow threshold**: changed from `> 128` to `>= 128`. Since 2^128 > f32::MAX, `exp2_midp(128.0)` now correctly returns inf instead of ~3.4e38.
+
+- **`exp2_midp` underflow limit**: tightened from -150 to -126. Inputs in [-150, -126] were producing garbage via the bit trick (which can't construct denormal floats). Now returns 0 for all inputs below -126.
+
+- **`pow_lowp(0, n)` for positive n**: now returns 0 instead of NaN. The zero-mask was being applied before the exp2 computation instead of after.
+
+- **`cbrt` zero handling**: `cbrt(±0)` now returns ±0 (preserving sign) instead of producing small nonzero values from the bit-hack initial guess.
+
+- **Accuracy improvements** (max ULP vs std, measured on x86-64):
+  - `exp2_midp`: 132 → 63 ULP
+  - `exp_midp`: 256+ → 58 ULP
+  - `pow_midp` (n=0.5): 149 → 9 ULP
+  - `pow_midp` (n=2): ~130 → 16 ULP
+  - `pow_midp` (n=3): ~150 → 55 ULP
+
+- **No performance impact**: round instruction costs the same as floor (same opcode, different rounding mode bit). The added `min(xi, 127)` is one extra SIMD min instruction.
+
 ## 0.9.4 — 2026-03-08
 
 Multi-tier `#[rite]`, `#[inline(always)]` wrappers, improved cbrt, docs overhaul.
