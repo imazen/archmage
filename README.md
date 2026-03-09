@@ -61,44 +61,83 @@ fn main() {
 
 No `unsafe` anywhere. Your crate can use `#![forbid(unsafe_code)]`.
 
-## What changed in Rust 1.85
+## How Rust enforces SIMD safety
 
-Rust 1.85 (Feb 2025) stabilized `target_feature_11`, which changed two things:
-
-1. **`#[target_feature]` functions can be declared safe** (Rust 2024 edition). Previously they had to be `unsafe fn`. Now they're just `fn` — but calling them from code without matching features still requires `unsafe`.
-
-2. **Value-based intrinsics are safe inside `#[target_feature]` functions.** `_mm256_add_ps`, `_mm256_mul_ps`, shuffles, compares — anything that doesn't touch a pointer is safe to call when the compiler knows the CPU features are enabled. Only pointer-based operations (`_mm256_loadu_ps(ptr)`, `_mm256_storeu_ps(ptr, v)`) remain unsafe.
-
-This means the only `unsafe` left in SIMD code is: (a) the one call site where you cross from normal code into a `#[target_feature]` function, and (b) memory operations that take raw pointers. Archmage eliminates both.
-
-## How archmage makes it zero-unsafe
+Rust 1.85 (Feb 2025) changed the rules for `#[target_feature]` functions:
 
 ```
-┌─────────── Your crate: #![forbid(unsafe_code)] ───────────┐
-│                                                            │
-│   summon() ──→ Token ──→ #[arcane] fn ──→ #[rite] fn      │
-│    (CPUID)    (proof)   (entry point)   (inlines freely)  │
-│                              │                             │
-│                   prelude / import_intrinsics               │
-│                    ┌────────┴────────┐                     │
-│                    │ core::arch    safe_unaligned_simd     │
-│                    │ (value ops    (memory ops             │
-│                    │  = safe)       = safe)                │
-│                    └─────────────────┘                     │
-│                                                            │
-│   Result: all intrinsics are safe. No unsafe in your code. │
-└────────────────────────────────────────────────────────────┘
+  Rust's #[target_feature] call rules (1.85+, 2024 edition)
+
+  ┌─────────────────────────┐         ┌─────────────────────────┐
+  │  fn normal_code()       │         │ #[target_feature(avx2)] │
+  │                         │── ? ──▶ │ fn simd_work()          │
+  │  (no target features)   │         │                         │
+  └─────────────────────────┘         └──────────┬──────────────┘
+                                                 │
+          Calling simd_work() from               │ safe
+          normal_code() requires                 │ (same or
+          unsafe { }. The caller                 ▼ superset)
+          has fewer features.          ┌─────────────────────────┐
+                                       │ #[target_feature(avx2)] │
+                                       │ fn simd_helper()        │
+                                       │                         │
+                                       └─────────────────────────┘
+
+  Same features or superset? Safe call between them. No unsafe needed.
+  Fewer features in caller?  Rust requires an unsafe block.
 ```
 
-Three pieces eliminate the remaining `unsafe`:
+Inside a `#[target_feature]` function, **value-based intrinsics are safe** — `_mm256_add_ps`, shuffles, compares, anything that doesn't touch a pointer. Only pointer-based memory ops (`_mm256_loadu_ps(ptr)`) remain unsafe.
 
-1. **Tokens** prove the CPU has the right features. `X64V3Token::summon()` checks CPUID and returns `Some(token)` only if AVX2+FMA are available. The token is zero-sized — passing it around costs nothing at runtime. Detection is cached (~1.3 ns), or compiles away entirely with `-Ctarget-cpu=haswell`.
+Two gaps remain:
 
-2. **`#[arcane]` / `#[rite]`** read the token type from your function signature and generate `#[target_feature(enable = "avx2,fma,...")]`. The `#[arcane]` macro generates the `unsafe` call to cross the `#[target_feature]` boundary *inside its own generated code* — your crate never writes `unsafe`. `#[rite]` functions called from matching `#[target_feature]` contexts don't need `unsafe` at all (Rust 1.85+). Both macros handle `#[cfg(target_arch)]` gating automatically.
+1. **The boundary crossing.** The first call from normal code into a `#[target_feature]` function requires `unsafe`. Someone has to verify the CPU actually has those features.
 
-3. **Safe memory ops** from [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd) (by [okaneco](https://github.com/okaneco)) shadow `core::arch`'s pointer-based versions. `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`. Same function names, safe signatures. These are included in the prelude, or you can use `#[arcane(import_intrinsics)]` to scope them to a single function.
+2. **Memory operations.** `_mm256_loadu_ps` takes `*const f32`. Raw pointers need `unsafe`.
+
+## How archmage closes both gaps
+
+Archmage makes the boundary crossing **sound** by tying it to runtime CPU detection. You can't cross without proof.
+
+```
+  Your crate: #![forbid(unsafe_code)]
+
+  ┌────────────────────────────────────────────────────────────┐
+  │                                                            │
+  │  1. summon()          Checks CPUID. Returns Some(token)    │
+  │     X64V3Token        only if AVX2+FMA are present.        │
+  │                       Token is zero-sized proof.           │
+  │          │                                                 │
+  │          ▼                                                 │
+  │  2. #[arcane] fn      Reads token type from signature.     │
+  │     entry(token, ..)  Generates #[target_feature] sibling. │
+  │                       Wraps the unsafe call internally —   │
+  │          │            your code never writes unsafe.        │
+  │          ▼                                                 │
+  │  3. #[rite] fns       Same #[target_feature] as caller.    │
+  │     + plain fns       Safe calls — Rust allows it.         │
+  │                       Inline freely, no boundary.          │
+  │          │                                                 │
+  │          ▼                                                 │
+  │  4. Intrinsics        Value ops: safe (Rust 1.85+)         │
+  │     in scope          Memory ops: safe_unaligned_simd      │
+  │                       takes &[f32; 8], not *const f32      │
+  │                                                            │
+  │  Result: all intrinsics are safe. No unsafe in your code.  │
+  └────────────────────────────────────────────────────────────┘
+```
+
+**Tokens are grouped by common CPU tiers.** `X64V3Token` covers AVX2+FMA+BMI2 — the set that Haswell (2013) and Zen 1+ share. `NeonToken` covers AArch64 NEON. `Arm64V2Token` covers CRC+RDM+DotProd+FP16+AES+SHA2 — the set that Apple M1, Cortex-A55+, and Graviton 2+ share. You pick a tier, not individual features. `summon()` checks all features in the tier atomically; it either succeeds (every feature present) or returns `None`.
+
+**`#[arcane]` is the trampoline.** It generates a sibling function with `#[target_feature(enable = "avx2,fma,...")]` and an `#[inline(always)]` wrapper that calls it through `unsafe`. The macro generates the `unsafe` block, not you. Since the token's existence proves the features are present, the call is sound. From inside the `#[arcane]` function, you can use intrinsics directly (value ops are safe) and call `#[rite]` functions with matching features (safe under Rust 1.85+).
+
+**[`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd)** (by [okaneco](https://github.com/okaneco)) closes the memory gap. It shadows `core::arch`'s pointer-based load/store functions with reference-based versions — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`. Same names, safe signatures. Archmage re-exports these through `import_intrinsics`, so the safe versions are in scope automatically.
 
 All tokens compile on all platforms. On the wrong architecture, `summon()` returns `None`. You rarely need `#[cfg(target_arch)]` in your code.
+
+### Why `#![forbid(unsafe_code)]` matters for AI-written SIMD
+
+AI is a patient compiler. It can write SIMD intrinsics, run benchmarks, iterate on hot loops, and try instruction sequences that no human would bother testing. Constraining AI to `#![forbid(unsafe_code)]` means it can't introduce undefined behavior — the type system catches unsound calls at compile time. The result is hand-tuned SIMD that's both fast and provably safe.
 
 ### Import styles
 
@@ -125,6 +164,37 @@ fn example(_: X64V3Token, data: &[f32; 8]) -> core::arch::x86_64::__m256 {
 ```
 
 Both import the same combined intrinsics module — using both is just duplication. The prelude is simpler; `import_intrinsics` is more explicit.
+
+## Which macro do I use?
+
+```
+                    Writing a SIMD function?
+                    ┌───────────┴───────────┐
+            Hand-written                Scalar code,
+            intrinsics              compiler auto-vectorizes
+                │                           │
+        Called from                  Need manual control
+        non-SIMD code?              over dispatch?
+     (after summon(), main)
+        ┌─────┴─────┐              ┌─────┴─────┐
+       YES          NO             NO          YES
+        │            │              │            │
+  ┌─────▼──────┐ ┌──▼────────┐ ┌───▼─────────┐ ┌▼────────────────┐
+  │ #[arcane]  │ │ #[rite]   │ │#[autoversion]│ │ #[arcane] per   │
+  │            │ │           │ │             │ │ variant +       │
+  │ Entry from │ │ Inlines   │ │ Generates   │ │ incant!()       │
+  │ normal code│ │ into the  │ │ variants +  │ │                 │
+  │ One per    │ │ caller's  │ │ dispatcher  │ │ You write each  │
+  │ hot path   │ │ LLVM      │ │ from one    │ │ #[arcane] fn    │
+  │            │ │ region    │ │ scalar body │ │ and dispatch    │
+  └─────┬──────┘ └──▲──┬────┘ └─────────────┘ └─────────────────┘
+        │           │  │
+        └───────────┘  └──▶ also calls #[rite]
+     #[arcane] calls       and plain #[inline(always)]
+     #[rite] helpers       fns (get caller's features)
+```
+
+Plain `#[inline(always)]` functions with no macro also work — if they inline into an `#[arcane]` or `#[rite]` caller, LLVM compiles them with the caller's features for free.
 
 ## `#[arcane]` vs `#[rite]`: entry point vs internal
 
