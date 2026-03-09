@@ -189,151 +189,252 @@ impl AccuracyStats {
 }
 
 // ============================================================================
-// cbrt tests
+// ULP helpers
 // ============================================================================
 
-#[test]
-#[cfg(target_arch = "x86_64")]
-fn test_cbrt_midp_brute_force() {
-    let Some(token) = X64V3Token::summon() else {
-        eprintln!("AVX2+FMA not available, skipping test");
-        return;
-    };
+/// Compute ULP distance between two f32 values.
+/// Returns None if either is NaN.
+fn ulp_distance(a: f32, b: f32) -> Option<u32> {
+    if a.is_nan() || b.is_nan() {
+        return None;
+    }
+    if a == b {
+        return Some(0);
+    }
+    // Convert sign-magnitude to two's complement-like ordering for ULP distance
+    let ai = a.to_bits() as i32;
+    let bi = b.to_bits() as i32;
+    let ai = if ai < 0 { i32::MIN - ai } else { ai };
+    let bi = if bi < 0 { i32::MIN - bi } else { bi };
+    Some((ai - bi).unsigned_abs())
+}
 
-    let mut stats = AccuracyStats::new("cbrt_midp");
+struct UlpStats {
+    name: &'static str,
+    max_ulp: u32,
+    max_ulp_input: f32,
+    max_ulp_expected: f32,
+    max_ulp_got: f32,
+    total_tested: usize,
+    nan_count: usize,
+    inf_count: usize,
+    ulp_histogram: [usize; 8], // [0 ulp, 1 ulp, 2 ulp, 3 ulp, 4-7, 8-15, 16-63, 64+]
+    max_rel_err: f64,
+    avg_rel_err: f64,
+}
 
-    // Test positive values: 1e-37 to 1e37 (avoiding denormals)
-    let test_values: Vec<f32> = (0..1_000_000)
-        .map(|i| {
-            let t = i as f32 / 1_000_000.0;
-            // Logarithmic distribution from 1e-37 to 1e37
-            10.0f32.powf(-37.0 + t * 74.0)
-        })
-        .collect();
-
-    for chunk in test_values.chunks(8) {
-        if chunk.len() < 8 {
-            continue;
-        }
-        let arr: &[f32; 8] = chunk.try_into().unwrap();
-        let result = simd_cbrt_midp(token, arr);
-        for (i, &x) in arr.iter().enumerate() {
-            let expected = x.cbrt();
-            stats.update(x, expected, result[i]);
+impl UlpStats {
+    fn new(name: &'static str) -> Self {
+        Self {
+            name,
+            max_ulp: 0,
+            max_ulp_input: 0.0,
+            max_ulp_expected: 0.0,
+            max_ulp_got: 0.0,
+            total_tested: 0,
+            nan_count: 0,
+            inf_count: 0,
+            ulp_histogram: [0; 8],
+            max_rel_err: 0.0,
+            avg_rel_err: 0.0,
         }
     }
 
-    // Test negative values: -1e37 to -1e-37 (avoiding denormals)
-    let negative_values: Vec<f32> = (0..1_000_000)
-        .map(|i| {
-            let t = i as f32 / 1_000_000.0;
-            -10.0f32.powf(-37.0 + t * 74.0)
-        })
-        .collect();
-
-    for chunk in negative_values.chunks(8) {
-        if chunk.len() < 8 {
-            continue;
+    fn update(&mut self, input: f32, expected: f32, got: f32) {
+        if got.is_nan() && !expected.is_nan() {
+            self.nan_count += 1;
+            return;
         }
-        let arr: &[f32; 8] = chunk.try_into().unwrap();
-        let result = simd_cbrt_midp(token, arr);
-        for (i, &x) in arr.iter().enumerate() {
-            let expected = x.cbrt();
-            stats.update(x, expected, result[i]);
+        if got.is_infinite() && !expected.is_infinite() {
+            self.inf_count += 1;
+            return;
+        }
+        if !expected.is_finite() || !got.is_finite() {
+            return;
+        }
+
+        self.total_tested += 1;
+
+        // Relative error
+        let abs_err = (got - expected).abs() as f64;
+        let rel_err = if expected.abs() > 1e-38 {
+            abs_err / expected.abs() as f64
+        } else {
+            abs_err
+        };
+        self.avg_rel_err += rel_err;
+        if rel_err > self.max_rel_err {
+            self.max_rel_err = rel_err;
+        }
+
+        // ULP distance
+        if let Some(ulps) = ulp_distance(expected, got) {
+            let bucket = match ulps {
+                0 => 0,
+                1 => 1,
+                2 => 2,
+                3 => 3,
+                4..=7 => 4,
+                8..=15 => 5,
+                16..=63 => 6,
+                _ => 7,
+            };
+            self.ulp_histogram[bucket] += 1;
+
+            if ulps > self.max_ulp {
+                self.max_ulp = ulps;
+                self.max_ulp_input = input;
+                self.max_ulp_expected = expected;
+                self.max_ulp_got = got;
+            }
         }
     }
 
-    // Test values near zero
-    let near_zero: Vec<f32> = (-100_000..100_000)
-        .map(|i| i as f32 * 1e-10)
-        .filter(|&x| x != 0.0)
-        .collect();
-
-    for chunk in near_zero.chunks(8) {
-        if chunk.len() < 8 {
-            continue;
-        }
-        let arr: &[f32; 8] = chunk.try_into().unwrap();
-        let result = simd_cbrt_midp(token, arr);
-        for (i, &x) in arr.iter().enumerate() {
-            let expected = x.cbrt();
-            stats.update(x, expected, result[i]);
+    fn finalize(&mut self) {
+        if self.total_tested > 0 {
+            self.avg_rel_err /= self.total_tested as f64;
         }
     }
 
-    // Test perfect cubes
-    let perfect_cubes: Vec<f32> = (-100..=100)
-        .filter(|&i| i != 0)
-        .map(|i| (i as f32).powi(3))
-        .collect();
-
-    for chunk in perfect_cubes.chunks(8) {
-        if chunk.len() < 8 {
-            continue;
+    fn print(&self) {
+        println!(
+            "{:20} max_ulp: {:4}  max_rel: {:.2e}  avg_rel: {:.2e}  tested: {}",
+            self.name, self.max_ulp, self.max_rel_err, self.avg_rel_err, self.total_tested
+        );
+        println!(
+            "    ULP histogram: 0:{} 1:{} 2:{} 3:{} 4-7:{} 8-15:{} 16-63:{} 64+:{}",
+            self.ulp_histogram[0],
+            self.ulp_histogram[1],
+            self.ulp_histogram[2],
+            self.ulp_histogram[3],
+            self.ulp_histogram[4],
+            self.ulp_histogram[5],
+            self.ulp_histogram[6],
+            self.ulp_histogram[7],
+        );
+        if self.max_ulp > 3 {
+            println!(
+                "    worst: input={:e} ({:#010x}) expected={:e} ({:#010x}) got={:e} ({:#010x})",
+                self.max_ulp_input,
+                self.max_ulp_input.to_bits(),
+                self.max_ulp_expected,
+                self.max_ulp_expected.to_bits(),
+                self.max_ulp_got,
+                self.max_ulp_got.to_bits(),
+            );
         }
-        let mut arr = [0.0f32; 8];
-        for (i, &v) in chunk.iter().enumerate() {
-            arr[i] = v;
-        }
-        let result = simd_cbrt_midp(token, &arr);
-        for (i, &x) in chunk.iter().enumerate() {
-            let expected = x.cbrt();
-            stats.update(x, expected, result[i]);
+        if self.nan_count > 0 || self.inf_count > 0 {
+            println!(
+                "    ERRORS: {} unexpected NaN, {} unexpected Inf",
+                self.nan_count, self.inf_count
+            );
         }
     }
 
-    stats.finalize();
-    stats.print();
-    stats.assert_max_rel_err(1e-6); // ~2 ULP for f32
+    fn assert_max_ulp(&self, max_allowed: u32) {
+        assert!(
+            self.max_ulp <= max_allowed,
+            "{}: max_ulp {} exceeds limit {} at input={:e} ({:#010x})",
+            self.name,
+            self.max_ulp,
+            max_allowed,
+            self.max_ulp_input,
+            self.max_ulp_input.to_bits(),
+        );
+        assert!(
+            self.nan_count == 0,
+            "{}: {} unexpected NaN values",
+            self.name,
+            self.nan_count,
+        );
+    }
 }
 
 // ============================================================================
-// cbrt_lowp and cbrt_fast tests
+// cbrt tests — comprehensive with ULP measurement
 // ============================================================================
 
-#[test]
-#[cfg(target_arch = "x86_64")]
-fn test_cbrt_lowp_brute_force() {
-    let Some(token) = X64V3Token::summon() else {
-        eprintln!("AVX2+FMA not available, skipping test");
-        return;
-    };
+/// Generate test vectors covering normal, denormal, edge, and special values.
+fn cbrt_test_vectors() -> Vec<f32> {
+    let mut vals = Vec::with_capacity(5_000_000);
 
-    let mut stats = AccuracyStats::new("cbrt_lowp");
+    // 1. Normal range: logarithmic sweep 1e-37 to 1e37
+    for i in 0..1_000_000 {
+        let t = i as f32 / 1_000_000.0;
+        vals.push(10.0f32.powf(-37.0 + t * 74.0));
+    }
 
-    let test_values: Vec<f32> = (0..1_000_000)
-        .map(|i| {
-            let t = i as f32 / 1_000_000.0;
-            10.0f32.powf(-37.0 + t * 74.0)
-        })
-        .collect();
+    // 2. Negative normal range
+    for i in 0..1_000_000 {
+        let t = i as f32 / 1_000_000.0;
+        vals.push(-10.0f32.powf(-37.0 + t * 74.0));
+    }
 
-    for chunk in test_values.chunks(8) {
-        if chunk.len() < 8 {
-            continue;
-        }
-        let arr: &[f32; 8] = chunk.try_into().unwrap();
-        let result = simd_cbrt_lowp(token, arr);
-        for (i, &x) in arr.iter().enumerate() {
-            let expected = x.cbrt();
-            stats.update(x, expected, result[i]);
+    // 3. Near-zero normal values
+    for i in -100_000..100_000i32 {
+        let v = i as f32 * 1e-10;
+        if v != 0.0 {
+            vals.push(v);
         }
     }
 
-    // Negative values
-    let negative_values: Vec<f32> = (0..1_000_000)
-        .map(|i| {
-            let t = i as f32 / 1_000_000.0;
-            -10.0f32.powf(-37.0 + t * 74.0)
-        })
-        .collect();
+    // 4. Denormals (smallest normal is 1.17549435e-38)
+    // Positive denormals
+    for i in 1..100_000u32 {
+        vals.push(f32::from_bits(i)); // smallest denormals
+    }
+    for i in 1..100_000u32 {
+        vals.push(f32::from_bits(0x0080_0000 - i)); // largest denormals (just below normal)
+    }
+    // Negative denormals
+    for i in 1..100_000u32 {
+        vals.push(f32::from_bits(0x8000_0000 | i));
+    }
+    for i in 1..100_000u32 {
+        vals.push(f32::from_bits(0x8000_0000 | (0x0080_0000 - i)));
+    }
 
-    for chunk in negative_values.chunks(8) {
+    // 5. Special values
+    vals.push(0.0);
+    vals.push(-0.0);
+    vals.push(f32::INFINITY);
+    vals.push(f32::NEG_INFINITY);
+    vals.push(f32::NAN);
+    vals.push(f32::MIN_POSITIVE); // smallest normal
+    vals.push(-f32::MIN_POSITIVE);
+    vals.push(f32::MAX);
+    vals.push(f32::MIN);
+    vals.push(1.0);
+    vals.push(-1.0);
+    vals.push(8.0);
+    vals.push(27.0);
+    vals.push(0.125); // 1/8 = 0.5^3
+
+    // 6. Perfect cubes
+    for i in -100..=100i32 {
+        if i != 0 {
+            vals.push((i as f32).powi(3));
+        }
+    }
+
+    vals
+}
+
+/// Run cbrt variant over test vectors, comparing against std::f32::cbrt().
+fn run_cbrt_test(
+    name: &'static str,
+    token: X64V3Token,
+    func: fn(X64V3Token, &[f32; 8]) -> [f32; 8],
+    vals: &[f32],
+) -> UlpStats {
+    let mut stats = UlpStats::new(name);
+
+    for chunk in vals.chunks(8) {
         if chunk.len() < 8 {
             continue;
         }
         let arr: &[f32; 8] = chunk.try_into().unwrap();
-        let result = simd_cbrt_lowp(token, arr);
+        let result = func(token, arr);
         for (i, &x) in arr.iter().enumerate() {
             let expected = x.cbrt();
             stats.update(x, expected, result[i]);
@@ -341,82 +442,184 @@ fn test_cbrt_lowp_brute_force() {
     }
 
     stats.finalize();
-    stats.print();
-    // lowp: 1 Halley iteration gives ~15 bits, expect ~1e-4 max relative error
-    stats.assert_max_rel_err(1e-3);
+    stats
+}
+
+/// Compare cbrt_lowp and cbrt_fast against cbrt_midp (not just std::cbrt).
+fn run_cbrt_vs_midp(
+    name: &'static str,
+    token: X64V3Token,
+    func: fn(X64V3Token, &[f32; 8]) -> [f32; 8],
+    vals: &[f32],
+) -> UlpStats {
+    let mut stats = UlpStats::new(name);
+
+    for chunk in vals.chunks(8) {
+        if chunk.len() < 8 {
+            continue;
+        }
+        let arr: &[f32; 8] = chunk.try_into().unwrap();
+        let result = func(token, arr);
+        let midp_result = simd_cbrt_midp(token, arr);
+        for i in 0..8 {
+            stats.update(arr[i], midp_result[i], result[i]);
+        }
+    }
+
+    stats.finalize();
+    stats
 }
 
 #[test]
 #[cfg(target_arch = "x86_64")]
-fn test_cbrt_fast_brute_force() {
+fn test_cbrt_all_variants_comprehensive() {
     let Some(token) = X64V3Token::summon() else {
         eprintln!("AVX2+FMA not available, skipping test");
         return;
     };
 
-    let mut stats = AccuracyStats::new("cbrt_fast");
+    let vals = cbrt_test_vectors();
 
-    let test_values: Vec<f32> = (0..1_000_000)
-        .map(|i| {
-            let t = i as f32 / 1_000_000.0;
-            10.0f32.powf(-37.0 + t * 74.0)
-        })
+    // Working range: normal nonzero finite values within 1e-37..1e37.
+    // This is where image/color processing operates. Excludes:
+    // - Zero (bit hack on 0 bits produces garbage; use _precise variant)
+    // - Denormals (< MIN_POSITIVE; use _precise variant)
+    // - Inf/NaN (not meaningful for cbrt)
+    // - Extreme values near f32::MAX (Newton formulation in midp overflows
+    //   because 3*y³ > f32::MAX; Halley formulation avoids this)
+    let working_range: Vec<f32> = vals
+        .iter()
+        .copied()
+        .filter(|x| x.is_finite() && x.abs() >= f32::MIN_POSITIVE && x.abs() <= 1e37)
         .collect();
 
-    for chunk in test_values.chunks(8) {
-        if chunk.len() < 8 {
-            continue;
-        }
-        let arr: &[f32; 8] = chunk.try_into().unwrap();
-        let result = simd_cbrt_fast(token, arr);
-        for (i, &x) in arr.iter().enumerate() {
-            let expected = x.cbrt();
-            stats.update(x, expected, result[i]);
-        }
-    }
-
-    // Negative values
-    let negative_values: Vec<f32> = (0..1_000_000)
-        .map(|i| {
-            let t = i as f32 / 1_000_000.0;
-            -10.0f32.powf(-37.0 + t * 74.0)
-        })
+    // Extreme values (>1e37): Newton formulation in midp overflows because
+    // 3*y³ > f32::MAX. Halley formulation avoids this since ratio stays ~1.0.
+    // Pad to 8 values so chunks work.
+    let mut extremes: Vec<f32> = vals
+        .iter()
+        .copied()
+        .filter(|x| x.is_finite() && x.abs() > 1e37)
         .collect();
-
-    for chunk in negative_values.chunks(8) {
-        if chunk.len() < 8 {
-            continue;
-        }
-        let arr: &[f32; 8] = chunk.try_into().unwrap();
-        let result = simd_cbrt_fast(token, arr);
-        for (i, &x) in arr.iter().enumerate() {
-            let expected = x.cbrt();
-            stats.update(x, expected, result[i]);
-        }
+    while extremes.len() % 8 != 0 {
+        extremes.push(1e38); // pad
     }
 
-    // Near-zero values
-    let near_zero: Vec<f32> = (-100_000..100_000)
-        .map(|i| i as f32 * 1e-10)
-        .filter(|&x| x != 0.0)
+    println!(
+        "\n=== cbrt vs std::f32::cbrt() — working range ({} values, 1e-37..1e37) ===\n",
+        working_range.len()
+    );
+
+    let midp_stats = run_cbrt_test("cbrt_midp", token, simd_cbrt_midp, &working_range);
+    midp_stats.print();
+    midp_stats.assert_max_ulp(4);
+
+    let fast_stats = run_cbrt_test("cbrt_fast", token, simd_cbrt_fast, &working_range);
+    fast_stats.print();
+    fast_stats.assert_max_ulp(4);
+
+    let lowp_stats = run_cbrt_test("cbrt_lowp", token, simd_cbrt_lowp, &working_range);
+    lowp_stats.print();
+    // lowp has ~15 bits precision, so expect up to ~256 ULP
+    lowp_stats.assert_max_ulp(512);
+
+    println!("\n=== cbrt_fast/lowp vs cbrt_midp (parity check, working range) ===\n");
+
+    let fast_vs_midp = run_cbrt_vs_midp("fast vs midp", token, simd_cbrt_fast, &working_range);
+    fast_vs_midp.print();
+
+    let lowp_vs_midp = run_cbrt_vs_midp("lowp vs midp", token, simd_cbrt_lowp, &working_range);
+    lowp_vs_midp.print();
+
+    // Full range including extremes — informational (Newton overflow at f32::MAX)
+    println!("\n=== cbrt on extreme values near f32::MAX (informational) ===\n");
+    let extremes: Vec<f32> = vals
+        .iter()
+        .copied()
+        .filter(|x| x.is_finite() && x.abs() > 1e37)
         .collect();
-
-    for chunk in near_zero.chunks(8) {
-        if chunk.len() < 8 {
-            continue;
-        }
-        let arr: &[f32; 8] = chunk.try_into().unwrap();
-        let result = simd_cbrt_fast(token, arr);
-        for (i, &x) in arr.iter().enumerate() {
-            let expected = x.cbrt();
-            stats.update(x, expected, result[i]);
-        }
+    if !extremes.is_empty() {
+        let midp_ext = run_cbrt_test("midp (extreme)", token, simd_cbrt_midp, &extremes);
+        midp_ext.print();
+        let fast_ext = run_cbrt_test("fast (extreme)", token, simd_cbrt_fast, &extremes);
+        fast_ext.print();
+        let lowp_ext = run_cbrt_test("lowp (extreme)", token, simd_cbrt_lowp, &extremes);
+        lowp_ext.print();
     }
 
-    stats.finalize();
-    stats.print();
-    // fast: 2 Halley iterations should match or beat midp (~1e-6)
-    stats.assert_max_rel_err(1e-6);
+    // Denormals — informational (none of the base variants handle these)
+    println!("\n=== cbrt on denormals (informational, no assertion) ===\n");
+    let denormals_only: Vec<f32> = vals
+        .iter()
+        .copied()
+        .filter(|x| x.is_finite() && *x != 0.0 && x.abs() < f32::MIN_POSITIVE)
+        .collect();
+    if !denormals_only.is_empty() {
+        let midp_denorm = run_cbrt_test("midp (denorm)", token, simd_cbrt_midp, &denormals_only);
+        midp_denorm.print();
+        let fast_denorm = run_cbrt_test("fast (denorm)", token, simd_cbrt_fast, &denormals_only);
+        fast_denorm.print();
+        let lowp_denorm = run_cbrt_test("lowp (denorm)", token, simd_cbrt_lowp, &denormals_only);
+        lowp_denorm.print();
+    }
+
+    println!("\n=== Edge case spot checks ===\n");
+
+    // Zero handling
+    let zeros = [0.0f32, -0.0, 0.0, -0.0, 0.0, -0.0, 0.0, -0.0];
+    let lowp_z = simd_cbrt_lowp(token, &zeros);
+    let fast_z = simd_cbrt_fast(token, &zeros);
+    let midp_z = simd_cbrt_midp(token, &zeros);
+    println!("cbrt(0.0):  lowp={:e}  fast={:e}  midp={:e}  std={:e}", lowp_z[0], fast_z[0], midp_z[0], 0.0f32.cbrt());
+    println!("cbrt(-0.0): lowp={:e}  fast={:e}  midp={:e}  std={:e}", lowp_z[1], fast_z[1], midp_z[1], (-0.0f32).cbrt());
+
+    // NaN handling
+    let nans = [f32::NAN; 8];
+    let lowp_n = simd_cbrt_lowp(token, &nans);
+    let fast_n = simd_cbrt_fast(token, &nans);
+    let midp_n = simd_cbrt_midp(token, &nans);
+    println!(
+        "cbrt(NaN):  lowp={}  fast={}  midp={}  (should be NaN)",
+        lowp_n[0].is_nan(),
+        fast_n[0].is_nan(),
+        midp_n[0].is_nan()
+    );
+
+    // Inf handling
+    let infs = [f32::INFINITY, f32::NEG_INFINITY, f32::INFINITY, f32::NEG_INFINITY,
+                f32::INFINITY, f32::NEG_INFINITY, f32::INFINITY, f32::NEG_INFINITY];
+    let lowp_i = simd_cbrt_lowp(token, &infs);
+    let fast_i = simd_cbrt_fast(token, &infs);
+    let midp_i = simd_cbrt_midp(token, &infs);
+    println!(
+        "cbrt(+inf): lowp={:e}  fast={:e}  midp={:e}  std={:e}",
+        lowp_i[0], fast_i[0], midp_i[0], f32::INFINITY.cbrt()
+    );
+    println!(
+        "cbrt(-inf): lowp={:e}  fast={:e}  midp={:e}  std={:e}",
+        lowp_i[1], fast_i[1], midp_i[1], f32::NEG_INFINITY.cbrt()
+    );
+
+    // Denormal spot check
+    let denorms = [1e-40f32, 1e-42, 1e-44, f32::from_bits(1), f32::from_bits(100), f32::from_bits(10000), 1e-39, 1e-41];
+    let midp_d = simd_cbrt_midp(token, &denorms);
+    let fast_d = simd_cbrt_fast(token, &denorms);
+    let lowp_d = simd_cbrt_lowp(token, &denorms);
+    println!("\nDenormal inputs (no denormal handling in any base variant):");
+    for i in 0..4 {
+        let expected = denorms[i].cbrt();
+        println!(
+            "  cbrt({:e}): std={:e}  midp={:e}({}ulp)  fast={:e}({}ulp)  lowp={:e}({}ulp)",
+            denorms[i],
+            expected,
+            midp_d[i],
+            ulp_distance(expected, midp_d[i]).map_or("NaN".to_string(), |u| u.to_string()),
+            fast_d[i],
+            ulp_distance(expected, fast_d[i]).map_or("NaN".to_string(), |u| u.to_string()),
+            lowp_d[i],
+            ulp_distance(expected, lowp_d[i]).map_or("NaN".to_string(), |u| u.to_string()),
+        );
+    }
 }
 
 // ============================================================================
