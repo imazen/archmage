@@ -1062,22 +1062,18 @@ These are documented semantic differences between architectures. Tests must acco
 - Possible future fix: registry-based detection or undocumented Windows APIs
 - Tracked as a known Rust std_detect limitation
 
-### avx512 Feature Gating in Dispatch Macros
+### ~~avx512 Feature Gating in Dispatch Macros~~ — Fixed
 
-**Fixed (v0.9.6):** `#[autoversion]` no longer gates v4/v4x variants on `feature = "avx512"`. Scalar auto-vectorized code needs no cargo feature — the `#[target_feature]` attribute alone suffices.
+**All macros now handle avx512 correctly:**
 
-**Still gated:** `incant!` and `#[magetypes]` still wrap v4/v4x in `#[cfg(feature = "avx512")]`. This is because:
-- `#[magetypes]` generates functions that typically use `import_intrinsics`, which imports 512-bit safe memory ops from `safe_unaligned_simd` — those ARE behind `feature = "avx512"` in archmage's `src/intrinsics/generated/x86_64.rs`
-- `incant!` dispatches to user-written `_v4` functions that likely also use `import_intrinsics`
+- **`#[autoversion]`**: Always generates v4/v4x variants (scalar code + `#[target_feature]`, no safe memory ops needed). Has its own default tier list that always includes v4.
+- **`incant!`/`#[magetypes]`**: Default tier list excludes v4 when archmage lacks avx512 feature. Explicit tier lists work unconditionally — no `#[cfg(feature)]` in output.
+- **`#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` with V4 token**: Clear `compile_error!` when avx512 feature not enabled, telling user exactly what to add to Cargo.toml.
+- **`#[arcane]`/`#[rite]` without `import_intrinsics`**: Always works with any token — value intrinsics need no cargo feature.
 
-**The real problem:** The `feature = "avx512"` check refers to a cargo feature on the *calling crate*, not on archmage. Downstream crates don't (and shouldn't need to) define their own "avx512" feature. The 512-bit safe memory ops need the feature on *archmage's* dependency on `safe_unaligned_simd`, which is a build-time concern.
+**Implementation:** `avx512` feature propagated from archmage → archmage-macros. Macros check `cfg!(feature = "avx512")` at expansion time. No `#[cfg(feature)]` ever emitted in output (was checking calling crate's features — always wrong for downstream crates).
 
-**TODO:** Create calling-crate integration tests that use `incant!` and `#[arcane(import_intrinsics)]` with v4 tokens WITHOUT any "avx512" feature. Determine:
-1. Do 512-bit safe memory ops compile without the feature? (They shouldn't — the import is cfg-gated)
-2. Do v4 functions that only use value-based intrinsics (no memory ops) work without the feature?
-3. What's the minimal boilerplate to make v4+import_intrinsics work in downstream crates?
-
-Possible fix: Remove `cargo_feature` from `incant!`/`#[magetypes]` too, and instead have the `import_intrinsics` module always export 512-bit ops (archmage already depends on `safe_unaligned_simd` unconditionally — the feature only controls which re-exports are available).
+**Test crates in `tests/avx512-cfg-tests/`** verify all scenarios including every token alias, trait bounds (`impl HasX64V4`), and generics (`T: HasX64V4`).
 
 ### Long-Term
 
