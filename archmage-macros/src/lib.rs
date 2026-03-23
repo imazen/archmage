@@ -585,9 +585,7 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
     // concrete tokens (X64V4Token), trait bounds (impl HasX64V4), and generics (T: HasX64V4).
     #[cfg(not(feature = "avx512"))]
     if args.import_intrinsics && features.iter().any(|f| f.starts_with("avx512")) {
-        let token_desc = token_type_name
-            .as_deref()
-            .unwrap_or("an AVX-512 token");
+        let token_desc = token_type_name.as_deref().unwrap_or("an AVX-512 token");
         let msg = format!(
             "Using {token_desc} with `import_intrinsics` requires the `avx512` feature.\n\
              \n\
@@ -1569,9 +1567,7 @@ fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     // Check resolved features (not token name) for uniform handling of concrete/trait/generic.
     #[cfg(not(feature = "avx512"))]
     if args.import_intrinsics && features.iter().any(|f| f.starts_with("avx512")) {
-        let token_desc = _token_type_name
-            .as_deref()
-            .unwrap_or("an AVX-512 token");
+        let token_desc = _token_type_name.as_deref().unwrap_or("an AVX-512 token");
         let msg = format!(
             "Using {token_desc} with `import_intrinsics` requires the `avx512` feature.\n\
              \n\
