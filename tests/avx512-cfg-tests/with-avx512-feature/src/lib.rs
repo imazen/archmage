@@ -8,7 +8,6 @@
 //! - #[magetypes] will NOT generate _v4 variants
 //! - But #[arcane(import_intrinsics)] with X64V4Token WILL work (it doesn't use cargo_feature)
 #![deny(warnings)]
-#![allow(unexpected_cfgs)] // incant! generates #[cfg(feature = "avx512")] which this crate doesn't define
 
 use archmage::prelude::*;
 

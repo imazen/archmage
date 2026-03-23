@@ -620,10 +620,13 @@ pub(crate) const ALL_TRAIT_NAMES: &[&str] = &[
 /// Generated from token-registry.toml.
 #[cfg_attr(feature = "avx512", allow(dead_code))]
 pub(crate) fn token_requires_avx512(token_name: &str) -> bool {
-    match token_name {
-        "X64V4Token" | "Avx512Token" | "Server64" => true,
-        "X64V4xToken" | "Avx512ModernToken" => true,
-        "Avx512Fp16Token" => true,
-        _ => false,
-    }
+    matches!(
+        token_name,
+        "X64V4Token"
+            | "Avx512Token"
+            | "Server64"
+            | "X64V4xToken"
+            | "Avx512ModernToken"
+            | "Avx512Fp16Token"
+    )
 }
