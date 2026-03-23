@@ -20,7 +20,7 @@ use archmage::prelude::*;
 // ============================================================================
 
 #[autoversion]
-fn sum_squares(_token: SimdToken, data: &[f32]) -> f32 {
+pub fn sum_squares(_token: SimdToken, data: &[f32]) -> f32 {
     let mut sum = 0.0f32;
     for &x in data {
         sum += x * x;
@@ -29,7 +29,7 @@ fn sum_squares(_token: SimdToken, data: &[f32]) -> f32 {
 }
 
 #[autoversion]
-fn scale_vec(_token: SimdToken, data: &[f32], factor: f32) -> Vec<f32> {
+pub fn scale_vec(_token: SimdToken, data: &[f32], factor: f32) -> Vec<f32> {
     data.iter().map(|&x| x * factor).collect()
 }
 
@@ -38,7 +38,7 @@ fn scale_vec(_token: SimdToken, data: &[f32], factor: f32) -> Vec<f32> {
 // ============================================================================
 
 #[autoversion(v3, v4, neon)]
-fn dot_product(_token: SimdToken, a: &[f32], b: &[f32]) -> f32 {
+pub fn dot_product(_token: SimdToken, a: &[f32], b: &[f32]) -> f32 {
     let n = a.len().min(b.len());
     let mut sum = 0.0f32;
     for i in 0..n {

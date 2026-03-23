@@ -4,7 +4,7 @@
 //! safe via token proof.
 
 use proc_macro::TokenStream;
-use quote::{ToTokens, format_ident, quote};
+use quote::{ToTokens, format_ident, quote, quote_spanned};
 use syn::{
     Attribute, FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound,
     parse::{Parse, ParseStream},
@@ -2644,8 +2644,11 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             None => quote! {},
         };
 
+        // All variants are private implementation details of the dispatcher.
+        // Suppress dead_code: if the dispatcher is unused, rustc warns on IT
+        // (via quote_spanned! with the user's span). Warning on individual
+        // variants would be confusing — the user didn't write _scalar or _v3.
         if tier.name != "scalar" {
-            // Non-scalar: add #[arcane] (with _self if needed)
             let arcane_attr = if let Some(ref self_type) = args.self_type {
                 quote! { #[archmage::arcane(_self = #self_type)] }
             } else {
@@ -2653,18 +2656,11 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             };
             variants.push(quote! {
                 #cfg_guard
+                #[allow(dead_code)]
                 #arcane_attr
                 #variant_fn
             });
         } else {
-            // Scalar variant: allow(dead_code) because rustc reports scalar
-            // variants as dead when the dispatcher is private, even though they
-            // ARE called from the dispatcher. The v3/v4 variants escape this
-            // because #[arcane] re-emits them with proc-macro spans (rustc
-            // suppresses dead_code for proc-macro-generated items). The scalar
-            // variant isn't processed by #[arcane], so it keeps user-visible
-            // spans and gets flagged. This allow() prevents a confusing warning
-            // that users can't fix without making the dispatcher pub.
             variants.push(quote! {
                 #cfg_guard
                 #[allow(dead_code)]
@@ -2776,7 +2772,10 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     let generics = &input_fn.sig.generics;
     let where_clause = &generics.where_clause;
 
-    let dispatcher = quote! {
+    // Use the user's span for the dispatcher so dead_code lint fires on the
+    // function the user actually wrote, not on invisible generated variants.
+    let user_span = fn_name.span();
+    let dispatcher = quote_spanned! { user_span =>
         #(#fn_attrs)*
         #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
             '__dispatch: {
