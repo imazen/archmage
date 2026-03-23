@@ -1062,6 +1062,23 @@ These are documented semantic differences between architectures. Tests must acco
 - Possible future fix: registry-based detection or undocumented Windows APIs
 - Tracked as a known Rust std_detect limitation
 
+### avx512 Feature Gating in Dispatch Macros
+
+**Fixed (v0.9.6):** `#[autoversion]` no longer gates v4/v4x variants on `feature = "avx512"`. Scalar auto-vectorized code needs no cargo feature — the `#[target_feature]` attribute alone suffices.
+
+**Still gated:** `incant!` and `#[magetypes]` still wrap v4/v4x in `#[cfg(feature = "avx512")]`. This is because:
+- `#[magetypes]` generates functions that typically use `import_intrinsics`, which imports 512-bit safe memory ops from `safe_unaligned_simd` — those ARE behind `feature = "avx512"` in archmage's `src/intrinsics/generated/x86_64.rs`
+- `incant!` dispatches to user-written `_v4` functions that likely also use `import_intrinsics`
+
+**The real problem:** The `feature = "avx512"` check refers to a cargo feature on the *calling crate*, not on archmage. Downstream crates don't (and shouldn't need to) define their own "avx512" feature. The 512-bit safe memory ops need the feature on *archmage's* dependency on `safe_unaligned_simd`, which is a build-time concern.
+
+**TODO:** Create calling-crate integration tests that use `incant!` and `#[arcane(import_intrinsics)]` with v4 tokens WITHOUT any "avx512" feature. Determine:
+1. Do 512-bit safe memory ops compile without the feature? (They shouldn't — the import is cfg-gated)
+2. Do v4 functions that only use value-based intrinsics (no memory ops) work without the feature?
+3. What's the minimal boilerplate to make v4+import_intrinsics work in downstream crates?
+
+Possible fix: Remove `cargo_feature` from `incant!`/`#[magetypes]` too, and instead have the `import_intrinsics` module always export 512-bit ops (archmage already depends on `safe_unaligned_simd` unconditionally — the feature only controls which re-exports are available).
+
 ### Long-Term
 
 - **v1.0: Require `scalar` in explicit `incant!` tier lists.** Flip `REQUIRE_EXPLICIT_SCALAR` to `true` in `archmage-macros/src/lib.rs`. Re-enable the `scalar_not_in_tier_list` compile-fail test in `tests/compile_fail.rs`. Currently `scalar` is auto-appended for backwards compatibility; all our own code already includes it explicitly.
