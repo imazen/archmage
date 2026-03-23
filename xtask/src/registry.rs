@@ -471,8 +471,6 @@ impl Registry {
         out.push('\n');
         self.gen_all_trait_names(&mut out);
         out.push('\n');
-        self.gen_token_requires_avx512(&mut out);
-        out.push('\n');
 
         out
     }

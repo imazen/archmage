@@ -1,0 +1,16 @@
+[package]
+name = "avx512-cfg-test-all-forms"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+# archmage WITHOUT avx512. Tests that every way of spelling a V4 token
+# gets the clear compile_error when used with import_intrinsics.
+# Each function is gated behind a cfg(test_*) that will never be true,
+# so we can selectively compile them one at a time to verify each error.
+
+[dependencies]
+archmage = { path = "../../.." }
+
+[workspace]

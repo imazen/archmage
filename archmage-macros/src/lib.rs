@@ -195,8 +195,6 @@ use generated::{
     canonical_token_to_tier_suffix, tier_to_canonical_token, token_to_arch, token_to_features,
     token_to_magetypes_namespace, trait_to_arch, trait_to_features, trait_to_magetypes_namespace,
 };
-#[cfg(not(feature = "avx512"))]
-use generated::token_requires_avx512;
 
 /// Result of extracting token info from a type.
 enum TokenTypeInfo {
@@ -578,28 +576,30 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
         }
     };
 
-    // Check: import_intrinsics with a V4/V4x/FP16 token requires the avx512 feature
+    // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature
     // on archmage (propagated to archmage-macros). Without it, 512-bit safe memory ops
     // from safe_unaligned_simd are not available, and _mm512_loadu_ps etc. would resolve
     // to the unsafe core::arch versions (taking raw pointers instead of references).
+    //
+    // We check the resolved features (not the token name) so this works uniformly for
+    // concrete tokens (X64V4Token), trait bounds (impl HasX64V4), and generics (T: HasX64V4).
     #[cfg(not(feature = "avx512"))]
-    if args.import_intrinsics {
-        if let Some(ref name) = token_type_name {
-            if token_requires_avx512(name) {
-                let msg = format!(
-                    "Using {name} with `import_intrinsics` requires the `avx512` feature.\n\
-                     \n\
-                     Add to your Cargo.toml:\n\
-                     \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
-                     \n\
-                     Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
-                     If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
-                );
-                return syn::Error::new_spanned(&input_fn.sig, msg)
-                    .to_compile_error()
-                    .into();
-            }
-        }
+    if args.import_intrinsics && features.iter().any(|f| f.starts_with("avx512")) {
+        let token_desc = token_type_name
+            .as_deref()
+            .unwrap_or("an AVX-512 token");
+        let msg = format!(
+            "Using {token_desc} with `import_intrinsics` requires the `avx512` feature.\n\
+             \n\
+             Add to your Cargo.toml:\n\
+             \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
+             \n\
+             Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
+             If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
+        );
+        return syn::Error::new_spanned(&input_fn.sig, msg)
+            .to_compile_error()
+            .into();
     }
 
     // Prepend import statements to body if requested
@@ -1565,25 +1565,25 @@ fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
         }
     };
 
-    // Check: import_intrinsics with a V4/V4x/FP16 token requires the avx512 feature
+    // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature.
+    // Check resolved features (not token name) for uniform handling of concrete/trait/generic.
     #[cfg(not(feature = "avx512"))]
-    if args.import_intrinsics {
-        if let Some(ref name) = _token_type_name {
-            if token_requires_avx512(name) {
-                let msg = format!(
-                    "Using {name} with `import_intrinsics` requires the `avx512` feature.\n\
-                     \n\
-                     Add to your Cargo.toml:\n\
-                     \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
-                     \n\
-                     Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
-                     If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
-                );
-                return syn::Error::new_spanned(&input_fn.sig, msg)
-                    .to_compile_error()
-                    .into();
-            }
-        }
+    if args.import_intrinsics && features.iter().any(|f| f.starts_with("avx512")) {
+        let token_desc = _token_type_name
+            .as_deref()
+            .unwrap_or("an AVX-512 token");
+        let msg = format!(
+            "Using {token_desc} with `import_intrinsics` requires the `avx512` feature.\n\
+             \n\
+             Add to your Cargo.toml:\n\
+             \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
+             \n\
+             Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
+             If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
+        );
+        return syn::Error::new_spanned(&input_fn.sig, msg)
+            .to_compile_error()
+            .into();
     }
 
     // Build target_feature attributes
@@ -1683,9 +1683,9 @@ fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
         let target_arch = token_to_arch(tier_token);
         let magetypes_namespace = token_to_magetypes_namespace(tier_token);
 
-        // Check: import_intrinsics with avx512 tokens requires the feature
+        // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature.
         #[cfg(not(feature = "avx512"))]
-        if args.import_intrinsics && token_requires_avx512(tier_token) {
+        if args.import_intrinsics && features.iter().any(|f| f.starts_with("avx512")) {
             let msg = format!(
                 "Using {tier_token} with `import_intrinsics` requires the `avx512` feature.\n\
                  \n\
