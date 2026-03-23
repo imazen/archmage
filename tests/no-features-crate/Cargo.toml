@@ -1,0 +1,14 @@
+[package]
+name = "archmage-no-features-test"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+# This crate exists to catch silent code elimination bugs.
+# It depends on archmage with NO feature flags — no "avx512", no "std".
+# All macros must generate valid, reachable code in this configuration.
+# Compiled with deny(warnings) to catch dead code, unreachable patterns, etc.
+
+[dependencies]
+archmage = { path = "../.." }

@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "archmage-macros", "magetypes", "xtask"]
+members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crate"]
 
 [package]
 name = "archmage"

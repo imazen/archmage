@@ -601,16 +601,17 @@ CI checks (all must pass):
 7. `cargo clippy -p magetypes` (default features) — zero warnings
 8. `cargo test --features "std avx512"` — all tests pass
 9. **no_std compilation + tests** — archmage and magetypes build and test without `std`
-10. `cargo fmt --check` — code is formatted
-11. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
-12. Miri UB detection (skipped if not installed)
-13. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
-14. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
-15. **ARM64 clippy** (requires `cross` + Docker)
+10. **No-features integration test** — `archmage-no-features-test` crate (zero features, `deny(warnings)`)
+11. `cargo fmt --check` — code is formatted
+12. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
+13. Miri UB detection (skipped if not installed)
+14. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
+15. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
+16. **ARM64 clippy** (requires `cross` + Docker)
 
 **Note:** Parity check reports 0 issues. All W128 types have identical APIs across x86/ARM/WASM.
 
-**Note:** Steps 11-13 require cross-compilation tooling. If `cross`/Docker/`wasmtime` are unavailable, they are skipped with warnings. For full coverage before publish, install the tooling:
+**Note:** Steps 12-14 require cross-compilation tooling. If `cross`/Docker/`wasmtime` are unavailable, they are skipped with warnings. For full coverage before publish, install the tooling:
 ```bash
 cargo install cross --git https://github.com/cross-rs/cross  # ARM64 testing
 curl https://wasmtime.dev/install.sh -sSf | bash              # WASM testing

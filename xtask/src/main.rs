@@ -2047,7 +2047,7 @@ fn run_ci() -> Result<()> {
     println!("╚══════════════════════════════════════════════════════════════════╝\n");
 
     // Step 1: Generate all code
-    println!("┌─ Step 1/16: Regenerating code ─────────────────────────────────────┐");
+    println!("┌─ Step 1/17: Regenerating code ─────────────────────────────────────┐");
     generate_all()?;
     println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
 
@@ -2065,7 +2065,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Formatting complete ──────────────────────────────────────────────┘\n");
 
     // Step 2: Check for clean worktree
-    println!("┌─ Step 2/16: Checking for uncommitted changes ──────────────────────┐");
+    println!("┌─ Step 2/17: Checking for uncommitted changes ──────────────────────┐");
     let status = std::process::Command::new("git")
         .args(["status", "--porcelain"])
         .output()
@@ -2084,27 +2084,27 @@ fn run_ci() -> Result<()> {
     println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
 
     // Step 3-4: Validation (already done in generate_all, but let's be explicit)
-    println!("┌─ Step 3/16: Validating magetypes safety ────────────────────────────┐");
+    println!("┌─ Step 3/17: Validating magetypes safety ────────────────────────────┐");
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
     validate_magetypes_with_registry(&reg)?;
     println!("└─ Magetypes validation passed ──────────────────────────────────────┘\n");
 
-    println!("┌─ Step 4/16: Validating summon() features ──────────────────────────┐");
+    println!("┌─ Step 4/17: Validating summon() features ──────────────────────────┐");
     validate_summon(&reg)?;
     println!("└─ summon() validation passed ──────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
-    println!("┌─ Step 5/16: Checking API parity (strict) ──────────────────────────┐");
+    println!("┌─ Step 5/17: Checking API parity (strict) ──────────────────────────┐");
     check_api_parity(true)?;
     println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
 
     // Step 6: Soundness verification
-    println!("┌─ Step 6/16: Verifying intrinsic soundness ─────────────────────────┐");
+    println!("┌─ Step 6/17: Verifying intrinsic soundness ─────────────────────────┐");
     verify_intrinsic_soundness()?;
     println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
 
     // Step 7: Clippy
-    println!("┌─ Step 7/16: Running clippy ────────────────────────────────────────┐");
+    println!("┌─ Step 7/17: Running clippy ────────────────────────────────────────┐");
     let clippy = std::process::Command::new("cargo")
         .args(["clippy", "--features", "std avx512", "--", "-D", "warnings"])
         .status()
@@ -2116,7 +2116,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Clippy check passed ──────────────────────────────────────────────┘\n");
 
     // Step 8: Clippy with default features (catches warnings hidden by avx512)
-    println!("┌─ Step 8/16: Running clippy (default features) ─────────────────────┐");
+    println!("┌─ Step 8/17: Running clippy (default features) ─────────────────────┐");
     let clippy_default = std::process::Command::new("cargo")
         .args(["clippy", "-p", "magetypes", "--", "-D", "warnings"])
         .status()
@@ -2128,7 +2128,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Clippy check passed (default features) ───────────────────────────┘\n");
 
     // Step 9: Tests
-    println!("┌─ Step 9/16: Running tests ─────────────────────────────────────────┐");
+    println!("┌─ Step 9/17: Running tests ─────────────────────────────────────────┐");
     let tests = std::process::Command::new("cargo")
         .args(["test", "--features", "std avx512"])
         .status()
@@ -2139,7 +2139,7 @@ fn run_ci() -> Result<()> {
     println!("└─ All tests passed ─────────────────────────────────────────────────┘\n");
 
     // Step 10: no_std compilation and tests
-    println!("┌─ Step 10/16: no_std compilation + tests ─────────────────────────────┐");
+    println!("┌─ Step 10/17: no_std compilation + tests ─────────────────────────────┐");
     // Check archmage compiles under no_std (with macros)
     let nostd_check = std::process::Command::new("cargo")
         .args([
@@ -2236,8 +2236,25 @@ fn run_ci() -> Result<()> {
     }
     println!("└─ no_std checks passed ───────────────────────────────────────────────┘\n");
 
-    // Step 11: Format check
-    println!("┌─ Step 11/16: Checking code formatting ──────────────────────────────┐");
+    // Step 11: No-features integration test (catches silent cfg elimination)
+    println!("┌─ Step 11/17: No-features integration test ─────────────────────────┐");
+    let no_features = std::process::Command::new("cargo")
+        .args(["test", "-p", "archmage-no-features-test"])
+        .status()
+        .context("Failed to test archmage-no-features-test")?;
+    if !no_features.success() {
+        bail!(
+            "No-features integration test failed.\n\
+             This crate exercises dispatch macros (#[autoversion], incant!) \
+             with zero cargo features enabled — catching silent code \
+             elimination from #[cfg(feature = ...)] guards."
+        );
+    }
+    println!("  ✓ No-features integration test passed");
+    println!("└─ No-features test passed ──────────────────────────────────────────┘\n");
+
+    // Step 12: Format check
+    println!("┌─ Step 12/17: Checking code formatting ──────────────────────────────┐");
     let fmt = std::process::Command::new("cargo")
         .args(["fmt", "--", "--check"])
         .status()
@@ -2249,7 +2266,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Format check passed ──────────────────────────────────────────────┘\n");
 
     // Step 12: Documentation build (catches broken doc links)
-    println!("┌─ Step 12/16: Building documentation ────────────────────────────────┐");
+    println!("┌─ Step 13/17: Building documentation ────────────────────────────────┐");
     let doc = std::process::Command::new("cargo")
         .args(["doc", "--features", "std avx512", "--no-deps"])
         .env("RUSTDOCFLAGS", "-Dwarnings")
@@ -2262,7 +2279,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Documentation check passed ─────────────────────────────────────────┘\n");
 
     // Step 13: Miri testing (UB detection)
-    println!("┌─ Step 13/16: Running Miri (UB detection) ──────────────────────────┐");
+    println!("┌─ Step 14/17: Running Miri (UB detection) ──────────────────────────┐");
     // Check if Miri is available
     let miri_available = std::process::Command::new("cargo")
         .args(["+nightly", "miri", "--version"])
@@ -2294,7 +2311,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
 
     // Step 14: ARM64 cross-compilation + tests
-    println!("┌─ Step 14/16: ARM64 cross-compilation + tests ───────────────────┐");
+    println!("┌─ Step 15/17: ARM64 cross-compilation + tests ───────────────────┐");
     let cross_ok = std::process::Command::new("cross")
         .arg("--version")
         .output()
@@ -2337,7 +2354,7 @@ fn run_ci() -> Result<()> {
     println!("└─ ARM64 cross-compilation complete ───────────────────────────────┘\n");
 
     // Step 15: WASM cross-compilation + tests
-    println!("┌─ Step 15/16: WASM cross-compilation + tests ───────────────────┐");
+    println!("┌─ Step 16/17: WASM cross-compilation + tests ───────────────────┐");
     let wasmtime_ok = std::process::Command::new("wasmtime")
         .arg("--version")
         .output()
@@ -2382,7 +2399,7 @@ fn run_ci() -> Result<()> {
     println!("└─ WASM cross-compilation complete ───────────────────────────────┘\n");
 
     // Step 16: ARM64 clippy
-    println!("┌─ Step 16/16: ARM64 clippy ─────────────────────────────────────┐");
+    println!("┌─ Step 17/17: ARM64 clippy ─────────────────────────────────────┐");
     if cross_ok && docker_ok {
         let arm_clippy = std::process::Command::new("cargo")
             .args([

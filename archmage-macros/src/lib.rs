@@ -2657,8 +2657,11 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
                 #variant_fn
             });
         } else {
+            // Scalar variant: allow(dead_code) because the compiler can't see
+            // through the labeled-block dispatch pattern that calls this.
             variants.push(quote! {
                 #cfg_guard
+                #[allow(dead_code)]
                 #variant_fn
             });
         }
