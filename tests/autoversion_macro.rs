@@ -46,6 +46,21 @@ fn v3_variant_works() {
     }
 }
 
+/// Verify that v4 variant is generated and callable even without the `avx512`
+/// cargo feature. Before the fix, `#[autoversion]` wrapped v4 variants in
+/// `#[cfg(feature = "avx512")]`, silently eliminating them in downstream crates.
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn v4_variant_exists_without_avx512_feature() {
+    if let Some(token) = X64V4Token::summon() {
+        let data = [1.0f32, 2.0, 3.0, 4.0];
+        let result = sum_of_squares_v4(token, &data);
+        assert!((result - 30.0).abs() < 1e-6, "v4: {result}");
+    }
+    // If X64V4Token::summon() returns None, the CPU doesn't support AVX-512
+    // — that's fine, the point is that the function EXISTS and compiles.
+}
+
 // ============================================================================
 // Explicit tiers
 // ============================================================================

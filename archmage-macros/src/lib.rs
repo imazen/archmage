@@ -2632,14 +2632,16 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             variant_fn.body = quote!(let _self = self; #original_body);
         }
 
-        // cfg guard
-        let cfg_guard = match (tier.target_arch, tier.cargo_feature) {
-            (Some(arch), Some(feature)) => {
-                quote! { #[cfg(all(target_arch = #arch, feature = #feature))] }
-            }
-            (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
-            (None, Some(feature)) => quote! { #[cfg(feature = #feature)] },
-            (None, None) => quote! {},
+        // cfg guard — arch only, no cargo_feature.
+        //
+        // #[autoversion] generates scalar code compiled with #[target_feature]
+        // via #[arcane]. It never uses import_intrinsics or 512-bit safe memory
+        // ops, so the avx512 cargo feature is irrelevant. Gating on it would
+        // silently eliminate v4/v4x variants in crates that don't define an
+        // "avx512" feature — which is every crate except archmage itself.
+        let cfg_guard = match tier.target_arch {
+            Some(arch) => quote! { #[cfg(target_arch = #arch)] },
+            None => quote! {},
         };
 
         if tier.name != "scalar" {
@@ -2730,20 +2732,12 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
                 quote! { #suffixed #turbofish(__t, #(#dispatch_args),*) }
             };
 
-            let check = quote! {
+            // No cargo_feature guard — same rationale as variant cfg guards above.
+            tier_checks.push(quote! {
                 if let Some(__t) = #token_path::summon() {
                     break '__dispatch #call;
                 }
-            };
-
-            if let Some(feat) = tier.cargo_feature {
-                tier_checks.push(quote! {
-                    #[cfg(feature = #feat)]
-                    { #check }
-                });
-            } else {
-                tier_checks.push(check);
-            }
+            });
         }
 
         let inner = quote! { #(#tier_checks)* };
