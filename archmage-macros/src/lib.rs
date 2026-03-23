@@ -2657,8 +2657,14 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
                 #variant_fn
             });
         } else {
-            // Scalar variant: allow(dead_code) because the compiler can't see
-            // through the labeled-block dispatch pattern that calls this.
+            // Scalar variant: allow(dead_code) because rustc reports scalar
+            // variants as dead when the dispatcher is private, even though they
+            // ARE called from the dispatcher. The v3/v4 variants escape this
+            // because #[arcane] re-emits them with proc-macro spans (rustc
+            // suppresses dead_code for proc-macro-generated items). The scalar
+            // variant isn't processed by #[arcane], so it keeps user-visible
+            // spans and gets flagged. This allow() prevents a confusing warning
+            // that users can't fix without making the dispatcher pub.
             variants.push(quote! {
                 #cfg_guard
                 #[allow(dead_code)]
