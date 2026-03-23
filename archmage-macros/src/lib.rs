@@ -195,6 +195,8 @@ use generated::{
     canonical_token_to_tier_suffix, tier_to_canonical_token, token_to_arch, token_to_features,
     token_to_magetypes_namespace, trait_to_arch, trait_to_features, trait_to_magetypes_namespace,
 };
+#[cfg(not(feature = "avx512"))]
+use generated::token_requires_avx512;
 
 /// Result of extracting token info from a type.
 enum TokenTypeInfo {
@@ -575,6 +577,30 @@ fn arcane_impl(mut input_fn: LightFn, macro_name: &str, args: ArcaneArgs) -> Tok
                 .into();
         }
     };
+
+    // Check: import_intrinsics with a V4/V4x/FP16 token requires the avx512 feature
+    // on archmage (propagated to archmage-macros). Without it, 512-bit safe memory ops
+    // from safe_unaligned_simd are not available, and _mm512_loadu_ps etc. would resolve
+    // to the unsafe core::arch versions (taking raw pointers instead of references).
+    #[cfg(not(feature = "avx512"))]
+    if args.import_intrinsics {
+        if let Some(ref name) = token_type_name {
+            if token_requires_avx512(name) {
+                let msg = format!(
+                    "Using {name} with `import_intrinsics` requires the `avx512` feature.\n\
+                     \n\
+                     Add to your Cargo.toml:\n\
+                     \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
+                     \n\
+                     Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
+                     If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
+                );
+                return syn::Error::new_spanned(&input_fn.sig, msg)
+                    .to_compile_error()
+                    .into();
+            }
+        }
+    }
 
     // Prepend import statements to body if requested
     let body_imports = generate_imports(
@@ -1488,6 +1514,7 @@ fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     let TokenParamInfo {
         features,
         target_arch,
+        token_type_name: _token_type_name,
         magetypes_namespace,
         ..
     } = if let Some(tier_token) = args.tier_tokens.first() {
@@ -1537,6 +1564,27 @@ fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
             }
         }
     };
+
+    // Check: import_intrinsics with a V4/V4x/FP16 token requires the avx512 feature
+    #[cfg(not(feature = "avx512"))]
+    if args.import_intrinsics {
+        if let Some(ref name) = _token_type_name {
+            if token_requires_avx512(name) {
+                let msg = format!(
+                    "Using {name} with `import_intrinsics` requires the `avx512` feature.\n\
+                     \n\
+                     Add to your Cargo.toml:\n\
+                     \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
+                     \n\
+                     Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
+                     If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
+                );
+                return syn::Error::new_spanned(&input_fn.sig, msg)
+                    .to_compile_error()
+                    .into();
+            }
+        }
+    }
 
     // Build target_feature attributes
     let target_feature_attrs: Vec<Attribute> = features
@@ -1634,6 +1682,24 @@ fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
         };
         let target_arch = token_to_arch(tier_token);
         let magetypes_namespace = token_to_magetypes_namespace(tier_token);
+
+        // Check: import_intrinsics with avx512 tokens requires the feature
+        #[cfg(not(feature = "avx512"))]
+        if args.import_intrinsics && token_requires_avx512(tier_token) {
+            let msg = format!(
+                "Using {tier_token} with `import_intrinsics` requires the `avx512` feature.\n\
+                 \n\
+                 Add to your Cargo.toml:\n\
+                 \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
+                 \n\
+                 Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
+                 If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
+            );
+            return syn::Error::new_spanned(&input_fn.sig, msg)
+                .to_compile_error()
+                .into();
+        }
+
         let suffix = canonical_token_to_tier_suffix(tier_token)
             .expect("canonical token must have a tier suffix");
 
