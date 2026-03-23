@@ -146,6 +146,88 @@ mod _type_aliases {
     #[cfg(target_arch = "x86_64")]
     pub type u64x4 = super::generic::u64x4<archmage::X64V3Token>;
 
+    // ======== AArch64 NEON type aliases (generic, backed by NEON intrinsics) ========
+
+    /// 4-lane f32 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type f32x4 = super::generic::f32x4<archmage::NeonToken>;
+
+    /// 8-lane f32 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type f32x8 = super::generic::f32x8<archmage::NeonToken>;
+
+    /// 2-lane f64 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type f64x2 = super::generic::f64x2<archmage::NeonToken>;
+
+    /// 4-lane f64 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type f64x4 = super::generic::f64x4<archmage::NeonToken>;
+
+    /// 4-lane i32 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type i32x4 = super::generic::i32x4<archmage::NeonToken>;
+
+    /// 8-lane i32 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type i32x8 = super::generic::i32x8<archmage::NeonToken>;
+
+    /// 4-lane u32 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type u32x4 = super::generic::u32x4<archmage::NeonToken>;
+
+    /// 8-lane u32 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type u32x8 = super::generic::u32x8<archmage::NeonToken>;
+
+    /// 2-lane i64 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type i64x2 = super::generic::i64x2<archmage::NeonToken>;
+
+    /// 4-lane i64 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type i64x4 = super::generic::i64x4<archmage::NeonToken>;
+
+    /// 16-lane i8 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type i8x16 = super::generic::i8x16<archmage::NeonToken>;
+
+    /// 32-lane i8 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type i8x32 = super::generic::i8x32<archmage::NeonToken>;
+
+    /// 16-lane u8 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type u8x16 = super::generic::u8x16<archmage::NeonToken>;
+
+    /// 32-lane u8 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type u8x32 = super::generic::u8x32<archmage::NeonToken>;
+
+    /// 8-lane i16 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type i16x8 = super::generic::i16x8<archmage::NeonToken>;
+
+    /// 16-lane i16 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type i16x16 = super::generic::i16x16<archmage::NeonToken>;
+
+    /// 8-lane u16 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type u16x8 = super::generic::u16x8<archmage::NeonToken>;
+
+    /// 16-lane u16 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type u16x16 = super::generic::u16x16<archmage::NeonToken>;
+
+    /// 2-lane u64 SIMD vector (NEON native 128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type u64x2 = super::generic::u64x2<archmage::NeonToken>;
+
+    /// 4-lane u64 SIMD vector (NEON polyfill via 2×128-bit).
+    #[cfg(target_arch = "aarch64")]
+    pub type u64x4 = super::generic::u64x4<archmage::NeonToken>;
+
     // ======== 512-bit types (V3 polyfill: 2×256-bit) ========
 
     /// 16-lane f32 SIMD vector (generic, V3 polyfill via 2×f32x8).

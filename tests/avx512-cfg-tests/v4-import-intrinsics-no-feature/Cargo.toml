@@ -1,0 +1,20 @@
+[package]
+name = "avx512-cfg-test-import-no-feature"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+# archmage WITHOUT avx512. Uses #[arcane(import_intrinsics)] with V4 token
+# and calls _mm512_loadu_ps (a memory op).
+#
+# Expected: _mm512_loadu_ps resolves to core::arch version (unsafe, takes *const f32)
+# instead of safe_unaligned_simd version (safe, takes &[f32; 16]).
+# Passing a reference should cause a type mismatch compile error.
+#
+# This test is expected to FAIL to compile — it documents the error the user gets.
+
+[dependencies]
+archmage = { path = "../../.." }
+
+[workspace]

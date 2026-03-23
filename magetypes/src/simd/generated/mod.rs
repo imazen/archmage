@@ -278,10 +278,11 @@ pub mod wasm {
 // generic::<T> versions. Old concrete types remain at original paths
 // (e.g., simd::generated::x86::w128::i8x16) for migration.
 
-#[cfg(target_arch = "aarch64")]
-pub use arm::w128::*;
-#[cfg(target_arch = "aarch64")]
-pub use polyfill::neon::*;
+// On aarch64, types are now provided as generic type aliases from simd/mod.rs
+// (via _type_aliases), so we no longer re-export old polyfill types here.
+// Old concrete types remain accessible at their full paths:
+//   simd::generated::arm::w128::f32x4 (old NEON w128 type)
+//   simd::generated::polyfill::neon::f32x8 (old polyfill type)
 
 #[cfg(target_arch = "wasm32")]
 pub use polyfill::wasm128::*;
@@ -499,18 +500,39 @@ pub mod neon {
     //! All take `NeonToken`.
 
     #[cfg(target_arch = "aarch64")]
-    pub use super::arm::w128::{
+    #[allow(non_camel_case_types)]
+    mod _neon_aliases {
+        // 128-bit native types
+        pub type f32x4 = crate::simd::generic::f32x4<archmage::NeonToken>;
+        pub type f64x2 = crate::simd::generic::f64x2<archmage::NeonToken>;
+        pub type i8x16 = crate::simd::generic::i8x16<archmage::NeonToken>;
+        pub type u8x16 = crate::simd::generic::u8x16<archmage::NeonToken>;
+        pub type i16x8 = crate::simd::generic::i16x8<archmage::NeonToken>;
+        pub type u16x8 = crate::simd::generic::u16x8<archmage::NeonToken>;
+        pub type i32x4 = crate::simd::generic::i32x4<archmage::NeonToken>;
+        pub type u32x4 = crate::simd::generic::u32x4<archmage::NeonToken>;
+        pub type i64x2 = crate::simd::generic::i64x2<archmage::NeonToken>;
+        pub type u64x2 = crate::simd::generic::u64x2<archmage::NeonToken>;
+        // 256-bit polyfilled types (2x128-bit NEON)
+        pub type f32x8 = crate::simd::generic::f32x8<archmage::NeonToken>;
+        pub type f64x4 = crate::simd::generic::f64x4<archmage::NeonToken>;
+        pub type i8x32 = crate::simd::generic::i8x32<archmage::NeonToken>;
+        pub type u8x32 = crate::simd::generic::u8x32<archmage::NeonToken>;
+        pub type i16x16 = crate::simd::generic::i16x16<archmage::NeonToken>;
+        pub type u16x16 = crate::simd::generic::u16x16<archmage::NeonToken>;
+        pub type i32x8 = crate::simd::generic::i32x8<archmage::NeonToken>;
+        pub type u32x8 = crate::simd::generic::u32x8<archmage::NeonToken>;
+        pub type i64x4 = crate::simd::generic::i64x4<archmage::NeonToken>;
+        pub type u64x4 = crate::simd::generic::u64x4<archmage::NeonToken>;
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    pub use _neon_aliases::*;
+
+    #[cfg(target_arch = "aarch64")]
+    pub use _neon_aliases::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
         i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
-    };
-
-    #[cfg(target_arch = "aarch64")]
-    pub use super::arm::w128::*;
-
-    // 256-bit polyfilled types (2×128-bit NEON, same NeonToken)
-    #[cfg(target_arch = "aarch64")]
-    pub use super::polyfill::neon::{
-        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
     };
 
     /// Token type for this width level

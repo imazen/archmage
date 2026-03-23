@@ -1,0 +1,15 @@
+[package]
+name = "avx512-cfg-test-no-import"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+# archmage WITHOUT avx512. V4 code uses only value intrinsics (no memory ops).
+# Tests whether #[arcane] (without import_intrinsics) works for V4 tokens.
+# Expected: compiles and runs fine — #[target_feature] enables value intrinsics.
+
+[dependencies]
+archmage = { path = "../../.." }
+
+[workspace]

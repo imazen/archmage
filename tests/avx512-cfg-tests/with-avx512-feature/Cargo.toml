@@ -1,0 +1,16 @@
+[package]
+name = "avx512-cfg-test-with-feature"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+# archmage has avx512 enabled, but THIS crate does NOT define an "avx512" feature.
+# Tests whether incant!/magetypes v4 dispatch works in this configuration.
+# Expected: v4 dispatch arms are dead code because #[cfg(feature = "avx512")]
+# in proc-macro output checks THIS crate's features, not archmage's.
+
+[dependencies]
+archmage = { path = "../../..", features = ["avx512"] }
+
+[workspace]

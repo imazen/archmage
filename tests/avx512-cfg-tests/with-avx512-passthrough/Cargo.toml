@@ -1,0 +1,18 @@
+[package]
+name = "avx512-cfg-test-passthrough"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+# This crate defines its OWN "avx512" feature that propagates to archmage.
+# Tests whether incant! v4 dispatch works when the calling crate has the feature.
+# Expected: v4 dispatch works when built with --features avx512.
+
+[features]
+avx512 = ["archmage/avx512"]
+
+[dependencies]
+archmage = { path = "../../.." }
+
+[workspace]
