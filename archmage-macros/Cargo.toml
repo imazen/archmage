@@ -17,6 +17,13 @@ include = [
 [lib]
 proc-macro = true
 
+[features]
+# When enabled, #[arcane(import_intrinsics)] and #[rite(import_intrinsics)] allow
+# V4/V4x/FP16 tokens (512-bit safe memory ops are available from safe_unaligned_simd).
+# Also adds v4/v4x to the default tier list for incant!/magetypes.
+# Propagated from archmage's own avx512 feature.
+avx512 = []
+
 [dependencies]
 syn = { version = "2.0", features = ["full", "parsing", "printing"] }
 quote = "1.0"

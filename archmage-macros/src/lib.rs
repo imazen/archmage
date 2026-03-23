@@ -1835,20 +1835,10 @@ fn magetypes_impl(mut input_fn: LightFn, tiers: &[&TierDescriptor]) -> TokenStre
             }
         };
 
-        // Add cfg guards
-        let cfg_guard = match (tier.target_arch, tier.cargo_feature) {
-            (Some(arch), Some(feature)) => {
-                quote! { #[cfg(all(target_arch = #arch, feature = #feature))] }
-            }
-            (Some(arch), None) => {
-                quote! { #[cfg(target_arch = #arch)] }
-            }
-            (None, Some(feature)) => {
-                quote! { #[cfg(feature = #feature)] }
-            }
-            (None, None) => {
-                quote! {} // No guard needed (scalar)
-            }
+        // Add cfg guard (arch only — no cargo feature checks in output)
+        let cfg_guard = match tier.target_arch {
+            Some(arch) => quote! { #[cfg(target_arch = #arch)] },
+            None => quote! {},
         };
 
         variants.push(if tier.name != "scalar" {
@@ -1900,8 +1890,6 @@ struct TierDescriptor {
     as_method: &'static str,
     /// Target architecture for cfg guard (None = no guard)
     target_arch: Option<&'static str>,
-    /// Required cargo feature (None = no feature guard)
-    cargo_feature: Option<&'static str>,
     /// Dispatch priority (higher = tried first within same arch)
     priority: u32,
 }
@@ -1915,7 +1903,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64V4xToken",
         as_method: "as_x64v4x",
         target_arch: Some("x86_64"),
-        cargo_feature: Some("avx512"),
+
         priority: 50,
     },
     TierDescriptor {
@@ -1924,7 +1912,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64V4Token",
         as_method: "as_x64v4",
         target_arch: Some("x86_64"),
-        cargo_feature: Some("avx512"),
+
         priority: 40,
     },
     TierDescriptor {
@@ -1933,7 +1921,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64V3CryptoToken",
         as_method: "as_x64v3_crypto",
         target_arch: Some("x86_64"),
-        cargo_feature: None,
+
         priority: 35,
     },
     TierDescriptor {
@@ -1942,7 +1930,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64V3Token",
         as_method: "as_x64v3",
         target_arch: Some("x86_64"),
-        cargo_feature: None,
+
         priority: 30,
     },
     TierDescriptor {
@@ -1951,7 +1939,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64CryptoToken",
         as_method: "as_x64_crypto",
         target_arch: Some("x86_64"),
-        cargo_feature: None,
+
         priority: 25,
     },
     TierDescriptor {
@@ -1960,7 +1948,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64V2Token",
         as_method: "as_x64v2",
         target_arch: Some("x86_64"),
-        cargo_feature: None,
+
         priority: 20,
     },
     TierDescriptor {
@@ -1969,7 +1957,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64V1Token",
         as_method: "as_x64v1",
         target_arch: Some("x86_64"),
-        cargo_feature: None,
+
         priority: 10,
     },
     // ARM: highest to lowest
@@ -1979,7 +1967,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::Arm64V3Token",
         as_method: "as_arm_v3",
         target_arch: Some("aarch64"),
-        cargo_feature: None,
+
         priority: 50,
     },
     TierDescriptor {
@@ -1988,7 +1976,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::Arm64V2Token",
         as_method: "as_arm_v2",
         target_arch: Some("aarch64"),
-        cargo_feature: None,
+
         priority: 40,
     },
     TierDescriptor {
@@ -1997,7 +1985,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::NeonAesToken",
         as_method: "as_neon_aes",
         target_arch: Some("aarch64"),
-        cargo_feature: None,
+
         priority: 30,
     },
     TierDescriptor {
@@ -2006,7 +1994,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::NeonSha3Token",
         as_method: "as_neon_sha3",
         target_arch: Some("aarch64"),
-        cargo_feature: None,
+
         priority: 30,
     },
     TierDescriptor {
@@ -2015,7 +2003,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::NeonCrcToken",
         as_method: "as_neon_crc",
         target_arch: Some("aarch64"),
-        cargo_feature: None,
+
         priority: 30,
     },
     TierDescriptor {
@@ -2024,7 +2012,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::NeonToken",
         as_method: "as_neon",
         target_arch: Some("aarch64"),
-        cargo_feature: None,
+
         priority: 20,
     },
     // WASM
@@ -2034,7 +2022,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::Wasm128RelaxedToken",
         as_method: "as_wasm128_relaxed",
         target_arch: Some("wasm32"),
-        cargo_feature: None,
+
         priority: 21,
     },
     TierDescriptor {
@@ -2043,7 +2031,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::Wasm128Token",
         as_method: "as_wasm128",
         target_arch: Some("wasm32"),
-        cargo_feature: None,
+
         priority: 20,
     },
     // Scalar (always last)
@@ -2053,13 +2041,25 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::ScalarToken",
         as_method: "as_scalar",
         target_arch: None,
-        cargo_feature: None,
+
         priority: 0,
     },
 ];
 
-/// Default tiers (backwards-compatible with pre-explicit behavior).
+/// Default tiers for `incant!` and `#[magetypes]`.
+///
+/// Without the `avx512` feature, v4/v4x are excluded from defaults because most
+/// users won't have written `_v4` functions. With avx512, v4 is included since
+/// safe 512-bit memory ops are available for `import_intrinsics`.
+#[cfg(feature = "avx512")]
 const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
+#[cfg(not(feature = "avx512"))]
+const DEFAULT_TIER_NAMES: &[&str] = &["v3", "neon", "wasm128", "scalar"];
+
+/// Default tiers for `#[autoversion]`. Always includes v4 because autoversion
+/// generates scalar code compiled with `#[target_feature]` — no safe memory ops
+/// needed, no `import_intrinsics`, so the `avx512` feature is irrelevant.
+const AUTOVERSION_DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
 
 /// Whether `incant!` requires `scalar` in explicit tier lists.
 /// Currently false for backwards compatibility. Flip to true in v1.0.
@@ -2331,21 +2331,20 @@ fn gen_incant_passthrough(
 ) -> TokenStream {
     let mut dispatch_arms = Vec::new();
 
-    // Group non-scalar tiers by (target_arch, cargo_feature) for nested cfg blocks
-    let mut arch_groups: Vec<(Option<&str>, Option<&str>, Vec<&TierDescriptor>)> = Vec::new();
+    // Group non-scalar tiers by target_arch for cfg blocks
+    let mut arch_groups: Vec<(Option<&str>, Vec<&TierDescriptor>)> = Vec::new();
     for tier in tiers {
         if tier.name == "scalar" {
             continue; // Handle scalar separately at the end
         }
-        let key = (tier.target_arch, tier.cargo_feature);
-        if let Some(group) = arch_groups.iter_mut().find(|(a, f, _)| (*a, *f) == key) {
-            group.2.push(tier);
+        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == tier.target_arch) {
+            group.1.push(tier);
         } else {
-            arch_groups.push((tier.target_arch, tier.cargo_feature, vec![tier]));
+            arch_groups.push((tier.target_arch, vec![tier]));
         }
     }
 
-    for (target_arch, cargo_feature, group_tiers) in &arch_groups {
+    for (target_arch, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
         for tier in group_tiers {
             let fn_suffixed = suffix_path(func_path, tier.suffix);
@@ -2359,26 +2358,14 @@ fn gen_incant_passthrough(
 
         let inner = quote! { #(#tier_checks)* };
 
-        let guarded = match (target_arch, cargo_feature) {
-            (Some(arch), Some(feat)) => quote! {
-                #[cfg(target_arch = #arch)]
-                {
-                    #[cfg(feature = #feat)]
-                    { #inner }
-                }
-            },
-            (Some(arch), None) => quote! {
+        if let Some(arch) = target_arch {
+            dispatch_arms.push(quote! {
                 #[cfg(target_arch = #arch)]
                 { #inner }
-            },
-            (None, Some(feat)) => quote! {
-                #[cfg(feature = #feat)]
-                { #inner }
-            },
-            (None, None) => inner,
-        };
-
-        dispatch_arms.push(guarded);
+            });
+        } else {
+            dispatch_arms.push(inner);
+        }
     }
 
     // Scalar fallback (always last)
@@ -2414,7 +2401,6 @@ fn gen_incant_entry(
     let mut dispatch_arms = Vec::new();
 
     // Group non-scalar tiers by target_arch for cfg blocks.
-    // Within each arch group, further split by cargo_feature.
     let mut arch_groups: Vec<(Option<&str>, Vec<&TierDescriptor>)> = Vec::new();
     for tier in tiers {
         if tier.name == "scalar" {
@@ -2433,20 +2419,11 @@ fn gen_incant_entry(
             let fn_suffixed = suffix_path(func_path, tier.suffix);
             let token_path: syn::Path = syn::parse_str(tier.token_path).unwrap();
 
-            let check = quote! {
+            tier_checks.push(quote! {
                 if let Some(__t) = #token_path::summon() {
                     break '__incant #fn_suffixed(__t, #(#args),*);
                 }
-            };
-
-            if let Some(feat) = tier.cargo_feature {
-                tier_checks.push(quote! {
-                    #[cfg(feature = #feat)]
-                    { #check }
-                });
-            } else {
-                tier_checks.push(check);
-            }
+            });
         }
 
         let inner = quote! { #(#tier_checks)* };
@@ -2578,10 +2555,14 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         }
     };
 
-    // Resolve tiers
+    // Resolve tiers — autoversion always includes v4 in its defaults because it
+    // generates scalar code compiled with #[target_feature], not import_intrinsics.
     let tier_names: Vec<String> = match &args.tiers {
         Some(names) => names.clone(),
-        None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
+        None => AUTOVERSION_DEFAULT_TIER_NAMES
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
     };
     let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span()) {
         Ok(t) => t,
@@ -2632,13 +2613,6 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             variant_fn.body = quote!(let _self = self; #original_body);
         }
 
-        // cfg guard — arch only, no cargo_feature.
-        //
-        // #[autoversion] generates scalar code compiled with #[target_feature]
-        // via #[arcane]. It never uses import_intrinsics or 512-bit safe memory
-        // ops, so the avx512 cargo feature is irrelevant. Gating on it would
-        // silently eliminate v4/v4x variants in crates that don't define an
-        // "avx512" feature — which is every crate except archmage itself.
         let cfg_guard = match tier.target_arch {
             Some(arch) => quote! { #[cfg(target_arch = #arch)] },
             None => quote! {},
@@ -2737,7 +2711,6 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
                 quote! { #suffixed #turbofish(__t, #(#dispatch_args),*) }
             };
 
-            // No cargo_feature guard — same rationale as variant cfg guards above.
             tier_checks.push(quote! {
                 if let Some(__t) = #token_path::summon() {
                     break '__dispatch #call;
@@ -3891,41 +3864,36 @@ mod tests {
     fn tier_v3_targets_x86_64() {
         let tier = find_tier("v3").unwrap();
         assert_eq!(tier.target_arch, Some("x86_64"));
-        assert_eq!(tier.cargo_feature, None);
     }
 
     #[test]
-    fn tier_v4_requires_avx512_feature() {
+    fn tier_v4_targets_x86_64() {
         let tier = find_tier("v4").unwrap();
         assert_eq!(tier.target_arch, Some("x86_64"));
-        assert_eq!(tier.cargo_feature, Some("avx512"));
     }
 
     #[test]
-    fn tier_v4x_requires_avx512_feature() {
+    fn tier_v4x_targets_x86_64() {
         let tier = find_tier("v4x").unwrap();
-        assert_eq!(tier.cargo_feature, Some("avx512"));
+        assert_eq!(tier.target_arch, Some("x86_64"));
     }
 
     #[test]
     fn tier_neon_targets_aarch64() {
         let tier = find_tier("neon").unwrap();
         assert_eq!(tier.target_arch, Some("aarch64"));
-        assert_eq!(tier.cargo_feature, None);
     }
 
     #[test]
     fn tier_wasm128_targets_wasm32() {
         let tier = find_tier("wasm128").unwrap();
         assert_eq!(tier.target_arch, Some("wasm32"));
-        assert_eq!(tier.cargo_feature, None);
     }
 
     #[test]
     fn tier_scalar_has_no_guards() {
         let tier = find_tier("scalar").unwrap();
         assert_eq!(tier.target_arch, None);
-        assert_eq!(tier.cargo_feature, None);
         assert_eq!(tier.priority, 0);
     }
 

@@ -33,7 +33,7 @@ std = []
 macros = []
 # AVX-512 token support (Avx512Token, X64V4xToken, X64V4Token, etc.)
 # Also enables AVX-512 safe memory ops from safe_unaligned_simd.
-avx512 = ["safe_unaligned_simd/avx512"]
+avx512 = ["safe_unaligned_simd/avx512", "archmage-macros/avx512"]
 # Backwards-compat: safe_unaligned_simd is now always included (no longer optional).
 # This feature exists so `features = ["safe_unaligned_simd"]` doesn't break.
 safe_unaligned_simd = []

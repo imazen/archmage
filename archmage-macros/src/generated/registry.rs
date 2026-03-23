@@ -610,3 +610,19 @@ pub(crate) const ALL_TRAIT_NAMES: &[&str] = &[
     "HasArm64V2",
     "HasArm64V3",
 ];
+
+/// Returns true if this token's features include any AVX-512 features.
+///
+/// Used by `#[arcane]`/`#[rite]` to error when `import_intrinsics` is used
+/// with a token that needs 512-bit safe memory ops but the `avx512` feature
+/// is not enabled on archmage.
+///
+/// Generated from token-registry.toml.
+pub(crate) fn token_requires_avx512(token_name: &str) -> bool {
+    match token_name {
+        "X64V4Token" | "Avx512Token" | "Server64" => true,
+        "X64V4xToken" | "Avx512ModernToken" => true,
+        "Avx512Fp16Token" => true,
+        _ => false,
+    }
+}
