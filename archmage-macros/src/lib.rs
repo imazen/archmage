@@ -1023,6 +1023,8 @@ fn arcane_impl_nested(
     let body = &input_fn.body;
     // Filter out user #[inline] attrs to avoid duplicates (will become a hard error).
     let attrs = filter_inline_attrs(&input_fn.attrs);
+    // Propagate lint attrs to inner function (same issue as sibling mode — #17)
+    let lint_attrs = filter_lint_attrs(&input_fn.attrs);
 
     // Determine self receiver type if present
     let self_receiver_kind: Option<SelfReceiver> = inputs.first().and_then(|arg| match arg {
@@ -1141,6 +1143,7 @@ fn arcane_impl_nested(
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
+                #(#lint_attrs)*
                 fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
                     #inner_body
                 }
@@ -1159,6 +1162,7 @@ fn arcane_impl_nested(
             #vis #sig {
                 #(#target_feature_attrs)*
                 #inline_attr
+                #(#lint_attrs)*
                 fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
                     #inner_body
                 }
