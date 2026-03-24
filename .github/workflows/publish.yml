@@ -80,13 +80,16 @@ jobs:
             fi
           done
           # Verify internal dep versions match
-          for DEP_LINE in $(grep -n 'version = "0\.' Cargo.toml magetypes/Cargo.toml | grep -E 'archmage-macros|archmage' | grep -v workspace); do
-            DEP_VERSION=$(echo "$DEP_LINE" | sed 's/.*version = "\([^"]*\)".*/\1/')
-            if [ "$DEP_VERSION" != "$VERSION" ]; then
-              echo "::error::Internal dep version ($DEP_VERSION) does not match tag ($VERSION): $DEP_LINE"
-              exit 1
-            fi
-          done
+          grep -h 'version = "0\.' Cargo.toml magetypes/Cargo.toml \
+            | grep -E 'archmage-macros|archmage' \
+            | grep -v workspace \
+            | while IFS= read -r line; do
+                DEP_VERSION=$(echo "$line" | sed 's/.*version = "\([^"]*\)".*/\1/')
+                if [ "$DEP_VERSION" != "$VERSION" ]; then
+                  echo "::error::Internal dep version ($DEP_VERSION) does not match tag ($VERSION): $line"
+                  exit 1
+                fi
+              done
           echo "✓ internal dependency versions match"
 
   # ==========================================================================
