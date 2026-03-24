@@ -2896,26 +2896,20 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 
     // Find SimdToken parameter, or auto-inject one if missing.
     //
-    // When the user writes `_token: SimdToken`, the dispatcher KEEPS the
-    // parameter (as `ScalarToken`) — the user's public signature is preserved.
-    // This enables incant! nesting: `process_scalar(ScalarToken, data)` works.
-    //
-    // When no SimdToken parameter is present, the macro injects a hidden
-    // `_token: SimdToken` internally and strips it from the dispatcher, so
-    // the public API keeps the user's original token-free signature.
-    let (token_param, token_was_explicit) = match find_simd_token_param(&input_fn.sig) {
-        Some(p) => (p, true),
+    // When no SimdToken parameter is present, #[autoversion] injects a hidden
+    // `_token: SimdToken` as the first non-self parameter. The generated
+    // dispatcher strips this parameter, so the public API keeps the original
+    // signature. Users never need to add SimdToken themselves.
+    let token_param = match find_simd_token_param(&input_fn.sig) {
+        Some(p) => p,
         None => {
             let insert_pos = if has_self { 1 } else { 0 };
             let token_arg: FnArg = parse_quote!(_token: SimdToken);
             input_fn.sig.inputs.insert(insert_pos, token_arg);
-            (
-                SimdTokenParamInfo {
-                    index: insert_pos,
-                    ident: Ident::new("_token", input_fn.sig.ident.span()),
-                },
-                false,
-            )
+            SimdTokenParamInfo {
+                index: insert_pos,
+                ident: Ident::new("_token", input_fn.sig.ident.span()),
+            }
         }
     };
 
@@ -3024,38 +3018,13 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // Generate dispatcher (adapted from gen_incant_entry)
     // =========================================================================
 
-    // Build dispatcher inputs.
-    //
-    // If the user wrote SimdToken explicitly, the dispatcher keeps the
-    // parameter but changes its type to `impl SimdToken`. This preserves
-    // the user's intent ("this function accepts a token") while making it
-    // concrete enough for Rust to compile. Any token works as the argument:
-    // incant! passes ScalarToken, manual callers pass whatever they have.
-    //
-    // If SimdToken was auto-injected (user didn't write it), we remove it
-    // from the dispatcher so the public API matches the user's original
-    // token-free signature.
+    // Build dispatcher inputs: original params minus SimdToken
     let mut dispatcher_inputs: Vec<FnArg> = input_fn.sig.inputs.iter().cloned().collect();
-    if token_was_explicit {
-        // Keep the parameter, change type SimdToken → impl SimdToken.
-        // Change pattern to `_` to suppress unused-variable warnings
-        // (the dispatcher ignores the token — it does its own summon()).
-        if let FnArg::Typed(pt) = &mut dispatcher_inputs[token_param.index] {
-            *pt.ty = parse_quote!(impl archmage::SimdToken);
-            *pt.pat = parse_quote!(_);
-        }
-    } else {
-        dispatcher_inputs.remove(token_param.index);
-    }
+    dispatcher_inputs.remove(token_param.index);
 
-    // Rename wildcard params so we can pass them as arguments.
-    // Skip the token parameter (if kept) — it's already `_` and not
-    // passed to variant calls (variants get their token from summon()).
+    // Rename wildcard params so we can pass them as arguments
     let mut wild_counter = 0u32;
-    for (i, arg) in dispatcher_inputs.iter_mut().enumerate() {
-        if token_was_explicit && i == token_param.index {
-            continue; // Don't rename the kept token's `_` pattern
-        }
+    for arg in &mut dispatcher_inputs {
         if let FnArg::Typed(pat_type) = arg
             && matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_))
         {
@@ -3071,16 +3040,10 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         }
     }
 
-    // Collect argument idents for dispatch calls (exclude self receiver
-    // AND the kept token parameter — variants get their own token from
-    // summon(), not from the dispatcher's parameter).
+    // Collect argument idents for dispatch calls (exclude self receiver)
     let dispatch_args: Vec<Ident> = dispatcher_inputs
         .iter()
-        .enumerate()
-        .filter_map(|(i, arg)| {
-            if token_was_explicit && i == token_param.index {
-                return None; // Skip the kept token param
-            }
+        .filter_map(|arg| {
             if let FnArg::Typed(PatType { pat, .. }) = arg
                 && let syn::Pat::Ident(pi) = pat.as_ref()
             {
@@ -4371,69 +4334,46 @@ mod tests {
     // =========================================================================
 
     #[test]
-    fn dispatcher_preserves_explicit_token_as_impl_simdtoken() {
-        // When user writes SimdToken explicitly, the dispatcher KEEPS it as impl SimdToken
+    fn dispatcher_param_removal_free_fn() {
+        // Simulate what autoversion_impl does: remove the SimdToken param
         let f: ItemFn =
             syn::parse_str("fn process(token: SimdToken, data: &[f32], scale: f32) -> f32 { 0.0 }")
                 .unwrap();
 
         let token_param = find_simd_token_param(&f.sig).unwrap();
         let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
+        dispatcher_inputs.remove(token_param.index);
 
-        // Replace type with impl SimdToken (as autoversion_impl does for explicit tokens)
-        if let FnArg::Typed(pt) = &mut dispatcher_inputs[token_param.index] {
-            *pt.ty = parse_quote!(impl archmage::SimdToken);
-            *pt.pat = syn::Pat::Wild(syn::PatWild {
-                attrs: vec![],
-                underscore_token: Default::default(),
-            });
-        }
-
-        // Should still have 3 params: impl SimdToken, data, scale
-        assert_eq!(dispatcher_inputs.len(), 3);
-
-        // First param should be impl SimdToken, not bare SimdToken
-        if let FnArg::Typed(pt) = &dispatcher_inputs[0] {
-            let ty_str = pt.ty.to_token_stream().to_string();
-            assert!(
-                ty_str.contains("SimdToken"),
-                "Explicit token should become impl SimdToken, got: {}",
-                ty_str
-            );
-        }
-    }
-
-    #[test]
-    fn dispatcher_strips_autoinjected_token() {
-        // When no SimdToken in user code, the auto-injected one is stripped
-        let f: ItemFn =
-            syn::parse_str("fn process(data: &[f32], scale: f32) -> f32 { 0.0 }").unwrap();
-
-        // No SimdToken found — would be auto-injected then stripped
-        assert!(find_simd_token_param(&f.sig).is_none());
-
-        // Dispatcher keeps original params (no token to strip)
-        let dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
+        // Should have 2 params remaining: data, scale
         assert_eq!(dispatcher_inputs.len(), 2);
+
+        // Neither should be SimdToken
+        for arg in &dispatcher_inputs {
+            if let FnArg::Typed(pt) = arg {
+                let ty_str = pt.ty.to_token_stream().to_string();
+                assert!(
+                    !ty_str.contains("SimdToken"),
+                    "SimdToken should be removed from dispatcher, found: {}",
+                    ty_str
+                );
+            }
+        }
     }
 
     #[test]
-    fn dispatcher_explicit_token_only_fn() {
-        // fn process(token: SimdToken) → dispatcher keeps impl SimdToken param
+    fn dispatcher_param_removal_token_only() {
         let f: ItemFn = syn::parse_str("fn process(token: SimdToken) -> f32 { 0.0 }").unwrap();
 
         let token_param = find_simd_token_param(&f.sig).unwrap();
         let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
-        if let FnArg::Typed(pt) = &mut dispatcher_inputs[token_param.index] {
-            *pt.ty = parse_quote!(impl archmage::SimdToken);
-        }
+        dispatcher_inputs.remove(token_param.index);
 
-        // Still 1 param — the impl SimdToken
-        assert_eq!(dispatcher_inputs.len(), 1);
+        // No params left — dispatcher takes no arguments
+        assert_eq!(dispatcher_inputs.len(), 0);
     }
 
     #[test]
-    fn dispatcher_explicit_token_last_position() {
+    fn dispatcher_param_removal_token_last() {
         let f: ItemFn =
             syn::parse_str("fn process(data: &[f32], scale: f32, token: SimdToken) -> f32 { 0.0 }")
                 .unwrap();
@@ -4442,12 +4382,9 @@ mod tests {
         assert_eq!(token_param.index, 2);
 
         let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
-        if let FnArg::Typed(pt) = &mut dispatcher_inputs[token_param.index] {
-            *pt.ty = parse_quote!(impl archmage::SimdToken);
-        }
+        dispatcher_inputs.remove(token_param.index);
 
-        // Still 3 params, last one is now impl SimdToken
-        assert_eq!(dispatcher_inputs.len(), 3);
+        assert_eq!(dispatcher_inputs.len(), 2);
     }
 
     #[test]

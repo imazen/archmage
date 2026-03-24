@@ -111,7 +111,7 @@ fn auto_sum(_token: SimdToken, data: &[f32]) -> f32 {
 #[test]
 fn autoversion_cfg_feature() {
     let data = [1.0f32, 2.0, 3.0, 4.0];
-    let result = auto_sum(ScalarToken, &data);
+    let result = auto_sum(&data);
     assert!((result - 10.0).abs() < 1e-6);
 }
 
@@ -127,7 +127,7 @@ fn auto_with_tier_gate(_token: SimdToken, data: &[f32]) -> f32 {
 #[test]
 fn autoversion_tier_feature_gate() {
     let data = [1.0f32, 2.0, 3.0];
-    let result = auto_with_tier_gate(ScalarToken, &data);
+    let result = auto_with_tier_gate(&data);
     assert!((result - 6.0).abs() < 1e-6);
 }
 
@@ -153,7 +153,7 @@ define_autoversioned!(macro_sum);
 #[test]
 fn autoversion_in_macro_rules() {
     let data = [1.0f32, 2.0, 3.0];
-    let result = macro_sum(ScalarToken, &data);
+    let result = macro_sum(&data);
     assert!((result - 6.0).abs() < 1e-6);
 }
 
@@ -172,6 +172,6 @@ define_conditional_autoversioned!(conditional_macro_sum);
 #[test]
 fn autoversion_cfg_in_macro_rules() {
     let data = [1.0f32, 2.0, 3.0, 4.0, 5.0];
-    let result = conditional_macro_sum(ScalarToken, &data);
+    let result = conditional_macro_sum(&data);
     assert!((result - 15.0).abs() < 1e-6);
 }

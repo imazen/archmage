@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn autoversion_default_tiers() {
         let data = [1.0f32, 2.0, 3.0, 4.0];
-        let result = sum_squares(ScalarToken, &data);
+        let result = sum_squares(&data);
         assert!((result - 30.0).abs() < 1e-6);
     }
 
@@ -82,7 +82,7 @@ mod tests {
     fn autoversion_explicit_v4_tier() {
         let a = [1.0f32, 2.0, 3.0];
         let b = [4.0f32, 5.0, 6.0];
-        let result = dot_product(ScalarToken, &a, &b);
+        let result = dot_product(&a, &b);
         assert!((result - 32.0).abs() < 1e-6);
     }
 
@@ -91,13 +91,13 @@ mod tests {
         let buf = Buffer {
             data: vec![1.0, 2.0, 3.0, 4.0],
         };
-        assert!((buf.total(ScalarToken) - 10.0).abs() < 1e-6);
+        assert!((buf.total() - 10.0).abs() < 1e-6);
     }
 
     #[test]
     fn autoversion_allocating_return() {
         let data = [1.0f32, 2.0, 3.0];
-        let result = scale_vec(ScalarToken, &data, 2.0);
+        let result = scale_vec(&data, 2.0);
         assert_eq!(result, vec![2.0, 4.0, 6.0]);
     }
 
