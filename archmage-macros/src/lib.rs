@@ -90,6 +90,23 @@ fn filter_lint_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
     attrs.iter().filter(|attr| is_lint_attr(attr)).collect()
 }
 
+/// Generate a cfg guard combining target_arch and an optional feature gate.
+///
+/// - `(Some("x86_64"), None)` → `#[cfg(target_arch = "x86_64")]`
+/// - `(Some("x86_64"), Some("avx512"))` → `#[cfg(all(target_arch = "x86_64", feature = "avx512"))]`
+/// - `(None, Some("avx512"))` → `#[cfg(feature = "avx512")]`
+/// - `(None, None)` → empty
+fn gen_cfg_guard(target_arch: Option<&str>, cfg_feature: Option<&str>) -> proc_macro2::TokenStream {
+    match (target_arch, cfg_feature) {
+        (Some(arch), Some(feat)) => {
+            quote! { #[cfg(all(target_arch = #arch, feature = #feat))] }
+        }
+        (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
+        (None, Some(feat)) => quote! { #[cfg(feature = #feat)] },
+        (None, None) => quote! {},
+    }
+}
+
 /// Build a turbofish token stream from a function's generics.
 ///
 /// Collects type and const generic parameters (skipping lifetimes) and returns
@@ -171,6 +188,10 @@ struct ArcaneArgs {
     /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
     /// and `use magetypes::simd::backends::*;`.
     import_magetypes: bool,
+    /// Additional cargo feature gate. When set, the generated `#[cfg(target_arch)]`
+    /// becomes `#[cfg(all(target_arch = "...", feature = "..."))]`.
+    /// Example: `#[arcane(cfg(avx512))]` → `#[cfg(all(target_arch = "x86_64", feature = "avx512"))]`
+    cfg_feature: Option<String>,
 }
 
 impl Parse for ArcaneArgs {
@@ -185,6 +206,12 @@ impl Parse for ArcaneArgs {
                 "nested" => args.nested = true,
                 "import_intrinsics" => args.import_intrinsics = true,
                 "import_magetypes" => args.import_magetypes = true,
+                "cfg" => {
+                    let content;
+                    syn::parenthesized!(content in input);
+                    let feat: Ident = content.parse()?;
+                    args.cfg_feature = Some(feat.to_string());
+                }
                 "_self" => {
                     let _: Token![=] = input.parse()?;
                     args.self_type = Some(input.parse()?);
@@ -910,12 +937,14 @@ fn arcane_impl_sibling(
 
     let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
 
-    let expanded = if let Some(arch) = target_arch {
+    let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
+
+    let expanded = if target_arch.is_some() {
         // Sibling function: #[doc(hidden)] #[target_feature] fn __arcane_fn(...)
         // Always private — only the wrapper is user-visible.
         // Safe declaration — Rust 2024 allows safe #[target_feature] functions.
         let sibling_fn = quote! {
-            #[cfg(target_arch = #arch)]
+            #cfg_guard
             #[doc(hidden)]
             #(#lint_attrs)*
             #(#target_feature_attrs)*
@@ -929,7 +958,7 @@ fn arcane_impl_sibling(
         // The unsafe block is needed because the sibling has #[target_feature] and
         // the wrapper doesn't — calling across this boundary requires unsafe.
         let wrapper_fn = quote! {
-            #[cfg(target_arch = #arch)]
+            #cfg_guard
             #(#attrs)*
             #[inline(always)]
             #vis #sig {
@@ -941,10 +970,19 @@ fn arcane_impl_sibling(
             }
         };
 
-        // Optional stub for other architectures
+        // Optional stub for other architectures / missing feature
         let stub = if args.stub {
+            let arch_str = target_arch.unwrap_or("unknown");
+            // Negate the cfg guard used for the real implementation
+            let not_cfg = match (target_arch, args.cfg_feature.as_deref()) {
+                (Some(arch), Some(feat)) => {
+                    quote! { #[cfg(not(all(target_arch = #arch, feature = #feat)))] }
+                }
+                (Some(arch), None) => quote! { #[cfg(not(target_arch = #arch))] },
+                _ => quote! {},
+            };
             quote! {
-                #[cfg(not(target_arch = #arch))]
+                #not_cfg
                 #(#attrs)*
                 #vis #sig {
                     let _ = (#(#stub_args),*);
@@ -955,7 +993,7 @@ fn arcane_impl_sibling(
                          that is the bug.",
                         stringify!(#fn_name),
                         #token_type_str,
-                        #arch,
+                        #arch_str,
                         #token_type_str,
                     )
                 }
@@ -1111,11 +1149,20 @@ fn arcane_impl_nested(
     };
 
     let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
-    let expanded = if let Some(arch) = target_arch {
+    let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
+
+    let expanded = if target_arch.is_some() {
         let stub = if args.stub {
+            let arch_str = target_arch.unwrap_or("unknown");
+            let not_cfg = match (target_arch, args.cfg_feature.as_deref()) {
+                (Some(arch), Some(feat)) => {
+                    quote! { #[cfg(not(all(target_arch = #arch, feature = #feat)))] }
+                }
+                (Some(arch), None) => quote! { #[cfg(not(target_arch = #arch))] },
+                _ => quote! {},
+            };
             quote! {
-                // Stub for other architectures - the token cannot be obtained
-                #[cfg(not(target_arch = #arch))]
+                #not_cfg
                 #(#attrs)*
                 #vis #sig {
                     let _ = (#(#inner_args),*);
@@ -1126,7 +1173,7 @@ fn arcane_impl_nested(
                          that is the bug.",
                         stringify!(#fn_name),
                         #token_type_str,
-                        #arch,
+                        #arch_str,
                         #token_type_str,
                     )
                 }
@@ -1137,7 +1184,7 @@ fn arcane_impl_nested(
 
         quote! {
             // Real implementation for the correct architecture
-            #[cfg(target_arch = #arch)]
+            #cfg_guard
             #(#attrs)*
             #[inline(always)]
             #vis #sig {
@@ -1490,6 +1537,8 @@ struct RiteArgs {
     /// Single tier: generates one function (no suffix, no token parameter needed).
     /// Multiple tiers: generates suffixed variants (e.g., `fn_v3`, `fn_v4`, `fn_neon`).
     tier_tokens: Vec<String>,
+    /// Additional cargo feature gate (same as arcane's cfg_feature).
+    cfg_feature: Option<String>,
 }
 
 impl Parse for RiteArgs {
@@ -1502,6 +1551,12 @@ impl Parse for RiteArgs {
                 "stub" => args.stub = true,
                 "import_intrinsics" => args.import_intrinsics = true,
                 "import_magetypes" => args.import_magetypes = true,
+                "cfg" => {
+                    let content;
+                    syn::parenthesized!(content in input);
+                    let feat: Ident = content.parse()?;
+                    args.cfg_feature = Some(feat.to_string());
+                }
                 other => {
                     if let Some(canonical) = tier_to_canonical_token(other) {
                         args.tier_tokens.push(String::from(canonical));
@@ -1511,7 +1566,7 @@ impl Parse for RiteArgs {
                             format!(
                                 "unknown rite argument: `{}`. Supported: tier names \
                                  (v1, v2, v3, v4, neon, arm_v2, wasm128, ...), \
-                                 `stub`, `import_intrinsics`, `import_magetypes`.",
+                                 `stub`, `import_intrinsics`, `import_magetypes`, `cfg(feature)`.",
                                 other
                             ),
                         ));
@@ -1647,21 +1702,25 @@ fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     }
 
     // If we know the target arch, generate cfg-gated impl (+ optional stub)
-    if let Some(arch) = target_arch {
+    let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
+    if target_arch.is_some() {
         let vis = &input_fn.vis;
         let sig = &input_fn.sig;
         let attrs = &input_fn.attrs;
         let body = &input_fn.body;
 
         let stub = if args.stub {
+            let not_cfg = match (target_arch, args.cfg_feature.as_deref()) {
+                (Some(arch), Some(feat)) => {
+                    quote! { #[cfg(not(all(target_arch = #arch, feature = #feat)))] }
+                }
+                (Some(arch), None) => quote! { #[cfg(not(target_arch = #arch))] },
+                _ => quote! {},
+            };
             quote! {
-                #[cfg(not(target_arch = #arch))]
+                #not_cfg
                 #vis #sig {
-                    unreachable!(concat!(
-                        "This function requires ",
-                        #arch,
-                        " architecture"
-                    ))
+                    unreachable!("This function requires a specific architecture and feature set")
                 }
             }
         } else {
@@ -1669,7 +1728,7 @@ fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
         };
 
         quote! {
-            #[cfg(target_arch = #arch)]
+            #cfg_guard
             #(#attrs)*
             #vis #sig {
                 #body
@@ -1768,14 +1827,15 @@ fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
         }
 
         // Emit cfg-gated variant
-        if let Some(arch) = target_arch {
+        let variant_cfg = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
+        if target_arch.is_some() {
             let vis = &variant_fn.vis;
             let sig = &variant_fn.sig;
             let attrs = &variant_fn.attrs;
             let body = &variant_fn.body;
 
             variants.extend(quote! {
-                #[cfg(target_arch = #arch)]
+                #variant_cfg
                 #(#attrs)*
                 #vis #sig {
                     #body
@@ -1783,12 +1843,20 @@ fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
             });
 
             if args.stub {
+                let not_cfg = match (target_arch, args.cfg_feature.as_deref()) {
+                    (Some(arch), Some(feat)) => {
+                        quote! { #[cfg(not(all(target_arch = #arch, feature = #feat)))] }
+                    }
+                    (Some(arch), None) => quote! { #[cfg(not(target_arch = #arch))] },
+                    _ => quote! {},
+                };
+                let arch_str = target_arch.unwrap_or("unknown");
                 variants.extend(quote! {
-                    #[cfg(not(target_arch = #arch))]
+                    #not_cfg
                     #vis #sig {
                         unreachable!(concat!(
                             "This function requires ",
-                            #arch,
+                            #arch_str,
                             " architecture"
                         ))
                     }
