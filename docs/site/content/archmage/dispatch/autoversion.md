@@ -122,6 +122,9 @@ fn process_v3(_token: X64V3Token, data: &[f32]) -> f32 { /* hand-written */ }
 | `wasm128` | `_wasm128` | `process_wasm128` |
 | `wasm128_relaxed` | `_wasm128_relaxed` | `process_wasm128_relaxed` |
 | `scalar` | `_scalar` | `process_scalar` |
+| `default` | `_default` | `process_default` |
+
+`scalar` and `default` are mutually exclusive fallback tiers. `scalar` passes `ScalarToken`; `default` is tokenless.
 
 ## Nesting with incant!
 
