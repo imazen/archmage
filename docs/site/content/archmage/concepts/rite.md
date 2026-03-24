@@ -346,7 +346,7 @@ Both single-tier and token-based produce identical machine code. Multi-tier prod
 
 ## Tier Names
 
-The tier name maps to the same features as the corresponding token. All `incant!` tier names work:
+The tier name maps to the same features as the corresponding token. All `incant!` tier names work. Tier names accept the `_` prefix — `_v3` is identical to `v3`, matching the suffix on generated function names:
 
 | Tier | Token | Architecture | Features |
 |------|-------|-------------|----------|

@@ -111,6 +111,15 @@ if let Some(token) = X64V4Token::summon() {  // Runtime check
 }
 ```
 
+The dispatch macros (`incant!`, `#[autoversion]`, `#[magetypes]`) support per-tier feature gating via the `tier(cfg(feature))` syntax:
+
+```rust
+// v4 dispatch arm wrapped in #[cfg(feature = "avx512")]
+incant!(process(data), [v4(cfg(avx512)), v3, neon, scalar])
+```
+
+The shorthand `v4(avx512)` also works. The gate is checked against the **calling crate's** features, not archmage's.
+
 ## RUSTFLAGS
 
 Not Cargo features, but important compiler flags:

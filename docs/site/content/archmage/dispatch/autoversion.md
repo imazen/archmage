@@ -172,20 +172,46 @@ A tokenless `#[autoversion] fn process_scalar(data: &[f32])` generates a dispatc
 fn process(data: &[f32]) -> f32 { ... }
 ```
 
-Only generates the listed tiers plus `scalar` (always implicit). Use this when you don't need every platform, or when you want tiers beyond the defaults.
+Only generates the listed tiers plus `scalar` (always implicit). Use this when you don't need every platform, or when you want tiers beyond the defaults. Tier names accept the `_` prefix — `_v3` is identical to `v3`, matching the suffix pattern on generated names.
 
 Default tiers (when no list given): **v4, v3, neon, wasm128, scalar**.
 
-## Feature-gated tiers
+### Tier list modifiers
 
-### Per-tier gates: `tier(feature)`
+Instead of replacing the entire default list, use `+` and `-` to modify it:
 
 ```rust
-#[autoversion(v4(avx512), v3, neon)]
+// Add arm_v2 to defaults
+#[autoversion(+arm_v2)]
+fn process(data: &[f32]) -> f32 { ... }
+
+// Remove tiers you don't need
+#[autoversion(-neon, -wasm128)]
+fn process(data: &[f32]) -> f32 { ... }
+
+// Make v4 unconditional (overrides the default avx512 gate)
+#[autoversion(+v4)]
+fn process(data: &[f32]) -> f32 { ... }
+
+// Combine freely
+#[autoversion(-wasm128, +arm_v2)]
+fn process(data: &[f32]) -> f32 { ... }
+```
+
+All entries must be `+`/`-` (modifier mode) or none (override mode) — mixing is a compile error.
+
+## Feature-gated tiers
+
+### Per-tier gates: `tier(cfg(feature))`
+
+```rust
+#[autoversion(v4(cfg(avx512)), v3, neon)]
 fn process(data: &[f32]) -> f32 { ... }
 ```
 
 The `v4` variant and its dispatch arm are wrapped in `#[cfg(feature = "avx512")]` — checked against the **calling crate's** features, not archmage's. If the crate doesn't define `avx512`, v4 is silently excluded.
+
+The shorthand `v4(avx512)` also works and produces identical output. The `cfg()` form is canonical.
 
 ### Whole-dispatch gate: `cfg(feature)`
 

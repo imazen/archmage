@@ -147,6 +147,8 @@ pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
 }
 ```
 
+Explicit tier lists, feature gates, and modifiers all work: `incant!(dot_product(a, b), [v3, neon, scalar])`, `incant!(dot_product(a, b), [v4(cfg(avx512)), v3, scalar])`, `incant!(dot_product(a, b), [+arm_v2])`.
+
 This works with `#![forbid(unsafe_code)]` — magetypes methods handle unsafe internally via `#[inline(always)]`.
 
 ## Using with #[arcane] and #[rite]

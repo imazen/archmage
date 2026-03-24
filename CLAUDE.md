@@ -314,6 +314,28 @@ pub fn sum(data: &[f32]) -> f32 {
 // Requires: sum_v1, sum_v3, sum_neon, sum_scalar
 ```
 
+Tier names accept the `_` prefix — `_v3` is identical to `v3`, matching the suffix pattern on generated function names.
+
+**Feature-gated tiers** — canonical form `tier(cfg(feature))`, shorthand `tier(feature)`:
+
+```rust
+incant!(sum(data), [v4(cfg(avx512)), v3, neon, scalar])
+// v4 dispatch arm wrapped in #[cfg(feature = "avx512")]
+```
+
+**Tier list modifiers** — add/remove from the default list instead of restating it:
+
+```rust
+incant!(sum(data), [+arm_v2])           // add arm_v2 to defaults
+incant!(sum(data), [-neon, -wasm128])   // remove tiers
+incant!(sum(data), [+v4])               // make v4 unconditional (no avx512 gate)
+incant!(sum(data), [+default])          // replace scalar with tokenless default
+incant!(sum(data), [-neon, +v1])        // combine freely
+```
+
+All entries must be `+`/`-` (modifier mode) or none (override mode) — mixing is a compile error.
+`default` and `scalar` are interchangeable fallback slots (`+default` replaces `scalar`).
+
 Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`,
 `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
 Always include `scalar` in explicit tier lists. Currently auto-appended if omitted; will become a compile error in v1.0.
@@ -356,14 +378,20 @@ let result = sum_of_squares(&my_data);
 **What gets generated:** `sum_of_squares_v4`, `_v3`, `_neon`, `_wasm128`, `_scalar` variants
 plus a `sum_of_squares(data)` dispatcher (token param removed).
 
-**Explicit tiers:** `#[autoversion(v3, neon)]`. `scalar` is always implicit.
+**Explicit tiers:** `#[autoversion(v3, neon)]`. `scalar` is always implicit. Tier names accept
+the `_` prefix — `_v3` is identical to `v3`.
+
+**Feature-gated tiers:** `#[autoversion(v4(cfg(avx512)), v3, neon)]`. Shorthand `v4(avx512)` also works.
+
+**Tier list modifiers:** `#[autoversion(+arm_v2)]` adds to defaults, `#[autoversion(-wasm128)]`
+removes. All entries must be `+`/`-` or none — mixing is a compile error.
 
 **Self receivers:** `#[autoversion(_self = MyType)]` — use `_self` in body.
 
 **Trait methods:** Can't expand to siblings. Delegate to an autoversioned inherent method.
 
 **vs `#[magetypes]` + `incant!`:**
-- `SimdToken` is replaced only in the signature (fast compile). `#[magetypes]` does full body substitution.
+- `SimdToken` is replaced only in the signature (fast compile). `#[magetypes]` does token-level replacement for `Token`, text substitution for other placeholders.
 - `#[autoversion]` generates its own dispatcher. `#[magetypes]` requires separate `incant!`.
 - Use `#[autoversion]` for scalar auto-vectorization. Use `#[magetypes]` + `incant!` for hand-written intrinsics.
 

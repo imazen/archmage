@@ -128,6 +128,8 @@ Always specify which tiers your function supports. Include `scalar` in the tier 
 | `_wasm128_relaxed` | `Wasm128RelaxedToken` | WASM Relaxed SIMD |
 | `_scalar` | `ScalarToken` | Always required (must be listed explicitly) |
 
+Tier names in the list can use the `_` prefix — `_v3` is identical to `v3`. This matches the suffix pattern on generated function names (`fn_v3`).
+
 Cross-architecture variants are excluded by `#[cfg]` — on x86-64, you need `_v3` and `_scalar`. You don't need `_neon` or `_wasm128` (they're cfg'd out by `incant!`).
 
 ## Passthrough Mode
@@ -200,6 +202,44 @@ pub fn process(data: &mut [f32]) -> f32 {
 ```
 
 The `avx512` cargo feature must be enabled for `_v4` to be compiled.
+
+## Feature-Gated Tiers
+
+Wrap a tier in `cfg(feature)` to conditionally include it based on a Cargo feature:
+
+```rust
+pub fn process(data: &mut [f32]) -> f32 {
+    incant!(process(data), [v4(cfg(avx512)), v3, neon, scalar])
+}
+```
+
+The `v4` dispatch arm is wrapped in `#[cfg(feature = "avx512")]` — if the calling crate doesn't define that feature, v4 is silently excluded. The shorthand `v4(avx512)` also works and produces identical output. The `cfg()` form is canonical.
+
+## Tier List Modifiers
+
+Instead of restating the entire default tier list, use `+` and `-` to modify it:
+
+```rust
+// Add arm_v2 to the defaults (v4, v3, neon, wasm128, scalar)
+incant!(process(data), [+arm_v2])
+
+// Remove tiers you don't need
+incant!(process(data), [-neon, -wasm128])
+
+// Make v4 unconditional (overrides the default avx512 gate)
+incant!(process(data), [+v4])
+
+// Replace scalar with tokenless default fallback
+incant!(process(data), [+default])
+
+// Add a cfg gate to a default tier
+incant!(process(data), [+neon(cfg(neon))])
+
+// Combine freely
+incant!(process(data), [-neon, -wasm128, +v1])
+```
+
+All entries in a tier list must be modifiers (`+`/`-`) or all must be plain names — mixing is a compile error. `+default` replaces `scalar` as the fallback slot.
 
 ## When to Use incant!
 

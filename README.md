@@ -328,7 +328,7 @@ The macro auto-injects a hidden `SimdToken` parameter internally — you don't n
 - `sum_of_squares_scalar(token: ScalarToken, ...)` — no SIMD
 - `sum_of_squares(data: &[f32]) -> f32` — **dispatcher** (token param removed)
 
-Explicit tiers: `#[autoversion(v3, neon)]`. `scalar` is always implicit.
+Explicit tiers: `#[autoversion(v3, neon)]`. `scalar` is always implicit. Use modifiers to tweak defaults: `#[autoversion(+arm_v2)]` adds a tier, `#[autoversion(-wasm128)]` removes one. Gate a tier on a Cargo feature: `#[autoversion(v4(cfg(avx512)), v3, neon)]`.
 
 For inherent methods, `self` works naturally — no special parameters needed. For trait method delegation, use `#[autoversion(_self = MyType)]` and `_self` in the body. See the [full parameter reference](https://imazen.github.io/archmage/archmage/dispatch/autoversion/) or the [API docs](https://docs.rs/archmage/latest/archmage/attr.autoversion.html).
 
@@ -393,7 +393,11 @@ fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
 | `_wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
 | `_scalar` | `ScalarToken` | any | No SIMD (always available) |
 
-By default, `incant!` tries `_v4` (if the `avx512` feature is enabled), `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon, scalar])`. Always include `scalar` in explicit tier lists — it documents the fallback path. (Currently auto-appended if omitted; will become a compile error in v1.0.)
+By default, `incant!` tries `_v4` (if the `avx512` feature is enabled), `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon, scalar])`. Tier names accept the `_` prefix — `_v3` is identical to `v3`, matching the suffix on generated function names.
+
+Instead of restating the entire default list, use modifiers: `[+arm_v2]` adds a tier, `[-wasm128]` removes one, `[+v4]` makes v4 unconditional. Gate a tier on a Cargo feature with `v4(cfg(avx512))` (shorthand: `v4(avx512)`). All entries must be modifiers or all plain — mixing is a compile error.
+
+Always include `scalar` (or `default`) in explicit tier lists — it documents the fallback path. (Currently auto-appended if omitted; will become a compile error in v1.0.)
 
 ## Runtime dispatch with `incant!` <sub>(alias: `dispatch_variant!`)</sub>
 
@@ -430,6 +434,10 @@ Each variant's first parameter is the matching token type — `_v3` takes `X64V3
 **`_scalar` is mandatory.** `incant!` always emits an unconditional call to `fn_scalar(ScalarToken, ...)` as the final fallback. If the `_scalar` function doesn't exist, you get a compile error — not a runtime failure. Always include `scalar` in explicit tier lists (e.g., `[v3, neon, scalar]`) to document this dependency. Currently `scalar` is auto-appended if omitted; this will become a compile error in v1.0.
 
 `incant!` wraps each tier's call in `#[cfg(target_arch)]` and `#[cfg(feature)]` guards, so you only define variants for architectures you target. With no explicit tier list, `incant!` dispatches to `v3`, `neon`, `wasm128`, and `scalar` by default (plus `v4` if the `avx512` feature is enabled).
+
+Gate a tier on a Cargo feature with the `tier(cfg(feature))` syntax: `incant!(sum(data), [v4(cfg(avx512)), v3, neon, scalar])`. The shorthand `v4(avx512)` also works.
+
+Use modifiers to tweak the default tier list without restating it: `[+arm_v2]` adds a tier, `[-wasm128]` removes one. All entries must be modifiers or all plain.
 
 Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
 

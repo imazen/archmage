@@ -44,7 +44,7 @@ pub fn process(data: &[f32]) -> f32 {
 
 ## What Gets Replaced
 
-`#[magetypes]` does text substitution on the token stream. Inside a `#[magetypes]` function:
+`#[magetypes]` replaces placeholders in each generated variant. `Token` uses token-level replacement (it understands token boundaries, so `ScalarToken` and `IntoConcreteToken` pass through unmodified). Other placeholders use text substitution on the token stream.
 
 | Placeholder | Replaced With |
 |-------------|---------------|
@@ -53,6 +53,38 @@ pub fn process(data: &[f32]) -> f32 {
 | `LANES` | Lane count for the platform (`8`, `4`, etc.) |
 
 Case-sensitive — `Token` is replaced, `token` is not.
+
+## Tier Lists
+
+`#[magetypes]` accepts the same tier list syntax as `incant!` and `#[autoversion]`. By default it generates variants for v3, v4, neon, wasm128, and scalar.
+
+**Explicit tiers:**
+
+```rust
+#[magetypes(v3, neon, scalar)]
+fn process(token: Token, data: &[f32]) -> f32 { ... }
+```
+
+**Feature-gated tiers:**
+
+```rust
+#[magetypes(v4(cfg(avx512)), v3, neon, scalar)]
+fn process(token: Token, data: &[f32]) -> f32 { ... }
+```
+
+The shorthand `v4(avx512)` also works.
+
+**Tier list modifiers:**
+
+```rust
+#[magetypes(+arm_v2)]
+fn process(token: Token, data: &[f32]) -> f32 { ... }
+
+#[magetypes(-wasm128, +v1)]
+fn process(token: Token, data: &[f32]) -> f32 { ... }
+```
+
+Tier names accept the `_` prefix — `_v3` is identical to `v3`.
 
 ## `#[magetypes]` vs Manual Variants
 

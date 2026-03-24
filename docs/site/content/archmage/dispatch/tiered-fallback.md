@@ -189,6 +189,23 @@ pub fn simple_add(a: f32, b: f32) -> f32 {
 
 SIMD only helps with bulk operations. For scalar math, just use scalar math.
 
+## Using `incant!` Modifiers
+
+When using `incant!`, you don't have to restate the entire default tier list to add or remove tiers:
+
+```rust
+// Add arm_v2 to the defaults
+incant!(process(data), [+arm_v2])
+
+// Remove tiers you don't target
+incant!(process(data), [-wasm128])
+
+// Gate v4 on a cargo feature
+incant!(process(data), [+v4(cfg(avx512))])
+```
+
+This keeps dispatch declarations concise as your tier requirements evolve.
+
 ## Recommendations
 
 1. **X64V3Token is usually enough** for x86 — it covers 99% of modern PCs
