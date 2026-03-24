@@ -1,19 +1,17 @@
 //! Test: calling crate defines `avx512 = ["archmage/avx512"]` and builds with it.
 //!
 //! When built with `--features avx512`:
-//! - This crate has feature "avx512" → proc-macro cfg checks pass
-//! - archmage has feature "avx512" → safe 512-bit memory ops available
-//! - incant! v4 dispatch should work
+//! - archmage has avx512 → v4 in default tier list, safe memory ops available
+//! - incant! dispatches v4 → v3 → scalar
 //!
 //! When built WITHOUT --features avx512:
-//! - This crate does NOT have "avx512" → v4 dispatch is dead code
-//! - archmage does NOT have "avx512" → safe memory ops unavailable
-//! - Should fall back to v3/scalar
+//! - archmage lacks avx512 → v4 not in default tier list
+//! - incant! dispatches v3 → scalar (v4 function doesn't exist)
 #![deny(warnings)]
 
 use archmage::prelude::*;
 
-// v4 variant — only compiled when feature = "avx512"
+// v4 variant — only exists when avx512 feature is enabled
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[arcane(import_intrinsics)]
 fn add_v4(_token: X64V4Token, a: &[f32; 16], b: &[f32; 16]) -> [f32; 16] {
@@ -43,8 +41,10 @@ fn add_scalar(_token: ScalarToken, a: &[f32; 16], b: &[f32; 16]) -> [f32; 16] {
     out
 }
 
+/// Uses default tiers — v4 is included when avx512 feature is on archmage,
+/// excluded when it's off. No explicit tier list needed.
 pub fn add_dispatched(a: &[f32; 16], b: &[f32; 16]) -> [f32; 16] {
-    incant!(add(a, b), [v4, v3, scalar])
+    incant!(add(a, b))
 }
 
 #[cfg(test)]
