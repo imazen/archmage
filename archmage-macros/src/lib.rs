@@ -1933,15 +1933,20 @@ fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> TokenStream 
         };
 
         // Add cfg guard: arch + optional feature gate
+        let allow_attr = if tier.allow_unexpected_cfg {
+            quote! { #[allow(unexpected_cfgs)] }
+        } else {
+            quote! {}
+        };
         let cfg_guard = match (tier.target_arch, &tier.feature_gate) {
             (Some(arch), Some(feat)) => quote! {
                 #[cfg(target_arch = #arch)]
-                #[allow(unexpected_cfgs)]
+                #allow_attr
                 #[cfg(feature = #feat)]
             },
             (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
             (None, Some(feat)) => quote! {
-                #[allow(unexpected_cfgs)]
+                #allow_attr
                 #[cfg(feature = #feat)]
             },
             (None, None) => quote! {},
@@ -2210,12 +2215,14 @@ fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
 #[derive(Clone)]
 struct ResolvedTier {
     tier: &'static TierDescriptor,
-    /// When Some, dispatch/generation is wrapped in
-    /// `#[allow(unexpected_cfgs)] #[cfg(feature = "...")]` so it's silently
-    /// eliminated when the calling crate doesn't define the feature.
+    /// When Some, dispatch/generation is wrapped in `#[cfg(feature = "...")]`
+    /// so it's eliminated when the calling crate doesn't define the feature.
     /// Set explicitly via `v4(avx512)` syntax or implicitly from `cfg_feature`
     /// on the TierDescriptor when using default tier lists.
     feature_gate: Option<String>,
+    /// When true, `#[allow(unexpected_cfgs)]` is added before the `#[cfg]`.
+    /// True for implicit gates (from defaults), false for explicit `tier(feat)`.
+    allow_unexpected_cfg: bool,
 }
 
 impl core::ops::Deref for ResolvedTier {
@@ -2253,6 +2260,7 @@ fn resolve_tiers(
         };
         match find_tier(name) {
             Some(tier) => {
+                let is_explicit = explicit_gate.is_some();
                 let feature_gate = explicit_gate.or_else(|| {
                     if default_feature_gates {
                         tier.cfg_feature.map(String::from)
@@ -2260,7 +2268,11 @@ fn resolve_tiers(
                         None
                     }
                 });
-                tiers.push(ResolvedTier { tier, feature_gate });
+                tiers.push(ResolvedTier {
+                    tier,
+                    allow_unexpected_cfg: feature_gate.is_some() && !is_explicit,
+                    feature_gate,
+                });
             }
             None => {
                 let known: Vec<&str> = ALL_TIERS.iter().map(|t| t.name).collect();
@@ -2277,6 +2289,7 @@ fn resolve_tiers(
         tiers.push(ResolvedTier {
             tier: find_tier("scalar").unwrap(),
             feature_gate: None,
+            allow_unexpected_cfg: false,
         });
     }
 
@@ -2563,8 +2576,13 @@ fn gen_incant_passthrough(
             };
 
             if let Some(feat) = &rt.feature_gate {
+                let allow_attr = if rt.allow_unexpected_cfg {
+                    quote! { #[allow(unexpected_cfgs)] }
+                } else {
+                    quote! {}
+                };
                 tier_checks.push(quote! {
-                    #[allow(unexpected_cfgs)]
+                    #allow_attr
                     #[cfg(feature = #feat)]
                     { #check }
                 });
@@ -2643,8 +2661,13 @@ fn gen_incant_entry(
             };
 
             if let Some(feat) = &rt.feature_gate {
+                let allow_attr = if rt.allow_unexpected_cfg {
+                    quote! { #[allow(unexpected_cfgs)] }
+                } else {
+                    quote! {}
+                };
                 tier_checks.push(quote! {
-                    #[allow(unexpected_cfgs)]
+                    #allow_attr
                     #[cfg(feature = #feat)]
                     { #check }
                 });
