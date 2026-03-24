@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+### Feature-gated tiers: `tier(feature)` syntax
+
+New syntax for conditionally dispatching to tiers based on the calling crate's cargo features. Works across all dispatch macros:
+
+```rust
+// incant! — dispatch gated on calling crate's "avx512" feature
+incant!(foo(x), [v4(avx512), v3, neon, scalar])
+
+// #[arcane] — combined arch + feature cfg guard (replaces manual #[cfg(all(...))])
+#[arcane(import_intrinsics, cfg(avx512))]
+fn process_v4(_token: X64V4Token, data: &mut [f32]) { ... }
+
+// #[rite] — same for single and multi-tier
+#[rite(v4, import_intrinsics, cfg(avx512))]
+fn helper() { ... }
+
+// #[autoversion] — full dispatch when feature on, scalar-only when off
+#[autoversion(cfg(simd))]
+fn process(_token: SimdToken, data: &[f32]) -> f32 { ... }
+```
+
+- `tier(feature)` wraps dispatch in `#[cfg(feature = "feature")]` — checks the *calling crate's* features, not archmage's. No `#[allow(unexpected_cfgs)]` emitted (the user explicitly declared the feature).
+- **Default tiers** auto-apply `(avx512)` to v4/v4x with `#[allow(unexpected_cfgs)]` — graceful degradation for crates that don't define an avx512 feature.
+- **`#[arcane(cfg(feat))]`** generates `#[cfg(all(target_arch = "...", feature = "feat"))]` — replaces the manual `#[cfg(all(target_arch = "x86_64", feature = "avx512"))]` pattern.
+- **`#[autoversion(cfg(feat))]`** emits two dispatchers: full dispatch under `#[cfg(feature)]`, scalar-only under `#[cfg(not(feature))]`.
+
+### `#[autoversion]` macro_rules! hygiene fix
+
+`#[autoversion]` now uses `return` instead of `break '__dispatch` in the generated dispatcher. This fixes a label hygiene issue where `#[autoversion]` applied inside `macro_rules!` would fail with "undeclared label `'__dispatch`". The labeled block's span was in the proc macro context while the function body was in the `macro_rules!` context. `return` has no hygiene issues since it's a keyword.
+
+`incant!` still uses labeled blocks (it's used as an expression where `return` would exit the enclosing function).
+
 ## 0.9.7 — 2026-03-24
 
 ### Backwards compatibility fix
