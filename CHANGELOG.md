@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.10 — 2026-03-24
+
+### Deprecations
+
+- **Width traits deprecated**: `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` now emit `#[deprecated]` warnings. `Has256BitSimd` is actively misleading (enables AVX, not AVX2). Use concrete tokens (`X64V3Token`) or tier traits (`HasX64V2`, `HasX64V4`). Will be removed in v1.0.
+
+- **`Avx2FmaToken` alias deprecated**: Misleading name — V3 includes BMI1/2, F16C, and more, not just AVX2+FMA. Use `X64V3Token` or `Desktop64`.
+
+- **Missing `scalar` in explicit `incant!` tier lists**: Now emits a deprecation warning. `incant!` always calls `fn_scalar()` as the final fallback — not listing it hides this requirement. Will become a compile error in v1.0.
+
+### Infrastructure
+
+- Trait deprecation driven from `token-registry.toml` via `deprecated` field.
+- Token alias deprecation via `deprecated_aliases` map in `token-registry.toml`.
+- Generator handles `#[allow(deprecated)]` on all internal references.
+
 ## 0.9.9 — 2026-03-24
 
 ### Backwards compat fix for explicit tier lists
