@@ -1877,11 +1877,11 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
         idents.iter().map(|i| i.to_string()).collect()
     };
 
-    // Skip avx512 tiers when feature is off — _v4 functions likely behind cfg(feature = "avx512")
+    // default_optional: tiers with cfg_feature are optional by default
     let tiers = match resolve_tiers(
         &tier_names,
         input_fn.sig.ident.span(),
-        cfg!(not(feature = "avx512")),
+        true, // magetypes always uses default_optional for cfg_feature tiers
     ) {
         Ok(t) => t,
         Err(e) => return e.to_compile_error().into(),
@@ -1890,7 +1890,7 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     magetypes_impl(input_fn, &tiers)
 }
 
-fn magetypes_impl(mut input_fn: LightFn, tiers: &[&TierDescriptor]) -> TokenStream {
+fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> TokenStream {
     // Strip user-provided #[arcane] / #[rite] to prevent double-wrapping
     // (magetypes auto-adds #[arcane] on non-scalar variants)
     input_fn
@@ -1934,10 +1934,19 @@ fn magetypes_impl(mut input_fn: LightFn, tiers: &[&TierDescriptor]) -> TokenStre
             }
         };
 
-        // Add cfg guard (arch only — no cargo feature checks in output)
-        let cfg_guard = match tier.target_arch {
-            Some(arch) => quote! { #[cfg(target_arch = #arch)] },
-            None => quote! {},
+        // Add cfg guard: arch + optional feature gate
+        let cfg_guard = match (tier.target_arch, tier.optional, tier.cfg_feature) {
+            (Some(arch), true, Some(feat)) => quote! {
+                #[cfg(target_arch = #arch)]
+                #[allow(unexpected_cfgs)]
+                #[cfg(feature = #feat)]
+            },
+            (Some(arch), _, _) => quote! { #[cfg(target_arch = #arch)] },
+            (None, true, Some(feat)) => quote! {
+                #[allow(unexpected_cfgs)]
+                #[cfg(feature = #feat)]
+            },
+            (None, _, _) => quote! {},
         };
 
         variants.push(if tier.name != "scalar" {
@@ -1989,6 +1998,11 @@ struct TierDescriptor {
     as_method: &'static str,
     /// Target architecture for cfg guard (None = no guard)
     target_arch: Option<&'static str>,
+    /// Cargo feature required for this tier's functions to exist.
+    /// When a tier is resolved as "optional" (e.g., `v4?` in incant! or in default
+    /// tier lists), dispatch is wrapped in `#[allow(unexpected_cfgs)] #[cfg(feature = "...")]`.
+    /// This checks the CALLING crate's features — matching the cfg on the function definitions.
+    cfg_feature: Option<&'static str>,
     /// Dispatch priority (higher = tried first within same arch)
     priority: u32,
 }
@@ -2002,7 +2016,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64V4xToken",
         as_method: "as_x64v4x",
         target_arch: Some("x86_64"),
-
+        cfg_feature: Some("avx512"),
         priority: 50,
     },
     TierDescriptor {
@@ -2011,7 +2025,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         token_path: "archmage::X64V4Token",
         as_method: "as_x64v4",
         target_arch: Some("x86_64"),
-
+        cfg_feature: Some("avx512"),
         priority: 40,
     },
     TierDescriptor {
@@ -2021,6 +2035,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_x64v3_crypto",
         target_arch: Some("x86_64"),
 
+        cfg_feature: None,
         priority: 35,
     },
     TierDescriptor {
@@ -2030,6 +2045,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_x64v3",
         target_arch: Some("x86_64"),
 
+        cfg_feature: None,
         priority: 30,
     },
     TierDescriptor {
@@ -2039,6 +2055,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_x64_crypto",
         target_arch: Some("x86_64"),
 
+        cfg_feature: None,
         priority: 25,
     },
     TierDescriptor {
@@ -2048,6 +2065,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_x64v2",
         target_arch: Some("x86_64"),
 
+        cfg_feature: None,
         priority: 20,
     },
     TierDescriptor {
@@ -2057,6 +2075,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_x64v1",
         target_arch: Some("x86_64"),
 
+        cfg_feature: None,
         priority: 10,
     },
     // ARM: highest to lowest
@@ -2067,6 +2086,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_arm_v3",
         target_arch: Some("aarch64"),
 
+        cfg_feature: None,
         priority: 50,
     },
     TierDescriptor {
@@ -2076,6 +2096,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_arm_v2",
         target_arch: Some("aarch64"),
 
+        cfg_feature: None,
         priority: 40,
     },
     TierDescriptor {
@@ -2085,6 +2106,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_neon_aes",
         target_arch: Some("aarch64"),
 
+        cfg_feature: None,
         priority: 30,
     },
     TierDescriptor {
@@ -2094,6 +2116,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_neon_sha3",
         target_arch: Some("aarch64"),
 
+        cfg_feature: None,
         priority: 30,
     },
     TierDescriptor {
@@ -2103,6 +2126,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_neon_crc",
         target_arch: Some("aarch64"),
 
+        cfg_feature: None,
         priority: 30,
     },
     TierDescriptor {
@@ -2112,6 +2136,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_neon",
         target_arch: Some("aarch64"),
 
+        cfg_feature: None,
         priority: 20,
     },
     // WASM
@@ -2122,6 +2147,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_wasm128_relaxed",
         target_arch: Some("wasm32"),
 
+        cfg_feature: None,
         priority: 21,
     },
     TierDescriptor {
@@ -2131,6 +2157,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_wasm128",
         target_arch: Some("wasm32"),
 
+        cfg_feature: None,
         priority: 20,
     },
     // Scalar (always last)
@@ -2141,6 +2168,7 @@ const ALL_TIERS: &[TierDescriptor] = &[
         as_method: "as_scalar",
         target_arch: None,
 
+        cfg_feature: None,
         priority: 0,
     },
 ];
@@ -2158,43 +2186,48 @@ fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
     ALL_TIERS.iter().find(|t| t.name == name)
 }
 
-/// Check if a tier's token requires AVX-512 features.
-///
-/// Uses the generated `token_to_features` registry to check if the tier's
-/// canonical token has any feature starting with "avx512".
-fn tier_requires_avx512(tier: &TierDescriptor) -> bool {
-    // Extract the token name from the path (e.g., "archmage::X64V4Token" → "X64V4Token")
-    let token_name = tier
-        .token_path
-        .rsplit("::")
-        .next()
-        .unwrap_or(tier.token_path);
-    token_to_features(token_name)
-        .is_some_and(|features| features.iter().any(|f| f.starts_with("avx512")))
+/// A resolved tier with its optional flag.
+#[derive(Clone)]
+struct ResolvedTier {
+    tier: &'static TierDescriptor,
+    /// If true, dispatch is wrapped in `#[allow(unexpected_cfgs)] #[cfg(feature = "...")]`
+    /// so it's silently eliminated when the calling crate doesn't define the feature.
+    optional: bool,
+}
+
+impl core::ops::Deref for ResolvedTier {
+    type Target = TierDescriptor;
+    fn deref(&self) -> &TierDescriptor {
+        self.tier
+    }
 }
 
 /// Resolve tier names to descriptors, sorted by dispatch priority (highest first).
 /// Always appends "scalar" if not already present.
 ///
-/// When `skip_avx512` is true, tiers whose tokens require AVX-512 features are
-/// silently skipped instead of included. This is used by `incant!` and `#[magetypes]`
-/// when the `avx512` feature is not enabled — the corresponding `_v4` functions
-/// likely don't exist (they're behind `#[cfg(feature = "avx512")]`).
-/// `#[autoversion]` passes `false` since it generates scalar code that doesn't
-/// need the feature.
+/// Tier names can end with `?` (e.g., `v4?`) to mark them as optional: the dispatch
+/// arm is wrapped in `#[allow(unexpected_cfgs)] #[cfg(feature = "avx512")]` so it
+/// compiles away when the calling crate doesn't define the feature.
+///
+/// When `default_optional` is true, tiers with `cfg_feature` are automatically
+/// treated as optional even without `?`. Used for default tier lists.
 fn resolve_tiers(
     tier_names: &[String],
     error_span: proc_macro2::Span,
-    skip_avx512: bool,
-) -> syn::Result<Vec<&'static TierDescriptor>> {
+    default_optional: bool,
+) -> syn::Result<Vec<ResolvedTier>> {
     let mut tiers = Vec::new();
-    for name in tier_names {
+    for raw_name in tier_names {
+        let (name, explicit_optional) = if raw_name.ends_with('?') {
+            (&raw_name[..raw_name.len() - 1], true)
+        } else {
+            (raw_name.as_str(), false)
+        };
         match find_tier(name) {
             Some(tier) => {
-                if skip_avx512 && tier_requires_avx512(tier) {
-                    continue; // silently skip — _v4 function likely doesn't exist
-                }
-                tiers.push(tier);
+                let optional =
+                    explicit_optional || (default_optional && tier.cfg_feature.is_some());
+                tiers.push(ResolvedTier { tier, optional });
             }
             None => {
                 let known: Vec<&str> = ALL_TIERS.iter().map(|t| t.name).collect();
@@ -2207,12 +2240,15 @@ fn resolve_tiers(
     }
 
     // Always include scalar fallback
-    if !tiers.iter().any(|t| t.name == "scalar") {
-        tiers.push(find_tier("scalar").unwrap());
+    if !tiers.iter().any(|rt| rt.tier.name == "scalar") {
+        tiers.push(ResolvedTier {
+            tier: find_tier("scalar").unwrap(),
+            optional: false,
+        });
     }
 
     // Sort by priority (highest first) for correct dispatch order
-    tiers.sort_by(|a, b| b.priority.cmp(&a.priority));
+    tiers.sort_by(|a, b| b.tier.priority.cmp(&a.tier.priority));
 
     Ok(tiers)
 }
@@ -2267,13 +2303,26 @@ impl Parse for IncantInput {
             None
         };
 
-        // Check for optional tier list: , [tier1, tier2, ...]
+        // Check for optional tier list: , [tier1, tier2?, ...]
+        // Tier names can end with `?` to mark them as optional (cfg-gated in output).
         let tiers = if input.peek(Token![,]) {
             let _: Token![,] = input.parse()?;
             let bracket_content;
             let bracket = syn::bracketed!(bracket_content in input);
-            let tier_idents = bracket_content.parse_terminated(Ident::parse, Token![,])?;
-            let tier_names: Vec<String> = tier_idents.iter().map(|i| i.to_string()).collect();
+            let mut tier_names = Vec::new();
+            while !bracket_content.is_empty() {
+                let ident: Ident = bracket_content.parse()?;
+                let name = if bracket_content.peek(Token![?]) {
+                    let _: Token![?] = bracket_content.parse()?;
+                    format!("{}?", ident)
+                } else {
+                    ident.to_string()
+                };
+                tier_names.push(name);
+                if bracket_content.peek(Token![,]) {
+                    let _: Token![,] = bracket_content.parse()?;
+                }
+            }
             Some((tier_names, bracket.span.join()))
         } else {
             None
@@ -2424,8 +2473,11 @@ fn incant_impl(input: IncantInput) -> TokenStream {
         .into();
     }
 
-    // Skip avx512 tiers when feature is off — _v4 functions likely behind cfg(feature = "avx512")
-    let tiers = match resolve_tiers(&tier_names, error_span, cfg!(not(feature = "avx512"))) {
+    // default_optional: when using default tiers (no explicit list), tiers with
+    // cfg_feature are automatically optional. With explicit lists, the user controls
+    // optionality via `?` suffix (e.g., `[v4?, v3, scalar]`).
+    let default_optional = input.tiers.is_none();
+    let tiers = match resolve_tiers(&tier_names, error_span, default_optional) {
         Ok(t) => t,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -2444,33 +2496,46 @@ fn gen_incant_passthrough(
     func_path: &syn::Path,
     args: &[syn::Expr],
     token_expr: &syn::Expr,
-    tiers: &[&TierDescriptor],
+    tiers: &[ResolvedTier],
 ) -> TokenStream {
     let mut dispatch_arms = Vec::new();
 
     // Group non-scalar tiers by target_arch for cfg blocks
-    let mut arch_groups: Vec<(Option<&str>, Vec<&TierDescriptor>)> = Vec::new();
-    for tier in tiers {
-        if tier.name == "scalar" {
+    let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
+    for rt in tiers {
+        if rt.name == "scalar" {
             continue; // Handle scalar separately at the end
         }
-        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == tier.target_arch) {
-            group.1.push(tier);
+        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == rt.target_arch) {
+            group.1.push(rt);
         } else {
-            arch_groups.push((tier.target_arch, vec![tier]));
+            arch_groups.push((rt.target_arch, vec![rt]));
         }
     }
 
     for (target_arch, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
-        for tier in group_tiers {
-            let fn_suffixed = suffix_path(func_path, tier.suffix);
-            let as_method = format_ident!("{}", tier.as_method);
-            tier_checks.push(quote! {
+        for rt in group_tiers {
+            let fn_suffixed = suffix_path(func_path, rt.suffix);
+            let as_method = format_ident!("{}", rt.as_method);
+
+            let check = quote! {
                 if let Some(__t) = __incant_token.#as_method() {
                     break '__incant #fn_suffixed(__t, #(#args),*);
                 }
-            });
+            };
+
+            if rt.optional
+                && let Some(feat) = rt.cfg_feature
+            {
+                tier_checks.push(quote! {
+                    #[allow(unexpected_cfgs)]
+                    #[cfg(feature = #feat)]
+                    { #check }
+                });
+            } else {
+                tier_checks.push(check);
+            }
         }
 
         let inner = quote! { #(#tier_checks)* };
@@ -2513,34 +2578,48 @@ fn gen_incant_passthrough(
 fn gen_incant_entry(
     func_path: &syn::Path,
     args: &[syn::Expr],
-    tiers: &[&TierDescriptor],
+    tiers: &[ResolvedTier],
 ) -> TokenStream {
     let mut dispatch_arms = Vec::new();
 
     // Group non-scalar tiers by target_arch for cfg blocks.
-    let mut arch_groups: Vec<(Option<&str>, Vec<&TierDescriptor>)> = Vec::new();
-    for tier in tiers {
-        if tier.name == "scalar" {
+    let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
+    for rt in tiers {
+        if rt.name == "scalar" {
             continue;
         }
-        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == tier.target_arch) {
-            group.1.push(tier);
+        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == rt.target_arch) {
+            group.1.push(rt);
         } else {
-            arch_groups.push((tier.target_arch, vec![tier]));
+            arch_groups.push((rt.target_arch, vec![rt]));
         }
     }
 
     for (target_arch, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
-        for tier in group_tiers {
-            let fn_suffixed = suffix_path(func_path, tier.suffix);
-            let token_path: syn::Path = syn::parse_str(tier.token_path).unwrap();
+        for rt in group_tiers {
+            let fn_suffixed = suffix_path(func_path, rt.suffix);
+            let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
 
-            tier_checks.push(quote! {
+            let check = quote! {
                 if let Some(__t) = #token_path::summon() {
                     break '__incant #fn_suffixed(__t, #(#args),*);
                 }
-            });
+            };
+
+            if rt.optional
+                && let Some(feat) = rt.cfg_feature
+            {
+                // Optional tier: wrap in cfg so it compiles away when the calling
+                // crate doesn't define the feature (matching the cfg on _v4 functions).
+                tier_checks.push(quote! {
+                    #[allow(unexpected_cfgs)]
+                    #[cfg(feature = #feat)]
+                    { #check }
+                });
+            } else {
+                tier_checks.push(check);
+            }
         }
 
         let inner = quote! { #(#tier_checks)* };
@@ -2801,7 +2880,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     let turbofish = build_turbofish(&input_fn.sig.generics);
 
     // Group non-scalar tiers by target_arch for cfg blocks
-    let mut arch_groups: Vec<(Option<&str>, Vec<&&TierDescriptor>)> = Vec::new();
+    let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
     for tier in &tiers {
         if tier.name == "scalar" {
             continue;
@@ -3615,10 +3694,11 @@ mod tests {
         let priorities: Vec<u32> = tiers.iter().map(|t| t.priority).collect();
         for window in priorities.windows(2) {
             assert!(
-                window[0] >= window[1],
-                "Tiers not sorted by priority: {:?}",
-                priorities
-            );
+                    window[0] >= window[1],
+            cfg_feature: None,
+                    "Tiers not sorted by priority: {:?}",
+                    priorities
+                );
         }
     }
 

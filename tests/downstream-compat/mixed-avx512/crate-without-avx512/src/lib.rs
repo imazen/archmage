@@ -20,11 +20,13 @@ fn mul_v3(_token: X64V3Token, a: f32, b: f32) -> f32 { a * b }
 
 fn mul_scalar(_token: ScalarToken, a: f32, b: f32) -> f32 { a * b }
 
+/// v4? means "optional" — dispatch wrapped in #[cfg(feature = "avx512")].
+/// If this crate's avx512 feature is off, v4 dispatch silently eliminated.
 pub fn mul(a: f32, b: f32) -> f32 {
-    incant!(mul(a, b), [v4, v3, scalar])
+    incant!(mul(a, b), [v4?, v3, scalar])
 }
 
-// Also test with default tiers (should work regardless)
+/// Default tiers: v4 is automatically optional (has cfg_feature).
 pub fn mul_default(a: f32, b: f32) -> f32 {
     incant!(mul(a, b))
 }
