@@ -67,6 +67,29 @@ fn filter_inline_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
         .collect()
 }
 
+/// Check if an attribute is a lint-control attribute.
+///
+/// Lint-control attributes (`#[allow(...)]`, `#[expect(...)]`, `#[deny(...)]`,
+/// `#[warn(...)]`, `#[forbid(...)]`) must be propagated to generated sibling
+/// functions so that user-applied lint suppressions work on the generated code.
+fn is_lint_attr(attr: &Attribute) -> bool {
+    let path = attr.path();
+    path.is_ident("allow")
+        || path.is_ident("expect")
+        || path.is_ident("deny")
+        || path.is_ident("warn")
+        || path.is_ident("forbid")
+}
+
+/// Extract lint-control attributes from a list of attributes.
+///
+/// Returns references to `#[allow(...)]`, `#[expect(...)]`, `#[deny(...)]`,
+/// `#[warn(...)]`, and `#[forbid(...)]` attributes. These need to be propagated
+/// to generated sibling functions so clippy/rustc lint suppressions work.
+fn filter_lint_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
+    attrs.iter().filter(|attr| is_lint_attr(attr)).collect()
+}
+
 /// Build a turbofish token stream from a function's generics.
 ///
 /// Collects type and const generic parameters (skipping lifetimes) and returns
@@ -813,6 +836,9 @@ fn arcane_impl_sibling(
     // Filter out user #[inline] attrs to avoid duplicates (will become a hard error).
     // The wrapper gets #[inline(always)] unconditionally — it's a trivial unsafe { sibling() }.
     let attrs = filter_inline_attrs(&input_fn.attrs);
+    // Lint-control attrs (#[allow(...)], #[expect(...)], etc.) must also go on the sibling,
+    // because the sibling has the same parameters and clippy lints it independently.
+    let lint_attrs = filter_lint_attrs(&input_fn.attrs);
 
     let sibling_name = format_ident!("__arcane_{}", fn_name);
 
@@ -891,6 +917,7 @@ fn arcane_impl_sibling(
         let sibling_fn = quote! {
             #[cfg(target_arch = #arch)]
             #[doc(hidden)]
+            #(#lint_attrs)*
             #(#target_feature_attrs)*
             #inline_attr
             fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
@@ -947,6 +974,7 @@ fn arcane_impl_sibling(
         // Still use sibling pattern for consistency. Sibling is always private.
         let sibling_fn = quote! {
             #[doc(hidden)]
+            #(#lint_attrs)*
             #(#target_feature_attrs)*
             #inline_attr
             fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {

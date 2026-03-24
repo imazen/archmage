@@ -198,6 +198,63 @@ mod sibling_tests {
         }
     }
 
+    // --- Lint attributes propagated to sibling (GH-17) ---
+    // #[allow], #[expect], etc. must be propagated to the generated __arcane_ sibling
+    // function, otherwise clippy fires on the sibling even when the user suppressed it.
+
+    #[allow(clippy::too_many_arguments)]
+    #[arcane]
+    fn many_args_fn(
+        token: X64V3Token,
+        a: f32,
+        b: f32,
+        c: f32,
+        d: f32,
+        e: f32,
+        f: f32,
+        g: f32,
+        h: f32,
+        i: f32,
+    ) -> f32 {
+        a + b + c + d + e + f + g + h + i
+    }
+
+    #[test]
+    fn lint_attrs_propagated_to_sibling() {
+        if let Some(token) = X64V3Token::summon() {
+            let result = many_args_fn(token, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
+            assert_eq!(result, 45.0);
+        }
+    }
+
+    // Verify #[allow] works on methods too (sibling has self receiver + args)
+    impl DataHolder {
+        #[allow(clippy::too_many_arguments)]
+        #[arcane]
+        fn many_args_method(
+            &self,
+            token: X64V3Token,
+            a: f32,
+            b: f32,
+            c: f32,
+            d: f32,
+            e: f32,
+            f: f32,
+            g: f32,
+        ) -> f32 {
+            self.data[0] + a + b + c + d + e + f + g
+        }
+    }
+
+    #[test]
+    fn lint_attrs_propagated_to_method_sibling() {
+        if let Some(token) = X64V3Token::summon() {
+            let h = DataHolder::new([100.0, 0.0, 0.0, 0.0]);
+            let result = h.many_args_method(token, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0);
+            assert_eq!(result, 128.0);
+        }
+    }
+
     // --- User #[inline(always)] stripped to avoid duplicate attribute warning ---
 
     #[inline(always)]
