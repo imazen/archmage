@@ -1,14 +1,21 @@
 [workspace]
 members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crate"]
 
-[package]
-name = "archmage"
+[workspace.package]
 version = "0.9.12"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
-description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive."
 repository = "https://github.com/imazen/archmage"
+
+[package]
+name = "archmage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive."
 documentation = "https://docs.rs/archmage"
 keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]

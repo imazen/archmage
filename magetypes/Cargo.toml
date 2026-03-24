@@ -1,11 +1,11 @@
 [package]
 name = "magetypes"
-version = "0.9.12"
-edition = "2024"
-rust-version = "1.89"
-license = "MIT OR Apache-2.0"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "Token-gated SIMD types with natural operators. Depends on archmage for tokens."
-repository = "https://github.com/imazen/archmage"
 documentation = "https://docs.rs/magetypes"
 keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]

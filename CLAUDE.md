@@ -655,10 +655,11 @@ If ANY check fails:
 **NEVER run `cargo publish` locally.** All releases go through GitHub Actions via tagged releases only. This ensures every published version has passed the full CI suite (including cross-platform tests, SDE emulation, Miri, etc.) before reaching crates.io. Local `cargo publish` bypasses CI and is banned.
 
 **Release process:**
-1. Update version numbers in all Cargo.toml files
-2. Commit the version bump, push to main
-3. Wait for CI to pass on main
-4. Create a GitHub release with matching tags — the release workflow handles `cargo publish`
+1. Update the version in `[workspace.package]` in the root `Cargo.toml` (single source of truth — all crates inherit via `version.workspace = true`)
+2. Update internal dep version strings (`archmage-macros = { version = "X.Y.Z", ... }` in root, `archmage = { version = "X.Y.Z", ... }` in magetypes)
+3. Commit the version bump, push to main
+4. Wait for CI to pass on main
+5. Create a GitHub release with matching tags — the release workflow handles `cargo publish`
 
 **Git tags are MANDATORY for every publish.** Tags MUST match published versions:
 

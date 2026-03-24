@@ -60,14 +60,34 @@ jobs:
       - name: Verify Cargo.toml versions match tag
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          # Workspace version is the single source of truth
+          WS_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          if [ "$WS_VERSION" != "$VERSION" ]; then
+            echo "::error::workspace version ($WS_VERSION) does not match tag ($VERSION)"
+            exit 1
+          fi
+          echo "✓ workspace version: $WS_VERSION"
+          # Verify each crate inherits or matches
           for CRATE in "." "archmage-macros" "magetypes"; do
             TOML_VERSION=$(grep '^version' "$CRATE/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
-            if [ "$TOML_VERSION" != "$VERSION" ]; then
+            if [ "$TOML_VERSION" = "$VERSION" ]; then
+              echo "✓ $CRATE/Cargo.toml: $TOML_VERSION"
+            elif grep -q 'version.workspace = true' "$CRATE/Cargo.toml"; then
+              echo "✓ $CRATE/Cargo.toml: inherits workspace ($WS_VERSION)"
+            else
               echo "::error::$CRATE/Cargo.toml version ($TOML_VERSION) does not match tag ($VERSION)"
               exit 1
             fi
-            echo "✓ $CRATE/Cargo.toml: $TOML_VERSION"
           done
+          # Verify internal dep versions match
+          for DEP_LINE in $(grep -n 'version = "0\.' Cargo.toml magetypes/Cargo.toml | grep -E 'archmage-macros|archmage' | grep -v workspace); do
+            DEP_VERSION=$(echo "$DEP_LINE" | sed 's/.*version = "\([^"]*\)".*/\1/')
+            if [ "$DEP_VERSION" != "$VERSION" ]; then
+              echo "::error::Internal dep version ($DEP_VERSION) does not match tag ($VERSION): $DEP_LINE"
+              exit 1
+            fi
+          done
+          echo "✓ internal dependency versions match"
 
   # ==========================================================================
   # Run generation check + clippy + tests before publishing
