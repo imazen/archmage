@@ -2,6 +2,14 @@
 //!
 //! Tests variant generation, dispatch, explicit tiers, self receivers,
 //! and correctness across all dispatch paths.
+//!
+//! Coverage matrix:
+//! - Legacy form (explicit `_token: SimdToken`): full coverage from v0.5
+//! - Tokenless form (no SimdToken): parity with legacy form
+//! - incant! nesting: autoversioned fn as scalar fallback via bridge
+//! - All self receiver types: &self, &mut self, self (owned)
+//! - Const generics, type generics, lifetimes
+//! - _self = Type nested mode
 
 use archmage::prelude::*;
 
@@ -924,4 +932,336 @@ fn tokenless_const_generic() {
     let mut data = [0.0f32; 16];
     fill_chunked::<4>(&mut data, 42.0);
     assert!(data.iter().all(|&x| (x - 42.0).abs() < 1e-6));
+}
+
+// ============================================================================
+// Tokenless self receivers (parity with legacy SimdToken method tests)
+// ============================================================================
+
+struct TokenlessBuffer {
+    data: Vec<f32>,
+}
+
+impl TokenlessBuffer {
+    #[autoversion]
+    fn total(&self) -> f32 {
+        self.data.iter().sum()
+    }
+
+    #[autoversion]
+    fn scale_all(&mut self, factor: f32) {
+        for x in self.data.iter_mut() {
+            *x *= factor;
+        }
+    }
+
+    #[autoversion]
+    fn into_total(self) -> f32 {
+        self.data.iter().sum()
+    }
+
+    #[autoversion]
+    fn values_ref(&self) -> &[f32] {
+        &self.data
+    }
+
+    #[autoversion]
+    fn weighted_sum(&self, weight: f32) -> f32 {
+        self.data.iter().map(|v| v * weight).sum()
+    }
+
+    #[autoversion(v3, neon)]
+    fn product(&self) -> f32 {
+        self.data.iter().product()
+    }
+}
+
+#[test]
+fn tokenless_ref_self() {
+    let buf = TokenlessBuffer {
+        data: vec![1.0, 2.0, 3.0, 4.0],
+    };
+    assert!((buf.total() - 10.0).abs() < 1e-6);
+}
+
+#[test]
+fn tokenless_mut_self() {
+    let mut buf = TokenlessBuffer {
+        data: vec![1.0, 2.0, 3.0],
+    };
+    buf.scale_all(3.0);
+    assert_eq!(buf.data, vec![3.0, 6.0, 9.0]);
+}
+
+#[test]
+fn tokenless_owned_self() {
+    let buf = TokenlessBuffer {
+        data: vec![1.0, 2.0, 3.0, 4.0],
+    };
+    assert!((buf.into_total() - 10.0).abs() < 1e-6);
+}
+
+#[test]
+fn tokenless_borrowing_return() {
+    let buf = TokenlessBuffer {
+        data: vec![1.0, 2.0, 3.0],
+    };
+    assert_eq!(buf.values_ref(), &[1.0, 2.0, 3.0]);
+}
+
+#[test]
+fn tokenless_self_with_extra_params() {
+    let buf = TokenlessBuffer {
+        data: vec![1.0, 2.0, 3.0],
+    };
+    assert!((buf.weighted_sum(10.0) - 60.0).abs() < 1e-6);
+}
+
+#[test]
+fn tokenless_self_explicit_tiers() {
+    let buf = TokenlessBuffer {
+        data: vec![2.0, 3.0, 4.0],
+    };
+    assert!((buf.product() - 24.0).abs() < 1e-6);
+}
+
+#[test]
+fn tokenless_scalar_method_variant() {
+    let buf = TokenlessBuffer {
+        data: vec![1.0, 2.0, 3.0],
+    };
+    let s = buf.total_scalar(ScalarToken);
+    assert!((s - 6.0).abs() < 1e-6);
+}
+
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn tokenless_v3_method_variant() {
+    if let Some(token) = X64V3Token::summon() {
+        let buf = TokenlessBuffer {
+            data: vec![10.0, 20.0, 30.0],
+        };
+        let result = buf.total_v3(token);
+        assert!((result - 60.0).abs() < 1e-6);
+    }
+}
+
+// ============================================================================
+// Tokenless _self = Type (nested mode)
+// ============================================================================
+
+struct TokenlessNested {
+    bias: f32,
+}
+
+impl TokenlessNested {
+    #[autoversion(_self = TokenlessNested)]
+    fn biased_sum(&self, data: &[f32]) -> f32 {
+        _self.bias + data.iter().sum::<f32>()
+    }
+
+    #[autoversion(_self = TokenlessNested)]
+    fn biased_scale(&mut self, data: &[f32], factor: f32) -> f32 {
+        _self.bias * factor + data.iter().sum::<f32>()
+    }
+}
+
+#[test]
+fn tokenless_nested_ref_self() {
+    let n = TokenlessNested { bias: 100.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    assert!((n.biased_sum(&data) - 106.0).abs() < 1e-6);
+}
+
+#[test]
+fn tokenless_nested_mut_self() {
+    let mut n = TokenlessNested { bias: 10.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    assert!((n.biased_scale(&data, 2.0) - 26.0).abs() < 1e-6);
+}
+
+// ============================================================================
+// Tokenless parity: explicit vs tokenless produce identical results
+// ============================================================================
+
+#[autoversion]
+fn parity_explicit(_token: SimdToken, data: &[f32]) -> f32 {
+    data.iter().map(|x| x * x).sum()
+}
+
+#[autoversion]
+fn parity_tokenless(data: &[f32]) -> f32 {
+    data.iter().map(|x| x * x).sum()
+}
+
+#[test]
+fn explicit_and_tokenless_produce_same_result() {
+    let data: Vec<f32> = (0..256).map(|i| i as f32 * 0.1).collect();
+    let explicit = parity_explicit(&data);
+    let tokenless = parity_tokenless(&data);
+    assert!(
+        (explicit - tokenless).abs() < 1e-3,
+        "explicit ({explicit}) != tokenless ({tokenless})"
+    );
+}
+
+#[test]
+fn explicit_and_tokenless_scalar_variants_match() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let explicit = parity_explicit_scalar(ScalarToken, &data);
+    let tokenless = parity_tokenless_scalar(ScalarToken, &data);
+    assert!(
+        (explicit - tokenless).abs() < 1e-6,
+        "scalar: explicit ({explicit}) != tokenless ({tokenless})"
+    );
+}
+
+// ============================================================================
+// incant! nesting: hand-written + autoversioned scalar fallback via bridge
+// ============================================================================
+
+/// Hand-written v3 — uses a distinctive multiplier so we can tell which path ran
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn nested_dispatch_v3(_token: X64V3Token, data: &[f32]) -> f32 {
+    // Real code would use intrinsics. Multiplier identifies this path.
+    data.iter().sum::<f32>() * 1000.0
+}
+
+/// Autoversioned fallback (inner) — tokenless, does its own dispatch
+#[autoversion(v3, neon)]
+fn nested_dispatch_fallback(data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+/// Bridge: incant! passes ScalarToken; bridge calls tokenless autoversion
+fn nested_dispatch_scalar(_: ScalarToken, data: &[f32]) -> f32 {
+    nested_dispatch_fallback(data)
+}
+
+/// Top-level: incant! dispatches to hand-written v3 or autoversioned fallback
+fn nested_dispatch(data: &[f32]) -> f32 {
+    incant!(nested_dispatch(data), [v3, scalar])
+}
+
+#[test]
+fn incant_nesting_dispatches_correctly() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = nested_dispatch(&data);
+    // Should produce a finite result regardless of which path
+    assert!(result.is_finite(), "nested dispatch: {result}");
+}
+
+#[test]
+fn incant_nesting_scalar_fallback_works() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    // Call the bridge directly — simulates what incant! does for scalar
+    let result = nested_dispatch_scalar(ScalarToken, &data);
+    assert!((result - 10.0).abs() < 1e-6, "scalar bridge: {result}");
+}
+
+#[test]
+fn incant_nesting_autoversion_fallback_directly() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    // Call the autoversioned dispatcher directly
+    let result = nested_dispatch_fallback(&data);
+    assert!(
+        (result - 10.0).abs() < 1e-6,
+        "autoversion fallback: {result}"
+    );
+}
+
+#[test]
+fn incant_nesting_fallback_scalar_variant() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    // Call the scalar variant of the autoversioned fallback
+    let result = nested_dispatch_fallback_scalar(ScalarToken, &data);
+    assert!(
+        (result - 10.0).abs() < 1e-6,
+        "fallback scalar variant: {result}"
+    );
+}
+
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn incant_nesting_v3_path_identified() {
+    if let Some(token) = X64V3Token::summon() {
+        let data = [1.0f32, 2.0, 3.0, 4.0];
+        // The hand-written v3 multiplies by 1000
+        let v3_result = nested_dispatch_v3(token, &data);
+        assert!(
+            (v3_result - 10000.0).abs() < 1e-3,
+            "hand-written v3: {v3_result}"
+        );
+        // The top-level dispatcher should pick v3 on x86_64 with AVX2
+        let dispatched = nested_dispatch(&data);
+        assert!(
+            (dispatched - 10000.0).abs() < 1e-3,
+            "dispatched should pick v3: {dispatched}"
+        );
+    }
+}
+
+// ============================================================================
+// incant! nesting with methods
+// ============================================================================
+
+struct NestedProcessor {
+    scale: f32,
+}
+
+impl NestedProcessor {
+    /// Top-level: manual dispatch via if/else, calling hand-written or bridge
+    pub fn process(&self, data: &[f32]) -> f32 {
+        #[cfg(target_arch = "x86_64")]
+        if let Some(token) = X64V3Token::summon() {
+            return self.process_v3(token, data);
+        }
+        self.process_scalar(ScalarToken, data)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[arcane]
+    fn process_v3(&self, _token: X64V3Token, data: &[f32]) -> f32 {
+        data.iter().sum::<f32>() * self.scale * 100.0 // distinctive
+    }
+
+    fn process_scalar(&self, _: ScalarToken, data: &[f32]) -> f32 {
+        self.process_auto(data)
+    }
+
+    #[autoversion(v3, neon)]
+    fn process_auto(&self, data: &[f32]) -> f32 {
+        data.iter().sum::<f32>() * self.scale
+    }
+}
+
+#[test]
+fn incant_nesting_method_dispatches() {
+    let p = NestedProcessor { scale: 2.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    let result = p.process(&data);
+    assert!(result.is_finite(), "method nested dispatch: {result}");
+}
+
+#[test]
+fn incant_nesting_method_scalar_bridge() {
+    let p = NestedProcessor { scale: 2.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    let result = p.process_scalar(ScalarToken, &data);
+    assert!(
+        (result - 12.0).abs() < 1e-6,
+        "method scalar bridge: {result}"
+    );
+}
+
+#[test]
+fn incant_nesting_method_auto_directly() {
+    let p = NestedProcessor { scale: 3.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    let result = p.process_auto(&data);
+    assert!(
+        (result - 18.0).abs() < 1e-6,
+        "method auto dispatch: {result}"
+    );
 }
