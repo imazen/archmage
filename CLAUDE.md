@@ -1085,6 +1085,14 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **v1.0: Remove `guaranteed()`**. Deprecated since 0.6.0, replaced by `compiled_with()`. Same semantics, better name.
 
+- **v1.0: Require `scalar` or `default` in explicit tier lists.** Update the scalar warning to also accept `default`. The auto-append of `scalar` stays until this becomes an error.
+
+- **v1.0: Remove `SimdToken` parameter support from `#[autoversion]`.** Deprecated since 0.9.11. Users should use tokenless (recommended) or `ScalarToken` for incant! nesting. `SimdToken` is a trait, not a type — it was always a macro-only placeholder.
+
+- **v1.0: Remove `_self = Type` from `#[autoversion]`.** Plain `self` works in sibling mode since the beginning. Only trait delegation needs nested mode, and autoversion can't do trait impls anyway. Saves ~40 lines.
+
+- **v1.0: Deprecate incant! passthrough mode (`with token`).** Zero uses in zen or any downstream crate. The use case (re-dispatch an existing token) is better served by `#[rite]` multi-tier or `IntoConcreteToken` directly. `default` tier solves the nesting case without passthrough.
+
 - **NOT planned for removal:** `#[simd_fn]`, `simd_route!`, `try_new()`, `forge_token_dangerously()`. These are discouraged migration aliases but remain supported — they don't cause confusion or bugs, they just have better-named equivalents.
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
