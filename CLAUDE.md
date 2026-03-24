@@ -1079,6 +1079,8 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **v1.0: Require `scalar` in explicit `incant!` tier lists.** Flip `REQUIRE_EXPLICIT_SCALAR` to `true` in `archmage-macros/src/lib.rs`. Re-enable the `scalar_not_in_tier_list` compile-fail test in `tests/compile_fail.rs`. Currently `scalar` is auto-appended for backwards compatibility; all our own code already includes it explicitly.
 
+- **v1.0: Require explicit `tier(feature)` syntax — remove implicit `cfg_feature` auto-gating.** Currently `TierDescriptor.cfg_feature` auto-applies `(avx512)` to v4/v4x in all tier lists (both default and explicit). This is backwards-compatible magic but confusing: plain `v4` in `[v4, v3, scalar]` silently gets a cfg gate. In v1.0, remove `cfg_feature` from `TierDescriptor` and `default_feature_gates` from `resolve_tiers`. Users must write `v4(avx512)` explicitly. Plain `v4` means unconditional dispatch — the function MUST exist. Default tier names drop v4 entirely; users add it with the syntax they want. This makes the behavior visible and predictable. Migration: search for `[v4,` and `[v4x,` in tier lists, add `(avx512)`.
+
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
 - ~~**Target-feature boundary overhead benchmark**~~: Done. See `benches/asm_inspection.rs` and `docs/PERFORMANCE.md`. Key results:
