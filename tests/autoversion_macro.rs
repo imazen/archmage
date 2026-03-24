@@ -848,3 +848,80 @@ fn plain_vs_nested_self_consistent() {
     );
     assert!((plain - 106.0).abs() < 1e-6);
 }
+
+// ============================================================================
+// Tokenless: #[autoversion] without explicit SimdToken parameter
+// ============================================================================
+
+/// When no SimdToken parameter is present, #[autoversion] auto-injects one.
+/// The dispatcher has the original signature (no token), callers unchanged.
+#[autoversion]
+fn inner_product(a: &[f32], b: &[f32]) -> f32 {
+    let mut sum = 0.0f32;
+    let len = a.len().min(b.len());
+    for i in 0..len {
+        sum += a[i] * b[i];
+    }
+    sum
+}
+
+#[test]
+fn tokenless_dispatcher_works() {
+    let a = [1.0f32, 2.0, 3.0, 4.0];
+    let b = [4.0f32, 3.0, 2.0, 1.0];
+    let result = inner_product(&a, &b);
+    assert!((result - 20.0).abs() < 1e-6, "tokenless: {result}");
+}
+
+#[test]
+fn tokenless_scalar_variant_callable() {
+    let a = [1.0f32, 2.0, 3.0];
+    let b = [3.0f32, 2.0, 1.0];
+    let result = inner_product_scalar(ScalarToken, &a, &b);
+    assert!((result - 10.0).abs() < 1e-6, "scalar: {result}");
+}
+
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn tokenless_v3_variant_callable() {
+    if let Some(token) = X64V3Token::summon() {
+        let a = [1.0f32, 2.0, 3.0, 4.0];
+        let b = [4.0f32, 3.0, 2.0, 1.0];
+        let result = inner_product_v3(token, &a, &b);
+        assert!((result - 20.0).abs() < 1e-6, "v3: {result}");
+    }
+}
+
+/// Tokenless with explicit tiers
+#[autoversion(v3, neon)]
+fn scale_sum(data: &[f32], factor: f32) -> f32 {
+    let mut sum = 0.0f32;
+    for &x in data {
+        sum += x * factor;
+    }
+    sum
+}
+
+#[test]
+fn tokenless_explicit_tiers() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = scale_sum(&data, 2.0);
+    assert!((result - 20.0).abs() < 1e-6, "scale_sum: {result}");
+}
+
+/// Tokenless with const generics
+#[autoversion]
+fn fill_chunked<const N: usize>(data: &mut [f32], val: f32) {
+    for chunk in data.chunks_mut(N) {
+        for x in chunk {
+            *x = val;
+        }
+    }
+}
+
+#[test]
+fn tokenless_const_generic() {
+    let mut data = [0.0f32; 16];
+    fill_chunked::<4>(&mut data, 42.0);
+    assert!(data.iter().all(|&x| (x - 42.0).abs() < 1e-6));
+}

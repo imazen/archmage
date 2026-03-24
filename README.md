@@ -303,7 +303,7 @@ Don't want to write intrinsics? Write plain scalar code and let the compiler vec
 use archmage::prelude::*;
 
 #[autoversion]
-fn sum_of_squares(_token: SimdToken, data: &[f32]) -> f32 {
+fn sum_of_squares(data: &[f32]) -> f32 {
     let mut sum = 0.0f32;
     for &x in data {
         sum += x * x;
@@ -317,7 +317,7 @@ let result = sum_of_squares(&my_data);
 
 `#[autoversion]` generates a separate copy of your function for each architecture tier — each compiled with `#[target_feature]` to unlock the auto-vectorizer — plus a runtime dispatcher that picks the best one. On x86-64 with AVX2+FMA, that loop compiles to `vfmadd231ps` (8 floats per cycle). On ARM, you get `fmla`. The `_scalar` fallback compiles without SIMD features as a safety net.
 
-The `_token: SimdToken` parameter is a placeholder — you don't use it in the body. The macro replaces it with concrete token types (`X64V3Token`, `NeonToken`, etc.) for each variant.
+The macro auto-injects a hidden `SimdToken` parameter internally — you don't need to add one. The generated dispatcher has your original signature. You can optionally write `_token: SimdToken` if you prefer the explicit style, but it's not required.
 
 **What gets generated** (default tiers):
 

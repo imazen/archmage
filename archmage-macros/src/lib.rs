@@ -2894,19 +2894,22 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // _self = Type is only needed for trait impls (nested mode in #[arcane]).
     // For inherent methods, self/Self work naturally in sibling mode.
 
-    // Find SimdToken parameter
+    // Find SimdToken parameter, or auto-inject one if missing.
+    //
+    // When no SimdToken parameter is present, #[autoversion] injects a hidden
+    // `_token: SimdToken` as the first non-self parameter. The generated
+    // dispatcher strips this parameter, so the public API keeps the original
+    // signature. Users never need to add SimdToken themselves.
     let token_param = match find_simd_token_param(&input_fn.sig) {
         Some(p) => p,
         None => {
-            return syn::Error::new_spanned(
-                &input_fn.sig,
-                "autoversion requires a `SimdToken` parameter.\n\
-                 Example: fn process(token: SimdToken, data: &[f32]) -> f32 { ... }\n\n\
-                 SimdToken is the dispatch placeholder — autoversion replaces it \
-                 with concrete token types and generates a runtime dispatcher.",
-            )
-            .to_compile_error()
-            .into();
+            let insert_pos = if has_self { 1 } else { 0 };
+            let token_arg: FnArg = parse_quote!(_token: SimdToken);
+            input_fn.sig.inputs.insert(insert_pos, token_arg);
+            SimdTokenParamInfo {
+                index: insert_pos,
+                ident: Ident::new("_token", input_fn.sig.ident.span()),
+            }
         }
     };
 
@@ -3173,10 +3176,10 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 
 /// Let the compiler auto-vectorize scalar code for each architecture.
 ///
-/// Write a plain scalar function with a `SimdToken` placeholder parameter.
-/// `#[autoversion]` generates architecture-specific copies — each compiled
-/// with different `#[target_feature]` flags via `#[arcane]` — plus a runtime
-/// dispatcher that calls the best one the CPU supports.
+/// Write a plain scalar function and let `#[autoversion]` generate
+/// architecture-specific copies — each compiled with different
+/// `#[target_feature]` flags via `#[arcane]` — plus a runtime dispatcher
+/// that calls the best one the CPU supports.
 ///
 /// You don't touch intrinsics, don't import SIMD types, don't think about
 /// lane widths. The compiler's auto-vectorizer does the work; you give it
@@ -3185,10 +3188,10 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 /// # The simple win
 ///
 /// ```rust,ignore
-/// use archmage::SimdToken;
+/// use archmage::autoversion;
 ///
 /// #[autoversion]
-/// fn sum_of_squares(_token: SimdToken, data: &[f32]) -> f32 {
+/// fn sum_of_squares(data: &[f32]) -> f32 {
 ///     let mut sum = 0.0f32;
 ///     for &x in data {
 ///         sum += x * x;
@@ -3200,10 +3203,14 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 /// let result = sum_of_squares(&my_data);
 /// ```
 ///
-/// The `_token` parameter is never used in the body. It exists so the macro
-/// knows where to substitute concrete token types. Each generated variant
+/// No `SimdToken` parameter needed — the macro injects one internally.
+/// The generated dispatcher keeps your original signature. Each variant
 /// gets `#[arcane]` → `#[target_feature(enable = "avx2,fma,...")]`, which
 /// unlocks the compiler's auto-vectorizer for that feature set.
+///
+/// You can optionally write `_token: SimdToken` as a parameter if you
+/// prefer the explicit style — the macro recognizes it and uses it
+/// instead of injecting one.
 ///
 /// On x86-64 with the `_v3` variant (AVX2+FMA), that loop compiles to
 /// `vfmadd231ps` — fused multiply-add on 8 floats per cycle. On aarch64
@@ -3216,7 +3223,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 ///
 /// ```rust,ignore
 /// #[autoversion]
-/// fn normalize(_token: SimdToken, data: &mut [f32], scale: f32) {
+/// fn normalize(data: &mut [f32], scale: f32) {
 ///     // Compiler auto-vectorizes this — no manual SIMD needed.
 ///     // On v3, this becomes vdivps + vmulps on 8 floats at a time.
 ///     for x in data.iter_mut() {
@@ -3904,11 +3911,10 @@ mod tests {
         let priorities: Vec<u32> = tiers.iter().map(|t| t.priority).collect();
         for window in priorities.windows(2) {
             assert!(
-                    window[0] >= window[1],
-            cfg_feature: None,
-                    "Tiers not sorted by priority: {:?}",
-                    priorities
-                );
+                window[0] >= window[1],
+                "Tiers not sorted by priority: {:?}",
+                priorities
+            );
         }
     }
 
