@@ -27,25 +27,11 @@ The macro generates one variant per architecture tier — each compiled with `#[
 
 On x86-64 with AVX2+FMA, that loop compiles to `vfmadd231ps` — fused multiply-add on 8 floats per cycle. On aarch64 with NEON, you get `fmla`. The `_scalar` fallback compiles without SIMD target features as a safety net.
 
-## SimdToken — optional placeholder
+## SimdToken — deprecated placeholder
 
-You can optionally write `_token: SimdToken` as a parameter. The macro recognizes it and strips it from the dispatcher — the generated public API never includes the token.
+> **Deprecated since 0.9.11.** Use the tokenless form (above) or `ScalarToken` for [incant! nesting](#nesting-with-incant).
 
-```rust
-#[autoversion]
-fn normalize(_token: SimdToken, data: &mut [f32], scale: f32) {
-    for x in data.iter_mut() {
-        *x = (*x - 128.0) * scale;
-    }
-}
-
-// Dispatcher is: fn normalize(data: &mut [f32], scale: f32)
-normalize(&mut data, 0.5);
-```
-
-The token exists for the macro's benefit — it marks where to substitute concrete token types in each variant. In the variants, `SimdToken` becomes `X64V3Token`, `NeonToken`, etc. In the dispatcher, the parameter is removed entirely.
-
-Both forms — with and without `SimdToken` — produce identical output. Prefer the tokenless form for new code.
+The legacy `_token: SimdToken` parameter is still recognized — the macro strips it from the dispatcher. But `SimdToken` is a trait, not a type, so the parameter was never valid Rust on its own. New code should not use it.
 
 ## What gets generated
 
