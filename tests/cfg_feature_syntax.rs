@@ -9,7 +9,6 @@ use archmage::prelude::*;
 // incant! with tier(feature) syntax
 // ============================================================================
 
-#[cfg(target_arch = "x86_64")]
 #[arcane]
 fn add_v3(_token: X64V3Token, a: f32, b: f32) -> f32 {
     a + b
@@ -19,7 +18,6 @@ fn add_scalar(_token: ScalarToken, a: f32, b: f32) -> f32 {
     a + b
 }
 
-#[cfg(target_arch = "aarch64")]
 #[arcane]
 fn add_neon(_token: NeonToken, a: f32, b: f32) -> f32 {
     a + b

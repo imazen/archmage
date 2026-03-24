@@ -439,7 +439,6 @@ mod default_tier_tests {
         x * 99.0
     }
 
-    #[cfg(target_arch = "x86_64")]
     #[arcane]
     fn entry_v3(_: X64V3Token, x: f32) -> f32 {
         x * 30.0
@@ -483,7 +482,6 @@ mod default_tier_tests {
         a + b + c
     }
 
-    #[cfg(target_arch = "x86_64")]
     #[arcane]
     fn multi_arg_v3(_: X64V3Token, a: f32, b: f32, c: f32) -> f32 {
         (a + b + c) * 100.0
@@ -512,7 +510,6 @@ mod default_tier_tests {
         x * 77.0
     }
 
-    #[cfg(target_arch = "x86_64")]
     #[arcane]
     fn passthrough_v3(_: X64V3Token, x: f32) -> f32 {
         x * 33.0

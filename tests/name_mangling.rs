@@ -291,7 +291,6 @@ fn incant_test_scalar(_: ScalarToken, x: f32) -> f32 {
     x * 10.0
 }
 
-#[cfg(target_arch = "x86_64")]
 #[arcane]
 fn incant_test_v3(_: X64V3Token, x: f32) -> f32 {
     x * 30.0
@@ -320,7 +319,6 @@ fn incant_default_test_default(x: f32) -> f32 {
     x * 99.0
 }
 
-#[cfg(target_arch = "x86_64")]
 #[arcane]
 fn incant_default_test_v3(_: X64V3Token, x: f32) -> f32 {
     x * 30.0
