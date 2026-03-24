@@ -135,6 +135,36 @@ pub(crate) fn replace_self_in_tokens(
     result
 }
 
+/// Generate import statements for intrinsics and/or magetypes.
+pub(crate) fn generate_imports(
+    target_arch: Option<&str>,
+    magetypes_namespace: Option<&str>,
+    import_intrinsics: bool,
+    import_magetypes: bool,
+) -> proc_macro2::TokenStream {
+    let mut imports = proc_macro2::TokenStream::new();
+
+    if import_intrinsics && let Some(arch) = target_arch {
+        let arch_ident = quote::format_ident!("{}", arch);
+        imports.extend(quote! {
+            #[allow(unused_imports)]
+            use archmage::intrinsics::#arch_ident::*;
+        });
+    }
+
+    if import_magetypes && let Some(ns) = magetypes_namespace {
+        let ns_ident = quote::format_ident!("{}", ns);
+        imports.extend(quote! {
+            #[allow(unused_imports)]
+            use magetypes::simd::#ns_ident::*;
+            #[allow(unused_imports)]
+            use magetypes::simd::backends::*;
+        });
+    }
+
+    imports
+}
+
 /// Suffix the last segment of a path: `process` → `process_v3`.
 pub(crate) fn suffix_path(path: &syn::Path, suffix: &str) -> syn::Path {
     let mut suffixed = path.clone();
