@@ -3,7 +3,7 @@ members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crat
 
 [package]
 name = "archmage"
-version = "0.9.6"
+version = "0.9.7"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -46,7 +46,7 @@ testable_dispatch = []
 
 [dependencies]
 # Proc-macro crate for #[arcane], #[rite], #[autoversion], incant!, etc.
-archmage-macros = { version = "0.9.6", path = "archmage-macros" }
+archmage-macros = { version = "0.9.7", path = "archmage-macros" }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
 safe_unaligned_simd = { version = "0.2.5" }
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.7 — 2026-03-24
+
+### Backwards compatibility fix
+
+- **`incant!`/`#[magetypes]` with explicit `[v4, ...]` tier lists** — AVX-512 tiers are now silently skipped when the `avx512` feature is off, even in explicit tier lists. This matches the old behavior where v4 dispatch arms were cfg-gated, but via the correct mechanism (expansion-time check on archmage-macros, not `#[cfg(feature)]` in output). Crates like linear-srgb that use `incant!(foo(x), [v4, v3, neon])` with cfg-gated `_v4` functions now work without changes.
+
 ## 0.9.6 — 2026-03-24
 
 ### Bug fixes
