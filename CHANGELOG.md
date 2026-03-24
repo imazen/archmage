@@ -47,9 +47,29 @@ fn process_scalar(_: ScalarToken, data: &[f32]) -> f32 {
 
 - **Concrete tokens in `#[autoversion]`** (`X64V3Token`, `NeonToken`, etc.): Now produces a clear compile error directing users to `#[arcane]` or `#[rite]` for single-token functions.
 
+### `default` tier — tokenless fallback
+
+New `default` tier for `incant!`, `#[autoversion]`, and `#[magetypes]`. Like `scalar` but calls `_default(args)` without any token:
+
+```rust
+fn process(data: &[f32]) -> f32 {
+    incant!(process(data), [v4, default])
+}
+
+#[arcane(import_intrinsics)]
+fn process_v4(_: X64V4Token, data: &[f32]) -> f32 { /* intrinsics */ }
+
+#[autoversion(v3, neon)]
+fn process_default(data: &[f32]) -> f32 {
+    data.iter().sum()  // tokenless — no ScalarToken, no bridge
+}
+```
+
+`scalar` and `default` are mutually exclusive. If neither is listed, `scalar` is auto-appended for backwards compatibility.
+
 ### Docs
 
-Comprehensive autoversion docs: name collision patterns, incant! nesting (bridgeless and bridge), feature-gated tiers, const generics, method patterns, when-to-use comparison.
+Comprehensive autoversion docs: name collision patterns, incant! nesting (bridgeless via `default` and via `ScalarToken`), feature-gated tiers, const generics, method patterns, when-to-use comparison.
 
 ## 0.9.10 — 2026-03-24
 
