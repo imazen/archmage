@@ -1,6 +1,7 @@
 //! Tests for the `cfg(feature)` syntax across all macros.
 //!
 //! Tests `tier(feature)` in incant!, `cfg(feature)` in #[arcane], #[rite], #[autoversion].
+#![allow(deprecated)] // Legacy SimdToken usage in autoversion tests
 
 use archmage::prelude::*;
 

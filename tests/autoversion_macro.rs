@@ -11,6 +11,9 @@
 //! - Const generics, type generics, lifetimes
 //! - _self = Type nested mode
 
+// Allow deprecated SimdToken usage — these tests intentionally exercise the legacy form
+#![allow(deprecated)]
+
 use archmage::prelude::*;
 
 // ============================================================================
@@ -1263,5 +1266,117 @@ fn incant_nesting_method_auto_directly() {
     assert!(
         (result - 18.0).abs() < 1e-6,
         "method auto dispatch: {result}"
+    );
+}
+
+// ============================================================================
+// ScalarToken nesting: no bridge needed
+// ============================================================================
+
+/// Hand-written v3 for the bridgeless nesting test
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn bridgeless_v3(_token: X64V3Token, data: &[f32]) -> f32 {
+    data.iter().sum::<f32>() * 1000.0 // distinctive
+}
+
+/// ScalarToken autoversion: the dispatcher IS the incant! scalar target.
+/// No bridge function needed — ScalarToken is kept in the dispatcher signature.
+#[autoversion(v3, neon)]
+fn bridgeless_scalar(_: ScalarToken, data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+/// Top-level: incant! dispatches to hand-written v3 or ScalarToken autoversion
+fn bridgeless(data: &[f32]) -> f32 {
+    incant!(bridgeless(data), [v3, scalar])
+}
+
+#[test]
+fn scalar_token_nesting_dispatches() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = bridgeless(&data);
+    assert!(result.is_finite(), "bridgeless dispatch: {result}");
+}
+
+#[test]
+fn scalar_token_nesting_scalar_directly() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    // incant! calls this with ScalarToken — and it works directly
+    let result = bridgeless_scalar(ScalarToken, &data);
+    assert!((result - 10.0).abs() < 1e-6, "scalar direct: {result}");
+}
+
+#[test]
+fn scalar_token_nesting_scalar_variant() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    // The autoversion's own _scalar variant
+    let result = bridgeless_scalar_scalar(ScalarToken, &data);
+    assert!((result - 10.0).abs() < 1e-6, "scalar variant: {result}");
+}
+
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn scalar_token_nesting_v3_path() {
+    if let Some(token) = X64V3Token::summon() {
+        let data = [1.0f32, 2.0, 3.0, 4.0];
+        // Hand-written v3 has ×1000 multiplier
+        let v3_result = bridgeless_v3(token, &data);
+        assert!(
+            (v3_result - 10000.0).abs() < 1e-3,
+            "hand-written v3: {v3_result}"
+        );
+        // Top-level should pick v3
+        let dispatched = bridgeless(&data);
+        assert!(
+            (dispatched - 10000.0).abs() < 1e-3,
+            "should pick v3: {dispatched}"
+        );
+    }
+}
+
+// ScalarToken nesting with method
+struct BridgelessProcessor {
+    scale: f32,
+}
+
+impl BridgelessProcessor {
+    pub fn process(&self, data: &[f32]) -> f32 {
+        #[cfg(target_arch = "x86_64")]
+        if let Some(token) = X64V3Token::summon() {
+            return self.process_v3(token, data);
+        }
+        self.process_scalar(ScalarToken, data)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[arcane]
+    fn process_v3(&self, _token: X64V3Token, data: &[f32]) -> f32 {
+        data.iter().sum::<f32>() * self.scale * 100.0
+    }
+
+    /// ScalarToken autoversion: dispatcher IS the scalar target
+    #[autoversion(v3, neon)]
+    fn process_scalar(&self, _: ScalarToken, data: &[f32]) -> f32 {
+        data.iter().sum::<f32>() * self.scale
+    }
+}
+
+#[test]
+fn scalar_token_nesting_method() {
+    let p = BridgelessProcessor { scale: 2.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    let result = p.process(&data);
+    assert!(result.is_finite(), "method bridgeless: {result}");
+}
+
+#[test]
+fn scalar_token_nesting_method_scalar_directly() {
+    let p = BridgelessProcessor { scale: 2.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    let result = p.process_scalar(ScalarToken, &data);
+    assert!(
+        (result - 12.0).abs() < 1e-6,
+        "method scalar direct: {result}"
     );
 }

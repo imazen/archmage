@@ -2848,35 +2848,78 @@ impl Parse for AutoversionArgs {
     }
 }
 
-/// Information about the `SimdToken` parameter found in a function signature.
-struct SimdTokenParamInfo {
+/// What kind of token parameter was found in the autoversion function signature.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AutoversionTokenKind {
+    /// `SimdToken` — legacy placeholder, stripped from dispatcher (deprecated).
+    SimdToken,
+    /// `ScalarToken` — real type, kept in dispatcher for incant! compatibility.
+    ScalarToken,
+    /// No token found — auto-injected internally, stripped from dispatcher.
+    AutoInjected,
+}
+
+/// Information about the token parameter in an autoversion function signature.
+#[derive(Debug)]
+struct AutoversionTokenParam {
     /// Index of the parameter in `sig.inputs`
     index: usize,
     /// The parameter identifier
     #[allow(dead_code)]
     ident: Ident,
+    /// What kind of token was found
+    kind: AutoversionTokenKind,
 }
 
-/// Find the `SimdToken` parameter in a function signature.
+/// Find a token parameter (`SimdToken` or `ScalarToken`) in a function signature
+/// for `#[autoversion]`.
 ///
-/// Searches all typed parameters for one whose type path ends in `SimdToken`.
-/// Returns the parameter index and identifier, or `None` if not found.
-fn find_simd_token_param(sig: &Signature) -> Option<SimdTokenParamInfo> {
+/// Returns Ok(Some) for recognized tokens, Ok(None) for no token, or Err for
+/// concrete SIMD tokens (X64V3Token etc.) which should use `#[arcane]` instead.
+fn find_autoversion_token_param(
+    sig: &Signature,
+) -> Result<Option<AutoversionTokenParam>, syn::Error> {
     for (i, arg) in sig.inputs.iter().enumerate() {
         if let FnArg::Typed(PatType { pat, ty, .. }) = arg
             && let Type::Path(type_path) = ty.as_ref()
             && let Some(seg) = type_path.path.segments.last()
-            && seg.ident == "SimdToken"
         {
+            let name = seg.ident.to_string();
+
+            // Recognized autoversion tokens
+            let kind = if name == "SimdToken" {
+                AutoversionTokenKind::SimdToken
+            } else if name == "ScalarToken" {
+                AutoversionTokenKind::ScalarToken
+            } else if token_to_features(&name).is_some() {
+                // It's a concrete SIMD token (X64V3Token, NeonToken, etc.)
+                return Err(syn::Error::new_spanned(
+                    ty,
+                    format!(
+                        "#[autoversion] generates multi-tier dispatch — it can't take a \
+                         concrete token like `{name}`.\n\
+                         Use #[arcane] or #[rite] for single-token functions.\n\
+                         Use #[autoversion] with no token parameter (recommended) or \
+                         ScalarToken for incant! nesting."
+                    ),
+                ));
+            } else {
+                continue;
+            };
+
             let ident = match pat.as_ref() {
                 syn::Pat::Ident(pi) => pi.ident.clone(),
                 syn::Pat::Wild(w) => Ident::new("__autoversion_token", w.underscore_token.span),
                 _ => continue,
             };
-            return Some(SimdTokenParamInfo { index: i, ident });
+            return Ok(Some(AutoversionTokenParam {
+                index: i,
+                ident,
+                kind,
+            }));
         }
     }
-    None
+    Ok(None)
 }
 
 /// Core implementation for `#[autoversion]`.
@@ -2894,24 +2937,48 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // _self = Type is only needed for trait impls (nested mode in #[arcane]).
     // For inherent methods, self/Self work naturally in sibling mode.
 
-    // Find SimdToken parameter, or auto-inject one if missing.
+    // Find token parameter (SimdToken or ScalarToken), or auto-inject one.
     //
-    // When no SimdToken parameter is present, #[autoversion] injects a hidden
-    // `_token: SimdToken` as the first non-self parameter. The generated
-    // dispatcher strips this parameter, so the public API keeps the original
-    // signature. Users never need to add SimdToken themselves.
-    let token_param = match find_simd_token_param(&input_fn.sig) {
-        Some(p) => p,
-        None => {
+    // Three modes:
+    // - ScalarToken: kept in dispatcher (real type, compiles, incant!-compatible)
+    // - SimdToken: stripped from dispatcher (legacy, deprecated)
+    // - None: auto-inject internally, strip from dispatcher (tokenless)
+    let token_param = match find_autoversion_token_param(&input_fn.sig) {
+        Err(e) => return e.to_compile_error().into(),
+        Ok(Some(p)) => p,
+        Ok(None) => {
             let insert_pos = if has_self { 1 } else { 0 };
             let token_arg: FnArg = parse_quote!(_token: SimdToken);
             input_fn.sig.inputs.insert(insert_pos, token_arg);
-            SimdTokenParamInfo {
+            AutoversionTokenParam {
                 index: insert_pos,
                 ident: Ident::new("_token", input_fn.sig.ident.span()),
+                kind: AutoversionTokenKind::AutoInjected,
             }
         }
     };
+
+    // Deprecation warning for SimdToken. We emit a function-local deprecation
+    // by referencing a deprecated item inside the dispatcher body.
+    let simdtoken_deprecation_in_body = if token_param.kind == AutoversionTokenKind::SimdToken {
+        let msg = "SimdToken parameter in #[autoversion] is deprecated — \
+                   remove it (tokenless) or use ScalarToken for incant! nesting";
+        Some(quote! {
+            {
+                #[deprecated(note = #msg)]
+                #[allow(dead_code)]
+                const SIMDTOKEN_DEPRECATED: () = ();
+                let _ = SIMDTOKEN_DEPRECATED;
+            }
+        })
+    } else {
+        None
+    };
+
+    // Whether to keep the token param in the dispatcher.
+    // ScalarToken is a real type → keep it (incant! compatibility).
+    // SimdToken and AutoInjected → strip (can't compile / internal).
+    let keep_token_in_dispatcher = token_param.kind == AutoversionTokenKind::ScalarToken;
 
     // Resolve tiers — autoversion always includes v4 in its defaults because it
     // generates scalar code compiled with #[target_feature], not import_intrinsics.
@@ -3018,13 +3085,23 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // Generate dispatcher (adapted from gen_incant_entry)
     // =========================================================================
 
-    // Build dispatcher inputs: original params minus SimdToken
+    // Build dispatcher inputs.
+    //
+    // ScalarToken is kept (real type, incant!-compatible).
+    // SimdToken and AutoInjected are stripped.
     let mut dispatcher_inputs: Vec<FnArg> = input_fn.sig.inputs.iter().cloned().collect();
-    dispatcher_inputs.remove(token_param.index);
+    if !keep_token_in_dispatcher {
+        dispatcher_inputs.remove(token_param.index);
+    }
 
-    // Rename wildcard params so we can pass them as arguments
+    // Rename wildcard params so we can pass them as arguments.
+    // Skip the kept ScalarToken param if it's a wildcard — the dispatcher
+    // ignores it (does its own summon()), no need to name it.
     let mut wild_counter = 0u32;
-    for arg in &mut dispatcher_inputs {
+    for (i, arg) in dispatcher_inputs.iter_mut().enumerate() {
+        if keep_token_in_dispatcher && i == token_param.index {
+            continue; // Don't rename the kept token's pattern
+        }
         if let FnArg::Typed(pat_type) = arg
             && matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_))
         {
@@ -3040,10 +3117,16 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         }
     }
 
-    // Collect argument idents for dispatch calls (exclude self receiver)
+    // Collect argument idents for dispatch calls (exclude self receiver
+    // AND the kept ScalarToken param — variants get their own token from
+    // summon(), not from the dispatcher's ScalarToken parameter).
     let dispatch_args: Vec<Ident> = dispatcher_inputs
         .iter()
-        .filter_map(|arg| {
+        .enumerate()
+        .filter_map(|(i, arg)| {
+            if keep_token_in_dispatcher && i == token_param.index {
+                return None; // Skip the kept token param
+            }
             if let FnArg::Typed(PatType { pat, .. }) = arg
                 && let syn::Pat::Ident(pi) = pat.as_ref()
             {
@@ -3144,6 +3227,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             #[cfg(feature = #feat)]
             #(#fn_attrs)*
             #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+                #simdtoken_deprecation_in_body
                 use archmage::SimdToken;
                 #(#dispatch_arms)*
                 #scalar_call
@@ -3152,6 +3236,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             #[cfg(not(feature = #feat))]
             #(#fn_attrs)*
             #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+                #simdtoken_deprecation_in_body
                 #scalar_call
             }
         }
@@ -3159,6 +3244,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         quote_spanned! { user_span =>
             #(#fn_attrs)*
             #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+                #simdtoken_deprecation_in_body
                 use archmage::SimdToken;
                 #(#dispatch_arms)*
                 #scalar_call
@@ -3653,107 +3739,131 @@ mod tests {
     }
 
     // =========================================================================
-    // autoversion — find_simd_token_param
+    // autoversion — find_autoversion_token_param
     // =========================================================================
 
     #[test]
-    fn find_simd_token_param_first_position() {
+    fn find_autoversion_token_param_simdtoken_first() {
         let f: ItemFn =
             syn::parse_str("fn process(token: SimdToken, data: &[f32]) -> f32 {}").unwrap();
-        let param = find_simd_token_param(&f.sig).unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(param.index, 0);
         assert_eq!(param.ident, "token");
+        assert_eq!(param.kind, AutoversionTokenKind::SimdToken);
     }
 
     #[test]
-    fn find_simd_token_param_second_position() {
+    fn find_autoversion_token_param_simdtoken_second() {
         let f: ItemFn =
             syn::parse_str("fn process(data: &[f32], token: SimdToken) -> f32 {}").unwrap();
-        let param = find_simd_token_param(&f.sig).unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(param.index, 1);
-        assert_eq!(param.ident, "token");
+        assert_eq!(param.kind, AutoversionTokenKind::SimdToken);
     }
 
     #[test]
-    fn find_simd_token_param_underscore_prefix() {
+    fn find_autoversion_token_param_underscore_prefix() {
         let f: ItemFn =
             syn::parse_str("fn process(_token: SimdToken, data: &[f32]) -> f32 {}").unwrap();
-        let param = find_simd_token_param(&f.sig).unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(param.index, 0);
         assert_eq!(param.ident, "_token");
     }
 
     #[test]
-    fn find_simd_token_param_wildcard() {
+    fn find_autoversion_token_param_wildcard() {
         let f: ItemFn = syn::parse_str("fn process(_: SimdToken, data: &[f32]) -> f32 {}").unwrap();
-        let param = find_simd_token_param(&f.sig).unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(param.index, 0);
         assert_eq!(param.ident, "__autoversion_token");
     }
 
     #[test]
-    fn find_simd_token_param_not_found() {
+    fn find_autoversion_token_param_scalar_token() {
+        let f: ItemFn =
+            syn::parse_str("fn process_scalar(_: ScalarToken, data: &[f32]) -> f32 {}").unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
+        assert_eq!(param.index, 0);
+        assert_eq!(param.kind, AutoversionTokenKind::ScalarToken);
+    }
+
+    #[test]
+    fn find_autoversion_token_param_not_found() {
         let f: ItemFn = syn::parse_str("fn process(data: &[f32]) -> f32 {}").unwrap();
-        assert!(find_simd_token_param(&f.sig).is_none());
+        assert!(find_autoversion_token_param(&f.sig).unwrap().is_none());
     }
 
     #[test]
-    fn find_simd_token_param_no_params() {
+    fn find_autoversion_token_param_no_params() {
         let f: ItemFn = syn::parse_str("fn process() {}").unwrap();
-        assert!(find_simd_token_param(&f.sig).is_none());
+        assert!(find_autoversion_token_param(&f.sig).unwrap().is_none());
     }
 
     #[test]
-    fn find_simd_token_param_concrete_token_not_matched() {
-        // autoversion looks specifically for SimdToken, not concrete tokens
+    fn find_autoversion_token_param_concrete_token_errors() {
         let f: ItemFn =
             syn::parse_str("fn process(token: X64V3Token, data: &[f32]) -> f32 {}").unwrap();
-        assert!(find_simd_token_param(&f.sig).is_none());
+        let err = find_autoversion_token_param(&f.sig).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("concrete token"),
+            "error should mention concrete token: {msg}"
+        );
+        assert!(
+            msg.contains("#[arcane]"),
+            "error should suggest #[arcane]: {msg}"
+        );
     }
 
     #[test]
-    fn find_simd_token_param_scalar_token_not_matched() {
+    fn find_autoversion_token_param_neon_token_errors() {
         let f: ItemFn =
-            syn::parse_str("fn process(token: ScalarToken, data: &[f32]) -> f32 {}").unwrap();
-        assert!(find_simd_token_param(&f.sig).is_none());
+            syn::parse_str("fn process(token: NeonToken, data: &[f32]) -> f32 {}").unwrap();
+        assert!(find_autoversion_token_param(&f.sig).is_err());
     }
 
     #[test]
-    fn find_simd_token_param_among_many() {
+    fn find_autoversion_token_param_unknown_type_ignored() {
+        // Random types are just regular params, not token params
+        let f: ItemFn = syn::parse_str("fn process(data: &[f32], scale: f32) -> f32 {}").unwrap();
+        assert!(find_autoversion_token_param(&f.sig).unwrap().is_none());
+    }
+
+    #[test]
+    fn find_autoversion_token_param_among_many() {
         let f: ItemFn = syn::parse_str(
             "fn process(a: i32, b: f64, token: SimdToken, c: &str, d: bool) -> f32 {}",
         )
         .unwrap();
-        let param = find_simd_token_param(&f.sig).unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(param.index, 2);
         assert_eq!(param.ident, "token");
     }
 
     #[test]
-    fn find_simd_token_param_with_generics() {
+    fn find_autoversion_token_param_with_generics() {
         let f: ItemFn =
             syn::parse_str("fn process<T: Clone>(token: SimdToken, data: &[T]) -> T {}").unwrap();
-        let param = find_simd_token_param(&f.sig).unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(param.index, 0);
-        assert_eq!(param.ident, "token");
     }
 
     #[test]
-    fn find_simd_token_param_with_where_clause() {
+    fn find_autoversion_token_param_with_where_clause() {
         let f: ItemFn = syn::parse_str(
             "fn process<T>(token: SimdToken, data: &[T]) -> T where T: Copy + Default {}",
         )
         .unwrap();
-        let param = find_simd_token_param(&f.sig).unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(param.index, 0);
     }
 
     #[test]
-    fn find_simd_token_param_with_lifetime() {
+    fn find_autoversion_token_param_with_lifetime() {
         let f: ItemFn =
             syn::parse_str("fn process<'a>(token: SimdToken, data: &'a [f32]) -> &'a f32 {}")
                 .unwrap();
-        let param = find_simd_token_param(&f.sig).unwrap();
+        let param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(param.index, 0);
     }
 
@@ -3866,7 +3976,8 @@ mod tests {
         f.sig.ident = format_ident!("{}_{}", fn_name, tier.suffix);
 
         // Find and replace SimdToken param type
-        let token_idx = find_simd_token_param(&f.sig)
+        let token_idx = find_autoversion_token_param(&f.sig)
+            .expect("should not error on SimdToken")
             .unwrap_or_else(|| panic!("No SimdToken param in: {}", func))
             .index;
         let concrete_type: Type = syn::parse_str(tier.token_path).unwrap();
@@ -4225,35 +4336,20 @@ mod tests {
             syn::parse_str("fn process(token: SimdToken, data: &[f32], scale: f32) -> f32 { 0.0 }")
                 .unwrap();
 
-        let token_param = find_simd_token_param(&f.sig).unwrap();
+        let token_param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
+        // SimdToken → strip from dispatcher
+        assert_eq!(token_param.kind, AutoversionTokenKind::SimdToken);
         let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
         dispatcher_inputs.remove(token_param.index);
-
-        // Should have 2 params remaining: data, scale
         assert_eq!(dispatcher_inputs.len(), 2);
-
-        // Neither should be SimdToken
-        for arg in &dispatcher_inputs {
-            if let FnArg::Typed(pt) = arg {
-                let ty_str = pt.ty.to_token_stream().to_string();
-                assert!(
-                    !ty_str.contains("SimdToken"),
-                    "SimdToken should be removed from dispatcher, found: {}",
-                    ty_str
-                );
-            }
-        }
     }
 
     #[test]
     fn dispatcher_param_removal_token_only() {
         let f: ItemFn = syn::parse_str("fn process(token: SimdToken) -> f32 { 0.0 }").unwrap();
-
-        let token_param = find_simd_token_param(&f.sig).unwrap();
+        let token_param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
         dispatcher_inputs.remove(token_param.index);
-
-        // No params left — dispatcher takes no arguments
         assert_eq!(dispatcher_inputs.len(), 0);
     }
 
@@ -4262,14 +4358,23 @@ mod tests {
         let f: ItemFn =
             syn::parse_str("fn process(data: &[f32], scale: f32, token: SimdToken) -> f32 { 0.0 }")
                 .unwrap();
-
-        let token_param = find_simd_token_param(&f.sig).unwrap();
+        let token_param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
         assert_eq!(token_param.index, 2);
-
         let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
         dispatcher_inputs.remove(token_param.index);
-
         assert_eq!(dispatcher_inputs.len(), 2);
+    }
+
+    #[test]
+    fn dispatcher_scalar_token_kept() {
+        // ScalarToken is a real type — kept in dispatcher for incant! compatibility
+        let f: ItemFn =
+            syn::parse_str("fn process_scalar(_: ScalarToken, data: &[f32]) -> f32 { 0.0 }")
+                .unwrap();
+        let token_param = find_autoversion_token_param(&f.sig).unwrap().unwrap();
+        assert_eq!(token_param.kind, AutoversionTokenKind::ScalarToken);
+        // Should NOT be removed — dispatcher keeps it
+        assert_eq!(f.sig.inputs.len(), 2);
     }
 
     #[test]

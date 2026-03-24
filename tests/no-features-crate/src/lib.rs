@@ -8,6 +8,7 @@
 //! variants become dead code here (the feature doesn't exist in this crate),
 //! and `#[deny(dead_code)]` will catch it.
 #![deny(warnings)]
+#![allow(deprecated)] // Legacy SimdToken usage in autoversion — will migrate to tokenless
 #![no_std]
 
 extern crate alloc;
