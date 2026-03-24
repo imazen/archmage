@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.9.6 — 2026-03-24
+
+### Bug fixes
+
+- **`i16x16`/`u16x16` bitmask correctness** — `bitmask()` was returning incorrect results on x86_64 AVX2: lanes 8-15 were always zero. Root cause: `_mm256_packs_epi16(shifted, shifted)` interleaves within 128-bit lanes, producing wrong lane ordering. Fix: extract 128-bit halves first, then use `_mm_packs_epi16(lo, hi)` for correct order. Fixed in both the raw W256 types and the generic backend implementations. ([#16])
+
+- **`#[arcane]` lint attribute propagation** — `#[allow(clippy::too_many_arguments)]` and similar lint-control attributes (`#[expect]`, `#[deny]`, `#[warn]`, `#[forbid]`) now propagate to the generated dispatch wrapper in both sibling mode (default) and nested mode. Previously, clippy would lint the generated code even when the user explicitly suppressed the warning. ([#17])
+
+- **`#[autoversion]` v4/v4x variants no longer require `avx512` feature** — `#[autoversion]` generates scalar code compiled with `#[target_feature]`, so the `avx512` cargo feature was never needed. Previously, v4/v4x variants were silently eliminated by `#[cfg(feature = "avx512")]` in macro output — which checked the *calling crate's* features (always wrong for downstream crates). Now v4/v4x variants are always generated.
+
+### avx512 feature gating overhaul
+
+The `avx512` cargo feature handling was redesigned. The old approach emitted `#[cfg(feature = "avx512")]` in proc-macro output, which checked the calling crate's features instead of archmage's — always wrong for downstream crates, and triggering `unexpected_cfgs` warnings on modern rustc.
+
+**New behavior:**
+
+- **`avx512` feature propagated to `archmage-macros`** — macros check `cfg!(feature = "avx512")` at expansion time on their own crate, not via `#[cfg]` in output.
+- **`#[autoversion]`** — always generates v4/v4x (scalar code, no safe memory ops needed).
+- **`incant!`/`#[magetypes]` default tiers** — include v4 only when `avx512` is enabled. Without it, dispatch gracefully skips v4.
+- **`#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` with AVX-512 tokens** — clear `compile_error!` when `avx512` is not enabled, telling users exactly what to add to `Cargo.toml`. Works for all token spellings: concrete (`X64V4Token`, `Avx512Token`, `Server64`), trait bounds (`impl HasX64V4`), and generics (`T: HasX64V4`).
+- **`#[arcane]`/`#[rite]` without `import_intrinsics`** — always works with any token. Value intrinsics don't need the cargo feature.
+- **No `#[cfg(feature = "...")]` ever emitted in macro output** — eliminates `unexpected_cfgs` warnings entirely.
+
+### Testing
+
+- 192 bitmask correctness tests covering all 24 integer SIMD types (W128/W256/W512).
+- No-features integration test crate (`archmage-no-features-test`) with `#![deny(warnings)]`.
+- 5 standalone avx512-cfg-test crates verifying every feature gating scenario.
+- Token infrastructure tests now serialized in CI to prevent races from process-wide state mutations.
+
+[#16]: https://github.com/imazen/archmage/issues/16
+[#17]: https://github.com/imazen/archmage/issues/17
+
 ## 0.9.5 — 2026-03-09
 
 ### Transcendental accuracy improvements
