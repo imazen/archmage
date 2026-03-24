@@ -65,6 +65,10 @@ jobs:
         run: cargo check --manifest-path tests/downstream-compat/linear-srgb/Cargo.toml
       - name: Downstream compat (linear-srgb, with avx512)
         run: cargo check --manifest-path tests/downstream-compat/linear-srgb/Cargo.toml --features avx512
+      - name: Downstream compat (zensim)
+        run: cargo check --manifest-path tests/downstream-compat/zensim/Cargo.toml
+      - name: Downstream compat (zenpixels-convert)
+        run: cargo check --manifest-path tests/downstream-compat/zenpixels-convert/Cargo.toml
 
       - name: CPU survey
         if: always()

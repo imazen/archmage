@@ -1,0 +1,15 @@
+[package]
+name = "archmage-compat-zenpixels-convert"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+zenpixels-convert = "0.1"
+
+[patch.crates-io]
+archmage = { path = "../../.." }
+archmage-macros = { path = "../../../archmage-macros" }
+magetypes = { path = "../../../magetypes" }
+
+[workspace]

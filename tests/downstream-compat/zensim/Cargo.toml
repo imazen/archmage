@@ -1,0 +1,15 @@
+[package]
+name = "archmage-compat-zensim"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+zensim = "0.2"
+
+[patch.crates-io]
+archmage = { path = "../../.." }
+archmage-macros = { path = "../../../archmage-macros" }
+magetypes = { path = "../../../magetypes" }
+
+[workspace]

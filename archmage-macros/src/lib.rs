@@ -2591,11 +2591,12 @@ fn incant_impl(input: IncantInput) -> TokenStream {
         .into();
     }
 
-    // default_optional: when using default tiers (no explicit list), tiers with
-    // cfg_feature are automatically optional. With explicit lists, the user controls
-    // optionality via `?` suffix (e.g., `[v4?, v3, scalar]`).
-    let default_optional = input.tiers.is_none();
-    let tiers = match resolve_tiers(&tier_names, error_span, default_optional) {
+    // Apply default feature gates: tiers with cfg_feature (v4→avx512) auto-get
+    // the gate unless the user explicitly wrote tier(feature). This is true for
+    // BOTH default and explicit tier lists — backwards compatible with published
+    // crates using [v4, v3, neon] where _v4 is behind #[cfg(feature = "avx512")].
+    // Users with unconditional _v4 functions use v4(!) or just don't cfg-gate them.
+    let tiers = match resolve_tiers(&tier_names, error_span, true) {
         Ok(t) => t,
         Err(e) => return e.to_compile_error().into(),
     };
