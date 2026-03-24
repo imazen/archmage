@@ -147,7 +147,6 @@ impl Parse for IncantInput {
 /// - `_neon_crc` for `NeonCrcToken`
 /// - `_wasm128` for `Wasm128Token`
 /// - `_scalar` for `ScalarToken`
-
 pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
     let func_path = &input.func_path;
     let args = &input.args;

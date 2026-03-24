@@ -13,21 +13,24 @@ mod tiers;
 mod token_discovery;
 
 use proc_macro::TokenStream;
-use quote::{ToTokens, format_ident, quote, quote_spanned};
-use syn::{
-    Attribute, FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound,
-    parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote,
-};
+use syn::parse_macro_input;
 
 use arcane::*;
 use autoversion::*;
 use common::*;
-use generated::{token_to_features, trait_to_features};
 use incant::*;
 use magetypes::*;
 use rite::*;
 use tiers::*;
+
+// Re-export items used by the test module (via `use super::*`).
+#[cfg(test)]
+use generated::{token_to_features, trait_to_features};
+#[cfg(test)]
+use quote::{ToTokens, format_ident};
+#[cfg(test)]
+use syn::{FnArg, PatType, Type};
+#[cfg(test)]
 use token_discovery::*;
 
 // LightFn, filter_inline_attrs, is_lint_attr, filter_lint_attrs, gen_cfg_guard,

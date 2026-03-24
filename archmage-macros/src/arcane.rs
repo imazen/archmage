@@ -3,15 +3,14 @@
 //! Sibling mode (default), nested mode, and WASM-safe mode.
 
 use proc_macro::TokenStream;
-use quote::{ToTokens, format_ident, quote, quote_spanned};
+use quote::{ToTokens, format_ident, quote};
 use syn::{
-    Attribute, FnArg, Ident, PatType, Signature, Token, Type,
+    Attribute, FnArg, Ident, Token, Type,
     parse::{Parse, ParseStream},
     parse_quote,
 };
 
 use crate::common::*;
-use crate::generated::{token_to_arch, token_to_features, token_to_magetypes_namespace};
 use crate::token_discovery::*;
 
 #[derive(Default)]
@@ -85,12 +84,6 @@ impl Parse for ArcaneArgs {
     }
 }
 
-// Additional generated imports beyond what's in the header
-use crate::generated::{
-    canonical_token_to_tier_suffix, tier_to_canonical_token, trait_to_arch, trait_to_features,
-    trait_to_magetypes_namespace,
-};
-
 /// Represents the kind of self receiver and the transformed parameter.
 pub(crate) enum SelfReceiver {
     /// `self` (by value/move)
@@ -100,12 +93,6 @@ pub(crate) enum SelfReceiver {
     /// `&mut self` (mutable reference)
     RefMut,
 }
-
-/// Generate import statements to prepend to a function body.
-///
-/// Returns a `TokenStream` of `use` statements based on the import flags,
-/// target architecture, and magetypes namespace.
-// generate_imports → moved to common.rs
 
 /// Shared implementation for arcane/arcane macros.
 pub(crate) fn arcane_impl(

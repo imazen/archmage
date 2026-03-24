@@ -3,9 +3,9 @@
 //! Single-tier, multi-tier, and stub modes.
 
 use proc_macro::TokenStream;
-use quote::{ToTokens, format_ident, quote};
+use quote::{format_ident, quote};
 use syn::{
-    Attribute, FnArg, Ident, PatType, Signature, Token, Type,
+    Attribute, Ident, Token,
     parse::{Parse, ParseStream},
     parse_quote,
 };
@@ -15,7 +15,6 @@ use crate::generated::{
     canonical_token_to_tier_suffix, tier_to_canonical_token, token_to_arch, token_to_features,
     token_to_magetypes_namespace,
 };
-use crate::tiers::*;
 use crate::token_discovery::*;
 
 #[derive(Default)]
