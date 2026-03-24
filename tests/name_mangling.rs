@@ -425,3 +425,83 @@ mod underscore_rite {
         }
     }
 }
+
+// ============================================================================
+// Additive tier lists: +tier appends to defaults
+// ============================================================================
+
+// #[autoversion(+v1)] — defaults (v4, v3, neon, wasm128, scalar) plus v1
+#[autoversion(+v1)]
+fn additive_av(data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+#[test]
+fn autoversion_additive_dispatches() {
+    assert_eq!(additive_av(&[1.0, 2.0, 3.0]), 6.0);
+}
+
+// Verify v1 variant was actually generated (it's not in defaults)
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn autoversion_additive_generates_v1() {
+    // v1 is baseline x86_64 — always available
+    let t = X64V1Token::summon().expect("v1 always available on x86_64");
+    assert_eq!(additive_av_v1(t, &[10.0, 20.0]), 30.0);
+}
+
+// incant! with [+v1] — defaults plus v1.
+// Must provide all default variants (v4, v3, neon, wasm128, scalar) plus v1.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[arcane]
+fn add_incant_v4(_: X64V4Token, x: f32) -> f32 {
+    x + 400.0
+}
+
+#[arcane]
+fn add_incant_v3(_: X64V3Token, x: f32) -> f32 {
+    x + 300.0
+}
+
+fn add_incant_v1(_: X64V1Token, x: f32) -> f32 {
+    x + 100.0
+}
+
+#[arcane]
+fn add_incant_neon(_: NeonToken, x: f32) -> f32 {
+    x + 500.0
+}
+
+fn add_incant_scalar(_: ScalarToken, x: f32) -> f32 {
+    x + 1.0
+}
+
+fn additive_incant_dispatch(x: f32) -> f32 {
+    incant!(add_incant(x), [+_v1])
+}
+
+#[test]
+fn incant_additive_dispatches() {
+    let result = additive_incant_dispatch(0.0);
+    assert!(result > 0.0);
+}
+
+// #[magetypes(+v1)] — defaults plus v1
+#[magetypes(+v1)]
+fn additive_mt(_token: Token, x: f32) -> f32 {
+    x + 1.0
+}
+
+#[test]
+fn magetypes_additive_scalar() {
+    assert_eq!(additive_mt_scalar(ScalarToken, 1.0), 2.0);
+}
+
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn magetypes_additive_v1_exists() {
+    // v1 variant should exist because +v1 adds it to defaults
+    if let Some(t) = X64V1Token::summon() {
+        assert_eq!(additive_mt_v1(t, 1.0), 2.0);
+    }
+}

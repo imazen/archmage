@@ -57,8 +57,7 @@ impl Parse for IncantInput {
             let bracket = syn::bracketed!(bracket_content in input);
             let mut tier_names = Vec::new();
             while !bracket_content.is_empty() {
-                let ident: Ident = bracket_content.parse()?;
-                tier_names.push(parse_tier_name_with_gate(&ident, &bracket_content)?);
+                tier_names.push(parse_one_tier(&bracket_content)?);
                 if bracket_content.peek(Token![,]) {
                     let _: Token![,] = bracket_content.parse()?;
                 }
@@ -174,10 +173,19 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
     // A fallback tier is always auto-appended, but not listing it explicitly
     // hides the fact that a _scalar/_default function is required.
     let scalar_warning = if let Some((names, _span)) = &input.tiers {
-        if !names.iter().any(|n| {
-            let base = n.split('(').next().unwrap_or(n);
-            base == "scalar" || base == "default"
-        }) {
+        // Additive mode (+tier) inherits scalar from defaults — no warning needed.
+        let is_additive = names.iter().all(|n| n.starts_with('+'));
+        if !is_additive
+            && !names.iter().any(|n| {
+                let base = n
+                    .strip_prefix('+')
+                    .unwrap_or(n)
+                    .split('(')
+                    .next()
+                    .unwrap_or(n);
+                base == "scalar" || base == "default"
+            })
+        {
             quote! {
                 #[deprecated(since = "0.9.9", note = "\
                     explicit incant! tier lists should include `scalar`. \

@@ -34,18 +34,23 @@ impl Parse for AutoversionArgs {
         let mut cfg_feature = None;
 
         while !input.is_empty() {
-            let ident: Ident = input.parse()?;
-            if ident == "_self" {
-                let _: Token![=] = input.parse()?;
-                self_type = Some(input.parse()?);
-            } else if ident == "cfg" {
-                let content;
-                syn::parenthesized!(content in input);
-                let feat: Ident = content.parse()?;
-                cfg_feature = Some(feat.to_string());
+            // Check for +tier (additive) before consuming ident
+            if input.peek(Token![+]) {
+                tier_names.push(crate::tiers::parse_one_tier(input)?);
             } else {
-                // Treat as tier name, optionally with cfg gate
-                tier_names.push(crate::tiers::parse_tier_name_with_gate(&ident, input)?);
+                let ident: Ident = input.parse()?;
+                if ident == "_self" {
+                    let _: Token![=] = input.parse()?;
+                    self_type = Some(input.parse()?);
+                } else if ident == "cfg" {
+                    let content;
+                    syn::parenthesized!(content in input);
+                    let feat: Ident = content.parse()?;
+                    cfg_feature = Some(feat.to_string());
+                } else {
+                    // Treat as tier name, optionally with cfg gate
+                    tier_names.push(crate::tiers::parse_tier_name_with_gate(&ident, input)?);
+                }
             }
             if input.peek(Token![,]) {
                 let _: Token![,] = input.parse()?;

@@ -219,13 +219,35 @@ pub(crate) fn parse_tier_name_with_gate(ident: &Ident, input: ParseStream) -> sy
     }
 }
 
-/// Parse a comma-separated list of tier names, each optionally followed by
-/// a cfg gate: `v4(cfg(avx512)), v3, neon, scalar` or `v4(avx512), v3, scalar`.
+/// Parse a single tier entry: optional `+` prefix, ident, optional `(cfg(feature))` gate.
+///
+/// Returns the tier string with `+` prefix preserved if present (e.g., `"+arm_v2"`).
+pub(crate) fn parse_one_tier(input: ParseStream) -> syn::Result<String> {
+    let additive = if input.peek(Token![+]) {
+        let _: Token![+] = input.parse()?;
+        true
+    } else {
+        false
+    };
+    let ident: Ident = input.parse()?;
+    let name = parse_tier_name_with_gate(&ident, input)?;
+    if additive {
+        Ok(format!("+{name}"))
+    } else {
+        Ok(name)
+    }
+}
+
+/// Parse a comma-separated list of tier names, each optionally prefixed with `+`
+/// and/or followed by a cfg gate.
+///
+/// - **Override mode** (no `+`): `v3, neon, scalar` — replaces defaults entirely.
+/// - **Additive mode** (all `+`): `+arm_v2, +v1` — appends to defaults.
+/// - Mixing `+` and non-`+` entries is a compile error.
 pub(crate) fn parse_tier_names(input: ParseStream) -> syn::Result<Vec<String>> {
     let mut names = Vec::new();
     while !input.is_empty() {
-        let ident: Ident = input.parse()?;
-        names.push(parse_tier_name_with_gate(&ident, input)?);
+        names.push(parse_one_tier(input)?);
         if input.peek(Token![,]) {
             let _: Token![,] = input.parse()?;
         }
@@ -263,13 +285,45 @@ impl core::ops::Deref for ResolvedTier {
 ///
 /// When `default_feature_gates` is true, tiers with `cfg_feature` in their
 /// descriptor automatically get that as their feature gate.
+///
+/// Tier names prefixed with `+` trigger **additive mode**: defaults are included
+/// first, then the `+` entries are appended. All entries must be `+` or none.
 pub(crate) fn resolve_tiers(
     tier_names: &[String],
     error_span: proc_macro2::Span,
     default_feature_gates: bool,
 ) -> syn::Result<Vec<ResolvedTier>> {
+    let any_additive = tier_names.iter().any(|n| n.starts_with('+'));
+    let any_plain = tier_names.iter().any(|n| !n.starts_with('+'));
+    if any_additive && any_plain {
+        return Err(syn::Error::new(
+            error_span,
+            "Cannot mix `+tier` (additive) and plain `tier` (override) entries.\n\
+             Use all `+` to append to defaults, or none to replace them entirely.",
+        ));
+    }
+
+    // In additive mode, start with defaults and append the user's extras.
+    let effective_names: Vec<String> = if any_additive {
+        let mut names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
+        for raw in tier_names {
+            let stripped = raw.strip_prefix('+').unwrap_or(raw);
+            // Don't add duplicates (user might write +v3 which is already in defaults)
+            let base = stripped.split('(').next().unwrap_or(stripped);
+            if !names.iter().any(|n| {
+                let n_base = n.split('(').next().unwrap_or(n);
+                n_base == base
+            }) {
+                names.push(stripped.to_string());
+            }
+        }
+        names
+    } else {
+        tier_names.to_vec()
+    };
+
     let mut tiers = Vec::new();
-    for raw_name in tier_names {
+    for raw_name in &effective_names {
         let (name, explicit_gate) = if let Some(paren_pos) = raw_name.find('(') {
             let tier_name = &raw_name[..paren_pos];
             let feat = raw_name[paren_pos + 1..].trim_end_matches(')');
