@@ -1865,16 +1865,14 @@ fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
 pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as LightFn);
 
-    // Parse optional tier list from attribute args
+    // Parse optional tier list from attribute args: tier1, tier2(feature), ...
     let tier_names: Vec<String> = if attr.is_empty() {
         DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect()
     } else {
-        let parser = |input: ParseStream| input.parse_terminated(Ident::parse, Token![,]);
-        let idents = match syn::parse::Parser::parse(parser, attr) {
-            Ok(p) => p,
+        match syn::parse::Parser::parse(parse_tier_names, attr) {
+            Ok(names) => names,
             Err(e) => return e.to_compile_error().into(),
-        };
-        idents.iter().map(|i| i.to_string()).collect()
+        }
     };
 
     // default_optional: tiers with cfg_feature are optional by default
@@ -1935,18 +1933,18 @@ fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> TokenStream 
         };
 
         // Add cfg guard: arch + optional feature gate
-        let cfg_guard = match (tier.target_arch, tier.optional, tier.cfg_feature) {
-            (Some(arch), true, Some(feat)) => quote! {
+        let cfg_guard = match (tier.target_arch, &tier.feature_gate) {
+            (Some(arch), Some(feat)) => quote! {
                 #[cfg(target_arch = #arch)]
                 #[allow(unexpected_cfgs)]
                 #[cfg(feature = #feat)]
             },
-            (Some(arch), _, _) => quote! { #[cfg(target_arch = #arch)] },
-            (None, true, Some(feat)) => quote! {
+            (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
+            (None, Some(feat)) => quote! {
                 #[allow(unexpected_cfgs)]
                 #[cfg(feature = #feat)]
             },
-            (None, _, _) => quote! {},
+            (None, None) => quote! {},
         };
 
         variants.push(if tier.name != "scalar" {
@@ -2181,6 +2179,28 @@ const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
 /// Currently false for backwards compatibility. Flip to true in v1.0.
 const REQUIRE_EXPLICIT_SCALAR: bool = false;
 
+/// Parse a comma-separated list of tier names, each optionally followed by
+/// `(feature)` for cfg-gating: `v4(avx512), v3, neon(simd), scalar`.
+fn parse_tier_names(input: ParseStream) -> syn::Result<Vec<String>> {
+    let mut names = Vec::new();
+    while !input.is_empty() {
+        let ident: Ident = input.parse()?;
+        let name = if input.peek(syn::token::Paren) {
+            let paren_content;
+            syn::parenthesized!(paren_content in input);
+            let feat: Ident = paren_content.parse()?;
+            format!("{}({})", ident, feat)
+        } else {
+            ident.to_string()
+        };
+        names.push(name);
+        if input.peek(Token![,]) {
+            let _: Token![,] = input.parse()?;
+        }
+    }
+    Ok(names)
+}
+
 /// Look up a tier by name, returning an error on unknown names.
 fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
     ALL_TIERS.iter().find(|t| t.name == name)
@@ -2190,9 +2210,12 @@ fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
 #[derive(Clone)]
 struct ResolvedTier {
     tier: &'static TierDescriptor,
-    /// If true, dispatch is wrapped in `#[allow(unexpected_cfgs)] #[cfg(feature = "...")]`
-    /// so it's silently eliminated when the calling crate doesn't define the feature.
-    optional: bool,
+    /// When Some, dispatch/generation is wrapped in
+    /// `#[allow(unexpected_cfgs)] #[cfg(feature = "...")]` so it's silently
+    /// eliminated when the calling crate doesn't define the feature.
+    /// Set explicitly via `v4(avx512)` syntax or implicitly from `cfg_feature`
+    /// on the TierDescriptor when using default tier lists.
+    feature_gate: Option<String>,
 }
 
 impl core::ops::Deref for ResolvedTier {
@@ -2205,29 +2228,39 @@ impl core::ops::Deref for ResolvedTier {
 /// Resolve tier names to descriptors, sorted by dispatch priority (highest first).
 /// Always appends "scalar" if not already present.
 ///
-/// Tier names can end with `?` (e.g., `v4?`) to mark them as optional: the dispatch
-/// arm is wrapped in `#[allow(unexpected_cfgs)] #[cfg(feature = "avx512")]` so it
-/// compiles away when the calling crate doesn't define the feature.
+/// Tier names can include a feature gate: `v4(avx512)` wraps dispatch/generation
+/// in `#[allow(unexpected_cfgs)] #[cfg(feature = "avx512")]`. Any feature name
+/// works: `neon(simd)`, `wasm128(wasm)`, etc. Without parentheses, the tier is
+/// unconditional.
 ///
-/// When `default_optional` is true, tiers with `cfg_feature` are automatically
-/// treated as optional even without `?`. Used for default tier lists.
+/// When `default_feature_gates` is true, tiers with `cfg_feature` in their
+/// descriptor automatically get that as their feature gate, even without explicit
+/// `(feature)` syntax. Used for default tier lists — v4/v4x auto-get `(avx512)`.
 fn resolve_tiers(
     tier_names: &[String],
     error_span: proc_macro2::Span,
-    default_optional: bool,
+    default_feature_gates: bool,
 ) -> syn::Result<Vec<ResolvedTier>> {
     let mut tiers = Vec::new();
     for raw_name in tier_names {
-        let (name, explicit_optional) = if raw_name.ends_with('?') {
-            (&raw_name[..raw_name.len() - 1], true)
+        // Parse "tier(feature)" or plain "tier"
+        let (name, explicit_gate) = if let Some(paren_pos) = raw_name.find('(') {
+            let tier_name = &raw_name[..paren_pos];
+            let feat = raw_name[paren_pos + 1..].trim_end_matches(')');
+            (tier_name, Some(feat.to_string()))
         } else {
-            (raw_name.as_str(), false)
+            (raw_name.as_str(), None)
         };
         match find_tier(name) {
             Some(tier) => {
-                let optional =
-                    explicit_optional || (default_optional && tier.cfg_feature.is_some());
-                tiers.push(ResolvedTier { tier, optional });
+                let feature_gate = explicit_gate.or_else(|| {
+                    if default_feature_gates {
+                        tier.cfg_feature.map(String::from)
+                    } else {
+                        None
+                    }
+                });
+                tiers.push(ResolvedTier { tier, feature_gate });
             }
             None => {
                 let known: Vec<&str> = ALL_TIERS.iter().map(|t| t.name).collect();
@@ -2243,7 +2276,7 @@ fn resolve_tiers(
     if !tiers.iter().any(|rt| rt.tier.name == "scalar") {
         tiers.push(ResolvedTier {
             tier: find_tier("scalar").unwrap(),
-            optional: false,
+            feature_gate: None,
         });
     }
 
@@ -2303,8 +2336,9 @@ impl Parse for IncantInput {
             None
         };
 
-        // Check for optional tier list: , [tier1, tier2?, ...]
-        // Tier names can end with `?` to mark them as optional (cfg-gated in output).
+        // Check for optional tier list: , [tier1, tier2(feature), ...]
+        // tier(feature) wraps dispatch in #[cfg(feature = "feature")].
+        // Example: [v4(avx512), v3, neon(simd), scalar]
         let tiers = if input.peek(Token![,]) {
             let _: Token![,] = input.parse()?;
             let bracket_content;
@@ -2312,9 +2346,12 @@ impl Parse for IncantInput {
             let mut tier_names = Vec::new();
             while !bracket_content.is_empty() {
                 let ident: Ident = bracket_content.parse()?;
-                let name = if bracket_content.peek(Token![?]) {
-                    let _: Token![?] = bracket_content.parse()?;
-                    format!("{}?", ident)
+                let name = if bracket_content.peek(syn::token::Paren) {
+                    // Parse tier(feature) — feature gate syntax
+                    let paren_content;
+                    syn::parenthesized!(paren_content in bracket_content);
+                    let feat: Ident = paren_content.parse()?;
+                    format!("{}({})", ident, feat)
                 } else {
                     ident.to_string()
                 };
@@ -2525,9 +2562,7 @@ fn gen_incant_passthrough(
                 }
             };
 
-            if rt.optional
-                && let Some(feat) = rt.cfg_feature
-            {
+            if let Some(feat) = &rt.feature_gate {
                 tier_checks.push(quote! {
                     #[allow(unexpected_cfgs)]
                     #[cfg(feature = #feat)]
@@ -2607,11 +2642,7 @@ fn gen_incant_entry(
                 }
             };
 
-            if rt.optional
-                && let Some(feat) = rt.cfg_feature
-            {
-                // Optional tier: wrap in cfg so it compiles away when the calling
-                // crate doesn't define the feature (matching the cfg on _v4 functions).
+            if let Some(feat) = &rt.feature_gate {
                 tier_checks.push(quote! {
                     #[allow(unexpected_cfgs)]
                     #[cfg(feature = #feat)]
@@ -2670,8 +2701,16 @@ impl Parse for AutoversionArgs {
                 let _: Token![=] = input.parse()?;
                 self_type = Some(input.parse()?);
             } else {
-                // Treat as tier name — validated later by resolve_tiers
-                tier_names.push(ident.to_string());
+                // Treat as tier name, optionally with (feature) gate
+                let name = if input.peek(syn::token::Paren) {
+                    let paren_content;
+                    syn::parenthesized!(paren_content in input);
+                    let feat: Ident = paren_content.parse()?;
+                    format!("{}({})", ident, feat)
+                } else {
+                    ident.to_string()
+                };
+                tier_names.push(name);
             }
             if input.peek(Token![,]) {
                 let _: Token![,] = input.parse()?;
