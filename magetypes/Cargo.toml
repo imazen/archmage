@@ -1,6 +1,6 @@
 [package]
 name = "magetypes"
-version = "0.9.11"
+version = "0.9.12"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -28,7 +28,7 @@ avx512 = ["archmage/avx512"]
 
 [dependencies]
 # Core tokens and macros
-archmage = { version = "0.9.11", path = "..", default-features = false }
+archmage = { version = "0.9.12", path = "..", default-features = false }
 
 # proptest depends on wait-timeout which doesn't compile on WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
