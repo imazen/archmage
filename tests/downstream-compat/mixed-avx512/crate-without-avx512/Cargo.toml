@@ -1,0 +1,21 @@
+[package]
+name = "crate-without-avx512"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# This crate does NOT enable avx512 on archmage.
+# Its _v4 functions are behind #[cfg(feature = "avx512")] and won't exist.
+# But because crate-with-avx512 is in the same workspace, cargo's feature
+# unification gives archmage-macros the avx512 feature anyway.
+#
+# This tests the proc-macro feature unification problem: archmage-macros
+# sees avx512=true (from the other crate), generates v4 dispatch, but
+# THIS crate's _v4 function doesn't exist.
+
+[dependencies]
+archmage = { workspace = true }
+crate-with-avx512 = { path = "../crate-with-avx512" }
+
+[features]
+avx512 = ["archmage/avx512"]

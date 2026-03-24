@@ -1,0 +1,11 @@
+[package]
+name = "crate-with-avx512"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# This crate enables avx512 on archmage.
+# Its _v4 functions exist unconditionally on x86_64.
+
+[dependencies]
+archmage = { workspace = true, features = ["avx512"] }
