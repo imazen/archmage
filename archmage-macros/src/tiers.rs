@@ -210,7 +210,11 @@ pub(crate) fn parse_tier_names(input: ParseStream) -> syn::Result<Vec<String>> {
 }
 
 /// Look up a tier by name.
+///
+/// Accepts `_v3` as well as `v3` — the leading `_` matches the name-mangling
+/// suffix (`fn_v3`), so users can write whichever form they find natural.
 pub(crate) fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
+    let name = name.strip_prefix('_').unwrap_or(name);
     ALL_TIERS.iter().find(|t| t.name == name)
 }
 

@@ -340,3 +340,88 @@ fn incant_default_calls_correct_suffix() {
     #[cfg(not(target_arch = "x86_64"))]
     assert_eq!(result, 99.0);
 }
+
+// ============================================================================
+// _tiername syntax: leading underscore matches name-mangling suffix
+// ============================================================================
+
+// incant! with _v3 and _scalar (underscore-prefixed tier names)
+fn us_incant_scalar(_: ScalarToken, x: f32) -> f32 {
+    x * 10.0
+}
+
+#[arcane]
+fn us_incant_v3(_: X64V3Token, x: f32) -> f32 {
+    x * 30.0
+}
+
+fn us_incant_dispatch(x: f32) -> f32 {
+    incant!(us_incant(x), [_v3, _scalar])
+}
+
+#[test]
+fn incant_underscore_tier_names() {
+    let result = us_incant_dispatch(1.0);
+    #[cfg(target_arch = "x86_64")]
+    if X64V3Token::summon().is_some() {
+        assert_eq!(result, 30.0);
+    } else {
+        assert_eq!(result, 10.0);
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    assert_eq!(result, 10.0);
+}
+
+// #[magetypes] with _v3 and _neon (underscore-prefixed tier names)
+#[magetypes(_v3, _neon)]
+fn us_mt(_token: Token, x: f32) -> f32 {
+    x + 1.0
+}
+
+#[test]
+fn magetypes_underscore_tier_names_scalar() {
+    // scalar is auto-appended
+    assert_eq!(us_mt_scalar(ScalarToken, 1.0), 2.0);
+}
+
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn magetypes_underscore_tier_names_v3() {
+    if let Some(t) = X64V3Token::summon() {
+        assert_eq!(us_mt_v3(t, 1.0), 2.0);
+    }
+}
+
+// #[autoversion] with _v3, _neon (underscore-prefixed tier names)
+#[autoversion(_v3, _neon)]
+fn us_av(data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+#[test]
+fn autoversion_underscore_tier_names() {
+    assert_eq!(us_av(&[1.0, 2.0, 3.0]), 6.0);
+}
+
+// #[rite] with _v3 (underscore-prefixed tier name, single tier)
+#[cfg(target_arch = "x86_64")]
+mod underscore_rite {
+    use archmage::prelude::*;
+
+    #[rite(_v3)]
+    fn us_rite_helper(x: f32) -> f32 {
+        x + 1.0
+    }
+
+    #[arcane]
+    fn call_us_rite(_token: X64V3Token, x: f32) -> f32 {
+        us_rite_helper(x)
+    }
+
+    #[test]
+    fn rite_underscore_tier_name() {
+        if let Some(t) = X64V3Token::summon() {
+            assert_eq!(call_us_rite(t, 1.0), 2.0);
+        }
+    }
+}

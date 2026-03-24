@@ -519,7 +519,10 @@ pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {
 ///
 /// Used by `#[rite(v3)]` to resolve the tier to a token without
 /// requiring a token parameter in the function signature.
+///
+/// Accepts `_v3` as well as `v3` — the leading `_` matches name-mangling suffixes.
 pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {
+    let tier_name = tier_name.strip_prefix('_').unwrap_or(tier_name);
     match tier_name {
         "v1" => Some("X64V1Token"),
         "v2" => Some("X64V2Token"),
