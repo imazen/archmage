@@ -1,170 +1,22 @@
 //! Proc-macros for archmage SIMD capability tokens.
 //!
-//! Provides `#[arcane]` attribute (with `#[arcane]` alias) to make raw intrinsics
-//! safe via token proof.
+//! Provides `#[arcane]`, `#[rite]`, `#[autoversion]`, `incant!`, and `#[magetypes]`.
+
+mod common;
+mod generated;
 
 use proc_macro::TokenStream;
 use quote::{ToTokens, format_ident, quote, quote_spanned};
 use syn::{
     Attribute, FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound,
     parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote, token,
+    parse_macro_input, parse_quote,
 };
 
-/// A function parsed with the body left as an opaque TokenStream.
-///
-/// Only the signature is fully parsed into an AST — the body tokens are collected
-/// without building any AST nodes (no expressions, statements, or patterns parsed).
-/// This saves ~2ms per function invocation at 100 lines of code.
-#[derive(Clone)]
-struct LightFn {
-    attrs: Vec<Attribute>,
-    vis: syn::Visibility,
-    sig: Signature,
-    brace_token: token::Brace,
-    body: proc_macro2::TokenStream,
-}
+use common::*;
 
-impl Parse for LightFn {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let attrs = input.call(Attribute::parse_outer)?;
-        let vis: syn::Visibility = input.parse()?;
-        let sig: Signature = input.parse()?;
-        let content;
-        let brace_token = syn::braced!(content in input);
-        let body: proc_macro2::TokenStream = content.parse()?;
-        Ok(LightFn {
-            attrs,
-            vis,
-            sig,
-            brace_token,
-            body,
-        })
-    }
-}
-
-impl ToTokens for LightFn {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        for attr in &self.attrs {
-            attr.to_tokens(tokens);
-        }
-        self.vis.to_tokens(tokens);
-        self.sig.to_tokens(tokens);
-        self.brace_token.surround(tokens, |tokens| {
-            self.body.to_tokens(tokens);
-        });
-    }
-}
-
-/// Filter out `#[inline]`, `#[inline(always)]`, `#[inline(never)]` from attributes.
-///
-/// Used to prevent duplicate inline attributes when the macro adds its own.
-/// Duplicate `#[inline]` is a warning that will become a hard error.
-fn filter_inline_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
-    attrs
-        .iter()
-        .filter(|attr| !attr.path().is_ident("inline"))
-        .collect()
-}
-
-/// Check if an attribute is a lint-control attribute.
-///
-/// Lint-control attributes (`#[allow(...)]`, `#[expect(...)]`, `#[deny(...)]`,
-/// `#[warn(...)]`, `#[forbid(...)]`) must be propagated to generated sibling
-/// functions so that user-applied lint suppressions work on the generated code.
-fn is_lint_attr(attr: &Attribute) -> bool {
-    let path = attr.path();
-    path.is_ident("allow")
-        || path.is_ident("expect")
-        || path.is_ident("deny")
-        || path.is_ident("warn")
-        || path.is_ident("forbid")
-}
-
-/// Extract lint-control attributes from a list of attributes.
-///
-/// Returns references to `#[allow(...)]`, `#[expect(...)]`, `#[deny(...)]`,
-/// `#[warn(...)]`, and `#[forbid(...)]` attributes. These need to be propagated
-/// to generated sibling functions so clippy/rustc lint suppressions work.
-fn filter_lint_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
-    attrs.iter().filter(|attr| is_lint_attr(attr)).collect()
-}
-
-/// Generate a cfg guard combining target_arch and an optional feature gate.
-///
-/// - `(Some("x86_64"), None)` → `#[cfg(target_arch = "x86_64")]`
-/// - `(Some("x86_64"), Some("avx512"))` → `#[cfg(all(target_arch = "x86_64", feature = "avx512"))]`
-/// - `(None, Some("avx512"))` → `#[cfg(feature = "avx512")]`
-/// - `(None, None)` → empty
-fn gen_cfg_guard(target_arch: Option<&str>, cfg_feature: Option<&str>) -> proc_macro2::TokenStream {
-    match (target_arch, cfg_feature) {
-        (Some(arch), Some(feat)) => {
-            quote! { #[cfg(all(target_arch = #arch, feature = #feat))] }
-        }
-        (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
-        (None, Some(feat)) => quote! { #[cfg(feature = #feat)] },
-        (None, None) => quote! {},
-    }
-}
-
-/// Build a turbofish token stream from a function's generics.
-///
-/// Collects type and const generic parameters (skipping lifetimes) and returns
-/// a `::<A, B, N, M>` turbofish fragment. Returns empty tokens if there are no
-/// type/const generics to forward.
-///
-/// This is needed when the dispatcher or wrapper calls variant/sibling functions
-/// that have const generics not inferable from argument types alone.
-fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStream {
-    let params: Vec<proc_macro2::TokenStream> = generics
-        .params
-        .iter()
-        .filter_map(|param| match param {
-            GenericParam::Type(tp) => {
-                let ident = &tp.ident;
-                Some(quote! { #ident })
-            }
-            GenericParam::Const(cp) => {
-                let ident = &cp.ident;
-                Some(quote! { #ident })
-            }
-            GenericParam::Lifetime(_) => None,
-        })
-        .collect();
-    if params.is_empty() {
-        quote! {}
-    } else {
-        quote! { ::<#(#params),*> }
-    }
-}
-
-/// Replace all `Self` identifier tokens with a concrete type in a token stream.
-///
-/// Recurses into groups (braces, parens, brackets). Used for `#[arcane(_self = Type)]`
-/// to replace `Self` in both the return type and body without needing to parse the body.
-fn replace_self_in_tokens(
-    tokens: proc_macro2::TokenStream,
-    replacement: &Type,
-) -> proc_macro2::TokenStream {
-    let mut result = proc_macro2::TokenStream::new();
-    for tt in tokens {
-        match tt {
-            proc_macro2::TokenTree::Ident(ref ident) if ident == "Self" => {
-                result.extend(replacement.to_token_stream());
-            }
-            proc_macro2::TokenTree::Group(group) => {
-                let new_stream = replace_self_in_tokens(group.stream(), replacement);
-                let mut new_group = proc_macro2::Group::new(group.delimiter(), new_stream);
-                new_group.set_span(group.span());
-                result.extend(std::iter::once(proc_macro2::TokenTree::Group(new_group)));
-            }
-            other => {
-                result.extend(std::iter::once(other));
-            }
-        }
-    }
-    result
-}
+// LightFn, filter_inline_attrs, is_lint_attr, filter_lint_attrs, gen_cfg_guard,
+// build_turbofish, replace_self_in_tokens, suffix_path → moved to common.rs
 
 /// Arguments to the `#[arcane]` macro.
 #[derive(Default)]
@@ -240,7 +92,6 @@ impl Parse for ArcaneArgs {
 
 // Token-to-features and trait-to-features mappings are generated from
 // token-registry.toml by xtask. Regenerate with: cargo run -p xtask -- generate
-mod generated;
 use generated::{
     canonical_token_to_tier_suffix, tier_to_canonical_token, token_to_arch, token_to_features,
     token_to_magetypes_namespace, trait_to_arch, trait_to_features, trait_to_magetypes_namespace,
@@ -2400,15 +2251,7 @@ struct IncantInput {
     tiers: Option<(Vec<String>, proc_macro2::Span)>,
 }
 
-/// Create a suffixed version of a function path.
-/// e.g. `module::func` + `"v3"` → `module::func_v3`
-fn suffix_path(path: &syn::Path, suffix: &str) -> syn::Path {
-    let mut suffixed = path.clone();
-    if let Some(last) = suffixed.segments.last_mut() {
-        last.ident = format_ident!("{}_{}", last.ident, suffix);
-    }
-    suffixed
-}
+// suffix_path → moved to common.rs
 
 impl Parse for IncantInput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
