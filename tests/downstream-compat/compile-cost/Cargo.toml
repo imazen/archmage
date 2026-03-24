@@ -1,0 +1,15 @@
+[workspace]
+
+[package]
+name = "compile-cost"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+archmage = { path = "../../.." }
+magetypes = { path = "../../../magetypes", optional = true }
+
+[features]
+avx512 = ["archmage/avx512", "magetypes?/avx512"]
+use_magetypes = ["magetypes"]
