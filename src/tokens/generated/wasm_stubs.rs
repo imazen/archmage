@@ -2,6 +2,7 @@
 //!
 //! Stub tokens: `summon()` always returns `None`.
 
+#[allow(deprecated)]
 use crate::tokens::Has128BitSimd;
 use crate::tokens::SimdToken;
 
@@ -115,5 +116,7 @@ impl Wasm128RelaxedToken {
     }
 }
 
+#[allow(deprecated)]
 impl Has128BitSimd for Wasm128Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for Wasm128RelaxedToken {}

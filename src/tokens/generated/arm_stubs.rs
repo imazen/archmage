@@ -3,6 +3,7 @@
 //! Stub tokens: `summon()` always returns `None`.
 
 use crate::tokens::SimdToken;
+#[allow(deprecated)]
 use crate::tokens::{Has128BitSimd, HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3};
 
 /// Stub for NEON token (not available on this architecture).
@@ -343,11 +344,17 @@ impl Arm64V3Token {
 /// Type alias for [`NeonToken`].
 pub type Arm64 = NeonToken;
 
+#[allow(deprecated)]
 impl Has128BitSimd for NeonToken {}
+#[allow(deprecated)]
 impl Has128BitSimd for NeonAesToken {}
+#[allow(deprecated)]
 impl Has128BitSimd for NeonSha3Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for NeonCrcToken {}
+#[allow(deprecated)]
 impl Has128BitSimd for Arm64V2Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for Arm64V3Token {}
 impl HasArm64V2 for Arm64V2Token {}
 impl HasArm64V2 for Arm64V3Token {}

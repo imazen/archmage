@@ -49,23 +49,46 @@ fn disabled_var_name(token_name: &str) -> String {
 pub fn generate_token_files(reg: &Registry) -> Vec<(String, String)> {
     let mut files = Vec::new();
 
+    // Collect deprecated trait names for #[allow(deprecated)] on impls
+    let deprecated_traits: Vec<&str> = reg
+        .traits
+        .iter()
+        .filter(|t| t.deprecated.is_some())
+        .map(|t| t.name.as_str())
+        .collect();
+
     // Group tokens by arch
     let x86_tokens: Vec<&TokenDef> = reg.token.iter().filter(|t| t.arch == "x86").collect();
     let arm_tokens: Vec<&TokenDef> = reg.token.iter().filter(|t| t.arch == "aarch64").collect();
     let wasm_tokens: Vec<&TokenDef> = reg.token.iter().filter(|t| t.arch == "wasm").collect();
 
     // Real implementations (all x86 tokens in one file — no base/avx512 split)
-    files.push(("x86.rs".into(), gen_real_tokens(reg, &x86_tokens, "x86")));
+    files.push((
+        "x86.rs".into(),
+        gen_real_tokens(reg, &x86_tokens, "x86", &deprecated_traits),
+    ));
     files.push((
         "arm.rs".into(),
-        gen_real_tokens(reg, &arm_tokens, "aarch64"),
+        gen_real_tokens(reg, &arm_tokens, "aarch64", &deprecated_traits),
     ));
-    files.push(("wasm.rs".into(), gen_real_tokens(reg, &wasm_tokens, "wasm")));
+    files.push((
+        "wasm.rs".into(),
+        gen_real_tokens(reg, &wasm_tokens, "wasm", &deprecated_traits),
+    ));
 
     // Stubs (all x86 tokens in one file)
-    files.push(("x86_stubs.rs".into(), gen_stub_tokens(reg, &x86_tokens)));
-    files.push(("arm_stubs.rs".into(), gen_stub_tokens(reg, &arm_tokens)));
-    files.push(("wasm_stubs.rs".into(), gen_stub_tokens(reg, &wasm_tokens)));
+    files.push((
+        "x86_stubs.rs".into(),
+        gen_stub_tokens(reg, &x86_tokens, &deprecated_traits),
+    ));
+    files.push((
+        "arm_stubs.rs".into(),
+        gen_stub_tokens(reg, &arm_tokens, &deprecated_traits),
+    ));
+    files.push((
+        "wasm_stubs.rs".into(),
+        gen_stub_tokens(reg, &wasm_tokens, &deprecated_traits),
+    ));
 
     // Traits
     files.push(("traits.rs".into(), gen_traits(reg)));
@@ -80,7 +103,12 @@ pub fn generate_token_files(reg: &Registry) -> Vec<(String, String)> {
 // Real token implementations (native arch)
 // ============================================================================
 
-fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
+fn gen_real_tokens(
+    reg: &Registry,
+    tokens: &[&TokenDef],
+    arch: &str,
+    deprecated_traits: &[&str],
+) -> String {
     let mut out = String::with_capacity(4096);
 
     out.push_str(&formatdoc! {"
@@ -105,6 +133,9 @@ fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
         .collect();
 
     if !trait_names.is_empty() {
+        if trait_names.iter().any(|t| deprecated_traits.contains(t)) {
+            out.push_str("#[allow(deprecated)]\n");
+        }
         let traits_list = trait_names.join(", ");
         out.push_str(&format!("use crate::tokens::{{{traits_list}}};\n"));
     }
@@ -168,7 +199,7 @@ fn gen_real_tokens(reg: &Registry, tokens: &[&TokenDef], arch: &str) -> String {
     }
 
     // Trait impls
-    gen_trait_impls(&mut out, tokens);
+    gen_trait_impls(&mut out, tokens, deprecated_traits);
 
     out
 }
@@ -647,7 +678,7 @@ fn collect_descendants<'a>(reg: &'a Registry, token: &'a TokenDef) -> Vec<&'a To
 // Stub token implementations (cross-platform)
 // ============================================================================
 
-fn gen_stub_tokens(reg: &Registry, tokens: &[&TokenDef]) -> String {
+fn gen_stub_tokens(reg: &Registry, tokens: &[&TokenDef], deprecated_traits: &[&str]) -> String {
     let _ = reg; // available if needed later
     let mut out = String::with_capacity(2048);
 
@@ -668,6 +699,9 @@ fn gen_stub_tokens(reg: &Registry, tokens: &[&TokenDef]) -> String {
         .collect();
 
     if !trait_names.is_empty() {
+        if trait_names.iter().any(|t| deprecated_traits.contains(t)) {
+            out.push_str("#[allow(deprecated)]\n");
+        }
         let traits_list = trait_names.join(", ");
         out.push_str(&format!("use crate::tokens::{{{traits_list}}};\n"));
     }
@@ -686,7 +720,7 @@ fn gen_stub_tokens(reg: &Registry, tokens: &[&TokenDef]) -> String {
     }
 
     // Trait impls (same as real — traits apply to stubs too for generic code)
-    gen_trait_impls(&mut out, tokens);
+    gen_trait_impls(&mut out, tokens, deprecated_traits);
 
     out
 }
@@ -764,7 +798,7 @@ fn gen_aliases(out: &mut String, token: &TokenDef) {
 // Trait impls (shared between real and stub)
 // ============================================================================
 
-fn gen_trait_impls(out: &mut String, tokens: &[&TokenDef]) {
+fn gen_trait_impls(out: &mut String, tokens: &[&TokenDef], deprecated_trait_names: &[&str]) {
     // Group by trait for readability
     let mut trait_to_tokens: std::collections::BTreeMap<&str, Vec<&str>> =
         std::collections::BTreeMap::new();
@@ -785,7 +819,11 @@ fn gen_trait_impls(out: &mut String, tokens: &[&TokenDef]) {
     out.push('\n');
 
     for (trait_name, token_names) in &trait_to_tokens {
+        let needs_allow = deprecated_trait_names.contains(trait_name);
         for token_name in token_names {
+            if needs_allow {
+                out.push_str("#[allow(deprecated)]\n");
+            }
             out.push_str(&format!("impl {trait_name} for {token_name} {{}}\n"));
         }
     }
@@ -807,26 +845,53 @@ fn gen_traits(reg: &Registry) -> String {
 
     "});
 
+    let deprecated_names: Vec<&str> = reg
+        .traits
+        .iter()
+        .filter(|t| t.deprecated.is_some())
+        .map(|t| t.name.as_str())
+        .collect();
+
     for trait_def in &reg.traits {
-        gen_trait_def(&mut out, trait_def);
+        gen_trait_def(&mut out, trait_def, &deprecated_names);
         out.push('\n');
     }
 
     out
 }
 
-fn gen_trait_def(out: &mut String, trait_def: &TraitDef) {
+fn gen_trait_def(out: &mut String, trait_def: &TraitDef, deprecated_trait_names: &[&str]) {
     let doc_block = gen_doc_comment(&trait_def.doc);
     let name = &trait_def.name;
 
+    // If this trait or any parent is deprecated, add #[allow(deprecated)]
+    let has_deprecated_parent = trait_def
+        .parents
+        .iter()
+        .any(|p| deprecated_trait_names.contains(&p.as_str()));
+    let allow_deprecated = if has_deprecated_parent || trait_def.deprecated.is_some() {
+        "#[allow(deprecated)]\n"
+    } else {
+        ""
+    };
+
+    let dep_attr = if let Some(msg) = &trait_def.deprecated {
+        format!(
+            "#[deprecated(since = \"0.9.9\", note = \"{}\")]\n",
+            msg.replace('"', "\\\"")
+        )
+    } else {
+        String::new()
+    };
+
     if trait_def.parents.is_empty() {
         out.push_str(&formatdoc! {"
-            {doc_block}pub trait {name}: SimdToken {{}}
+            {doc_block}{allow_deprecated}{dep_attr}pub trait {name}: SimdToken {{}}
         "});
     } else {
         let bounds = trait_def.parents.join(" + ");
         out.push_str(&formatdoc! {"
-            {doc_block}pub trait {name}: {bounds} {{}}
+            {doc_block}{allow_deprecated}{dep_attr}pub trait {name}: {bounds} {{}}
         "});
     }
 }

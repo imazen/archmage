@@ -85,6 +85,9 @@ pub struct TraitDef {
     /// Used by `import_magetypes` parameter in `#[arcane]`/`#[rite]`.
     #[serde(default)]
     pub magetypes_namespace: Option<String>,
+    /// Deprecation message. When set, generates `#[deprecated(since = "...", note = "...")]`.
+    #[serde(default)]
+    pub deprecated: Option<String>,
 }
 
 /// A width namespace for simd type re-exports.

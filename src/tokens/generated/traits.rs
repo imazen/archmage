@@ -5,12 +5,27 @@
 use crate::tokens::SimdToken;
 
 /// Marker trait for tokens that provide 128-bit SIMD.
+#[allow(deprecated)]
+#[deprecated(
+    since = "0.9.9",
+    note = "Width traits are misleading (Has256BitSimd enables AVX, not AVX2). Use concrete tokens (X64V3Token) or tier traits (HasX64V2, HasX64V4) instead. Will be removed in v1.0."
+)]
 pub trait Has128BitSimd: SimdToken {}
 
 /// Marker trait for tokens that provide 256-bit SIMD.
+#[allow(deprecated)]
+#[deprecated(
+    since = "0.9.9",
+    note = "Has256BitSimd only enables AVX, NOT AVX2 or FMA — causes suboptimal codegen. Use X64V3Token or HasX64V2 instead. Will be removed in v1.0."
+)]
 pub trait Has256BitSimd: Has128BitSimd {}
 
 /// Marker trait for tokens that provide 512-bit SIMD.
+#[allow(deprecated)]
+#[deprecated(
+    since = "0.9.9",
+    note = "Width traits are misleading. Use X64V4Token or HasX64V4 instead. Will be removed in v1.0."
+)]
 pub trait Has512BitSimd: Has256BitSimd {}
 
 /// Marker trait for x86-64-v2 level (Nehalem 2008+).

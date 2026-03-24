@@ -159,7 +159,8 @@ pub use tokens::SimdToken;
 // Global SIMD kill switch
 pub use tokens::dangerously_disable_tokens_except_wasm;
 
-// Width marker traits
+// Width marker traits (deprecated — use concrete tokens or tier traits)
+#[allow(deprecated)]
 pub use tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 
 // x86 tier marker traits (based on LLVM x86-64 microarchitecture levels)

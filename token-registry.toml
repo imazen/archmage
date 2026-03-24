@@ -257,6 +257,7 @@ arch = "x86_64"
 x86_features = ["sse", "sse2"]
 magetypes_namespace = "v3"
 doc = "Marker trait for tokens that provide 128-bit SIMD."
+deprecated = "Width traits are misleading (Has256BitSimd enables AVX, not AVX2). Use concrete tokens (X64V3Token) or tier traits (HasX64V2, HasX64V4) instead. Will be removed in v1.0."
 
 [[trait]]
 name = "Has256BitSimd"
@@ -265,6 +266,7 @@ x86_features = ["sse", "sse2", "avx"]
 parents = ["Has128BitSimd"]
 magetypes_namespace = "v3"
 doc = "Marker trait for tokens that provide 256-bit SIMD."
+deprecated = "Has256BitSimd only enables AVX, NOT AVX2 or FMA — causes suboptimal codegen. Use X64V3Token or HasX64V2 instead. Will be removed in v1.0."
 
 [[trait]]
 name = "Has512BitSimd"
@@ -273,6 +275,7 @@ x86_features = ["sse", "sse2", "avx", "avx2", "avx512f"]
 parents = ["Has256BitSimd"]
 magetypes_namespace = "v4"
 doc = "Marker trait for tokens that provide 512-bit SIMD."
+deprecated = "Width traits are misleading. Use X64V4Token or HasX64V4 instead. Will be removed in v1.0."
 
 [[trait]]
 name = "HasX64V2"

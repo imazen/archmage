@@ -136,6 +136,7 @@ pub use crate::tokens::HasX64V2;
 pub use crate::tokens::HasX64V4;
 pub use crate::tokens::IntoConcreteToken;
 pub use crate::tokens::SimdToken;
+#[allow(deprecated)]
 pub use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 pub use crate::tokens::{HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3};
 

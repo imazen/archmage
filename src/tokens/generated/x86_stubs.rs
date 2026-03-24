@@ -3,6 +3,7 @@
 //! Stub tokens: `summon()` always returns `None`.
 
 use crate::tokens::SimdToken;
+#[allow(deprecated)]
 use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd, HasX64V2, HasX64V4};
 
 /// Stub for x86-64-v1 token (not available on this architecture).
@@ -466,21 +467,37 @@ pub type Server64 = X64V4Token;
 /// Type alias for [`X64V4xToken`].
 pub type Avx512ModernToken = X64V4xToken;
 
+#[allow(deprecated)]
 impl Has128BitSimd for X64V1Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for X64V2Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for X64CryptoToken {}
+#[allow(deprecated)]
 impl Has128BitSimd for X64V3Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for X64V3CryptoToken {}
+#[allow(deprecated)]
 impl Has128BitSimd for X64V4Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for X64V4xToken {}
+#[allow(deprecated)]
 impl Has128BitSimd for Avx512Fp16Token {}
+#[allow(deprecated)]
 impl Has256BitSimd for X64V3Token {}
+#[allow(deprecated)]
 impl Has256BitSimd for X64V3CryptoToken {}
+#[allow(deprecated)]
 impl Has256BitSimd for X64V4Token {}
+#[allow(deprecated)]
 impl Has256BitSimd for X64V4xToken {}
+#[allow(deprecated)]
 impl Has256BitSimd for Avx512Fp16Token {}
+#[allow(deprecated)]
 impl Has512BitSimd for X64V4Token {}
+#[allow(deprecated)]
 impl Has512BitSimd for X64V4xToken {}
+#[allow(deprecated)]
 impl Has512BitSimd for Avx512Fp16Token {}
 impl HasX64V2 for X64V2Token {}
 impl HasX64V2 for X64CryptoToken {}

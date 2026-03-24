@@ -2248,10 +2248,6 @@ const ALL_TIERS: &[TierDescriptor] = &[
 /// `resolve_tiers` with `skip_avx512=true` filters it out when the feature is off.
 const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
 
-/// Whether `incant!` requires `scalar` in explicit tier lists.
-/// Currently false for backwards compatibility. Flip to true in v1.0.
-const REQUIRE_EXPLICIT_SCALAR: bool = false;
-
 /// Parse a comma-separated list of tier names, each optionally followed by
 /// `(feature)` for cfg-gating: `v4(avx512), v3, neon(simd), scalar`.
 fn parse_tier_names(input: ParseStream) -> syn::Result<Vec<String>> {
@@ -2572,24 +2568,31 @@ fn incant_impl(input: IncantInput) -> TokenStream {
         .map(|(_, span)| *span)
         .unwrap_or(last_segment_span);
 
-    // When the user specifies explicit tiers, require `scalar` in the list.
-    // This forces acknowledgment that a scalar fallback path exists and must
-    // be implemented. Default tiers (no bracket list) always include scalar.
-    // TODO(v1.0): flip REQUIRE_EXPLICIT_SCALAR to true
-    if REQUIRE_EXPLICIT_SCALAR
-        && let Some((names, span)) = &input.tiers
-        && !names.iter().any(|n| n == "scalar")
-    {
-        return syn::Error::new(
-            *span,
-            "explicit tier list must include `scalar`. \
-             incant! always dispatches to fn_scalar() as the final fallback, \
-             so `scalar` must appear in the tier list to acknowledge this. \
-             Example: [v3, neon, scalar]",
-        )
-        .to_compile_error()
-        .into();
-    }
+    // When the user specifies explicit tiers without `scalar` in incant!, emit
+    // a deprecation warning. In v1.0 this will become a compile error.
+    // scalar is always auto-appended, but not listing it explicitly hides the
+    // fact that a _scalar function is required.
+    let scalar_warning = if let Some((names, _span)) = &input.tiers {
+        if !names.iter().any(|n| {
+            let base = n.split('(').next().unwrap_or(n);
+            base == "scalar"
+        }) {
+            quote! {
+                #[deprecated(since = "0.9.9", note = "\
+                    explicit incant! tier lists should include `scalar`. \
+                    incant! always calls fn_scalar() as the final fallback. \
+                    This will become a compile error in v1.0. \
+                    Example: incant!(foo(x), [v3, neon, scalar])")]
+                #[allow(non_upper_case_globals)]
+                const __incant_missing_scalar_tier: () = ();
+                let _ = __incant_missing_scalar_tier;
+            }
+        } else {
+            quote! {}
+        }
+    } else {
+        quote! {}
+    };
 
     // Apply default feature gates: tiers with cfg_feature (v4→avx512) auto-get
     // the gate unless the user explicitly wrote tier(feature). This is true for
@@ -2603,10 +2606,24 @@ fn incant_impl(input: IncantInput) -> TokenStream {
 
     // Group tiers by architecture for cfg-guarded blocks
     // Within each arch, tiers are already sorted by priority (highest first)
-    if let Some(token_expr) = &input.with_token {
+    let dispatch: TokenStream = if let Some(token_expr) = &input.with_token {
         gen_incant_passthrough(func_path, args, token_expr, &tiers)
     } else {
         gen_incant_entry(func_path, args, &tiers)
+    };
+
+    if scalar_warning.is_empty() {
+        dispatch
+    } else {
+        // Wrap dispatch in a block that includes the deprecation warning
+        let dispatch2: proc_macro2::TokenStream = dispatch.into();
+        quote! {
+            {
+                #scalar_warning
+                #dispatch2
+            }
+        }
+        .into()
     }
 }
 
