@@ -2,11 +2,15 @@
 //!
 //! Tests variant generation, dispatch, explicit tiers, self receivers,
 //! and correctness across all dispatch paths.
+//!
+//! **Signature preservation rule:** When the user writes `_token: SimdToken`,
+//! the dispatcher keeps the parameter as `ScalarToken`. When no SimdToken is
+//! present, the dispatcher has the user's original token-free signature.
 
 use archmage::prelude::*;
 
 // ============================================================================
-// Basic: free function with default tiers
+// Basic: free function with default tiers (explicit SimdToken)
 // ============================================================================
 
 #[autoversion]
@@ -22,7 +26,8 @@ fn sum_of_squares(_token: SimdToken, data: &[f32]) -> f32 {
 fn dispatcher_returns_correct_result() {
     let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
     let expected: f32 = data.iter().map(|x| x * x).sum();
-    let result = sum_of_squares(&data);
+    // Explicit SimdToken → dispatcher takes ScalarToken
+    let result = sum_of_squares(ScalarToken, &data);
     assert!(
         (result - expected).abs() < 1e-3,
         "dispatcher returned {result}, expected {expected}"
@@ -57,8 +62,6 @@ fn v4_variant_exists_without_avx512_feature() {
         let result = sum_of_squares_v4(token, &data);
         assert!((result - 30.0).abs() < 1e-6, "v4: {result}");
     }
-    // If X64V4Token::summon() returns None, the CPU doesn't support AVX-512
-    // — that's fine, the point is that the function EXISTS and compiles.
 }
 
 // ============================================================================
@@ -79,7 +82,7 @@ fn dot_product(_token: SimdToken, a: &[f32], b: &[f32]) -> f32 {
 fn explicit_tiers_dispatcher() {
     let a = [1.0f32, 2.0, 3.0, 4.0];
     let b = [4.0f32, 3.0, 2.0, 1.0];
-    let result = dot_product(&a, &b);
+    let result = dot_product(ScalarToken, &a, &b);
     assert!((result - 20.0).abs() < 1e-6, "dot: {result}");
 }
 
@@ -103,7 +106,7 @@ fn scale_and_offset(_token: SimdToken, data: &[f32], scale: f32, offset: f32) ->
 #[test]
 fn multi_param_dispatcher() {
     let data = [1.0f32, 2.0, 3.0];
-    let result = scale_and_offset(&data, 2.0, 10.0);
+    let result = scale_and_offset(ScalarToken, &data, 2.0, 10.0);
     assert_eq!(result, vec![12.0, 14.0, 16.0]);
 }
 
@@ -121,7 +124,7 @@ fn normalize_inplace(_token: SimdToken, data: &mut [f32], scale: f32) {
 #[test]
 fn mutable_slice_dispatcher() {
     let mut data = vec![1.0f32, 2.0, 3.0, 4.0];
-    normalize_inplace(&mut data, 0.5);
+    normalize_inplace(ScalarToken, &mut data, 0.5);
     assert_eq!(data, vec![0.5, 1.0, 1.5, 2.0]);
 }
 
@@ -143,7 +146,7 @@ fn prefix_sums(_token: SimdToken, data: &[f32]) -> Vec<f32> {
 #[test]
 fn allocating_return_type() {
     let data = [1.0f32, 2.0, 3.0, 4.0];
-    let result = prefix_sums(&data);
+    let result = prefix_sums(ScalarToken, &data);
     assert_eq!(result, vec![1.0, 3.0, 6.0, 10.0]);
 }
 
@@ -167,7 +170,7 @@ fn self_receiver_dispatcher() {
     let buf = Buffer {
         data: vec![1.0, 2.0, 3.0, 4.0],
     };
-    let result = buf.total();
+    let result = buf.total(ScalarToken);
     assert!((result - 10.0).abs() < 1e-6, "total: {result}");
 }
 
@@ -211,7 +214,7 @@ fn mut_self_receiver_dispatcher() {
     let mut buf = Buffer {
         data: vec![1.0, 2.0, 3.0, 4.0],
     };
-    buf.scale_all(3.0);
+    buf.scale_all(ScalarToken, 3.0);
     assert_eq!(buf.data, vec![3.0, 6.0, 9.0, 12.0]);
 }
 
@@ -220,7 +223,7 @@ fn plain_self_receiver_ref() {
     let c = Counter {
         values: vec![1.0, 2.0, 3.0],
     };
-    let result = c.sum();
+    let result = c.sum(ScalarToken);
     assert!((result - 6.0).abs() < 1e-6, "sum: {result}");
 }
 
@@ -229,7 +232,7 @@ fn plain_self_receiver_mut() {
     let mut c = Counter {
         values: vec![1.0, 2.0, 3.0],
     };
-    c.double_all();
+    c.double_all(ScalarToken);
     assert_eq!(c.values, vec![2.0, 4.0, 6.0]);
 }
 
@@ -245,7 +248,7 @@ fn sum_wildcard(_: SimdToken, data: &[f32]) -> f32 {
 #[test]
 fn wildcard_token_param() {
     let data = [1.0f32, 2.0, 3.0];
-    let result = sum_wildcard(&data);
+    let result = sum_wildcard(ScalarToken, &data);
     assert!((result - 6.0).abs() < 1e-6, "wildcard: {result}");
 }
 
@@ -270,7 +273,7 @@ fn all_variants_consistent() {
     }
 
     // Dispatcher should match scalar within floating-point tolerance
-    let dispatched = sum_of_squares(&data);
+    let dispatched = sum_of_squares(ScalarToken, &data);
     assert!(
         (dispatched - expected).abs() < 1e-1,
         "dispatched ({dispatched}) != scalar ({expected})"
@@ -284,8 +287,8 @@ fn all_variants_consistent() {
 #[test]
 fn empty_input() {
     let empty: &[f32] = &[];
-    assert_eq!(sum_of_squares(empty), 0.0);
-    assert_eq!(dot_product(empty, empty), 0.0);
+    assert_eq!(sum_of_squares(ScalarToken, empty), 0.0);
+    assert_eq!(dot_product(ScalarToken, empty, empty), 0.0);
 }
 
 // ============================================================================
@@ -304,7 +307,7 @@ fn plain_self_with_explicit_tiers() {
     let c = Counter {
         values: vec![2.0, 3.0, 4.0],
     };
-    assert!((c.product() - 24.0).abs() < 1e-6);
+    assert!((c.product(ScalarToken) - 24.0).abs() < 1e-6);
 }
 
 // ============================================================================
@@ -323,7 +326,7 @@ fn plain_self_with_extra_params() {
     let c = Counter {
         values: vec![1.0, 2.0, 3.0],
     };
-    assert!((c.weighted_sum(10.0) - 60.0).abs() < 1e-6);
+    assert!((c.weighted_sum(ScalarToken, 10.0) - 60.0).abs() < 1e-6);
 }
 
 // ============================================================================
@@ -346,16 +349,8 @@ fn owned_self_receiver() {
     let d = OwnedData {
         data: vec![1.0, 2.0, 3.0, 4.0],
     };
-    assert!((d.into_sum() - 10.0).abs() < 1e-6);
+    assert!((d.into_sum(ScalarToken) - 10.0).abs() < 1e-6);
 }
-
-// ============================================================================
-// Token as first non-self parameter
-// ============================================================================
-
-// For methods, self is first and SimdToken is second — this works fine.
-// (Already tested above: Counter::sum has &self first, _token second.)
-// For free functions, SimdToken must be the first parameter.
 
 // ============================================================================
 // Multiple wildcard parameters
@@ -371,7 +366,7 @@ fn add_wildcards(_: SimdToken, _: &[f32], _: &[f32]) -> f32 {
 fn multiple_wildcards() {
     let a = [1.0f32];
     let b = [2.0f32];
-    assert_eq!(add_wildcards(&a, &b), 42.0);
+    assert_eq!(add_wildcards(ScalarToken, &a, &b), 42.0);
 }
 
 // ============================================================================
@@ -396,7 +391,7 @@ fn min_max(_token: SimdToken, data: &[f32]) -> (f32, f32) {
 #[test]
 fn tuple_return_type() {
     let data = [3.0f32, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0];
-    let (min, max) = min_max(&data);
+    let (min, max) = min_max(ScalarToken, &data);
     assert!((min - 1.0).abs() < 1e-6);
     assert!((max - 9.0).abs() < 1e-6);
 }
@@ -412,8 +407,8 @@ fn find_first_negative(_token: SimdToken, data: &[f32]) -> Option<usize> {
 
 #[test]
 fn option_return_type() {
-    assert_eq!(find_first_negative(&[1.0, -2.0, 3.0]), Some(1));
-    assert_eq!(find_first_negative(&[1.0, 2.0, 3.0]), None);
+    assert_eq!(find_first_negative(ScalarToken, &[1.0, -2.0, 3.0]), Some(1));
+    assert_eq!(find_first_negative(ScalarToken, &[1.0, 2.0, 3.0]), None);
 }
 
 // ============================================================================
@@ -428,7 +423,7 @@ fn sum_i64(_token: SimdToken, data: &[i64]) -> i64 {
 #[test]
 fn integer_data() {
     let data: Vec<i64> = (1..=100).collect();
-    assert_eq!(sum_i64(&data), 5050);
+    assert_eq!(sum_i64(ScalarToken, &data), 5050);
 }
 
 // ============================================================================
@@ -442,8 +437,8 @@ fn all_positive(_token: SimdToken, data: &[f32]) -> bool {
 
 #[test]
 fn boolean_return() {
-    assert!(all_positive(&[1.0, 2.0, 3.0]));
-    assert!(!all_positive(&[1.0, -2.0, 3.0]));
+    assert!(all_positive(ScalarToken, &[1.0, 2.0, 3.0]));
+    assert!(!all_positive(ScalarToken, &[1.0, -2.0, 3.0]));
 }
 
 // ============================================================================
@@ -498,7 +493,7 @@ fn sum_large(_token: SimdToken, data: &[f32]) -> f32 {
 fn large_data_auto_vectorized() {
     let data: Vec<f32> = (0..4096).map(|i| i as f32).collect();
     let expected: f32 = (0..4096).map(|i| i as f32).sum();
-    let result = sum_large(&data);
+    let result = sum_large(ScalarToken, &data);
     assert!(
         (result - expected).abs() < 1.0,
         "large sum: got {result}, expected {expected}"
@@ -524,7 +519,7 @@ fn clamp_inplace(_token: SimdToken, data: &mut [f32], lo: f32, hi: f32) {
 #[test]
 fn inplace_mutation_with_bounds() {
     let mut data = vec![-5.0, 0.0, 5.0, 10.0, 15.0];
-    clamp_inplace(&mut data, 0.0, 10.0);
+    clamp_inplace(ScalarToken, &mut data, 0.0, 10.0);
     assert_eq!(data, vec![0.0, 0.0, 5.0, 10.0, 10.0]);
 }
 
@@ -544,7 +539,7 @@ fn self_receiver_borrowing_return() {
     let c = Counter {
         values: vec![1.0, 2.0, 3.0],
     };
-    assert_eq!(c.values_ref(), &[1.0, 2.0, 3.0]);
+    assert_eq!(c.values_ref(ScalarToken), &[1.0, 2.0, 3.0]);
 }
 
 // ============================================================================
@@ -558,7 +553,7 @@ fn noop(_token: SimdToken, _data: &[f32]) {
 
 #[test]
 fn unit_return_type() {
-    noop(&[1.0, 2.0, 3.0]);
+    noop(ScalarToken, &[1.0, 2.0, 3.0]);
     // if it compiles and doesn't panic, it works
 }
 
@@ -578,7 +573,7 @@ fn sum_array<const N: usize>(_token: SimdToken, data: &[f32; N]) -> f32 {
 #[test]
 fn const_generic_basic() {
     let data = [1.0f32, 2.0, 3.0, 4.0];
-    let result = sum_array(&data);
+    let result = sum_array(ScalarToken, &data);
     assert!((result - 10.0).abs() < 1e-6, "const generic: {result}");
 }
 
@@ -600,7 +595,7 @@ fn make_zeros<const N: usize>(_token: SimdToken) -> [f32; N] {
 
 #[test]
 fn const_generic_return_only() {
-    let result: [f32; 4] = make_zeros();
+    let result: [f32; 4] = make_zeros(ScalarToken);
     assert_eq!(result, [0.0; 4]);
 }
 
@@ -621,7 +616,7 @@ fn reshape<const M: usize, const N: usize>(_token: SimdToken, data: &[f32; M]) -
 #[test]
 fn const_generic_multiple() {
     let data = [1.0f32, 2.0, 3.0, 4.0];
-    let result: [f32; 2] = reshape(&data);
+    let result: [f32; 2] = reshape(ScalarToken, &data);
     assert_eq!(result, [1.0, 2.0]);
 }
 
@@ -643,7 +638,7 @@ fn sum_generic<const N: usize, T: Default + Copy + core::ops::Add<Output = T>>(
 #[test]
 fn const_generic_plus_type_generic() {
     let data = [1.0f32, 2.0, 3.0, 4.0];
-    let result: f32 = sum_generic(&data);
+    let result: f32 = sum_generic(ScalarToken, &data);
     assert!((result - 10.0).abs() < 1e-6);
 }
 
@@ -662,7 +657,7 @@ fn chunk_sum<const CHUNK: usize>(_token: SimdToken, data: &[f32]) -> f32 {
 #[test]
 fn const_generic_body_only() {
     let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let result = chunk_sum::<4>(&data);
+    let result = chunk_sum::<4>(ScalarToken, &data);
     assert!((result - 36.0).abs() < 1e-6, "chunk_sum: {result}");
 }
 
@@ -702,7 +697,7 @@ fn const_generic_self_receiver() {
     let buf = ConstGenericBuf {
         data: [1.0, 2.0, 3.0, 4.0],
     };
-    let result: [f32; 2] = buf.extract();
+    let result: [f32; 2] = buf.extract(ScalarToken);
     assert_eq!(result, [1.0, 2.0]);
 }
 
@@ -711,7 +706,7 @@ fn const_generic_nested_self() {
     let buf = ConstGenericBuf {
         data: [1.0, 2.0, 3.0, 4.0],
     };
-    let result: [f32; 3] = buf.extract_nested();
+    let result: [f32; 3] = buf.extract_nested(ScalarToken);
     assert_eq!(result, [1.0, 2.0, 3.0]);
 }
 
@@ -730,7 +725,7 @@ fn const_sum_explicit<const N: usize>(_token: SimdToken, data: &[f32; N]) -> f32
 #[test]
 fn const_generic_explicit_tiers() {
     let data = [1.0f32, 2.0, 3.0];
-    let result = const_sum_explicit(&data);
+    let result = const_sum_explicit(ScalarToken, &data);
     assert!((result - 6.0).abs() < 1e-6);
 }
 
@@ -750,7 +745,7 @@ fn first_n_sum<'a, const N: usize>(_token: SimdToken, data: &'a [f32]) -> f32 {
 #[test]
 fn const_generic_with_lifetime() {
     let data = [1.0f32, 2.0, 3.0, 4.0, 5.0];
-    let result = first_n_sum::<3>(&data);
+    let result = first_n_sum::<3>(ScalarToken, &data);
     assert!((result - 6.0).abs() < 1e-6);
 }
 
@@ -781,7 +776,7 @@ fn const_generic_bpp_pattern() {
         data: vec![1, 2, 3, 4, 5, 6],
     };
     let mut out = Vec::new();
-    row.fill_row::<3>(&mut out);
+    row.fill_row::<3>(ScalarToken, &mut out);
     assert_eq!(out, vec![1, 2, 3, 4, 5, 6]);
 }
 
@@ -791,7 +786,7 @@ fn const_generic_bpp_pattern_nested() {
         data: vec![1, 2, 3, 4, 5, 6],
     };
     let mut out = Vec::new();
-    row.fill_row_nested::<2>(&mut out);
+    row.fill_row_nested::<2>(ScalarToken, &mut out);
     assert_eq!(out, vec![1, 2, 3, 4, 5, 6]);
 }
 
@@ -840,8 +835,8 @@ impl Accum {
 fn plain_vs_nested_self_consistent() {
     let a = Accum { bias: 100.0 };
     let data = [1.0f32, 2.0, 3.0];
-    let plain = a.sum_plain(&data);
-    let nested = a.sum_nested(&data);
+    let plain = a.sum_plain(ScalarToken, &data);
+    let nested = a.sum_nested(ScalarToken, &data);
     assert!(
         (plain - nested).abs() < 1e-6,
         "plain ({plain}) != nested ({nested})"
@@ -869,6 +864,7 @@ fn inner_product(a: &[f32], b: &[f32]) -> f32 {
 fn tokenless_dispatcher_works() {
     let a = [1.0f32, 2.0, 3.0, 4.0];
     let b = [4.0f32, 3.0, 2.0, 1.0];
+    // No token needed — tokenless autoversion
     let result = inner_product(&a, &b);
     assert!((result - 20.0).abs() < 1e-6, "tokenless: {result}");
 }
@@ -924,4 +920,49 @@ fn tokenless_const_generic() {
     let mut data = [0.0f32; 16];
     fill_chunked::<4>(&mut data, 42.0);
     assert!(data.iter().all(|&x| (x - 42.0).abs() < 1e-6));
+}
+
+// ============================================================================
+// incant! nesting: autoversioned function as scalar fallback
+// ============================================================================
+
+/// Hand-written v3 variant
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn nested_process_v3(_token: X64V3Token, data: &[f32]) -> f32 {
+    // In real code this would use intrinsics; here we just verify dispatch
+    data.iter().sum::<f32>() * 100.0 // distinctive value to identify which path ran
+}
+
+/// Autoversioned scalar fallback — dispatcher takes ScalarToken,
+/// compatible with incant!'s scalar dispatch path.
+#[autoversion(v3, neon)]
+fn nested_process_scalar(_token: SimdToken, data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+/// Top-level dispatcher using incant! with an autoversioned scalar fallback.
+/// This demonstrates the nesting pattern: hand-written SIMD for specific tiers,
+/// autoversioned auto-vectorization for the fallback.
+fn nested_process(data: &[f32]) -> f32 {
+    // incant! will call nested_process_v3(token, data) on x86 with AVX2,
+    // and nested_process_scalar(ScalarToken, data) as fallback.
+    // The scalar fallback internally re-dispatches via autoversion.
+    incant!(nested_process(data), [v3, scalar])
+}
+
+#[test]
+fn incant_nesting_dispatches() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = nested_process(&data);
+    // We can't know which path ran (depends on CPU), but it should not panic
+    assert!(result.is_finite(), "nested dispatch produced {result}");
+}
+
+#[test]
+fn incant_nesting_scalar_fallback_works() {
+    // Call the autoversioned scalar fallback directly with ScalarToken
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = nested_process_scalar(ScalarToken, &data);
+    assert!((result - 10.0).abs() < 1e-6, "scalar fallback: {result}");
 }
