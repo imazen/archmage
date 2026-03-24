@@ -2779,18 +2779,28 @@ struct AutoversionArgs {
     self_type: Option<Type>,
     /// Explicit tier names (None = default tiers).
     tiers: Option<Vec<String>>,
+    /// When set, emit full autoversion under `#[cfg(feature = "...")]` and a
+    /// plain scalar fallback under `#[cfg(not(feature = "..."))]`. Solves the
+    /// hygiene issue with `macro_rules!` wrappers.
+    cfg_feature: Option<String>,
 }
 
 impl Parse for AutoversionArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut self_type = None;
         let mut tier_names = Vec::new();
+        let mut cfg_feature = None;
 
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             if ident == "_self" {
                 let _: Token![=] = input.parse()?;
                 self_type = Some(input.parse()?);
+            } else if ident == "cfg" {
+                let content;
+                syn::parenthesized!(content in input);
+                let feat: Ident = content.parse()?;
+                cfg_feature = Some(feat.to_string());
             } else {
                 // Treat as tier name, optionally with (feature) gate
                 let name = if input.peek(syn::token::Paren) {
@@ -2815,6 +2825,7 @@ impl Parse for AutoversionArgs {
             } else {
                 Some(tier_names)
             },
+            cfg_feature,
         })
     }
 }
@@ -3072,13 +3083,40 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // Use the user's span for the dispatcher so dead_code lint fires on the
     // function the user actually wrote, not on invisible generated variants.
     let user_span = fn_name.span();
-    let dispatcher = quote_spanned! { user_span =>
-        #(#fn_attrs)*
-        #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
-            '__dispatch: {
-                use archmage::SimdToken;
-                #(#dispatch_arms)*
+
+    let dispatcher = if let Some(ref feat) = args.cfg_feature {
+        // When cfg(feature) is set, emit TWO dispatchers:
+        // 1. #[cfg(feature)] — full dispatch with labeled block
+        // 2. #[cfg(not(feature))] — straight-to-scalar passthrough (no labeled block)
+        //
+        // The scalar passthrough avoids the '__dispatch label hygiene issue when
+        // #[autoversion] is applied inside macro_rules!.
+        quote_spanned! { user_span =>
+            #[cfg(feature = #feat)]
+            #(#fn_attrs)*
+            #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+                '__dispatch: {
+                    use archmage::SimdToken;
+                    #(#dispatch_arms)*
+                    #scalar_call
+                }
+            }
+
+            #[cfg(not(feature = #feat))]
+            #(#fn_attrs)*
+            #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
                 #scalar_call
+            }
+        }
+    } else {
+        quote_spanned! { user_span =>
+            #(#fn_attrs)*
+            #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+                '__dispatch: {
+                    use archmage::SimdToken;
+                    #(#dispatch_arms)*
+                    #scalar_call
+                }
             }
         }
     };
