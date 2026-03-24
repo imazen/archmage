@@ -2948,9 +2948,24 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
             variant_fn.body = quote!(let _self = self; #original_body);
         }
 
-        let cfg_guard = match tier.target_arch {
-            Some(arch) => quote! { #[cfg(target_arch = #arch)] },
-            None => quote! {},
+        // cfg guard: arch + optional feature gate from tier(feature) syntax
+        let allow_attr = if tier.allow_unexpected_cfg {
+            quote! { #[allow(unexpected_cfgs)] }
+        } else {
+            quote! {}
+        };
+        let cfg_guard = match (tier.target_arch, &tier.feature_gate) {
+            (Some(arch), Some(feat)) => quote! {
+                #[cfg(target_arch = #arch)]
+                #allow_attr
+                #[cfg(feature = #feat)]
+            },
+            (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
+            (None, Some(feat)) => quote! {
+                #allow_attr
+                #[cfg(feature = #feat)]
+            },
+            (None, None) => quote! {},
         };
 
         // All variants are private implementation details of the dispatcher.
@@ -3036,9 +3051,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     let mut dispatch_arms = Vec::new();
     for (target_arch, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
-        for tier in group_tiers {
-            let suffixed = format_ident!("{}_{}", fn_name, tier.suffix);
-            let token_path: syn::Path = syn::parse_str(tier.token_path).unwrap();
+        for rt in group_tiers {
+            let suffixed = format_ident!("{}_{}", fn_name, rt.suffix);
+            let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
 
             let call = if has_self {
                 quote! { self.#suffixed #turbofish(__t, #(#dispatch_args),*) }
@@ -3046,11 +3061,26 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
                 quote! { #suffixed #turbofish(__t, #(#dispatch_args),*) }
             };
 
-            tier_checks.push(quote! {
+            let check = quote! {
                 if let Some(__t) = #token_path::summon() {
                     return #call;
                 }
-            });
+            };
+
+            if let Some(feat) = &rt.feature_gate {
+                let allow_attr = if rt.allow_unexpected_cfg {
+                    quote! { #[allow(unexpected_cfgs)] }
+                } else {
+                    quote! {}
+                };
+                tier_checks.push(quote! {
+                    #allow_attr
+                    #[cfg(feature = #feat)]
+                    { #check }
+                });
+            } else {
+                tier_checks.push(check);
+            }
         }
 
         let inner = quote! { #(#tier_checks)* };

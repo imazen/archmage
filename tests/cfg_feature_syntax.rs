@@ -116,6 +116,22 @@ fn autoversion_cfg_feature() {
 }
 
 // ============================================================================
+// #[autoversion] with per-tier feature gates
+// ============================================================================
+
+#[autoversion(v4(avx512), v3, neon)]
+fn auto_with_tier_gate(_token: SimdToken, data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+#[test]
+fn autoversion_tier_feature_gate() {
+    let data = [1.0f32, 2.0, 3.0];
+    let result = auto_with_tier_gate(&data);
+    assert!((result - 6.0).abs() < 1e-6);
+}
+
+// ============================================================================
 // #[autoversion] inside macro_rules! — hygiene fix
 // ============================================================================
 
