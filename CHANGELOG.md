@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.9.11 — 2026-03-24
+
+### `#[autoversion]` — tokenless mode
+
+`#[autoversion]` no longer requires a `SimdToken` parameter. Write plain functions — the macro handles everything:
+
+```rust
+#[autoversion]
+fn sum(data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+// Call directly:
+let result = sum(&data);
+```
+
+The optional `_token: SimdToken` placeholder is still recognized for backwards compatibility. Either way, the dispatcher always strips the token — the public API is your function's real parameters.
+
+### Comprehensive docs
+
+New documentation covering name collision patterns, `incant!` nesting (hand-written SIMD + autoversioned fallback via bridge function), feature-gated tiers, const generics, and method patterns.
+
 ## 0.9.10 — 2026-03-24
 
 ### Deprecations
