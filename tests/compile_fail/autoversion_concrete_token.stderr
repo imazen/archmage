@@ -1,0 +1,21 @@
+error: #[autoversion] generates multi-tier dispatch — it can't take a concrete token like `X64V3Token`.
+       Use #[arcane] or #[rite] for single-token functions.
+       Use #[autoversion] with no token parameter (recommended) or ScalarToken for incant! nesting.
+ --> tests/compile_fail/autoversion_concrete_token.rs:5:20
+  |
+5 | fn process(_token: X64V3Token, data: &[f32]) -> f32 {
+  |                    ^^^^^^^^^^
+
+warning: unused import: `archmage::prelude::*`
+ --> tests/compile_fail/autoversion_concrete_token.rs:2:5
+  |
+2 | use archmage::prelude::*;
+  |     ^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0425]: cannot find function `process` in this scope
+  --> tests/compile_fail/autoversion_concrete_token.rs:10:13
+   |
+10 |     let _ = process(&[1.0]);
+   |             ^^^^^^^ not found in this scope

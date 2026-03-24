@@ -45,4 +45,10 @@ fn ui_tests() {
     // incant! with explicit tiers requires `scalar` in the list
     // (gated behind REQUIRE_EXPLICIT_SCALAR, currently false — re-enable in v1.0)
     // t.compile_fail("tests/compile_fail/scalar_not_in_tier_list.rs");
+
+    // scalar + default are mutually exclusive
+    t.compile_fail("tests/compile_fail/scalar_default_mutual_exclusion.rs");
+
+    // #[autoversion] rejects concrete tokens
+    t.compile_fail("tests/compile_fail/autoversion_concrete_token.rs");
 }

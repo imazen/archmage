@@ -1,0 +1,5 @@
+error: `scalar` and `default` are mutually exclusive fallback tiers. Use `scalar` (takes ScalarToken) or `default` (tokenless).
+  --> tests/compile_fail/scalar_default_mutual_exclusion.rs:12:31
+   |
+12 |     let _ = incant!(add(1.0), [v3, scalar, default]);
+   |                               ^^^^^^^^^^^^^^^^^^^^^
