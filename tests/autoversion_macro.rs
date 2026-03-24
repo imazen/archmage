@@ -1494,3 +1494,110 @@ fn default_tier_method_fallback() {
     let result = p.process_default(&data);
     assert!((result - 12.0).abs() < 1e-6, "method default: {result}");
 }
+
+// ============================================================================
+// Nesting pitfall: autoversion on a _scalar function
+//
+// The natural mistake: use incant! with [v3, scalar], then autoversion
+// the scalar fallback. The autoversion dispatcher strips the token,
+// but incant! calls _scalar(ScalarToken, data) — signature mismatch.
+//
+// This section tests both WRONG patterns (that users might try) and
+// the CORRECT solutions (ScalarToken param, default tier, bridge).
+// ============================================================================
+
+// --- Solution 1: ScalarToken param (autoversion keeps it) ---
+
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn resample_scalar_sol1_v3(_: X64V3Token, data: &[f32], factor: f32) -> f32 {
+    data.iter().map(|x| x * factor).sum::<f32>() * 1000.0
+}
+
+#[autoversion(v3, neon)]
+fn resample_scalar_sol1_scalar(_: ScalarToken, data: &[f32], factor: f32) -> f32 {
+    data.iter().map(|x| x * factor).sum()
+}
+
+fn resample_scalar_sol1(data: &[f32], factor: f32) -> f32 {
+    incant!(resample_scalar_sol1(data, factor), [v3, scalar])
+}
+
+#[test]
+fn nesting_pitfall_scalar_token_solution() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = resample_scalar_sol1(&data, 2.0);
+    assert!(result.is_finite(), "ScalarToken solution: {result}");
+    // Direct call to the autoversioned scalar fallback — with ScalarToken
+    let scalar = resample_scalar_sol1_scalar(ScalarToken, &data, 2.0);
+    assert!((scalar - 20.0).abs() < 1e-6, "direct scalar: {scalar}");
+}
+
+// --- Solution 2: default tier (tokenless, cleanest) ---
+
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn resample_default_sol2_v3(_: X64V3Token, data: &[f32], factor: f32) -> f32 {
+    data.iter().map(|x| x * factor).sum::<f32>() * 1000.0
+}
+
+#[autoversion(v3, neon)]
+fn resample_default_sol2_default(data: &[f32], factor: f32) -> f32 {
+    data.iter().map(|x| x * factor).sum()
+}
+
+fn resample_default_sol2(data: &[f32], factor: f32) -> f32 {
+    incant!(resample_default_sol2(data, factor), [v3, default])
+}
+
+#[test]
+fn nesting_pitfall_default_tier_solution() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = resample_default_sol2(&data, 2.0);
+    assert!(result.is_finite(), "default tier solution: {result}");
+    // Direct call — no token at all
+    let fallback = resample_default_sol2_default(&data, 2.0);
+    assert!((fallback - 20.0).abs() < 1e-6, "direct default: {fallback}");
+}
+
+// --- Solution 3: bridge function (works with plain scalar tier) ---
+
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn resample_bridge_sol3_v3(_: X64V3Token, data: &[f32], factor: f32) -> f32 {
+    data.iter().map(|x| x * factor).sum::<f32>() * 1000.0
+}
+
+#[autoversion(v3, neon)]
+fn resample_bridge_sol3_auto(data: &[f32], factor: f32) -> f32 {
+    data.iter().map(|x| x * factor).sum()
+}
+
+// Bridge: incant! passes ScalarToken, bridge forwards tokenlessly
+fn resample_bridge_sol3_scalar(_: ScalarToken, data: &[f32], factor: f32) -> f32 {
+    resample_bridge_sol3_auto(data, factor)
+}
+
+fn resample_bridge_sol3(data: &[f32], factor: f32) -> f32 {
+    incant!(resample_bridge_sol3(data, factor), [v3, scalar])
+}
+
+#[test]
+fn nesting_pitfall_bridge_solution() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = resample_bridge_sol3(&data, 2.0);
+    assert!(result.is_finite(), "bridge solution: {result}");
+}
+
+// --- Verify all three solutions produce the same scalar result ---
+
+#[test]
+fn nesting_pitfall_all_solutions_agree() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let factor = 2.0;
+    let s1 = resample_scalar_sol1_scalar(ScalarToken, &data, factor);
+    let s2 = resample_default_sol2_default(&data, factor);
+    let s3 = resample_bridge_sol3_auto(&data, factor);
+    assert!((s1 - s2).abs() < 1e-6, "sol1 ({s1}) != sol2 ({s2})");
+    assert!((s2 - s3).abs() < 1e-6, "sol2 ({s2}) != sol3 ({s3})");
+}
