@@ -1081,6 +1081,12 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **v1.0: Require explicit `tier(feature)` syntax — remove implicit `cfg_feature` auto-gating.** Currently `TierDescriptor.cfg_feature` auto-applies `(avx512)` to v4/v4x in all tier lists (both default and explicit). This is backwards-compatible magic but confusing: plain `v4` in `[v4, v3, scalar]` silently gets a cfg gate. In v1.0, remove `cfg_feature` from `TierDescriptor` and `default_feature_gates` from `resolve_tiers`. Users must write `v4(avx512)` explicitly. Plain `v4` means unconditional dispatch — the function MUST exist. Default tier names drop v4 entirely; users add it with the syntax they want. This makes the behavior visible and predictable. Migration: search for `[v4,` and `[v4x,` in tier lists, add `(avx512)`.
 
+- **v1.0: Remove width traits** (`Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd`). `Has256BitSimd` only enables AVX (not AVX2 or FMA) — actively misleading and causes suboptimal codegen. Use concrete tokens (`X64V3Token`) or tier traits (`HasX64V2`, `HasX64V4`).
+
+- **v1.0: Remove `guaranteed()`**. Deprecated since 0.6.0, replaced by `compiled_with()`. Same semantics, better name.
+
+- **NOT planned for removal:** `#[simd_fn]`, `simd_route!`, `try_new()`, `forge_token_dangerously()`. These are discouraged migration aliases but remain supported — they don't cause confusion or bugs, they just have better-named equivalents.
+
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 
 - ~~**Target-feature boundary overhead benchmark**~~: Done. See `benches/asm_inspection.rs` and `docs/PERFORMANCE.md`. Key results:
