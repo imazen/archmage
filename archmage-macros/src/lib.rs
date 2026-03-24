@@ -1877,7 +1877,12 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
         idents.iter().map(|i| i.to_string()).collect()
     };
 
-    let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span()) {
+    // Skip avx512 tiers when feature is off — _v4 functions likely behind cfg(feature = "avx512")
+    let tiers = match resolve_tiers(
+        &tier_names,
+        input_fn.sig.ident.span(),
+        cfg!(not(feature = "avx512")),
+    ) {
         Ok(t) => t,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -2140,20 +2145,9 @@ const ALL_TIERS: &[TierDescriptor] = &[
     },
 ];
 
-/// Default tiers for `incant!` and `#[magetypes]`.
-///
-/// Without the `avx512` feature, v4/v4x are excluded from defaults because most
-/// users won't have written `_v4` functions. With avx512, v4 is included since
-/// safe 512-bit memory ops are available for `import_intrinsics`.
-#[cfg(feature = "avx512")]
+/// Default tiers for all dispatch macros. Always includes v4 in the list —
+/// `resolve_tiers` with `skip_avx512=true` filters it out when the feature is off.
 const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
-#[cfg(not(feature = "avx512"))]
-const DEFAULT_TIER_NAMES: &[&str] = &["v3", "neon", "wasm128", "scalar"];
-
-/// Default tiers for `#[autoversion]`. Always includes v4 because autoversion
-/// generates scalar code compiled with `#[target_feature]` — no safe memory ops
-/// needed, no `import_intrinsics`, so the `avx512` feature is irrelevant.
-const AUTOVERSION_DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
 
 /// Whether `incant!` requires `scalar` in explicit tier lists.
 /// Currently false for backwards compatibility. Flip to true in v1.0.
@@ -2164,16 +2158,44 @@ fn find_tier(name: &str) -> Option<&'static TierDescriptor> {
     ALL_TIERS.iter().find(|t| t.name == name)
 }
 
+/// Check if a tier's token requires AVX-512 features.
+///
+/// Uses the generated `token_to_features` registry to check if the tier's
+/// canonical token has any feature starting with "avx512".
+fn tier_requires_avx512(tier: &TierDescriptor) -> bool {
+    // Extract the token name from the path (e.g., "archmage::X64V4Token" → "X64V4Token")
+    let token_name = tier
+        .token_path
+        .rsplit("::")
+        .next()
+        .unwrap_or(tier.token_path);
+    token_to_features(token_name)
+        .is_some_and(|features| features.iter().any(|f| f.starts_with("avx512")))
+}
+
 /// Resolve tier names to descriptors, sorted by dispatch priority (highest first).
 /// Always appends "scalar" if not already present.
+///
+/// When `skip_avx512` is true, tiers whose tokens require AVX-512 features are
+/// silently skipped instead of included. This is used by `incant!` and `#[magetypes]`
+/// when the `avx512` feature is not enabled — the corresponding `_v4` functions
+/// likely don't exist (they're behind `#[cfg(feature = "avx512")]`).
+/// `#[autoversion]` passes `false` since it generates scalar code that doesn't
+/// need the feature.
 fn resolve_tiers(
     tier_names: &[String],
     error_span: proc_macro2::Span,
+    skip_avx512: bool,
 ) -> syn::Result<Vec<&'static TierDescriptor>> {
     let mut tiers = Vec::new();
     for name in tier_names {
         match find_tier(name) {
-            Some(tier) => tiers.push(tier),
+            Some(tier) => {
+                if skip_avx512 && tier_requires_avx512(tier) {
+                    continue; // silently skip — _v4 function likely doesn't exist
+                }
+                tiers.push(tier);
+            }
             None => {
                 let known: Vec<&str> = ALL_TIERS.iter().map(|t| t.name).collect();
                 return Err(syn::Error::new(
@@ -2402,7 +2424,8 @@ fn incant_impl(input: IncantInput) -> TokenStream {
         .into();
     }
 
-    let tiers = match resolve_tiers(&tier_names, error_span) {
+    // Skip avx512 tiers when feature is off — _v4 functions likely behind cfg(feature = "avx512")
+    let tiers = match resolve_tiers(&tier_names, error_span, cfg!(not(feature = "avx512"))) {
         Ok(t) => t,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -2653,12 +2676,13 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // generates scalar code compiled with #[target_feature], not import_intrinsics.
     let tier_names: Vec<String> = match &args.tiers {
         Some(names) => names.clone(),
-        None => AUTOVERSION_DEFAULT_TIER_NAMES
+        None => DEFAULT_TIER_NAMES
             .iter()
             .map(|s| s.to_string())
             .collect(),
     };
-    let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span()) {
+    // autoversion never skips avx512 — it generates scalar code with #[target_feature]
+    let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span(), false) {
         Ok(t) => t,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -3562,7 +3586,7 @@ mod tests {
     #[test]
     fn autoversion_default_tiers_all_resolve() {
         let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
-        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
         assert!(!tiers.is_empty());
         // scalar should be present
         assert!(tiers.iter().any(|t| t.name == "scalar"));
@@ -3571,7 +3595,7 @@ mod tests {
     #[test]
     fn autoversion_scalar_always_appended() {
         let names = vec!["v3".to_string(), "neon".to_string()];
-        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
         assert!(
             tiers.iter().any(|t| t.name == "scalar"),
             "scalar must be auto-appended"
@@ -3581,7 +3605,7 @@ mod tests {
     #[test]
     fn autoversion_scalar_not_duplicated() {
         let names = vec!["v3".to_string(), "scalar".to_string()];
-        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
         let scalar_count = tiers.iter().filter(|t| t.name == "scalar").count();
         assert_eq!(scalar_count, 1, "scalar must not be duplicated");
     }
@@ -3589,7 +3613,7 @@ mod tests {
     #[test]
     fn autoversion_tiers_sorted_by_priority() {
         let names = vec!["neon".to_string(), "v4".to_string(), "v3".to_string()];
-        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
         // v4 (priority 40) > v3 (30) > neon (20) > scalar (0)
         let priorities: Vec<u32> = tiers.iter().map(|t| t.priority).collect();
         for window in priorities.windows(2) {
@@ -3604,7 +3628,7 @@ mod tests {
     #[test]
     fn autoversion_unknown_tier_errors() {
         let names = vec!["v3".to_string(), "avx9000".to_string()];
-        let result = resolve_tiers(&names, proc_macro2::Span::call_site());
+        let result = resolve_tiers(&names, proc_macro2::Span::call_site(), false);
         match result {
             Ok(_) => panic!("Expected error for unknown tier 'avx9000'"),
             Err(e) => {
@@ -3634,7 +3658,7 @@ mod tests {
     fn autoversion_default_tier_list_is_sensible() {
         // Defaults should cover x86, ARM, WASM, and scalar
         let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
-        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
 
         let has_x86 = tiers.iter().any(|t| t.target_arch == Some("x86_64"));
         let has_arm = tiers.iter().any(|t| t.target_arch == Some("aarch64"));
@@ -3894,7 +3918,7 @@ mod tests {
     #[test]
     fn variant_replacement_all_default_tiers_produce_valid_fns() {
         let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
-        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site()).unwrap();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
 
         for tier in &tiers {
             let f = do_variant_replacement(
