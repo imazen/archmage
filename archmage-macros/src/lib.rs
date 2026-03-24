@@ -3048,7 +3048,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 
             tier_checks.push(quote! {
                 if let Some(__t) = #token_path::summon() {
-                    break '__dispatch #call;
+                    return #call;
                 }
             });
         }
@@ -3084,22 +3084,18 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // function the user actually wrote, not on invisible generated variants.
     let user_span = fn_name.span();
 
+    // autoversion uses `return` instead of `break '__dispatch` — no labeled block
+    // needed. This avoids label hygiene issues when #[autoversion] is applied inside
+    // macro_rules! (labels from proc macros can't be seen from macro_rules! contexts).
     let dispatcher = if let Some(ref feat) = args.cfg_feature {
-        // When cfg(feature) is set, emit TWO dispatchers:
-        // 1. #[cfg(feature)] — full dispatch with labeled block
-        // 2. #[cfg(not(feature))] — straight-to-scalar passthrough (no labeled block)
-        //
-        // The scalar passthrough avoids the '__dispatch label hygiene issue when
-        // #[autoversion] is applied inside macro_rules!.
+        // cfg(feature): full dispatch when on, scalar-only when off
         quote_spanned! { user_span =>
             #[cfg(feature = #feat)]
             #(#fn_attrs)*
             #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
-                '__dispatch: {
-                    use archmage::SimdToken;
-                    #(#dispatch_arms)*
-                    #scalar_call
-                }
+                use archmage::SimdToken;
+                #(#dispatch_arms)*
+                #scalar_call
             }
 
             #[cfg(not(feature = #feat))]
@@ -3112,11 +3108,9 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         quote_spanned! { user_span =>
             #(#fn_attrs)*
             #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
-                '__dispatch: {
-                    use archmage::SimdToken;
-                    #(#dispatch_arms)*
-                    #scalar_call
-                }
+                use archmage::SimdToken;
+                #(#dispatch_arms)*
+                #scalar_call
             }
         }
     };
