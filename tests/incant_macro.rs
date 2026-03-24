@@ -425,3 +425,132 @@ mod into_concrete_token_tests {
         }
     }
 }
+
+// =============================================================================
+// `default` tier — tokenless fallback
+// =============================================================================
+
+mod default_tier_tests {
+    use archmage::prelude::*;
+
+    // -- Entry-point mode with default --
+
+    fn entry_default(x: f32) -> f32 {
+        x * 99.0
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[arcane]
+    fn entry_v3(_: X64V3Token, x: f32) -> f32 {
+        x * 30.0
+    }
+
+    fn entry_dispatch(x: f32) -> f32 {
+        incant!(entry(x), [v3, default])
+    }
+
+    #[test]
+    fn entry_point_default_dispatches() {
+        let result = entry_dispatch(1.0);
+        #[cfg(target_arch = "x86_64")]
+        if X64V3Token::summon().is_some() {
+            assert_eq!(result, 30.0);
+        } else {
+            assert_eq!(result, 99.0);
+        }
+        #[cfg(not(target_arch = "x86_64"))]
+        assert_eq!(result, 99.0);
+    }
+
+    // -- Entry-point mode, default only (no other tiers) --
+
+    fn default_only_default(x: f32) -> f32 {
+        x + 42.0
+    }
+
+    fn default_only_dispatch(x: f32) -> f32 {
+        incant!(default_only(x), [default])
+    }
+
+    #[test]
+    fn default_only_works() {
+        assert_eq!(default_only_dispatch(1.0), 43.0);
+    }
+
+    // -- Entry-point with multiple args --
+
+    fn multi_arg_default(a: f32, b: f32, c: f32) -> f32 {
+        a + b + c
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[arcane]
+    fn multi_arg_v3(_: X64V3Token, a: f32, b: f32, c: f32) -> f32 {
+        (a + b + c) * 100.0
+    }
+
+    fn multi_arg_dispatch(a: f32, b: f32, c: f32) -> f32 {
+        incant!(multi_arg(a, b, c), [v3, default])
+    }
+
+    #[test]
+    fn default_with_multiple_args() {
+        let result = multi_arg_dispatch(1.0, 2.0, 3.0);
+        #[cfg(target_arch = "x86_64")]
+        if X64V3Token::summon().is_some() {
+            assert_eq!(result, 600.0);
+        } else {
+            assert_eq!(result, 6.0);
+        }
+        #[cfg(not(target_arch = "x86_64"))]
+        assert_eq!(result, 6.0);
+    }
+
+    // -- Passthrough mode with default --
+
+    fn passthrough_default(x: f32) -> f32 {
+        x * 77.0
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[arcane]
+    fn passthrough_v3(_: X64V3Token, x: f32) -> f32 {
+        x * 33.0
+    }
+
+    fn passthrough_dispatch<T: IntoConcreteToken>(token: T, x: f32) -> f32 {
+        incant!(passthrough(x) with token, [v3, default])
+    }
+
+    #[test]
+    fn passthrough_default_with_scalar() {
+        let result = passthrough_dispatch(ScalarToken, 1.0);
+        // ScalarToken doesn't match v3, falls through to default (tokenless)
+        assert_eq!(result, 77.0);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn passthrough_default_with_v3() {
+        if let Some(token) = X64V3Token::summon() {
+            let result = passthrough_dispatch(token, 1.0);
+            assert_eq!(result, 33.0);
+        }
+    }
+
+    // -- Verify default is called without token (tokenless) --
+
+    // This function takes NO token. If incant! tried to pass one, it wouldn't compile.
+    fn no_token_default(x: f32) -> f32 {
+        x
+    }
+
+    fn no_token_dispatch(x: f32) -> f32 {
+        incant!(no_token(x), [default])
+    }
+
+    #[test]
+    fn default_is_truly_tokenless() {
+        assert_eq!(no_token_dispatch(42.0), 42.0);
+    }
+}
