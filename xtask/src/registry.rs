@@ -34,6 +34,10 @@ pub struct TokenDef {
     pub arch: String,
     #[serde(default)]
     pub aliases: Vec<String>,
+    /// Aliases that are deprecated. Map of alias name → deprecation message.
+    /// These still generate type aliases but with `#[deprecated]`.
+    #[serde(default)]
+    pub deprecated_aliases: std::collections::HashMap<String, String>,
     pub features: Vec<String>,
     pub traits: Vec<String>,
     #[serde(default)]

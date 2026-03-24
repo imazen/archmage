@@ -456,6 +456,10 @@ pub type Sse2Token = X64V1Token;
 pub type Desktop64 = X64V3Token;
 
 /// Type alias for [`X64V3Token`].
+#[deprecated(
+    since = "0.9.9",
+    note = "Use X64V3Token or Desktop64 instead. Avx2FmaToken is misleading — V3 includes BMI1/2, F16C, and more, not just AVX2+FMA."
+)]
 pub type Avx2FmaToken = X64V3Token;
 
 /// Type alias for [`X64V4Token`].

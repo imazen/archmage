@@ -68,6 +68,7 @@ doc = "Proof that PCLMULQDQ + AES-NI are available (on top of x86-64-v2).\n\nPCL
 name = "X64V3Token"
 arch = "x86"
 aliases = ["Desktop64", "Avx2FmaToken"]
+deprecated_aliases = { Avx2FmaToken = "Use X64V3Token or Desktop64 instead. Avx2FmaToken is misleading — V3 includes BMI1/2, F16C, and more, not just AVX2+FMA." }
 features = [
     "sse", "sse2",
     "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",

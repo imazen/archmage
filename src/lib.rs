@@ -171,6 +171,7 @@ pub use tokens::HasX64V4;
 pub use tokens::{HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3};
 
 // All tokens available on all architectures (summon() returns None on wrong arch)
+#[allow(deprecated)]
 pub use tokens::{
     // ARM tokens
     Arm64,

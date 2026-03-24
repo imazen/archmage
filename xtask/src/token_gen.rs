@@ -786,11 +786,21 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
 
 fn gen_aliases(out: &mut String, token: &TokenDef) {
     for alias in &token.aliases {
-        out.push_str(&formatdoc! {"
-            /// Type alias for [`{name}`].
-            pub type {alias} = {name};
+        if let Some(msg) = token.deprecated_aliases.get(alias) {
+            let escaped = msg.replace('"', "\\\"");
+            out.push_str(&formatdoc! {"
+                /// Type alias for [`{name}`].
+                #[deprecated(since = \"0.9.9\", note = \"{escaped}\")]
+                pub type {alias} = {name};
 
-        ", name = token.name});
+            ", name = token.name});
+        } else {
+            out.push_str(&formatdoc! {"
+                /// Type alias for [`{name}`].
+                pub type {alias} = {name};
+
+            ", name = token.name});
+        }
     }
 }
 

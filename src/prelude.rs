@@ -145,6 +145,7 @@ pub use crate::tokens::ScalarToken;
 pub use crate::tokens::{
     Arm64, Arm64V2Token, Arm64V3Token, NeonAesToken, NeonCrcToken, NeonSha3Token, NeonToken,
 };
+#[allow(deprecated)]
 pub use crate::tokens::{
     Avx2FmaToken, Desktop64, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken,
     X64V3Token,
