@@ -3181,11 +3181,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 /// `#[target_feature]` flags via `#[arcane]` — plus a runtime dispatcher
 /// that calls the best one the CPU supports.
 ///
-/// You don't touch intrinsics, don't import SIMD types, don't think about
-/// lane widths. The compiler's auto-vectorizer does the work; you give it
-/// permission via `#[target_feature]`, which `#[autoversion]` handles.
-///
-/// # The simple win
+/// # Quick start
 ///
 /// ```rust,ignore
 /// use archmage::autoversion;
@@ -3203,220 +3199,109 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
 /// let result = sum_of_squares(&my_data);
 /// ```
 ///
-/// No `SimdToken` parameter needed — the macro injects one internally.
-/// The generated dispatcher keeps your original signature. Each variant
-/// gets `#[arcane]` → `#[target_feature(enable = "avx2,fma,...")]`, which
-/// unlocks the compiler's auto-vectorizer for that feature set.
+/// Each variant gets `#[arcane]` → `#[target_feature(enable = "avx2,fma,...")]`,
+/// which unlocks the compiler's auto-vectorizer for that feature set.
+/// On x86-64, that loop compiles to `vfmadd231ps`. On aarch64, `fmla`.
+/// The `_scalar` fallback compiles without SIMD target features.
 ///
-/// You can optionally write `_token: SimdToken` as a parameter if you
-/// prefer the explicit style — the macro recognizes it and uses it
-/// instead of injecting one.
+/// # SimdToken — optional placeholder
 ///
-/// On x86-64 with the `_v3` variant (AVX2+FMA), that loop compiles to
-/// `vfmadd231ps` — fused multiply-add on 8 floats per cycle. On aarch64
-/// with NEON, you get `fmla`. The `_scalar` fallback compiles without any
-/// SIMD target features, as a safety net for unknown hardware.
-///
-/// # Chunks + remainder
-///
-/// The classic data-processing pattern works naturally:
+/// You can optionally write `_token: SimdToken` as a parameter. The macro
+/// recognizes it and strips it from the dispatcher — both forms produce
+/// identical output. Prefer the tokenless form for new code.
 ///
 /// ```rust,ignore
 /// #[autoversion]
-/// fn normalize(data: &mut [f32], scale: f32) {
-///     // Compiler auto-vectorizes this — no manual SIMD needed.
-///     // On v3, this becomes vdivps + vmulps on 8 floats at a time.
-///     for x in data.iter_mut() {
-///         *x = (*x - 128.0) * scale;
-///     }
+/// fn normalize(_token: SimdToken, data: &mut [f32], scale: f32) {
+///     for x in data.iter_mut() { *x = (*x - 128.0) * scale; }
 /// }
+/// // Dispatcher is: fn normalize(data: &mut [f32], scale: f32)
 /// ```
-///
-/// If you want explicit control over chunk boundaries (e.g., for
-/// accumulator patterns), that works too:
-///
-/// ```rust,ignore
-/// #[autoversion]
-/// fn dot_product(_token: SimdToken, a: &[f32], b: &[f32]) -> f32 {
-///     let n = a.len().min(b.len());
-///     let mut sum = 0.0f32;
-///     for i in 0..n {
-///         sum += a[i] * b[i];
-///     }
-///     sum
-/// }
-/// ```
-///
-/// The compiler decides the chunk size based on the target features of each
-/// variant (8 floats for AVX2, 4 for NEON, 1 for scalar).
 ///
 /// # What gets generated
 ///
-/// With default tiers, `#[autoversion] fn process(_t: SimdToken, data: &[f32]) -> f32`
-/// expands to:
+/// `#[autoversion] fn process(data: &[f32]) -> f32` expands to:
 ///
-/// - `process_v4(token: X64V4Token, ...)` — AVX-512 (behind `#[cfg(feature = "avx512")]`)
+/// - `process_v4(token: X64V4Token, ...)` — AVX-512
 /// - `process_v3(token: X64V3Token, ...)` — AVX2+FMA
 /// - `process_neon(token: NeonToken, ...)` — aarch64 NEON
 /// - `process_wasm128(token: Wasm128Token, ...)` — WASM SIMD
 /// - `process_scalar(token: ScalarToken, ...)` — no SIMD, always available
-/// - `process(data: &[f32]) -> f32` — **dispatcher** (SimdToken param removed)
+/// - `process(data: &[f32]) -> f32` — **dispatcher**
 ///
-/// Each non-scalar variant is wrapped in `#[arcane]` (for `#[target_feature]`)
-/// and `#[cfg(target_arch = ...)]`. The dispatcher does runtime CPU feature
-/// detection via `Token::summon()` and calls the best match. When compiled
-/// with `-C target-cpu=native`, the detection is elided by the compiler.
-///
-/// The suffixed variants are private sibling functions — only the dispatcher
-/// is public. Within the same module, you can call them directly for testing
-/// or benchmarking.
-///
-/// # SimdToken replacement
-///
-/// `#[autoversion]` replaces the `SimdToken` type annotation in the function
-/// signature with the concrete token type for each variant (e.g.,
-/// `archmage::X64V3Token`). Only the parameter's type changes — the function
-/// body is never reparsed, which keeps compile times low.
-///
-/// The token variable (whatever you named it — `token`, `_token`, `_t`)
-/// keeps working in the body because its type comes from the signature.
-/// So `f32x8::from_array(token, ...)` works — `token` is now an `X64V3Token`
-/// which satisfies the same trait bounds as `SimdToken`.
-///
-/// `#[magetypes]` takes a different approach: it replaces the text `Token`
-/// everywhere in the function — signature and body — via string substitution.
-/// Use `#[magetypes]` when you need body-level type substitution (e.g.,
-/// `Token`-dependent constants or type aliases that differ per variant).
-/// Use `#[autoversion]` when you want compiler auto-vectorization of scalar
-/// code with zero boilerplate.
-///
-/// # Benchmarking
-///
-/// Measure the speedup with a side-by-side comparison. The generated
-/// `_scalar` variant serves as the baseline; the dispatcher picks the
-/// best available:
-///
-/// ```rust,ignore
-/// use criterion::{Criterion, black_box, criterion_group, criterion_main};
-/// use archmage::SimdToken;
-///
-/// #[autoversion]
-/// fn sum_squares(_token: SimdToken, data: &[f32]) -> f32 {
-///     data.iter().map(|&x| x * x).fold(0.0f32, |a, b| a + b)
-/// }
-///
-/// fn bench(c: &mut Criterion) {
-///     let data: Vec<f32> = (0..4096).map(|i| i as f32 * 0.01).collect();
-///     let mut group = c.benchmark_group("sum_squares");
-///
-///     // Dispatched — picks best available at runtime
-///     group.bench_function("dispatched", |b| {
-///         b.iter(|| sum_squares(black_box(&data)))
-///     });
-///
-///     // Scalar baseline — no target_feature, no auto-vectorization
-///     group.bench_function("scalar", |b| {
-///         b.iter(|| sum_squares_scalar(archmage::ScalarToken, black_box(&data)))
-///     });
-///
-///     // Specific tier (useful for isolating which tier wins)
-///     #[cfg(target_arch = "x86_64")]
-///     if let Some(t) = archmage::X64V3Token::summon() {
-///         group.bench_function("v3_avx2_fma", |b| {
-///             b.iter(|| sum_squares_v3(t, black_box(&data)));
-///         });
-///     }
-///
-///     group.finish();
-/// }
-///
-/// criterion_group!(benches, bench);
-/// criterion_main!(benches);
-/// ```
-///
-/// For a tight numeric loop on x86-64, the `_v3` variant (AVX2+FMA)
-/// typically runs 4-8x faster than `_scalar` because `#[target_feature]`
-/// unlocks auto-vectorization that the baseline build can't use.
+/// Variants are private. The dispatcher gets the original function's visibility.
+/// Within the same module, call variants directly for testing or benchmarking.
 ///
 /// # Explicit tiers
 ///
 /// ```rust,ignore
-/// #[autoversion(v3, v4, v4x, neon, arm_v2, wasm128)]
-/// fn process(_token: SimdToken, data: &[f32]) -> f32 {
-///     // ...
-/// }
+/// #[autoversion(v3, v4, neon, arm_v2, wasm128)]
+/// fn process(data: &[f32]) -> f32 { ... }
 /// ```
 ///
 /// `scalar` is always included implicitly.
 ///
-/// Default tiers (when no list given): `v4`, `v3`, `neon`, `wasm128`, `scalar`.
+/// Default tiers: `v4`, `v3`, `neon`, `wasm128`, `scalar`.
 ///
 /// Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v4`, `v4x`, `neon`,
 /// `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
 /// `wasm128_relaxed`, `x64_crypto`, `scalar`.
 ///
-/// # Methods with self receivers
+/// # Methods
 ///
-/// For inherent methods, `self` works naturally — no `_self` needed:
+/// For inherent methods, `self` works naturally:
 ///
 /// ```rust,ignore
 /// impl ImageBuffer {
 ///     #[autoversion]
-///     fn normalize(&mut self, token: SimdToken, gamma: f32) {
+///     fn normalize(&mut self, gamma: f32) {
 ///         for pixel in &mut self.data {
 ///             *pixel = (*pixel / 255.0).powf(gamma);
 ///         }
 ///     }
 /// }
-///
-/// // Call normally — no token:
 /// buffer.normalize(2.2);
 /// ```
 ///
-/// All receiver types work: `self`, `&self`, `&mut self`. Non-scalar variants
-/// get `#[arcane]` (sibling mode), where `self`/`Self` resolve naturally.
-///
-/// # Trait methods (requires `_self = Type`)
-///
-/// Trait methods can't use `#[autoversion]` directly because proc macro
-/// attributes on trait impl items can't expand to multiple sibling functions.
-/// Use the delegation pattern with `_self = Type`:
+/// For trait method delegation, use `_self = Type` (nested mode):
 ///
 /// ```rust,ignore
-/// trait Processor {
-///     fn process(&self, data: &[f32]) -> f32;
-/// }
-///
-/// impl Processor for MyType {
-///     fn process(&self, data: &[f32]) -> f32 {
-///         self.process_impl(data) // delegate to autoversioned method
-///     }
-/// }
-///
 /// impl MyType {
 ///     #[autoversion(_self = MyType)]
-///     fn process_impl(&self, token: SimdToken, data: &[f32]) -> f32 {
+///     fn compute_impl(&self, data: &[f32]) -> f32 {
 ///         _self.weights.iter().zip(data).map(|(w, d)| w * d).sum()
 ///     }
 /// }
 /// ```
 ///
-/// `_self = Type` uses nested mode in `#[arcane]`, which is required for
-/// trait impls. Use `_self` (not `self`) in the body when using this form.
+/// # Nesting with `incant!`
+///
+/// Hand-written SIMD for specific tiers, autoversion for the rest:
+///
+/// ```rust,ignore
+/// pub fn process(data: &[f32]) -> f32 {
+///     incant!(process(data), [v4, scalar])
+/// }
+///
+/// #[arcane(import_intrinsics)]
+/// fn process_v4(_t: X64V4Token, data: &[f32]) -> f32 { /* AVX-512 */ }
+///
+/// // Bridge: incant! passes ScalarToken, autoversion doesn't need one
+/// fn process_scalar(_: ScalarToken, data: &[f32]) -> f32 {
+///     process_auto(data)
+/// }
+///
+/// #[autoversion(v3, neon)]
+/// fn process_auto(data: &[f32]) -> f32 { data.iter().sum() }
+/// ```
 ///
 /// # Comparison with `#[magetypes]` + `incant!`
 ///
 /// | | `#[autoversion]` | `#[magetypes]` + `incant!` |
 /// |---|---|---|
-/// | Placeholder | `SimdToken` | `Token` |
-/// | Generates variants | Yes | Yes (magetypes) |
-/// | Generates dispatcher | Yes | No (you write `incant!`) |
-/// | Best for | Scalar auto-vectorization | Explicit SIMD with typed vectors |
-/// | Lines of code | 1 attribute | 2+ (magetypes + incant + arcane) |
-///
-/// Use `#[autoversion]` for scalar loops you want auto-vectorized. Use
-/// `#[magetypes]` + `incant!` when you need `f32x8`, `u8x32`, and
-/// hand-tuned SIMD code per architecture
+/// | Generates variants + dispatcher | Yes | Variants only (+ separate `incant!`) |
+/// | Body touched | No (signature only) | Yes (text substitution) |
+/// | Best for | Scalar auto-vectorization | Hand-written SIMD types |
 #[proc_macro_attribute]
 pub fn autoversion(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AutoversionArgs);
