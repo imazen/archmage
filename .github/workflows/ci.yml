@@ -40,6 +40,24 @@ jobs:
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
 
+      # token_infrastructure uses dangerously_disable_token_process_wide() —
+      # process-wide state that races when tests run in parallel.
+      - name: Run token infrastructure tests (serialized)
+        run: cargo test --features "${{ env.FEATURES }}" --test token_infrastructure -- --test-threads=1
+
+      # Standalone test crates verify avx512 feature gating behavior.
+      # NOT workspace members (to avoid feature unification).
+      - name: Test avx512 cfg (with feature)
+        run: cargo test --manifest-path tests/avx512-cfg-tests/with-avx512-feature/Cargo.toml
+      - name: Test avx512 cfg (passthrough, with feature)
+        run: cargo test --manifest-path tests/avx512-cfg-tests/with-avx512-passthrough/Cargo.toml --features avx512
+      - name: Test avx512 cfg (passthrough, without feature)
+        run: cargo test --manifest-path tests/avx512-cfg-tests/with-avx512-passthrough/Cargo.toml
+      - name: Test avx512 cfg (v4 value intrinsics, no avx512)
+        run: cargo test --manifest-path tests/avx512-cfg-tests/v4-no-import-intrinsics/Cargo.toml
+      - name: Test avx512 cfg (all token forms)
+        run: cargo test --manifest-path tests/avx512-cfg-tests/v4-all-token-forms/Cargo.toml
+
       - name: CPU survey
         if: always()
         shell: bash
@@ -81,6 +99,11 @@ jobs:
 
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
+
+      # token_infrastructure uses dangerously_disable_token_process_wide() —
+      # process-wide state that races when tests run in parallel.
+      - name: Run token infrastructure tests (serialized)
+        run: cargo test --features "${{ env.FEATURES }}" --test token_infrastructure -- --test-threads=1
 
       - name: CPU survey
         if: always()
