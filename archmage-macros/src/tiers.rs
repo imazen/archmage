@@ -219,23 +219,25 @@ pub(crate) fn parse_tier_name_with_gate(ident: &Ident, input: ParseStream) -> sy
     }
 }
 
-/// Parse a single tier entry: optional `+` prefix, ident, optional `(cfg(feature))` gate.
+/// Parse a single tier entry: optional `+`/`-` prefix, ident, optional `(cfg(feature))` gate.
 ///
-/// Returns the tier string with `+` prefix preserved if present (e.g., `"+arm_v2"`).
+/// Returns the tier string with prefix preserved:
+/// - `"+arm_v2"` — add/override this tier
+/// - `"-neon"` — remove this tier from defaults
+/// - `"v3"` — plain tier (override mode)
 pub(crate) fn parse_one_tier(input: ParseStream) -> syn::Result<String> {
-    let additive = if input.peek(Token![+]) {
+    let prefix = if input.peek(Token![+]) {
         let _: Token![+] = input.parse()?;
-        true
+        "+"
+    } else if input.peek(Token![-]) {
+        let _: Token![-] = input.parse()?;
+        "-"
     } else {
-        false
+        ""
     };
     let ident: Ident = input.parse()?;
     let name = parse_tier_name_with_gate(&ident, input)?;
-    if additive {
-        Ok(format!("+{name}"))
-    } else {
-        Ok(name)
-    }
+    Ok(format!("{prefix}{name}"))
 }
 
 /// Parse a comma-separated list of tier names, each optionally prefixed with `+`
@@ -293,28 +295,67 @@ pub(crate) fn resolve_tiers(
     error_span: proc_macro2::Span,
     default_feature_gates: bool,
 ) -> syn::Result<Vec<ResolvedTier>> {
-    let any_additive = tier_names.iter().any(|n| n.starts_with('+'));
-    let any_plain = tier_names.iter().any(|n| !n.starts_with('+'));
-    if any_additive && any_plain {
+    let any_modifier = tier_names
+        .iter()
+        .any(|n| n.starts_with('+') || n.starts_with('-'));
+    let any_plain = tier_names
+        .iter()
+        .any(|n| !n.starts_with('+') && !n.starts_with('-'));
+    if any_modifier && any_plain {
         return Err(syn::Error::new(
             error_span,
-            "Cannot mix `+tier` (additive) and plain `tier` (override) entries.\n\
-             Use all `+` to append to defaults, or none to replace them entirely.",
+            "Cannot mix `+tier`/`-tier` (modify defaults) with plain `tier` (override).\n\
+             Use all `+`/`-` to modify defaults, or none to replace them entirely.",
         ));
     }
 
-    // In additive mode, start with defaults and append the user's extras.
-    let effective_names: Vec<String> = if any_additive {
+    // In additive mode, start with defaults then merge user entries:
+    // - Same base name → replace (e.g., +v4 overrides the default v4(avx512) gate)
+    // - New base name → append (e.g., +arm_v2 adds a tier)
+    //
+    // This lets users write [+default] to swap scalar→default, [+v4] to make
+    // v4 unconditional, or [+neon(cfg(neon))] to gate a default tier.
+    //
+    // User-overridden tiers are tracked so that default_feature_gates doesn't
+    // re-apply the descriptor's cfg_feature on them. Writing +v4 means "I want
+    // v4 exactly as written, without the automatic avx512 gate."
+    let mut user_overrides: Vec<String> = Vec::new();
+    let effective_names: Vec<String> = if any_modifier {
         let mut names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
         for raw in tier_names {
-            let stripped = raw.strip_prefix('+').unwrap_or(raw);
-            // Don't add duplicates (user might write +v3 which is already in defaults)
+            let is_removal = raw.starts_with('-');
+            let stripped = raw
+                .strip_prefix('+')
+                .or_else(|| raw.strip_prefix('-'))
+                .unwrap_or(raw);
             let base = stripped.split('(').next().unwrap_or(stripped);
-            if !names.iter().any(|n| {
+            // Strip leading _ for matching (find_tier does this too)
+            let base = base.strip_prefix('_').unwrap_or(base);
+
+            // `default` and `scalar` are interchangeable fallback slots.
+            let is_fallback = base == "default" || base == "scalar";
+
+            let pos = names.iter().position(|n| {
                 let n_base = n.split('(').next().unwrap_or(n);
-                n_base == base
-            }) {
+                if is_fallback {
+                    n_base == "default" || n_base == "scalar"
+                } else {
+                    n_base == base
+                }
+            });
+
+            if is_removal {
+                if let Some(pos) = pos {
+                    names.remove(pos);
+                }
+                // Removing a tier that's not in defaults is a silent no-op
+            } else if let Some(pos) = pos {
+                // Replace existing default with user's version
+                names[pos] = stripped.to_string();
+                user_overrides.push(base.to_string());
+            } else {
                 names.push(stripped.to_string());
+                user_overrides.push(base.to_string());
             }
         }
         names
@@ -334,8 +375,11 @@ pub(crate) fn resolve_tiers(
         match find_tier(name) {
             Some(tier) => {
                 let is_explicit = explicit_gate.is_some();
+                // User-overridden tiers (from + entries) get exactly what the user
+                // wrote — no auto-gating from the descriptor. +v4 means unconditional.
+                let is_user_override = user_overrides.iter().any(|o| o == tier.name);
                 let feature_gate = explicit_gate.or_else(|| {
-                    if default_feature_gates {
+                    if default_feature_gates && !is_user_override {
                         tier.cfg_feature.map(String::from)
                     } else {
                         None

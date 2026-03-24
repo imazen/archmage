@@ -1,0 +1,12 @@
+[package]
+name = "tier-modifiers-without-avx512"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# No avx512 feature — v4 dispatch is cfg-gated out by default.
+[dependencies]
+archmage = { workspace = true }
+
+[features]
+avx512 = ["archmage/avx512"]

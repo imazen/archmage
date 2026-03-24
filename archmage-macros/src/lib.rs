@@ -916,6 +916,98 @@ mod tests {
     }
 
     // =========================================================================
+    // resolve_tiers — additive / subtractive / override
+    // =========================================================================
+
+    fn resolve_tier_names(names: &[&str], default_gates: bool) -> Vec<String> {
+        let names: Vec<String> = names.iter().map(|s| s.to_string()).collect();
+        resolve_tiers(&names, proc_macro2::Span::call_site(), default_gates)
+            .unwrap()
+            .iter()
+            .map(|rt| {
+                if let Some(ref gate) = rt.feature_gate {
+                    format!("{}({})", rt.name, gate)
+                } else {
+                    rt.name.to_string()
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn resolve_defaults() {
+        let tiers = resolve_tier_names(&["v4", "v3", "neon", "wasm128", "scalar"], true);
+        assert!(tiers.contains(&"v3".to_string()));
+        assert!(tiers.contains(&"scalar".to_string()));
+        // v4 gets auto-gated when default_feature_gates=true
+        assert!(tiers.contains(&"v4(avx512)".to_string()));
+    }
+
+    #[test]
+    fn resolve_additive_appends() {
+        let tiers = resolve_tier_names(&["+v1"], true);
+        assert!(tiers.contains(&"v1".to_string()));
+        assert!(tiers.contains(&"v3".to_string())); // from defaults
+        assert!(tiers.contains(&"scalar".to_string())); // from defaults
+    }
+
+    #[test]
+    fn resolve_additive_v4_overrides_gate() {
+        // +v4 should replace v4(avx512) with plain v4 (no gate)
+        let tiers = resolve_tier_names(&["+v4"], true);
+        assert!(tiers.contains(&"v4".to_string())); // no gate
+        assert!(!tiers.iter().any(|t| t == "v4(avx512)")); // gated version gone
+    }
+
+    #[test]
+    fn resolve_additive_default_replaces_scalar() {
+        let tiers = resolve_tier_names(&["+default"], true);
+        assert!(tiers.contains(&"default".to_string()));
+        assert!(!tiers.iter().any(|t| t == "scalar")); // scalar replaced
+    }
+
+    #[test]
+    fn resolve_subtractive_removes() {
+        let tiers = resolve_tier_names(&["-neon", "-wasm128"], true);
+        assert!(!tiers.iter().any(|t| t == "neon"));
+        assert!(!tiers.iter().any(|t| t == "wasm128"));
+        assert!(tiers.contains(&"v3".to_string())); // others remain
+    }
+
+    #[test]
+    fn resolve_mixed_add_remove() {
+        let tiers = resolve_tier_names(&["-neon", "-wasm128", "+v1"], true);
+        assert!(tiers.contains(&"v1".to_string()));
+        assert!(!tiers.iter().any(|t| t == "neon"));
+        assert!(!tiers.iter().any(|t| t == "wasm128"));
+        assert!(tiers.contains(&"v3".to_string()));
+        assert!(tiers.contains(&"scalar".to_string()));
+    }
+
+    #[test]
+    fn resolve_additive_duplicate_is_noop() {
+        // +v3 when v3 is already in defaults — no duplicate
+        let tiers = resolve_tier_names(&["+v3"], true);
+        let v3_count = tiers.iter().filter(|t| t.as_str() == "v3").count();
+        assert_eq!(v3_count, 1);
+    }
+
+    #[test]
+    fn resolve_mixing_plus_and_plain_is_error() {
+        let names: Vec<String> = vec!["+v1".into(), "v3".into()];
+        let result = resolve_tiers(&names, proc_macro2::Span::call_site(), true);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn resolve_underscore_tier_name() {
+        let tiers = resolve_tier_names(&["_v3", "_neon", "_scalar"], false);
+        assert!(tiers.contains(&"v3".to_string()));
+        assert!(tiers.contains(&"neon".to_string()));
+        assert!(tiers.contains(&"scalar".to_string()));
+    }
+
+    // =========================================================================
     // autoversion — argument parsing
     // =========================================================================
 

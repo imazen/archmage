@@ -173,8 +173,10 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
     // A fallback tier is always auto-appended, but not listing it explicitly
     // hides the fact that a _scalar/_default function is required.
     let scalar_warning = if let Some((names, _span)) = &input.tiers {
-        // Additive mode (+tier) inherits scalar from defaults — no warning needed.
-        let is_additive = names.iter().all(|n| n.starts_with('+'));
+        // Modifier mode (+tier/-tier) inherits scalar from defaults — no warning needed.
+        let is_additive = names
+            .iter()
+            .all(|n| n.starts_with('+') || n.starts_with('-'));
         if !is_additive
             && !names.iter().any(|n| {
                 let base = n

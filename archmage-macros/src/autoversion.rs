@@ -34,8 +34,8 @@ impl Parse for AutoversionArgs {
         let mut cfg_feature = None;
 
         while !input.is_empty() {
-            // Check for +tier (additive) before consuming ident
-            if input.peek(Token![+]) {
+            // Check for +tier/-tier (modify defaults) before consuming ident
+            if input.peek(Token![+]) || input.peek(Token![-]) {
                 tier_names.push(crate::tiers::parse_one_tier(input)?);
             } else {
                 let ident: Ident = input.parse()?;

@@ -1,0 +1,6 @@
+[workspace]
+members = ["with-avx512", "without-avx512"]
+resolver = "2"
+
+[workspace.dependencies]
+archmage = { path = "../../.." }

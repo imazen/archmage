@@ -1,0 +1,8 @@
+[package]
+name = "tier-modifiers-with-avx512"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+archmage = { workspace = true, features = ["avx512"] }
