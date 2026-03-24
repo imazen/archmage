@@ -110,19 +110,24 @@ pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStr
     }
 }
 
-/// Replace all `Self` identifier tokens with a concrete type in a token stream.
-pub(crate) fn replace_self_in_tokens(
+/// Replace all occurrences of a named identifier in a token stream.
+///
+/// Recurses into groups (braces, parens, brackets). Each matching `Ident` is
+/// replaced with `replacement` — which can be multiple tokens (e.g., a path
+/// like `archmage::X64V3Token`). Non-matching tokens pass through unchanged.
+pub(crate) fn replace_ident_in_tokens(
     tokens: proc_macro2::TokenStream,
-    replacement: &Type,
+    target: &str,
+    replacement: &proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
     let mut result = proc_macro2::TokenStream::new();
     for tt in tokens {
         match tt {
-            proc_macro2::TokenTree::Ident(ref ident) if ident == "Self" => {
-                result.extend(replacement.to_token_stream());
+            proc_macro2::TokenTree::Ident(ref ident) if *ident == target => {
+                result.extend(replacement.clone());
             }
             proc_macro2::TokenTree::Group(group) => {
-                let new_stream = replace_self_in_tokens(group.stream(), replacement);
+                let new_stream = replace_ident_in_tokens(group.stream(), target, replacement);
                 let mut new_group = proc_macro2::Group::new(group.delimiter(), new_stream);
                 new_group.set_span(group.span());
                 result.extend(std::iter::once(proc_macro2::TokenTree::Group(new_group)));
@@ -133,6 +138,14 @@ pub(crate) fn replace_self_in_tokens(
         }
     }
     result
+}
+
+/// Replace all `Self` identifier tokens with a concrete type in a token stream.
+pub(crate) fn replace_self_in_tokens(
+    tokens: proc_macro2::TokenStream,
+    replacement: &Type,
+) -> proc_macro2::TokenStream {
+    replace_ident_in_tokens(tokens, "Self", &replacement.to_token_stream())
 }
 
 /// Generate import statements for intrinsics and/or magetypes.

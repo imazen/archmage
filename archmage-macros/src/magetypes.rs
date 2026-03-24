@@ -16,38 +16,27 @@ pub(crate) fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> T
     let fn_name = &input_fn.sig.ident;
     let fn_attrs = &input_fn.attrs;
 
-    // Convert function to string for text substitution
-    let fn_str = input_fn.to_token_stream().to_string();
-
     let mut variants = Vec::new();
 
     for tier in tiers {
-        // Create suffixed function name
-        let suffixed_name = format!("{}_{}", fn_name, tier.suffix);
+        // Clone and rename at the AST level (no string surgery)
+        let mut variant_fn = input_fn.clone();
+        variant_fn.sig.ident = quote::format_ident!("{}_{}", fn_name, tier.suffix);
+        // Strip attrs — they go on the outer wrapper, not each variant
+        variant_fn.attrs = Vec::new();
 
-        // Do text substitution
-        let mut variant_str = fn_str.clone();
-
-        // Replace function name
-        variant_str = variant_str.replacen(&fn_name.to_string(), &suffixed_name, 1);
-
-        // Replace Token type with concrete token
-        variant_str = variant_str.replace("Token", tier.token_path);
-
-        // Parse back to tokens
-        let variant_tokens: proc_macro2::TokenStream = match variant_str.parse() {
-            Ok(t) => t,
-            Err(e) => {
-                return syn::Error::new_spanned(
-                    &input_fn,
-                    format!(
-                        "Failed to parse generated variant `{}`: {}",
-                        suffixed_name, e
-                    ),
-                )
-                .to_compile_error()
-                .into();
-            }
+        // Replace `Token` ident with the concrete token path at the token level.
+        // This is safe: each identifier is a discrete token tree, so `ScalarToken`,
+        // `IntoConcreteToken`, etc. are single Ident nodes that do NOT match "Token".
+        let variant_tokens = if tier.token_path.is_empty() {
+            // `default` tier has no token type — just emit the fn without replacement
+            variant_fn.to_token_stream()
+        } else {
+            let concrete_tokens: proc_macro2::TokenStream = tier
+                .token_path
+                .parse()
+                .expect("tier token_path must be valid tokens");
+            replace_ident_in_tokens(variant_fn.to_token_stream(), "Token", &concrete_tokens)
         };
 
         // Add cfg guard: arch + optional feature gate

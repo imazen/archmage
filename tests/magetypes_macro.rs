@@ -289,6 +289,43 @@ mod passthrough_integration {
 }
 
 // =============================================================================
+// Token replacement must be ident-level, not substring
+// =============================================================================
+
+mod token_not_substring {
+    use super::*;
+    use archmage::magetypes;
+
+    /// Regression: the old string-level replacement would corrupt identifiers
+    /// that contain "Token" as a substring (e.g., `ScalarToken`, `MyTokenizer`).
+    /// Token-level replacement treats each identifier as an atomic unit.
+    #[magetypes]
+    pub fn uses_token_substring(token: Token, x: f32) -> f32 {
+        // These identifiers contain "Token" as a substring.
+        // String-level replace("Token", "archmage::X64V3Token") would mangle them.
+        let _scalar_token_ref: &str = "ScalarToken";
+        let _token_izer: f32 = x; // variable named with Token substring
+        let _ = token;
+        _token_izer + 1.0
+    }
+
+    #[test]
+    fn scalar_variant_with_token_substrings() {
+        let result = uses_token_substring_scalar(ScalarToken, 41.0);
+        assert_eq!(result, 42.0);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn v3_variant_with_token_substrings() {
+        if let Some(token) = archmage::X64V3Token::summon() {
+            let result = uses_token_substring_v3(token, 41.0);
+            assert_eq!(result, 42.0);
+        }
+    }
+}
+
+// =============================================================================
 // Generic magetypes function + incant! dispatch (manual variants)
 // =============================================================================
 
