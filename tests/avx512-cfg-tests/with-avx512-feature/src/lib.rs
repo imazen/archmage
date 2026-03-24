@@ -8,6 +8,7 @@
 //! - #[magetypes] will NOT generate _v4 variants
 //! - But #[arcane(import_intrinsics)] with X64V4Token WILL work (it doesn't use cargo_feature)
 #![deny(warnings)]
+#![allow(unexpected_cfgs)]
 
 use archmage::prelude::*;
 
