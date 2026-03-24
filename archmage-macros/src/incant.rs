@@ -58,16 +58,7 @@ impl Parse for IncantInput {
             let mut tier_names = Vec::new();
             while !bracket_content.is_empty() {
                 let ident: Ident = bracket_content.parse()?;
-                let name = if bracket_content.peek(syn::token::Paren) {
-                    // Parse tier(feature) — feature gate syntax
-                    let paren_content;
-                    syn::parenthesized!(paren_content in bracket_content);
-                    let feat: Ident = paren_content.parse()?;
-                    format!("{}({})", ident, feat)
-                } else {
-                    ident.to_string()
-                };
-                tier_names.push(name);
+                tier_names.push(parse_tier_name_with_gate(&ident, &bracket_content)?);
                 if bracket_content.peek(Token![,]) {
                     let _: Token![,] = bracket_content.parse()?;
                 }

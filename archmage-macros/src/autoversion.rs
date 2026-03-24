@@ -44,16 +44,8 @@ impl Parse for AutoversionArgs {
                 let feat: Ident = content.parse()?;
                 cfg_feature = Some(feat.to_string());
             } else {
-                // Treat as tier name, optionally with (feature) gate
-                let name = if input.peek(syn::token::Paren) {
-                    let paren_content;
-                    syn::parenthesized!(paren_content in input);
-                    let feat: Ident = paren_content.parse()?;
-                    format!("{}({})", ident, feat)
-                } else {
-                    ident.to_string()
-                };
-                tier_names.push(name);
+                // Treat as tier name, optionally with cfg gate
+                tier_names.push(crate::tiers::parse_tier_name_with_gate(&ident, input)?);
             }
             if input.peek(Token![,]) {
                 let _: Token![,] = input.parse()?;

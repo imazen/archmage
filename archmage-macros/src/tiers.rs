@@ -187,21 +187,45 @@ pub(crate) const ALL_TIERS: &[TierDescriptor] = &[
 /// Default tiers for all dispatch macros.
 pub(crate) const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
 
+/// Parse an optional cfg-gate after a tier name.
+///
+/// Accepts both `tier(cfg(feature))` (canonical) and `tier(feature)` (shorthand).
+/// Returns the combined `"tier(feature)"` string, or just `"tier"` if no gate.
+pub(crate) fn parse_tier_name_with_gate(ident: &Ident, input: ParseStream) -> syn::Result<String> {
+    if input.peek(syn::token::Paren) {
+        let paren_content;
+        syn::parenthesized!(paren_content in input);
+        // Check for cfg(feature) syntax: v4(cfg(avx512))
+        let feat_name = if paren_content.peek(Ident) && paren_content.peek2(syn::token::Paren) {
+            let kw: Ident = paren_content.parse()?;
+            if kw != "cfg" {
+                return Err(syn::Error::new(
+                    kw.span(),
+                    format!("expected `cfg` in tier gate, got `{kw}`"),
+                ));
+            }
+            let inner;
+            syn::parenthesized!(inner in paren_content);
+            let feat: Ident = inner.parse()?;
+            feat.to_string()
+        } else {
+            // Bare feature name shorthand: v4(avx512)
+            let feat: Ident = paren_content.parse()?;
+            feat.to_string()
+        };
+        Ok(format!("{}({})", ident, feat_name))
+    } else {
+        Ok(ident.to_string())
+    }
+}
+
 /// Parse a comma-separated list of tier names, each optionally followed by
-/// `(feature)` for cfg-gating: `v4(avx512), v3, neon(simd), scalar`.
+/// a cfg gate: `v4(cfg(avx512)), v3, neon, scalar` or `v4(avx512), v3, scalar`.
 pub(crate) fn parse_tier_names(input: ParseStream) -> syn::Result<Vec<String>> {
     let mut names = Vec::new();
     while !input.is_empty() {
         let ident: Ident = input.parse()?;
-        let name = if input.peek(syn::token::Paren) {
-            let paren_content;
-            syn::parenthesized!(paren_content in input);
-            let feat: Ident = paren_content.parse()?;
-            format!("{}({})", ident, feat)
-        } else {
-            ident.to_string()
-        };
-        names.push(name);
+        names.push(parse_tier_name_with_gate(&ident, input)?);
         if input.peek(Token![,]) {
             let _: Token![,] = input.parse()?;
         }

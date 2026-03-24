@@ -36,10 +36,17 @@ fn add_v4(_token: X64V4Token, a: f32, b: f32) -> f32 {
     a + b
 }
 
-/// Explicit tier list with feature-gated v4
+/// Explicit tier list with feature-gated v4 (shorthand)
 #[test]
 fn incant_explicit_v4_feature_gate() {
     let result = incant!(add(1.0, 2.0), [v4(avx512), v3, scalar]);
+    assert!((result - 3.0).abs() < 1e-6);
+}
+
+/// Same with canonical cfg() syntax
+#[test]
+fn incant_explicit_v4_cfg_gate() {
+    let result = incant!(add(1.0, 2.0), [v4(cfg(avx512)), v3, scalar]);
     assert!((result - 3.0).abs() < 1e-6);
 }
 
@@ -118,6 +125,7 @@ fn autoversion_cfg_feature() {
 // #[autoversion] with per-tier feature gates
 // ============================================================================
 
+// Shorthand: v4(avx512)
 #[autoversion(v4(avx512), v3, neon)]
 fn auto_with_tier_gate(_token: SimdToken, data: &[f32]) -> f32 {
     data.iter().sum()
@@ -127,6 +135,19 @@ fn auto_with_tier_gate(_token: SimdToken, data: &[f32]) -> f32 {
 fn autoversion_tier_feature_gate() {
     let data = [1.0f32, 2.0, 3.0];
     let result = auto_with_tier_gate(&data);
+    assert!((result - 6.0).abs() < 1e-6);
+}
+
+// Canonical: v4(cfg(avx512))
+#[autoversion(v4(cfg(avx512)), v3, neon)]
+fn auto_with_cfg_gate(_token: SimdToken, data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+#[test]
+fn autoversion_cfg_tier_gate() {
+    let data = [1.0f32, 2.0, 3.0];
+    let result = auto_with_cfg_gate(&data);
     assert!((result - 6.0).abs() < 1e-6);
 }
 
