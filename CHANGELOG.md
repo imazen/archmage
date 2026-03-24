@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.9 — 2026-03-24
+
+### Backwards compat fix for explicit tier lists
+
+`incant!` with explicit `[v4, v3, neon]` tier lists now always auto-applies the `(avx512)` feature gate to v4/v4x — matching 0.9.5 behavior. 0.9.8 only applied this for default tier lists, breaking zenresize and zensim whose published code uses `[v4, v3]` with cfg-gated `_v4` functions.
+
+### CI
+
+Added downstream compat tests for zensim and zenpixels-convert (both depend on linear-srgb which uses the `[v4, v3, neon]` pattern).
+
 ## 0.9.8 — 2026-03-24
 
 ### Feature-gated tiers: `tier(feature)` syntax
