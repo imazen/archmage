@@ -1124,7 +1124,7 @@ fn explicit_and_tokenless_scalar_variants_match() {
 // ============================================================================
 
 /// Hand-written v3 — uses a distinctive multiplier so we can tell which path ran
-#[cfg(target_arch = "x86_64")]
+
 #[arcane]
 fn nested_dispatch_v3(_token: X64V3Token, data: &[f32]) -> f32 {
     // Real code would use intrinsics. Multiplier identifies this path.
@@ -1223,7 +1223,6 @@ impl NestedProcessor {
         self.process_scalar(ScalarToken, data)
     }
 
-    #[cfg(target_arch = "x86_64")]
     #[arcane]
     fn process_v3(&self, _token: X64V3Token, data: &[f32]) -> f32 {
         data.iter().sum::<f32>() * self.scale * 100.0 // distinctive
@@ -1274,7 +1273,7 @@ fn incant_nesting_method_auto_directly() {
 // ============================================================================
 
 /// Hand-written v3 for the bridgeless nesting test
-#[cfg(target_arch = "x86_64")]
+
 #[arcane]
 fn bridgeless_v3(_token: X64V3Token, data: &[f32]) -> f32 {
     data.iter().sum::<f32>() * 1000.0 // distinctive
@@ -1349,7 +1348,6 @@ impl BridgelessProcessor {
         self.process_scalar(ScalarToken, data)
     }
 
-    #[cfg(target_arch = "x86_64")]
     #[arcane]
     fn process_v3(&self, _token: X64V3Token, data: &[f32]) -> f32 {
         data.iter().sum::<f32>() * self.scale * 100.0
@@ -1386,7 +1384,7 @@ fn scalar_token_nesting_method_scalar_directly() {
 // ============================================================================
 
 /// Hand-written v3
-#[cfg(target_arch = "x86_64")]
+
 #[arcane]
 fn default_tier_v3(_token: X64V3Token, data: &[f32]) -> f32 {
     data.iter().sum::<f32>() * 1000.0
@@ -1467,7 +1465,6 @@ impl DefaultProcessor {
         self.process_default(data)
     }
 
-    #[cfg(target_arch = "x86_64")]
     #[arcane]
     fn process_v3(&self, _token: X64V3Token, data: &[f32]) -> f32 {
         data.iter().sum::<f32>() * self.scale * 100.0
@@ -1508,7 +1505,6 @@ fn default_tier_method_fallback() {
 
 // --- Solution 1: ScalarToken param (autoversion keeps it) ---
 
-#[cfg(target_arch = "x86_64")]
 #[arcane]
 fn resample_scalar_sol1_v3(_: X64V3Token, data: &[f32], factor: f32) -> f32 {
     data.iter().map(|x| x * factor).sum::<f32>() * 1000.0
@@ -1535,7 +1531,6 @@ fn nesting_pitfall_scalar_token_solution() {
 
 // --- Solution 2: default tier (tokenless, cleanest) ---
 
-#[cfg(target_arch = "x86_64")]
 #[arcane]
 fn resample_default_sol2_v3(_: X64V3Token, data: &[f32], factor: f32) -> f32 {
     data.iter().map(|x| x * factor).sum::<f32>() * 1000.0
@@ -1562,7 +1557,6 @@ fn nesting_pitfall_default_tier_solution() {
 
 // --- Solution 3: bridge function (works with plain scalar tier) ---
 
-#[cfg(target_arch = "x86_64")]
 #[arcane]
 fn resample_bridge_sol3_v3(_: X64V3Token, data: &[f32], factor: f32) -> f32 {
     data.iter().map(|x| x * factor).sum::<f32>() * 1000.0

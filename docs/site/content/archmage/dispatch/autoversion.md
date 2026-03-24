@@ -128,43 +128,56 @@ fn process_v3(_token: X64V3Token, data: &[f32]) -> f32 { /* hand-written */ }
 
 ## Nesting with incant!
 
-Hand-written SIMD intrinsics for specific tiers, autoversioned auto-vectorization as the fallback. Use different base names to avoid collisions:
+Hand-written SIMD for specific tiers, autoversioned auto-vectorization for the rest. Two approaches:
+
+### `default` tier (recommended)
+
+The `default` tier calls `_default(args)` without any token — a direct match for a tokenless autoversion dispatcher:
 
 ```rust
 use archmage::prelude::*;
 
-/// Top-level dispatcher
 pub fn process(data: &[f32]) -> f32 {
-    incant!(process(data), [v4, scalar])
+    incant!(process(data), [v4, default])
 }
 
-/// Hand-written AVX-512
+/// Hand-written AVX-512 — #[arcane] handles #[cfg(target_arch)]
 #[arcane(import_intrinsics)]
 fn process_v4(_token: X64V4Token, data: &[f32]) -> f32 {
     // ... AVX-512 intrinsics ...
     todo!()
 }
 
-/// Bridge: incant! passes ScalarToken, autoversion doesn't need one
-fn process_scalar(_: ScalarToken, data: &[f32]) -> f32 {
-    process_auto(data)
-}
-
 /// Auto-vectorized fallback — gets V3/NEON for free
 #[autoversion(v3, neon)]
-fn process_auto(data: &[f32]) -> f32 {
+fn process_default(data: &[f32]) -> f32 {
     data.iter().sum()
 }
 ```
 
-How it works:
+`incant!` tries V4 first. If unavailable, calls `process_default(data)` — no token, no bridge. The autoversion dispatcher internally tries V3 → NEON → scalar.
 
-1. `incant!` tries `process_v4` (hand-written AVX-512)
-2. If unavailable, falls through to `process_scalar(ScalarToken, data)`
-3. `process_scalar` bridges to the autoversioned `process_auto` dispatcher
-4. `process_auto` internally tries V3 auto-vectorization → NEON → scalar
+### `ScalarToken` param (alternative)
 
-The one-line bridge (`process_scalar`) connects incant!'s token-passing convention with autoversion's token-free dispatcher. No special macro features needed.
+If you prefer the `scalar` tier name, give your autoversioned function a `ScalarToken` parameter. Autoversion keeps it in the dispatcher, matching what `incant!` passes:
+
+```rust
+pub fn process(data: &[f32]) -> f32 {
+    incant!(process(data), [v4, scalar])
+}
+
+#[arcane(import_intrinsics)]
+fn process_v4(_token: X64V4Token, data: &[f32]) -> f32 { todo!() }
+
+#[autoversion(v3, neon)]
+fn process_scalar(_: ScalarToken, data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+```
+
+### Why not just tokenless `_scalar`?
+
+A tokenless `#[autoversion] fn process_scalar(data: &[f32])` generates a dispatcher with no token parameter. But `incant!` calls `process_scalar(ScalarToken, data)` — signature mismatch. Use `default` or `ScalarToken` to avoid this.
 
 ## Explicit tiers
 
