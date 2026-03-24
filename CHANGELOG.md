@@ -2,25 +2,54 @@
 
 ## 0.9.11 — 2026-03-24
 
-### `#[autoversion]` — tokenless mode
+### `#[autoversion]` — tokenless mode + ScalarToken nesting
 
-`#[autoversion]` no longer requires a `SimdToken` parameter. Write plain functions — the macro handles everything:
+`#[autoversion]` no longer requires a `SimdToken` parameter. Write plain functions:
 
 ```rust
 #[autoversion]
-fn sum(data: &[f32]) -> f32 {
-    data.iter().sum()
-}
+fn sum(data: &[f32]) -> f32 { data.iter().sum() }
 
-// Call directly:
 let result = sum(&data);
 ```
 
-The optional `_token: SimdToken` placeholder is still recognized for backwards compatibility. Either way, the dispatcher always strips the token — the public API is your function's real parameters.
+Three token forms:
 
-### Comprehensive docs
+| Parameter | Dispatcher signature | Use case |
+|-----------|---------------------|----------|
+| *(none)* | Token-free | **Recommended** for new code |
+| `_: ScalarToken` | Keeps ScalarToken | **incant! nesting** — no bridge needed |
+| `_: SimdToken` | Token stripped | **Deprecated** — use tokenless or ScalarToken |
 
-New documentation covering name collision patterns, `incant!` nesting (hand-written SIMD + autoversioned fallback via bridge function), feature-gated tiers, const generics, and method patterns.
+**ScalarToken nesting** — hand-written SIMD + autoversioned fallback, zero boilerplate:
+
+```rust
+fn process(data: &[f32]) -> f32 {
+    incant!(process(data), [v4, scalar])
+}
+
+#[arcane(import_intrinsics)]
+fn process_v4(_: X64V4Token, data: &[f32]) -> f32 { /* AVX-512 intrinsics */ }
+
+#[autoversion(v3, neon)]
+fn process_scalar(_: ScalarToken, data: &[f32]) -> f32 {
+    data.iter().sum()  // auto-vectorized, dispatches v3/neon/scalar internally
+}
+```
+
+`process_scalar` IS the autoversion dispatcher. `incant!` calls it with ScalarToken — signature matches directly.
+
+### Deprecations
+
+- **`SimdToken` in `#[autoversion]`**: Emits deprecation warning. `SimdToken` is a trait, not a type — it can't appear in compiled signatures. Use tokenless or `ScalarToken`.
+
+### Errors
+
+- **Concrete tokens in `#[autoversion]`** (`X64V3Token`, `NeonToken`, etc.): Now produces a clear compile error directing users to `#[arcane]` or `#[rite]` for single-token functions.
+
+### Docs
+
+Comprehensive autoversion docs: name collision patterns, incant! nesting (bridgeless and bridge), feature-gated tiers, const generics, method patterns, when-to-use comparison.
 
 ## 0.9.10 — 2026-03-24
 
