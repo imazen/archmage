@@ -1380,3 +1380,117 @@ fn scalar_token_nesting_method_scalar_directly() {
         "method scalar direct: {result}"
     );
 }
+
+// ============================================================================
+// `default` tier: tokenless fallback for incant! nesting
+// ============================================================================
+
+/// Hand-written v3
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn default_tier_v3(_token: X64V3Token, data: &[f32]) -> f32 {
+    data.iter().sum::<f32>() * 1000.0
+}
+
+/// Autoversioned tokenless fallback — named _default, no token needed
+#[autoversion(v3, neon)]
+fn default_tier_default(data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+/// Top-level: incant! with `default` instead of `scalar`
+fn default_tier(data: &[f32]) -> f32 {
+    incant!(default_tier(data), [v3, default])
+}
+
+#[test]
+fn default_tier_dispatches() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = default_tier(&data);
+    assert!(result.is_finite(), "default tier: {result}");
+}
+
+#[test]
+fn default_tier_fallback_directly() {
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let result = default_tier_default(&data);
+    assert!((result - 10.0).abs() < 1e-6, "default fallback: {result}");
+}
+
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn default_tier_picks_v3() {
+    if let Some(token) = X64V3Token::summon() {
+        let data = [1.0f32, 2.0, 3.0, 4.0];
+        let v3 = default_tier_v3(token, &data);
+        assert!((v3 - 10000.0).abs() < 1e-3, "v3: {v3}");
+        let dispatched = default_tier(&data);
+        assert!(
+            (dispatched - 10000.0).abs() < 1e-3,
+            "dispatch: {dispatched}"
+        );
+    }
+}
+
+// default tier with autoversion(default) — autoversion generates _default variant
+#[autoversion(v3, neon, default)]
+fn auto_with_default(data: &[f32]) -> f32 {
+    data.iter().sum()
+}
+
+#[test]
+fn autoversion_default_tier() {
+    let data = [1.0f32, 2.0, 3.0];
+    let result = auto_with_default(&data);
+    assert!((result - 6.0).abs() < 1e-6, "auto default: {result}");
+}
+
+#[test]
+fn autoversion_default_variant_callable() {
+    let data = [1.0f32, 2.0, 3.0];
+    // _default variant is tokenless — call without any token
+    let result = auto_with_default_default(&data);
+    assert!((result - 6.0).abs() < 1e-6, "default variant: {result}");
+}
+
+// default tier with method
+struct DefaultProcessor {
+    scale: f32,
+}
+
+impl DefaultProcessor {
+    pub fn process(&self, data: &[f32]) -> f32 {
+        #[cfg(target_arch = "x86_64")]
+        if let Some(token) = X64V3Token::summon() {
+            return self.process_v3(token, data);
+        }
+        self.process_default(data)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[arcane]
+    fn process_v3(&self, _token: X64V3Token, data: &[f32]) -> f32 {
+        data.iter().sum::<f32>() * self.scale * 100.0
+    }
+
+    #[autoversion(v3, neon)]
+    fn process_default(&self, data: &[f32]) -> f32 {
+        data.iter().sum::<f32>() * self.scale
+    }
+}
+
+#[test]
+fn default_tier_method() {
+    let p = DefaultProcessor { scale: 2.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    let result = p.process(&data);
+    assert!(result.is_finite(), "method default: {result}");
+}
+
+#[test]
+fn default_tier_method_fallback() {
+    let p = DefaultProcessor { scale: 2.0 };
+    let data = [1.0f32, 2.0, 3.0];
+    let result = p.process_default(&data);
+    assert!((result - 12.0).abs() < 1e-6, "method default: {result}");
+}

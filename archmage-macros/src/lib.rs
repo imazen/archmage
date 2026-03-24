@@ -2020,8 +2020,8 @@ fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> TokenStream 
             (None, None) => quote! {},
         };
 
-        variants.push(if tier.name != "scalar" {
-            // Non-scalar variants get #[arcane] so target_feature is applied
+        variants.push(if tier.name != "scalar" && tier.name != "default" {
+            // Non-fallback variants get #[arcane] so target_feature is applied
             quote! {
                 #cfg_guard
                 #[archmage::arcane]
@@ -2231,14 +2231,23 @@ const ALL_TIERS: &[TierDescriptor] = &[
         cfg_feature: None,
         priority: 20,
     },
-    // Scalar (always last)
+    // Scalar (always last — takes ScalarToken)
     TierDescriptor {
         name: "scalar",
         suffix: "scalar",
         token_path: "archmage::ScalarToken",
         as_method: "as_scalar",
         target_arch: None,
-
+        cfg_feature: None,
+        priority: 0,
+    },
+    // Default (always last — tokenless, for incant! nesting with autoversion)
+    TierDescriptor {
+        name: "default",
+        suffix: "default",
+        token_path: "", // not used — default is called without a token
+        as_method: "",  // not used — default is not dispatched via IntoConcreteToken
+        target_arch: None,
         cfg_feature: None,
         priority: 0,
     },
@@ -2348,8 +2357,20 @@ fn resolve_tiers(
         }
     }
 
-    // Always include scalar fallback
-    if !tiers.iter().any(|rt| rt.tier.name == "scalar") {
+    // Error if both scalar and default are in the same tier list
+    let has_scalar = tiers.iter().any(|rt| rt.tier.name == "scalar");
+    let has_default = tiers.iter().any(|rt| rt.tier.name == "default");
+    if has_scalar && has_default {
+        return Err(syn::Error::new(
+            error_span,
+            "`scalar` and `default` are mutually exclusive fallback tiers. \
+             Use `scalar` (takes ScalarToken) or `default` (tokenless).",
+        ));
+    }
+
+    // Always include a fallback tier. If neither scalar nor default is present,
+    // auto-append scalar for backwards compatibility.
+    if !has_scalar && !has_default {
         tiers.push(ResolvedTier {
             tier: find_tier("scalar").unwrap(),
             feature_gate: None,
@@ -2568,14 +2589,14 @@ fn incant_impl(input: IncantInput) -> TokenStream {
         .map(|(_, span)| *span)
         .unwrap_or(last_segment_span);
 
-    // When the user specifies explicit tiers without `scalar` in incant!, emit
-    // a deprecation warning. In v1.0 this will become a compile error.
-    // scalar is always auto-appended, but not listing it explicitly hides the
-    // fact that a _scalar function is required.
+    // When the user specifies explicit tiers without `scalar` or `default` in
+    // incant!, emit a deprecation warning. In v1.0 this will become a compile error.
+    // A fallback tier is always auto-appended, but not listing it explicitly
+    // hides the fact that a _scalar/_default function is required.
     let scalar_warning = if let Some((names, _span)) = &input.tiers {
         if !names.iter().any(|n| {
             let base = n.split('(').next().unwrap_or(n);
-            base == "scalar"
+            base == "scalar" || base == "default"
         }) {
             quote! {
                 #[deprecated(since = "0.9.9", note = "\
@@ -2636,11 +2657,11 @@ fn gen_incant_passthrough(
 ) -> TokenStream {
     let mut dispatch_arms = Vec::new();
 
-    // Group non-scalar tiers by target_arch for cfg blocks
+    // Group non-fallback tiers by target_arch for cfg blocks
     let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
     for rt in tiers {
-        if rt.name == "scalar" {
-            continue; // Handle scalar separately at the end
+        if rt.name == "scalar" || rt.name == "default" {
+            continue; // Handle fallback separately at the end
         }
         if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == rt.target_arch) {
             group.1.push(rt);
@@ -2689,9 +2710,15 @@ fn gen_incant_passthrough(
         }
     }
 
-    // Scalar fallback (always last)
-    let fn_scalar = suffix_path(func_path, "scalar");
-    let scalar_arm = if tiers.iter().any(|t| t.name == "scalar") {
+    // Fallback (always last): scalar (with token) or default (tokenless)
+    let has_default = tiers.iter().any(|t| t.name == "default");
+    let fallback_arm = if has_default {
+        let fn_default = suffix_path(func_path, "default");
+        quote! {
+            break '__incant #fn_default(#(#args),*);
+        }
+    } else if tiers.iter().any(|t| t.name == "scalar") {
+        let fn_scalar = suffix_path(func_path, "scalar");
         quote! {
             if let Some(__t) = __incant_token.as_scalar() {
                 break '__incant #fn_scalar(__t, #(#args),*);
@@ -2707,7 +2734,7 @@ fn gen_incant_passthrough(
             use archmage::IntoConcreteToken;
             let __incant_token = #token_expr;
             #(#dispatch_arms)*
-            #scalar_arm
+            #fallback_arm
         }
     };
     expanded.into()
@@ -2721,10 +2748,10 @@ fn gen_incant_entry(
 ) -> TokenStream {
     let mut dispatch_arms = Vec::new();
 
-    // Group non-scalar tiers by target_arch for cfg blocks.
+    // Group non-fallback tiers by target_arch for cfg blocks.
     let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
     for rt in tiers {
-        if rt.name == "scalar" {
+        if rt.name == "scalar" || rt.name == "default" {
             continue;
         }
         if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == rt.target_arch) {
@@ -2774,14 +2801,21 @@ fn gen_incant_entry(
         }
     }
 
-    // Scalar fallback
-    let fn_scalar = suffix_path(func_path, "scalar");
+    // Fallback: scalar (with ScalarToken) or default (tokenless)
+    let has_default = tiers.iter().any(|rt| rt.name == "default");
+    let fallback_call = if has_default {
+        let fn_default = suffix_path(func_path, "default");
+        quote! { #fn_default(#(#args),*) }
+    } else {
+        let fn_scalar = suffix_path(func_path, "scalar");
+        quote! { #fn_scalar(archmage::ScalarToken, #(#args),*) }
+    };
 
     let expanded = quote! {
         '__incant: {
             use archmage::SimdToken;
             #(#dispatch_arms)*
-            #fn_scalar(archmage::ScalarToken, #(#args),*)
+            #fallback_call
         }
     };
     expanded.into()
@@ -3023,15 +3057,24 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         // Rename: process → process_v3
         variant_fn.sig.ident = format_ident!("{}_{}", fn_name, tier.suffix);
 
-        // Replace SimdToken param type with concrete token type
-        let concrete_type: Type = syn::parse_str(tier.token_path).unwrap();
-        if let FnArg::Typed(pt) = &mut variant_fn.sig.inputs[token_param.index] {
-            *pt.ty = concrete_type;
+        // Replace token param type with concrete token type.
+        // For "default" tier: remove the token param entirely (tokenless variant).
+        if tier.name == "default" {
+            let mut inputs: Vec<FnArg> = variant_fn.sig.inputs.iter().cloned().collect();
+            inputs.remove(token_param.index);
+            variant_fn.sig.inputs = inputs.into_iter().collect();
+        } else {
+            let concrete_type: Type = syn::parse_str(tier.token_path).unwrap();
+            if let FnArg::Typed(pt) = &mut variant_fn.sig.inputs[token_param.index] {
+                *pt.ty = concrete_type;
+            }
         }
 
-        // Scalar with _self = Type: inject `let _self = self;` preamble so body's
-        // _self references resolve (non-scalar variants get this from #[arcane(_self = Type)])
-        if tier.name == "scalar" && has_self && args.self_type.is_some() {
+        // Fallback (scalar/default) with _self = Type: inject `let _self = self;` preamble
+        // so body's _self references resolve (non-fallback variants get this from
+        // #[arcane(_self = Type)])
+        if (tier.name == "scalar" || tier.name == "default") && has_self && args.self_type.is_some()
+        {
             let original_body = variant_fn.body.clone();
             variant_fn.body = quote!(let _self = self; #original_body);
         }
@@ -3060,7 +3103,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         // Suppress dead_code: if the dispatcher is unused, rustc warns on IT
         // (via quote_spanned! with the user's span). Warning on individual
         // variants would be confusing — the user didn't write _scalar or _v3.
-        if tier.name != "scalar" {
+        if tier.name != "scalar" && tier.name != "default" {
             let arcane_attr = if let Some(ref self_type) = args.self_type {
                 quote! { #[archmage::arcane(_self = #self_type)] }
             } else {
@@ -3139,10 +3182,10 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // Build turbofish for forwarding type/const generics to variant calls
     let turbofish = build_turbofish(&input_fn.sig.generics);
 
-    // Group non-scalar tiers by target_arch for cfg blocks
+    // Group non-fallback tiers by target_arch for cfg blocks
     let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
     for tier in &tiers {
-        if tier.name == "scalar" {
+        if tier.name == "scalar" || tier.name == "default" {
             continue;
         }
         if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == tier.target_arch) {
@@ -3199,12 +3242,28 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
         }
     }
 
-    // Scalar fallback (always available, no summon needed)
-    let scalar_name = format_ident!("{}_scalar", fn_name);
-    let scalar_call = if has_self {
-        quote! { self.#scalar_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
+    // Fallback call (always available, no summon needed)
+    let has_default_tier = tiers.iter().any(|t| t.name == "default");
+    let fallback_suffix = if has_default_tier {
+        "default"
     } else {
-        quote! { #scalar_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
+        "scalar"
+    };
+    let fallback_name = format_ident!("{}_{}", fn_name, fallback_suffix);
+    let fallback_call = if has_default_tier {
+        // default: tokenless call
+        if has_self {
+            quote! { self.#fallback_name #turbofish(#(#dispatch_args),*) }
+        } else {
+            quote! { #fallback_name #turbofish(#(#dispatch_args),*) }
+        }
+    } else {
+        // scalar: call with ScalarToken
+        if has_self {
+            quote! { self.#fallback_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
+        } else {
+            quote! { #fallback_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
+        }
     };
 
     // Build dispatcher function
@@ -3230,14 +3289,14 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
                 #simdtoken_deprecation_in_body
                 use archmage::SimdToken;
                 #(#dispatch_arms)*
-                #scalar_call
+                #fallback_call
             }
 
             #[cfg(not(feature = #feat))]
             #(#fn_attrs)*
             #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
                 #simdtoken_deprecation_in_body
-                #scalar_call
+                #fallback_call
             }
         }
     } else {
@@ -3247,7 +3306,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
                 #simdtoken_deprecation_in_body
                 use archmage::SimdToken;
                 #(#dispatch_arms)*
-                #scalar_call
+                #fallback_call
             }
         }
     };
@@ -3975,18 +4034,27 @@ mod tests {
         // Rename
         f.sig.ident = format_ident!("{}_{}", fn_name, tier.suffix);
 
-        // Find and replace SimdToken param type
+        // Find and replace SimdToken param type (skip for "default" — tokenless)
         let token_idx = find_autoversion_token_param(&f.sig)
             .expect("should not error on SimdToken")
             .unwrap_or_else(|| panic!("No SimdToken param in: {}", func))
             .index;
-        let concrete_type: Type = syn::parse_str(tier.token_path).unwrap();
-        if let FnArg::Typed(pt) = &mut f.sig.inputs[token_idx] {
-            *pt.ty = concrete_type;
+        if tier_name == "default" {
+            // Remove the token param for default tier
+            let stmts = f.block.stmts.clone();
+            let mut inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
+            inputs.remove(token_idx);
+            f.sig.inputs = inputs.into_iter().collect();
+            f.block.stmts = stmts;
+        } else {
+            let concrete_type: Type = syn::parse_str(tier.token_path).unwrap();
+            if let FnArg::Typed(pt) = &mut f.sig.inputs[token_idx] {
+                *pt.ty = concrete_type;
+            }
         }
 
-        // Scalar + self: inject preamble
-        if tier_name == "scalar" && has_self {
+        // Fallback (scalar/default) + self: inject preamble
+        if (tier_name == "scalar" || tier_name == "default") && has_self {
             let preamble: syn::Stmt = syn::parse_quote!(let _self = self;);
             f.block.stmts.insert(0, preamble);
         }
