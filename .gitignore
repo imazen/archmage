@@ -12,4 +12,5 @@ docs/book/mermaid-init.js
 # Zola build output
 docs/site/public/
 tests/avx512-cfg-tests/*/target/
+tests/downstream-compat/*/target/
 copter-report/

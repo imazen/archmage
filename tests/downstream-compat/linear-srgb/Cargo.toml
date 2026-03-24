@@ -1,0 +1,24 @@
+[package]
+name = "archmage-compat-linear-srgb"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+# Integration test: published linear-srgb against local archmage.
+# linear-srgb uses incant! with explicit [v4, v3, neon] tier lists and
+# cfg-gated _v4 functions — the exact pattern that broke in 0.9.6.
+# Tests both with and without the avx512 feature.
+
+[features]
+avx512 = ["linear-srgb/avx512"]
+
+[dependencies]
+linear-srgb = "0.6"
+
+[patch.crates-io]
+archmage = { path = "../../.." }
+archmage-macros = { path = "../../../archmage-macros" }
+magetypes = { path = "../../../magetypes" }
+
+[workspace]

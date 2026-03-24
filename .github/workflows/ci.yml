@@ -58,6 +58,14 @@ jobs:
       - name: Test avx512 cfg (all token forms)
         run: cargo test --manifest-path tests/avx512-cfg-tests/v4-all-token-forms/Cargo.toml
 
+      # Downstream compatibility: published linear-srgb against local archmage.
+      # linear-srgb uses incant! with explicit [v4, v3, neon] tier lists and
+      # cfg-gated _v4 functions — the pattern that motivated skip_avx512.
+      - name: Downstream compat (linear-srgb, no avx512)
+        run: cargo check --manifest-path tests/downstream-compat/linear-srgb/Cargo.toml
+      - name: Downstream compat (linear-srgb, with avx512)
+        run: cargo check --manifest-path tests/downstream-compat/linear-srgb/Cargo.toml --features avx512
+
       - name: CPU survey
         if: always()
         shell: bash
