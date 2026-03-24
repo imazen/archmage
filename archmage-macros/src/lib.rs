@@ -2676,10 +2676,7 @@ fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream
     // generates scalar code compiled with #[target_feature], not import_intrinsics.
     let tier_names: Vec<String> = match &args.tiers {
         Some(names) => names.clone(),
-        None => DEFAULT_TIER_NAMES
-            .iter()
-            .map(|s| s.to_string())
-            .collect(),
+        None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
     };
     // autoversion never skips avx512 — it generates scalar code with #[target_feature]
     let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span(), false) {
