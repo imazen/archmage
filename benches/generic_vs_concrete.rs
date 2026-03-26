@@ -205,7 +205,8 @@ fn dot_concrete_arcane_entry(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32
 // Criterion benchmarks
 // ============================================================================
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use zenbench::criterion_compat::*;
+use zenbench::{criterion_group, criterion_main};
 
 fn bench_patterns(c: &mut Criterion) {
     let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];

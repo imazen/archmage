@@ -8,7 +8,8 @@
 #![cfg(target_arch = "x86_64")]
 
 use archmage::{SimdToken, X64V3Token, arcane};
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use zenbench::criterion_compat::*;
+use zenbench::{criterion_group, criterion_main};
 use magetypes::simd::generic::f32x8;
 
 // ============================================================================

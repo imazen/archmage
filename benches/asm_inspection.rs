@@ -676,7 +676,8 @@ pub fn nest_v2_v2_bare(data: &[[f32; 8]], other: &[[f32; 8]]) -> f32 {
 // Criterion benchmark
 // ============================================================================
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use zenbench::criterion_compat::*;
+use zenbench::{criterion_group, criterion_main};
 
 fn bench_patterns(c: &mut Criterion) {
     let data: Vec<[f32; 8]> = (0..1000).map(|i| [i as f32; 8]).collect();

@@ -9,7 +9,8 @@
 #![cfg(target_arch = "x86_64")]
 
 use archmage::{Desktop64, SimdToken, arcane};
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use zenbench::criterion_compat::*;
+use zenbench::{criterion_group, criterion_main};
 use magetypes::simd::f32x8;
 use std::arch::x86_64::*;
 
@@ -48,7 +49,7 @@ pub fn safe_load_loop(token: Desktop64, data: &[[f32; 8]]) -> f32 {
 fn unsafe_load_loop_inner(_token: Desktop64, data: &[[f32; 8]]) -> f32 {
     let mut acc = _mm256_setzero_ps();
     for chunk in data {
-        let v = unsafe { _mm256_loadu_ps(chunk.as_ptr()) };
+        let v = unsafe { std::arch::x86_64::_mm256_loadu_ps(chunk.as_ptr()) };
         acc = _mm256_add_ps(acc, _mm256_mul_ps(v, v));
     }
     let hi = _mm256_extractf128_ps::<1>(acc);
@@ -100,7 +101,7 @@ pub fn safe_load_single(_token: Desktop64, data: &[f32; 8]) -> __m256 {
 #[unsafe(no_mangle)]
 #[arcane(import_intrinsics)]
 pub fn unsafe_load_single(_token: Desktop64, data: &[f32; 8]) -> __m256 {
-    unsafe { _mm256_loadu_ps(data.as_ptr()) }
+    unsafe { std::arch::x86_64::_mm256_loadu_ps(data.as_ptr()) }
 }
 
 // =============================================================================

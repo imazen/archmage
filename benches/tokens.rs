@@ -1,6 +1,7 @@
 //! Benchmarks for archmage tokens and operations
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use zenbench::criterion_compat::*;
+use zenbench::{criterion_group, criterion_main};
 
 #[cfg(target_arch = "x86_64")]
 fn bench_token_overhead(c: &mut Criterion) {

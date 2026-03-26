@@ -100,7 +100,8 @@ fn load_f32x8_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
 // Criterion benchmark (required for cargo asm --bench to work)
 // ============================================================================
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use zenbench::criterion_compat::*;
+use zenbench::{criterion_group, criterion_main};
 
 fn bench_load_patterns(c: &mut Criterion) {
     let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
