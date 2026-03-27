@@ -1,21 +1,8 @@
 use archmage::{arcane, X64V3Token};
 #[doc(hidden)]
-#[target_feature(enable = "sse")]
-#[target_feature(enable = "sse2")]
-#[target_feature(enable = "sse3")]
-#[target_feature(enable = "ssse3")]
-#[target_feature(enable = "sse4.1")]
-#[target_feature(enable = "sse4.2")]
-#[target_feature(enable = "popcnt")]
-#[target_feature(enable = "cmpxchg16b")]
-#[target_feature(enable = "avx")]
-#[target_feature(enable = "avx2")]
-#[target_feature(enable = "fma")]
-#[target_feature(enable = "bmi1")]
-#[target_feature(enable = "bmi2")]
-#[target_feature(enable = "f16c")]
-#[target_feature(enable = "lzcnt")]
-#[target_feature(enable = "movbe")]
+#[target_feature(
+    enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+)]
 #[inline]
 fn __arcane_with_raw_ptr(token: X64V3Token, ptr: *const f32, len: usize) -> f32 {
     let mut sum = 0.0f32;

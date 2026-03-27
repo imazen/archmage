@@ -164,11 +164,10 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
             .into();
     }
 
-    // Build target_feature attributes
-    let target_feature_attrs: Vec<Attribute> = features
-        .iter()
-        .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
-        .collect();
+    // Build a single target_feature attribute with all features comma-joined
+    let features_csv = features.join(",");
+    let target_feature_attrs: Vec<Attribute> =
+        vec![parse_quote!(#[target_feature(enable = #features_csv)])];
 
     // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
     let inline_attr: Attribute = parse_quote!(#[inline]);
@@ -292,11 +291,10 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
         let mut variant_fn = input_fn.clone();
         variant_fn.sig.ident = suffixed_ident;
 
-        // Build target_feature attributes
-        let target_feature_attrs: Vec<Attribute> = features
-            .iter()
-            .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
-            .collect();
+        // Build a single target_feature attribute with all features comma-joined
+        let features_csv = features.join(",");
+        let target_feature_attrs: Vec<Attribute> =
+            vec![parse_quote!(#[target_feature(enable = #features_csv)])];
         let inline_attr: Attribute = parse_quote!(#[inline]);
 
         let mut new_attrs = target_feature_attrs;

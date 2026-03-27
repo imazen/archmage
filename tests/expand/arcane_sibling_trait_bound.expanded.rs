@@ -1,13 +1,6 @@
 use archmage::{arcane, HasX64V2};
 #[doc(hidden)]
-#[target_feature(enable = "sse")]
-#[target_feature(enable = "sse2")]
-#[target_feature(enable = "sse3")]
-#[target_feature(enable = "ssse3")]
-#[target_feature(enable = "sse4.1")]
-#[target_feature(enable = "sse4.2")]
-#[target_feature(enable = "popcnt")]
-#[target_feature(enable = "cmpxchg16b")]
+#[target_feature(enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b")]
 #[inline]
 fn __arcane_process_v2(token: impl HasX64V2, data: &[f32; 4]) -> f32 {
     data.iter().sum()

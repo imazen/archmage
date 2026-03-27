@@ -205,11 +205,10 @@ pub(crate) fn arcane_impl(
         };
     }
 
-    // Build target_feature attributes
-    let target_feature_attrs: Vec<Attribute> = features
-        .iter()
-        .map(|feature| parse_quote!(#[target_feature(enable = #feature)]))
-        .collect();
+    // Build a single target_feature attribute with all features comma-joined
+    let features_csv = features.join(",");
+    let target_feature_attrs: Vec<Attribute> =
+        vec![parse_quote!(#[target_feature(enable = #features_csv)])];
 
     // Rename wildcard patterns (`_: Type`) to named params so the inner/sibling call works
     let mut wild_rename_counter = 0u32;
