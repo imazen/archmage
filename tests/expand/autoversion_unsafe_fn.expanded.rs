@@ -1,15 +1,15 @@
 use archmage::autoversion;
-fn unsafe_sum(ptr: *const f32, len: usize) -> f32 {
+unsafe fn unsafe_sum(ptr: *const f32, len: usize) -> f32 {
     use archmage::SimdToken;
     {
         if let Some(__t) = archmage::X64V4Token::summon() {
-            return unsafe_sum_v4(__t, ptr, len);
+            return unsafe { unsafe_sum_v4(__t, ptr, len) };
         }
         if let Some(__t) = archmage::X64V3Token::summon() {
-            return unsafe_sum_v3(__t, ptr, len);
+            return unsafe { unsafe_sum_v3(__t, ptr, len) };
         }
     }
-    unsafe_sum_scalar(archmage::ScalarToken, ptr, len)
+    unsafe { unsafe_sum_scalar(archmage::ScalarToken, ptr, len) }
 }
 #[doc(hidden)]
 #[allow(dead_code)]

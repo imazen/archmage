@@ -382,6 +382,10 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         }
     }
 
+    // If the original function is `unsafe fn`, the dispatcher must also be `unsafe fn`
+    // and variant calls must be wrapped in `unsafe {}`.
+    let is_unsafe = input_fn.sig.unsafety.is_some();
+
     let mut dispatch_arms = Vec::new();
     for (target_arch, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
@@ -389,10 +393,17 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             let suffixed = format_ident!("{}_{}", fn_name, rt.suffix);
             let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
 
-            let call = if has_self {
+            let raw_call = if has_self {
                 quote! { self.#suffixed #turbofish(__t, #(#dispatch_args),*) }
             } else {
                 quote! { #suffixed #turbofish(__t, #(#dispatch_args),*) }
+            };
+
+            // Wrap call in unsafe if the original function (and thus variants) is unsafe
+            let call = if is_unsafe {
+                quote! { unsafe { #raw_call } }
+            } else {
+                raw_call
             };
 
             let check = quote! {
@@ -437,7 +448,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         "scalar"
     };
     let fallback_name = format_ident!("{}_{}", fn_name, fallback_suffix);
-    let fallback_call = if has_default_tier {
+    let raw_fallback = if has_default_tier {
         // default: tokenless call
         if has_self {
             quote! { self.#fallback_name #turbofish(#(#dispatch_args),*) }
@@ -452,6 +463,11 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             quote! { #fallback_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
         }
     };
+    let fallback_call = if is_unsafe {
+        quote! { unsafe { #raw_fallback } }
+    } else {
+        raw_fallback
+    };
 
     // Build dispatcher function
     let dispatcher_inputs_punct: syn::punctuated::Punctuated<FnArg, Token![,]> =
@@ -459,6 +475,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     let output = &input_fn.sig.output;
     let generics = &input_fn.sig.generics;
     let where_clause = &generics.where_clause;
+    let unsafety = &input_fn.sig.unsafety;
 
     // Use the user's span for the dispatcher so dead_code lint fires on the
     // function the user actually wrote, not on invisible generated variants.
@@ -472,7 +489,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         quote_spanned! { user_span =>
             #[cfg(feature = #feat)]
             #(#fn_attrs)*
-            #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+            #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
                 #simdtoken_deprecation_in_body
                 use archmage::SimdToken;
                 #(#dispatch_arms)*
@@ -481,7 +498,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
 
             #[cfg(not(feature = #feat))]
             #(#fn_attrs)*
-            #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+            #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
                 #simdtoken_deprecation_in_body
                 #fallback_call
             }
@@ -489,7 +506,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     } else {
         quote_spanned! { user_span =>
             #(#fn_attrs)*
-            #vis fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+            #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
                 #simdtoken_deprecation_in_body
                 use archmage::SimdToken;
                 #(#dispatch_arms)*

@@ -49,14 +49,15 @@ fn expanded_snapshots_compile() {
     t.pass("tests/expand/token_downgrade.expanded.rs");
     t.pass("tests/expand/token_upgrade_conditional.expanded.rs");
 
+    // === Fixed bugs — expanded output now compiles ===
+    t.pass("tests/expand/autoversion_unsafe_fn.expanded.rs");
+
     // === Known bugs — expanded output doesn't compile ===
     // When fixed: move to t.pass() and delete the .stderr file
     //
-    // Bug 1: #[autoversion] on unsafe fn — dispatcher drops `unsafe`
-    t.compile_fail("tests/expand/autoversion_unsafe_fn.expanded.rs");
-    // Bug 2: #[rite] on trait impl — #[target_feature] on safe trait method is invalid
+    // Bug: #[rite] on trait impl — #[target_feature] on safe trait method is invalid
     t.compile_fail("tests/expand/rite_trait_impl.expanded.rs");
-    // Bug 3: #[autoversion] on trait impl — variants placed inside trait impl block
+    // Bug: #[autoversion] on trait impl — variants placed inside trait impl block
     t.compile_fail("tests/expand/autoversion_trait_impl.expanded.rs");
 
     // === Excluded — cargo expand artifacts (not macro bugs) ===
