@@ -1053,6 +1053,16 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
+## Known Bugs
+
+Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs`):
+
+1. **`#[autoversion]` on `unsafe fn`: dispatcher drops `unsafe`** — The generated dispatcher function is `fn` instead of `unsafe fn`. Calls to unsafe variant functions (`unsafe_sum_v4(...)`) lack `unsafe` blocks. Soundness bug. (`tests/expand/autoversion_unsafe_fn.expanded.rs`)
+
+2. **`#[rite]` on trait impl method: `#[target_feature]` on safe trait method is invalid** — Rust rejects `#[target_feature(..)]` on safe trait methods. The macro applies it directly, which works as macro output but the expanded code is invalid standalone Rust. (`tests/expand/rite_trait_impl.expanded.rs`)
+
+3. **`#[autoversion]` on trait impl method: variants placed inside trait impl block** — Generated variant methods (`process_v3`, `process_v4`, `process_scalar`) are emitted inside `impl Trait for Type {}`, but they aren't members of the trait. Compile error E0407. (`tests/expand/autoversion_trait_impl.expanded.rs`)
+
 ## Pending Work
 
 ### API Parity Status (0 issues — complete!)

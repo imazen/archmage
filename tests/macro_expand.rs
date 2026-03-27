@@ -7,23 +7,21 @@
 
 #[test]
 fn macro_expansion_snapshots() {
-    // This both compiles the unexpanded input (verifying macros produce valid code)
-    // and diffs the expanded output against checked-in snapshots.
     macrotest::expand("tests/expand/*.rs");
 }
 
-/// Verify that expanded snapshots compile as standalone Rust.
+/// Verify that every expanded snapshot compiles as standalone Rust.
 ///
-/// Excluded:
-/// - `*_stub.expanded.rs` — stubs expand `unreachable!()` to internal `core::panicking`
-///   which isn't valid standalone Rust (cargo expand artifact, not a macro bug)
-/// - `incant_passthrough.expanded.rs` — labeled blocks expand to internal compiler plumbing
-/// - `autoversion_unsafe_fn.expanded.rs` — known bug: dispatcher drops `unsafe` from `unsafe fn`
-///   (tracked, will be fixed before this exclusion is removed)
+/// This catches bugs where macros generate code that only works as tokens
+/// in the original context but wouldn't compile if written by hand.
+///
+/// Known bugs are tested with `compile_fail` — when fixed, they'll fail
+/// this test (prompting removal of the compile_fail and addition of pass).
 #[test]
 fn expanded_snapshots_compile() {
     let t = trybuild::TestCases::new();
-    // Test all expanded files EXCEPT known cargo-expand artifacts and known bugs
+
+    // === All expanded files that should compile ===
     t.pass("tests/expand/arcane_calls_rite.expanded.rs");
     t.pass("tests/expand/arcane_cfg_feature.expanded.rs");
     t.pass("tests/expand/arcane_import_intrinsics.expanded.rs");
@@ -50,10 +48,20 @@ fn expanded_snapshots_compile() {
     t.pass("tests/expand/rite_unsafe_fn.expanded.rs");
     t.pass("tests/expand/token_downgrade.expanded.rs");
     t.pass("tests/expand/token_upgrade_conditional.expanded.rs");
-    // EXCLUDED — cargo expand artifacts (not real bugs):
-    // t.pass("tests/expand/arcane_stub.expanded.rs");        // unreachable!() → core::panicking
-    // t.pass("tests/expand/rite_multi_tier_stub.expanded.rs"); // same
-    // t.pass("tests/expand/incant_passthrough.expanded.rs");   // labeled block internals
-    // EXCLUDED — known bug (dispatcher drops unsafe from unsafe fn):
-    // t.pass("tests/expand/autoversion_unsafe_fn.expanded.rs");
+
+    // === Known bugs — expanded output doesn't compile ===
+    // When fixed: move to t.pass() and delete the .stderr file
+    //
+    // Bug 1: #[autoversion] on unsafe fn — dispatcher drops `unsafe`
+    t.compile_fail("tests/expand/autoversion_unsafe_fn.expanded.rs");
+    // Bug 2: #[rite] on trait impl — #[target_feature] on safe trait method is invalid
+    t.compile_fail("tests/expand/rite_trait_impl.expanded.rs");
+    // Bug 3: #[autoversion] on trait impl — variants placed inside trait impl block
+    t.compile_fail("tests/expand/autoversion_trait_impl.expanded.rs");
+
+    // === Excluded — cargo expand artifacts (not macro bugs) ===
+    // unreachable!() expands to internal core::panicking; labeled blocks to compiler internals
+    // t.pass("tests/expand/arcane_stub.expanded.rs");
+    // t.pass("tests/expand/rite_multi_tier_stub.expanded.rs");
+    // t.pass("tests/expand/incant_passthrough.expanded.rs");
 }
