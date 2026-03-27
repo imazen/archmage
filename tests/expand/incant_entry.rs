@@ -1,4 +1,4 @@
-// incant! entry mode — summons tokens and dispatches
+// incant! entry mode with explicit tier list — summons tokens and dispatches
 use archmage::{arcane, incant, X64V3Token, NeonToken, ScalarToken};
 
 #[arcane]
@@ -16,7 +16,7 @@ fn process_scalar(_token: ScalarToken, data: &[f32; 4]) -> f32 {
 }
 
 fn dispatch(data: &[f32; 4]) -> f32 {
-    incant!(process(data))
+    incant!(process(data), [v3, neon, scalar])
 }
 
 fn main() {}

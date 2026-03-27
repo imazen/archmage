@@ -1,5 +1,5 @@
 warning: unused import: `rite`
- --> tests/expand/rite_trait_impl.expanded.rs:1:16
+ --> tests/expand/should-fail/rite_trait_impl.expanded.rs:1:16
   |
 1 | use archmage::{rite, X64V3Token};
   |                ^^^^
@@ -7,7 +7,7 @@ warning: unused import: `rite`
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
 error: `#[target_feature(..)]` cannot be applied to safe trait method
-  --> tests/expand/rite_trait_impl.expanded.rs:9:5
+  --> tests/expand/should-fail/rite_trait_impl.expanded.rs:9:5
    |
  9 | /     #[target_feature(
 10 | |         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
@@ -18,13 +18,13 @@ error: `#[target_feature(..)]` cannot be applied to safe trait method
    |       --------------------------------------------------- not an `unsafe` function
 
 error[E0053]: method `compute` has an incompatible type for trait
-  --> tests/expand/rite_trait_impl.expanded.rs:13:5
+  --> tests/expand/should-fail/rite_trait_impl.expanded.rs:13:5
    |
 13 |     fn compute(&self, token: X64V3Token, x: f32) -> f32 {
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected safe fn, found unsafe fn
    |
 note: type in trait
-  --> tests/expand/rite_trait_impl.expanded.rs:6:5
+  --> tests/expand/should-fail/rite_trait_impl.expanded.rs:6:5
    |
  6 |     fn compute(&self, token: X64V3Token, x: f32) -> f32;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -32,7 +32,7 @@ note: type in trait
               found signature `#[target_features] fn(&Engine, X64V3Token, f32) -> f32`
 
 warning: unused variable: `token`
-  --> tests/expand/rite_trait_impl.expanded.rs:13:23
+  --> tests/expand/should-fail/rite_trait_impl.expanded.rs:13:23
    |
 13 |     fn compute(&self, token: X64V3Token, x: f32) -> f32 {
    |                       ^^^^^ help: if this is intentional, prefix it with an underscore: `_token`

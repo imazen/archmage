@@ -1,5 +1,5 @@
 error[E0407]: method `process_v4` is not a member of trait `Process`
-  --> tests/expand/autoversion_trait_impl.expanded.rs:23:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:23:5
    |
 23 |       fn process_v4(&self, _token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
    |       ^  ---------- help: there is an associated function with a similar name: `process`
@@ -14,7 +14,7 @@ error[E0407]: method `process_v4` is not a member of trait `Process`
    | |_____^ not a member of trait `Process`
 
 error[E0407]: method `process_v3` is not a member of trait `Process`
-  --> tests/expand/autoversion_trait_impl.expanded.rs:46:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:46:5
    |
 46 |       fn process_v3(&self, _token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
    |       ^  ---------- help: there is an associated function with a similar name: `process`
@@ -29,7 +29,7 @@ error[E0407]: method `process_v3` is not a member of trait `Process`
    | |_____^ not a member of trait `Process`
 
 error[E0407]: method `process_scalar` is not a member of trait `Process`
-  --> tests/expand/autoversion_trait_impl.expanded.rs:68:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:68:5
    |
 68 | /     fn process_scalar(&self, _token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {
 69 | |         let _self = self;
@@ -41,7 +41,7 @@ error[E0407]: method `process_scalar` is not a member of trait `Process`
    | |_____^ not a member of trait `Process`
 
 warning: unused import: `archmage::autoversion`
- --> tests/expand/autoversion_trait_impl.expanded.rs:1:5
+ --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:1:5
   |
 1 | use archmage::autoversion;
   |     ^^^^^^^^^^^^^^^^^^^^^
@@ -49,37 +49,37 @@ warning: unused import: `archmage::autoversion`
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
 error[E0599]: no method named `process_v4` found for reference `&Filter` in the current scope
-  --> tests/expand/autoversion_trait_impl.expanded.rs:13:29
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:13:29
    |
 13 |                 return self.process_v4(__t, data);
    |                             ^^^^^^^^^^
    |
 help: there is a method `process` with a similar name, but with different arguments
-  --> tests/expand/autoversion_trait_impl.expanded.rs:6:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:6:5
    |
  6 |     fn process(&self, data: &[f32; 4]) -> f32;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0599]: no method named `process_v3` found for reference `&Filter` in the current scope
-  --> tests/expand/autoversion_trait_impl.expanded.rs:16:29
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:16:29
    |
 16 |                 return self.process_v3(__t, data);
    |                             ^^^^^^^^^^
    |
 help: there is a method `process` with a similar name, but with different arguments
-  --> tests/expand/autoversion_trait_impl.expanded.rs:6:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:6:5
    |
  6 |     fn process(&self, data: &[f32; 4]) -> f32;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0599]: no method named `process_scalar` found for reference `&Filter` in the current scope
-  --> tests/expand/autoversion_trait_impl.expanded.rs:19:14
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:19:14
    |
 19 |         self.process_scalar(archmage::ScalarToken, data)
    |              ^^^^^^^^^^^^^^
    |
 help: there is a method `process` with a similar name, but with different arguments
-  --> tests/expand/autoversion_trait_impl.expanded.rs:6:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:6:5
    |
  6 |     fn process(&self, data: &[f32; 4]) -> f32;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
