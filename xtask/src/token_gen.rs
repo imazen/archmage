@@ -33,6 +33,27 @@ fn screaming_snake(token_name: &str, suffix: &str) -> String {
     format!("{result}_{suffix}")
 }
 
+/// Convert token name to a lower_snake_case function name with given suffix.
+fn lower_snake(token_name: &str, suffix: &str) -> String {
+    let mut result = String::new();
+    let mut prev_was_upper = false;
+    for (i, c) in token_name.chars().enumerate() {
+        if c.is_uppercase() {
+            if i > 0 && !prev_was_upper {
+                result.push('_');
+            }
+            result.push(c.to_ascii_lowercase());
+            prev_was_upper = true;
+        } else {
+            result.push(c);
+            prev_was_upper = c.is_uppercase();
+        }
+    }
+    // Remove "_token" suffix
+    let result = result.trim_end_matches("_token").to_string();
+    format!("{result}_{suffix}")
+}
+
 /// Convert token name to a screaming snake case cache variable name.
 fn cache_var_name(token_name: &str) -> String {
     screaming_snake(token_name, "CACHE")
@@ -190,6 +211,12 @@ fn gen_real_tokens(
     // Generate each token
     for token in tokens {
         gen_real_token_struct(&mut out, reg, token, arch, tokens);
+        // Cold-path detection function (outside the impl block)
+        match arch {
+            "x86" => out.push_str(&gen_summon_cold_x86(token)),
+            "aarch64" => out.push_str(&gen_summon_cold_aarch64(token)),
+            _ => {} // WASM is compile-time only, no cold path
+        }
         out.push('\n');
     }
 
@@ -388,7 +415,7 @@ fn gen_summon_x86(token: &TokenDef) -> String {
 
     let cache_name = cache_var_name(&token.name);
     let all_features = cfg_all_features(&check_features);
-    let detect_expr = gen_x86_detect_expr(&check_features);
+    let detect_fn_name = lower_snake(&token.name, "detect");
 
     formatdoc! {"
         {INDENT}#[allow(deprecated)]
@@ -406,18 +433,54 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
         {INDENT}            2 => Some(unsafe {{ Self::forge_token_dangerously() }}),
         {INDENT}            1 => None,
-        {INDENT}            _ => {{
-        {INDENT}                let available = {detect_expr};
-        {INDENT}                {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
-        {INDENT}                if available {{
-        {INDENT}                    Some(unsafe {{ Self::forge_token_dangerously() }})
-        {INDENT}                }} else {{
-        {INDENT}                    None
-        {INDENT}                }}
-        {INDENT}            }}
+        {INDENT}            _ => {detect_fn_name}(),
         {INDENT}        }}
         {INDENT}    }}
         {INDENT}}}
+    "}
+}
+
+/// Generate the cold-path detection function for an x86 token.
+///
+/// This is `#[cold] #[inline(never)]` so summon()'s inline body stays tiny:
+/// just an atomic u8 read + two-way branch. The full feature detection
+/// (which calls into std_detect and probes CPUID) is outlined into this
+/// function, which is called only on the first summon() for each token.
+fn gen_summon_cold_x86(token: &TokenDef) -> String {
+    // Filter out sse/sse2 (x86_64 baseline)
+    let check_features: Vec<&str> = token
+        .features
+        .iter()
+        .filter(|f| *f != "sse" && *f != "sse2")
+        .map(|s| s.as_str())
+        .collect();
+
+    if check_features.is_empty() {
+        return String::new();
+    }
+
+    let name = &token.name;
+    let cache_name = cache_var_name(name);
+    let detect_fn_name = lower_snake(name, "detect");
+    let detect_expr = gen_x86_detect_expr(&check_features);
+    let dct_guard = ", not(feature = \"testable_dispatch\")";
+    let all_features = cfg_all_features(&check_features);
+
+    formatdoc! {"
+        #[cfg(not(all({all_features}{dct_guard})))]
+        #[cold]
+        #[inline(never)]
+        #[allow(deprecated)]
+        fn {detect_fn_name}() -> Option<{name}> {{
+            let available = {detect_expr};
+            {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
+            if available {{
+                Some(unsafe {{ <{name} as SimdToken>::forge_token_dangerously() }})
+            }} else {{
+                None
+            }}
+        }}
+
     "}
 }
 
@@ -429,7 +492,7 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
 
     let cache_name = cache_var_name(&token.name);
     let all_features = cfg_all_features(&check_features);
-    let detect_expr = gen_aarch64_detect_expr(&check_features);
+    let detect_fn_name = lower_snake(&token.name, "detect");
 
     formatdoc! {"
         {INDENT}#[allow(deprecated)]
@@ -447,18 +510,39 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
         {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
         {INDENT}            2 => Some(unsafe {{ Self::forge_token_dangerously() }}),
         {INDENT}            1 => None,
-        {INDENT}            _ => {{
-        {INDENT}                let available = {detect_expr};
-        {INDENT}                {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
-        {INDENT}                if available {{
-        {INDENT}                    Some(unsafe {{ Self::forge_token_dangerously() }})
-        {INDENT}                }} else {{
-        {INDENT}                    None
-        {INDENT}                }}
-        {INDENT}            }}
+        {INDENT}            _ => {detect_fn_name}(),
         {INDENT}        }}
         {INDENT}    }}
         {INDENT}}}
+    "}
+}
+
+/// Generate the cold-path detection function for an aarch64 token.
+fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
+    let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
+
+    let name = &token.name;
+    let cache_name = cache_var_name(name);
+    let detect_fn_name = lower_snake(name, "detect");
+    let detect_expr = gen_aarch64_detect_expr(&check_features);
+    let dct_guard = ", not(feature = \"testable_dispatch\")";
+    let all_features = cfg_all_features(&check_features);
+
+    formatdoc! {"
+        #[cfg(not(all({all_features}{dct_guard})))]
+        #[cold]
+        #[inline(never)]
+        #[allow(deprecated)]
+        fn {detect_fn_name}() -> Option<{name}> {{
+            let available = {detect_expr};
+            {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
+            if available {{
+                Some(unsafe {{ <{name} as SimdToken>::forge_token_dangerously() }})
+            }} else {{
+                None
+            }}
+        }}
+
     "}
 }
 

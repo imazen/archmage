@@ -400,7 +400,9 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
 
             // NeonToken no longer has always_available — uses runtime detection like others
 
-            // Find the summon() body for this impl block
+            // Find the summon() body and its cold-path _DETECT function.
+            // The detection logic may be in summon() directly (old style) or
+            // in a separate #[cold] #[inline(never)] function called from summon().
             let impl_start = cap.get(0).unwrap().start();
             let remaining = &content[impl_start..];
 
@@ -410,14 +412,40 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
                 None => continue,
             };
 
-            // Extract features from the summon body (up to the next fn or closing brace)
+            // Search the summon() body (inline part)
             let summon_body = &remaining[summon_pos..];
-            // Find end: next "fn " or impl block end
             let body_end = summon_body
                 .find("\n    fn ")
                 .or_else(|| summon_body.find("\n    #["))
                 .unwrap_or(summon_body.len().min(2000));
-            let summon_section = &summon_body[..body_end];
+            let mut summon_section = summon_body[..body_end].to_string();
+
+            // Also search the cold-path _DETECT function if it exists.
+            // The detect function is a module-level function named like
+            // X64_V3_DETECT, NEON_DETECT, etc.
+            let detect_fn_name = {
+                let mut result = String::new();
+                let mut prev_was_upper = false;
+                for (i, c) in token_name.chars().enumerate() {
+                    if c.is_uppercase() {
+                        if i > 0 && !prev_was_upper {
+                            result.push('_');
+                        }
+                        result.push(c.to_ascii_lowercase());
+                        prev_was_upper = true;
+                    } else {
+                        result.push(c);
+                        prev_was_upper = c.is_uppercase();
+                    }
+                }
+                let result = result.trim_end_matches("_token").to_string();
+                format!("{result}_detect")
+            };
+            let detect_marker = format!("fn {detect_fn_name}()");
+            if let Some(detect_pos) = content.find(&detect_marker) {
+                let detect_end = (detect_pos + 2000).min(content.len());
+                summon_section.push_str(&content[detect_pos..detect_end]);
+            }
 
             let re = match *arch {
                 "x86" => &x86_feature_re,
@@ -426,7 +454,7 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
             };
 
             let checked: BTreeSet<String> = re
-                .captures_iter(summon_section)
+                .captures_iter(&summon_section)
                 .map(|c| c[1].to_string())
                 .collect();
 

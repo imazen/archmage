@@ -67,15 +67,7 @@ impl SimdToken for NeonToken {
             match NEON_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
-                _ => {
-                    let available = crate::is_aarch64_feature_available!("neon");
-                    NEON_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-                    if available {
-                        Some(unsafe { Self::forge_token_dangerously() })
-                    } else {
-                        None
-                    }
-                }
+                _ => neon_detect(),
             }
         }
     }
@@ -154,6 +146,19 @@ impl NeonToken {
         }
     }
 }
+#[cfg(not(all(target_feature = "neon", not(feature = "testable_dispatch"))))]
+#[cold]
+#[inline(never)]
+#[allow(deprecated)]
+fn neon_detect() -> Option<NeonToken> {
+    let available = crate::is_aarch64_feature_available!("neon");
+    NEON_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+    if available {
+        Some(unsafe { <NeonToken as SimdToken>::forge_token_dangerously() })
+    } else {
+        None
+    }
+}
 
 /// Proof that NEON + AES is available.
 ///
@@ -214,16 +219,7 @@ impl SimdToken for NeonAesToken {
             match NEON_AES_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
-                _ => {
-                    let available = crate::is_aarch64_feature_available!("neon")
-                        && crate::is_aarch64_feature_available!("aes");
-                    NEON_AES_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-                    if available {
-                        Some(unsafe { Self::forge_token_dangerously() })
-                    } else {
-                        None
-                    }
-                }
+                _ => neon_aes_detect(),
             }
         }
     }
@@ -310,6 +306,24 @@ impl NeonAesToken {
         }
     }
 }
+#[cfg(not(all(
+    target_feature = "neon",
+    target_feature = "aes",
+    not(feature = "testable_dispatch")
+)))]
+#[cold]
+#[inline(never)]
+#[allow(deprecated)]
+fn neon_aes_detect() -> Option<NeonAesToken> {
+    let available =
+        crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("aes");
+    NEON_AES_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+    if available {
+        Some(unsafe { <NeonAesToken as SimdToken>::forge_token_dangerously() })
+    } else {
+        None
+    }
+}
 
 /// Proof that NEON + SHA3 is available.
 ///
@@ -370,16 +384,7 @@ impl SimdToken for NeonSha3Token {
             match NEON_SHA3_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
-                _ => {
-                    let available = crate::is_aarch64_feature_available!("neon")
-                        && crate::is_aarch64_feature_available!("sha3");
-                    NEON_SHA3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-                    if available {
-                        Some(unsafe { Self::forge_token_dangerously() })
-                    } else {
-                        None
-                    }
-                }
+                _ => neon_sha3_detect(),
             }
         }
     }
@@ -466,6 +471,24 @@ impl NeonSha3Token {
         }
     }
 }
+#[cfg(not(all(
+    target_feature = "neon",
+    target_feature = "sha3",
+    not(feature = "testable_dispatch")
+)))]
+#[cold]
+#[inline(never)]
+#[allow(deprecated)]
+fn neon_sha3_detect() -> Option<NeonSha3Token> {
+    let available = crate::is_aarch64_feature_available!("neon")
+        && crate::is_aarch64_feature_available!("sha3");
+    NEON_SHA3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+    if available {
+        Some(unsafe { <NeonSha3Token as SimdToken>::forge_token_dangerously() })
+    } else {
+        None
+    }
+}
 
 /// Proof that NEON + CRC is available.
 ///
@@ -527,16 +550,7 @@ impl SimdToken for NeonCrcToken {
             match NEON_CRC_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
-                _ => {
-                    let available = crate::is_aarch64_feature_available!("neon")
-                        && crate::is_aarch64_feature_available!("crc");
-                    NEON_CRC_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-                    if available {
-                        Some(unsafe { Self::forge_token_dangerously() })
-                    } else {
-                        None
-                    }
-                }
+                _ => neon_crc_detect(),
             }
         }
     }
@@ -621,6 +635,24 @@ impl NeonCrcToken {
         {
             Ok(NEON_CRC_DISABLED.load(Ordering::Relaxed))
         }
+    }
+}
+#[cfg(not(all(
+    target_feature = "neon",
+    target_feature = "crc",
+    not(feature = "testable_dispatch")
+)))]
+#[cold]
+#[inline(never)]
+#[allow(deprecated)]
+fn neon_crc_detect() -> Option<NeonCrcToken> {
+    let available =
+        crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("crc");
+    NEON_CRC_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+    if available {
+        Some(unsafe { <NeonCrcToken as SimdToken>::forge_token_dangerously() })
+    } else {
+        None
     }
 }
 
@@ -708,21 +740,7 @@ impl SimdToken for Arm64V2Token {
             match ARM64_V2_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
-                _ => {
-                    let available = crate::is_aarch64_feature_available!("neon")
-                        && crate::is_aarch64_feature_available!("crc")
-                        && crate::is_aarch64_feature_available!("rdm")
-                        && crate::is_aarch64_feature_available!("dotprod")
-                        && crate::is_aarch64_feature_available!("fp16")
-                        && crate::is_aarch64_feature_available!("aes")
-                        && crate::is_aarch64_feature_available!("sha2");
-                    ARM64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-                    if available {
-                        Some(unsafe { Self::forge_token_dangerously() })
-                    } else {
-                        None
-                    }
-                }
+                _ => arm64_v2_detect(),
             }
         }
     }
@@ -834,6 +852,34 @@ impl Arm64V2Token {
         }
     }
 }
+#[cfg(not(all(
+    target_feature = "neon",
+    target_feature = "crc",
+    target_feature = "rdm",
+    target_feature = "dotprod",
+    target_feature = "fp16",
+    target_feature = "aes",
+    target_feature = "sha2",
+    not(feature = "testable_dispatch")
+)))]
+#[cold]
+#[inline(never)]
+#[allow(deprecated)]
+fn arm64_v2_detect() -> Option<Arm64V2Token> {
+    let available = crate::is_aarch64_feature_available!("neon")
+        && crate::is_aarch64_feature_available!("crc")
+        && crate::is_aarch64_feature_available!("rdm")
+        && crate::is_aarch64_feature_available!("dotprod")
+        && crate::is_aarch64_feature_available!("fp16")
+        && crate::is_aarch64_feature_available!("aes")
+        && crate::is_aarch64_feature_available!("sha2");
+    ARM64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+    if available {
+        Some(unsafe { <Arm64V2Token as SimdToken>::forge_token_dangerously() })
+    } else {
+        None
+    }
+}
 
 /// Proof that the full modern ARM SIMD feature set is available (Arm64-v3).
 ///
@@ -938,26 +984,7 @@ impl SimdToken for Arm64V3Token {
             match ARM64_V3_CACHE.load(Ordering::Relaxed) {
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
-                _ => {
-                    let available = crate::is_aarch64_feature_available!("neon")
-                        && crate::is_aarch64_feature_available!("crc")
-                        && crate::is_aarch64_feature_available!("rdm")
-                        && crate::is_aarch64_feature_available!("dotprod")
-                        && crate::is_aarch64_feature_available!("fp16")
-                        && crate::is_aarch64_feature_available!("aes")
-                        && crate::is_aarch64_feature_available!("sha2")
-                        && crate::is_aarch64_feature_available!("fhm")
-                        && crate::is_aarch64_feature_available!("fcma")
-                        && crate::is_aarch64_feature_available!("sha3")
-                        && crate::is_aarch64_feature_available!("i8mm")
-                        && crate::is_aarch64_feature_available!("bf16");
-                    ARM64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-                    if available {
-                        Some(unsafe { Self::forge_token_dangerously() })
-                    } else {
-                        None
-                    }
-                }
+                _ => arm64_v3_detect(),
             }
         }
     }
@@ -1088,6 +1115,44 @@ impl Arm64V3Token {
         {
             Ok(ARM64_V3_DISABLED.load(Ordering::Relaxed))
         }
+    }
+}
+#[cfg(not(all(
+    target_feature = "neon",
+    target_feature = "crc",
+    target_feature = "rdm",
+    target_feature = "dotprod",
+    target_feature = "fp16",
+    target_feature = "aes",
+    target_feature = "sha2",
+    target_feature = "fhm",
+    target_feature = "fcma",
+    target_feature = "sha3",
+    target_feature = "i8mm",
+    target_feature = "bf16",
+    not(feature = "testable_dispatch")
+)))]
+#[cold]
+#[inline(never)]
+#[allow(deprecated)]
+fn arm64_v3_detect() -> Option<Arm64V3Token> {
+    let available = crate::is_aarch64_feature_available!("neon")
+        && crate::is_aarch64_feature_available!("crc")
+        && crate::is_aarch64_feature_available!("rdm")
+        && crate::is_aarch64_feature_available!("dotprod")
+        && crate::is_aarch64_feature_available!("fp16")
+        && crate::is_aarch64_feature_available!("aes")
+        && crate::is_aarch64_feature_available!("sha2")
+        && crate::is_aarch64_feature_available!("fhm")
+        && crate::is_aarch64_feature_available!("fcma")
+        && crate::is_aarch64_feature_available!("sha3")
+        && crate::is_aarch64_feature_available!("i8mm")
+        && crate::is_aarch64_feature_available!("bf16");
+    ARM64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+    if available {
+        Some(unsafe { <Arm64V3Token as SimdToken>::forge_token_dangerously() })
+    } else {
+        None
     }
 }
 
