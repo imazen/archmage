@@ -7,9 +7,9 @@
 #![cfg(target_arch = "x86_64")]
 
 use archmage::{Desktop64, SimdToken, X64V3Token};
+use std::sync::atomic::{AtomicU8, Ordering};
 use zenbench::criterion_compat::*;
 use zenbench::{criterion_group, criterion_main};
-use std::sync::atomic::{AtomicU8, Ordering};
 
 // ============================================================================
 // Current implementation (multiple is_x86_feature_detected! calls)

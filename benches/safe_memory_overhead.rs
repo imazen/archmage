@@ -9,10 +9,10 @@
 #![cfg(target_arch = "x86_64")]
 
 use archmage::{Desktop64, SimdToken, arcane};
-use zenbench::criterion_compat::*;
-use zenbench::{criterion_group, criterion_main};
 use magetypes::simd::f32x8;
 use std::arch::x86_64::*;
+use zenbench::criterion_compat::*;
+use zenbench::{criterion_group, criterion_main};
 
 // =============================================================================
 // Pattern 1: safe_unaligned_simd load in hot loop inside #[arcane]
