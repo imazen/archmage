@@ -59,7 +59,7 @@ safe_unaligned_simd = { version = "0.2.5" }
 
 # Dev dependencies that don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-zenbench = { version = "0.1.1", features = ["criterion-compat"] }
+zenbench = { version = "0.1.2", features = ["criterion-compat"] }
 trybuild = "1.0"
 safe_unaligned_simd = { version = "0.2.5", features = ["avx512"] }
 # SIMD types for tests and examples
