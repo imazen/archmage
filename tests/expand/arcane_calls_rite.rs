@@ -1,0 +1,20 @@
+// #[arcane] entry point calling #[rite] inner helper — the recommended pattern
+use archmage::{arcane, rite, X64V3Token};
+
+#[rite(v3)]
+fn normalize(v: &[f32; 4]) -> [f32; 4] {
+    let mut sum = 0.0f32;
+    for &x in v {
+        sum += x * x;
+    }
+    let inv = 1.0 / sum.sqrt();
+    [v[0] * inv, v[1] * inv, v[2] * inv, v[3] * inv]
+}
+
+#[arcane]
+fn process(token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
+    let _ = token;
+    normalize(data)
+}
+
+fn main() {}
