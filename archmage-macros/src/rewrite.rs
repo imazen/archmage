@@ -119,9 +119,14 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
     };
 
     // Partition callee tiers into:
-    // 1. Same-arch tiers ABOVE the caller (need summon — upgrade attempts)
-    // 2. Same-arch tier matching or below the caller (direct call — guaranteed)
-    // 3. Scalar/default fallback
+    // 1. Exact match (caller tier == callee tier) — direct call, no method
+    // 2. Downgrade (caller can reach callee via ancestor chain) — token.method()
+    // 3. Upgrade (callee above caller, or unreachable branch) — needs summon
+    // 4. Scalar/default fallback
+    //
+    // Uses can_downgrade_tier() which checks the actual parent DAG, not just
+    // numeric priority. This correctly handles cross-branch cases (e.g., V4
+    // cannot downgrade to V3_crypto even though V4 has higher priority).
     let mut upgrade_tiers: Vec<&ResolvedTier> = Vec::new();
     let mut direct_tier: Option<&ResolvedTier> = None;
 
@@ -133,12 +138,19 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
         if rt.target_arch != ctx.target_arch {
             continue;
         }
-        if rt.priority > ctx.tier_priority {
-            // Callee tier is above caller — needs upgrade (summon)
+        if rt.suffix == ctx.tier_suffix {
+            // Exact match — direct call, no downgrade method
+            if direct_tier.is_none() {
+                direct_tier = Some(rt);
+            }
+        } else if crate::generated::can_downgrade_tier(&ctx.tier_suffix, rt.suffix) {
+            // Caller can downgrade to this tier — direct call with method
+            if direct_tier.is_none() {
+                direct_tier = Some(rt);
+            }
+        } else {
+            // Can't downgrade — needs upgrade summon
             upgrade_tiers.push(rt);
-        } else if direct_tier.is_none() {
-            // First tier at or below caller — direct call (best match)
-            direct_tier = Some(rt);
         }
     }
 

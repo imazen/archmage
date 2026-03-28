@@ -571,6 +571,33 @@ pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'stati
     }
 }
 
+/// Check if tier `from_suffix` can downgrade to tier `to_suffix`.
+///
+/// Returns true when the `from` token has an extraction method (`.to_suffix()`)
+/// for the `to` token. Follows the parent hierarchy transitively.
+/// Identity (from == to) returns false (use direct pass, no method needed).
+pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
+    if from_suffix == to_suffix {
+        return false;
+    }
+    match (from_suffix, to_suffix) {
+        ("v2", "v1") => true,
+        ("x64_crypto", "v2" | "v1") => true,
+        ("v3", "v2" | "v1") => true,
+        ("v3_crypto", "x64_crypto" | "v2" | "v1" | "v3") => true,
+        ("v4", "x64_crypto" | "v2" | "v1" | "v3") => true,
+        ("v4x", "v3_crypto" | "x64_crypto" | "v2" | "v1" | "v3" | "v4") => true,
+        ("fp16", "v4" | "x64_crypto" | "v2" | "v1" | "v3") => true,
+        ("neon_aes", "neon") => true,
+        ("neon_sha3", "neon") => true,
+        ("neon_crc", "neon") => true,
+        ("arm_v2", "neon") => true,
+        ("arm_v3", "arm_v2" | "neon") => true,
+        ("wasm128_relaxed", "wasm128") => true,
+        _ => false,
+    }
+}
+
 /// All concrete token names that exist in the runtime crate.
 #[cfg(test)]
 pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[

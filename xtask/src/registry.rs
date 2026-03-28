@@ -474,6 +474,8 @@ impl Registry {
         out.push('\n');
         self.gen_canonical_token_to_tier_suffix(&mut out);
         out.push('\n');
+        self.gen_can_downgrade_tier(&mut out);
+        out.push('\n');
         self.gen_all_concrete_tokens(&mut out);
         out.push('\n');
         self.gen_all_trait_names(&mut out);
@@ -722,6 +724,65 @@ impl Registry {
         }
 
         out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
+    /// Generate `can_downgrade_tier(from_suffix, to_suffix) -> bool`.
+    ///
+    /// Returns true if a token with tier `from_suffix` has an extraction method
+    /// to a token with tier `to_suffix`. This follows the parent DAG: a token
+    /// can downgrade to any of its ancestors (transitive).
+    fn gen_can_downgrade_tier(&self, out: &mut String) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Check if tier `from_suffix` can downgrade to tier `to_suffix`.
+            ///
+            /// Returns true when the `from` token has an extraction method (`.to_suffix()`)
+            /// for the `to` token. Follows the parent hierarchy transitively.
+            /// Identity (from == to) returns false (use direct pass, no method needed).
+            pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {{
+                if from_suffix == to_suffix {{ return false; }}
+                match (from_suffix, to_suffix) {{
+        "});
+
+        // For each token, compute all ancestor tier suffixes via BFS through parents
+        for token in &self.token {
+            let from_suffix = match token.short_name.as_deref() {
+                Some(s) => s,
+                None => continue,
+            };
+
+            // BFS ancestors
+            let mut ancestors = Vec::new();
+            let mut queue: Vec<&str> = token.parents.iter().map(|s| s.as_str()).collect();
+            let mut visited = std::collections::HashSet::new();
+            visited.insert(token.name.as_str());
+
+            while let Some(parent_name) = queue.pop() {
+                if !visited.insert(parent_name) {
+                    continue;
+                }
+                if let Some(parent) = self.token.iter().find(|t| t.name == parent_name) {
+                    if let Some(ref short) = parent.short_name {
+                        ancestors.push(short.as_str());
+                    }
+                    for grandparent in &parent.parents {
+                        queue.push(grandparent);
+                    }
+                }
+            }
+
+            if !ancestors.is_empty() {
+                let ancestor_list: Vec<String> =
+                    ancestors.iter().map(|a| format!("\"{a}\"")).collect();
+                let pattern = ancestor_list.join(" | ");
+                out.push_str(&format!(
+                    "        (\"{from_suffix}\", {pattern}) => true,\n"
+                ));
+            }
+        }
+
+        out.push_str("        _ => false,\n");
         out.push_str("    }\n}\n");
     }
 
