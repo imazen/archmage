@@ -753,6 +753,18 @@ impl SimdToken for Arm64V2Token {
 }
 
 impl Arm64V2Token {
+    /// Get a NeonAesToken (Arm64-v2 implies NEON+AES)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn neon_aes(self) -> NeonAesToken {
+        unsafe { NeonAesToken::forge_token_dangerously() }
+    }
+    /// Get a NeonCrcToken (Arm64-v2 implies NEON+CRC)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn neon_crc(self) -> NeonCrcToken {
+        unsafe { NeonCrcToken::forge_token_dangerously() }
+    }
     /// Get a NeonToken (Arm64-v2 implies NEON)
     #[allow(deprecated)]
     #[inline(always)]
@@ -1002,6 +1014,24 @@ impl Arm64V3Token {
     #[inline(always)]
     pub fn arm_v2(self) -> Arm64V2Token {
         unsafe { Arm64V2Token::forge_token_dangerously() }
+    }
+    /// Get a NeonAesToken (Arm64-v3 implies NEON+AES)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn neon_aes(self) -> NeonAesToken {
+        unsafe { NeonAesToken::forge_token_dangerously() }
+    }
+    /// Get a NeonCrcToken (Arm64-v3 implies NEON+CRC)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn neon_crc(self) -> NeonCrcToken {
+        unsafe { NeonCrcToken::forge_token_dangerously() }
+    }
+    /// Get a NeonSha3Token (Arm64-v3 implies NEON+SHA3)
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn neon_sha3(self) -> NeonSha3Token {
+        unsafe { NeonSha3Token::forge_token_dangerously() }
     }
     /// Get a NeonToken (Arm64-v3 implies NEON)
     #[allow(deprecated)]

@@ -568,17 +568,37 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
 }
 
 fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
-    let ancestors = collect_ancestors(reg, token);
-    if ancestors.is_empty() {
+    // Use feature subset math: generate a method for every same-arch token
+    // whose features are a strict subset of this token's features.
+    // This is more complete than the parent DAG (catches cross-branch subsets).
+    let token_features: std::collections::BTreeSet<&str> =
+        token.features.iter().map(|s| s.as_str()).collect();
+
+    let mut targets: Vec<&TokenDef> = reg
+        .token
+        .iter()
+        .filter(|other| {
+            other.name != token.name && other.arch == token.arch && {
+                let other_features: std::collections::BTreeSet<&str> =
+                    other.features.iter().map(|s| s.as_str()).collect();
+                other_features.is_subset(&token_features) && other_features != token_features
+            }
+        })
+        .collect();
+
+    if targets.is_empty() {
         return;
     }
+
+    // Sort for deterministic output
+    targets.sort_by_key(|t| &t.name);
 
     let name = &token.name;
     let token_display = token.display_name.as_deref().unwrap_or(name);
 
     out.push_str(&format!("\nimpl {name} {{\n"));
 
-    for ancestor in &ancestors {
+    for ancestor in &targets {
         let anc_name = &ancestor.name;
         let short = ancestor
             .short_name

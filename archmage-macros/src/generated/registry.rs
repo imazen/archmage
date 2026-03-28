@@ -573,8 +573,7 @@ pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'stati
 
 /// Check if tier `from_suffix` can downgrade to tier `to_suffix`.
 ///
-/// Returns true when the `from` token has an extraction method (`.to_suffix()`)
-/// for the `to` token. Follows the parent hierarchy transitively.
+/// Derived from feature set math: true when `from.features ⊃ to.features`.
 /// Identity (from == to) returns false (use direct pass, no method needed).
 pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
     if from_suffix == to_suffix {
@@ -582,17 +581,17 @@ pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
     }
     match (from_suffix, to_suffix) {
         ("v2", "v1") => true,
-        ("x64_crypto", "v2" | "v1") => true,
-        ("v3", "v2" | "v1") => true,
-        ("v3_crypto", "x64_crypto" | "v2" | "v1" | "v3") => true,
-        ("v4", "x64_crypto" | "v2" | "v1" | "v3") => true,
-        ("v4x", "v3_crypto" | "x64_crypto" | "v2" | "v1" | "v3" | "v4") => true,
-        ("fp16", "v4" | "x64_crypto" | "v2" | "v1" | "v3") => true,
+        ("x64_crypto", "v1" | "v2") => true,
+        ("v3", "v1" | "v2") => true,
+        ("v3_crypto", "v1" | "v2" | "v3" | "x64_crypto") => true,
+        ("v4", "v1" | "v2" | "v3" | "x64_crypto") => true,
+        ("v4x", "v1" | "v2" | "v3" | "v3_crypto" | "v4" | "x64_crypto") => true,
+        ("fp16", "v1" | "v2" | "v3" | "v4" | "x64_crypto") => true,
         ("neon_aes", "neon") => true,
         ("neon_sha3", "neon") => true,
         ("neon_crc", "neon") => true,
-        ("arm_v2", "neon") => true,
-        ("arm_v3", "arm_v2" | "neon") => true,
+        ("arm_v2", "neon" | "neon_aes" | "neon_crc") => true,
+        ("arm_v3", "arm_v2" | "neon" | "neon_aes" | "neon_crc" | "neon_sha3") => true,
         ("wasm128_relaxed", "wasm128") => true,
         _ => false,
     }

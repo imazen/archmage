@@ -729,53 +729,57 @@ impl Registry {
 
     /// Generate `can_downgrade_tier(from_suffix, to_suffix) -> bool`.
     ///
-    /// Returns true if a token with tier `from_suffix` has an extraction method
-    /// to a token with tier `to_suffix`. This follows the parent DAG: a token
-    /// can downgrade to any of its ancestors (transitive).
+    /// Derived from feature set math: `from` can downgrade to `to` when
+    /// `from.features ⊇ to.features` (strict superset). Computed at codegen
+    /// time from the actual feature lists — not from the parent DAG.
     fn gen_can_downgrade_tier(&self, out: &mut String) {
         use indoc::formatdoc;
         out.push_str(&formatdoc! {"
             /// Check if tier `from_suffix` can downgrade to tier `to_suffix`.
             ///
-            /// Returns true when the `from` token has an extraction method (`.to_suffix()`)
-            /// for the `to` token. Follows the parent hierarchy transitively.
+            /// Derived from feature set math: true when `from.features ⊃ to.features`.
             /// Identity (from == to) returns false (use direct pass, no method needed).
             pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {{
                 if from_suffix == to_suffix {{ return false; }}
                 match (from_suffix, to_suffix) {{
         "});
 
-        // For each token, compute all ancestor tier suffixes via BFS through parents
-        for token in &self.token {
-            let from_suffix = match token.short_name.as_deref() {
+        // Feature subset computation: from can downgrade to to when
+        // from.features ⊇ to.features AND same architecture
+        for from_token in &self.token {
+            let from_suffix = match from_token.short_name.as_deref() {
                 Some(s) => s,
                 None => continue,
             };
+            let from_features: std::collections::BTreeSet<&str> =
+                from_token.features.iter().map(|s| s.as_str()).collect();
 
-            // BFS ancestors
-            let mut ancestors = Vec::new();
-            let mut queue: Vec<&str> = token.parents.iter().map(|s| s.as_str()).collect();
-            let mut visited = std::collections::HashSet::new();
-            visited.insert(token.name.as_str());
-
-            while let Some(parent_name) = queue.pop() {
-                if !visited.insert(parent_name) {
+            let mut downgradable = Vec::new();
+            for to_token in &self.token {
+                if from_token.name == to_token.name {
                     continue;
                 }
-                if let Some(parent) = self.token.iter().find(|t| t.name == parent_name) {
-                    if let Some(ref short) = parent.short_name {
-                        ancestors.push(short.as_str());
-                    }
-                    for grandparent in &parent.parents {
-                        queue.push(grandparent);
-                    }
+                let to_suffix = match to_token.short_name.as_deref() {
+                    Some(s) => s,
+                    None => continue,
+                };
+                if from_token.arch != to_token.arch {
+                    continue;
+                }
+                let to_features: std::collections::BTreeSet<&str> =
+                    to_token.features.iter().map(|s| s.as_str()).collect();
+
+                // Strict superset: from ⊇ to AND from ≠ to
+                if to_features.is_subset(&from_features) && to_features != from_features {
+                    downgradable.push(to_suffix);
                 }
             }
 
-            if !ancestors.is_empty() {
-                let ancestor_list: Vec<String> =
-                    ancestors.iter().map(|a| format!("\"{a}\"")).collect();
-                let pattern = ancestor_list.join(" | ");
+            if !downgradable.is_empty() {
+                downgradable.sort();
+                let pattern: Vec<String> =
+                    downgradable.iter().map(|s| format!("\"{s}\"")).collect();
+                let pattern = pattern.join(" | ");
                 out.push_str(&format!(
                     "        (\"{from_suffix}\", {pattern}) => true,\n"
                 ));
