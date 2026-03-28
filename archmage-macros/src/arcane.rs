@@ -217,18 +217,17 @@ pub(crate) fn arcane_impl(
 
     // Rewrite incant!() calls in the body to direct tier calls.
     // Only for concrete tokens where we can determine the tier suffix.
-    if let Some(ref type_name) = token_type_name {
-        if let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(type_name) {
-            if let Some(tier) = crate::tiers::find_tier(tier_suffix) {
-                let ctx = crate::rewrite::CallerContext {
-                    tier_suffix: tier_suffix.to_string(),
-                    tier_priority: tier.priority,
-                    target_arch: tier.target_arch,
-                    token_ident: _token_ident.clone(),
-                };
-                input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body.clone(), &ctx);
-            }
-        }
+    if let Some(ref type_name) = token_type_name
+        && let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(type_name)
+        && let Some(tier) = crate::tiers::find_tier(tier_suffix)
+    {
+        let ctx = crate::rewrite::CallerContext {
+            tier_suffix: tier_suffix.to_string(),
+            tier_priority: tier.priority,
+            target_arch: tier.target_arch,
+            token_ident: _token_ident.clone(),
+        };
+        input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body.clone(), &ctx);
     }
 
     // Build a single target_feature attribute with all features comma-joined

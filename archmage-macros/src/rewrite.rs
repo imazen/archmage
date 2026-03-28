@@ -61,19 +61,20 @@ pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> 
         }
 
         // Check for `incant ! ( ... )` pattern
-        if is_ident(&tokens[i], "incant") && i + 2 < tokens.len() && is_punct(&tokens[i + 1], '!') {
-            if let Some(TokenTree::Group(group)) = tokens.get(i + 2) {
-                if group.delimiter() == Delimiter::Parenthesis {
-                    // Try to parse the incant arguments
-                    let inner = group.stream();
-                    if let Ok(input) = syn::parse2::<IncantInput>(inner) {
-                        // Rewrite this incant! call
-                        let rewritten = rewrite_single_incant(&input, ctx);
-                        result.extend(rewritten.into_iter());
-                        i += 3; // skip `incant`, `!`, `(...)`
-                        continue;
-                    }
-                }
+        if is_ident(&tokens[i], "incant")
+            && i + 2 < tokens.len()
+            && is_punct(&tokens[i + 1], '!')
+            && let Some(TokenTree::Group(group)) = tokens.get(i + 2)
+            && group.delimiter() == Delimiter::Parenthesis
+        {
+            // Try to parse the incant arguments
+            let inner = group.stream();
+            if let Ok(input) = syn::parse2::<IncantInput>(inner) {
+                // Rewrite this incant! call
+                let rewritten = rewrite_single_incant(&input, ctx);
+                result.extend(rewritten.into_iter());
+                i += 3; // skip `incant`, `!`, `(...)`
+                continue;
             }
         }
 
