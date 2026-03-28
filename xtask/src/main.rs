@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod expand_gen;
 mod intrinsics_browser;
 mod registry;
 mod simd_types;
@@ -1235,6 +1236,7 @@ fn main() -> Result<()> {
         "validate-registry" => validate_registry()?,
         "parity" => check_api_parity(false)?,
         "soundness" => verify_intrinsic_soundness()?,
+        "gen-expand" => expand_gen::generate_expand_tests(&PathBuf::from("tests/expand"))?,
         "miri" => run_miri()?,
         "audit" => run_safety_audit()?,
         "intrinsics-refresh" => refresh_intrinsics_database()?,

@@ -1,22 +1,19 @@
 //! Macro expansion snapshot tests.
 //!
-//! - `tests/expand/*.rs` — all must compile (unexpanded AND expanded)
-//! - `tests/expand/should-fail/` — known bugs, may fail unexpanded and/or expanded
+//! Generated test files live in `tests/expand/{category}/`.
+//! Known bugs live in `tests/expand/should-fail/`.
 //!
-//! Snapshot diffs (macrotest) only run on x86_64 — expansion is arch-dependent.
-//! Compilation tests (trybuild) run on all platforms.
-//!
-//! To update snapshots (on x86_64):
-//!   `MACROTEST=overwrite cargo test -p archmage --test macro_expand`
+//! To regenerate test inputs: `cargo run -p xtask -- gen-expand`
+//! To update snapshots: `MACROTEST=overwrite cargo test -p archmage --test macro_expand`
 //!
 //! Requires `cargo-expand` (`cargo install cargo-expand`).
 
 /// Expand all passing inputs and diff against `.expanded.rs` snapshots.
-/// x86_64 only — expansion output is arch-dependent (cfg-gated code differs).
+/// x86_64 only — expansion output is arch-dependent.
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn macro_expansion_snapshots() {
-    macrotest::expand("tests/expand/*.rs");
+    macrotest::expand("tests/expand/**/*.rs");
 }
 
 /// Snapshot tests for known-buggy expansions.
@@ -26,26 +23,35 @@ fn macro_expansion_snapshots_known_bugs() {
     macrotest::expand("tests/expand/should-fail/*.rs");
 }
 
-/// Every unexpanded input in expand/ must compile with macros applied.
-/// x86_64 only — test files use x86-specific tokens and intrinsics.
+/// Every unexpanded input must compile with macros applied.
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn unexpanded_input_compiles() {
     let t = trybuild::TestCases::new();
-    t.pass("tests/expand/*.rs");
+    t.pass("tests/expand/arcane/*.rs");
+    t.pass("tests/expand/rite/*.rs");
+    t.pass("tests/expand/autoversion/*.rs");
+    t.pass("tests/expand/incant/*.rs");
+    t.pass("tests/expand/rewrite/*.rs");
+    t.pass("tests/expand/deprecated/*.rs");
+    t.pass("tests/expand/combinations/*.rs");
 }
 
-/// Every expanded output in expand/ must compile as standalone Rust.
-/// x86_64 only — snapshots contain x86_64-specific imports and types.
+/// Every expanded output must compile as standalone Rust.
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn expanded_output_compiles() {
     let t = trybuild::TestCases::new();
-    t.pass("tests/expand/*.expanded.rs");
+    t.pass("tests/expand/arcane/*.expanded.rs");
+    t.pass("tests/expand/rite/*.expanded.rs");
+    t.pass("tests/expand/autoversion/*.expanded.rs");
+    t.pass("tests/expand/incant/*.expanded.rs");
+    t.pass("tests/expand/rewrite/*.expanded.rs");
+    t.pass("tests/expand/deprecated/*.expanded.rs");
+    t.pass("tests/expand/combinations/*.expanded.rs");
 }
 
 /// Known bugs: expanded output that doesn't compile standalone.
-/// When fixed, move from should-fail/ back to expand/.
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn expanded_output_known_bugs() {

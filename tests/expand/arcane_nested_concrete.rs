@@ -1,9 +1,0 @@
-// #[arcane(nested)] with concrete token — inner fn inside outer
-use archmage::{arcane, X64V3Token};
-
-#[arcane(nested)]
-fn process(token: X64V3Token, a: f32, b: f32) -> f32 {
-    a + b
-}
-
-fn main() {}
