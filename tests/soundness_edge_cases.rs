@@ -5,7 +5,7 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use archmage::{arcane, rite, autoversion, SimdToken, X64V3Token, X64V4Token, ScalarToken};
+use archmage::{ScalarToken, SimdToken, X64V3Token, X64V4Token, arcane, autoversion, rite};
 
 // ============================================================================
 // 1. Token + Send/Sync: tokens should be safely sendable across threads
@@ -58,11 +58,7 @@ fn fn_pointer_to_trampoline_requires_token() {
 // ============================================================================
 
 #[arcane]
-fn process_with_closure(
-    token: X64V3Token,
-    data: &[f32; 4],
-    transform: impl Fn(f32) -> f32,
-) -> f32 {
+fn process_with_closure(token: X64V3Token, data: &[f32; 4], transform: impl Fn(f32) -> f32) -> f32 {
     let _ = token;
     // The closure `transform` does NOT have target_feature — that's fine.
     // Calling a non-target_feature fn from target_feature context is always safe.
@@ -84,18 +80,22 @@ fn callback_without_target_feature_is_safe() {
 #[autoversion]
 fn sum_squares(data: &[f32; 4]) -> f32 {
     let mut s = 0.0f32;
-    for &x in data { s += x * x; }
+    for &x in data {
+        s += x * x;
+    }
     s
 }
 
 #[test]
 fn autoversion_from_multiple_threads() {
-    let handles: Vec<_> = (0..4).map(|i| {
-        std::thread::spawn(move || {
-            let data = [i as f32; 4];
-            sum_squares(&data)
+    let handles: Vec<_> = (0..4)
+        .map(|i| {
+            std::thread::spawn(move || {
+                let data = [i as f32; 4];
+                sum_squares(&data)
+            })
         })
-    }).collect();
+        .collect();
 
     for (i, h) in handles.into_iter().enumerate() {
         let expected = 4.0 * (i as f32) * (i as f32);
@@ -121,9 +121,7 @@ fn v4_calls_v3(token: X64V4Token, x: f32) -> f32 {
 #[test]
 fn downgrade_in_thread() {
     if let Some(token) = X64V4Token::summon() {
-        let handle = std::thread::spawn(move || {
-            v4_calls_v3(token, 5.0)
-        });
+        let handle = std::thread::spawn(move || v4_calls_v3(token, 5.0));
         assert_eq!(handle.join().unwrap(), 11.0);
     }
 }
@@ -134,12 +132,14 @@ fn downgrade_in_thread() {
 
 #[test]
 fn concurrent_summon_is_safe() {
-    let handles: Vec<_> = (0..8).map(|_| {
-        std::thread::spawn(|| {
-            // All threads race to summon — should all get the same result
-            X64V3Token::summon()
+    let handles: Vec<_> = (0..8)
+        .map(|_| {
+            std::thread::spawn(|| {
+                // All threads race to summon — should all get the same result
+                X64V3Token::summon()
+            })
         })
-    }).collect();
+        .collect();
 
     let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
     // All results should be identical
@@ -159,7 +159,9 @@ struct SimdProcessor {
 
 impl SimdProcessor {
     fn new() -> Option<Self> {
-        Some(Self { token: X64V3Token::summon()? })
+        Some(Self {
+            token: X64V3Token::summon()?,
+        })
     }
 
     fn process(&self, data: &[f32; 4]) -> f32 {
@@ -186,12 +188,12 @@ fn token_in_arc_across_threads() {
         // Token is Copy, but test Arc<Struct> pattern too
         let proc = Arc::new(SimdProcessor { token });
 
-        let handles: Vec<_> = (0..4).map(|_| {
-            let proc = Arc::clone(&proc);
-            std::thread::spawn(move || {
-                proc.process(&[1.0, 2.0, 3.0, 4.0])
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let proc = Arc::clone(&proc);
+                std::thread::spawn(move || proc.process(&[1.0, 2.0, 3.0, 4.0]))
             })
-        }).collect();
+            .collect();
 
         for h in handles {
             assert_eq!(h.join().unwrap(), 10.0);
