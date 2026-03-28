@@ -17,7 +17,7 @@ pub(crate) struct IncantInput {
     /// Arguments to pass
     pub(crate) args: Vec<syn::Expr>,
     /// Optional token variable for passthrough mode
-    with_token: Option<syn::Expr>,
+    pub(crate) with_token: Option<syn::Expr>,
     /// Optional explicit tier list (None = default tiers)
     pub(crate) tiers: Option<(Vec<String>, proc_macro2::Span)>,
 }

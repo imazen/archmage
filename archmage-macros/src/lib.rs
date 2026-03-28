@@ -8,6 +8,7 @@ mod common;
 mod generated;
 mod incant;
 mod magetypes;
+mod rewrite;
 mod rite;
 mod tiers;
 mod token_discovery;
