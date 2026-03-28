@@ -7,6 +7,10 @@ passthrough = [
     "RUST_LOG",
 ]
 
+# Install cargo-expand inside cross containers for macrotest snapshot tests
+[build]
+pre-build = ["cargo install cargo-expand --locked"]
+
 # i686 (32-bit x86 Linux)
 [target.i686-unknown-linux-gnu]
 # Uses QEMU for testing
