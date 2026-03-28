@@ -617,14 +617,14 @@ mod x86_tests {
 }
 
 // =============================================================================
-// Cross-architecture cfg-out and stub tests
+// Cross-architecture cfg-out tests
 // =============================================================================
 
 #[cfg(target_arch = "x86_64")]
 mod cross_arch_cfgout_tests {
     use archmage::{NeonToken, SimdToken, arcane};
 
-    // Default behavior: ARM function is cfg'd out on x86 (no stub)
+    // Default behavior: ARM function is cfg'd out on x86
     #[arcane]
     fn arm_function_cfgout(_token: NeonToken, data: &[f32]) -> f32 {
         data.iter().sum()
@@ -635,18 +635,6 @@ mod cross_arch_cfgout_tests {
         // NeonToken can't be summoned on x86, and the function is cfg'd out
         assert!(NeonToken::summon().is_none());
         // arm_function_cfgout doesn't exist on x86 — not referenceable
-    }
-
-    // With stub: ARM function exists as unreachable stub on x86
-    #[arcane(stub)]
-    fn arm_function_with_stub(_token: NeonToken, data: &[f32]) -> f32 {
-        data.iter().sum()
-    }
-
-    #[test]
-    fn stub_function_compiles() {
-        // Function exists (stub) but can't be reached — token returns None
-        assert!(NeonToken::summon().is_none());
     }
 }
 
@@ -660,14 +648,8 @@ mod cross_arch_cfgout_tests_arm {
         data.iter().sum()
     }
 
-    // With stub: x86 function exists as unreachable stub on ARM
-    #[arcane(stub)]
-    fn x86_function_with_stub(_token: X64V3Token, data: &[f32]) -> f32 {
-        data.iter().sum()
-    }
-
     #[test]
-    fn stub_function_compiles() {
+    fn cfgout_function_not_callable() {
         assert!(X64V3Token::summon().is_none());
     }
 }

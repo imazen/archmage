@@ -48,7 +48,17 @@ impl Parse for ArcaneArgs {
             let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
                 "inline_always" => args.inline_always = true,
-                "stub" => args.stub = true,
+                "stub" => {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        "`stub` has been removed. Use `incant!` for cross-arch dispatch \
+                         instead — it cfg-gates each architecture automatically.\n\
+                         \n\
+                         Before: #[arcane(stub)] fn process(token: X64V3Token, ...) { ... }\n\
+                         After:  #[arcane] fn process_v3(token: X64V3Token, ...) { ... }\n\
+                         \x20       fn dispatch(...) { incant!(process(...)) }",
+                    ));
+                }
                 "nested" => args.nested = true,
                 "import_intrinsics" => args.import_intrinsics = true,
                 "import_magetypes" => args.import_magetypes = true,

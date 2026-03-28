@@ -398,20 +398,20 @@ mod x86_tests {
     }
 
     // =========================================================================
-    // Stub + imports: function compiles on all arches, imports on native
+    // import_intrinsics + import_magetypes: function compiles on native arch
     // =========================================================================
 
-    #[arcane(stub, import_intrinsics, import_magetypes)]
-    fn stubbed_with_imports(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    #[arcane(import_intrinsics, import_magetypes)]
+    fn with_both_imports(token: X64V3Token, data: &[f32; 8]) -> f32 {
         let v = f32x8::load(token, data);
         v.reduce_add()
     }
 
     #[test]
-    fn test_stub_with_imports() {
+    fn test_both_imports() {
         if let Some(token) = X64V3Token::summon() {
             let data = [1.0f32; 8];
-            let result = stubbed_with_imports(token, &data);
+            let result = with_both_imports(token, &data);
             assert!((result - 8.0).abs() < 0.001);
         }
     }

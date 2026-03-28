@@ -177,12 +177,13 @@ mod explicit_dispatch {
 
     pub fn process(data: &[f32]) -> f32 {
         if let Some(token) = X64V3Token::summon() {
-            process_avx2(token, data)
-        } else if let Some(token) = Arm64::summon() {
-            process_neon(token, data)
-        } else {
-            process_scalar(data)
+            return process_avx2(token, data);
         }
+        #[cfg(target_arch = "aarch64")]
+        if let Some(token) = Arm64::summon() {
+            return process_neon(token, data);
+        }
+        process_scalar(data)
     }
 
     #[arcane]
@@ -195,7 +196,7 @@ mod explicit_dispatch {
         sum.reduce_add() + data.chunks_exact(8).remainder().iter().sum::<f32>()
     }
 
-    #[arcane(stub)]
+    #[arcane]
     fn process_neon(token: Arm64, data: &[f32]) -> f32 {
         let mut sum = f32x4::zero(token);
         for chunk in data.chunks_exact(4) {
@@ -434,12 +435,13 @@ mod dot_product {
         assert_eq!(a.len(), b.len());
 
         if let Some(token) = X64V3Token::summon() {
-            dot_avx2(token, a, b)
-        } else if let Some(token) = Arm64::summon() {
-            dot_neon(token, a, b)
-        } else {
-            dot_scalar(a, b)
+            return dot_avx2(token, a, b);
         }
+        #[cfg(target_arch = "aarch64")]
+        if let Some(token) = Arm64::summon() {
+            return dot_neon(token, a, b);
+        }
+        dot_scalar(a, b)
     }
 
     #[arcane]
@@ -464,7 +466,7 @@ mod dot_product {
         sum
     }
 
-    #[arcane(stub)]
+    #[arcane]
     fn dot_neon(token: Arm64, a: &[f32], b: &[f32]) -> f32 {
         let mut acc = f32x4::zero(token);
 

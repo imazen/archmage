@@ -186,8 +186,8 @@ fn test_rite_tier_from_arcane() {
     }
 }
 
-// Tier with stub — generates unreachable stub on wrong arch
-#[rite(v3, stub)]
+// Tier-based (no token parameter needed)
+#[rite(v3)]
 fn negate_tierless(a: &[f32; 8]) -> [f32; 8] {
     let zero = _mm256_setzero_ps();
     unsafe {
@@ -215,7 +215,7 @@ fn test_rite_tier_v2() {
 }
 
 #[test]
-fn test_rite_tier_stub() {
+fn test_rite_tier_negate() {
     if X64V3Token::summon().is_some() {
         let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let result = unsafe { negate_tierless(&a) };
@@ -389,12 +389,11 @@ fn test_rite_tier_v3_fma() {
     }
 }
 
-// --- Tier + import_intrinsics + stub combo ---
+// --- Tier + import_intrinsics combo ---
 
-#[rite(v3, import_intrinsics, stub)]
+#[rite(v3, import_intrinsics)]
 fn abs_f32x8_all_options(a: &[f32; 8]) -> [f32; 8] {
     // import_intrinsics: safe memory ops (reference-based loads/stores)
-    // stub: unreachable stub on non-x86_64
     // v3: no token parameter needed
     let va = _mm256_loadu_ps(a);
     let sign_mask = _mm256_set1_ps(-0.0);
@@ -405,7 +404,7 @@ fn abs_f32x8_all_options(a: &[f32; 8]) -> [f32; 8] {
 }
 
 #[test]
-fn test_rite_tier_import_intrinsics_stub_combo() {
+fn test_rite_tier_import_intrinsics_combo() {
     if X64V3Token::summon().is_some() {
         let a = [-1.0f32, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0];
         let result = unsafe { abs_f32x8_all_options(&a) };
@@ -1016,28 +1015,6 @@ fn test_rite_tier_chain_three_helpers() {
     }
 }
 
-// --- Tier + stub on V2 ---
-
-#[rite(v2, stub)]
-fn popcount_array_v2_stub(data: &[u32; 4]) -> [u32; 4] {
-    [
-        core::arch::x86_64::_popcnt32(data[0] as i32) as u32,
-        core::arch::x86_64::_popcnt32(data[1] as i32) as u32,
-        core::arch::x86_64::_popcnt32(data[2] as i32) as u32,
-        core::arch::x86_64::_popcnt32(data[3] as i32) as u32,
-    ]
-}
-
-#[test]
-fn test_rite_tier_v2_stub() {
-    use archmage::X64V2Token;
-    if X64V2Token::summon().is_some() {
-        let data = [0b1111u32, 0b10101010, 0b11111111, 0b0];
-        let result = unsafe { popcount_array_v2_stub(&data) };
-        assert_eq!(result, [4, 4, 8, 0]);
-    }
-}
-
 // --- V3 with generic lifetime parameters ---
 
 #[rite(v3, import_intrinsics)]
@@ -1107,25 +1084,6 @@ fn test_rite_multi_tier_import_intrinsics() {
     if X64V3Token::summon().is_some() {
         let r3 = unsafe { multi_tier_loadu_v3(&data) };
         assert_eq!(r3, 10.0);
-    }
-}
-
-// --- Multi-tier with stub ---
-
-#[rite(v1, v3, stub)]
-fn multi_tier_stub_fn(x: f32, y: f32) -> f32 {
-    x * y + 1.0
-}
-
-#[test]
-fn test_rite_multi_tier_stub() {
-    // Both should be callable on x86_64
-    let r1 = unsafe { multi_tier_stub_fn_v1(3.0, 4.0) };
-    assert_eq!(r1, 13.0);
-
-    if X64V3Token::summon().is_some() {
-        let r3 = unsafe { multi_tier_stub_fn_v3(3.0, 4.0) };
-        assert_eq!(r3, 13.0);
     }
 }
 

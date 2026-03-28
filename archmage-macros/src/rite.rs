@@ -43,7 +43,12 @@ impl Parse for RiteArgs {
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
-                "stub" => args.stub = true,
+                "stub" => {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        "`stub` has been removed. Use `incant!` for cross-arch dispatch instead.",
+                    ));
+                }
                 "import_intrinsics" => args.import_intrinsics = true,
                 "import_magetypes" => args.import_magetypes = true,
                 "cfg" => {

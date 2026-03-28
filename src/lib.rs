@@ -75,7 +75,7 @@
 //! scope, plus a safe wrapper that calls it. Since both live in the same scope,
 //! `self` and `Self` work naturally in methods. For trait impls, use
 //! `#[arcane(_self = Type)]` (nested mode). On wrong architectures, functions
-//! are cfg'd out by default; use `#[arcane(stub)]` for unreachable stubs.
+//! are cfg'd out by default. Use `incant!` for cross-arch dispatch.
 //!
 //! `#[rite]` applies `#[target_feature]` + `#[inline]` directly to the
 //! function, with no wrapper and no boundary. It works in three modes:

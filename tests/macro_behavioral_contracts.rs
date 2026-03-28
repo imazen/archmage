@@ -271,7 +271,7 @@ mod rite_contracts_x86 {
 }
 
 // =============================================================================
-// C. Cross-arch behavior: cfg-out default, stub opt-in
+// C. Cross-arch behavior: cfg-out on wrong architecture
 // =============================================================================
 
 #[cfg(target_arch = "x86_64")]
@@ -284,21 +284,9 @@ mod cross_arch_cfgout_x86 {
         data.iter().sum()
     }
 
-    // With stub: ARM function exists as unreachable stub on x86
-    #[arcane(stub)]
-    fn arm_with_stub(_token: NeonToken, data: &[f32]) -> f32 {
-        data.iter().sum()
-    }
-
     #[test]
     fn arm_token_not_available_on_x86() {
         assert!(NeonToken::summon().is_none());
-    }
-
-    #[test]
-    fn stub_function_exists() {
-        // arm_with_stub exists as a stub — can take a reference
-        let _fn_ref: fn(NeonToken, &[f32]) -> f32 = arm_with_stub;
     }
 }
 
@@ -308,11 +296,6 @@ mod cross_arch_cfgout_arm {
 
     #[arcane]
     fn x86_cfgout(_token: X64V3Token, data: &[f32]) -> f32 {
-        data.iter().sum()
-    }
-
-    #[arcane(stub)]
-    fn x86_with_stub(_token: X64V3Token, data: &[f32]) -> f32 {
         data.iter().sum()
     }
 
