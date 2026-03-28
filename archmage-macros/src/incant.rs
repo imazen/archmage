@@ -309,7 +309,7 @@ pub(crate) fn gen_incant_passthrough(
         let fn_default = suffix_path(func_path, "default");
         let default_args: Vec<syn::Expr> = args
             .iter()
-            .filter(|a| quote::ToTokens::to_token_stream(*a).to_string() != "Token")
+            .filter(|a| !crate::common::is_bare_ident_pub(a, "Token"))
             .cloned()
             .collect();
         quote! {
@@ -416,7 +416,7 @@ pub(crate) fn gen_incant_entry(
         // Default tier: strip Token marker from args if present (tokenless call)
         let default_args: Vec<syn::Expr> = args
             .iter()
-            .filter(|a| quote::ToTokens::to_token_stream(*a).to_string() != "Token")
+            .filter(|a| !crate::common::is_bare_ident_pub(a, "Token"))
             .cloned()
             .collect();
         quote! { #fn_default(#(#default_args),*) }

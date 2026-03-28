@@ -655,7 +655,13 @@ impl Registry {
         // Token types used as bounds (same as other trait_to_* functions)
         for token in &self.token {
             let pattern = Self::match_pattern(token);
-            out.push_str(&format!("        {pattern} => Some(\"{}\"),\n", token.arch));
+            let target_arch = match token.arch.as_str() {
+                "x86" => "x86_64",
+                "aarch64" => "aarch64",
+                "wasm" => "wasm32",
+                other => other,
+            };
+            out.push_str(&format!("        {pattern} => Some(\"{target_arch}\"),\n"));
         }
 
         out.push('\n');

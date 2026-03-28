@@ -10,17 +10,8 @@
 // These tests only apply to x86_64 (the UI tests use x86_64 intrinsics)
 #![cfg(target_arch = "x86_64")]
 
-fn is_ci() -> bool {
-    std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok()
-}
-
 #[test]
 fn ui_tests() {
-    if is_ci() {
-        eprintln!("Skipping trybuild tests in CI (stderr output varies by platform/version)");
-        return;
-    }
-
     let t = trybuild::TestCases::new();
 
     // These tests verify that pointer-based intrinsics fail without unsafe
