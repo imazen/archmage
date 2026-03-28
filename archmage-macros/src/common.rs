@@ -179,12 +179,22 @@ pub(crate) fn generate_imports(
 }
 
 /// Check if any argument expression contains the `Token` identifier.
+/// Check if any argument is exactly the standalone `Token` marker ident.
+///
+/// Only matches a bare `Token` expression — NOT `Token::method()`,
+/// `path::Token`, `ScalarToken`, etc. Uses token-tree matching, not strings.
 pub(crate) fn args_contain_token_marker(args: &[syn::Expr]) -> bool {
-    args.iter().any(|arg| {
-        let s = arg.to_token_stream().to_string();
-        // Check for standalone "Token" ident (not part of a larger name like ScalarToken)
-        s == "Token" || s.starts_with("Token ") || s.contains(" Token") || s.contains("(Token")
-    })
+    args.iter().any(|arg| is_bare_token_ident(arg))
+}
+
+/// Check if an expression is exactly the `Token` ident with no path or method call.
+fn is_bare_token_ident(expr: &syn::Expr) -> bool {
+    match expr {
+        syn::Expr::Path(p) => {
+            p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].ident == "Token"
+        }
+        _ => false,
+    }
 }
 
 /// Build call arguments with the token in the correct position.
