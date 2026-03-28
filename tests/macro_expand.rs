@@ -35,9 +35,9 @@ fn unexpanded_input_compiles() {
 }
 
 /// Every expanded output in expand/ must compile as standalone Rust.
-/// Runs on all platforms — the x86_64 snapshots must be valid Rust everywhere
-/// (cross-arch code is cfg-gated out).
+/// x86_64 only — snapshots contain x86_64-specific imports and types.
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn expanded_output_compiles() {
     let t = trybuild::TestCases::new();
     t.pass("tests/expand/*.expanded.rs");
@@ -46,6 +46,7 @@ fn expanded_output_compiles() {
 /// Known bugs: expanded output that doesn't compile standalone.
 /// When fixed, move from should-fail/ back to expand/.
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn expanded_output_known_bugs() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/expand/should-fail/*.expanded.rs");
