@@ -490,6 +490,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --locked
+
       - name: Build
         run: cargo build ${{ matrix.build }}
 
@@ -589,6 +592,9 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --locked
 
       - name: Download Intel SDE
         run: |
