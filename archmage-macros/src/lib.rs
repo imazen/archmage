@@ -438,54 +438,86 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// ```rust,ignore
 /// pub fn public_api(data: &[f32]) -> f32 {
-///     incant!(dot(data))
+///     incant!(dot(Token, data))
 /// }
 /// ```
 ///
 /// Expands to runtime feature detection + dispatch to `dot_v3`, `dot_v4`,
-/// `dot_neon`, `dot_wasm128`, or `dot_scalar`.
+/// `dot_neon`, `dot_wasm128`, or `dot_scalar`. The `Token` marker is
+/// replaced with the summoned token. Token can appear at any position
+/// to match the callee's signature:
+///
+/// ```rust,ignore
+/// incant!(process(Token, data), [v3, scalar])  // token-first
+/// incant!(process(data, Token), [v3, scalar])  // token-last
+/// ```
+///
+/// If `Token` is omitted, the token is prepended (backward compatible).
 ///
 /// # Explicit Tiers
 ///
 /// Specify which tiers to dispatch to:
 ///
 /// ```rust,ignore
-/// // Only dispatch to v1, v3, neon, and scalar
 /// pub fn api(data: &[f32]) -> f32 {
-///     incant!(process(data), [v1, v3, neon, scalar])
+///     incant!(process(Token, data), [v1, v3, neon, scalar])
 /// }
 /// ```
 ///
-/// Always include `scalar` in explicit tier lists — `incant!` always
-/// emits a `fn_scalar()` call as the final fallback, and listing it
-/// documents this dependency. Currently auto-appended if omitted;
-/// will become a compile error in v1.0. Unknown tier names cause a
-/// compile error. Tiers are automatically sorted into correct
-/// dispatch order (highest priority first).
+/// Always include `scalar` in explicit tier lists. Currently auto-appended
+/// if omitted; will become a compile error in v1.0. Tiers are automatically
+/// sorted by dispatch priority (highest first).
 ///
 /// Known tiers: `v1`, `v2`, `v3`, `v4`, `v4x`, `neon`, `neon_aes`,
 /// `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
 ///
-/// # Passthrough Mode (already have token)
+/// # Automatic Rewriting (inside tier macros)
 ///
-/// Uses compile-time dispatch via `IntoConcreteToken`:
+/// When `incant!` appears inside an `#[arcane]`, `#[rite]`, or
+/// `#[autoversion]` function body, the outer macro **rewrites** it to
+/// a direct call at compile time — bypassing the runtime dispatcher:
 ///
 /// ```rust,ignore
 /// #[arcane]
 /// fn outer(token: X64V3Token, data: &[f32]) -> f32 {
-///     incant!(inner(data) with token)
+///     // Rewritten to: inner_v3(token, data) — zero overhead
+///     incant!(inner(token, data), [v3, scalar])
 /// }
 /// ```
 ///
-/// Also supports explicit tiers:
+/// The rewriter recognizes the caller's token variable by name and
+/// handles downcasting (V4 caller → V3 callee), upgrade attempts
+/// (summon a higher tier), and feature-gated tiers automatically.
+///
+/// Use `Token` or the caller's token variable name in the args to
+/// control token position:
 ///
 /// ```rust,ignore
-/// fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
+/// #[arcane]
+/// fn outer(my_token: X64V3Token, data: &[f32]) -> f32 {
+///     // my_token recognized, placed where it appears in args
+///     incant!(inner(data, my_token), [v3, scalar])
+/// }
+/// ```
+///
+/// # Passthrough Mode (generic token dispatch)
+///
+/// For functions generic over token types, use `with token` for
+/// compile-time dispatch via `IntoConcreteToken`:
+///
+/// ```rust,ignore
+/// fn dispatch<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
 ///     incant!(process(data) with token, [v3, neon, scalar])
 /// }
 /// ```
 ///
-/// The compiler monomorphizes the dispatch, eliminating non-matching branches.
+/// The compiler monomorphizes the dispatch — when `T = X64V3Token`,
+/// only the V3 branch survives. No runtime summon, no overhead.
+///
+/// This is different from the rewriter: passthrough works on generic
+/// `IntoConcreteToken` bounds where the concrete tier isn't known at
+/// macro time. The rewriter works when the concrete tier IS known
+/// (inside `#[arcane]`/`#[rite]`/`#[autoversion]` bodies).
 ///
 /// # Variant Naming
 ///
