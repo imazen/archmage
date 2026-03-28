@@ -27,8 +27,9 @@ fn macro_expansion_snapshots_known_bugs() {
 }
 
 /// Every unexpanded input in expand/ must compile with macros applied.
-/// Runs on all platforms.
+/// x86_64 only — test files use x86-specific tokens and intrinsics.
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn unexpanded_input_compiles() {
     let t = trybuild::TestCases::new();
     t.pass("tests/expand/*.rs");
