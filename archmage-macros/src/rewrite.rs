@@ -154,7 +154,9 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
         let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
 
         let token_expr = quote! { __t };
-        let call_args = crate::common::build_call_args(args, &token_expr);
+        let caller_ident = token_ident.to_string();
+        let call_args =
+            crate::common::build_call_args_with_ident(args, &token_expr, Some(&caller_ident));
         let check = quote! {
             if let Some(__t) = #token_path::summon() {
                 break '__incant_rewrite #fn_suffixed(#call_args);
@@ -188,16 +190,23 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
             let downgrade_method = format_ident!("{}", rt.suffix);
             quote! { #token_ident.#downgrade_method() }
         };
-        let call_args = crate::common::build_call_args(args, &token_expr);
+        let caller_ident = token_ident.to_string();
+        let call_args =
+            crate::common::build_call_args_with_ident(args, &token_expr, Some(&caller_ident));
         quote! { #fn_suffixed(#call_args) }
     } else {
         // No same-arch tier at or below caller — fall through to scalar
         let has_default = tiers.iter().any(|t| t.name == "default");
         if has_default {
             let fn_default = suffix_path(func_path, "default");
+            // Strip token markers from args for tokenless default call
+            let caller_ident = token_ident.to_string();
             let default_args: Vec<&syn::Expr> = args
                 .iter()
-                .filter(|a| quote::ToTokens::to_token_stream(*a).to_string() != "Token")
+                .filter(|a| {
+                    !crate::common::is_bare_ident_pub(a, "Token")
+                        && !crate::common::is_bare_ident_pub(a, &caller_ident)
+                })
                 .collect();
             quote! { #fn_default(#(#default_args),*) }
         } else {

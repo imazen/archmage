@@ -179,49 +179,114 @@ pub(crate) fn generate_imports(
 }
 
 /// Check if any argument expression contains the `Token` identifier.
-/// Check if any argument is exactly the standalone `Token` marker ident.
-///
-/// Only matches a bare `Token` expression — NOT `Token::method()`,
-/// `path::Token`, `ScalarToken`, etc. Uses token-tree matching, not strings.
-pub(crate) fn args_contain_token_marker(args: &[syn::Expr]) -> bool {
-    args.iter().any(|arg| is_bare_token_ident(arg))
+/// Check if an expression is a bare ident matching a given name.
+pub(crate) fn is_bare_ident_pub(expr: &syn::Expr, name: &str) -> bool {
+    is_bare_ident(expr, name)
 }
 
-/// Check if an expression is exactly the `Token` ident with no path or method call.
-fn is_bare_token_ident(expr: &syn::Expr) -> bool {
+fn is_bare_ident(expr: &syn::Expr, name: &str) -> bool {
     match expr {
         syn::Expr::Path(p) => {
-            p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].ident == "Token"
+            p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].ident == name
         }
         _ => false,
     }
 }
 
+/// Detect how the token is placed in incant! arguments.
+///
+/// Returns the kind of token placement found:
+/// - `TokenPlacement::Explicit(index)`: arg at `index` is the `Token` marker
+/// - `TokenPlacement::Variable(index, ident)`: arg at `index` is the caller's token variable
+/// - `TokenPlacement::None`: no token in args (will be prepended, deprecated)
+pub(crate) enum TokenPlacement {
+    /// `Token` marker found at this arg index
+    Explicit(usize),
+    /// Caller's token variable name found at this arg index
+    Variable(usize),
+    /// No token in args — will prepend (deprecated)
+    None,
+}
+
+/// Find where the token is placed in incant! arguments.
+///
+/// Checks for:
+/// 1. `Token` marker (explicit placeholder for summon mode)
+/// 2. A bare ident matching `caller_token_ident` (the actual variable)
+/// Falls back to `None` (token will be prepended).
+pub(crate) fn find_token_placement(
+    args: &[syn::Expr],
+    caller_token_ident: Option<&str>,
+) -> TokenPlacement {
+    for (i, arg) in args.iter().enumerate() {
+        if is_bare_ident(arg, "Token") {
+            return TokenPlacement::Explicit(i);
+        }
+    }
+    if let Some(ident_name) = caller_token_ident {
+        for (i, arg) in args.iter().enumerate() {
+            if is_bare_ident(arg, ident_name) {
+                return TokenPlacement::Variable(i);
+            }
+        }
+    }
+    TokenPlacement::None
+}
+
 /// Build call arguments with the token in the correct position.
 ///
-/// If any arg is the `Token` marker, replace it with `token_expr`.
-/// If no `Token` marker found, prepend `token_expr` (backward compat).
+/// Handles three cases:
+/// - `Token` marker in args: replace with `token_expr`
+/// - Caller's token variable in args: replace with `token_expr` (may downcast)
+/// - Neither: prepend `token_expr` (backward compat, deprecated)
 pub(crate) fn build_call_args(
     args: &[syn::Expr],
     token_expr: &proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
-    if args_contain_token_marker(args) {
-        // Replace Token marker with actual token expression
-        let replaced: Vec<proc_macro2::TokenStream> = args
-            .iter()
-            .map(|arg| replace_ident_in_tokens(arg.to_token_stream(), "Token", token_expr))
-            .collect();
-        quote! { #(#replaced),* }
-    } else {
-        // No Token marker — prepend token (backward compat)
-        quote! { #token_expr, #(#args),* }
+    build_call_args_with_ident(args, token_expr, None)
+}
+
+/// Build call arguments, also checking for the caller's token variable name.
+pub(crate) fn build_call_args_with_ident(
+    args: &[syn::Expr],
+    token_expr: &proc_macro2::TokenStream,
+    caller_token_ident: Option<&str>,
+) -> proc_macro2::TokenStream {
+    match find_token_placement(args, caller_token_ident) {
+        TokenPlacement::Explicit(_) => {
+            // Replace Token marker with token expression
+            let replaced: Vec<proc_macro2::TokenStream> = args
+                .iter()
+                .map(|arg| replace_ident_in_tokens(arg.to_token_stream(), "Token", token_expr))
+                .collect();
+            quote! { #(#replaced),* }
+        }
+        TokenPlacement::Variable(idx) => {
+            // Replace the caller's token variable with the target token expression
+            let replaced: Vec<proc_macro2::TokenStream> = args
+                .iter()
+                .enumerate()
+                .map(|(i, arg)| {
+                    if i == idx {
+                        token_expr.clone()
+                    } else {
+                        arg.to_token_stream()
+                    }
+                })
+                .collect();
+            quote! { #(#replaced),* }
+        }
+        TokenPlacement::None => {
+            // No token in args — prepend (backward compat)
+            quote! { #token_expr, #(#args),* }
+        }
     }
 }
 
 /// Build call arguments for scalar fallback.
 ///
-/// If any arg is the `Token` marker, replace with `ScalarToken`.
-/// If no marker, prepend `ScalarToken`.
+/// If `Token` marker or caller's token variable is in args, replace with `ScalarToken`.
+/// If neither, prepend `ScalarToken`.
 pub(crate) fn build_scalar_call_args(args: &[syn::Expr]) -> proc_macro2::TokenStream {
     let scalar = quote! { archmage::ScalarToken };
     build_call_args(args, &scalar)
