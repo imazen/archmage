@@ -1067,6 +1067,10 @@ Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs
 
 - **Rite token forging**: Should tokenless `#[rite(v3)]` functions auto-forge a token at the top of the body? This would let them participate in incant! rewriting (pass token to callees). The forge is provably safe (`#[target_feature]` guarantees features). But: it adds generated `unsafe` to the body, and the soundness argument relies on `#[target_feature]` being the proof — which is a different safety model than "token from summon()". Deferred pending design clarity.
 
+## Rejected
+
+- **Short tier syntax in signatures** (`_token: v3`): Tier names work as suffixes (`_v3`) and macro attributes (`#[rite(v3)]`) but not as type names — they're tier labels, not types. Breaks IDE tooling, isn't real Rust, marginal savings. Existing aliases (`Desktop64`, `Arm64`, `Server64`) suffice.
+
 ## Pending Work
 
 ### API Parity Status (0 issues — complete!)
