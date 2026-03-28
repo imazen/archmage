@@ -97,11 +97,11 @@ pub(crate) fn rite_impl(input_fn: LightFn, args: RiteArgs) -> TokenStream {
 pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     // Resolve features: either from tier name or from token parameter
     let TokenParamInfo {
+        ident: token_ident,
         features,
         target_arch,
         token_type_name: _token_type_name,
         magetypes_namespace,
-        ..
     } = if let Some(tier_token) = args.tier_tokens.first() {
         // Tier specified directly (e.g., #[rite(v3)]) — no token param needed
         let features = token_to_features(tier_token)
@@ -167,6 +167,21 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         return syn::Error::new_spanned(&input_fn.sig, msg)
             .to_compile_error()
             .into();
+    }
+
+    // Rewrite incant!() calls in the body to direct tier calls.
+    if let Some(ref type_name) = _token_type_name {
+        if let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(type_name) {
+            if let Some(tier) = crate::tiers::find_tier(tier_suffix) {
+                let ctx = crate::rewrite::CallerContext {
+                    tier_suffix: tier_suffix.to_string(),
+                    tier_priority: tier.priority,
+                    target_arch: tier.target_arch,
+                    token_ident: token_ident.clone(),
+                };
+                input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body.clone(), &ctx);
+            }
+        }
     }
 
     // Build a single target_feature attribute with all features comma-joined
@@ -295,6 +310,21 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
         // Clone and rename the function
         let mut variant_fn = input_fn.clone();
         variant_fn.sig.ident = suffixed_ident;
+
+        // Rewrite incant!() calls in the variant body.
+        // Only for rite functions with a token param — tokenless rite can't pass tokens.
+        if let Some(tier) = crate::tiers::find_tier(suffix) {
+            if let Some(token_info) = crate::token_discovery::find_token_param(&variant_fn.sig) {
+                let ctx = crate::rewrite::CallerContext {
+                    tier_suffix: suffix.to_string(),
+                    tier_priority: tier.priority,
+                    target_arch: tier.target_arch,
+                    token_ident: token_info.ident,
+                };
+                variant_fn.body =
+                    crate::rewrite::rewrite_incant_in_body(variant_fn.body.clone(), &ctx);
+            }
+        }
 
         // Build a single target_feature attribute with all features comma-joined
         let features_csv = features.join(",");
