@@ -655,8 +655,6 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
         .unwrap_or_else(|| "unknown".to_string());
 
     let root_json = json!({
-        "generated": chrono_date(),
-        "rustVersion": rust_version,
         "tokens": tokens_json,
         "intrinsics": intrinsics_json,
         "safeVariants": safe_json,

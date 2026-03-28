@@ -92,8 +92,6 @@ jobs:
         run: |
           cargo fetch
           cargo run -p xtask -- generate
-          # Ignore intrinsics.json — contains rustVersion that varies by toolchain
-          git checkout -- docs/intrinsics-browser/data/intrinsics.json 2>/dev/null || true
           if ! git diff --exit-code; then
             echo "::error::Generated code differs from committed code!"
             exit 1
@@ -104,6 +102,9 @@ jobs:
 
       - name: Format check
         run: cargo fmt --all -- --check
+
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --locked
 
       - name: Tests
         run: cargo test --features "${{ env.FEATURES }}"

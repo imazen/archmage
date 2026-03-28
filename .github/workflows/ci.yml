@@ -253,8 +253,6 @@ jobs:
 
       - name: Check for differences
         run: |
-          # Ignore rustVersion/generated date in intrinsics.json — varies by toolchain
-          git checkout -- docs/intrinsics-browser/data/intrinsics.json 2>/dev/null || true
           if ! git diff --exit-code; then
             echo ""
             echo "::error::Generated code differs from committed code!"
