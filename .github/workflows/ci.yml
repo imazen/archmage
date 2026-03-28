@@ -595,9 +595,6 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
-
       - name: Download Intel SDE
         run: |
           wget -q https://downloadmirror.intel.com/831748/sde-external-9.44.0-2024-08-22-lin.tar.xz
@@ -618,6 +615,12 @@ jobs:
         run: |
           for test in target/debug/deps/*-*; do
             if [ -x "$test" ] && [ -f "$test" ]; then
+              name=$(basename "$test")
+              # Skip macro_expand — it spawns cargo-expand subprocesses (not CPU-specific)
+              # Skip compile_fail — trybuild spawns rustc (not CPU-specific)
+              case "$name" in
+                macro_expand-*|compile_fail-*) echo "Skipping: $name (not CPU-specific)"; continue ;;
+              esac
               echo "Running: $test"
               sde64 ${{ matrix.cpu.flag }} -- "$test" || true
             fi
