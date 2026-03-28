@@ -8,6 +8,8 @@ use syn::{
 };
 
 use crate::common::*;
+#[allow(unused_imports)]
+use crate::common::{build_call_args, build_scalar_call_args};
 use crate::tiers::*;
 
 /// Input for the incant! macro
@@ -265,9 +267,11 @@ pub(crate) fn gen_incant_passthrough(
             let fn_suffixed = suffix_path(func_path, rt.suffix);
             let as_method = format_ident!("{}", rt.as_method);
 
+            let token_expr = quote! { __t };
+            let call_args = build_call_args(args, &token_expr);
             let check = quote! {
                 if let Some(__t) = __incant_token.#as_method() {
-                    break '__incant #fn_suffixed(__t, #(#args),*);
+                    break '__incant #fn_suffixed(#call_args);
                 }
             };
 
@@ -303,14 +307,21 @@ pub(crate) fn gen_incant_passthrough(
     let has_default = tiers.iter().any(|t| t.name == "default");
     let fallback_arm = if has_default {
         let fn_default = suffix_path(func_path, "default");
+        let default_args: Vec<syn::Expr> = args
+            .iter()
+            .filter(|a| quote::ToTokens::to_token_stream(*a).to_string() != "Token")
+            .cloned()
+            .collect();
         quote! {
-            break '__incant #fn_default(#(#args),*);
+            break '__incant #fn_default(#(#default_args),*);
         }
     } else if tiers.iter().any(|t| t.name == "scalar") {
         let fn_scalar = suffix_path(func_path, "scalar");
+        let token_expr = quote! { __t };
+        let call_args = build_call_args(args, &token_expr);
         quote! {
             if let Some(__t) = __incant_token.as_scalar() {
-                break '__incant #fn_scalar(__t, #(#args),*);
+                break '__incant #fn_scalar(#call_args);
             }
             unreachable!("Token did not match any known variant")
         }
@@ -362,9 +373,11 @@ pub(crate) fn gen_incant_entry(
             let fn_suffixed = suffix_path(func_path, rt.suffix);
             let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
 
+            let token_expr = quote! { __t };
+            let call_args = build_call_args(args, &token_expr);
             let check = quote! {
                 if let Some(__t) = #token_path::summon() {
-                    break '__incant #fn_suffixed(__t, #(#args),*);
+                    break '__incant #fn_suffixed(#call_args);
                 }
             };
 
@@ -400,10 +413,17 @@ pub(crate) fn gen_incant_entry(
     let has_default = tiers.iter().any(|rt| rt.name == "default");
     let fallback_call = if has_default {
         let fn_default = suffix_path(func_path, "default");
-        quote! { #fn_default(#(#args),*) }
+        // Default tier: strip Token marker from args if present (tokenless call)
+        let default_args: Vec<syn::Expr> = args
+            .iter()
+            .filter(|a| quote::ToTokens::to_token_stream(*a).to_string() != "Token")
+            .cloned()
+            .collect();
+        quote! { #fn_default(#(#default_args),*) }
     } else {
         let fn_scalar = suffix_path(func_path, "scalar");
-        quote! { #fn_scalar(archmage::ScalarToken, #(#args),*) }
+        let scalar_args = build_scalar_call_args(args);
+        quote! { #fn_scalar(#scalar_args) }
     };
 
     let expanded = quote! {

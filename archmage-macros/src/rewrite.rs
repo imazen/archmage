@@ -153,9 +153,11 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
         let fn_suffixed = suffix_path(func_path, rt.suffix);
         let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
 
+        let token_expr = quote! { __t };
+        let call_args = crate::common::build_call_args(args, &token_expr);
         let check = quote! {
             if let Some(__t) = #token_path::summon() {
-                break '__incant_rewrite #fn_suffixed(__t, #(#args),*);
+                break '__incant_rewrite #fn_suffixed(#call_args);
             }
         };
 
@@ -178,23 +180,30 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
     // Build the direct call (guaranteed hit — no summon)
     let fallback_call = if let Some(rt) = direct_tier {
         let fn_suffixed = suffix_path(func_path, rt.suffix);
-        if rt.suffix == ctx.tier_suffix {
+        let token_expr = if rt.suffix == ctx.tier_suffix {
             // Exact match — pass token directly
-            quote! { #fn_suffixed(#token_ident, #(#args),*) }
+            quote! { #token_ident }
         } else {
             // Downgrade — call the tier method on the token
             let downgrade_method = format_ident!("{}", rt.suffix);
-            quote! { #fn_suffixed(#token_ident.#downgrade_method(), #(#args),*) }
-        }
+            quote! { #token_ident.#downgrade_method() }
+        };
+        let call_args = crate::common::build_call_args(args, &token_expr);
+        quote! { #fn_suffixed(#call_args) }
     } else {
         // No same-arch tier at or below caller — fall through to scalar
         let has_default = tiers.iter().any(|t| t.name == "default");
         if has_default {
             let fn_default = suffix_path(func_path, "default");
-            quote! { #fn_default(#(#args),*) }
+            let default_args: Vec<&syn::Expr> = args
+                .iter()
+                .filter(|a| quote::ToTokens::to_token_stream(*a).to_string() != "Token")
+                .collect();
+            quote! { #fn_default(#(#default_args),*) }
         } else {
             let fn_scalar = suffix_path(func_path, "scalar");
-            quote! { #fn_scalar(archmage::ScalarToken, #(#args),*) }
+            let scalar_args = crate::common::build_scalar_call_args(args);
+            quote! { #fn_scalar(#scalar_args) }
         }
     };
 

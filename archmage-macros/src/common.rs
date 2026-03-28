@@ -178,6 +178,45 @@ pub(crate) fn generate_imports(
     imports
 }
 
+/// Check if any argument expression contains the `Token` identifier.
+pub(crate) fn args_contain_token_marker(args: &[syn::Expr]) -> bool {
+    args.iter().any(|arg| {
+        let s = arg.to_token_stream().to_string();
+        // Check for standalone "Token" ident (not part of a larger name like ScalarToken)
+        s == "Token" || s.starts_with("Token ") || s.contains(" Token") || s.contains("(Token")
+    })
+}
+
+/// Build call arguments with the token in the correct position.
+///
+/// If any arg is the `Token` marker, replace it with `token_expr`.
+/// If no `Token` marker found, prepend `token_expr` (backward compat).
+pub(crate) fn build_call_args(
+    args: &[syn::Expr],
+    token_expr: &proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
+    if args_contain_token_marker(args) {
+        // Replace Token marker with actual token expression
+        let replaced: Vec<proc_macro2::TokenStream> = args
+            .iter()
+            .map(|arg| replace_ident_in_tokens(arg.to_token_stream(), "Token", token_expr))
+            .collect();
+        quote! { #(#replaced),* }
+    } else {
+        // No Token marker — prepend token (backward compat)
+        quote! { #token_expr, #(#args),* }
+    }
+}
+
+/// Build call arguments for scalar fallback.
+///
+/// If any arg is the `Token` marker, replace with `ScalarToken`.
+/// If no marker, prepend `ScalarToken`.
+pub(crate) fn build_scalar_call_args(args: &[syn::Expr]) -> proc_macro2::TokenStream {
+    let scalar = quote! { archmage::ScalarToken };
+    build_call_args(args, &scalar)
+}
+
 /// Suffix the last segment of a path: `process` → `process_v3`.
 pub(crate) fn suffix_path(path: &syn::Path, suffix: &str) -> syn::Path {
     let mut suffixed = path.clone();
