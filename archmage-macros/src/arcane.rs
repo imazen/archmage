@@ -235,22 +235,39 @@ pub(crate) fn arcane_impl(
     let target_feature_attrs: Vec<Attribute> =
         vec![parse_quote!(#[target_feature(enable = #features_csv)])];
 
-    // Rename wildcard patterns (`_: Type`) to named params so the inner/sibling call works
-    let mut wild_rename_counter = 0u32;
+    // Rename non-ident patterns to named params so the wrapper → sibling call works.
+    // Wildcards (`_: T`), tuple patterns (`(a, b): (T, U)`), struct patterns, etc.
+    // are replaced with generated idents. The original pattern is re-bound in the
+    // sibling body via `let original_pattern = generated_ident;`.
+    let mut pattern_rename_counter = 0u32;
+    let mut pattern_rebinds = Vec::new();
     for arg in &mut input_fn.sig.inputs {
-        if let FnArg::Typed(pat_type) = arg
-            && matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_))
-        {
-            let ident = format_ident!("__archmage_wild_{}", wild_rename_counter);
-            wild_rename_counter += 1;
-            *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
-                attrs: vec![],
-                by_ref: None,
-                mutability: None,
-                ident,
-                subpat: None,
-            });
+        if let FnArg::Typed(pat_type) = arg {
+            let needs_rename = !matches!(pat_type.pat.as_ref(), syn::Pat::Ident(_));
+            if needs_rename {
+                let generated = format_ident!("__archmage_arg_{}", pattern_rename_counter);
+                pattern_rename_counter += 1;
+                let original_pat = pat_type.pat.clone();
+                let ty = &pat_type.ty;
+                // Emit `let original_pattern: Type = generated_ident;` in the body
+                pattern_rebinds.push(quote! { let #original_pat: #ty = #generated; });
+                *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+                    attrs: vec![],
+                    by_ref: None,
+                    mutability: None,
+                    ident: generated,
+                    subpat: None,
+                });
+            }
         }
+    }
+    // Prepend pattern rebindings to the body
+    if !pattern_rebinds.is_empty() {
+        let original_body = &input_fn.body;
+        input_fn.body = quote! {
+            #(#pattern_rebinds)*
+            #original_body
+        };
     }
 
     // Choose inline attribute based on args
