@@ -648,6 +648,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --locked
+
       - name: Generate coverage
         run: cargo llvm-cov --features "${{ env.FEATURES }}" --lcov --output-path lcov.info
 
@@ -679,6 +682,9 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --locked
 
       - name: Generate coverage
         run: cargo llvm-cov --features "${{ env.FEATURES }}" --lcov --output-path lcov.info
