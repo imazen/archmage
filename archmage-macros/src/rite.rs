@@ -170,7 +170,10 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
     }
 
     // Rewrite incant!() calls in the body to direct tier calls.
-    if let Some(ref type_name) = _token_type_name
+    // Only when a real token parameter exists — tokenless rite (e.g., #[rite(v3)])
+    // has no token to pass to callees.
+    if token_ident != "_"
+        && let Some(ref type_name) = _token_type_name
         && let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(type_name)
         && let Some(tier) = crate::tiers::find_tier(tier_suffix)
     {
