@@ -1063,6 +1063,10 @@ Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs
 
 3. **`#[autoversion]` on trait impl method: variants placed inside trait impl block** — Generated variant methods (`process_v3`, `process_v4`, `process_scalar`) are emitted inside `impl Trait for Type {}`, but they aren't members of the trait. Compile error E0407. (`tests/expand/autoversion_trait_impl.expanded.rs`)
 
+## Open Questions
+
+- **Rite token forging**: Should tokenless `#[rite(v3)]` functions auto-forge a token at the top of the body? This would let them participate in incant! rewriting (pass token to callees). The forge is provably safe (`#[target_feature]` guarantees features). But: it adds generated `unsafe` to the body, and the soundness argument relies on `#[target_feature]` being the proof — which is a different safety model than "token from summon()". Deferred pending design clarity.
+
 ## Pending Work
 
 ### API Parity Status (0 issues — complete!)
