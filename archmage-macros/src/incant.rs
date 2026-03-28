@@ -330,6 +330,12 @@ pub(crate) fn gen_incant_passthrough(
 }
 
 /// Generate incant! entry point mode (summon tokens).
+///
+/// Each tier becomes an `if let Some(__t) = Token::summon() { call }` arm
+/// inside a `#[cfg]`-gated block. Uses `break` from a labeled block for
+/// early exit — necessary because `#[cfg]` attributes can't be placed on
+/// `else if` arms, and the dispatch must be an expression (not a statement
+/// with `return`).
 pub(crate) fn gen_incant_entry(
     func_path: &syn::Path,
     args: &[syn::Expr],
