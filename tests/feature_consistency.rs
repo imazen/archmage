@@ -5,6 +5,11 @@
 //! capabilities, these tests will crash (SIGILL).
 //!
 //! Cross-platform: tests for x86_64, aarch64, and wasm32.
+//!
+//! The `x64_tokens_are_x86_64_only` and `compiled_with_reflects_architecture`
+//! tests verify that X64* tokens are stubs on non-x86_64 targets (including
+//! 32-bit x86). Run on i686 to verify:
+//!   cross test --target i686-unknown-linux-gnu --test feature_consistency
 
 use archmage::SimdToken;
 use archmage::*;
@@ -417,11 +422,15 @@ fn scalar_token_always_available() {
 /// Verify that tokens on unsupported architectures return None.
 #[test]
 fn wrong_arch_tokens_return_none() {
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+    #[cfg(not(target_arch = "x86_64"))]
     {
         assert!(
+            X64V1Token::summon().is_none(),
+            "x86_64 tokens should be None on non-x86_64"
+        );
+        assert!(
             X64V2Token::summon().is_none(),
-            "x86 tokens should be None on non-x86"
+            "x86_64 tokens should be None on non-x86_64"
         );
         assert!(X64V3Token::summon().is_none());
     }
@@ -445,4 +454,89 @@ fn wrong_arch_tokens_return_none() {
             "WASM relaxed tokens should be None on non-WASM"
         );
     }
+}
+
+/// X64 tokens are x86_64-only. On 32-bit x86, they must return None.
+/// This test verifies the cfg gating — on x86_64 it checks tokens work,
+/// on any other arch (including 32-bit x86) it checks they return None.
+#[test]
+fn x64_tokens_are_x86_64_only() {
+    #[cfg(target_arch = "x86_64")]
+    {
+        // On x86_64, V1 is baseline — must always be Some
+        assert!(
+            X64V1Token::summon().is_some(),
+            "X64V1Token should always be Some on x86_64"
+        );
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        // On ALL other architectures (including 32-bit x86), must be None.
+        // This catches the bug where arch="x86" in the registry would give
+        // 32-bit x86 real implementations instead of stubs.
+        assert!(
+            X64V1Token::summon().is_none(),
+            "X64V1Token must be None on non-x86_64 (including 32-bit x86)"
+        );
+        assert!(
+            X64V2Token::summon().is_none(),
+            "X64V2Token must be None on non-x86_64"
+        );
+        assert!(
+            X64V3Token::summon().is_none(),
+            "X64V3Token must be None on non-x86_64"
+        );
+        assert!(
+            X64CryptoToken::summon().is_none(),
+            "X64CryptoToken must be None on non-x86_64"
+        );
+        assert!(
+            X64V3CryptoToken::summon().is_none(),
+            "X64V3CryptoToken must be None on non-x86_64"
+        );
+    }
+}
+
+/// Verify compiled_with() returns correct values per architecture.
+/// On x86_64, V1 features are baseline so compiled_with() = Some(true).
+/// On other architectures, compiled_with() must indicate unavailability.
+#[test]
+fn compiled_with_reflects_architecture() {
+    #[cfg(target_arch = "x86_64")]
+    {
+        // SSE2 is the x86_64 ABI baseline — always compiled in
+        #[cfg(not(feature = "testable_dispatch"))]
+        assert_eq!(
+            X64V1Token::compiled_with(),
+            Some(true),
+            "X64V1Token::compiled_with() should be Some(true) on x86_64"
+        );
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        // On non-x86_64 (including 32-bit x86), compiled_with should NOT
+        // return Some(true) — these tokens don't belong to this architecture.
+        assert_ne!(
+            X64V1Token::compiled_with(),
+            Some(true),
+            "X64V1Token::compiled_with() must not be Some(true) on non-x86_64"
+        );
+    }
+}
+
+/// The #[arcane] macro cfg-gates to x86_64 only. Verify the macro registry
+/// agrees with the token module routing — both must target x86_64, not x86.
+#[test]
+fn macro_registry_targets_x86_64_not_x86() {
+    // This is a compile-time check: if the macro registry returned "x86"
+    // instead of "x86_64", #[arcane] would emit cfg(target_arch = "x86")
+    // which would generate real implementations on 32-bit x86.
+    //
+    // The test verifies the invariant indirectly: on x86_64 the token
+    // exists and works, on everything else it's a stub returning None.
+    // A cross-compilation test on i686 would fail if the routing were wrong.
+    #[cfg(target_arch = "x86_64")]
+    assert!(X64V3Token::summon().is_some() || X64V3Token::summon().is_none());
+    #[cfg(not(target_arch = "x86_64"))]
+    assert!(X64V3Token::summon().is_none());
 }

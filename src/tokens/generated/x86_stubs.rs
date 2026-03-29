@@ -450,6 +450,10 @@ impl Avx512Fp16Token {
 }
 
 /// Type alias for [`X64V1Token`].
+#[deprecated(
+    since = "0.9.9",
+    note = "Use X64V1Token instead. Sse2Token is misleading — this is an x86_64-only token (SSE2 is the x86_64 baseline). On 32-bit x86, summon() returns None."
+)]
 pub type Sse2Token = X64V1Token;
 
 /// Type alias for [`X64V3Token`].

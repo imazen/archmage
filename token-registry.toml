@@ -28,12 +28,13 @@
 name = "X64V1Token"
 arch = "x86"
 aliases = ["Sse2Token"]
+deprecated_aliases = { Sse2Token = "Use X64V1Token instead. Sse2Token is misleading — this is an x86_64-only token (SSE2 is the x86_64 baseline). On 32-bit x86, summon() returns None." }
 features = ["sse", "sse2"]
 traits = ["Has128BitSimd"]
 display_name = "x86-64-v1"
 short_name = "v1"
 magetypes_namespace = "v3"
-doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust\nstill requires #[target_feature(enable = \"sse2\")] for SSE2 intrinsics to\nbe safe. This token provides that via `#[arcane]`.\n\nOn x86_64, summon() always returns Some."
+doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust\nstill requires #[target_feature(enable = \"sse2\")] for SSE2 intrinsics to\nbe safe. This token provides that via `#[arcane]`.\n\nOn x86_64, summon() always returns Some. On 32-bit x86, returns None\n(x86_64 tokens are not available on 32-bit)."
 
 [[token]]
 name = "X64V2Token"

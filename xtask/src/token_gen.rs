@@ -1023,15 +1023,15 @@ fn gen_mod_rs() -> String {
         mod traits;
         pub use traits::*;
 
-        // x86: real implementations on x86_64, stubs elsewhere
-        #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+        // x86_64: real implementations on x86_64, stubs elsewhere (including 32-bit x86)
+        #[cfg(target_arch = "x86_64")]
         mod x86;
-        #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+        #[cfg(target_arch = "x86_64")]
         pub use x86::*;
 
-        #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+        #[cfg(not(target_arch = "x86_64"))]
         mod x86_stubs;
-        #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+        #[cfg(not(target_arch = "x86_64"))]
         pub use x86_stubs::*;
 
         // aarch64: real implementations on aarch64, stubs elsewhere
