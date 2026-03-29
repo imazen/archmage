@@ -5,9 +5,9 @@ weight = 4
 
 <sub>(alias: `#[token_target_features]`)</sub>
 
-`#[rite]` should be your **default choice** for SIMD functions. It adds `#[target_feature]` + `#[inline]` directly to your function, so LLVM can inline it into any caller with matching features.
+`#[rite]` is an advanced alternative to `#[arcane]` for internal SIMD helpers. It adds `#[target_feature]` + `#[inline]` directly to your function — no wrapper, no boundary.
 
-Use `#[arcane(import_intrinsics)]` only at **entry points** where the token comes from the outside world.
+For most code, `#[arcane]` works for both entry points and helpers (LLVM inlines the wrapper when features match). `#[rite]` is useful when you want explicit `#[target_feature]` without a wrapper, or when generating multi-tier suffixed variants.
 
 ## Three Modes
 
@@ -66,14 +66,14 @@ flowchart TD
     style H3 fill:#1a4a6e,color:#fff
 {% end %}
 
-## The Rule
+## When to Use `#[rite]` vs `#[arcane]`
 
-| Caller | Use |
-|--------|-----|
-| Called from `#[arcane]` or `#[rite]` with same/compatible features | `#[rite(v3, import_intrinsics)]` or `#[rite(import_intrinsics)]` with token |
-| Called from non-SIMD code (tests, public API, after `summon()`) | `#[arcane(import_intrinsics)]` |
+For most code, `#[arcane]` works everywhere — LLVM inlines the wrapper when features match (V3→V3 = zero overhead). `#[rite]` is available when you want direct `#[target_feature]` + `#[inline]` without a wrapper.
 
-**Default to `#[rite]`.** Only use `#[arcane]` when you need the safe wrapper.
+| Caller | `#[arcane]` | `#[rite]` |
+|--------|-------------|-----------|
+| From non-SIMD code | Required (generates safe wrapper) | N/A |
+| From `#[arcane]`/`#[rite]` with matching features | Works (wrapper inlined away) | Also works (no wrapper) |
 
 ```rust
 use archmage::prelude::*;
@@ -256,10 +256,10 @@ For intrinsics-heavy code where each tier uses different instructions, write sep
 
 ### Multi-tier with options
 
-All options (`import_intrinsics`, `import_magetypes`, `stub`) work with multi-tier:
+All options (`import_intrinsics`, `import_magetypes`) work with multi-tier:
 
 ```rust
-#[rite(v3, v4, import_intrinsics, stub)]
+#[rite(v3, v4, import_intrinsics)]
 fn process(data: &[f32; 4]) -> f32 {
     let v = _mm_loadu_ps(data);
     let sum = _mm_hadd_ps(v, v);
@@ -267,7 +267,7 @@ fn process(data: &[f32; 4]) -> f32 {
     _mm_cvtss_f32(sum)
 }
 // Generates: process_v3(), process_v4() on x86_64
-//            + unreachable stubs on other architectures
+// Cfg'd out on other architectures
 ```
 
 ## Why This Works (Rust 1.85+)
@@ -321,16 +321,14 @@ The same applies to multi-tier variants — calling `process_v3()` from a test o
 
 ## Choosing Between #[arcane] and #[rite]
 
-**Default to `#[rite]`** — only use `#[arcane]` when necessary.
+**`#[arcane]` works everywhere** — entry points and helpers alike. When features match, LLVM inlines the wrapper away. `#[rite]` is an alternative for when you want explicit `#[target_feature]` + `#[inline]` without a wrapper.
 
-| Situation | Use | Why |
-|-----------|-----|-----|
-| Internal helper, doesn't need token | `#[rite(v3, import_intrinsics)]` | Cleanest — no token threading |
-| Internal helper, passes token to magetypes | `#[rite(import_intrinsics)]` with token | Token needed for magetypes constructors |
-| Multi-tier auto-vectorization | `#[rite(v3, v4, neon)]` | One body, multiple compiled variants |
-| Entry point (receives token from outside) | `#[arcane(import_intrinsics)]` | Needs safe wrapper |
-| Public API | `#[arcane(import_intrinsics)]` | Callers aren't in target_feature context |
-| Called from tests | `#[arcane(import_intrinsics)]` | Tests aren't in target_feature context |
+| Situation | Recommended | Why |
+|-----------|-------------|-----|
+| Entry point / public API | `#[arcane]` | Generates safe wrapper for non-SIMD callers |
+| Internal helper | `#[arcane]` or `#[rite]` | Both work; arcane wrapper inlines when features match |
+| Multi-tier auto-vectorization | `#[rite(v3, v4, neon)]` | Generates suffixed variants from one body |
+| Tokenless helper (no threading) | `#[rite(v3)]` | Cleaner — no token parameter needed |
 
 ## When to Use Tier-Based vs Token-Based
 
@@ -398,30 +396,25 @@ All `#[rite]` functions inline into the caller — no target-feature boundary, o
 
 ## Cross-Architecture Behavior
 
-Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. Use `stub` to generate an unreachable stub instead. Both modes work with all `#[rite]` forms:
+Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. On the wrong architecture, no function is emitted — no dead code.
 
 ```rust
-// Default: only exists on x86_64
+// Only exists on x86_64 — cfg'd out on ARM/WASM
 #[rite(v3, import_intrinsics)]
 fn helper(v: __m256) -> __m256 {
     _mm256_add_ps(v, v)
 }
-
-// With stub: unreachable stub on other architectures
-#[rite(v3, stub, import_intrinsics)]
-fn helper_stubbed(v: __m256) -> __m256 {
-    _mm256_add_ps(v, v)
-}
 ```
 
-For multi-tier, each variant gets its own cfg guard and optional stub:
+For multi-tier, each variant gets its own `#[cfg(target_arch)]` guard:
 
 ```rust
-#[rite(v3, neon, stub)]
+#[rite(v3, neon)]
 fn portable_helper(x: f32, y: f32) -> f32 { x + y }
-// process_v3() on x86_64, process_neon() on aarch64
-// unreachable stubs for the other architecture
+// portable_helper_v3() on x86_64, portable_helper_neon() on aarch64
 ```
+
+Use `incant!` for cross-arch dispatch — it handles all cfg gating automatically.
 
 ## Auto-Imports
 
@@ -445,7 +438,7 @@ fn helper_with_token(token: X64V3Token, data: &[f32; 8]) -> f32 {
 }
 ```
 
-The recommended pattern: `#[arcane(import_intrinsics)]` at the entry point, `#[rite(v3, import_intrinsics)]` for everything else.
+For most code, `#[arcane(import_intrinsics)]` works for both entry points and helpers. `#[rite]` is an alternative when you want direct `#[target_feature]` without a wrapper.
 
 See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import-intrinsics) for the full namespace mapping.
 
@@ -453,7 +446,7 @@ See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import-intrinsics) for t
 
 `#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. This applies equally to all `#[rite]` modes — token-based, tier-based, and multi-tier variants all emit the same `#[inline]` attribute.
 
-Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. Calling `#[arcane]` per iteration instead costs 4x (simple adds) to 6.2x (DCT-8). See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md).
+Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. `#[arcane]` calling `#[arcane]` with matching features also hits 547 ns — the wrapper inlines away. See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md).
 
 `#[inline(always)]` combined with `#[target_feature]` is not allowed on stable Rust, but we don't need it — `#[inline]` works perfectly.
 
@@ -466,7 +459,6 @@ All options combine freely. Order doesn't matter.
 | `v3`, `neon`, `v4`, ... | Tier name — sets features (one = single function, multiple = suffixed variants) |
 | `import_intrinsics` | Injects `use archmage::intrinsics::{arch}::*` (safe memory ops) |
 | `import_magetypes` | Injects magetypes SIMD type imports |
-| `stub` | Generates `unreachable!()` stub on wrong architecture |
 
 **Examples:**
 
@@ -475,7 +467,5 @@ All options combine freely. Order doesn't matter.
 #[rite(v3, import_intrinsics)]                 // single tier + safe intrinsics
 #[rite(v3, v4, neon)]                          // multi-tier (generates _v3, _v4, _neon)
 #[rite(v3, v4, import_intrinsics)]             // multi-tier + safe intrinsics
-#[rite(v3, v4, import_intrinsics, stub)]       // multi-tier + intrinsics + stubs
 #[rite(import_intrinsics)]                     // token-based (reads token from params)
-#[rite(stub)]                                  // token-based + cross-arch stub
 ```

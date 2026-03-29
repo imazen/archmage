@@ -128,13 +128,25 @@ This is verified by `cargo xtask validate` — it reads the token registry and c
 
 ## Cross-architecture compilation
 
-On the wrong architecture, `#[arcane]` generates an unreachable stub:
+On the wrong architecture, `#[arcane]` and `#[rite]` cfg-out the function entirely — no code is emitted. This means direct call sites must be guarded:
 
 ```rust
-// On ARM, this generates:
-fn kernel(_token: X64V3Token, _data: &[f32; 8]) -> f32 {
-    unreachable!("X64V3Token cannot exist on this architecture")
+// This function only exists on x86_64 — cfg'd out on ARM/WASM
+#[arcane(import_intrinsics)]
+fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    // ...
+}
+
+// Option 1: Guard the call site with #[cfg]
+#[cfg(target_arch = "x86_64")]
+if let Some(token) = X64V3Token::summon() {
+    kernel(token, &data);
+}
+
+// Option 2: Use incant! which handles cfg-gating automatically
+pub fn process(data: &[f32; 8]) -> f32 {
+    incant!(kernel(data))
 }
 ```
 
-The stub compiles but can never execute — `X64V3Token::summon()` returns `None` on ARM, so you can never obtain the token needed to call the function.
+`incant!` is the recommended approach for cross-arch dispatch — it wraps each tier call in `#[cfg(target_arch)]` blocks automatically, so you never need manual cfg guards at call sites.

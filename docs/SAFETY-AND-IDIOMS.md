@@ -207,16 +207,19 @@ These aliases pretend platforms are interchangeable. An 8-wide AVX2 algorithm is
 
 ## Cross-Architecture
 
-All tokens exist on all architectures. On wrong arch, `summon()` returns `None`:
+All tokens exist on all architectures. On wrong arch, `summon()` returns `None`. `#[arcane]` and `#[rite]` cfg-out the function on wrong architectures (no code emitted), so use `incant!` or `#[cfg(target_arch)]` guards at call sites:
 
 ```rust
 #[arcane(import_intrinsics)]
 fn x86_kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    // On ARM: generates unreachable!() stub
+    // On ARM: this function is not emitted (cfg'd out)
+    // ...
 }
 
+// Use cfg guard at the call site, or use incant! for multi-arch dispatch
+#[cfg(target_arch = "x86_64")]
 if let Some(token) = X64V3Token::summon() {
-    x86_kernel(token, &data)  // Only runs on x86 with AVX2
+    x86_kernel(token, &data);  // Only exists on x86
 }
 ```
 

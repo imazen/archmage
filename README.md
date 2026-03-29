@@ -103,13 +103,12 @@ Archmage makes the boundary crossing **sound** by tying it to runtime CPU detect
   │          │                                                 │
   │          ▼                                                 │
   │  2. #[arcane] fn      Reads token type from signature.     │
-  │     entry(token, ..)  Generates #[target_feature] sibling. │
+  │     my_func(token,..) Generates #[target_feature] sibling. │
   │                       Wraps the unsafe call internally —   │
   │          │            your code never writes unsafe.        │
   │          ▼                                                 │
-  │  3. #[rite] fns       Same #[target_feature] as caller.    │
-  │     + plain fns       Safe calls — Rust allows it.         │
-  │                       Inline freely, no boundary.          │
+  │  3. More #[arcane]    Matching features? Safe call.        │
+  │     + plain fns       LLVM inlines — no boundary.          │
   │          │                                                 │
   │          ▼                                                 │
   │  4. Intrinsics        Value ops: safe (Rust 1.85+)         │
@@ -122,7 +121,7 @@ Archmage makes the boundary crossing **sound** by tying it to runtime CPU detect
 
 **Tokens are grouped by common CPU tiers.** `X64V3Token` covers AVX2+FMA+BMI2 — the set that Haswell (2013) and Zen 1+ share. `NeonToken` covers AArch64 NEON. `Arm64V2Token` covers CRC+RDM+DotProd+FP16+AES+SHA2 — the set that Apple M1, Cortex-A55+, and Graviton 2+ share. You pick a tier, not individual features. `summon()` checks all features in the tier atomically; it either succeeds (every feature present) or returns `None`. The token is zero-sized — passing it costs nothing. Detection is cached (~1.3 ns), or compiles away entirely with `-Ctarget-cpu=haswell`.
 
-**`#[arcane]` is the trampoline.** It generates a sibling function with `#[target_feature(enable = "avx2,fma,...")]` and an `#[inline(always)]` wrapper that calls it through `unsafe`. The macro generates the `unsafe` block, not you. Since the token's existence proves the features are present, the call is sound. From inside the `#[arcane]` function, you can use intrinsics directly (value ops are safe) and call `#[rite]` functions with matching features (safe under Rust 1.85+). Both macros handle `#[cfg(target_arch)]` gating automatically.
+**`#[arcane]` is the trampoline.** It generates a sibling function with `#[target_feature(enable = "avx2,fma,...")]` and an `#[inline(always)]` wrapper that calls it through `unsafe`. The macro generates the `unsafe` block, not you. Since the token's existence proves the features are present, the call is sound. From inside the `#[arcane]` function, you can use intrinsics directly (value ops are safe) and call other `#[arcane]` functions with matching features (safe under Rust 1.85+, and LLVM inlines the wrapper away — zero overhead). `#[arcane]` handles `#[cfg(target_arch)]` gating automatically.
 
 **[`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd)** (by [okaneco](https://github.com/okaneco)) closes the memory gap. It shadows `core::arch`'s pointer-based load/store functions with reference-based versions — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`. Same names, safe signatures. Archmage re-exports these through `import_intrinsics`, so the safe versions are in scope automatically.
 
@@ -132,9 +131,9 @@ All tokens compile on all platforms. On the wrong architecture, `summon()` retur
 
 AI is a patient compiler. It can write SIMD intrinsics, run benchmarks, iterate on hot loops, and try instruction sequences that no human would bother testing. Constraining AI to `#![forbid(unsafe_code)]` means it can't introduce undefined behavior — the type system catches unsound calls at compile time. The result is hand-tuned SIMD that's both fast and provably safe.
 
-### Import styles
+### One import, zero `#[cfg]`
 
-`use archmage::prelude::*` imports everything — tokens, traits, macros, all platform intrinsics, and safe memory ops. The examples in this README use the prelude for brevity:
+`use archmage::prelude::*` gives you everything — tokens, traits, macros, all platform intrinsics, and safe memory ops. All tokens compile on all platforms; `summon()` returns `None` on the wrong architecture. You rarely need `#[cfg(target_arch)]` in your code.
 
 ```rust
 use archmage::prelude::*;
@@ -145,7 +144,23 @@ fn example(_: X64V3Token, data: &[f32; 8]) -> __m256 {
 }
 ```
 
-If you don't want thousands of intrinsic names at module scope, use selective imports with `import_intrinsics` to scope them to the function body:
+`#[arcane]` wraps its output in `#[cfg(target_arch = "x86_64")]` automatically — the function doesn't exist on ARM, and that's fine. For dispatch across architectures, `incant!` handles the cfg gating for you:
+
+```rust
+use archmage::prelude::*;
+
+#[arcane]
+fn process_v3(_: X64V3Token, data: &mut [f32]) { /* AVX2 */ }
+#[arcane]
+fn process_neon(_: NeonToken, data: &mut [f32]) { /* NEON */ }
+fn process_scalar(_: ScalarToken, data: &mut [f32]) { /* fallback */ }
+
+pub fn process(data: &mut [f32]) {
+    incant!(process(data), [v3, neon, scalar])  // no #[cfg] needed
+}
+```
+
+If you prefer scoped imports over the prelude, use `import_intrinsics` to inject intrinsics into the function body only:
 
 ```rust
 use archmage::{X64V3Token, SimdToken, arcane};
@@ -156,77 +171,64 @@ fn example(_: X64V3Token, data: &[f32; 8]) -> core::arch::x86_64::__m256 {
 }
 ```
 
-Both import the same combined intrinsics module — using both is just duplication. The prelude is simpler; `import_intrinsics` is more explicit.
+Both import the same combined intrinsics module — the prelude imports them at module scope, `import_intrinsics` scopes them to the function body.
 
 ## Which macro do I use?
 
 ```
-                    Writing a SIMD function?
-                    ┌───────────┴───────────┐
-            Hand-written                Scalar code,
-            intrinsics              compiler auto-vectorizes
-                │                           │
-        Called from                  Need manual control
-        non-SIMD code?              over dispatch?
-     (after summon(), main)
-        ┌─────┴─────┐              ┌─────┴─────┐
-       YES          NO             NO          YES
-        │            │              │            │
-  ┌─────▼──────┐ ┌──▼────────┐ ┌───▼─────────┐ ┌▼────────────────┐
-  │ #[arcane]  │ │ #[rite]   │ │#[autoversion]│ │ #[arcane] per   │
-  │            │ │           │ │             │ │ variant +       │
-  │ Entry from │ │ Inlines   │ │ Generates   │ │ incant!()       │
-  │ normal code│ │ into the  │ │ variants +  │ │                 │
-  │ One per    │ │ caller's  │ │ dispatcher  │ │ You write each  │
-  │ hot path   │ │ LLVM      │ │ from one    │ │ #[arcane] fn    │
-  │            │ │ region    │ │ scalar body │ │ and dispatch    │
-  └─────┬──────┘ └──▲──┬────┘ └─────────────┘ └─────────────────┘
-        │           │  │
-        └───────────┘  └──▶ also calls #[rite]
-     #[arcane] calls       and plain #[inline(always)]
-     #[rite] helpers       fns (get caller's features)
+         Writing a SIMD function?
+         ┌───────────┴───────────┐
+  Hand-written intrinsics    Scalar code, let compiler
+         │                   auto-vectorize
+         │                        │
+  ┌──────▼──────┐          ┌──────▼──────────┐
+  │  #[arcane]  │          │  #[autoversion]  │
+  │             │          │                  │
+  │ Use for all │          │ Generates per-   │
+  │ SIMD fns —  │          │ tier variants +  │
+  │ entry points│          │ dispatcher from  │
+  │ AND helpers │          │ one scalar body  │
+  └──────┬──────┘          └─────────────────┘
+         │
+  Need cross-arch dispatch?
+         │
+  ┌──────▼──────────────────┐
+  │  incant!()              │
+  │                         │
+  │ Routes to _v3, _neon,   │
+  │ _scalar, etc.           │
+  │ Handles all #[cfg] for  │
+  │ you — zero boilerplate  │
+  └─────────────────────────┘
 ```
 
-Plain `#[inline(always)]` functions with no macro also work — if they inline into an `#[arcane]` or `#[rite]` caller, LLVM compiles them with the caller's features for free.
+Plain `#[inline(always)]` functions with no macro also work — if they inline into an `#[arcane]` caller, LLVM compiles them with the caller's features for free.
 
-## `#[arcane]` vs `#[rite]`: entry point vs internal
+## `#[arcane]` everywhere
 
-**`#[rite]` should be your default.** Use `#[arcane]` only at the entry point — the first call from non-SIMD code.
-
-### Two `#[rite]` syntaxes — same output
+Use `#[arcane]` for every SIMD function — entry points and internal helpers alike. When one `#[arcane]` function calls another with matching features, LLVM inlines the wrapper away. Zero overhead.
 
 ```rust
-use archmage::{X64V3Token, rite};
-use core::arch::x86_64::__m256;
+use archmage::prelude::*;
 
-// Tier-based: specify the tier name, no token parameter needed
-#[rite(v3, import_intrinsics)]
-fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 {
+#[arcane]
+fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+    let products = mul_vectors(token, a, b);  // #[arcane] — inlines, zero cost
+    horizontal_sum(token, products)            // #[arcane] — same
+}
+
+#[arcane]
+fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
     _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
 }
 
-// Token-based: reads features from the token type in the signature
-#[rite(import_intrinsics)]
+#[arcane]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
     let low = _mm256_castps256_ps128(sum);
     let high = _mm256_extractf128_ps::<1>(sum);
     _mm_cvtss_f32(_mm_add_ss(low, high))
-}
-```
-
-Both produce identical `#[target_feature(enable = "avx2,fma,...")]` output. The tier-based form is shorter; the token form is handy when you already have the token in scope.
-
-### `#[arcane]` at the entry point
-
-```rust
-use archmage::{X64V3Token, SimdToken, arcane};
-
-#[arcane(import_intrinsics)]
-fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let products = mul_vectors(a, b);       // #[rite(v3)] — no token needed
-    horizontal_sum(token, products)          // #[rite] — reads token type
 }
 
 fn main() {
@@ -237,56 +239,23 @@ fn main() {
 }
 ```
 
-`#[arcane]` generates an `#[inline(always)]` wrapper that crosses the `#[target_feature]` boundary via `unsafe` — internally, in generated code your crate never sees. From inside, you call `#[rite]` functions freely (same features = safe call).
+### The target-feature boundary
 
-### Why two macros?
-
-`#[arcane]` generates a safe wrapper that crosses the `#[target_feature]` boundary — LLVM can't optimize across it. `#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into the caller. Same features = no boundary.
+The one thing that costs performance is calling an `#[arcane]` function **from code without matching features** — each call crosses LLVM's `#[target_feature]` optimization boundary. Put loops inside the `#[arcane]` function, not around it.
 
 Processing 1000 8-float vector additions ([full benchmark details](docs/PERFORMANCE.md)):
 
 | Pattern | Time | Why |
 |---------|------|-----|
-| `#[rite]` inside `#[arcane]` | 547 ns | Features match — LLVM inlines |
-| `#[arcane]` per iteration | 2209 ns (4x) | Target-feature boundary per call |
+| `#[arcane]` calling `#[arcane]` (same features) | 547 ns | Features match — LLVM inlines |
+| `#[arcane]` per iteration from non-SIMD code | 2209 ns (4x) | Target-feature boundary per call |
 | Bare `#[target_feature]` (no archmage) | 2222 ns (4x) | Same boundary — archmage adds nothing |
 
 The 4x penalty is LLVM's `#[target_feature]` boundary, not archmage overhead. Bare `#[target_feature]` without archmage has the same cost. With real workloads (DCT-8), the boundary costs up to 6.2x.
 
-**The rule:** `#[arcane]` once at the entry point, `#[rite]` for everything called from SIMD code.
+**The rule:** enter `#[arcane]` once from non-SIMD code, put the loop inside. From within `#[arcane]`, call other `#[arcane]` functions freely — same or subset features means LLVM inlines.
 
 For trait impls, use `#[arcane(_self = Type)]` — a nested inner-function approach (since sibling would add methods not in the trait definition).
-
-### Multi-tier `#[rite]` (rare)
-
-Occasionally you have scalar code called from inside SIMD functions where `#[inline(always)]` isn't viable and you don't want `#[autoversion]`'s dispatch overhead. In that case, give `#[rite]` multiple tiers and it generates a suffixed variant for each:
-
-```rust
-use archmage::prelude::*;
-
-// Generates normalize_v3() and normalize_neon() —
-// each compiled with different #[target_feature], auto-vectorized separately
-#[rite(v3, neon)]
-fn normalize(data: &mut [f32]) {
-    let max = data.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    if max != 0.0 {
-        for x in data.iter_mut() { *x /= max; }
-    }
-}
-```
-
-Call the matching suffixed variant from an `#[arcane]` or `#[rite]` context:
-
-```rust
-use archmage::prelude::*;
-
-#[arcane]
-fn process(token: X64V3Token, data: &mut [f32]) {
-    normalize_v3(data);  // safe — caller has V3 features, callee needs V3
-}
-```
-
-These are `#[target_feature]` functions — you can't call them from non-SIMD code or dispatch them via `incant!`. They're for internal use within a SIMD call chain.
 
 ## Auto-vectorization with `#[autoversion]`
 
@@ -327,11 +296,11 @@ For inherent methods, `self` works naturally — no special parameters needed. F
 
 **When to use which:**
 
-| | `#[autoversion]` | `#[arcane]` + `#[rite]` |
+| | `#[autoversion]` | `#[arcane]` + `incant!` |
 |---|---|---|
 | You write | Scalar loops | SIMD intrinsics |
 | Vectorization | Compiler auto-vectorizes | You choose the instructions |
-| Lines of code | 1 attribute | Manual variant + dispatch |
+| Lines of code | 1 attribute | Per-tier variants + dispatch |
 | Best for | Simple numeric loops | Hand-tuned SIMD kernels |
 
 ## SIMD types with `magetypes`
@@ -397,12 +366,12 @@ Always include `scalar` (or `default`) in explicit tier lists — it documents t
 Write platform-specific variants with concrete types, then dispatch at runtime:
 
 ```rust
-use archmage::incant;
-#[cfg(target_arch = "x86_64")]
+use archmage::prelude::*;
 use magetypes::simd::f32x8;
 
-#[cfg(target_arch = "x86_64")]
-fn sum_squares_v3(token: archmage::X64V3Token, data: &[f32]) -> f32 {
+// No #[cfg] needed — #[arcane] handles it
+#[arcane]
+fn sum_squares_v3(token: X64V3Token, data: &[f32]) -> f32 {
     let chunks = data.chunks_exact(8);
     let mut acc = f32x8::zero(token);
     for chunk in chunks {
@@ -412,11 +381,11 @@ fn sum_squares_v3(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     acc.reduce_add() + chunks.remainder().iter().map(|x| x * x).sum::<f32>()
 }
 
-fn sum_squares_scalar(_token: archmage::ScalarToken, data: &[f32]) -> f32 {
+fn sum_squares_scalar(_token: ScalarToken, data: &[f32]) -> f32 {
     data.iter().map(|x| x * x).sum()
 }
 
-/// Dispatches to the best available at runtime.
+/// Dispatches to the best available at runtime — no #[cfg] needed.
 fn sum_squares(data: &[f32]) -> f32 {
     incant!(sum_squares(data), [v3, scalar])
 }
@@ -442,7 +411,7 @@ Use `Token` to mark where the summoned token is placed: `incant!(process(data, T
 
 ### Zero-overhead nesting
 
-Inside `#[arcane]`, `#[rite]`, or `#[autoversion]` bodies, `incant!` is automatically rewritten to a direct call — no runtime dispatch. The rewriter handles downcasting, upgrade attempts, and feature-gated tiers. See the [dispatch docs](https://imazen.github.io/archmage/archmage/dispatch/incant/) for details.
+Inside `#[arcane]` or `#[autoversion]` bodies, `incant!` is automatically rewritten to a direct call — no runtime dispatch. The rewriter handles downcasting, upgrade attempts, and feature-gated tiers. See the [dispatch docs](https://imazen.github.io/archmage/archmage/dispatch/incant/) for details.
 
 ## Tokens
 
@@ -460,7 +429,7 @@ Inside `#[arcane]`, `#[rite]`, or `#[autoversion]` bodies, `incant!` is automati
 | `Wasm128Token` | | WASM SIMD | Compile-time only |
 | `ScalarToken` | | (none) | Always available |
 
-Higher tokens subsume lower ones: `X64V4Token` → `X64V3Token` → `X64V2Token` → `X64V1Token`. Downcasting is free (zero-cost). `#[arcane(stub)]` generates unreachable stubs on non-matching architectures when you need cross-arch dispatch without `#[cfg]` guards. `incant!` handles cfg-gating automatically.
+Higher tokens subsume lower ones: `X64V4Token` → `X64V3Token` → `X64V2Token` → `X64V1Token`. Downcasting is free (zero-cost). `incant!` handles `#[cfg(target_arch)]` gating automatically — you don't need to write cfg guards for cross-arch dispatch.
 
 See [`token-registry.toml`](token-registry.toml) for the complete mapping of tokens to CPU features.
 

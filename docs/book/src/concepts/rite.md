@@ -269,8 +269,7 @@ All options combine freely. Order doesn't matter.
 | `v3`, `neon`, `v4`, ... | Tier name — one = single function, multiple = suffixed variants |
 | `import_intrinsics` | Injects `use archmage::intrinsics::{arch}::*` (safe memory ops) |
 | `import_magetypes` | Injects magetypes SIMD type imports |
-| `stub` | Generates `unreachable!()` stub on wrong architecture |
 
 ## Cross-Architecture Behavior
 
-Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. Use `#[rite(stub)]` to generate an unreachable stub instead. For multi-tier, each variant gets its own cfg guard.
+Like `#[arcane]`, `#[rite]` cfg-gates functions to the matching architecture by default. On non-matching architectures, no function is emitted. For multi-tier, each variant gets its own cfg guard. Use `incant!` for cross-arch dispatch.

@@ -17,7 +17,7 @@ fn avx2_kernel(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
-The function simply doesn't exist on ARM/WASM. This is fine for `incant!` dispatch (which cfg-gates its calls automatically) and for manual dispatch behind `summon()`. The only case where it matters is direct references to the function *by name* outside of dispatch — those need either `stub` or a `#[cfg]` guard on the *call site*.
+The function simply doesn't exist on ARM/WASM. This is fine for `incant!` dispatch (which cfg-gates its calls automatically) and for manual dispatch behind `summon()`. The only case where it matters is direct references to the function *by name* outside of dispatch — those need a `#[cfg]` guard on the *call site*.
 
 ## `incant!` — No Guards Needed
 
@@ -56,24 +56,12 @@ pub fn process(data: &mut [f32]) {
 
 Wait — that won't compile on ARM because `process_avx2` doesn't exist. Two options:
 
-### Option A: Use `stub`
+### Option A: Use `incant!` (recommended)
 
 ```rust
-#[arcane(stub, import_intrinsics)]
-fn process_avx2(token: X64V3Token, data: &mut [f32]) { /* ... */ }
-
-#[arcane(stub, import_intrinsics)]
-fn process_neon(token: NeonToken, data: &mut [f32]) { /* ... */ }
-
-// Both referenced by name — stubs make this compile everywhere
+// No #[cfg], no ceremony
 pub fn process(data: &mut [f32]) {
-    if let Some(token) = X64V3Token::summon() {
-        return process_avx2(token, data);
-    }
-    if let Some(token) = NeonToken::summon() {
-        return process_neon(token, data);
-    }
-    process_scalar(data);
+    incant!(process(data), [v3, neon, scalar])
 }
 ```
 
@@ -97,26 +85,6 @@ pub fn process(data: &mut [f32]) {
         return process_neon(token, data);
     }
     process_scalar(data);
-}
-```
-
-### Option C: Use `incant!` (recommended)
-
-```rust
-// No #[cfg], no stubs, no ceremony
-pub fn process(data: &mut [f32]) {
-    incant!(process(data), [v3, neon, scalar])
-}
-```
-
-## `#[rite]` Also Supports `stub`
-
-`#[rite(stub)]` works the same way for inner helpers:
-
-```rust
-#[rite(stub, import_intrinsics)]
-fn helper(token: X64V3Token, val: f32) -> f32 {
-    val * 2.0
 }
 ```
 
@@ -168,8 +136,7 @@ fn test_avx2_path() {
 
 ## Migration from Stub Default
 
-If your code previously relied on `#[arcane]` generating stubs on wrong architectures:
+If your code previously relied on `#[arcane]` generating stubs on wrong architectures (the `stub` option was removed in v0.9.13):
 
 1. **Use `incant!`**: Handles cfg-gating automatically (recommended)
-2. **Add `stub`**: `#[arcane(stub)]` restores the old behavior
-3. **Guard the call site**: `#[cfg]` on the reference, not the function
+2. **Guard the call site**: `#[cfg]` on the reference, not the function

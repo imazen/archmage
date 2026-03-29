@@ -185,9 +185,7 @@ fn v3_sum(token: X64V3Token, data: &[f32; 8]) -> f32 {
 
 ## Cross-Architecture Behavior
 
-**Default (cfg-out):** On non-matching architectures, no function is emitted. Code referencing it must use `#[cfg]` guards or `incant!`.
-
-**With `stub`:** `#[arcane(stub)]` generates an `unreachable!()` stub on wrong architectures.
+On non-matching architectures, no function is emitted. Code referencing it by name must use `#[cfg]` guards on the call site, or use `incant!` which handles cfg-gating automatically.
 
 See [Cross-Platform](./cross-platform.md) for dispatch patterns.
 
@@ -196,22 +194,9 @@ See [Cross-Platform](./cross-platform.md) for dispatch patterns.
 | Option | Effect |
 |--------|--------|
 | `#[arcane]` | Sibling expansion, cfg-out on wrong arch |
-| `#[arcane(stub)]` | Sibling expansion, unreachable stub on wrong arch |
 | `#[arcane(nested)]` | Nested inner function (old behavior) |
 | `#[arcane(_self = Type)]` | Implies nested, replaces `self`→`_self` |
-| `#[arcane(nested, stub)]` | Nested + stub |
 | `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
-
-### `stub`
-
-Generate an `unreachable!()` stub on non-matching architectures:
-
-```rust
-#[arcane(stub, import_intrinsics)]
-fn process(token: X64V3Token, data: &[f32]) -> f32 {
-    data.iter().sum()
-}
-```
 
 ### `nested`
 

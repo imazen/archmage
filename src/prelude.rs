@@ -44,13 +44,13 @@
 //!
 //! Requires the `macros` feature (enabled by default).
 //!
-//! - [`arcane`] — Entry-point macro. Generates `#[target_feature]` wrappers
-//!   with cross-architecture stubs. Use at API boundaries after `summon()`.
-//! - [`rite`] — Internal helper macro. Adds `#[target_feature]` + `#[inline]`
-//!   so LLVM inlines it into callers with matching features. Three modes:
+//! - [`arcane`] — The SIMD macro. Generates `#[target_feature]` wrappers
+//!   with automatic `#[cfg(target_arch)]` gating. Use for all SIMD functions.
+//! - [`rite`] — Advanced alternative to `#[arcane]` for internal helpers.
+//!   Adds `#[target_feature]` + `#[inline]` directly (no wrapper). Three modes:
 //!   token-based (`#[rite]`), tier-based (`#[rite(v3)]` — no token needed),
 //!   or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants).
-//!   Use for functions called from `#[arcane]` context.
+//!   Optional — `#[arcane]` works for helpers too.
 //! - [`incant!`] — Dispatch macro. Routes to suffixed functions (`_v3`, `_neon`,
 //!   `_scalar`, etc.) based on platform. See [How `incant!` works](#how-incant-works).
 //! - [`autoversion`] — Auto-vectorization macro. Write plain scalar code with a

@@ -196,18 +196,12 @@ fn v3_sum(_token: X64V3Token, data: &[f32; 8]) -> f32 {
 
 ## Cross-Architecture Behavior
 
-**Default (cfg-out):** On non-matching architectures, no function is emitted at all — less dead code. Code referencing the function must use `#[cfg]` guards or `incant!`.
-
-**With `stub`:** `#[arcane(stub)]` generates an `unreachable!()` stub on wrong architectures. Use when cross-arch dispatch references the function without cfg guards.
+On non-matching architectures, no function is emitted — no dead code. Code referencing the function by name must use `#[cfg]` guards on the call site, or use `incant!` (which handles cfg gating automatically).
 
 ```rust
-// Default: cfg'd out on non-x86 — doesn't exist
+// Only exists on x86_64 — cfg'd out on ARM/WASM
 #[arcane(import_intrinsics)]
 fn process_avx2(token: X64V3Token, data: &[f32]) -> f32 { ... }
-
-// With stub: unreachable stub exists on non-x86
-#[arcane(stub, import_intrinsics)]
-fn process_avx2_stubbed(token: X64V3Token, data: &[f32]) -> f32 { ... }
 ```
 
 See [Cross-Platform](@/archmage/concepts/cross-platform.md) for dispatch patterns.
@@ -220,22 +214,8 @@ See [Cross-Platform](@/archmage/concepts/cross-platform.md) for dispatch pattern
 | `#[arcane(import_intrinsics, import_magetypes)]` | Also auto-import magetypes SIMD types |
 | `#[arcane(_self = Type, import_intrinsics)]` | **For trait impls.** Nested mode, replaces `self`→`_self` |
 | `#[arcane]` | Sibling expansion, no auto-imports (intrinsics must be in scope) |
-| `#[arcane(stub, import_intrinsics)]` | Sibling + unreachable stub on wrong arch |
 | `#[arcane(nested, import_intrinsics)]` | Nested inner function (for trait impls without `self`) |
-| `#[arcane(nested, stub, import_intrinsics)]` | Nested + stub |
 | `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
-
-### `stub`
-
-Generate an `unreachable!()` stub on non-matching architectures:
-
-```rust
-#[arcane(stub, import_intrinsics)]
-fn process(token: X64V3Token, data: &[f32]) -> f32 {
-    // Real implementation on x86, unreachable stub on ARM/WASM
-    data.iter().sum()
-}
-```
 
 ### `nested` and `_self = Type`
 

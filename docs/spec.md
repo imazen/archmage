@@ -129,11 +129,9 @@ HasArm64V3 → HasNeonSha3
 
 All token types are defined on all architectures. On unsupported architectures, `summon()` returns `None`. This enables cross-platform code that compiles everywhere but only dispatches on the right arch.
 
-**Cfg-out default:** `#[arcane]` and `#[rite]` only emit code on the matching architecture. On wrong architectures, no function is generated — less dead code, cleaner binaries. Direct *call sites* referencing the function by name must use `#[cfg(target_arch)]` guards, `stub`, or `incant!` (which cfg-gates automatically). No `#[cfg]` is needed on the function *definitions* — the macros handle that.
+**Cfg-out default:** `#[arcane]` and `#[rite]` only emit code on the matching architecture. On wrong architectures, no function is generated — less dead code, cleaner binaries. Direct call sites referencing the function by name must use `#[cfg(target_arch)]` guards or `incant!` (which cfg-gates automatically). No `#[cfg]` is needed on the function *definitions* — the macros handle that.
 
-**Stub opt-in:** `#[arcane(stub)]` and `#[rite(stub)]` generate `unreachable!()` stubs on wrong architectures. Use when cross-arch dispatch references the function without cfg guards. The stub is safe because the token can't be constructed on the wrong architecture.
-
-**`incant!` is unaffected** — it wraps each tier call in `#[cfg(target_arch)]` blocks, so it works correctly with cfg'd-out functions.
+**`incant!` is the recommended dispatch mechanism** — it wraps each tier call in `#[cfg(target_arch)]` blocks, so it works correctly with cfg'd-out functions. No manual `#[cfg]` guards needed at call sites.
 
 Stub modules for token types (not macro-generated functions): `x86_stubs.rs`, `arm_stubs.rs`, `wasm_stubs.rs`.
 
@@ -240,10 +238,8 @@ impl SimdOps for MyType {
 | Option | Effect |
 |--------|--------|
 | `#[arcane]` | Sibling expansion, cfg-out on wrong arch |
-| `#[arcane(stub)]` | Sibling expansion, unreachable stub on wrong arch |
 | `#[arcane(nested)]` | Nested inner function |
 | `#[arcane(_self = Type)]` | Implies nested, replaces `self`→`_self` |
-| `#[arcane(nested, stub)]` | Nested + stub |
 | `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
 
 #### `#[rite]`
@@ -257,8 +253,6 @@ impl SimdOps for MyType {
 3. **Multi-tier** (`#[rite(v3, v4, neon)]`): generates a suffixed variant for each tier (`fn_v3`, `fn_v4`, `fn_neon`), each with its own `#[target_feature]` and `#[cfg(target_arch)]`
 
 Token-based and tier-based produce identical output. Multi-tier generates one function per tier. Since Rust 1.85+, all variants are safe to call from matching `#[arcane]` or `#[rite]` contexts.
-
-`#[rite(stub)]` generates an unreachable stub on wrong architectures (default: cfg-out).
 
 This also works with `impl Trait` bounds, generic parameters, and `_self` for trait methods.
 

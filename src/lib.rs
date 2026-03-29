@@ -83,11 +83,11 @@
 //! - **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token needed
 //! - **Multi-tier** (`#[rite(v3, v4, neon)]`): generates a suffixed copy for each tier
 //!
-//! **`#[rite]` should be your default.** Use `#[arcane]` only at entry points
-//! (the first call from non-SIMD code). Token-based and tier-based produce
-//! identical output — the token form can be easier to remember if you already
-//! have the token in scope. Multi-tier generates one function per tier, each
-//! compiled with different `#[target_feature]` attributes.
+//! **Use `#[arcane]` for all SIMD functions** — entry points and helpers alike.
+//! When one `#[arcane]` function calls another with matching features, LLVM
+//! inlines the wrapper away (zero overhead). `#[rite]` is available as an
+//! advanced alternative that adds `#[target_feature]` + `#[inline]` directly
+//! without a wrapper.
 //!
 //! Use concrete tokens like `X64V3Token` (AVX2+FMA) or `X64V4Token` (AVX-512).
 //! For generic code, use tier traits like `HasX64V2` or `HasX64V4`.

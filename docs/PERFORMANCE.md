@@ -10,24 +10,24 @@ Every benchmark pattern shows archmage and bare `#[target_feature]` producing th
 
 | What you write | Time (1000 x 8-float add) | What LLVM sees |
 |----------------|---------------------------|----------------|
-| `#[rite]` helper in `#[arcane]` | 547 ns | One function, one target, full inlining |
+| `#[arcane]` calling `#[arcane]` (matching features) | 547 ns | Features match — LLVM inlines wrapper |
 | Bare `#[target_feature]` (no archmage) | 544 ns | Same |
-| `#[arcane]` per loop iteration | 2209 ns (4x) | Boundary crossing per call |
+| `#[arcane]` per loop iteration from non-SIMD code | 2209 ns (4x) | Boundary crossing per call |
 | Bare `#[target_feature]` per loop iteration | 2222 ns (4x) | Same boundary, same cost |
 
 The 4x penalty comes from LLVM, not archmage. Read on.
 
 ## The target-feature boundary
 
-`#[arcane]` reads the token type from your function signature to decide which `#[target_feature]` to emit. `#[rite]` does the same in three modes: token-based (reads the parameter), tier-based (`#[rite(v3)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants). A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`.
+`#[arcane]` reads the token type from your function signature to decide which `#[target_feature]` to emit. A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`.
 
-`#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This is how you cross into SIMD code without writing `unsafe` yourself — but the wrapper creates an LLVM optimization boundary. LLVM won't inline across mismatched `#[target_feature]` attributes: no load hoisting, no store sinking, no cross-iteration vectorization.
+`#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This is how you cross into SIMD code without writing `unsafe` yourself. When an `#[arcane]` function calls another `#[arcane]` function with matching features, LLVM inlines the wrapper away — no boundary. The boundary only exists when the caller has fewer features than the callee (e.g., non-SIMD code calling an `#[arcane]` function).
 
-`#[rite]` applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features (from its own `#[arcane]` or `#[rite]`), LLVM inlines freely — no boundary. Use `#[rite(v3)]` for tier-based (no token), `#[rite]` with a token parameter, or `#[rite(v3, v4, neon)]` to generate suffixed variants for each tier.
+LLVM won't inline across mismatched `#[target_feature]` attributes: no load hoisting, no store sinking, no cross-iteration vectorization. But matching features = no mismatch = full inlining.
 
 The boundary has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. `#[arcane]` just makes the wrapper safe; the boundary is LLVM's.
 
-**The fix:** use `#[arcane]` once at your API entry point, and `#[rite]` for everything called from within SIMD code. Use `#[rite(v3)]` for helpers that don't need the token, or pass the token through for magetypes. LLVM sees matching targets, inlines freely, and there's no boundary.
+**The fix:** enter `#[arcane]` once from non-SIMD code, put the loop inside. From within `#[arcane]`, call other `#[arcane]` functions freely — matching features means LLVM inlines the wrapper away. `#[rite]` is also available (adds `#[target_feature]` + `#[inline]` directly, no wrapper) but isn't necessary when features match.
 
 ```rust
 // WRONG: boundary every iteration (4x slower)
@@ -38,7 +38,7 @@ fn process_all(points: &[[f32; 8]]) {
     }
 }
 
-// RIGHT: one boundary, loop inside, tier-based helpers
+// RIGHT: one boundary, loop inside
 fn process_all(points: &[[f32; 8]]) {
     if let Some(token) = X64V3Token::summon() {
         process_all_simd(token, points);  // one #[arcane] entry
@@ -46,14 +46,14 @@ fn process_all(points: &[[f32; 8]]) {
 }
 
 #[arcane(import_intrinsics)]
-fn process_all_simd(_token: X64V3Token, points: &[[f32; 8]]) {
+fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     for p in points {
-        process_one(p);  // #[rite(v3)] — inlines, no boundary, no token
+        process_one(token, p);  // #[arcane] — features match, LLVM inlines
     }
 }
 
-#[rite(v3, import_intrinsics)]
-fn process_one(p: &[f32; 8]) {
+#[arcane(import_intrinsics)]
+fn process_one(_token: X64V3Token, p: &[f32; 8]) {
     // ...
 }
 ```
@@ -168,9 +168,9 @@ These are distilled from the benchmark data above.
 
 1. **Enter `#[arcane]` once.** Put loops inside it. Each call from non-SIMD code crosses the boundary.
 
-2. **Use `#[rite]` for everything inside.** `#[rite]` adds `#[target_feature]` + `#[inline]` directly. LLVM inlines it into any caller with matching features. No boundary. Use `#[rite(v3)]` for tier-based (no token), `#[rite]` with a token for magetypes, or `#[rite(v3, v4, neon)]` for multi-tier suffixed variants.
+2. **Use `#[arcane]` for helpers too.** When an `#[arcane]` function calls another with matching features, LLVM inlines the wrapper — no boundary. `#[rite]` (adds `#[target_feature]` + `#[inline]` directly) and plain `#[inline(always)]` functions also work.
 
-3. **Never call `#[arcane]` from `#[arcane]`.** Use `#[rite]` for functions called from SIMD code. `#[arcane]` creates a wrapper that re-crosses the boundary.
+3. **Don't cross feature boundaries in hot loops.** Calling `#[arcane]` from `#[arcane]` with matching features is free — LLVM inlines the wrapper (benchmark: V3→V3 = 1.0x). The boundary only hurts when the caller has fewer features than the callee (V3→V4 = 4x).
 
 4. **Downcasting is free.** A V4 function calling a V3 helper inlines because V4 is a superset of V3. Same for V3 calling V2.
 
