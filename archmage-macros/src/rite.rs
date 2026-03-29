@@ -179,7 +179,6 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
     {
         let ctx = crate::rewrite::CallerContext {
             tier_suffix: tier_suffix.to_string(),
-            tier_priority: tier.priority,
             target_arch: tier.target_arch,
             token_ident: token_ident.clone(),
         };
@@ -320,7 +319,6 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
         {
             let ctx = crate::rewrite::CallerContext {
                 tier_suffix: suffix.to_string(),
-                tier_priority: tier.priority,
                 target_arch: tier.target_arch,
                 token_ident: token_info.ident,
             };

@@ -579,22 +579,28 @@ pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
     if from_suffix == to_suffix {
         return false;
     }
-    match (from_suffix, to_suffix) {
-        ("v2", "v1") => true,
-        ("x64_crypto", "v1" | "v2") => true,
-        ("v3", "v1" | "v2") => true,
-        ("v3_crypto", "v1" | "v2" | "v3" | "x64_crypto") => true,
-        ("v4", "v1" | "v2" | "v3" | "x64_crypto") => true,
-        ("v4x", "v1" | "v2" | "v3" | "v3_crypto" | "v4" | "x64_crypto") => true,
-        ("fp16", "v1" | "v2" | "v3" | "v4" | "x64_crypto") => true,
-        ("neon_aes", "neon") => true,
-        ("neon_sha3", "neon") => true,
-        ("neon_crc", "neon") => true,
-        ("arm_v2", "neon" | "neon_aes" | "neon_crc") => true,
-        ("arm_v3", "arm_v2" | "neon" | "neon_aes" | "neon_crc" | "neon_sha3") => true,
-        ("wasm128_relaxed", "wasm128") => true,
-        _ => false,
-    }
+    matches!(
+        (from_suffix, to_suffix),
+        ("v2", "v1")
+            | ("x64_crypto", "v1" | "v2")
+            | ("v3", "v1" | "v2")
+            | ("v3_crypto", "v1" | "v2" | "v3" | "x64_crypto")
+            | ("v4", "v1" | "v2" | "v3" | "x64_crypto")
+            | (
+                "v4x",
+                "v1" | "v2" | "v3" | "v3_crypto" | "v4" | "x64_crypto"
+            )
+            | ("fp16", "v1" | "v2" | "v3" | "v4" | "x64_crypto")
+            | ("neon_aes", "neon")
+            | ("neon_sha3", "neon")
+            | ("neon_crc", "neon")
+            | ("arm_v2", "neon" | "neon_aes" | "neon_crc")
+            | (
+                "arm_v3",
+                "arm_v2" | "neon" | "neon_aes" | "neon_crc" | "neon_sha3"
+            )
+            | ("wasm128_relaxed", "wasm128")
+    )
 }
 
 /// All concrete token names that exist in the runtime crate.

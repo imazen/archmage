@@ -21,8 +21,6 @@ use crate::tiers::{self, DEFAULT_TIER_NAMES, ResolvedTier};
 pub(crate) struct CallerContext {
     /// The caller's tier suffix (e.g., "v3", "v4", "neon")
     pub tier_suffix: String,
-    /// The caller's tier priority (higher = more features)
-    pub tier_priority: u32,
     /// The caller's target arch (e.g., Some("x86_64"))
     pub target_arch: Option<&'static str>,
     /// The token ident available in the caller's scope (e.g., `token`, `__token`, `_token`)
@@ -278,10 +276,9 @@ mod tests {
     use super::*;
     use quote::quote;
 
-    fn make_ctx(tier: &str, priority: u32, arch: Option<&'static str>) -> CallerContext {
+    fn make_ctx(tier: &str, _priority: u32, arch: Option<&'static str>) -> CallerContext {
         CallerContext {
             tier_suffix: tier.to_string(),
-            tier_priority: priority,
             target_arch: arch,
             token_ident: format_ident!("__token"),
         }

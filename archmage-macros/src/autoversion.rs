@@ -271,7 +271,6 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         if tier.name != "scalar" && tier.name != "default" {
             let ctx = crate::rewrite::CallerContext {
                 tier_suffix: tier.suffix.to_string(),
-                tier_priority: tier.priority,
                 target_arch: tier.target_arch,
                 token_ident: token_param.ident.clone(),
             };

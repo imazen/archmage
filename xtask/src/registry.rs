@@ -741,7 +741,7 @@ impl Registry {
             /// Identity (from == to) returns false (use direct pass, no method needed).
             pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {{
                 if from_suffix == to_suffix {{ return false; }}
-                match (from_suffix, to_suffix) {{
+                matches!((from_suffix, to_suffix),
         "});
 
         // Feature subset computation: from can downgrade to to when
@@ -780,14 +780,14 @@ impl Registry {
                 let pattern: Vec<String> =
                     downgradable.iter().map(|s| format!("\"{s}\"")).collect();
                 let pattern = pattern.join(" | ");
-                out.push_str(&format!(
-                    "        (\"{from_suffix}\", {pattern}) => true,\n"
-                ));
+                out.push_str(&format!("        (\"{from_suffix}\", {pattern}) |\n"));
             }
         }
 
-        out.push_str("        _ => false,\n");
-        out.push_str("    }\n}\n");
+        // Remove trailing " |\n" and close the matches! macro
+        let trimmed = out.trim_end_matches(" |\n").len();
+        out.truncate(trimmed);
+        out.push_str("\n    )\n}\n");
     }
 
     fn gen_all_concrete_tokens(&self, out: &mut String) {

@@ -223,7 +223,6 @@ pub(crate) fn arcane_impl(
     {
         let ctx = crate::rewrite::CallerContext {
             tier_suffix: tier_suffix.to_string(),
-            tier_priority: tier.priority,
             target_arch: tier.target_arch,
             token_ident: _token_ident.clone(),
         };

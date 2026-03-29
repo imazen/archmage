@@ -197,11 +197,11 @@ fn is_bare_ident(expr: &syn::Expr, name: &str) -> bool {
 ///
 /// Returns the kind of token placement found:
 /// - `TokenPlacement::Explicit(index)`: arg at `index` is the `Token` marker
-/// - `TokenPlacement::Variable(index, ident)`: arg at `index` is the caller's token variable
+/// - `TokenPlacement::Variable(index)`: arg at `index` is the caller's token variable
 /// - `TokenPlacement::None`: no token in args (will be prepended, deprecated)
 pub(crate) enum TokenPlacement {
-    /// `Token` marker found at this arg index
-    Explicit(usize),
+    /// `Token` marker found in args
+    Explicit,
     /// Caller's token variable name found at this arg index
     Variable(usize),
     /// No token in args — will prepend (deprecated)
@@ -213,14 +213,15 @@ pub(crate) enum TokenPlacement {
 /// Checks for:
 /// 1. `Token` marker (explicit placeholder for summon mode)
 /// 2. A bare ident matching `caller_token_ident` (the actual variable)
+///
 /// Falls back to `None` (token will be prepended).
 pub(crate) fn find_token_placement(
     args: &[syn::Expr],
     caller_token_ident: Option<&str>,
 ) -> TokenPlacement {
-    for (i, arg) in args.iter().enumerate() {
+    for arg in args.iter() {
         if is_bare_ident(arg, "Token") {
-            return TokenPlacement::Explicit(i);
+            return TokenPlacement::Explicit;
         }
     }
     if let Some(ident_name) = caller_token_ident {
@@ -253,7 +254,7 @@ pub(crate) fn build_call_args_with_ident(
     caller_token_ident: Option<&str>,
 ) -> proc_macro2::TokenStream {
     match find_token_placement(args, caller_token_ident) {
-        TokenPlacement::Explicit(_) => {
+        TokenPlacement::Explicit => {
             // Replace Token marker with token expression
             let replaced: Vec<proc_macro2::TokenStream> = args
                 .iter()
