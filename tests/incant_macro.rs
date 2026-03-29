@@ -50,6 +50,26 @@ fn sum_wasm128(_token: archmage::Wasm128Token, data: &[f32]) -> f32 {
 }
 
 // =============================================================================
+// V1/V2 tier variants — test lower-tier dispatch
+// =============================================================================
+
+// V1 (SSE2 baseline — always available on x86_64)
+#[cfg(target_arch = "x86_64")]
+fn add_one_v1(_token: archmage::X64V1Token, data: &[f32]) -> Vec<f32> {
+    data.iter().map(|x| x + 1.0).collect()
+}
+
+// V2 (SSE4.2 — available on almost all x86_64 CPUs since 2008)
+#[cfg(target_arch = "x86_64")]
+fn add_one_v2(_token: archmage::X64V2Token, data: &[f32]) -> Vec<f32> {
+    data.iter().map(|x| x + 1.0).collect()
+}
+
+fn add_one_scalar(_token: ScalarToken, data: &[f32]) -> Vec<f32> {
+    data.iter().map(|x| x + 1.0).collect()
+}
+
+// =============================================================================
 // Entry point mode tests
 // =============================================================================
 
@@ -82,6 +102,62 @@ mod entry_point_tests {
         let result = sum_api(&data);
         let expected: f32 = (0..1000).map(|i| i as f32).sum();
         assert_eq!(result, expected);
+    }
+}
+
+// =============================================================================
+// V1/V2 dispatch tests — verify lower tiers work with incant!
+// =============================================================================
+
+mod v1_v2_dispatch_tests {
+    use super::*;
+    use archmage::incant;
+
+    /// incant! with explicit [v1, scalar] dispatches to _v1 on x86_64.
+    /// V1 is the x86_64 baseline (SSE2) — always available.
+    pub fn add_one_v1_api(data: &[f32]) -> Vec<f32> {
+        incant!(add_one(data), [v1, scalar])
+    }
+
+    #[test]
+    fn v1_dispatch_works() {
+        let data = [1.0f32, 2.0, 3.0];
+        let result = add_one_v1_api(&data);
+        assert_eq!(result, vec![2.0, 3.0, 4.0]);
+    }
+
+    /// incant! with explicit [v2, v1, scalar] tries V2 first, falls back to V1.
+    pub fn add_one_v2_api(data: &[f32]) -> Vec<f32> {
+        incant!(add_one(data), [v2, v1, scalar])
+    }
+
+    #[test]
+    fn v2_dispatch_works() {
+        let data = [10.0f32, 20.0];
+        let result = add_one_v2_api(&data);
+        assert_eq!(result, vec![11.0, 21.0]);
+    }
+
+    /// Verify V1 is always reached on x86_64 (it's baseline).
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn v1_always_available_on_x86_64() {
+        assert!(
+            archmage::X64V1Token::summon().is_some(),
+            "V1 is x86_64 baseline — must always be Some"
+        );
+    }
+
+    /// Verify V2 dispatch still falls through correctly when
+    /// only scalar is available (non-x86_64).
+    #[cfg(not(target_arch = "x86_64"))]
+    #[test]
+    fn v1_v2_fall_through_to_scalar_on_non_x86() {
+        let data = [5.0f32];
+        let result = add_one_v1_api(&data);
+        assert_eq!(result, vec![6.0]);
+        let result = add_one_v2_api(&data);
+        assert_eq!(result, vec![6.0]);
     }
 }
 
