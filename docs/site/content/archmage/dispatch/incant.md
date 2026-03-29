@@ -241,6 +241,55 @@ incant!(process(data), [-neon, -wasm128, +v1])
 
 All entries in a tier list must be modifiers (`+`/`-`) or all must be plain names — mixing is a compile error. `+default` replaces `scalar` as the fallback slot.
 
+## Token Position
+
+Use the `Token` marker in args to control where the summoned token is placed:
+
+```rust
+// Token-first (default if Token omitted)
+incant!(process(Token, data), [v3, scalar])
+
+// Token-last (matches callees with token as last param)
+incant!(process(data, Token), [v3, scalar])
+```
+
+Without `Token`, the token is prepended to the args. Including `Token` explicitly is recommended — it documents the callee's expected signature and avoids ambiguity.
+
+## Automatic Rewriting (Zero Overhead)
+
+When `incant!` appears inside an `#[arcane]`, `#[rite]`, or `#[autoversion]` function body, the outer macro rewrites it at compile time to a **direct call** — bypassing the runtime dispatcher entirely.
+
+```rust
+#[arcane]
+fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
+    // Rewritten to: inner_v3(token, data) — no summon, no dispatch
+    incant!(inner(Token, data), [v3, scalar])
+}
+```
+
+The rewriter handles:
+
+| Situation | Generated code |
+|-----------|----------------|
+| Exact tier match (V3 → V3) | `inner_v3(token, data)` — direct call |
+| Downgrade (V4 → V3) | `inner_v3(token.v3(), data)` — downgrade method |
+| Upgrade available (V3, V4 exists) | `if let Some(t) = V4Token::summon() { inner_v4(t, data) } else { inner_v3(token, data) }` |
+| Feature-gated upgrade | `#[cfg(feature = "avx512")] { ... summon V4 ... }` |
+| Cross-branch (V4 → V3_crypto) | Summon (V4 can't downgrade to V3_crypto) |
+| No same-arch tier | `inner_scalar(ScalarToken, data)` |
+
+The caller's token variable is recognized by name — it can be `token`, `_token`, `my_simd_proof`, anything. The macro finds it by type in the function signature.
+
+```rust
+#[arcane]
+fn outer(alligator: X64V3Token, x: f32) -> f32 {
+    // `alligator` recognized as the token — passed through correctly
+    incant!(inner(alligator, x), [v3, scalar])
+}
+```
+
+Tokenless `#[rite(v3)]` functions skip rewriting (no token to pass).
+
 ## When to Use incant!
 
 **Use incant! when:**

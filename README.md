@@ -441,7 +441,15 @@ Use modifiers to tweak the default tier list without restating it: `[+arm_v2]` a
 
 Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
 
-If you already have a token, use `with` to dispatch on its concrete type: `incant!(func(data) with token)`.
+If you already have a token, use `with` to dispatch on its concrete type: `incant!(func(data) with token, [v3, neon, scalar])`. This uses `IntoConcreteToken` for compile-time monomorphized dispatch — no runtime summon.
+
+### Token position
+
+Use `Token` to mark where the summoned token is placed: `incant!(process(data, Token), [v3, scalar])` puts the token last. Without `Token`, the token is prepended.
+
+### Zero-overhead nesting
+
+Inside `#[arcane]`, `#[rite]`, or `#[autoversion]` bodies, `incant!` is automatically rewritten to a direct call — no runtime dispatch. The rewriter handles downcasting, upgrade attempts, and feature-gated tiers. See the [dispatch docs](https://imazen.github.io/archmage/archmage/dispatch/incant/) for details.
 
 ## Tokens
 

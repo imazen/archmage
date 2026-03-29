@@ -1067,6 +1067,10 @@ Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs
 
 - **Rite token forging**: Should tokenless `#[rite(v3)]` functions auto-forge a token at the top of the body? This would let them participate in incant! rewriting (pass token to callees). The forge is provably safe (`#[target_feature]` guarantees features). But: it adds generated `unsafe` to the body, and the soundness argument relies on `#[target_feature]` being the proof — which is a different safety model than "token from summon()". Deferred pending design clarity.
 
+- **`incant_direct!` for inner function calls** (#19): New macro that calls `__arcane_fn_v3()` directly from matching `#[target_feature]` contexts, bypassing the trampoline without depending on `#[inline(always)]`. Requires `#[arcane(pub(crate))]` to expose the inner. Would subsume `#[rite]`'s use case (call inner directly without wrapper). See [issue #19](https://github.com/imazen/archmage/issues/19).
+
+- **Demote `#[rite]` to footnote**: With `incant_direct!`, `#[rite]` becomes redundant — `#[arcane]` + `incant_direct!` covers the same use case with better composability. Keep `#[rite]` as a supported but non-promoted alternative.
+
 ## Rejected
 
 - **Short tier syntax in signatures** (`_token: v3`): Tier names work as suffixes (`_v3`) and macro attributes (`#[rite(v3)]`) but not as type names — they're tier labels, not types. Breaks IDE tooling, isn't real Rust, marginal savings. Existing aliases (`Desktop64`, `Arm64`, `Server64`) suffice.
