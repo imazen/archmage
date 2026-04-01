@@ -772,13 +772,11 @@ jobs:
 
       - name: Compare results across architectures
         run: |
-          FILES=$(find arch-results/ -name '*.jsonl' 2>/dev/null | sort)
-          COUNT=$(echo "$FILES" | grep -c . || true)
-          echo "Found $COUNT arch result files"
-          if [ "$COUNT" -lt 2 ]; then
+          mapfile -t FILES < <(find arch-results/ -name '*.jsonl' 2>/dev/null | sort)
+          echo "Found ${#FILES[@]} arch result files"
+          if [ "${#FILES[@]}" -lt 2 ]; then
             echo "Need at least 2 architecture result files to compare. Skipping."
             exit 0
           fi
-          echo "Comparing files:"
-          echo "$FILES"
-          echo "$FILES" | xargs cargo run -p xtask -- compare-arch-results
+          printf "  %s\n" "${FILES[@]}"
+          cargo run -p xtask -- compare-arch-results "${FILES[@]}"
