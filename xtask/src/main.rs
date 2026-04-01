@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod compare_arch;
 mod expand_gen;
 mod intrinsics_browser;
 mod registry;
@@ -1240,6 +1241,20 @@ fn main() -> Result<()> {
         "miri" => run_miri()?,
         "audit" => run_safety_audit()?,
         "intrinsics-refresh" => refresh_intrinsics_database()?,
+        "compare-arch-results" => {
+            let files: Vec<String> = if args.len() > 2 {
+                args[2..].to_vec()
+            } else {
+                // Auto-discover .jsonl files in arch-results/ directory
+                let dir = std::path::Path::new("arch-results");
+                if dir.is_dir() {
+                    compare_arch::find_jsonl_files(dir)
+                } else {
+                    Vec::new()
+                }
+            };
+            compare_arch::compare_arch_results(&files)?;
+        }
         "ci" | "all" => run_ci()?,
         _ => {
             eprintln!("Unknown command: {}", args[1]);
@@ -1252,6 +1267,9 @@ fn main() -> Result<()> {
             eprintln!("  miri              Run Miri on magetypes (UB detection)");
             eprintln!("  audit             Scan for safety-critical code");
             eprintln!("  intrinsics-refresh  Re-extract intrinsics from current Rust toolchain");
+            eprintln!(
+                "  compare-arch-results  Compare JSONL outputs from arch_exercise across architectures"
+            );
             eprintln!("  ci | all          Run all CI checks");
             std::process::exit(1);
         }
