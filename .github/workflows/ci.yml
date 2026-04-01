@@ -85,6 +85,18 @@ jobs:
           name: cpu-survey-test-x64-${{ matrix.os }}
           path: cpu-survey.txt
 
+      - name: Run arch exercise
+        if: always()
+        shell: bash
+        run: cargo run --example arch_exercise --features "${{ env.FEATURES }}" > arch-results.jsonl
+
+      - name: Upload arch results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-results-x64-${{ matrix.os }}
+          path: arch-results.jsonl
+
   # ==========================================================================
   # Primary: Native ARM64 testing
   # ==========================================================================
@@ -134,6 +146,18 @@ jobs:
         with:
           name: cpu-survey-test-aarch64-${{ matrix.os }}
           path: cpu-survey.txt
+
+      - name: Run arch exercise
+        if: always()
+        shell: bash
+        run: cargo run --example arch_exercise --features "${{ env.FEATURES }}" > arch-results.jsonl
+
+      - name: Upload arch results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-results-aarch64-${{ matrix.name }}
+          path: arch-results.jsonl
 
   # ==========================================================================
   # Cross-compiled testing with QEMU emulation
@@ -230,6 +254,20 @@ jobs:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test --test feature_consistency --target wasm32-wasip1
+
+      - name: Run arch exercise (WASM)
+        if: always()
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo run --example arch_exercise --target wasm32-wasip1 > arch-results.jsonl
+
+      - name: Upload arch results (WASM)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-results-wasm
+          path: arch-results.jsonl
 
   # ==========================================================================
   # Generation check - ensure generated code matches committed code
@@ -705,3 +743,36 @@ jobs:
           flags: aarch64
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ==========================================================================
+  # Cross-architecture SIMD parity comparison
+  # ==========================================================================
+  compare-arch-results:
+    name: Compare Architecture Results
+    runs-on: ubuntu-latest
+    needs: [test-x64, test-aarch64, test-wasm]
+    if: always()
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Download all arch results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: arch-results-*
+          path: arch-results/
+
+      - name: List collected artifacts
+        run: find arch-results/ -name '*.jsonl' -exec echo {} \; -exec wc -l {} \;
+
+      - name: Compare results across architectures
+        run: |
+          FILES=$(find arch-results/ -name '*.jsonl' | sort)
+          echo "Comparing files:"
+          echo "$FILES"
+          echo "$FILES" | xargs cargo run -p xtask -- compare-arch-results
