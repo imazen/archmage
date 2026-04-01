@@ -355,10 +355,18 @@ pub fn roundevenf(x: f32) -> f32 {
     if abs_x >= MAGIC {
         return x; // already an integer
     }
-    if x > 0.0 {
+    let result = if x > 0.0 {
         (x + MAGIC) - MAGIC
     } else {
         (x - MAGIC) + MAGIC
+    };
+    // Preserve the sign of the input when the result is zero.
+    // The magic-number trick can produce +0.0 for negative values that round to zero
+    // (e.g., -0.5 → 0.0), but IEEE 754 roundToIntegralTiesToEven preserves the sign.
+    if result == 0.0 {
+        f32::from_bits(result.to_bits() | (x.to_bits() & 0x8000_0000))
+    } else {
+        result
     }
 }
 
@@ -378,10 +386,15 @@ pub fn roundeven(x: f64) -> f64 {
     if abs_x >= MAGIC {
         return x; // already an integer
     }
-    if x > 0.0 {
+    let result = if x > 0.0 {
         (x + MAGIC) - MAGIC
     } else {
         (x - MAGIC) + MAGIC
+    };
+    if result == 0.0 {
+        f64::from_bits(result.to_bits() | (x.to_bits() & 0x8000_0000_0000_0000))
+    } else {
+        result
     }
 }
 

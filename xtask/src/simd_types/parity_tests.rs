@@ -13,6 +13,10 @@ pub fn generate_parity_tests() -> Vec<(String, String)> {
             generate_cross_arch_parity(),
         ),
         ("polyfill_parity.rs".to_string(), generate_polyfill_parity()),
+        (
+            "scalar_parity.rs".to_string(),
+            super::scalar_parity_gen::generate_scalar_parity(),
+        ),
     ]
 }
 

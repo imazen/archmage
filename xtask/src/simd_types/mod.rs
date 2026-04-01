@@ -29,6 +29,7 @@ mod ops;
 pub mod ops_bitcast;
 mod ops_comparison;
 pub mod parity_tests;
+pub mod scalar_parity_gen;
 mod structure;
 mod structure_arm;
 pub mod structure_polyfill;
