@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.16 — 2026-04-01
+
+### Scalar rounding now matches hardware (ties-to-even)
+
+The scalar backend's `round()` and `to_i32_round()` now use IEEE 754 round-to-nearest-even, matching the behavior of SSE `cvtps2dq`, AVX2 `vcvtps2dq`, NEON `vcvtnq_s32_f32`, and WASM `f32x4.nearest`. Previously, the scalar fallback used ties-away-from-zero (`f32::round()` semantics), causing dispatch parity failures — e.g., a 47-byte divergence in zenjpeg's encoder when comparing scalar vs SIMD output.
+
+New `nostd_math::roundevenf` and `nostd_math::roundeven` functions are available for `no_std` code that needs IEEE 754 default rounding.
+
+### Token disable tests no longer flaky
+
+Tests that call `dangerously_disable_token_process_wide()` now hold `lock_token_testing()`, preventing races when tests run in parallel.
+
 ## 0.9.11 — 2026-03-24
 
 ### `#[autoversion]` — tokenless mode + ScalarToken nesting

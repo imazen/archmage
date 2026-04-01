@@ -69,7 +69,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "archmage"
-version = "0.9.15"
+version = "0.9.16"
 dependencies = [
  "archmage-macros",
  "macrotest",
@@ -81,7 +81,7 @@ dependencies = [
 
 [[package]]
 name = "archmage-macros"
-version = "0.9.15"
+version = "0.9.16"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -358,7 +358,7 @@ dependencies = [
 
 [[package]]
 name = "magetypes"
-version = "0.9.15"
+version = "0.9.16"
 dependencies = [
  "archmage",
  "proptest",
