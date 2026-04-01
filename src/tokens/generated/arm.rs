@@ -232,7 +232,9 @@ impl SimdToken for NeonAesToken {
 }
 
 impl NeonAesToken {
-    /// Get a NeonToken (NEON+AES implies NEON)
+    /// Extract a NeonToken — guaranteed because NEON+AES implies NEON.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
@@ -397,7 +399,9 @@ impl SimdToken for NeonSha3Token {
 }
 
 impl NeonSha3Token {
-    /// Get a NeonToken (NEON+SHA3 implies NEON)
+    /// Extract a NeonToken — guaranteed because NEON+SHA3 implies NEON.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
@@ -563,7 +567,9 @@ impl SimdToken for NeonCrcToken {
 }
 
 impl NeonCrcToken {
-    /// Get a NeonToken (NEON+CRC implies NEON)
+    /// Extract a NeonToken — guaranteed because NEON+CRC implies NEON.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
@@ -753,19 +759,25 @@ impl SimdToken for Arm64V2Token {
 }
 
 impl Arm64V2Token {
-    /// Get a NeonAesToken (Arm64-v2 implies NEON+AES)
+    /// Extract a NeonAesToken — guaranteed because Arm64-v2 implies NEON+AES.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_aes(self) -> NeonAesToken {
         unsafe { NeonAesToken::forge_token_dangerously() }
     }
-    /// Get a NeonCrcToken (Arm64-v2 implies NEON+CRC)
+    /// Extract a NeonCrcToken — guaranteed because Arm64-v2 implies NEON+CRC.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_crc(self) -> NeonCrcToken {
         unsafe { NeonCrcToken::forge_token_dangerously() }
     }
-    /// Get a NeonToken (Arm64-v2 implies NEON)
+    /// Extract a NeonToken — guaranteed because Arm64-v2 implies NEON.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
@@ -1009,31 +1021,41 @@ impl SimdToken for Arm64V3Token {
 }
 
 impl Arm64V3Token {
-    /// Get a Arm64V2Token (Arm64-v3 implies Arm64-v2)
+    /// Extract a Arm64V2Token — guaranteed because Arm64-v3 implies Arm64-v2.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn arm_v2(self) -> Arm64V2Token {
         unsafe { Arm64V2Token::forge_token_dangerously() }
     }
-    /// Get a NeonAesToken (Arm64-v3 implies NEON+AES)
+    /// Extract a NeonAesToken — guaranteed because Arm64-v3 implies NEON+AES.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_aes(self) -> NeonAesToken {
         unsafe { NeonAesToken::forge_token_dangerously() }
     }
-    /// Get a NeonCrcToken (Arm64-v3 implies NEON+CRC)
+    /// Extract a NeonCrcToken — guaranteed because Arm64-v3 implies NEON+CRC.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_crc(self) -> NeonCrcToken {
         unsafe { NeonCrcToken::forge_token_dangerously() }
     }
-    /// Get a NeonSha3Token (Arm64-v3 implies NEON+SHA3)
+    /// Extract a NeonSha3Token — guaranteed because Arm64-v3 implies NEON+SHA3.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_sha3(self) -> NeonSha3Token {
         unsafe { NeonSha3Token::forge_token_dangerously() }
     }
-    /// Get a NeonToken (Arm64-v3 implies NEON)
+    /// Extract a NeonToken — guaranteed because Arm64-v3 implies NEON.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {

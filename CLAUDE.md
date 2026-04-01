@@ -173,6 +173,21 @@ fn v3_impl(token: X64V3Token, chunk: &[f32]) -> f32 {
 }
 ```
 
+**Extraction methods for explicit downcasting:** Every token has `.v1()`, `.v2()`, `.v3()`, `.neon()`, etc. methods to get any lower-tier token it implies. These are guaranteed (infallible), zero-cost, and the primary way to downcast when you need a specific lower token type:
+
+```rust
+let v4 = X64V4Token::summon().unwrap();
+let v3: X64V3Token = v4.v3();        // guaranteed — V4 implies V3
+let v2: X64V2Token = v4.v2();        // guaranteed — V4 implies V2
+let crypto = v4.x64_crypto();        // guaranteed — V4 implies crypto
+
+let arm_v3 = Arm64V3Token::summon().unwrap();
+let arm_v2 = arm_v3.arm_v2();        // guaranteed — V3 implies V2
+let neon = arm_v3.neon();            // guaranteed — V3 implies NEON
+```
+
+**`IntoConcreteToken::as_*()` is NOT downcasting — it's identity checking.** `v4_token.as_x64v3()` returns `None` because the token is not literally an `X64V3Token`. Use `.v3()` for downcasting, `as_*()` for type-based dispatch branching.
+
 **Upcasting via `IntoConcreteToken`:** Safe, but creates an LLVM optimization boundary:
 
 ```rust
@@ -188,7 +203,7 @@ fn process<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
 
 The issue: `#[target_feature]` changes LLVM's target for that function. Generic caller and feature-enabled callee have mismatched targets, so LLVM can't optimize across that boundary. Do dispatch once at entry, not deep in hot code.
 
-**The rule:** Use concrete tokens for hot paths. Downcasting (V4→V3) is free. Upcasting via `IntoConcreteToken` is safe but creates optimization boundaries.
+**The rule:** Use concrete tokens for hot paths. Downcasting (V4→V3) via extraction methods is free. Upcasting via `IntoConcreteToken` is safe but creates optimization boundaries.
 
 ### When `-Ctarget-cpu=native` Is Fine
 

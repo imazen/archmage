@@ -5,6 +5,8 @@ weight = 4
 
 `IntoConcreteToken` enables compile-time dispatch via monomorphization. Each token type returns `Some(self)` for its own type and `None` for others.
 
+**Important:** `as_*()` methods are identity checks, not hierarchy-aware downcasts. `X64V4Token.as_x64v3()` returns `None` — it asks "are you literally `X64V3Token`?", not "do you support V3?". For guaranteed downcasting (V4 → V3), use [extraction methods](/archmage/getting-started/tokens/#extraction-methods) like `.v3()` instead.
+
 ## Basic Usage
 
 ```rust

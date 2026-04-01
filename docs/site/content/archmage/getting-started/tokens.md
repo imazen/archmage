@@ -131,6 +131,41 @@ if let Some(v4) = X64V4Token::summon() {
 
 V4 includes all V3 features, so the token is valid proof.
 
+### Extraction Methods
+
+Every token has methods to extract any lower-tier token it implies. The method name is the short tier name (`.v1()`, `.v2()`, `.v3()`, `.neon()`, etc.). These are guaranteed, infallible, and zero-cost.
+
+```rust
+if let Some(v4) = X64V4Token::summon() {
+    let v3: X64V3Token = v4.v3();      // guaranteed — V4 implies V3
+    let v2: X64V2Token = v4.v2();      // guaranteed — V4 implies V2
+    let v1: X64V1Token = v4.v1();      // guaranteed — V4 implies V1
+    let crypto = v4.x64_crypto();      // guaranteed — V4 implies crypto
+}
+
+if let Some(arm_v3) = Arm64V3Token::summon() {
+    let arm_v2 = arm_v3.arm_v2();      // guaranteed — V3 implies V2
+    let neon = arm_v3.neon();           // guaranteed — V3 implies NEON
+    let aes = arm_v3.neon_aes();       // guaranteed — V3 implies AES
+    let sha3 = arm_v3.neon_sha3();     // guaranteed — V3 implies SHA3
+}
+```
+
+Use extraction when you have a concrete higher token and need to call a function that takes a specific lower token. This is the most common downcasting pattern.
+
+### Extraction vs `IntoConcreteToken::as_*()`
+
+Don't confuse extraction methods with `IntoConcreteToken::as_*()`. They solve different problems:
+
+| | Extraction (`.v2()`, `.neon()`) | `IntoConcreteToken` (`.as_x64v3()`) |
+|---|---|---|
+| **Returns** | The lower token directly | `Option<ExactToken>` |
+| **Hierarchy-aware** | Yes — follows "implies" relationships | No — identity check only |
+| **Use case** | You have V4, need to call a V3 function | You have an unknown `T`, need to branch by type |
+| **Fails?** | Never — guaranteed by type system | Returns `None` if token doesn't match exactly |
+
+`as_x64v3()` on an `X64V4Token` returns **`None`** — it checks "are you literally an `X64V3Token`?", not "do you support V3 features?". For hierarchy-aware downcasting, use the extraction methods.
+
 ## Trait Bounds
 
 For generic code, use tier traits:

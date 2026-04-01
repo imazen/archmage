@@ -264,7 +264,9 @@ impl SimdToken for X64V2Token {
 }
 
 impl X64V2Token {
-    /// Get a X64V1Token (x86-64-v2 implies x86-64-v1)
+    /// Extract a X64V1Token — guaranteed because x86-64-v2 implies x86-64-v1.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
@@ -511,13 +513,17 @@ impl SimdToken for X64CryptoToken {
 }
 
 impl X64CryptoToken {
-    /// Get a X64V1Token (x86-64 Crypto implies x86-64-v1)
+    /// Extract a X64V1Token — guaranteed because x86-64 Crypto implies x86-64-v1.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
         unsafe { X64V1Token::forge_token_dangerously() }
     }
-    /// Get a X64V2Token (x86-64 Crypto implies x86-64-v2)
+    /// Extract a X64V2Token — guaranteed because x86-64 Crypto implies x86-64-v2.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
@@ -791,13 +797,17 @@ impl SimdToken for X64V3Token {
 }
 
 impl X64V3Token {
-    /// Get a X64V1Token (x86-64-v3 implies x86-64-v1)
+    /// Extract a X64V1Token — guaranteed because x86-64-v3 implies x86-64-v1.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
         unsafe { X64V1Token::forge_token_dangerously() }
     }
-    /// Get a X64V2Token (x86-64-v3 implies x86-64-v2)
+    /// Extract a X64V2Token — guaranteed because x86-64-v3 implies x86-64-v2.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
@@ -1125,25 +1135,33 @@ impl SimdToken for X64V3CryptoToken {
 }
 
 impl X64V3CryptoToken {
-    /// Get a X64CryptoToken (x86-64-v3 Crypto implies x86-64 Crypto)
+    /// Extract a X64CryptoToken — guaranteed because x86-64-v3 Crypto implies x86-64 Crypto.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
         unsafe { X64CryptoToken::forge_token_dangerously() }
     }
-    /// Get a X64V1Token (x86-64-v3 Crypto implies x86-64-v1)
+    /// Extract a X64V1Token — guaranteed because x86-64-v3 Crypto implies x86-64-v1.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
         unsafe { X64V1Token::forge_token_dangerously() }
     }
-    /// Get a X64V2Token (x86-64-v3 Crypto implies x86-64-v2)
+    /// Extract a X64V2Token — guaranteed because x86-64-v3 Crypto implies x86-64-v2.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
-    /// Get a X64V3Token (x86-64-v3 Crypto implies x86-64-v3)
+    /// Extract a X64V3Token — guaranteed because x86-64-v3 Crypto implies x86-64-v3.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
@@ -1497,25 +1515,33 @@ impl SimdToken for X64V4Token {
 }
 
 impl X64V4Token {
-    /// Get a X64CryptoToken (AVX-512 implies x86-64 Crypto)
+    /// Extract a X64CryptoToken — guaranteed because AVX-512 implies x86-64 Crypto.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
         unsafe { X64CryptoToken::forge_token_dangerously() }
     }
-    /// Get a X64V1Token (AVX-512 implies x86-64-v1)
+    /// Extract a X64V1Token — guaranteed because AVX-512 implies x86-64-v1.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
         unsafe { X64V1Token::forge_token_dangerously() }
     }
-    /// Get a X64V2Token (AVX-512 implies x86-64-v2)
+    /// Extract a X64V2Token — guaranteed because AVX-512 implies x86-64-v2.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
-    /// Get a X64V3Token (AVX-512 implies x86-64-v3)
+    /// Extract a X64V3Token — guaranteed because AVX-512 implies x86-64-v3.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
@@ -1927,37 +1953,49 @@ impl SimdToken for X64V4xToken {
 }
 
 impl X64V4xToken {
-    /// Get a X64CryptoToken (x86-64-v4x implies x86-64 Crypto)
+    /// Extract a X64CryptoToken — guaranteed because x86-64-v4x implies x86-64 Crypto.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
         unsafe { X64CryptoToken::forge_token_dangerously() }
     }
-    /// Get a X64V1Token (x86-64-v4x implies x86-64-v1)
+    /// Extract a X64V1Token — guaranteed because x86-64-v4x implies x86-64-v1.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
         unsafe { X64V1Token::forge_token_dangerously() }
     }
-    /// Get a X64V2Token (x86-64-v4x implies x86-64-v2)
+    /// Extract a X64V2Token — guaranteed because x86-64-v4x implies x86-64-v2.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
-    /// Get a X64V3CryptoToken (x86-64-v4x implies x86-64-v3 Crypto)
+    /// Extract a X64V3CryptoToken — guaranteed because x86-64-v4x implies x86-64-v3 Crypto.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3_crypto(self) -> X64V3CryptoToken {
         unsafe { X64V3CryptoToken::forge_token_dangerously() }
     }
-    /// Get a X64V3Token (x86-64-v4x implies x86-64-v3)
+    /// Extract a X64V3Token — guaranteed because x86-64-v4x implies x86-64-v3.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
-    /// Get a X64V4Token (x86-64-v4x implies AVX-512)
+    /// Extract a X64V4Token — guaranteed because x86-64-v4x implies AVX-512.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
@@ -2389,31 +2427,41 @@ impl SimdToken for Avx512Fp16Token {
 }
 
 impl Avx512Fp16Token {
-    /// Get a X64CryptoToken (AVX-512FP16 implies x86-64 Crypto)
+    /// Extract a X64CryptoToken — guaranteed because AVX-512FP16 implies x86-64 Crypto.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
         unsafe { X64CryptoToken::forge_token_dangerously() }
     }
-    /// Get a X64V1Token (AVX-512FP16 implies x86-64-v1)
+    /// Extract a X64V1Token — guaranteed because AVX-512FP16 implies x86-64-v1.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
         unsafe { X64V1Token::forge_token_dangerously() }
     }
-    /// Get a X64V2Token (AVX-512FP16 implies x86-64-v2)
+    /// Extract a X64V2Token — guaranteed because AVX-512FP16 implies x86-64-v2.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
         unsafe { X64V2Token::forge_token_dangerously() }
     }
-    /// Get a X64V3Token (AVX-512FP16 implies x86-64-v3)
+    /// Extract a X64V3Token — guaranteed because AVX-512FP16 implies x86-64-v3.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
         unsafe { X64V3Token::forge_token_dangerously() }
     }
-    /// Get a X64V4Token (AVX-512FP16 implies AVX-512)
+    /// Extract a X64V4Token — guaranteed because AVX-512FP16 implies AVX-512.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {

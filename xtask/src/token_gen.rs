@@ -607,7 +607,9 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
         let anc_display = ancestor.display_name.as_deref().unwrap_or(anc_name);
 
         out.push_str(&formatdoc! {"
-            {INDENT}/// Get a {anc_name} ({token_display} implies {anc_display})
+            {INDENT}/// Extract a {anc_name} — guaranteed because {token_display} implies {anc_display}.
+            {INDENT}///
+            {INDENT}/// Zero-cost: compiles away entirely.
             {INDENT}#[allow(deprecated)]
             {INDENT}#[inline(always)]
             {INDENT}pub fn {short}(self) -> {anc_name} {{

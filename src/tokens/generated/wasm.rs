@@ -122,7 +122,9 @@ impl SimdToken for Wasm128RelaxedToken {
 }
 
 impl Wasm128RelaxedToken {
-    /// Get a Wasm128Token (WASM Relaxed SIMD implies WASM SIMD128)
+    /// Extract a Wasm128Token — guaranteed because WASM Relaxed SIMD implies WASM SIMD128.
+    ///
+    /// Zero-cost: compiles away entirely.
     #[allow(deprecated)]
     #[inline(always)]
     pub fn wasm128(self) -> Wasm128Token {

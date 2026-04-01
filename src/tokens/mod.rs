@@ -396,6 +396,13 @@ pub fn dangerously_disable_tokens_except_wasm(
 /// own type and `None` for others. The compiler monomorphizes away all the
 /// `None` branches, leaving only the matching path.
 ///
+/// **These are identity checks, not hierarchy-aware downcasts.**
+/// `X64V4Token.as_x64v3()` returns `None` — it checks "is this literally
+/// an `X64V3Token`?", not "does this support V3 features?".
+///
+/// For guaranteed hierarchy downcasting (V4 → V3), use the extraction methods
+/// on concrete tokens instead (e.g., `v4_token.v3()`).
+///
 /// # Example
 ///
 /// ```rust
@@ -414,7 +421,10 @@ pub fn dangerously_disable_tokens_except_wasm(
 /// assert_eq!(result, 6.0);
 /// ```
 pub trait IntoConcreteToken: SimdToken + Sized {
-    /// Try to cast to X64V1Token.
+    /// Returns `Some(self)` if this is exactly `X64V1Token`, `None` otherwise.
+    ///
+    /// This is an identity check, not a downcast. For guaranteed downcasting
+    /// from a higher token, use extraction methods like `.v1()` instead.
     #[inline(always)]
     fn as_x64v1(self) -> Option<X64V1Token> {
         None
