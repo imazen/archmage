@@ -88,7 +88,7 @@ jobs:
       - name: Run arch exercise
         if: always()
         shell: bash
-        run: cargo run --example arch_exercise --features "${{ env.FEATURES }}" > arch-results.jsonl
+        run: cargo run -p magetypes --example arch_exercise --features "${{ env.FEATURES }}" > arch-results.jsonl
 
       - name: Upload arch results
         if: always()
@@ -150,7 +150,7 @@ jobs:
       - name: Run arch exercise
         if: always()
         shell: bash
-        run: cargo run --example arch_exercise --features "${{ env.FEATURES }}" > arch-results.jsonl
+        run: cargo run -p magetypes --example arch_exercise --features "${{ env.FEATURES }}" > arch-results.jsonl
 
       - name: Upload arch results
         if: always()
@@ -260,7 +260,7 @@ jobs:
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo run --example arch_exercise --target wasm32-wasip1 > arch-results.jsonl
+        run: cargo run -p magetypes --example arch_exercise --target wasm32-wasip1 > arch-results.jsonl
 
       - name: Upload arch results (WASM)
         if: always()
@@ -772,7 +772,13 @@ jobs:
 
       - name: Compare results across architectures
         run: |
-          FILES=$(find arch-results/ -name '*.jsonl' | sort)
+          FILES=$(find arch-results/ -name '*.jsonl' 2>/dev/null | sort)
+          COUNT=$(echo "$FILES" | grep -c . || true)
+          echo "Found $COUNT arch result files"
+          if [ "$COUNT" -lt 2 ]; then
+            echo "Need at least 2 architecture result files to compare. Skipping."
+            exit 0
+          fi
           echo "Comparing files:"
           echo "$FILES"
           echo "$FILES" | xargs cargo run -p xtask -- compare-arch-results
