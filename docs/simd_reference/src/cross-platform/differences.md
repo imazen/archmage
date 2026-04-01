@@ -127,6 +127,45 @@ NEON and WASM require multi-step reductions. x86 has `haddps` but it's slow (mul
 // shuffle + add + shuffle + add + extract
 ```
 
+Reduction associativity may differ between backends (tree vs left-fold), producing small relative errors (~1e-6) for inputs with large magnitude differences.
+
+## Negation and Signed Zero
+
+```rust
+// x86: subps(zero, x) — loses -0.0 sign
+_mm_sub_ps(_mm_setzero_ps(), x)  // neg(0.0) = +0.0, neg(-0.0) = +0.0
+
+// NEON: vneg flips sign bit directly
+vnegq_f32(x)  // neg(0.0) = -0.0, neg(-0.0) = +0.0
+
+// WASM: f32x4_neg flips sign bit
+f32x4_neg(x)  // neg(0.0) = -0.0, neg(-0.0) = +0.0
+```
+
+**Magetypes:** The `-v` operator uses the backend's native negation. If signed-zero correctness matters, use `v.xor(sign_mask)` with a splat of `-0.0` to flip the sign bit directly.
+
+## Min/Max NaN Propagation
+
+```rust
+// x86: minps returns SECOND operand when FIRST is NaN
+_mm_min_ps(NaN, x)  // → x (returns second)
+_mm_min_ps(x, NaN)  // → NaN (returns second)
+
+// NEON/WASM/Scalar: always returns non-NaN
+fminq_f32(NaN, x)   // → x
+fminq_f32(x, NaN)   // → x
+```
+
+**Magetypes:** `min()`/`max()` use the native instruction. If your data may contain NaN, filter it first or use `simd_lt` + `blend` for consistent behavior.
+
+## FMA vs Separate Multiply-Add
+
+x86 (AVX2+) and ARM use hardware FMA (one rounding), while WASM and the scalar fallback compute `a*b+c` with two roundings. Near-zero cancellation (when `a*b ≈ -c`) can produce differences of many ULPs. This is inherent to IEEE 754 — fused and unfused operations are both correct but produce different results.
+
+## Rounding Consistency (Fixed in 0.9.16)
+
+Prior to 0.9.16, the scalar backend's `round()` used ties-away-from-zero (`f32::round()` semantics), while all hardware backends used ties-to-even (IEEE 754 default). This caused dispatch parity failures. Fixed by implementing `roundevenf` using the 2^23 magic-number trick. All backends now produce identical rounding results.
+
 **Magetypes:** `reduce_add()`, `reduce_max()`, `reduce_min()` use the optimal sequence for each platform.
 
 ## Known Behavioral Differences Table

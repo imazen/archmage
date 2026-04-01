@@ -88,6 +88,51 @@ fn interleave_example<T: F32x4Backend>(a: f32x4<T>, b: f32x4<T>) {
 }
 ```
 
+## Floating-Point Behavioral Differences
+
+These differences arise from how hardware implements IEEE 754 operations. They affect specific edge cases (NaN, signed zero, near-zero cancellation) but not normal arithmetic.
+
+### Negation and Signed Zero
+
+| | x86-64 | AArch64 | WASM |
+|---|--------|---------|------|
+| `neg(0.0)` | `+0.0` (uses `sub(0, x)`) | `-0.0` (uses `vneg`) | `-0.0` (uses `f32x4_neg`) |
+
+x86 implements negation as `0 - x`, which produces `+0.0` for zero inputs (IEEE 754: `+0 - +0 = +0`). ARM and WASM flip the sign bit directly, preserving `-0.0`. If the sign of zero matters for your algorithm, use bitwise XOR with a sign mask instead of the `-` operator.
+
+### Min/Max NaN Propagation
+
+| | x86-64 | AArch64 / WASM / Scalar |
+|---|--------|--------------------------|
+| `min(NaN, x)` | Returns `x` (second operand) | Returns `x` (non-NaN value) |
+| `min(x, NaN)` | Returns `NaN` | Returns `x` (non-NaN value) |
+
+SSE `minps`/`maxps` always returns the second operand when the first is NaN, and the first when the second is NaN — it doesn't distinguish "propagate NaN" from "return non-NaN." ARM and WASM (and scalar `f32::min`) always return the non-NaN value regardless of operand order. If your inputs may contain NaN, filter them first or use comparison + blend for consistent behavior.
+
+### FMA vs Separate Multiply-Add
+
+| | x86-64 (AVX2+) / AArch64 | WASM / Scalar fallback |
+|---|---------------------------|------------------------|
+| `mul_add(a, b, c)` | Fused multiply-add (one rounding) | `a * b + c` (two roundings) |
+
+Hardware FMA computes `a × b + c` with a single rounding step, while the scalar/WASM fallback rounds the intermediate product before adding `c`. This matters most when `a × b` nearly cancels with `c` — the results can differ by many ULPs near zero. For most inputs the difference is sub-ULP. Accept small differences in dispatch parity tests.
+
+### Comparison NaN Semantics (simd_ne)
+
+| | x86-64 | AArch64 / WASM |
+|---|--------|----------------|
+| `simd_ne(NaN, x)` | True (unordered: NaN ≠ anything) | May vary by implementation |
+
+The `simd_ne` operation uses the hardware's not-equal comparison, which may be "ordered" or "unordered" depending on platform. For portable NaN-aware inequality, use `simd_eq` + `not`.
+
+### Reduction Associativity (reduce_add)
+
+All backends compute `reduce_add` using tree reduction, but the exact grouping may differ between scalar (left-fold) and hardware (pairwise tree). For inputs with large magnitude differences, floating-point associativity causes small relative errors (~1e-6). This is inherent to IEEE 754 and not a bug.
+
+### Rounding Consistency (Fixed in 0.9.16)
+
+As of version 0.9.16, `round()`, `floor()`, `ceil()`, and `to_i32_round()` produce identical results across all backends including the scalar fallback. Previously, the scalar backend used ties-away-from-zero for rounding while all hardware used ties-to-even (IEEE 754 default). This was fixed by implementing `roundevenf` in the scalar math library.
+
 ## Summary: Safe Portable Patterns
 
 | Operation | Portable Method |
@@ -97,8 +142,9 @@ fn interleave_example<T: F32x4Backend>(a: f32x4<T>, b: f32x4<T>) {
 | Bitwise XOR | `.xor()` |
 | Bitwise NOT | `.not()` |
 | Sign-extending right shift | `.shr_arithmetic::<N>()` |
-| Arithmetic, FMA, comparisons | All operators and methods |
-| Reductions | All methods |
-| Transcendentals | All methods |
+| Arithmetic, comparisons, rounding | All operators and methods (bit-exact across backends) |
+| Reductions | All methods (tiny FP associativity differences possible) |
+| FMA (`mul_add`/`mul_sub`) | All methods (±1 ULP difference scalar vs hardware) |
+| Transcendentals | All methods (tolerance-based parity) |
 
-The vast majority of magetypes operations are fully portable with identical semantics. The differences listed above are the complete set.
+The vast majority of magetypes operations are fully portable with identical semantics. The floating-point edge cases listed above affect only NaN, signed zero, and near-zero cancellation scenarios.

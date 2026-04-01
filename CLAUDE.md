@@ -1108,6 +1108,12 @@ These are documented semantic differences between architectures. Tests must acco
 | `shr` for signed integers | Logical (zero-fill) | Arithmetic (sign-extend) | Arithmetic (sign-extend) | Use `shr_arithmetic` for portable sign-extending shift |
 | `blend` signature | `(mask, true, false)` | `(mask, true, false)` | `(self, other, mask)` | Avoid in portable code; use bitcast + comparison verification |
 | `interleave_lo/hi` | f32x4 only | f32x4 only | f32x4 only | Only use on f32x4, not integer types |
+| `neg(0.0)` signed zero | `sub(0,x)` → `+0.0` | `vneg` → `-0.0` | `f32x4_neg` → `-0.0` | If sign of zero matters, use `bitxor` with sign mask |
+| `min`/`max` NaN propagation | Returns second operand when first is NaN | Returns non-NaN operand | Returns non-NaN operand | Filter NaN before min/max, or use comparison + blend |
+| `simd_ne` NaN semantics | Unordered (NaN != x → true) | Ordered on some impls | Ordered | Use `simd_eq` + `not` for portable unordered-NE |
+| `mul_add`/`mul_sub` rounding | FMA (one rounding) | FMA (one rounding) | Separate mul+add (two roundings) | Accept ≤1 ULP difference; avoid near-zero cancellation |
+| `reduce_add` associativity | Tree reduction | Tree reduction | Tree reduction | Accept small relative error (~1e-6) for large inputs |
+| `round` ties | Ties-to-even (all backends, fixed in 0.9.16) | Ties-to-even | Ties-to-even | Consistent across all backends since 0.9.16 |
 
 ### Known Platform Detection Issues
 
