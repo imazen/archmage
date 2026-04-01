@@ -113,10 +113,10 @@ impl f32x1 {
         Self(crate::nostd_math::ceilf(self.0))
     }
 
-    /// Element-wise round to nearest.
+    /// Element-wise round to nearest (ties to even, matching hardware SIMD).
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self(crate::nostd_math::roundf(self.0))
+        Self(crate::nostd_math::roundevenf(self.0))
     }
 
     /// Fused multiply-add: `self * b + c`.

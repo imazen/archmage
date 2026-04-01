@@ -333,6 +333,58 @@ pub fn round(x: f64) -> f64 {
     f64::from_bits(abs_result.to_bits() | (x.to_bits() & 0x8000_0000_0000_0000))
 }
 
+/// f32 round to nearest, ties to even (IEEE 754 default rounding mode).
+///
+/// Matches the rounding behavior of hardware SIMD instructions:
+/// SSE/AVX `cvtps2dq`/`roundps`, NEON `vrndnq_f32`, WASM `f32x4.nearest`.
+///
+/// Uses the magic-number trick: adding 2^23 forces the mantissa to snap to an
+/// integer (IEEE 754 addition uses round-to-nearest-even by default), then
+/// subtracting 2^23 recovers the original scale. For |x| >= 2^23, f32 values
+/// are already exact integers.
+#[inline(always)]
+pub fn roundevenf(x: f32) -> f32 {
+    const MAGIC: f32 = 8_388_608.0; // 2^23
+    if x.is_nan() || x.is_infinite() {
+        return x;
+    }
+    if x == 0.0 {
+        return x; // preserve sign of zero
+    }
+    let abs_x = f32::from_bits(x.to_bits() & 0x7FFF_FFFF);
+    if abs_x >= MAGIC {
+        return x; // already an integer
+    }
+    if x > 0.0 {
+        (x + MAGIC) - MAGIC
+    } else {
+        (x - MAGIC) + MAGIC
+    }
+}
+
+/// f64 round to nearest, ties to even (IEEE 754 default rounding mode).
+///
+/// See [`roundevenf`] for the f32 version and design rationale.
+#[inline(always)]
+pub fn roundeven(x: f64) -> f64 {
+    const MAGIC: f64 = 4_503_599_627_370_496.0; // 2^52
+    if x.is_nan() || x.is_infinite() {
+        return x;
+    }
+    if x == 0.0 {
+        return x; // preserve sign of zero
+    }
+    let abs_x = f64::from_bits(x.to_bits() & 0x7FFF_FFFF_FFFF_FFFF);
+    if abs_x >= MAGIC {
+        return x; // already an integer
+    }
+    if x > 0.0 {
+        (x + MAGIC) - MAGIC
+    } else {
+        (x - MAGIC) + MAGIC
+    }
+}
+
 /// f32 fused multiply-add (non-fused fallback: `a * b + c`).
 ///
 /// In a scalar no_std context there's no hardware FMA instruction to use,

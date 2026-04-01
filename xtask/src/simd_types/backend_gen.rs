@@ -1527,14 +1527,14 @@ fn generate_scalar_impls(types: &[FloatVecType]) -> String {
                     "crate::nostd_math::sqrtf",
                     "crate::nostd_math::floorf",
                     "crate::nostd_math::ceilf",
-                    "crate::nostd_math::roundf",
+                    "crate::nostd_math::roundevenf",
                 )
             } else {
                 (
                     "crate::nostd_math::sqrt",
                     "crate::nostd_math::floor",
                     "crate::nostd_math::ceil",
-                    "crate::nostd_math::round",
+                    "crate::nostd_math::roundeven",
                 )
             };
             code.push_str(&formatdoc! {r#"

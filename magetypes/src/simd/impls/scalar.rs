@@ -31,7 +31,7 @@ fn f32_ceil(x: f32) -> f32 {
 }
 #[inline(always)]
 fn f32_round(x: f32) -> f32 {
-    crate::nostd_math::roundf(x)
+    crate::nostd_math::roundevenf(x)
 }
 
 // Helpers to avoid trait method name shadowing inside the impl block.
@@ -52,7 +52,7 @@ fn f64_ceil(x: f64) -> f64 {
 }
 #[inline(always)]
 fn f64_round(x: f64) -> f64 {
-    crate::nostd_math::round(x)
+    crate::nostd_math::roundeven(x)
 }
 
 impl F32x4Backend for archmage::ScalarToken {
@@ -8849,7 +8849,7 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn round(a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| crate::nostd_math::roundf(a[i]))
+        core::array::from_fn(|i| crate::nostd_math::roundevenf(a[i]))
     }
 
     #[inline(always)]
@@ -9065,7 +9065,7 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn round(a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| crate::nostd_math::round(a[i]))
+        core::array::from_fn(|i| crate::nostd_math::roundeven(a[i]))
     }
 
     #[inline(always)]

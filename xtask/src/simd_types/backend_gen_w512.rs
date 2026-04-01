@@ -832,7 +832,7 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
         sqrt_fn = if elem == "f32" { "sqrtf" } else { "sqrt" },
         floor_fn = if elem == "f32" { "floorf" } else { "floor" },
         ceil_fn = if elem == "f32" { "ceilf" } else { "ceil" },
-        round_fn = if elem == "f32" { "roundf" } else { "round" },
+        round_fn = if elem == "f32" { "roundevenf" } else { "roundeven" },
         abs_mask = if elem == "f32" { "0x7FFF_FFFF" } else { "0x7FFF_FFFF_FFFF_FFFF" },
     }
 }

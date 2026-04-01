@@ -103,7 +103,7 @@ impl<T: F32x4Backend> f32x4<T> {
     #[inline(always)]
     pub fn to_u8(self) -> [u8; 4] {
         let arr = self.to_array();
-        core::array::from_fn(|i| crate::nostd_math::roundf(arr[i]).clamp(0.0, 255.0) as u8)
+        core::array::from_fn(|i| crate::nostd_math::roundevenf(arr[i]).clamp(0.0, 255.0) as u8)
     }
 
     // ====== Interleave Operations ======
@@ -199,10 +199,10 @@ impl<T: F32x4Backend> f32x4<T> {
         let av = a.to_array();
         let mut out = [0u8; 16];
         for i in 0..4 {
-            out[i * 4] = crate::nostd_math::roundf(rv[i]).clamp(0.0, 255.0) as u8;
-            out[i * 4 + 1] = crate::nostd_math::roundf(gv[i]).clamp(0.0, 255.0) as u8;
-            out[i * 4 + 2] = crate::nostd_math::roundf(bv[i]).clamp(0.0, 255.0) as u8;
-            out[i * 4 + 3] = crate::nostd_math::roundf(av[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4] = crate::nostd_math::roundevenf(rv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 1] = crate::nostd_math::roundevenf(gv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 2] = crate::nostd_math::roundevenf(bv[i]).clamp(0.0, 255.0) as u8;
+            out[i * 4 + 3] = crate::nostd_math::roundevenf(av[i]).clamp(0.0, 255.0) as u8;
         }
         out
     }
