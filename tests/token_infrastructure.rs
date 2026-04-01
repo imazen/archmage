@@ -7,6 +7,7 @@
 //! Most tests here work on x86_64 using real tokens. Stub behavior is tested
 //! via the ARM/WASM tokens which are stubs on x86_64.
 
+use archmage::testing::lock_token_testing;
 use archmage::{
     // Aliases
     Arm64,
@@ -135,13 +136,14 @@ fn x86_summon_returns_option() {
 // Disable mechanism (process-wide)
 // ============================================================================
 
-// NOTE: These tests mutate global state (atomic flags). They MUST be run
-// with `--test-threads=1` or in isolation. cargo test does NOT do this by
-// default, but the individual tests clean up after themselves.
+// These tests mutate global state (atomic flags). They use lock_token_testing()
+// to serialize against each other and against token permutation tests.
 
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn disable_v3_makes_summon_return_none() {
+    let _lock = lock_token_testing();
+
     // Skip if compiled with target features (disable returns Err)
     if X64V3Token::compiled_with() == Some(true) {
         return;
@@ -188,6 +190,8 @@ fn disable_v3_makes_summon_return_none() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn disable_v2_makes_summon_return_none() {
+    let _lock = lock_token_testing();
+
     if X64V2Token::compiled_with() == Some(true) {
         return;
     }
@@ -210,6 +214,8 @@ fn disable_v2_makes_summon_return_none() {
 
 #[test]
 fn default_is_not_disabled() {
+    let _lock = lock_token_testing();
+
     // Fresh process: manually_disabled() should be false (or Err for stubs/compiled)
     if let Ok(disabled) = X64V2Token::manually_disabled() {
         assert!(!disabled, "default should not be disabled");
@@ -226,6 +232,8 @@ fn default_is_not_disabled() {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn disable_v3_cascades_to_v4() {
+    let _lock = lock_token_testing();
+
     if X64V3Token::compiled_with() == Some(true) {
         return;
     }
@@ -268,6 +276,8 @@ fn disable_v3_cascades_to_v4() {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn disable_v2_cascades_to_v3_v4() {
+    let _lock = lock_token_testing();
+
     if X64V2Token::compiled_with() == Some(true) {
         return;
     }
@@ -291,6 +301,8 @@ fn disable_v2_cascades_to_v3_v4() {
 #[cfg(feature = "avx512")]
 #[test]
 fn disable_child_does_not_affect_parent() {
+    let _lock = lock_token_testing();
+
     if X64V4Token::compiled_with() == Some(true) || X64V3Token::compiled_with() == Some(true) {
         return;
     }
@@ -794,6 +806,8 @@ fn dct_compiled_with_returns_none() {
 #[cfg(feature = "testable_dispatch")]
 #[test]
 fn dct_disable_returns_ok() {
+    let _lock = lock_token_testing();
+
     // With testable_dispatch, disable should succeed even when
     // compiled with -Ctarget-cpu=native.
     let result = X64V3Token::dangerously_disable_token_process_wide(true);
@@ -816,6 +830,7 @@ fn dct_disable_returns_ok() {
 
 #[test]
 fn disable_all_tokens_except_wasm() {
+    let _lock = lock_token_testing();
     use archmage::dangerously_disable_tokens_except_wasm;
 
     let result = dangerously_disable_tokens_except_wasm(true);
@@ -989,6 +1004,8 @@ fn disable_all_simd_error_display() {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn x64v4x_disable_and_manually_disabled() {
+    let _lock = lock_token_testing();
+
     if X64V4xToken::compiled_with() == Some(true) {
         return;
     }
@@ -1003,6 +1020,8 @@ fn x64v4x_disable_and_manually_disabled() {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn avx512fp16_disable_and_manually_disabled() {
+    let _lock = lock_token_testing();
+
     if Avx512Fp16Token::compiled_with() == Some(true) {
         return;
     }
@@ -1017,6 +1036,8 @@ fn avx512fp16_disable_and_manually_disabled() {
 #[cfg(feature = "avx512")]
 #[test]
 fn v4_manually_disabled_default() {
+    let _lock = lock_token_testing();
+
     if let Ok(disabled) = X64V4Token::manually_disabled() {
         assert!(!disabled, "default should not be disabled");
     } // compiled_with — that's fine
