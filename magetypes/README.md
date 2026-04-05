@@ -118,9 +118,119 @@ Each namespace also includes narrower native types and wider polyfilled types. F
 - **`std`** (default): Enable std library support
 - **`avx512`**: Enable 512-bit types for AVX-512
 
-## Using with `incant!` for runtime dispatch
+## Mixed Dispatch: Generic + Specialized + Auto-Vectorized
 
-The recommended pattern for multi-platform SIMD: write a `_v3` variant with concrete SIMD types and a `_scalar` fallback, then dispatch with `incant!`:
+The full pattern: `#[magetypes]` generates generic variants from one function body, a manual `#[arcane]` adds a hand-tuned specialization for one tier, and `#[autoversion]` auto-vectorizes scalar code. All three produce the same `_suffix` naming convention, so one `incant!` dispatches to them all.
+
+```rust
+use archmage::prelude::*;
+use magetypes::simd::generic::f32x8 as GenericF32x8;
+
+// 1. Generic algorithm — #[magetypes] generates _v4, _v3, _neon, _wasm128, _scalar
+#[magetypes(v4, v3, neon, wasm128, scalar)]
+fn process_impl(token: Token, data: &mut [f32], scale: f32) {
+    #[allow(non_camel_case_types)]
+    type f32x8 = GenericF32x8<Token>;
+    let scale_v = f32x8::splat(token, scale);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, data);
+    for chunk in chunks {
+        let v = f32x8::load(token, chunk);
+        (v * scale_v).store(chunk);
+    }
+    for v in tail { *v *= scale; }
+}
+
+// 2. Manual specialization for v4x — uses safe AVX-512 intrinsics
+//    not available in the generic f32x8 API. The _v4x suffix matches
+//    incant!'s naming convention.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[arcane]
+fn process_impl_v4x(_token: X64V4xToken, data: &mut [f32], scale: f32) {
+    let scale_v = _mm512_set1_ps(scale);
+    for chunk in data.chunks_exact_mut(16) {
+        let v = _mm512_loadu_ps(chunk.as_ptr());
+        _mm512_storeu_ps(chunk.as_mut_ptr(), _mm512_mul_ps(v, scale_v));
+    }
+    // ... scalar tail
+}
+
+// 3. One incant! dispatches to ALL variants — generated + manual.
+//    v4x(cfg(avx512)) feature-gates that tier: excluded if the avx512
+//    cargo feature isn't enabled by the downstream crate.
+pub fn process(data: &mut [f32], scale: f32) {
+    incant!(process_impl(data, scale),
+        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]);
+}
+```
+
+`incant!` doesn't know or care which macro generated each variant — it just looks for functions named `process_impl_v4x`, `process_impl_v4`, etc.
+
+### `#[rite]` multi-tier — suffixed inner helpers
+
+`#[rite(v3, v4, neon)]` generates `_v3`, `_v4`, `_neon` suffixed copies of a helper function, each with `#[target_feature]` + `#[inline]`. Use for inner functions called from `#[arcane]` entry points — zero dispatch overhead, just inlining:
+
+```rust
+// Generates accumulate_v3, accumulate_v4, accumulate_neon — all inlined
+#[rite(v3, v4, neon, import_intrinsics)]
+fn accumulate(data: &[f32; 8], acc: f32) -> f32 {
+    let v = _mm256_loadu_ps(data.as_ptr());
+    // ...
+    acc
+}
+```
+
+### `#[autoversion]` — Auto-Vectorized Scalar Code
+
+For loops that LLVM auto-vectorizes well, skip magetypes entirely. `#[autoversion]` generates tier variants AND a dispatcher from plain scalar code:
+
+```rust
+use archmage::autoversion;
+
+/// Compiles to vfmadd231ps (AVX2), fmla (NEON), etc. — zero manual SIMD.
+#[autoversion]
+fn apply_color_matrix(rgb: &mut [f32], mat: [[f32; 3]; 3]) {
+    for pixel in rgb.chunks_exact_mut(3) {
+        let (r, g, b) = (pixel[0], pixel[1], pixel[2]);
+        pixel[0] = mat[0][0] * r + mat[0][1] * g + mat[0][2] * b;
+        pixel[1] = mat[1][0] * r + mat[1][1] * g + mat[1][2] * b;
+        pixel[2] = mat[2][0] * r + mat[2][1] * g + mat[2][2] * b;
+    }
+}
+
+// Call directly — autoversion generated the dispatcher too:
+apply_color_matrix(&mut pixels, matrix);
+```
+
+### When to use which
+
+| Approach | Use when | Dispatch |
+|---|---|---|
+| `#[magetypes]` + `incant!` | You need explicit SIMD types (`f32x8`, `i32x4`) | Manual `incant!` |
+| `#[arcane]` + `incant!` | One tier needs hand-tuned intrinsics | Manual `incant!` |
+| `#[autoversion]` | Scalar code that LLVM auto-vectorizes well | Built-in |
+| All three mixed | Most tiers are generic, one needs intrinsics, entry is auto-vectorized | One `incant!` handles all |
+
+### Attribute parameter reference
+
+| Parameter | `#[arcane]` | `#[rite]` | `#[magetypes]` | `#[autoversion]` |
+|---|---|---|---|---|
+| Tier names (`v3`, `neon`, ...) | — | **Yes** (suffixed variants) | **Yes** (suffixed variants) | **Yes** (suffixed + dispatcher) |
+| `+tier` / `-tier` modifiers | — | — | **Yes** | **Yes** |
+| `tier(cfg(feature))` gate | — | — | **Yes** | **Yes** |
+| `import_intrinsics` | **Yes** | **Yes** | auto | auto |
+| `import_magetypes` | **Yes** | **Yes** | auto | auto |
+| `cfg(feature)` | **Yes** | **Yes** | — | **Yes** |
+| `_self = Type` | **Yes** | — | — | **Yes** |
+| `nested` | **Yes** | — | — | — |
+| `inline_always` | **Yes** (nightly) | — | — | — |
+
+**Tier suffixes:** `_v1`, `_v2`, `_x64_crypto`, `_v3`, `_v3_crypto`, `_v4`, `_v4x`, `_neon`, `_neon_aes`, `_neon_sha3`, `_neon_crc`, `_arm_v2`, `_arm_v3`, `_wasm128`, `_wasm128_relaxed`, `_scalar`, `_default`.
+
+**Default tiers** (when no list given): `v4(avx512)`, `v3`, `neon`, `wasm128`, `scalar`.
+
+### Plain `incant!` dispatch
+
+For simpler cases without mixing, write suffixed variants directly:
 
 ```rust
 use archmage::incant;
