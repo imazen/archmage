@@ -9,6 +9,17 @@ Archmage lets you write SIMD code in Rust without `unsafe`. It works on x86-64, 
 archmage = "0.9"
 ```
 
+## MSRV: Rust 1.89
+
+Archmage requires Rust 1.89+. This isn't arbitrary — 1.89 is the version where Rust's SIMD story finally came together:
+
+- **1.86** stabilized `target_feature_11`: `#[target_feature]` functions can be safe `fn`, and calling between matching `#[target_feature]` contexts is safe. This is what lets `#[arcane]` generate a safe wrapper without `unsafe fn`.
+- **1.87** declared value-based `std::arch` intrinsics safe. `_mm256_add_ps` inside a `#[target_feature]` function no longer needs an `unsafe` block.
+- **1.88** stabilized `as_chunks` and `as_chunks_mut` on slices — ergonomic SIMD-width chunking without `chunks_exact` + `try_into().unwrap()`.
+- **1.89** stabilized all AVX-512 target features and intrinsics — 22 target features, ~857 intrinsic functions, mask types, plus SHA-512/SM3/SM4. Without this, `#[target_feature(enable = "avx512f")]` is a compiler error on stable. [Full inventory →](https://imazen.github.io/archmage/archmage/reference/rust-189-simd/)
+
+Four releases turned Rust SIMD from "unsafe everything" to "zero unsafe with full feature coverage." If you're writing SIMD code in Rust and you're on anything older than 1.89, you're fighting the language instead of using it.
+
 ## The problem
 
 Raw SIMD in Rust requires `unsafe` for every intrinsic call:
@@ -37,7 +48,7 @@ use archmage::prelude::*;  // tokens, traits, macros, intrinsics, safe memory op
 fn multiply(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let a = _mm256_loadu_ps(data);          // safe: takes &[f32; 8], not *const f32
     let b = _mm256_set1_ps(2.0);            // safe: inside #[target_feature]
-    let c = _mm256_mul_ps(a, b);            // safe: value-based (Rust 1.85+)
+    let c = _mm256_mul_ps(a, b);            // safe: value-based (Rust 1.87+)
     let mut out = [0.0f32; 8];
     _mm256_storeu_ps(&mut out, c);          // safe: takes &mut [f32; 8]
     out
@@ -56,10 +67,10 @@ No `unsafe` anywhere. Your crate can use `#![forbid(unsafe_code)]`.
 
 ## How Rust enforces SIMD safety
 
-Rust 1.85 (Feb 2025) changed the rules for `#[target_feature]` functions:
+Rust 1.86 (Apr 2025) and 1.87 (May 2025) changed the rules for `#[target_feature]` functions:
 
 ```
-  Rust's #[target_feature] call rules (1.85+, 2024 edition)
+  Rust's #[target_feature] call rules (1.86+)
 
   ┌─────────────────────────┐         ┌──────────────────────────────┐
   │  fn normal_code()       │ unsafe  │ #[target_feature(avx2, fma)] │
@@ -111,7 +122,7 @@ Archmage makes the boundary crossing **sound** by tying it to runtime CPU detect
   │     + plain fns       LLVM inlines — no boundary.          │
   │          │                                                 │
   │          ▼                                                 │
-  │  4. Intrinsics        Value ops: safe (Rust 1.85+)         │
+  │  4. Intrinsics        Value ops: safe (Rust 1.87+)         │
   │     in scope          Memory ops: safe_unaligned_simd      │
   │                       takes &[f32; 8], not *const f32      │
   │                                                            │
@@ -121,7 +132,7 @@ Archmage makes the boundary crossing **sound** by tying it to runtime CPU detect
 
 **Tokens are grouped by common CPU tiers.** `X64V3Token` covers AVX2+FMA+BMI2 — the set that Haswell (2013) and Zen 1+ share. `NeonToken` covers AArch64 NEON. `Arm64V2Token` covers CRC+RDM+DotProd+FP16+AES+SHA2 — the set that Apple M1, Cortex-A55+, and Graviton 2+ share. You pick a tier, not individual features. `summon()` checks all features in the tier atomically; it either succeeds (every feature present) or returns `None`. The token is zero-sized — passing it costs nothing. Detection is cached (~1.3 ns), or compiles away entirely with `-Ctarget-cpu=haswell`.
 
-**`#[arcane]` is the trampoline.** It generates a sibling function with `#[target_feature(enable = "avx2,fma,...")]` and an `#[inline(always)]` wrapper that calls it through `unsafe`. The macro generates the `unsafe` block, not you. Since the token's existence proves the features are present, the call is sound. From inside the `#[arcane]` function, you can use intrinsics directly (value ops are safe) and call other `#[arcane]` functions with matching features (safe under Rust 1.85+, and LLVM inlines the wrapper away — zero overhead). `#[arcane]` handles `#[cfg(target_arch)]` gating automatically.
+**`#[arcane]` is the trampoline.** It generates a sibling function with `#[target_feature(enable = "avx2,fma,...")]` and an `#[inline(always)]` wrapper that calls it through `unsafe`. The macro generates the `unsafe` block, not you. Since the token's existence proves the features are present, the call is sound. From inside the `#[arcane]` function, you can use intrinsics directly (value ops are safe) and call other `#[arcane]` functions with matching features (safe under Rust 1.86+, and LLVM inlines the wrapper away — zero overhead). `#[arcane]` handles `#[cfg(target_arch)]` gating automatically.
 
 **[`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd)** (by [okaneco](https://github.com/okaneco)) closes the memory gap. It shadows `core::arch`'s pointer-based load/store functions with reference-based versions — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`. Same names, safe signatures. Archmage re-exports these through `import_intrinsics`, so the safe versions are in scope automatically.
 
