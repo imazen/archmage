@@ -14,3 +14,17 @@ docs/site/public/
 tests/avx512-cfg-tests/*/target/
 tests/downstream-compat/*/target/
 copter-report/
+
+# Tooling noise
+Cargo.lock
+.superwork/
+.claude/
+.zenbench/
+.external-cache/
+Cargo.toml.original.txt
+*.rs.local
+*.profraw
+*.profdata
+perf.data
+perf.data.old
+fuzz-*.log
