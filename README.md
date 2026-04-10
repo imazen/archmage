@@ -9,7 +9,7 @@ Archmage lets you write SIMD code in Rust without `unsafe`. It works on x86-64, 
 archmage = "0.9"
 ```
 
-## MSRV: Rust 1.89 — [How Rust 1.89 brought the safe SIMD story together for Archmage](MSRV.md)
+### MSRV: Rust 1.89 — [How Rust 1.89 brought the safe SIMD story together for Archmage](MSRV.md)
 
 ## The problem
 
