@@ -957,7 +957,11 @@ fn avx512fp16_forge_and_into_concrete_token() {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "forge-token-api"))]
+#[cfg(all(
+    target_arch = "x86_64",
+    feature = "avx512",
+    feature = "forge-token-api"
+))]
 #[allow(deprecated)]
 #[test]
 fn avx512fp16_forge_and_downcast() {

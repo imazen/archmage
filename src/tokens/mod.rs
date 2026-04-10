@@ -166,7 +166,6 @@ pub trait SimdToken: sealed::Sealed + Copy + Clone + Send + Sync + 'static {
     fn try_new() -> Option<Self> {
         Self::summon()
     }
-
 }
 
 // All token types, traits, and aliases are generated from token-registry.toml.
