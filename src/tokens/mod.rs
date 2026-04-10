@@ -233,6 +233,16 @@ impl ScalarToken {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl ScalarToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[allow(dead_code)]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {

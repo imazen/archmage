@@ -93,11 +93,16 @@ impl NeonToken {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl NeonToken {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -270,11 +275,16 @@ impl NeonAesToken {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl NeonAesToken {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -462,11 +472,16 @@ impl NeonSha3Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl NeonSha3Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -655,11 +670,16 @@ impl NeonCrcToken {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl NeonCrcToken {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -872,11 +892,16 @@ impl Arm64V2Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl Arm64V2Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -1159,11 +1184,16 @@ impl Arm64V3Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl Arm64V3Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }

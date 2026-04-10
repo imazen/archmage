@@ -97,11 +97,16 @@ impl X64V1Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl X64V1Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -302,11 +307,16 @@ impl X64V2Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl X64V2Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -576,11 +586,16 @@ impl X64CryptoToken {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl X64CryptoToken {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -885,11 +900,16 @@ impl X64V3Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl X64V3Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -1248,11 +1268,16 @@ impl X64V3CryptoToken {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl X64V3CryptoToken {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -1653,11 +1678,16 @@ impl X64V4Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl X64V4Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -2116,11 +2146,16 @@ impl X64V4xToken {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl X64V4xToken {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -2615,11 +2650,16 @@ impl Avx512Fp16Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl Avx512Fp16Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }

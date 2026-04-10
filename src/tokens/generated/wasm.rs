@@ -66,11 +66,16 @@ impl Wasm128Token {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl Wasm128Token {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -160,11 +165,16 @@ impl Wasm128RelaxedToken {
 
 #[cfg(not(feature = "forge-token-api"))]
 impl Wasm128RelaxedToken {
-    /// Create a token without any checks (internal only).
+    /// Create a token without any checks.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
