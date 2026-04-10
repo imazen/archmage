@@ -1,5 +1,7 @@
 //! # Why `forge_token_dangerously()` is deprecated and dangerous
 //!
+//! Requires the `forge-token-api` feature: `cargo run --example unsafe_counterexample --features forge-token-api`
+//!
 //! This example demonstrates the UB that archmage's token system prevents.
 //!
 //! ## The safe path

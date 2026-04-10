@@ -2,7 +2,7 @@
 members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crate"]
 
 [workspace.package]
-version = "0.9.16"
+version = "0.9.17"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -50,10 +50,14 @@ safe_unaligned_simd = []
 # uses runtime detection + cache, so dangerously_disable_token_process_wide()
 # and for_each_token_permutation() always work.
 testable_dispatch = []
+# Expose forge_token_dangerously() as a public method on token types.
+# Without this, it's pub(crate) only. Needed for testing token infrastructure
+# from external crates. The method is unsafe and deprecated — prefer summon().
+forge-token-api = []
 
 [dependencies]
 # Proc-macro crate for #[arcane], #[rite], #[autoversion], incant!, etc.
-archmage-macros = { version = "0.9.16", path = "archmage-macros" }
+archmage-macros = { version = "0.9.17", path = "archmage-macros" }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
 safe_unaligned_simd = { version = "0.2.5" }
 
@@ -65,6 +69,10 @@ macrotest = "1.2.1"
 safe_unaligned_simd = { version = "0.2.5", features = ["avx512"] }
 # SIMD types for tests and examples
 magetypes = { path = "magetypes", features = ["avx512"] }
+
+[[example]]
+name = "unsafe_counterexample"
+required-features = ["forge-token-api"]
 
 [[bench]]
 name = "tokens"

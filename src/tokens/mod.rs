@@ -167,23 +167,6 @@ pub trait SimdToken: sealed::Sealed + Copy + Clone + Send + Sync + 'static {
         Self::summon()
     }
 
-    /// Create a token without any checks.
-    ///
-    /// # Safety
-    ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    ///
-    /// # Deprecated
-    ///
-    /// **Do not use in new code.** Pass tokens through from `summon()` instead.
-    /// If you're inside a `#[cfg(target_feature = "...")]` block where the
-    /// feature is compile-time guaranteed, use `summon().unwrap()`.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    unsafe fn forge_token_dangerously() -> Self;
 }
 
 // All token types, traits, and aliases are generated from token-registry.toml.
@@ -229,10 +212,31 @@ impl SimdToken for ScalarToken {
     fn summon() -> Option<Self> {
         Some(Self)
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl ScalarToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl ScalarToken {
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self
     }
 }

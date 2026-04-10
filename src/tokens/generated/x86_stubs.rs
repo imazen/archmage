@@ -31,10 +31,21 @@ impl SimdToken for X64V1Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl X64V1Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -88,10 +99,21 @@ impl SimdToken for X64V2Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl X64V2Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -144,10 +166,21 @@ impl SimdToken for X64CryptoToken {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl X64CryptoToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -199,10 +232,21 @@ impl SimdToken for X64V3Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl X64V3Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -254,10 +298,21 @@ impl SimdToken for X64V3CryptoToken {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl X64V3CryptoToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -309,10 +364,21 @@ impl SimdToken for X64V4Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl X64V4Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -364,10 +430,21 @@ impl SimdToken for X64V4xToken {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl X64V4xToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -419,10 +496,21 @@ impl SimdToken for Avx512Fp16Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl Avx512Fp16Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }

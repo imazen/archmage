@@ -4,6 +4,9 @@
 //! Extraction methods (e.g., `.v1()`, `.neon()`) only exist on real tokens,
 //! not stubs. So downcast tests are cfg-gated to the correct architecture.
 //! IntoConcreteToken and SimdToken trait methods work on stubs too.
+//!
+//! Requires the `forge-token-api` feature (tests forge tokens directly).
+#![cfg(feature = "forge-token-api")]
 
 #[allow(deprecated)] // forge_token_dangerously
 use archmage::*;

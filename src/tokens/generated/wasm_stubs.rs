@@ -31,10 +31,21 @@ impl SimdToken for Wasm128Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl Wasm128Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -86,10 +97,21 @@ impl SimdToken for Wasm128RelaxedToken {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl Wasm128RelaxedToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }

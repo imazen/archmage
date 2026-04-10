@@ -71,10 +71,35 @@ impl SimdToken for NeonToken {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl NeonToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl NeonToken {
+    /// Create a token without any checks (internal only).
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -154,7 +179,7 @@ fn neon_detect() -> Option<NeonToken> {
     let available = crate::is_aarch64_feature_available!("neon");
     NEON_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <NeonToken as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { NeonToken::forge_token_dangerously() })
     } else {
         None
     }
@@ -223,10 +248,35 @@ impl SimdToken for NeonAesToken {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl NeonAesToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl NeonAesToken {
+    /// Create a token without any checks (internal only).
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -321,7 +371,7 @@ fn neon_aes_detect() -> Option<NeonAesToken> {
         crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("aes");
     NEON_AES_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <NeonAesToken as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { NeonAesToken::forge_token_dangerously() })
     } else {
         None
     }
@@ -390,10 +440,35 @@ impl SimdToken for NeonSha3Token {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl NeonSha3Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl NeonSha3Token {
+    /// Create a token without any checks (internal only).
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -488,7 +563,7 @@ fn neon_sha3_detect() -> Option<NeonSha3Token> {
         && crate::is_aarch64_feature_available!("sha3");
     NEON_SHA3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <NeonSha3Token as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { NeonSha3Token::forge_token_dangerously() })
     } else {
         None
     }
@@ -558,10 +633,35 @@ impl SimdToken for NeonCrcToken {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl NeonCrcToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl NeonCrcToken {
+    /// Create a token without any checks (internal only).
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -656,7 +756,7 @@ fn neon_crc_detect() -> Option<NeonCrcToken> {
         crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("crc");
     NEON_CRC_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <NeonCrcToken as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { NeonCrcToken::forge_token_dangerously() })
     } else {
         None
     }
@@ -750,10 +850,35 @@ impl SimdToken for Arm64V2Token {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl Arm64V2Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl Arm64V2Token {
+    /// Create a token without any checks (internal only).
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -899,7 +1024,7 @@ fn arm64_v2_detect() -> Option<Arm64V2Token> {
         && crate::is_aarch64_feature_available!("sha2");
     ARM64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <Arm64V2Token as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { Arm64V2Token::forge_token_dangerously() })
     } else {
         None
     }
@@ -1012,10 +1137,35 @@ impl SimdToken for Arm64V3Token {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl Arm64V3Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl Arm64V3Token {
+    /// Create a token without any checks (internal only).
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -1202,7 +1352,7 @@ fn arm64_v3_detect() -> Option<Arm64V3Token> {
         && crate::is_aarch64_feature_available!("bf16");
     ARM64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <Arm64V3Token as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { Arm64V3Token::forge_token_dangerously() })
     } else {
         None
     }
