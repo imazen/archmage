@@ -1,6 +1,6 @@
 //! Test: Nested #[target_feature] functions inline without unsafe
 //!
-//! As of Rust 1.85+, calling a #[target_feature] function from another
+//! As of Rust 1.86+, calling a #[target_feature] function from another
 //! function with matching (or superset) features is safe - no unsafe needed.
 
 #![cfg(target_arch = "x86_64")]

@@ -32,7 +32,7 @@ fn mul_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 
 #[rite]
 fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
-    // No unsafe needed - value-based intrinsics are safe inside #[target_feature] (Rust 1.85+)
+    // No unsafe needed - value-based intrinsics are safe inside #[target_feature] (Rust 1.87+)
     let sum = _mm256_hadd_ps(v, v);
     let sum = _mm256_hadd_ps(sum, sum);
     let low = _mm256_castps256_ps128(sum);
@@ -202,7 +202,7 @@ fn negate_tierless(a: &[f32; 8]) -> [f32; 8] {
 // V2 tier — SSE4.2 level (128-bit)
 #[rite(v2)]
 fn popcount_tierless(val: i32) -> i32 {
-    // POPCNT is available at v2 — safe inside #[target_feature] (Rust 1.85+)
+    // POPCNT is available at v2 — safe inside #[target_feature] (Rust 1.87+)
     core::arch::x86_64::_popcnt32(val)
 }
 

@@ -9,7 +9,7 @@ section_order = ["hero", "features", "easy_command", "final_cta"]
 [extra.hero]
 title = "Archmage"
 description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Zero overhead. Zero unsafe. Full SIMD."
-badge = "Rust 1.85+"
+badge = "Rust 1.87+"
 gradient_opacity = 15
 cta_buttons = [
     { text = "Get Started", url = "/archmage/getting-started/installation/", style = "primary" },

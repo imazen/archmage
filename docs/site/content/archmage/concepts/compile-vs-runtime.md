@@ -30,7 +30,7 @@ fn process_avx2(data: &[f32; 8]) -> f32 {
 }
 ```
 
-Since Rust 1.85, the function itself isn't `unsafe`. But **calling** it from a context without matching target features requires `unsafe` — because without a `summon()` or CPUID check, there's no proof the CPU supports those instructions. Calling on an unsupported CPU means an illegal instruction fault.
+Since Rust 1.86, the function itself isn't `unsafe`. But **calling** it from a context without matching target features requires `unsafe` — because without a `summon()` or CPUID check, there's no proof the CPU supports those instructions. Calling on an unsupported CPU means an illegal instruction fault.
 
 **This is what `#[arcane]` does for you:**
 
@@ -204,7 +204,7 @@ fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
 fn helper(data: &[f32; 8]) -> f32 { ... }  // Tier-based — no token needed
 ```
 
-Since Rust 1.85+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` functions without `unsafe`:
+Since Rust 1.86+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` functions without `unsafe`:
 
 ```rust
 #[arcane(import_intrinsics)]

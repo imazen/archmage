@@ -4,7 +4,7 @@
 
 For internal helpers called from other SIMD functions, use [`#[rite]`](./rite.md) instead — it inlines into the caller, avoiding the target-feature boundary.
 
-> **Rust 1.85+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `import_intrinsics` to get safe memory ops that take references instead of raw pointers.
+> **Rust 1.87+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `import_intrinsics` to get safe memory ops that take references instead of raw pointers.
 
 ## How It Works
 

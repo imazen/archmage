@@ -64,7 +64,7 @@ fn kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
 
 The outer function is safe. The `unsafe` is an implementation detail justified by the token.
 
-### 3. Rust 1.85+ Changed Everything
+### 3. Rust 1.86-1.87 Changed Everything
 
 Value-based intrinsics are safe inside `#[target_feature]` functions:
 
@@ -177,7 +177,7 @@ When explaining archmage:
 1. Tokens are zero-sized proofs of CPU features
 2. `summon()` does the runtime check, returns `Option<Token>`
 3. `#[arcane]` generates `#[target_feature]` code
-4. Inside `#[target_feature]`, most intrinsics are safe (Rust 1.85+)
+4. Inside `#[target_feature]`, most intrinsics are safe (Rust 1.87+)
 5. `#[arcane]` at the boundary, `#[rite]` for everything else
 6. `#[rite]` has three modes: token-based, tier-based (`#[rite(v3)]`), multi-tier (`#[rite(v3, v4, neon)]`)
 7. Enter `#[arcane]` once, `#[rite]` for everything inside

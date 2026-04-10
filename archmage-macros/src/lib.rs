@@ -223,7 +223,7 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Creates an LLVM optimization boundary — use [`token_target_features`]
 /// (alias for [`rite`]) for inner helpers to avoid this.
 ///
-/// Since Rust 1.85, value-based SIMD intrinsics are safe inside
+/// Since Rust 1.87, value-based SIMD intrinsics are safe inside
 /// `#[target_feature]` functions. This macro generates the `#[target_feature]`
 /// wrapper so you never need to write `unsafe` for SIMD code.
 ///
@@ -270,7 +270,7 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// ```
 ///
 /// Each variant gets its own `#[target_feature]` and `#[cfg(target_arch)]`.
-/// Since Rust 1.85, calling these from a matching `#[arcane]` or `#[rite]`
+/// Since Rust 1.86, calling these from a matching `#[arcane]` or `#[rite]`
 /// context is safe — no `unsafe` needed when the caller has matching or
 /// superset features.
 ///
@@ -326,7 +326,7 @@ pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// function signature. No wrapper, no optimization boundary. Use for functions
 /// called from within `#[arcane]`/`#[token_target_features_boundary]` code.
 ///
-/// Since Rust 1.85, calling a `#[target_feature]` function from another function
+/// Since Rust 1.86, calling a `#[target_feature]` function from another function
 /// with matching features is safe — no `unsafe` needed.
 ///
 /// See [`rite`] for full documentation and examples.

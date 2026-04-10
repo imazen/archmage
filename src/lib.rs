@@ -17,7 +17,7 @@
 //!     let va = _mm256_loadu_ps(a);  // Takes &[f32; 8], not *const f32
 //!     let vb = _mm256_loadu_ps(b);
 //!
-//!     // Value-based intrinsics are SAFE inside #[arcane]! (Rust 1.85+)
+//!     // Value-based intrinsics are SAFE inside #[arcane]! (Rust 1.87+)
 //!     let result = _mm256_fmadd_ps(va, vb, va);
 //!
 //!     let mut out = [0.0f32; 8];
@@ -94,7 +94,7 @@
 //!
 //! ## Safety
 //!
-//! Since Rust 1.85, value-based SIMD intrinsics (arithmetic, shuffle, compare,
+//! Since Rust 1.87, value-based SIMD intrinsics (arithmetic, shuffle, compare,
 //! bitwise) are safe inside `#[target_feature]` functions. Only pointer-based
 //! memory operations remain unsafe — `import_intrinsics` handles this by
 //! providing safe reference-based memory ops that shadow the pointer-based ones.

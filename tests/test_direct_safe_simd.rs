@@ -1,4 +1,4 @@
-//! Test: Value intrinsics are SAFE inside #[arcane] (Rust 1.85+)
+//! Test: Value intrinsics are SAFE inside #[arcane] (Rust 1.87+)
 //!
 //! Key insight: Inside #[target_feature], value-based intrinsics are safe.
 //! Memory ops are safe too when using import_intrinsics (reference-based).

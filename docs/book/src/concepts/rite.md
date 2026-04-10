@@ -179,11 +179,11 @@ fn entry(token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
 }
 ```
 
-Since Rust 1.85, `#[target_feature]` functions can safely call other `#[target_feature]` functions when the caller has matching or superset features.
+Since Rust 1.86, `#[target_feature]` functions can safely call other `#[target_feature]` functions when the caller has matching or superset features.
 
-## Why This Works (Rust 1.85+)
+## Why This Works (Rust 1.86+)
 
-Since Rust 1.85, calling a `#[target_feature]` function from another function with matching or superset features is **safe** — no `unsafe` block needed. This is what makes `#[rite]` functions callable from `#[arcane]` or other `#[rite]` functions without `unsafe`:
+Since Rust 1.86, calling a `#[target_feature]` function from another function with matching or superset features is **safe** — no `unsafe` block needed. This is what makes `#[rite]` functions callable from `#[arcane]` or other `#[rite]` functions without `unsafe`:
 
 ```rust
 #[target_feature(enable = "avx2,fma")]

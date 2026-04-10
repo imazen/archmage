@@ -62,7 +62,7 @@
 //! ## 4. Platform intrinsics
 //!
 //! Re-exports `core::arch::{x86_64, aarch64, wasm32}::*` for the current
-//! platform. Since Rust 1.85, **value-based intrinsics are safe inside
+//! platform. Since Rust 1.87, **value-based intrinsics are safe inside
 //! `#[target_feature]` functions**. This means arithmetic, shuffle, compare,
 //! and bitwise intrinsics need no `unsafe` inside `#[arcane]`:
 //!

@@ -12,7 +12,7 @@ sidebar = true
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
-Rust 1.85 made value-based SIMD intrinsics safe inside `#[target_feature]` functions. **Archmage** fills the last gap: proving at the type level that the CPU actually supports those features, so you never call a `#[target_feature]` function on hardware that can't run it. The `import_intrinsics` option on `#[arcane]`/`#[rite]` brings safe memory operations into scope alongside `core::arch` intrinsics, so memory loads and stores take references instead of raw pointers.
+Rust 1.87 made value-based SIMD intrinsics safe inside `#[target_feature]` functions. **Archmage** fills the last gap: proving at the type level that the CPU actually supports those features, so you never call a `#[target_feature]` function on hardware that can't run it. The `import_intrinsics` option on `#[arcane]`/`#[rite]` brings safe memory operations into scope alongside `core::arch` intrinsics, so memory loads and stores take references instead of raw pointers.
 
 You prove CPU feature availability once with a **capability token**, then write safe code that the compiler optimizes into raw SIMD instructions. No `unsafe` needed for the SIMD work itself.
 
@@ -69,7 +69,7 @@ fn main() {
 
 1. **Tokens** are zero-sized proof types. `X64V3Token::summon()` returns `Some(token)` only if the CPU supports AVX2+FMA. See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete token-to-feature mapping.
 
-2. **`#[arcane(import_intrinsics)]`** generates a `#[target_feature]` function and auto-imports intrinsics. Inside, SIMD intrinsics are safe (Rust 1.85+). Descriptive alias: `#[token_target_features_boundary]`.
+2. **`#[arcane(import_intrinsics)]`** generates a `#[target_feature]` function and auto-imports intrinsics. Inside, SIMD intrinsics are safe (Rust 1.87+). Descriptive alias: `#[token_target_features_boundary]`.
 
 3. **`#[rite]`** adds `#[target_feature]` + `#[inline]` directly — no wrapper, no boundary. Three modes: token-based (`#[rite(import_intrinsics)]`), tier-based (`#[rite(v3, import_intrinsics)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants `fn_v3`, `fn_v4`, `fn_neon`). Descriptive alias: `#[token_target_features]`.
 

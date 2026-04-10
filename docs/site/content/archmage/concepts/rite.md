@@ -243,7 +243,7 @@ fn entry(token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
 }
 ```
 
-Since Rust 1.85, a `#[target_feature]` function can safely call another `#[target_feature]` function when the caller has matching or superset features. The `#[arcane]` wrapper gives the caller V3 features, so calling `scale_v3()` (which also needs V3) requires no `unsafe`.
+Since Rust 1.86, a `#[target_feature]` function can safely call another `#[target_feature]` function when the caller has matching or superset features. The `#[arcane]` wrapper gives the caller V3 features, so calling `scale_v3()` (which also needs V3) requires no `unsafe`.
 
 ### When to use multi-tier
 
@@ -270,9 +270,9 @@ fn process(data: &[f32; 4]) -> f32 {
 // Cfg'd out on other architectures
 ```
 
-## Why This Works (Rust 1.85+)
+## Why This Works (Rust 1.86+)
 
-Since Rust 1.85, calling a `#[target_feature]` function from another function with matching or superset features is **safe** — no `unsafe` block needed. This is what makes `#[rite]` functions callable from `#[arcane]` or other `#[rite]` functions without `unsafe`:
+Since Rust 1.86, calling a `#[target_feature]` function from another function with matching or superset features is **safe** — no `unsafe` block needed. This is what makes `#[rite]` functions callable from `#[arcane]` or other `#[rite]` functions without `unsafe`:
 
 ```rust
 #[target_feature(enable = "avx2,fma")]

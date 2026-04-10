@@ -65,7 +65,7 @@ Single-tier and token-based produce identical `#[target_feature]` attributes. Mu
 
 **`#[rite]` should be the default.** Use `#[arcane(import_intrinsics)]` only at the entry point. For internal helpers, use `#[rite(v3, import_intrinsics)]` (tier-based, no token parameter) or `#[rite(import_intrinsics)]` (token-based). For multi-tier auto-vectorization, use `#[rite(v3, v4, neon)]`. `import_intrinsics` auto-imports `archmage::intrinsics::{arch}::*` — a combined module where `safe_unaligned_simd` memory ops shadow `core::arch` pointer-based ones. No ambiguity, no qualification needed.
 
-Multi-tier variants are safe to call from matching `#[arcane]` or `#[rite]` contexts — since Rust 1.85, `#[target_feature]` functions can safely call other `#[target_feature]` functions when the caller has matching or superset features.
+Multi-tier variants are safe to call from matching `#[arcane]` or `#[rite]` contexts — since Rust 1.86, `#[target_feature]` functions can safely call other `#[target_feature]` functions when the caller has matching or superset features.
 
 ### CRITICAL: Target-Feature Boundaries (4x Performance Impact)
 
@@ -745,9 +745,9 @@ live in `token-registry.toml`. Everything else is derived:
 
 To add/modify tokens: edit `token-registry.toml`, then `just generate`.
 
-## Core Insight: Rust 1.85+ Changed Everything
+## Core Insight: Rust 1.86-1.87 Changed Everything
 
-As of Rust 1.85, **value-based intrinsics are safe inside `#[target_feature]` functions**:
+Rust 1.86 stabilized `target_feature_11` (safe `fn` with `#[target_feature]`, safe cross-calls). Rust 1.87 declared value-based `std::arch` intrinsics safe. Together, **value-based intrinsics are safe inside `#[target_feature]` functions**:
 
 ```rust
 #[target_feature(enable = "avx2")]

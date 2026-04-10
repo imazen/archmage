@@ -123,7 +123,7 @@ fn square(v: __m256) -> __m256 {
 
 `#[rite(v3)]` generates the same `#[target_feature]` as taking an `X64V3Token` parameter. Use it when the function doesn't need the token for anything else. Taking the token parameter works just as well — and can be easier to remember if you already have the token in scope. For multi-tier code, `#[rite(v3, v4, neon)]` generates suffixed variants (`square_v3`, `square_v4`, `square_neon`) from a single function body.
 
-Since Rust 1.85, calling a `#[target_feature]` function from another function with matching features is safe — that's why `square(v)` needs no `unsafe` block inside the `#[arcane]` function. The caller's V3 features are a superset of the callee's V3 features, so the compiler verifies safety at compile time.
+Since Rust 1.86, calling a `#[target_feature]` function from another function with matching features is safe — that's why `square(v)` needs no `unsafe` block inside the `#[arcane]` function. The caller's V3 features are a superset of the callee's V3 features, so the compiler verifies safety at compile time.
 
 ## Key Points
 

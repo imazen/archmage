@@ -2,7 +2,7 @@
 
 Tracks CPU target features relative to archmage token coverage. Updated March 2026.
 
-**MSRV: Rust 1.89** (archmage, archmage-macros, magetypes). xtask: 1.85.
+**MSRV: Rust 1.89** (archmage, archmage-macros, magetypes, xtask).
 
 The source of truth for what archmage tokens enable is `token-registry.toml`.
 

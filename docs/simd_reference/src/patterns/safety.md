@@ -4,7 +4,7 @@
 
 1. **Tokens prove CPU features exist.** You can't construct one without `summon()` succeeding.
 2. **`#[arcane]` generates `#[target_feature]` code.** The macro wraps your function body in an inner function with the right target features enabled.
-3. **Inside `#[target_feature]`, most intrinsics are safe.** Rust 1.85+ made value-based intrinsics safe in this context.
+3. **Inside `#[target_feature]`, most intrinsics are safe.** Rust 1.87+ made value-based intrinsics safe in this context.
 4. **Only memory operations need `unsafe`.** Raw pointer loads/stores, or use `import_intrinsics` to get safe memory ops that take references instead of raw pointers.
 
 ## What's safe inside `#[arcane]`
