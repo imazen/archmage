@@ -75,10 +75,40 @@ impl SimdToken for X64V1Token {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl X64V1Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl X64V1Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -255,10 +285,40 @@ impl SimdToken for X64V2Token {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl X64V2Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl X64V2Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -405,7 +465,7 @@ fn x64_v2_detect() -> Option<X64V2Token> {
         && crate::is_x86_feature_available!("cmpxchg16b");
     X64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <X64V2Token as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { X64V2Token::forge_token_dangerously() })
     } else {
         None
     }
@@ -504,10 +564,40 @@ impl SimdToken for X64CryptoToken {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl X64CryptoToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl X64CryptoToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -668,7 +758,7 @@ fn x64_crypto_detect() -> Option<X64CryptoToken> {
         && crate::is_x86_feature_available!("aes");
     X64_CRYPTO_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <X64CryptoToken as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { X64CryptoToken::forge_token_dangerously() })
     } else {
         None
     }
@@ -788,10 +878,40 @@ impl SimdToken for X64V3Token {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl X64V3Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl X64V3Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -988,7 +1108,7 @@ fn x64_v3_detect() -> Option<X64V3Token> {
         && crate::is_x86_feature_available!("movbe");
     X64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <X64V3Token as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { X64V3Token::forge_token_dangerously() })
     } else {
         None
     }
@@ -1126,10 +1246,40 @@ impl SimdToken for X64V3CryptoToken {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl X64V3CryptoToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl X64V3CryptoToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -1357,7 +1507,7 @@ fn x64_v3_crypto_detect() -> Option<X64V3CryptoToken> {
         && crate::is_x86_feature_available!("vaes");
     X64_V3_CRYPTO_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <X64V3CryptoToken as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { X64V3CryptoToken::forge_token_dangerously() })
     } else {
         None
     }
@@ -1506,10 +1656,40 @@ impl SimdToken for X64V4Token {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl X64V4Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl X64V4Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -1758,7 +1938,7 @@ fn x64_v4_detect() -> Option<X64V4Token> {
         && crate::is_x86_feature_available!("avx512vl");
     X64_V4_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <X64V4Token as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { X64V4Token::forge_token_dangerously() })
     } else {
         None
     }
@@ -1944,10 +2124,40 @@ impl SimdToken for X64V4xToken {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl X64V4xToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl X64V4xToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -2265,7 +2475,7 @@ fn x64_v4x_detect() -> Option<X64V4xToken> {
         && crate::is_x86_feature_available!("vaes");
     X64_V4X_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <X64V4xToken as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { X64V4xToken::forge_token_dangerously() })
     } else {
         None
     }
@@ -2418,10 +2628,40 @@ impl SimdToken for Avx512Fp16Token {
             }
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl Avx512Fp16Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl Avx512Fp16Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -2683,7 +2923,7 @@ fn avx512_fp16_detect() -> Option<Avx512Fp16Token> {
         && crate::is_x86_feature_available!("avx512fp16");
     AVX512_FP16_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
-        Some(unsafe { <Avx512Fp16Token as SimdToken>::forge_token_dangerously() })
+        Some(unsafe { Avx512Fp16Token::forge_token_dangerously() })
     } else {
         None
     }

@@ -272,12 +272,47 @@ fn gen_real_token_struct(
     out.push('\n');
     out.push_str(&gen_summon(token, arch));
 
-    // forge_token_dangerously()
+    // Close SimdToken impl
+    out.push_str(&formatdoc! {"
+        }}
+    "});
+
+    // forge_token_dangerously() — pub with feature flag, pub(crate) without
+    let name = &token.name;
     out.push_str(&formatdoc! {"
 
+        #[cfg(feature = \"forge-token-api\")]
+        impl {name} {{
+            /// Create a token without any checks.
+            ///
+            /// # Safety
+            ///
+            /// Caller must guarantee the CPU feature is available. Using a forged token
+            /// when the feature is unavailable causes undefined behavior.
+            #[deprecated(
+                since = \"0.5.0\",
+                note = \"Pass tokens through from summon() instead of forging\"
+            )]
             #[inline(always)]
-            #[allow(deprecated)]
-            unsafe fn forge_token_dangerously() -> Self {{
+            pub unsafe fn forge_token_dangerously() -> Self {{
+                Self {{ _private: () }}
+            }}
+        }}
+
+        #[cfg(not(feature = \"forge-token-api\"))]
+        impl {name} {{
+            /// Create a token without any checks.
+            ///
+            /// # Safety
+            ///
+            /// Caller must guarantee the CPU feature is available. Using a forged token
+            /// when the feature is unavailable causes undefined behavior.
+            #[deprecated(
+                since = \"0.5.0\",
+                note = \"Pass tokens through from summon() instead of forging\"
+            )]
+            #[inline(always)]
+            pub(crate) unsafe fn forge_token_dangerously() -> Self {{
                 Self {{ _private: () }}
             }}
         }}
@@ -475,7 +510,7 @@ fn gen_summon_cold_x86(token: &TokenDef) -> String {
             let available = {detect_expr};
             {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
             if available {{
-                Some(unsafe {{ <{name} as SimdToken>::forge_token_dangerously() }})
+                Some(unsafe {{ {name}::forge_token_dangerously() }})
             }} else {{
                 None
             }}
@@ -537,7 +572,7 @@ fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
             let available = {detect_expr};
             {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
             if available {{
-                Some(unsafe {{ <{name} as SimdToken>::forge_token_dangerously() }})
+                Some(unsafe {{ {name}::forge_token_dangerously() }})
             }} else {{
                 None
             }}
@@ -865,9 +900,21 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
                 None // Not available on this architecture
             }}
 
-            #[allow(deprecated)]
+        }}
+
+        #[cfg(feature = \"forge-token-api\")]
+        impl {name} {{
+            /// Create a token without any checks.
+            ///
+            /// # Safety
+            ///
+            /// Caller must guarantee the CPU feature is available.
+            #[deprecated(
+                since = \"0.5.0\",
+                note = \"Pass tokens through from summon() instead of forging\"
+            )]
             #[inline(always)]
-            unsafe fn forge_token_dangerously() -> Self {{
+            pub unsafe fn forge_token_dangerously() -> Self {{
                 Self {{ _private: () }}
             }}
         }}

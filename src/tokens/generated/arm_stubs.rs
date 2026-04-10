@@ -31,10 +31,21 @@ impl SimdToken for NeonToken {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl NeonToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -86,10 +97,21 @@ impl SimdToken for NeonAesToken {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl NeonAesToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -141,10 +163,21 @@ impl SimdToken for NeonSha3Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl NeonSha3Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -196,10 +229,21 @@ impl SimdToken for NeonCrcToken {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl NeonCrcToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -253,10 +297,21 @@ impl SimdToken for Arm64V2Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl Arm64V2Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -311,10 +366,21 @@ impl SimdToken for Arm64V3Token {
     fn summon() -> Option<Self> {
         None // Not available on this architecture
     }
+}
 
-    #[allow(deprecated)]
+#[cfg(feature = "forge-token-api")]
+impl Arm64V3Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }

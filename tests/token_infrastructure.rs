@@ -918,6 +918,7 @@ fn compile_time_error_from_disable_contains_features() {
 // Coverage: forge_token_dangerously + IntoConcreteToken for stubs
 // ============================================================================
 
+#[cfg(feature = "forge-token-api")]
 #[allow(deprecated)]
 #[test]
 fn stub_forge_and_into_concrete_token() {
@@ -945,7 +946,7 @@ fn stub_forge_and_into_concrete_token() {
     }
 }
 
-#[cfg(feature = "avx512")]
+#[cfg(all(feature = "avx512", feature = "forge-token-api"))]
 #[allow(deprecated)]
 #[test]
 fn avx512fp16_forge_and_into_concrete_token() {
@@ -956,7 +957,11 @@ fn avx512fp16_forge_and_into_concrete_token() {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(
+    target_arch = "x86_64",
+    feature = "avx512",
+    feature = "forge-token-api"
+))]
 #[allow(deprecated)]
 #[test]
 fn avx512fp16_forge_and_downcast() {

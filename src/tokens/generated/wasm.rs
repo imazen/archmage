@@ -44,10 +44,40 @@ impl SimdToken for Wasm128Token {
             None
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl Wasm128Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl Wasm128Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -113,10 +143,40 @@ impl SimdToken for Wasm128RelaxedToken {
             None
         }
     }
+}
 
+#[cfg(feature = "forge-token-api")]
+impl Wasm128RelaxedToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
     #[inline(always)]
-    #[allow(deprecated)]
-    unsafe fn forge_token_dangerously() -> Self {
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl Wasm128RelaxedToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
