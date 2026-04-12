@@ -13,6 +13,7 @@ include = [
     "src/**",
     "benches/**",
     "tests/**",
+    "examples/**",
     "Cargo.toml",
     "README.md",
     "LICENSE*",

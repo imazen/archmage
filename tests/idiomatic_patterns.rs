@@ -482,47 +482,8 @@ mod pattern_manual_dispatch_x86 {
 // PATTERN 7: Using magetypes Types Directly
 // =============================================================================
 //
-// The magetypes crate provides high-level SIMD types (f32x8, i32x4, etc.)
-// that work with archmage tokens.
-
-#[cfg(target_arch = "x86_64")]
-mod pattern_magetypes {
-    use archmage::{SimdToken, X64V3Token};
-    use magetypes::simd::f32x8;
-
-    #[test]
-    fn test_magetypes_basic() {
-        if let Some(token) = X64V3Token::summon() {
-            let a = f32x8::splat(token, 2.0);
-            let b = f32x8::splat(token, 3.0);
-            let c = a + b;
-            assert_eq!(c.to_array(), [5.0f32; 8]);
-        }
-    }
-
-    #[test]
-    fn test_magetypes_load_store() {
-        if let Some(token) = X64V3Token::summon() {
-            let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-            let v = f32x8::load(token, &data);
-            let doubled = v + v;
-            assert_eq!(
-                doubled.to_array(),
-                [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]
-            );
-        }
-    }
-
-    #[test]
-    fn test_magetypes_reduce() {
-        if let Some(token) = X64V3Token::summon() {
-            let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-            let v = f32x8::load(token, &data);
-            let sum = v.reduce_add();
-            assert_eq!(sum, 36.0);
-        }
-    }
-}
+// See magetypes crate tests for comprehensive coverage of magetypes integration
+// patterns (splat, load/store, reduce, operators, etc.).
 
 // =============================================================================
 // PATTERN 8: Separate Platform Implementations
