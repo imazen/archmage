@@ -2,7 +2,7 @@
 members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crate"]
 
 [workspace.package]
-version = "0.9.17"
+version = "0.9.18"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -57,7 +57,7 @@ forge-token-api = []
 
 [dependencies]
 # Proc-macro crate for #[arcane], #[rite], #[autoversion], incant!, etc.
-archmage-macros = { version = "0.9.17", path = "archmage-macros" }
+archmage-macros = { version = "0.9.18", path = "archmage-macros" }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
 safe_unaligned_simd = { version = "0.2.5" }
 
