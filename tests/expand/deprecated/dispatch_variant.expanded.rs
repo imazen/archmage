@@ -9,6 +9,10 @@ fn __arcane_compute_v3(_t: X64V3Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn compute_v3(_t: X64V3Token, x: f32) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&_t);
+    }
     unsafe { __arcane_compute_v3(_t, x) }
 }
 fn compute_scalar(_t: ScalarToken, x: f32) -> f32 {

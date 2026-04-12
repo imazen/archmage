@@ -20,6 +20,10 @@ fn process(
     __archmage_arg_1: f32,
     __archmage_arg_2: f32,
 ) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&__archmage_arg_0);
+    }
     unsafe { __arcane_process(__archmage_arg_0, __archmage_arg_1, __archmage_arg_2) }
 }
 fn main() {}

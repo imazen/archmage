@@ -1,0 +1,25 @@
+error[E0308]: mismatched types
+ --> tests/compile_fail/token_aliasing.rs:8:1
+  |
+8 | #[arcane]
+  | ^^^^^^^^^
+  | |
+  | expected `&X64V3Token`, found `&X64V2Token`
+  | arguments to this function are incorrect
+  |
+  = note: expected reference `&X64V3Token`
+             found reference `&X64V2Token`
+note: function defined here
+ --> tests/compile_fail/token_aliasing.rs:8:1
+  |
+8 | #[arcane]
+  | ^^^^^^^^^
+  = note: this error originates in the attribute macro `arcane` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused variable: `token`
+ --> tests/compile_fail/token_aliasing.rs:9:9
+  |
+9 | fn evil(token: X64V3Token, data: &[f32; 8]) -> f32 {
+  |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_token`
+  |
+  = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default

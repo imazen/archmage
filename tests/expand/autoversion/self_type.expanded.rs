@@ -30,6 +30,10 @@ impl P {
         ) -> f32 {
             x * _self.f
         }
+        {
+            fn __archmage_verify(_: &::archmage::X64V4Token) {}
+            __archmage_verify(&_token);
+        }
         unsafe { __simd_inner_apply_v4(self, _token, x) }
     }
     #[allow(dead_code)]
@@ -46,6 +50,10 @@ impl P {
             x: f32,
         ) -> f32 {
             x * _self.f
+        }
+        {
+            fn __archmage_verify(_: &::archmage::X64V3Token) {}
+            __archmage_verify(&_token);
         }
         unsafe { __simd_inner_apply_v3(self, _token, x) }
     }

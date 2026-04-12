@@ -7,6 +7,7 @@ fn __arcane_process(token: impl HasX64V2, a: f32) -> f32 {
 }
 #[inline(always)]
 fn process(token: impl HasX64V2, a: f32) -> f32 {
+    ::archmage::__private::assert_archmage_token(&token);
     unsafe { __arcane_process(token, a) }
 }
 fn main() {}

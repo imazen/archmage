@@ -10,6 +10,10 @@ fn __arcane_process(token: X64V3Token, callback: &dyn Fn(f32) -> f32, x: f32) ->
 }
 #[inline(always)]
 fn process(token: X64V3Token, callback: &dyn Fn(f32) -> f32, x: f32) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __arcane_process(token, callback, x) }
 }
 fn main() {}

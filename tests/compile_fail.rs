@@ -42,4 +42,10 @@ fn ui_tests() {
 
     // #[autoversion] rejects concrete tokens
     t.compile_fail("tests/compile_fail/autoversion_concrete_token.rs");
+
+    // Token shadowing: local struct with same name as archmage token must fail
+    t.compile_fail("tests/compile_fail/token_shadowing.rs");
+
+    // Token aliasing: renaming a lower-tier token to a higher-tier name must fail
+    t.compile_fail("tests/compile_fail/token_aliasing.rs");
 }

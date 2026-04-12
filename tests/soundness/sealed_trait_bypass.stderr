@@ -1,0 +1,15 @@
+error[E0603]: trait `Sealed` is private
+  --> tests/soundness/sealed_trait_bypass.rs:19:24
+   |
+19 | impl archmage::tokens::Sealed for FakeToken {}
+   |                        ^^^^^^ private trait
+   |
+note: the trait `Sealed` is defined here
+  --> src/tokens/mod.rs
+   |
+   | pub(crate) use sealed::Sealed;
+   |                ^^^^^^^^^^^^^^
+help: import `Sealed` directly
+   |
+19 | impl archmage::tokens::sealed::Sealed for FakeToken {}
+   |                        ++++++++

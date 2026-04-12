@@ -22,6 +22,10 @@ fn __arcane_process(token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
 }
 #[inline(always)]
 fn process(token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __arcane_process(token, data) }
 }
 fn main() {}

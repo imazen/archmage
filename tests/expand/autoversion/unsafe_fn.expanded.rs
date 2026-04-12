@@ -31,6 +31,10 @@ fn __arcane_process_v4(
 #[allow(dead_code)]
 #[inline(always)]
 unsafe fn process_v4(_token: archmage::X64V4Token, ptr: *const f32, len: usize) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V4Token) {}
+        __archmage_verify(&_token);
+    }
     unsafe { __arcane_process_v4(_token, ptr, len) }
 }
 #[doc(hidden)]
@@ -53,6 +57,10 @@ fn __arcane_process_v3(
 #[allow(dead_code)]
 #[inline(always)]
 unsafe fn process_v3(_token: archmage::X64V3Token, ptr: *const f32, len: usize) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&_token);
+    }
     unsafe { __arcane_process_v3(_token, ptr, len) }
 }
 #[allow(dead_code)]

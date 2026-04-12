@@ -147,6 +147,33 @@ pub mod testing;
 // Use `magetypes::simd` for f32x8, i32x4, etc.
 
 // ============================================================================
+// Private module for macro-generated assertions
+// ============================================================================
+
+/// Internal module used by `#[arcane]` macro output. Not part of the public API.
+///
+/// The `#[arcane]` macro emits a call to `assert_archmage_token` in every wrapper
+/// function to prevent token shadowing attacks. Without this, a user could create
+/// a local struct with the same name as an archmage token (e.g., `struct X64V3Token;`),
+/// and the macro — which does name-based feature lookup — would generate
+/// `#[target_feature(enable = "avx2,fma,...")]` + `unsafe { ... }` for the impostor,
+/// enabling UB on CPUs that lack those features.
+///
+/// The assertion is zero-cost: it compiles to nothing, but enforces that the
+/// token type implements [`SimdToken`], which requires the sealed `Sealed` trait
+/// that only archmage's own tokens can implement.
+#[doc(hidden)]
+pub mod __private {
+    /// Compile-time assertion that `T` is a genuine archmage token.
+    ///
+    /// Called by macro-generated wrappers. Optimized away entirely — exists
+    /// only to produce a compile error if the token type doesn't implement
+    /// [`SimdToken`](crate::SimdToken) (which is sealed).
+    #[inline(always)]
+    pub fn assert_archmage_token<T: crate::SimdToken>(_: &T) {}
+}
+
+// ============================================================================
 // Re-exports at crate root for convenience
 // ============================================================================
 

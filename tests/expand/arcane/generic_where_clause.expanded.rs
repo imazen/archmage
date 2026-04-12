@@ -20,6 +20,10 @@ fn sum_slice<T>(token: X64V3Token, data: &[T]) -> f32
 where
     T: Copy + Into<f32>,
 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __arcane_sum_slice::<T>(token, data) }
 }
 fn main() {}
