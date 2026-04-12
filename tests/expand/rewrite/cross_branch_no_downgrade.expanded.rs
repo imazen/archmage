@@ -9,6 +9,10 @@ fn __arcane_inner_v3_crypto(_t: X64V3CryptoToken, x: f32) -> f32 {
 }
 #[inline(always)]
 fn inner_v3_crypto(_t: X64V3CryptoToken, x: f32) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3CryptoToken) {}
+        __archmage_verify(&_t);
+    }
     unsafe { __arcane_inner_v3_crypto(_t, x) }
 }
 fn inner_scalar(_t: ScalarToken, x: f32) -> f32 {
@@ -30,6 +34,10 @@ fn __arcane_outer(token: X64V4Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn outer(token: X64V4Token, x: f32) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V4Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __arcane_outer(token, x) }
 }
 fn main() {}

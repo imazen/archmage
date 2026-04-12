@@ -36,7 +36,11 @@ mod sealed {
     pub trait Sealed {}
 }
 
-pub use sealed::Sealed;
+// Sealed is pub(crate) — external crates cannot implement SimdToken.
+// This is a semver break from 0.9.17 (Sealed was accidentally pub), but
+// necessary: the public re-export allowed external SimdToken impls,
+// undermining the entire token safety model.
+pub(crate) use sealed::Sealed;
 
 /// Marker trait for SIMD capability tokens.
 ///

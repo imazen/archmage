@@ -8,6 +8,10 @@ fn process(token: X64V3Token, a: f32, b: f32) -> f32 {
     fn __simd_inner_process(token: X64V3Token, a: f32, b: f32) -> f32 {
         a + b
     }
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __simd_inner_process(token, a, b) }
 }
 fn main() {}

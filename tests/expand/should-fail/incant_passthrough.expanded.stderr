@@ -7,13 +7,13 @@ warning: unused imports: `NeonToken`, `arcane`, and `incant`
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
 error[E0658]: use of unstable library feature `panic_internals`: internal details of the implementation of the `panic!` and related macros
-  --> tests/expand/should-fail/incant_passthrough.expanded.rs:30:13
+  --> tests/expand/should-fail/incant_passthrough.expanded.rs:34:13
    |
-30 |             ::core::panicking::panic_fmt(
+34 |             ::core::panicking::panic_fmt(
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: unused import: `archmage::IntoConcreteToken`
-  --> tests/expand/should-fail/incant_passthrough.expanded.rs:19:13
+  --> tests/expand/should-fail/incant_passthrough.expanded.rs:23:13
    |
-19 |         use archmage::IntoConcreteToken;
+23 |         use archmage::IntoConcreteToken;
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^

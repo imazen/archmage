@@ -13,6 +13,43 @@ use syn::{
 use crate::common::*;
 use crate::token_discovery::*;
 
+/// Generate a compile-time assertion that the token parameter is a genuine
+/// archmage token of the expected type.
+///
+/// For **concrete tokens** (e.g., `X64V3Token`): asserts the exact type via
+/// `::archmage::X64V3Token`, catching both shadowing (local struct with the
+/// same name) and aliasing (e.g., `use archmage::X64V2Token as X64V3Token`).
+///
+/// For **trait/generic bounds** (e.g., `impl HasX64V2`, `T: HasNeon`): falls
+/// back to checking `SimdToken` (sealed trait), which catches shadowing but
+/// cannot catch cross-trait aliasing.
+///
+/// Both forms are zero-cost: the generated code is optimized away entirely.
+fn gen_token_assertion(
+    token_type_name: &Option<String>,
+    token_ident: &Ident,
+) -> proc_macro2::TokenStream {
+    if let Some(name) = token_type_name {
+        // Concrete token: verify the exact type via fully-qualified path.
+        // This catches both shadowing (non-archmage type) and aliasing
+        // (wrong archmage token renamed to match this name).
+        let expected_type = format_ident!("{}", name);
+        quote! {
+            // Compile-time proof that the token is genuinely ::archmage::#expected_type.
+            // Catches name shadowing (local struct) and aliasing (wrong token renamed).
+            {
+                fn __archmage_verify(_: &::archmage::#expected_type) {}
+                __archmage_verify(&#token_ident);
+            }
+        }
+    } else {
+        // Trait/generic bound: can only verify SimdToken (sealed).
+        quote! {
+            ::archmage::__private::assert_archmage_token(&#token_ident);
+        }
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct ArcaneArgs {
     /// Use `#[inline(always)]` instead of `#[inline]` for the inner function.
@@ -138,7 +175,7 @@ pub(crate) fn arcane_impl(
 
     // Find the token parameter, its features, target arch, and token type name
     let TokenParamInfo {
-        ident: _token_ident,
+        ident: mut _token_ident,
         features,
         target_arch,
         token_type_name,
@@ -267,6 +304,12 @@ pub(crate) fn arcane_impl(
             #(#pattern_rebinds)*
             #original_body
         };
+        // Pattern renaming may have changed the token parameter's ident
+        // (e.g., wildcard `_: X64V3Token` → `__archmage_arg_0: X64V3Token`).
+        // Re-discover the correct ident from the modified signature.
+        if let Some(info) = find_token_param(&input_fn.sig) {
+            _token_ident = info.ident;
+        }
     }
 
     // Choose inline attribute based on args
@@ -297,6 +340,7 @@ pub(crate) fn arcane_impl(
             token_type_name,
             target_feature_attrs,
             inline_attr,
+            _token_ident,
         )
     } else {
         arcane_impl_sibling(
@@ -306,6 +350,7 @@ pub(crate) fn arcane_impl(
             token_type_name,
             target_feature_attrs,
             inline_attr,
+            _token_ident,
         )
     }
 }
@@ -431,6 +476,7 @@ pub(crate) fn arcane_impl_sibling(
     token_type_name: Option<String>,
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Attribute,
+    token_ident: Ident,
 ) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
@@ -537,11 +583,13 @@ pub(crate) fn arcane_impl_sibling(
         // Wrapper function: fn original_name(...) { unsafe { sibling_call } }
         // The unsafe block is needed because the sibling has #[target_feature] and
         // the wrapper doesn't — calling across this boundary requires unsafe.
+        let token_assertion = gen_token_assertion(&token_type_name, &token_ident);
         let wrapper_fn = quote! {
             #cfg_guard
             #(#attrs)*
             #[inline(always)]
             #vis #sig {
+                #token_assertion
                 // SAFETY: The token parameter proves the required CPU features are available.
                 // Calling a #[target_feature] function from a non-matching context requires
                 // unsafe because the CPU may not support those instructions. The token's
@@ -630,6 +678,7 @@ pub(crate) fn arcane_impl_nested(
     token_type_name: Option<String>,
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Attribute,
+    token_ident: Ident,
 ) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
@@ -762,6 +811,7 @@ pub(crate) fn arcane_impl_nested(
             quote! {}
         };
 
+        let token_assertion = gen_token_assertion(&token_type_name, &token_ident);
         quote! {
             // Real implementation for the correct architecture
             #cfg_guard
@@ -775,6 +825,7 @@ pub(crate) fn arcane_impl_nested(
                     #inner_body
                 }
 
+                #token_assertion
                 // SAFETY: The token parameter proves the required CPU features are available.
                 unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }
@@ -783,6 +834,7 @@ pub(crate) fn arcane_impl_nested(
         }
     } else {
         // No specific arch (trait bounds or generic) - generate without cfg guards
+        let token_assertion = gen_token_assertion(&token_type_name, &token_ident);
         quote! {
             #(#attrs)*
             #[inline(always)]
@@ -794,6 +846,7 @@ pub(crate) fn arcane_impl_nested(
                     #inner_body
                 }
 
+                #token_assertion
                 // SAFETY: The token proves the required CPU features are available.
                 unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }

@@ -9,6 +9,10 @@ fn __arcane_v3_helper(_t: X64V3Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn v3_helper(_t: X64V3Token, x: f32) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&_t);
+    }
     unsafe { __arcane_v3_helper(_t, x) }
 }
 #[doc(hidden)]
@@ -21,6 +25,10 @@ fn __arcane_v4_caller(token: X64V4Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn v4_caller(token: X64V4Token, x: f32) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V4Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __arcane_v4_caller(token, x) }
 }
 fn main() {}

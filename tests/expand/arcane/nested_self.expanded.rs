@@ -12,6 +12,10 @@ impl Processor {
         fn __simd_inner_process(_self: &Processor, token: X64V3Token, a: f32) -> f32 {
             _self.val + a
         }
+        {
+            fn __archmage_verify(_: &::archmage::X64V3Token) {}
+            __archmage_verify(&token);
+        }
         unsafe { __simd_inner_process(self, token, a) }
     }
 }

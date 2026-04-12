@@ -16,6 +16,10 @@ fn apply_ref<F>(token: X64V3Token, f: F, data: &[f32]) -> f32
 where
     F: for<'a> Fn(&'a [f32]) -> f32,
 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __arcane_apply_ref::<F>(token, f, data) }
 }
 fn main() {}

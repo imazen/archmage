@@ -20,6 +20,10 @@ fn __arcane_sum_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 #[allow(dead_code)]
 #[inline(always)]
 fn sum_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&_token);
+    }
     unsafe { __arcane_sum_v3(_token, data) }
 }
 #[allow(dead_code)]

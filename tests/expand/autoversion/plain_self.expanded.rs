@@ -27,6 +27,10 @@ impl P {
     #[allow(dead_code)]
     #[inline(always)]
     fn apply_v4(&self, _token: archmage::X64V4Token, x: f32) -> f32 {
+        {
+            fn __archmage_verify(_: &::archmage::X64V4Token) {}
+            __archmage_verify(&_token);
+        }
         unsafe { self.__arcane_apply_v4(_token, x) }
     }
     #[doc(hidden)]
@@ -41,6 +45,10 @@ impl P {
     #[allow(dead_code)]
     #[inline(always)]
     fn apply_v3(&self, _token: archmage::X64V3Token, x: f32) -> f32 {
+        {
+            fn __archmage_verify(_: &::archmage::X64V3Token) {}
+            __archmage_verify(&_token);
+        }
         unsafe { self.__arcane_apply_v3(_token, x) }
     }
     #[allow(dead_code)]

@@ -39,6 +39,10 @@ impl Process for Filter {
             }
             sum
         }
+        {
+            fn __archmage_verify(_: &::archmage::X64V4Token) {}
+            __archmage_verify(&_token);
+        }
         unsafe { __simd_inner_process_v4(self, _token, data) }
     }
     #[allow(dead_code)]
@@ -61,6 +65,10 @@ impl Process for Filter {
                 }
             }
             sum
+        }
+        {
+            fn __archmage_verify(_: &::archmage::X64V3Token) {}
+            __archmage_verify(&_token);
         }
         unsafe { __simd_inner_process_v3(self, _token, data) }
     }

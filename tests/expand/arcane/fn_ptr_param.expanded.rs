@@ -10,6 +10,10 @@ fn __arcane_apply_fn(token: X64V3Token, f: fn(f32) -> f32, x: f32) -> f32 {
 }
 #[inline(always)]
 fn apply_fn(token: X64V3Token, f: fn(f32) -> f32, x: f32) -> f32 {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __arcane_apply_fn(token, f, x) }
 }
 fn main() {}

@@ -13,6 +13,10 @@ fn __arcane_first_n<'a, T: Copy, const N: usize>(
 }
 #[inline(always)]
 fn first_n<'a, T: Copy, const N: usize>(token: X64V3Token, data: &'a [T; N]) -> &'a T {
+    {
+        fn __archmage_verify(_: &::archmage::X64V3Token) {}
+        __archmage_verify(&token);
+    }
     unsafe { __arcane_first_n::<T, N>(token, data) }
 }
 fn main() {}
