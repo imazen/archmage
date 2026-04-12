@@ -122,7 +122,7 @@ fn f32x8_to_u8() {
         let v =
             f32x8::<X64V3Token>::from_array(t, [0.0, 127.6, 255.0, -5.0, 300.0, 0.4, 128.5, 1.0]);
         let bytes = v.to_u8();
-        assert_eq!(bytes, [0, 128, 255, 0, 255, 0, 129, 1]); // clamped + rounded
+        assert_eq!(bytes, [0, 128, 255, 0, 255, 0, 128, 1]); // clamped + round-to-even
     }
 }
 
