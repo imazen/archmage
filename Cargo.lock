@@ -73,7 +73,6 @@ version = "0.9.17"
 dependencies = [
  "archmage-macros",
  "macrotest",
- "magetypes",
  "safe_unaligned_simd",
  "trybuild",
  "zenbench",
