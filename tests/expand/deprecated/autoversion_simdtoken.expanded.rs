@@ -33,10 +33,9 @@ fn __arcane_process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 #[allow(dead_code)]
 #[inline(always)]
 fn process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V4Token) {}
-        __archmage_verify(&_token);
-    }
+    const _: () = [
+        (),
+    ][!(<archmage::X64V4Token>::__ARCHMAGE_TIER_TAG == 4263219212u32) as usize];
     unsafe { __arcane_process_v4(_token, data) }
 }
 #[doc(hidden)]
@@ -51,10 +50,9 @@ fn __arcane_process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 #[allow(dead_code)]
 #[inline(always)]
 fn process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&_token);
-    }
+    const _: () = [
+        (),
+    ][!(<archmage::X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_process_v3(_token, data) }
 }
 #[allow(dead_code)]

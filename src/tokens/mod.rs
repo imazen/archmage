@@ -255,6 +255,16 @@ impl ScalarToken {
 }
 
 impl ScalarToken {
+    /// Tier tag for compile-time token identity assertion.
+    ///
+    /// Used by `#[arcane]` to verify that a `ScalarToken` parameter is genuinely
+    /// `archmage::ScalarToken` and not a shadowed or aliased type.
+    /// Must match `expected_tier_tag("ScalarToken")` in the proc-macro registry.
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0xD141EACA;
+}
+
+impl ScalarToken {
     /// Scalar tokens cannot be disabled (they are always available).
     ///
     /// Always returns `Err(CompileTimeGuaranteedError)` because `ScalarToken`

@@ -1,26 +1,10 @@
-error[E0308]: mismatched types
+error[E0599]: no associated item named `__ARCHMAGE_TIER_TAG` found for struct `X64V3Token` in the current scope
   --> tests/compile_fail/token_shadowing.rs:11:1
-   |
-11 | #[arcane]
-   | ^^^^^^^^^
-   | |
-   | expected `archmage::X64V3Token`, found `X64V3Token`
-   | arguments to this function are incorrect
-   |
-   = note: `X64V3Token` and `archmage::X64V3Token` have similar names, but are actually distinct types
-note: `X64V3Token` is defined in the current crate
-  --> tests/compile_fail/token_shadowing.rs:9:1
    |
  9 | struct X64V3Token;
-   | ^^^^^^^^^^^^^^^^^
-note: `archmage::X64V3Token` is defined in crate `archmage`
-  --> src/tokens/generated/x86.rs
-   |
-   | pub struct X64V3Token {
-   | ^^^^^^^^^^^^^^^^^^^^^
-note: function defined here
-  --> tests/compile_fail/token_shadowing.rs:11:1
-   |
+   | ----------------- associated item `__ARCHMAGE_TIER_TAG` not found for this struct
+10 |
 11 | #[arcane]
-   | ^^^^^^^^^
+   | ^^^^^^^^^ associated item not found in `X64V3Token`
+   |
    = note: this error originates in the attribute macro `arcane` (in Nightly builds, run with -Z macro-backtrace for more info)

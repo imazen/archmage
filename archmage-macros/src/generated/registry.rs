@@ -603,6 +603,33 @@ pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
     )
 }
 
+/// Returns the expected tier tag for a concrete token type name.
+///
+/// Used by `#[arcane]` to emit compile-time assertions.
+/// Generated from token-registry.toml.
+pub(crate) fn expected_tier_tag(token_name: &str) -> Option<u32> {
+    match token_name {
+        "ScalarToken" => Some(0xD141EACA),
+        "X64V1Token" | "Sse2Token" => Some(0x510E0DCD),
+        "X64V2Token" => Some(0x8CCD97C6),
+        "X64CryptoToken" => Some(0xF5F0FBF5),
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(0xF38B284B),
+        "X64V3CryptoToken" => Some(0x01EAE708),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some(0xFE1B900C),
+        "X64V4xToken" | "Avx512ModernToken" => Some(0x8F63232A),
+        "Avx512Fp16Token" => Some(0x2F39FFC0),
+        "NeonToken" | "Arm64" => Some(0x72CB52B2),
+        "NeonAesToken" => Some(0x8C16863D),
+        "NeonSha3Token" => Some(0x8215198F),
+        "NeonCrcToken" => Some(0x5C2B1B4E),
+        "Arm64V2Token" => Some(0xB0231590),
+        "Arm64V3Token" => Some(0xB2F6E2D5),
+        "Wasm128Token" => Some(0x1E0DF26B),
+        "Wasm128RelaxedToken" => Some(0x821D5452),
+        _ => None,
+    }
+}
+
 /// All concrete token names that exist in the runtime crate.
 #[cfg(test)]
 pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[

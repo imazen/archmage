@@ -10,10 +10,7 @@ fn __arcane_process(token: X64V3Token, callback: &dyn Fn(f32) -> f32, x: f32) ->
 }
 #[inline(always)]
 fn process(token: X64V3Token, callback: &dyn Fn(f32) -> f32, x: f32) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&token);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_process(token, callback, x) }
 }
 fn main() {}

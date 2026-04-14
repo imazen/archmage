@@ -17,10 +17,7 @@ fn fma<T>(token: X64V3Token, a: T, b: T, c: T) -> T
 where
     T: Copy + Mul<Output = T> + Add<Output = T>,
 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&token);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_fma::<T>(token, a, b, c) }
 }
 fn main() {}

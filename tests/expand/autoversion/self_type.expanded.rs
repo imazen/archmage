@@ -30,10 +30,9 @@ impl P {
         ) -> f32 {
             x * _self.f
         }
-        {
-            fn __archmage_verify(_: &::archmage::X64V4Token) {}
-            __archmage_verify(&_token);
-        }
+        const _: () = [
+            (),
+        ][!(<archmage::X64V4Token>::__ARCHMAGE_TIER_TAG == 4263219212u32) as usize];
         unsafe { __simd_inner_apply_v4(self, _token, x) }
     }
     #[allow(dead_code)]
@@ -51,10 +50,9 @@ impl P {
         ) -> f32 {
             x * _self.f
         }
-        {
-            fn __archmage_verify(_: &::archmage::X64V3Token) {}
-            __archmage_verify(&_token);
-        }
+        const _: () = [
+            (),
+        ][!(<archmage::X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
         unsafe { __simd_inner_apply_v3(self, _token, x) }
     }
     #[allow(dead_code)]

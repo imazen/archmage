@@ -1391,6 +1391,36 @@ fn arm64_v3_detect() -> Option<Arm64V3Token> {
 /// Type alias for [`NeonToken`].
 pub type Arm64 = NeonToken;
 
+impl NeonToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x72CB52B2;
+}
+
+impl NeonAesToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x8C16863D;
+}
+
+impl NeonSha3Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x8215198F;
+}
+
+impl NeonCrcToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x5C2B1B4E;
+}
+
+impl Arm64V2Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0xB0231590;
+}
+
+impl Arm64V3Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0xB2F6E2D5;
+}
+
 #[allow(deprecated)]
 impl Has128BitSimd for NeonToken {}
 #[allow(deprecated)]

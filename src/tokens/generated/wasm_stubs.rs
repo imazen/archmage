@@ -138,6 +138,16 @@ impl Wasm128RelaxedToken {
     }
 }
 
+impl Wasm128Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x1E0DF26B;
+}
+
+impl Wasm128RelaxedToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x821D5452;
+}
+
 #[allow(deprecated)]
 impl Has128BitSimd for Wasm128Token {}
 #[allow(deprecated)]

@@ -190,6 +190,9 @@ pub(crate) struct TokenParamInfo {
     pub token_type_name: Option<String>,
     /// Magetypes width namespace (e.g., "v3", "neon", "wasm128")
     pub magetypes_namespace: Option<&'static str>,
+    /// Full type from the function signature (for const tier tag assertion).
+    /// Set for concrete token types, None for trait/generic bounds.
+    pub token_type: Option<Type>,
 }
 
 /// Resolve magetypes namespace from a list of trait names.
@@ -227,17 +230,21 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
                 if let Some(info) = extract_token_type_info(ty) {
-                    let (features, arch, token_name, mage_ns) = match info {
+                    let (features, arch, token_name, mage_ns, full_type) = match info {
                         TokenTypeInfo::Concrete(ref name) => {
                             let features = token_to_features(name).map(|f| f.to_vec());
                             let arch = token_to_arch(name);
                             let ns = token_to_magetypes_namespace(name);
-                            (features, arch, Some(name.clone()), ns)
+                            // Clone the full Type for const tier tag assertion.
+                            // This preserves any path prefix (e.g., `my_crate::X64V3Token`)
+                            // so the assertion resolves through re-exports.
+                            let full_type = Some(ty.as_ref().clone());
+                            (features, arch, Some(name.clone()), ns, full_type)
                         }
                         TokenTypeInfo::ImplTrait(ref trait_names) => {
                             let ns = traits_to_magetypes_namespace(trait_names);
                             let arch = traits_to_arch(trait_names);
-                            (traits_to_features(trait_names), arch, None, ns)
+                            (traits_to_features(trait_names), arch, None, ns, None)
                         }
                         TokenTypeInfo::Generic(type_name) => {
                             // Look up the generic parameter's bounds
@@ -247,7 +254,7 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                                 .as_ref()
                                 .and_then(|t| traits_to_magetypes_namespace(t));
                             let arch = bounds.as_ref().and_then(|t| traits_to_arch(t));
-                            (features, arch, None, ns)
+                            (features, arch, None, ns, None)
                         }
                     };
 
@@ -267,6 +274,7 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                                 target_arch: arch,
                                 token_type_name: token_name,
                                 magetypes_namespace: mage_ns,
+                                token_type: full_type,
                             });
                         }
                     }

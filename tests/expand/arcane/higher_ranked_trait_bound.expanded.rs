@@ -16,10 +16,7 @@ fn apply_ref<F>(token: X64V3Token, f: F, data: &[f32]) -> f32
 where
     F: for<'a> Fn(&'a [f32]) -> f32,
 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&token);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_apply_ref::<F>(token, f, data) }
 }
 fn main() {}

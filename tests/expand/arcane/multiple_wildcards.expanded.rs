@@ -20,10 +20,7 @@ fn process(
     __archmage_arg_1: f32,
     __archmage_arg_2: f32,
 ) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&__archmage_arg_0);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_process(__archmage_arg_0, __archmage_arg_1, __archmage_arg_2) }
 }
 fn main() {}

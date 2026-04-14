@@ -102,6 +102,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         target_arch,
         token_type_name: _token_type_name,
         magetypes_namespace,
+        token_type: _,
     } = if let Some(tier_token) = args.tier_tokens.first() {
         // Tier specified directly (e.g., #[rite(v3)]) — no token param needed
         let features = token_to_features(tier_token)
@@ -115,6 +116,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
             target_arch,
             token_type_name: Some(tier_token.clone()),
             magetypes_namespace,
+            token_type: None,
         }
     } else {
         match find_token_param(&input_fn.sig) {
