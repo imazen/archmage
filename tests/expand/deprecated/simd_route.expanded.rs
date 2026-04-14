@@ -10,7 +10,9 @@ fn __arcane_compute_v3(_t: X64V3Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn compute_v3(_t: X64V3Token, x: f32) -> f32 {
-    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
+    const _ARCHMAGE_TOKEN_MISMATCH: () = [
+        (),
+    ][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_compute_v3(_t, x) }
 }
 fn compute_scalar(_t: ScalarToken, x: f32) -> f32 {

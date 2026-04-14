@@ -20,7 +20,7 @@ fn __arcane_sum_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 #[allow(dead_code)]
 #[inline(always)]
 fn sum_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
-    const _: () = [
+    const _ARCHMAGE_TOKEN_MISMATCH: () = [
         (),
     ][!(<archmage::X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_sum_v3(_token, data) }

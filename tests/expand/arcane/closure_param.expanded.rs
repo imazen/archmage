@@ -14,7 +14,9 @@ fn __arcane_apply(
 }
 #[inline(always)]
 fn apply(token: X64V3Token, data: &[f32; 4], f: impl Fn(f32) -> f32) -> [f32; 4] {
-    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
+    const _ARCHMAGE_TOKEN_MISMATCH: () = [
+        (),
+    ][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_apply(token, data, f) }
 }
 fn main() {}

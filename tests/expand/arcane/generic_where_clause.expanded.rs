@@ -20,7 +20,9 @@ fn sum_slice<T>(token: X64V3Token, data: &[T]) -> f32
 where
     T: Copy + Into<f32>,
 {
-    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
+    const _ARCHMAGE_TOKEN_MISMATCH: () = [
+        (),
+    ][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_sum_slice::<T>(token, data) }
 }
 fn main() {}

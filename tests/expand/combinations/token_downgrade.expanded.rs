@@ -9,7 +9,9 @@ fn __arcane_v3_helper(_t: X64V3Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn v3_helper(_t: X64V3Token, x: f32) -> f32 {
-    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
+    const _ARCHMAGE_TOKEN_MISMATCH: () = [
+        (),
+    ][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_v3_helper(_t, x) }
 }
 #[doc(hidden)]
@@ -22,7 +24,9 @@ fn __arcane_v4_caller(token: X64V4Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn v4_caller(token: X64V4Token, x: f32) -> f32 {
-    const _: () = [()][!(<X64V4Token>::__ARCHMAGE_TIER_TAG == 4263219212u32) as usize];
+    const _ARCHMAGE_TOKEN_MISMATCH: () = [
+        (),
+    ][!(<X64V4Token>::__ARCHMAGE_TIER_TAG == 4263219212u32) as usize];
     unsafe { __arcane_v4_caller(token, x) }
 }
 fn main() {}

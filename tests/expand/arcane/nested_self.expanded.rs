@@ -12,7 +12,7 @@ impl Processor {
         fn __simd_inner_process(_self: &Processor, token: X64V3Token, a: f32) -> f32 {
             _self.val + a
         }
-        const _: () = [
+        const _ARCHMAGE_TOKEN_MISMATCH: () = [
             (),
         ][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
         unsafe { __simd_inner_process(self, token, a) }

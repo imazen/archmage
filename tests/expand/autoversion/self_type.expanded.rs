@@ -30,7 +30,7 @@ impl P {
         ) -> f32 {
             x * _self.f
         }
-        const _: () = [
+        const _ARCHMAGE_TOKEN_MISMATCH: () = [
             (),
         ][!(<archmage::X64V4Token>::__ARCHMAGE_TIER_TAG == 4263219212u32) as usize];
         unsafe { __simd_inner_apply_v4(self, _token, x) }
@@ -50,7 +50,7 @@ impl P {
         ) -> f32 {
             x * _self.f
         }
-        const _: () = [
+        const _ARCHMAGE_TOKEN_MISMATCH: () = [
             (),
         ][!(<archmage::X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
         unsafe { __simd_inner_apply_v3(self, _token, x) }

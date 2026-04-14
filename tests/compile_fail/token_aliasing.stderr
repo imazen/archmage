@@ -2,7 +2,7 @@ error[E0080]: index out of bounds: the length is 1 but the index is 1
  --> tests/compile_fail/token_aliasing.rs:8:1
   |
 8 | #[arcane]
-  | ^^^^^^^^^ evaluation of `evil::_` failed here
+  | ^^^^^^^^^ evaluation of `evil::_ARCHMAGE_TOKEN_MISMATCH` failed here
   |
   = note: this error originates in the attribute macro `arcane` (in Nightly builds, run with -Z macro-backtrace for more info)
 

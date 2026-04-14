@@ -10,7 +10,9 @@ fn __arcane_make_iter(token: X64V3Token, data: &[f32]) -> impl Iterator<Item = &
 }
 #[inline(always)]
 fn make_iter(token: X64V3Token, data: &[f32]) -> impl Iterator<Item = &f32> {
-    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
+    const _ARCHMAGE_TOKEN_MISMATCH: () = [
+        (),
+    ][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_make_iter(token, data) }
 }
 fn main() {}

@@ -10,7 +10,9 @@ fn __arcane_process(token: X64V3Token, __archmage_arg_0: [f32; 4]) -> f32 {
 }
 #[inline(always)]
 fn process(token: X64V3Token, __archmage_arg_0: [f32; 4]) -> f32 {
-    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
+    const _ARCHMAGE_TOKEN_MISMATCH: () = [
+        (),
+    ][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_process(token, __archmage_arg_0) }
 }
 fn main() {}

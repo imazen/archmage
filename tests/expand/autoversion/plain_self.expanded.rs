@@ -27,7 +27,7 @@ impl P {
     #[allow(dead_code)]
     #[inline(always)]
     fn apply_v4(&self, _token: archmage::X64V4Token, x: f32) -> f32 {
-        const _: () = [
+        const _ARCHMAGE_TOKEN_MISMATCH: () = [
             (),
         ][!(<archmage::X64V4Token>::__ARCHMAGE_TIER_TAG == 4263219212u32) as usize];
         unsafe { self.__arcane_apply_v4(_token, x) }
@@ -44,7 +44,7 @@ impl P {
     #[allow(dead_code)]
     #[inline(always)]
     fn apply_v3(&self, _token: archmage::X64V3Token, x: f32) -> f32 {
-        const _: () = [
+        const _ARCHMAGE_TOKEN_MISMATCH: () = [
             (),
         ][!(<archmage::X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
         unsafe { self.__arcane_apply_v3(_token, x) }

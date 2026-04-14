@@ -37,14 +37,16 @@ fn gen_token_assertion(
     if let (Some(name), Some(ty)) = (token_type_name, token_type)
         && let Some(expected_tag) = crate::generated::expected_tier_tag(name)
     {
-        // Use array-indexing trick instead of assert!() to avoid
-        // ::core::panicking::panic (unstable) in macro-expanded output.
-        // When the condition is true:  [()][!true as usize]  = [()][0] = ()  (ok)
-        // When the condition is false: [()][!false as usize] = [()][1]        (compile error)
+        // Array-indexing trick for const assertion: can't use assert!() because
+        // cargo-expand desugars it to ::core::panicking::panic_fmt (unstable),
+        // breaking expanded-output compilation tests. Can't use an archmage:: path
+        // because downstream crates may rename the dependency (#30).
+        //
+        // The descriptive const name appears in the error message:
+        //   evaluation of `fn_name::_ARCHMAGE_TOKEN_MISMATCH` failed here
         return quote! {
-            // Compile-time proof that the token type is genuinely the expected
-            // archmage type. Catches shadowing (no tag) and aliasing (wrong tag).
-            const _: () = [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];
+            const _ARCHMAGE_TOKEN_MISMATCH: () =
+                [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];
         };
     }
     // Trait/generic bound or unknown token: the sealed SimdToken trait
