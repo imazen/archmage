@@ -367,3 +367,53 @@ mod generic_magetypes_dispatch {
         assert!((result - 36.0).abs() < 0.01);
     }
 }
+
+// =============================================================================
+// Attribute propagation (#32)
+// =============================================================================
+
+/// Module uses `#[deny(missing_docs)]` to verify doc comments propagate
+/// to all generated variants. Before the fix, `#[magetypes]` stripped all
+/// attributes from variants, causing missing_docs warnings on `_v3`, `_neon`,
+/// `_wasm128`, and `_scalar` variants even when the template had a doc comment.
+#[deny(missing_docs)]
+mod attr_propagation {
+    use archmage::{ScalarToken, SimdToken, magetypes};
+
+    /// Documented function — doc must propagate to all variants.
+    #[magetypes]
+    pub fn documented(token: Token, x: f32) -> f32 {
+        let _ = token;
+        x + 1.0
+    }
+
+    /// Documented function with `#[allow(unused_variables)]`.
+    #[allow(unused_variables)]
+    #[magetypes]
+    pub fn with_allow(token: Token, x: f32, unused_arg: i32) -> f32 {
+        let _ = token;
+        x
+    }
+
+    /// Documented function with explicit tiers.
+    #[magetypes(v3, neon, scalar)]
+    pub fn documented_explicit(token: Token, x: f32) -> f32 {
+        let _ = token;
+        x * 2.0
+    }
+
+    #[test]
+    fn documented_scalar_works() {
+        assert_eq!(documented_scalar(ScalarToken, 1.0), 2.0);
+    }
+
+    #[test]
+    fn with_allow_scalar_works() {
+        assert_eq!(with_allow_scalar(ScalarToken, 5.0, 999), 5.0);
+    }
+
+    #[test]
+    fn documented_explicit_scalar_works() {
+        assert_eq!(documented_explicit_scalar(ScalarToken, 3.0), 6.0);
+    }
+}
