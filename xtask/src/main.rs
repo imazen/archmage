@@ -1515,7 +1515,19 @@ fn generate_all() -> Result<()> {
     println!("=== Generating Macro Registry ===");
     let registry_path = PathBuf::from("token-registry.toml");
     let reg = registry::Registry::load(&registry_path)?;
-    let generated = reg.generate_macro_registry();
+
+    // Parse major version from workspace Cargo.toml for tier tag hashing
+    let cargo_toml = fs::read_to_string("Cargo.toml")?;
+    let major_version: u32 = cargo_toml
+        .lines()
+        .find(|l| l.starts_with("version") || l.contains("version ="))
+        .and_then(|l| l.split('"').nth(1))
+        .and_then(|v| v.split('.').next())
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+    println!("  Major version for tier tags: {major_version}");
+
+    let generated = reg.generate_macro_registry(major_version);
     let gen_dir = PathBuf::from("archmage-macros/src/generated");
     fs::create_dir_all(&gen_dir)?;
     let gen_path = gen_dir.join("registry.rs");
@@ -1557,7 +1569,7 @@ pub(crate) use registry::*;
     println!("\n=== Generating Token Implementations ===");
     let token_dir = PathBuf::from("src/tokens/generated");
     fs::create_dir_all(&token_dir)?;
-    let token_files = token_gen::generate_token_files(&reg);
+    let token_files = token_gen::generate_token_files(&reg, major_version);
     let mut token_total_bytes = 0;
     for (rel_path, content) in &token_files {
         let full_path = token_dir.join(rel_path);

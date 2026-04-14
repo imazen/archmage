@@ -436,6 +436,24 @@ impl std::fmt::Display for Registry {
 }
 
 // ============================================================================
+// Tier Tags
+// ============================================================================
+
+/// FNV-1a hash of token name seeded with major version.
+///
+/// Produces a unique tag for each token struct name, used for compile-time
+/// assertion that a concrete token type is genuinely the expected archmage
+/// type (not shadowed or aliased).
+pub fn tier_tag(token_name: &str, major_version: u32) -> u32 {
+    let mut hash: u32 = 0x811c_9dc5 ^ major_version.wrapping_mul(0x0100_0193);
+    for byte in token_name.bytes() {
+        hash ^= byte as u32;
+        hash = hash.wrapping_mul(0x0100_0193);
+    }
+    hash
+}
+
+// ============================================================================
 // Code Generation
 // ============================================================================
 
@@ -447,7 +465,7 @@ impl Registry {
     /// - `trait_to_features()` — maps trait and token names to feature lists (for bounds)
     /// - `ALL_CONCRETE_TOKENS` — all token names including aliases
     /// - `ALL_TRAIT_NAMES` — all trait names
-    pub fn generate_macro_registry(&self) -> String {
+    pub fn generate_macro_registry(&self, major_version: u32) -> String {
         use indoc::formatdoc;
         let mut out = String::with_capacity(8192);
 
@@ -475,6 +493,8 @@ impl Registry {
         self.gen_canonical_token_to_tier_suffix(&mut out);
         out.push('\n');
         self.gen_can_downgrade_tier(&mut out);
+        out.push('\n');
+        self.gen_expected_tier_tag(&mut out, major_version);
         out.push('\n');
         self.gen_all_concrete_tokens(&mut out);
         out.push('\n');
@@ -790,6 +810,38 @@ impl Registry {
         out.push_str("\n    )\n}\n");
     }
 
+    /// Generate `expected_tier_tag()` — maps token names (including aliases) to
+    /// their FNV-1a tier tag constants.
+    ///
+    /// Used by `#[arcane]` to emit compile-time `const` assertions that verify
+    /// a concrete token type is genuinely the expected archmage type.
+    fn gen_expected_tier_tag(&self, out: &mut String, major_version: u32) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Returns the expected tier tag for a concrete token type name.
+            ///
+            /// Used by `#[arcane]` to emit compile-time assertions.
+            /// Generated from token-registry.toml.
+            pub(crate) fn expected_tier_tag(token_name: &str) -> Option<u32> {{
+                match token_name {{
+        "});
+
+        // ScalarToken first
+        let scalar_tag = tier_tag("ScalarToken", major_version);
+        out.push_str(&format!(
+            "        \"ScalarToken\" => Some(0x{scalar_tag:08X}),\n"
+        ));
+
+        for token in &self.token {
+            let tag = tier_tag(&token.name, major_version);
+            let pattern = Self::match_pattern(token);
+            out.push_str(&format!("        {pattern} => Some(0x{tag:08X}),\n"));
+        }
+
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
     fn gen_all_concrete_tokens(&self, out: &mut String) {
         out.push_str("/// All concrete token names that exist in the runtime crate.\n");
         out.push_str("#[cfg(test)]\n");
@@ -932,7 +984,7 @@ mod tests {
     #[test]
     fn macro_registry_contains_all_tokens() {
         let registry = load_test_registry();
-        let output = registry.generate_macro_registry();
+        let output = registry.generate_macro_registry(0);
 
         // Every token should appear in the generated registry
         for token in &registry.token {
@@ -956,7 +1008,7 @@ mod tests {
     #[test]
     fn macro_registry_contains_features() {
         let registry = load_test_registry();
-        let output = registry.generate_macro_registry();
+        let output = registry.generate_macro_registry(0);
 
         // Key features should appear in the output
         for feature in &["avx2", "fma", "neon", "simd128"] {

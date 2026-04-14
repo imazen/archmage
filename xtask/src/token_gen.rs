@@ -6,7 +6,7 @@
 //! - Trait definitions
 //! - Module file with cfg-gated imports
 
-use crate::registry::{Registry, TokenDef, TraitDef};
+use crate::registry::{Registry, TokenDef, TraitDef, tier_tag};
 use indoc::formatdoc;
 
 /// Convert token name to a screaming snake case variable name with given suffix.
@@ -67,7 +67,7 @@ fn disabled_var_name(token_name: &str) -> String {
 /// All generated token files as (relative_path, content) pairs.
 ///
 /// Relative to `src/tokens/generated/`.
-pub fn generate_token_files(reg: &Registry) -> Vec<(String, String)> {
+pub fn generate_token_files(reg: &Registry, major_version: u32) -> Vec<(String, String)> {
     let mut files = Vec::new();
 
     // Collect deprecated trait names for #[allow(deprecated)] on impls
@@ -86,29 +86,35 @@ pub fn generate_token_files(reg: &Registry) -> Vec<(String, String)> {
     // Real implementations (all x86 tokens in one file — no base/avx512 split)
     files.push((
         "x86.rs".into(),
-        gen_real_tokens(reg, &x86_tokens, "x86", &deprecated_traits),
+        gen_real_tokens(reg, &x86_tokens, "x86", &deprecated_traits, major_version),
     ));
     files.push((
         "arm.rs".into(),
-        gen_real_tokens(reg, &arm_tokens, "aarch64", &deprecated_traits),
+        gen_real_tokens(
+            reg,
+            &arm_tokens,
+            "aarch64",
+            &deprecated_traits,
+            major_version,
+        ),
     ));
     files.push((
         "wasm.rs".into(),
-        gen_real_tokens(reg, &wasm_tokens, "wasm", &deprecated_traits),
+        gen_real_tokens(reg, &wasm_tokens, "wasm", &deprecated_traits, major_version),
     ));
 
     // Stubs (all x86 tokens in one file)
     files.push((
         "x86_stubs.rs".into(),
-        gen_stub_tokens(reg, &x86_tokens, &deprecated_traits),
+        gen_stub_tokens(reg, &x86_tokens, &deprecated_traits, major_version),
     ));
     files.push((
         "arm_stubs.rs".into(),
-        gen_stub_tokens(reg, &arm_tokens, &deprecated_traits),
+        gen_stub_tokens(reg, &arm_tokens, &deprecated_traits, major_version),
     ));
     files.push((
         "wasm_stubs.rs".into(),
-        gen_stub_tokens(reg, &wasm_tokens, &deprecated_traits),
+        gen_stub_tokens(reg, &wasm_tokens, &deprecated_traits, major_version),
     ));
 
     // Traits
@@ -129,6 +135,7 @@ fn gen_real_tokens(
     tokens: &[&TokenDef],
     arch: &str,
     deprecated_traits: &[&str],
+    major_version: u32,
 ) -> String {
     let mut out = String::with_capacity(4096);
 
@@ -224,6 +231,9 @@ fn gen_real_tokens(
     for token in tokens {
         gen_aliases(&mut out, token);
     }
+
+    // Tier tags — compile-time assertion constants
+    gen_tier_tags(&mut out, tokens, major_version);
 
     // Trait impls
     gen_trait_impls(&mut out, tokens, deprecated_traits);
@@ -819,7 +829,12 @@ fn collect_descendants<'a>(reg: &'a Registry, token: &'a TokenDef) -> Vec<&'a To
 // Stub token implementations (cross-platform)
 // ============================================================================
 
-fn gen_stub_tokens(reg: &Registry, tokens: &[&TokenDef], deprecated_traits: &[&str]) -> String {
+fn gen_stub_tokens(
+    reg: &Registry,
+    tokens: &[&TokenDef],
+    deprecated_traits: &[&str],
+    major_version: u32,
+) -> String {
     let _ = reg; // available if needed later
     let mut out = String::with_capacity(2048);
 
@@ -859,6 +874,9 @@ fn gen_stub_tokens(reg: &Registry, tokens: &[&TokenDef], deprecated_traits: &[&s
     for token in tokens {
         gen_aliases(&mut out, token);
     }
+
+    // Tier tags — compile-time assertion constants (same tags as real tokens)
+    gen_tier_tags(&mut out, tokens, major_version);
 
     // Trait impls (same as real — traits apply to stubs too for generic code)
     gen_trait_impls(&mut out, tokens, deprecated_traits);
@@ -989,6 +1007,30 @@ fn gen_trait_impls(out: &mut String, tokens: &[&TokenDef], deprecated_trait_name
             }
             out.push_str(&format!("impl {trait_name} for {token_name} {{}}\n"));
         }
+    }
+}
+
+// ============================================================================
+// Tier tags — compile-time assertion constants
+// ============================================================================
+
+/// Generate `__ARCHMAGE_TIER_TAG` inherent const impl blocks for each token struct.
+///
+/// These are used by `#[arcane]` to emit `const _: () = assert!(...)` checks
+/// that verify the token type is genuinely the expected archmage type, without
+/// requiring `::archmage::` in the expanded code.
+fn gen_tier_tags(out: &mut String, tokens: &[&TokenDef], major_version: u32) {
+    out.push('\n');
+    for token in tokens {
+        let name = &token.name;
+        let tag = tier_tag(name, major_version);
+        out.push_str(&formatdoc! {"
+            impl {name} {{
+                #[doc(hidden)]
+                pub const __ARCHMAGE_TIER_TAG: u32 = 0x{tag:08X};
+            }}
+
+        "});
     }
 }
 
@@ -1253,7 +1295,7 @@ mod tests {
     #[test]
     fn generates_expected_file_set() {
         let reg = load_test_registry();
-        let files = generate_token_files(&reg);
+        let files = generate_token_files(&reg, 0);
         let names: Vec<&str> = files.iter().map(|(n, _)| n.as_str()).collect();
 
         // Must produce exactly these files
@@ -1283,7 +1325,7 @@ mod tests {
     #[test]
     fn x86_real_tokens_contain_all_x86_tokens() {
         let reg = load_test_registry();
-        let files = generate_token_files(&reg);
+        let files = generate_token_files(&reg, 0);
         let x86_code = &files.iter().find(|(n, _)| n == "x86.rs").unwrap().1;
 
         let x86_tokens: Vec<&str> = reg
@@ -1308,7 +1350,7 @@ mod tests {
     #[test]
     fn arm_real_tokens_contain_all_arm_tokens() {
         let reg = load_test_registry();
-        let files = generate_token_files(&reg);
+        let files = generate_token_files(&reg, 0);
         let arm_code = &files.iter().find(|(n, _)| n == "arm.rs").unwrap().1;
 
         let arm_tokens: Vec<&str> = reg
@@ -1333,7 +1375,7 @@ mod tests {
     #[test]
     fn stubs_return_none_for_summon() {
         let reg = load_test_registry();
-        let files = generate_token_files(&reg);
+        let files = generate_token_files(&reg, 0);
 
         for (name, code) in &files {
             if name.ends_with("_stubs.rs") {
@@ -1349,7 +1391,7 @@ mod tests {
     #[test]
     fn traits_file_contains_all_traits() {
         let reg = load_test_registry();
-        let files = generate_token_files(&reg);
+        let files = generate_token_files(&reg, 0);
         let traits_code = &files.iter().find(|(n, _)| n == "traits.rs").unwrap().1;
 
         for trait_def in &reg.traits {
@@ -1364,7 +1406,7 @@ mod tests {
     #[test]
     fn real_tokens_have_summon_and_compiled_with() {
         let reg = load_test_registry();
-        let files = generate_token_files(&reg);
+        let files = generate_token_files(&reg, 0);
 
         for (name, code) in &files {
             if name == "x86.rs" || name == "arm.rs" || name == "wasm.rs" {
@@ -1398,7 +1440,7 @@ mod tests {
     #[test]
     fn parent_extraction_methods_generated() {
         let reg = load_test_registry();
-        let files = generate_token_files(&reg);
+        let files = generate_token_files(&reg, 0);
         let x86_code = &files.iter().find(|(n, _)| n == "x86.rs").unwrap().1;
 
         // X64V3Token has parent X64V2Token — should generate extraction method
@@ -1437,7 +1479,7 @@ mod tests {
     #[test]
     fn mod_rs_routes_all_architectures() {
         let reg = load_test_registry();
-        let files = generate_token_files(&reg);
+        let files = generate_token_files(&reg, 0);
         let mod_code = &files.iter().find(|(n, _)| n == "mod.rs").unwrap().1;
 
         // Must have cfg routing for all architectures

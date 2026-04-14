@@ -9,10 +9,7 @@ fn __arcane_v4_fast(_t: X64V4Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn v4_fast(_t: X64V4Token, x: f32) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V4Token) {}
-        __archmage_verify(&_t);
-    }
+    const _: () = [()][!(<X64V4Token>::__ARCHMAGE_TIER_TAG == 4263219212u32) as usize];
     unsafe { __arcane_v4_fast(_t, x) }
 }
 #[doc(hidden)]
@@ -25,10 +22,7 @@ fn __arcane_v3_with_upgrade(_t: X64V3Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn v3_with_upgrade(_t: X64V3Token, x: f32) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&_t);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_v3_with_upgrade(_t, x) }
 }
 fn main() {}

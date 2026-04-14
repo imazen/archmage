@@ -9,10 +9,7 @@ fn __arcane_inner_v3(_t: X64V3Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn inner_v3(_t: X64V3Token, x: f32) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&_t);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_inner_v3(_t, x) }
 }
 fn inner_scalar(_t: ScalarToken, x: f32) -> f32 {
@@ -28,10 +25,7 @@ fn __arcane_outer(alligator: X64V3Token, x: f32) -> f32 {
 }
 #[inline(always)]
 fn outer(alligator: X64V3Token, x: f32) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&alligator);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_outer(alligator, x) }
 }
 fn main() {}

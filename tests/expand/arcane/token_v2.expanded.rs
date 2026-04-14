@@ -7,10 +7,7 @@ fn __arcane_process(token: X64V2Token, a: f32) -> f32 {
 }
 #[inline(always)]
 fn process(token: X64V2Token, a: f32) -> f32 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V2Token) {}
-        __archmage_verify(&token);
-    }
+    const _: () = [()][!(<X64V2Token>::__ARCHMAGE_TIER_TAG == 2362283974u32) as usize];
     unsafe { __arcane_process(token, a) }
 }
 fn main() {}

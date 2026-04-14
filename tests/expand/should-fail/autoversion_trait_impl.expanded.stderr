@@ -9,35 +9,35 @@ error[E0407]: method `process_v4` is not a member of trait `Process`
 25 | |             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,av...
 26 | |         )]
 ...  |
-46 | |         unsafe { __simd_inner_process_v4(self, _token, data) }
-47 | |     }
+45 | |         unsafe { __simd_inner_process_v4(self, _token, data) }
+46 | |     }
    | |_____^ not a member of trait `Process`
 
 error[E0407]: method `process_v3` is not a member of trait `Process`
-  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:50:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:49:5
    |
-50 |       fn process_v3(&self, _token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
+49 |       fn process_v3(&self, _token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
    |       ^  ---------- help: there is an associated function with a similar name: `process`
    |  _____|
    | |
-51 | |         #[target_feature(
-52 | |             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-53 | |         )]
+50 | |         #[target_feature(
+51 | |             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+52 | |         )]
 ...  |
-73 | |         unsafe { __simd_inner_process_v3(self, _token, data) }
-74 | |     }
+71 | |         unsafe { __simd_inner_process_v3(self, _token, data) }
+72 | |     }
    | |_____^ not a member of trait `Process`
 
 error[E0407]: method `process_scalar` is not a member of trait `Process`
-  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:76:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:74:5
    |
-76 | /     fn process_scalar(&self, _token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {
-77 | |         let _self = self;
-78 | |         let mut sum = 0.0f32;
-79 | |         for &x in data {
+74 | /     fn process_scalar(&self, _token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {
+75 | |         let _self = self;
+76 | |         let mut sum = 0.0f32;
+77 | |         for &x in data {
 ...  |
-84 | |         sum
-85 | |     }
+82 | |         sum
+83 | |     }
    | |_____^ not a member of trait `Process`
 
 warning: unused import: `archmage::autoversion`

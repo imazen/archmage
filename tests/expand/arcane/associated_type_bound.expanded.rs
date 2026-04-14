@@ -16,10 +16,7 @@ fn sum_iter<I>(token: X64V3Token, iter: I) -> f32
 where
     I: Iterator<Item = f32>,
 {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&token);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_sum_iter::<I>(token, iter) }
 }
 fn main() {}

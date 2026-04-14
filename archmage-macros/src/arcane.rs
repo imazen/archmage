@@ -16,38 +16,40 @@ use crate::token_discovery::*;
 /// Generate a compile-time assertion that the token parameter is a genuine
 /// archmage token of the expected type.
 ///
-/// For **concrete tokens** (e.g., `X64V3Token`): asserts the exact type via
-/// `::archmage::X64V3Token`, catching both shadowing (local struct with the
-/// same name) and aliasing (e.g., `use archmage::X64V2Token as X64V3Token`).
+/// For **concrete tokens** (e.g., `X64V3Token`): emits a `const` assertion
+/// comparing `<Type>::__ARCHMAGE_TIER_TAG` against the expected tag value.
+/// The `Type` is the full path from the function signature (not just the
+/// last segment), so it resolves through re-exports without requiring
+/// `::archmage::` in the consumer's extern prelude.
 ///
-/// For **trait/generic bounds** (e.g., `impl HasX64V2`, `T: HasNeon`): falls
-/// back to checking `SimdToken` (sealed trait), which catches shadowing but
-/// cannot catch cross-trait aliasing.
+/// This catches:
+/// - **Shadowing:** local `struct X64V3Token` has no `__ARCHMAGE_TIER_TAG` const.
+/// - **Aliasing:** `use archmage::X64V2Token as X64V3Token` has the wrong tag.
 ///
-/// Both forms are zero-cost: the generated code is optimized away entirely.
+/// For **trait/generic bounds** (e.g., `impl HasX64V2`, `T: HasNeon`): no
+/// assertion needed — the sealed `SimdToken` trait already prevents forgery.
+///
+/// Both forms are zero-cost: `const` assertions vanish from the binary.
 fn gen_token_assertion(
     token_type_name: &Option<String>,
-    token_ident: &Ident,
+    token_type: &Option<Type>,
 ) -> proc_macro2::TokenStream {
-    if let Some(name) = token_type_name {
-        // Concrete token: verify the exact type via fully-qualified path.
-        // This catches both shadowing (non-archmage type) and aliasing
-        // (wrong archmage token renamed to match this name).
-        let expected_type = format_ident!("{}", name);
-        quote! {
-            // Compile-time proof that the token is genuinely ::archmage::#expected_type.
-            // Catches name shadowing (local struct) and aliasing (wrong token renamed).
-            {
-                fn __archmage_verify(_: &::archmage::#expected_type) {}
-                __archmage_verify(&#token_ident);
-            }
-        }
-    } else {
-        // Trait/generic bound: can only verify SimdToken (sealed).
-        quote! {
-            ::archmage::__private::assert_archmage_token(&#token_ident);
-        }
+    if let (Some(name), Some(ty)) = (token_type_name, token_type)
+        && let Some(expected_tag) = crate::generated::expected_tier_tag(name)
+    {
+        // Use array-indexing trick instead of assert!() to avoid
+        // ::core::panicking::panic (unstable) in macro-expanded output.
+        // When the condition is true:  [()][!true as usize]  = [()][0] = ()  (ok)
+        // When the condition is false: [()][!false as usize] = [()][1]        (compile error)
+        return quote! {
+            // Compile-time proof that the token type is genuinely the expected
+            // archmage type. Catches shadowing (no tag) and aliasing (wrong tag).
+            const _: () = [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];
+        };
     }
+    // Trait/generic bound or unknown token: the sealed SimdToken trait
+    // prevents forgery. No path-based assertion needed.
+    quote! {}
 }
 
 #[derive(Default)]
@@ -180,6 +182,7 @@ pub(crate) fn arcane_impl(
         target_arch,
         token_type_name,
         magetypes_namespace,
+        token_type,
     } = match find_token_param(&input_fn.sig) {
         Some(result) => result,
         None => {
@@ -338,6 +341,7 @@ pub(crate) fn arcane_impl(
             &args,
             target_arch,
             token_type_name,
+            token_type,
             target_feature_attrs,
             inline_attr,
             _token_ident,
@@ -348,6 +352,7 @@ pub(crate) fn arcane_impl(
             &args,
             target_arch,
             token_type_name,
+            token_type,
             target_feature_attrs,
             inline_attr,
             _token_ident,
@@ -469,14 +474,16 @@ pub(crate) fn arcane_impl_wasm_safe(
 /// lacks matching target features. Compatible with `#![forbid(unsafe_code)]`.
 ///
 /// Self/self work naturally since both functions live in the same impl scope.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn arcane_impl_sibling(
     input_fn: LightFn,
     args: &ArcaneArgs,
     target_arch: Option<&str>,
     token_type_name: Option<String>,
+    token_type: Option<Type>,
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Attribute,
-    token_ident: Ident,
+    _token_ident: Ident,
 ) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
@@ -583,7 +590,7 @@ pub(crate) fn arcane_impl_sibling(
         // Wrapper function: fn original_name(...) { unsafe { sibling_call } }
         // The unsafe block is needed because the sibling has #[target_feature] and
         // the wrapper doesn't — calling across this boundary requires unsafe.
-        let token_assertion = gen_token_assertion(&token_type_name, &token_ident);
+        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
         let wrapper_fn = quote! {
             #cfg_guard
             #(#attrs)*
@@ -671,14 +678,16 @@ pub(crate) fn arcane_impl_sibling(
 /// This is the original approach: generates a nested inner function inside the
 /// original function. Required when `_self = Type` is used because Self must be
 /// replaced in the nested function (where it's not in scope).
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn arcane_impl_nested(
     input_fn: LightFn,
     args: &ArcaneArgs,
     target_arch: Option<&str>,
     token_type_name: Option<String>,
+    token_type: Option<Type>,
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Attribute,
-    token_ident: Ident,
+    _token_ident: Ident,
 ) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
@@ -811,7 +820,7 @@ pub(crate) fn arcane_impl_nested(
             quote! {}
         };
 
-        let token_assertion = gen_token_assertion(&token_type_name, &token_ident);
+        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
         quote! {
             // Real implementation for the correct architecture
             #cfg_guard
@@ -834,7 +843,7 @@ pub(crate) fn arcane_impl_nested(
         }
     } else {
         // No specific arch (trait bounds or generic) - generate without cfg guards
-        let token_assertion = gen_token_assertion(&token_type_name, &token_ident);
+        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
         quote! {
             #(#attrs)*
             #[inline(always)]

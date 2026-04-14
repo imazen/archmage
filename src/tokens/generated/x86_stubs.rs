@@ -563,6 +563,46 @@ pub type Server64 = X64V4Token;
 /// Type alias for [`X64V4xToken`].
 pub type Avx512ModernToken = X64V4xToken;
 
+impl X64V1Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x510E0DCD;
+}
+
+impl X64V2Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x8CCD97C6;
+}
+
+impl X64CryptoToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0xF5F0FBF5;
+}
+
+impl X64V3Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0xF38B284B;
+}
+
+impl X64V3CryptoToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x01EAE708;
+}
+
+impl X64V4Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0xFE1B900C;
+}
+
+impl X64V4xToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x8F63232A;
+}
+
+impl Avx512Fp16Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x2F39FFC0;
+}
+
 #[allow(deprecated)]
 impl Has128BitSimd for X64V1Token {}
 #[allow(deprecated)]

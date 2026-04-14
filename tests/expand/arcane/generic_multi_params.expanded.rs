@@ -11,10 +11,7 @@ fn __arcane_add_items<T: Add<Output = T> + Copy>(token: X64V3Token, a: T, b: T) 
 }
 #[inline(always)]
 fn add_items<T: Add<Output = T> + Copy>(token: X64V3Token, a: T, b: T) -> T {
-    {
-        fn __archmage_verify(_: &::archmage::X64V3Token) {}
-        __archmage_verify(&token);
-    }
+    const _: () = [()][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
     unsafe { __arcane_add_items::<T>(token, a, b) }
 }
 fn main() {}
