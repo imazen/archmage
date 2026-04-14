@@ -14,7 +14,15 @@ pub(crate) fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> T
         .retain(|attr| !attr.path().is_ident("arcane") && !attr.path().is_ident("rite"));
 
     let fn_name = &input_fn.sig.ident;
-    let fn_attrs = &input_fn.attrs;
+
+    // Attrs to propagate to each variant: doc comments, #[allow], #[inline], etc.
+    // Exclude #[magetypes] (consumed) and #[arcane]/#[rite] (already stripped above).
+    let propagated_attrs: Vec<_> = input_fn
+        .attrs
+        .iter()
+        .filter(|a| !a.path().is_ident("magetypes"))
+        .cloned()
+        .collect();
 
     let mut variants = Vec::new();
 
@@ -22,8 +30,8 @@ pub(crate) fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> T
         // Clone and rename at the AST level (no string surgery)
         let mut variant_fn = input_fn.clone();
         variant_fn.sig.ident = quote::format_ident!("{}_{}", fn_name, tier.suffix);
-        // Strip attrs — they go on the outer wrapper, not each variant
-        variant_fn.attrs = Vec::new();
+        // Propagate doc comments, #[allow], etc. to each variant
+        variant_fn.attrs = propagated_attrs.clone();
 
         // Replace `Token` ident with the concrete token path at the token level.
         // This is safe: each identifier is a discrete token tree, so `ScalarToken`,
@@ -74,14 +82,7 @@ pub(crate) fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> T
         });
     }
 
-    // Remove attributes from the list that should not be duplicated
-    let filtered_attrs: Vec<_> = fn_attrs
-        .iter()
-        .filter(|a| !a.path().is_ident("magetypes"))
-        .collect();
-
     let output = quote! {
-        #(#filtered_attrs)*
         #(#variants)*
     };
 
