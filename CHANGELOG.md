@@ -1,5 +1,30 @@
 # Changelog
 
+## [Unreleased]
+
+### QUEUED BREAKING CHANGES
+
+- Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
+- Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
+- Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)
+- Remove `_self = Type` from `#[autoversion]` — plain `self` works in sibling mode; `#[autoversion]` can't do trait impls anyway
+- Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
+- Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
+- Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
+- Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
+
+### Added
+
+- `w512` cargo feature for magetypes gating 512-bit SIMD types (`f32x16`, `f64x8`, `i*x64`, `u*x64`, etc.). Default-on for backwards compatibility. Users who only need W128/W256 can disable default features and skip `w512` for ~25% faster builds. `avx512` implies `w512`. (75a32d6)
+
+### Changed
+
+- Token tier-tag assertions use per-token `__ARCHMAGE_TIER_TAG` constants instead of `::archmage::` path checks, enabling re-exporters to use `#[arcane]` without requiring downstream crates to depend on archmage directly (6b34824)
+
+### Fixed
+
+- Token aliasing compile errors now show `_ARCHMAGE_TOKEN_MISMATCH` in the error instead of anonymous `_`, making the failure immediately diagnosable (ba5ef4d)
+
 ## 0.9.16 — 2026-04-01
 
 ### Scalar rounding now matches hardware (ties-to-even)
