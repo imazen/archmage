@@ -13,6 +13,8 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+## 0.9.19 — 2026-04-14
+
 ### Added
 
 - `w512` cargo feature for magetypes gating 512-bit SIMD types (`f32x16`, `f64x8`, `i*x64`, `u*x64`, etc.). Default-on for backwards compatibility. Users who only need W128/W256 can disable default features and skip `w512` for ~25% faster builds. `avx512` implies `w512`. (75a32d6)
@@ -23,6 +25,7 @@
 
 ### Fixed
 
+- `#[magetypes]` now propagates doc comments, `#[allow]`, and other attributes to all generated variants — previously stripped them, causing `missing_docs` warnings (#32, f2f8b94)
 - Token aliasing compile errors now show `_ARCHMAGE_TOKEN_MISMATCH` in the error instead of anonymous `_`, making the failure immediately diagnosable (ba5ef4d)
 
 ## 0.9.16 — 2026-04-01
