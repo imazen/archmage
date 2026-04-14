@@ -22,7 +22,7 @@ include = [
 [features]
 # bytemuck is NOT default - it bypasses token-gated construction safety
 # Users who enable it are explicitly opting out of token safety guarantees
-default = ["std"]
+default = ["std", "w512"]
 std = ["archmage/std"]
 # 512-bit SIMD type support (polyfill via 2×W256 on all platforms).
 # Gates the f32x16/f64x8/i*x64/u*x64/i*x32/u*x32/i*x16/u*x16 generic wrappers,
