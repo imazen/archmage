@@ -9,6 +9,7 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
 
@@ -18,6 +19,7 @@ use crate::simd::backends::*;
 // X64V4Token — base AVX-512 (F/BW/CD/DQ/VL)
 // ============================================================================
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl F32x16Backend for archmage::X64V4Token {
     type Repr = __m512;
@@ -245,6 +247,7 @@ impl F32x16Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl F64x8Backend for archmage::X64V4Token {
     type Repr = __m512d;
@@ -472,6 +475,7 @@ impl F64x8Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I8x64Backend for archmage::X64V4Token {
     type Repr = __m512i;
@@ -684,6 +688,7 @@ impl I8x64Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U8x64Backend for archmage::X64V4Token {
     type Repr = __m512i;
@@ -885,6 +890,7 @@ impl U8x64Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I16x32Backend for archmage::X64V4Token {
     type Repr = __m512i;
@@ -1083,6 +1089,7 @@ impl I16x32Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U16x32Backend for archmage::X64V4Token {
     type Repr = __m512i;
@@ -1276,6 +1283,7 @@ impl U16x32Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I32x16Backend for archmage::X64V4Token {
     type Repr = __m512i;
@@ -1474,6 +1482,7 @@ impl I32x16Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U32x16Backend for archmage::X64V4Token {
     type Repr = __m512i;
@@ -1667,6 +1676,7 @@ impl U32x16Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I64x8Backend for archmage::X64V4Token {
     type Repr = __m512i;
@@ -1860,6 +1870,7 @@ impl I64x8Backend for archmage::X64V4Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U64x8Backend for archmage::X64V4Token {
     type Repr = __m512i;
@@ -2052,6 +2063,7 @@ impl U64x8Backend for archmage::X64V4Token {
 // X64V4xToken — base AVX-512 (same intrinsics as V4)
 // ============================================================================
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl F32x16Backend for archmage::X64V4xToken {
     type Repr = __m512;
@@ -2279,6 +2291,7 @@ impl F32x16Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl F64x8Backend for archmage::X64V4xToken {
     type Repr = __m512d;
@@ -2506,6 +2519,7 @@ impl F64x8Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I8x64Backend for archmage::X64V4xToken {
     type Repr = __m512i;
@@ -2718,6 +2732,7 @@ impl I8x64Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U8x64Backend for archmage::X64V4xToken {
     type Repr = __m512i;
@@ -2919,6 +2934,7 @@ impl U8x64Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I16x32Backend for archmage::X64V4xToken {
     type Repr = __m512i;
@@ -3117,6 +3133,7 @@ impl I16x32Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U16x32Backend for archmage::X64V4xToken {
     type Repr = __m512i;
@@ -3310,6 +3327,7 @@ impl U16x32Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I32x16Backend for archmage::X64V4xToken {
     type Repr = __m512i;
@@ -3508,6 +3526,7 @@ impl I32x16Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U32x16Backend for archmage::X64V4xToken {
     type Repr = __m512i;
@@ -3701,6 +3720,7 @@ impl U32x16Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I64x8Backend for archmage::X64V4xToken {
     type Repr = __m512i;
@@ -3894,6 +3914,7 @@ impl I64x8Backend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U64x8Backend for archmage::X64V4xToken {
     type Repr = __m512i;
@@ -4086,6 +4107,7 @@ impl U64x8Backend for archmage::X64V4xToken {
 // X64V4xToken — extension: popcnt (VPOPCNTDQ + BITALG)
 // ============================================================================
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl i8x64PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
@@ -4094,6 +4116,7 @@ impl i8x64PopcntBackend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl u8x64PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
@@ -4102,6 +4125,7 @@ impl u8x64PopcntBackend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl i16x32PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
@@ -4110,6 +4134,7 @@ impl i16x32PopcntBackend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl u16x32PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
@@ -4118,6 +4143,7 @@ impl u16x32PopcntBackend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl i32x16PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
@@ -4126,6 +4152,7 @@ impl i32x16PopcntBackend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl u32x16PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
@@ -4134,6 +4161,7 @@ impl u32x16PopcntBackend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl i64x8PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
@@ -4142,6 +4170,7 @@ impl i64x8PopcntBackend for archmage::X64V4xToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl u64x8PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
@@ -4154,7 +4183,8 @@ impl u64x8PopcntBackend for archmage::X64V4xToken {
 // F32x16Convert — native AVX-512 conversions
 // ============================================================================
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(feature = "w512")]
 impl F32x16Convert for archmage::X64V4Token {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: __m512) -> __m512i {
@@ -4182,7 +4212,8 @@ impl F32x16Convert for archmage::X64V4Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(feature = "w512")]
 impl F32x16Convert for archmage::X64V4xToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: __m512) -> __m512i {

@@ -3891,7 +3891,7 @@ impl F32x8Convert for archmage::NeonToken {
     }
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", feature = "w512"))]
 impl F32x16Convert for archmage::NeonToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: [float32x4_t; 4]) -> [int32x4_t; 4] {
@@ -4077,6 +4077,7 @@ impl U64x4Bitcast for archmage::NeonToken {
         unsafe { [vreinterpretq_u64_s64(a[0]), vreinterpretq_u64_s64(a[1])] }
     }
 }
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl F32x16Backend for archmage::NeonToken {
     type Repr = [float32x4_t; 4];
@@ -4316,6 +4317,7 @@ impl F32x16Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl F64x8Backend for archmage::NeonToken {
     type Repr = [float64x2_t; 4];
@@ -4555,6 +4557,7 @@ impl F64x8Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl I8x64Backend for archmage::NeonToken {
     type Repr = [int8x16_t; 4];
@@ -4768,6 +4771,7 @@ impl I8x64Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl U8x64Backend for archmage::NeonToken {
     type Repr = [uint8x16_t; 4];
@@ -4977,6 +4981,7 @@ impl U8x64Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl I16x32Backend for archmage::NeonToken {
     type Repr = [int16x8_t; 4];
@@ -5195,6 +5200,7 @@ impl I16x32Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl U16x32Backend for archmage::NeonToken {
     type Repr = [uint16x8_t; 4];
@@ -5409,6 +5415,7 @@ impl U16x32Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl I32x16Backend for archmage::NeonToken {
     type Repr = [int32x4_t; 4];
@@ -5627,6 +5634,7 @@ impl I32x16Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl U32x16Backend for archmage::NeonToken {
     type Repr = [uint32x4_t; 4];
@@ -5841,6 +5849,7 @@ impl U32x16Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl I64x8Backend for archmage::NeonToken {
     type Repr = [int64x2_t; 4];
@@ -6054,6 +6063,7 @@ impl I64x8Backend for archmage::NeonToken {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl U64x8Backend for archmage::NeonToken {
     type Repr = [uint64x2_t; 4];

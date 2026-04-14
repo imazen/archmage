@@ -6,7 +6,9 @@
 #[cfg(target_arch = "x86_64")]
 mod tests {
     use archmage::{ScalarToken, SimdToken, X64V3Token};
-    use magetypes::simd::generic::{f32x4, f32x8, f32x16};
+    #[cfg(feature = "w512")]
+    use magetypes::simd::generic::f32x16;
+    use magetypes::simd::generic::{f32x4, f32x8};
 
     // ====== Helpers ======
 
@@ -732,6 +734,7 @@ mod tests {
         1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 64.0, 1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0,
     ];
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_log2_lowp() {
         if let Some(t) = X64V3Token::summon() {
@@ -742,6 +745,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_exp2_lowp() {
         if let Some(t) = X64V3Token::summon() {
@@ -755,6 +759,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_ln_lowp() {
         if let Some(t) = X64V3Token::summon() {
@@ -765,6 +770,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_exp_lowp() {
         if let Some(t) = X64V3Token::summon() {
@@ -779,6 +785,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_log10_lowp() {
         if let Some(t) = X64V3Token::summon() {
@@ -789,6 +796,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_pow_lowp() {
         if let Some(t) = X64V3Token::summon() {
@@ -801,6 +809,7 @@ mod tests {
 
     // ====== f32x16 Mid-Precision Tests (X64V3Token) ======
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_log2_midp() {
         if let Some(t) = X64V3Token::summon() {
@@ -811,6 +820,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_log2_midp_edge_cases() {
         if let Some(t) = X64V3Token::summon() {
@@ -839,6 +849,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_exp2_midp() {
         if let Some(t) = X64V3Token::summon() {
@@ -852,6 +863,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_ln_midp() {
         if let Some(t) = X64V3Token::summon() {
@@ -862,6 +874,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_exp_midp() {
         if let Some(t) = X64V3Token::summon() {
@@ -876,6 +889,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_log10_midp() {
         if let Some(t) = X64V3Token::summon() {
@@ -886,6 +900,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_pow_midp() {
         if let Some(t) = X64V3Token::summon() {
@@ -900,6 +915,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_pow_midp_cube() {
         if let Some(t) = X64V3Token::summon() {
@@ -915,6 +931,7 @@ mod tests {
 
     // ====== f32x16 cbrt Tests ======
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_cbrt_midp() {
         if let Some(t) = X64V3Token::summon() {
@@ -929,6 +946,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_cbrt_midp_negative() {
         if let Some(t) = X64V3Token::summon() {
@@ -943,6 +961,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_cbrt_midp_precise_zero() {
         if let Some(t) = X64V3Token::summon() {
@@ -962,6 +981,7 @@ mod tests {
 
     // ====== f32x16 Roundtrip Tests ======
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_log2_exp2_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
@@ -971,6 +991,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_ln_exp_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
@@ -982,6 +1003,7 @@ mod tests {
 
     // ====== f32x16 _unchecked Variants ======
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_unchecked_variants_match() {
         if let Some(t) = X64V3Token::summon() {
@@ -1005,6 +1027,7 @@ mod tests {
 
     // ====== f32x16 Scalar Backend Tests ======
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_scalar_log2_midp() {
         let t = ScalarToken;
@@ -1014,6 +1037,7 @@ mod tests {
         assert_close_16(result, expected, 5e-6, "scalar f32x16 log2_midp");
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_scalar_exp2_midp() {
         let t = ScalarToken;
@@ -1026,6 +1050,7 @@ mod tests {
         assert_close_16(result, expected, 5e-6, "scalar f32x16 exp2_midp");
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_scalar_pow_midp() {
         let t = ScalarToken;
@@ -1039,6 +1064,7 @@ mod tests {
         assert_close_16(result, expected, 5e-6, "scalar f32x16 pow_midp(0.5)");
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_scalar_cbrt_midp() {
         let t = ScalarToken;
@@ -1054,6 +1080,7 @@ mod tests {
 
     // ====== f32x16 Cross-Backend Consistency ======
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_x86_scalar_log2_agree() {
         if let Some(x86_t) = X64V3Token::summon() {
@@ -1072,6 +1099,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_x86_scalar_exp2_agree() {
         if let Some(x86_t) = X64V3Token::summon() {
@@ -1089,6 +1117,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_x86_scalar_pow_agree() {
         if let Some(x86_t) = X64V3Token::summon() {
@@ -1107,6 +1136,7 @@ mod tests {
 
     // ====== f32x16 Generic Function Test ======
 
+    #[cfg(feature = "w512")]
     fn gamma_correct_16<T: magetypes::simd::backends::F32x16Convert>(
         token: T,
         linear: &[f32; 16],
@@ -1117,6 +1147,7 @@ mod tests {
             .to_array()
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_generic_gamma_correction() {
         if let Some(t) = X64V3Token::summon() {
@@ -1139,6 +1170,7 @@ mod tests {
 
     // ====== f32x16 Large Range Test ======
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_exp2_midp_large_range() {
         if let Some(t) = X64V3Token::summon() {
@@ -1153,6 +1185,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_log2_midp_large_range() {
         if let Some(t) = X64V3Token::summon() {
@@ -1169,6 +1202,7 @@ mod tests {
 
     // ====== f32x16 Conversion Tests (F32x16Convert) ======
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_bitcast_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
@@ -1179,6 +1213,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_convert_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
@@ -1194,6 +1229,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_to_i32_round() {
         if let Some(t) = X64V3Token::summon() {
@@ -1212,6 +1248,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "w512")]
     #[test]
     fn f32x16_scalar_bitcast_roundtrip() {
         let t = ScalarToken;

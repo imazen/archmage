@@ -3251,7 +3251,7 @@ impl F32x8Convert for archmage::Wasm128Token {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
 impl F32x16Convert for archmage::Wasm128Token {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: [v128; 4]) -> [v128; 4] {
@@ -3417,6 +3417,7 @@ impl U64x4Bitcast for archmage::Wasm128Token {
         a
     }
 }
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl F32x16Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -3656,6 +3657,7 @@ impl F32x16Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl F64x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -3895,6 +3897,7 @@ impl F64x8Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl I8x64Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -4104,6 +4107,7 @@ impl I8x64Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl U8x64Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -4309,6 +4313,7 @@ impl U8x64Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl I16x32Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -4523,6 +4528,7 @@ impl I16x32Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl U16x32Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -4733,6 +4739,7 @@ impl U16x32Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl I32x16Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -4947,6 +4954,7 @@ impl I32x16Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl U32x16Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -5157,6 +5165,7 @@ impl U32x16Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl I64x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
@@ -5366,6 +5375,7 @@ impl I64x8Backend for archmage::Wasm128Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl U64x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];

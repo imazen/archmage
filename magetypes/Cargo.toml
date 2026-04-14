@@ -24,8 +24,12 @@ include = [
 # Users who enable it are explicitly opting out of token safety guarantees
 default = ["std"]
 std = ["archmage/std"]
-# AVX-512 type support
-avx512 = ["archmage/avx512"]
+# 512-bit SIMD type support (polyfill via 2×W256 on all platforms).
+# Gates the f32x16/f64x8/i*x64/u*x64/i*x32/u*x32/i*x16/u*x16 generic wrappers,
+# backend traits, and all W512 backend impls.
+w512 = []
+# AVX-512 native type support. Implies `w512` (native impls need the backend traits).
+avx512 = ["w512", "archmage/avx512"]
 
 [dependencies]
 # Core tokens and macros

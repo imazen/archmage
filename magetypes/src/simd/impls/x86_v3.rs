@@ -4013,7 +4013,7 @@ impl F32x8Convert for archmage::X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
 impl F32x16Convert for archmage::X64V3Token {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: [__m256; 2]) -> [__m256i; 2] {
@@ -4164,6 +4164,7 @@ impl U64x4Bitcast for archmage::X64V3Token {
         a
     }
 }
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl F32x16Backend for archmage::X64V3Token {
     type Repr = [__m256; 2];
@@ -4455,6 +4456,7 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl F64x8Backend for archmage::X64V3Token {
     type Repr = [__m256d; 2];
@@ -4746,6 +4748,7 @@ impl F64x8Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I8x64Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
@@ -4986,6 +4989,7 @@ impl I8x64Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U8x64Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
@@ -5219,6 +5223,7 @@ impl U8x64Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I16x32Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
@@ -5467,6 +5472,7 @@ impl I16x32Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U16x32Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
@@ -5708,6 +5714,7 @@ impl U16x32Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I32x16Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
@@ -5956,6 +5963,7 @@ impl I32x16Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U32x16Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
@@ -6197,6 +6205,7 @@ impl U32x16Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I64x8Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
@@ -6437,6 +6446,7 @@ impl I64x8Backend for archmage::X64V3Token {
     }
 }
 
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U64x8Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];

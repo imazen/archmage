@@ -4,11 +4,13 @@
 
 use super::F32x4Backend;
 use super::F32x8Backend;
+#[cfg(feature = "w512")]
 use super::F32x16Backend;
 use super::F64x2Backend;
 use super::F64x4Backend;
 use super::I32x4Backend;
 use super::I32x8Backend;
+#[cfg(feature = "w512")]
 use super::I32x16Backend;
 use super::I64x2Backend;
 use super::I64x4Backend;
@@ -60,6 +62,7 @@ pub trait F32x8Convert: F32x8Backend + I32x8Backend + SimdToken + Sealed + Copy 
 /// Conversions between f32x16 and i32x16 representations.
 ///
 /// Requires both `F32x16Backend` and `I32x16Backend` to be implemented.
+#[cfg(feature = "w512")]
 pub trait F32x16Convert:
     F32x16Backend + I32x16Backend + SimdToken + Sealed + Copy + 'static
 {

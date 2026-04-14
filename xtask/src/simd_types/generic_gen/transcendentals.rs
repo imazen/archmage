@@ -539,8 +539,8 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
         }
     }
 
-    // 512-bit section
-    code.push_str("\n// 512-bit generic wrapper types\n");
+    // 512-bit section — gated behind `w512` feature
+    code.push_str("\n// 512-bit generic wrapper types (gated behind `w512` feature)\n");
 
     // W512 mod declarations (alphabetical, plus transcendentals)
     let mut w512_names: Vec<String> = w512.iter().map(|t| t.name()).collect();
@@ -552,7 +552,7 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
     w512_mods.push("transcendentals_f32x16".to_string());
     w512_mods.sort();
     for mod_name in &w512_mods {
-        code.push_str(&format!("mod {mod_name};\n"));
+        code.push_str(&format!("#[cfg(feature = \"w512\")]\nmod {mod_name};\n"));
     }
 
     // W512 pub use declarations (specific order:
@@ -564,7 +564,9 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
     code.push('\n');
     for name in &w512_pub_use_order {
         if w512_names.contains(&name.to_string()) {
-            code.push_str(&format!("pub use {name}_impl::{name};\n"));
+            code.push_str(&format!(
+                "#[cfg(feature = \"w512\")]\npub use {name}_impl::{name};\n"
+            ));
         }
     }
 

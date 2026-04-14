@@ -386,6 +386,38 @@ fn all_u32_types() -> Vec<U32VecType> {
 // Public Entry Point
 // ============================================================================
 
+/// Prepend `#[cfg(feature = "w512")]` before every `impl …Backend/…Convert for`
+/// block in the input so the entire W512 impl section (scalar / V3 polyfill /
+/// NEON / WASM / V4 native) disappears from the build when `w512` is off.
+/// Applied at the call site in `generate_backend_files` rather than threaded
+/// through every per-impl generator.
+///
+/// The caller passes a string composed ONLY of W512 impls. For each impl block
+/// we insert the feature cfg above whatever attribute already precedes it
+/// (usually `#[cfg(target_arch = "…")]`) — rustc ANDs multiple `#[cfg]`s on
+/// the same item, so both conditions must hold for the impl to be included.
+fn gate_w512_impls(src: String) -> String {
+    let mut out = String::with_capacity(src.len() + src.len() / 10);
+    let mut prev_was_target_arch = false;
+    for line in src.split_inclusive('\n') {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("#[cfg(target_arch") {
+            // Gate above the existing target_arch attribute so both apply.
+            out.push_str("#[cfg(feature = \"w512\")]\n");
+            prev_was_target_arch = true;
+        } else if trimmed.starts_with("impl ") && !prev_was_target_arch {
+            // Bare `impl` with no preceding attribute (e.g. scalar impls).
+            out.push_str("#[cfg(feature = \"w512\")]\n");
+            prev_was_target_arch = false;
+        } else if !trimmed.is_empty() {
+            // Any non-blank, non-attribute line resets the look-behind.
+            prev_was_target_arch = false;
+        }
+        out.push_str(line);
+    }
+    out
+}
+
 /// Generate all backend trait definitions and implementations.
 ///
 /// Returns a map of relative paths (under `magetypes/src/simd/`) to file contents.
@@ -504,7 +536,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
             + &generate_x86_convert_impls("X64V3Token")
             + &generate_x86_additional_convert_impls("X64V3Token")
-            + &generate_x86_v3_w512_impls(&w512_types),
+            + &gate_w512_impls(generate_x86_v3_w512_impls(&w512_types)),
     );
     files.insert(
         "impls/scalar.rs".to_string(),
@@ -515,7 +547,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_scalar_int_impls(&remaining_int_types)
             + &generate_scalar_convert_impls()
             + &generate_scalar_additional_convert_impls()
-            + &generate_scalar_w512_impls(&w512_types),
+            + &gate_w512_impls(generate_scalar_w512_impls(&w512_types)),
     );
     files.insert(
         "impls/arm_neon.rs".to_string(),
@@ -526,7 +558,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_neon_int_impls(&remaining_int_types)
             + &generate_neon_convert_impls()
             + &generate_neon_additional_convert_impls()
-            + &generate_neon_w512_impls(&w512_types),
+            + &gate_w512_impls(generate_neon_w512_impls(&w512_types)),
     );
     files.insert(
         "impls/wasm128.rs".to_string(),
@@ -537,13 +569,16 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_wasm_int_impls(&remaining_int_types)
             + &generate_wasm_convert_impls()
             + &generate_wasm_additional_convert_impls()
-            + &generate_wasm_w512_impls(&w512_types),
+            + &gate_w512_impls(generate_wasm_w512_impls(&w512_types)),
     );
 
-    // 10b. x86 V4 native AVX-512 implementation (W512 types only)
+    // 10b. x86 V4 native AVX-512 implementation (W512 types only). Already
+    // gated by `feature = "avx512"` at the `mod x86_v4` declaration, but we
+    // also need the individual impls to be `w512`-gated because `avx512`
+    // implies `w512` (and we want a single gate scheme).
     files.insert(
         "impls/x86_v4.rs".to_string(),
-        generate_x86_v4_impls_file(&w512_types),
+        gate_w512_impls(generate_x86_v4_impls_file(&w512_types)),
     );
 
     // 11. impls/mod.rs
@@ -840,10 +875,13 @@ fn generate_backends_mod(
     }
 
     // Module declarations and re-exports (W512: f32x16, f64x8, i8x64, etc.)
+    // Gated behind `w512` feature — avx512 implies w512 via the magetypes feature graph.
     for ty in w512_types {
         let name = ty.name();
         let trait_name = ty.trait_name();
-        code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
+        code.push_str(&format!(
+            "#[cfg(feature = \"w512\")]\nmod {name};\n#[cfg(feature = \"w512\")]\npub use {name}::{trait_name};\n\n"
+        ));
     }
 
     // Extension traits (popcnt for Modern token)
@@ -852,8 +890,10 @@ fn generate_backends_mod(
     code.push_str("#[cfg(feature = \"avx512\")]\n");
     code.push_str("pub use popcnt::*;\n\n");
 
-    // Conversion and bitcast traits (float/i32/u32/i64)
-    code.push_str("mod convert;\npub use convert::{F32x4Convert, F32x8Convert, F32x16Convert, U32x4Bitcast, U32x8Bitcast, I64x2Bitcast, I64x4Bitcast};\n\n");
+    // Conversion and bitcast traits (float/i32/u32/i64). F32x16Convert is gated on w512.
+    code.push_str("mod convert;\n");
+    code.push_str("pub use convert::{F32x4Convert, F32x8Convert, U32x4Bitcast, U32x8Bitcast, I64x2Bitcast, I64x4Bitcast};\n");
+    code.push_str("#[cfg(feature = \"w512\")]\npub use convert::F32x16Convert;\n\n");
 
     // Additional conversion traits (i8↔u8, i16↔u16, u64↔i64 bitcasts)
     code.push_str("mod convert_int;\npub use convert_int::{I8x16Bitcast, I8x32Bitcast, I16x8Bitcast, I16x16Bitcast, U64x2Bitcast, U64x4Bitcast};\n\n");
@@ -988,7 +1028,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
 
 fn generate_x86_v4_f32x16_convert(token: &str) -> String {
     formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
         impl F32x16Convert for archmage::{token} {{
             #[inline(always)]
             fn bitcast_f32_to_i32(a: __m512) -> __m512i {{
@@ -3128,11 +3168,13 @@ fn generate_convert_traits() -> String {
         use super::sealed::Sealed;
         use super::F32x4Backend;
         use super::F32x8Backend;
+        #[cfg(feature = "w512")]
         use super::F32x16Backend;
         use super::F64x2Backend;
         use super::F64x4Backend;
         use super::I32x4Backend;
         use super::I32x8Backend;
+        #[cfg(feature = "w512")]
         use super::I32x16Backend;
         use super::I64x2Backend;
         use super::I64x4Backend;
@@ -3183,6 +3225,7 @@ fn generate_convert_traits() -> String {
         /// Conversions between f32x16 and i32x16 representations.
         ///
         /// Requires both `F32x16Backend` and `I32x16Backend` to be implemented.
+        #[cfg(feature = "w512")]
         pub trait F32x16Convert: F32x16Backend + I32x16Backend + SimdToken + Sealed + Copy + 'static {{
             /// Bitcast f32x16 to i32x16 (reinterpret bits, no conversion).
             fn bitcast_f32_to_i32(a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
@@ -3555,7 +3598,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
         impl F32x16Convert for archmage::{token} {{
             #[inline(always)]
             fn bitcast_f32_to_i32(a: [__m256; 2]) -> [__m256i; 2] {{
@@ -4005,8 +4048,15 @@ fn generate_scalar_convert_impls() -> String {
             .collect::<Vec<_>>()
             .join(", ");
 
+        // F32x16Convert (lanes=16) is W512 and needs a feature gate.
+        let w512_gate = if lanes == 16 {
+            "#[cfg(feature = \"w512\")]\n"
+        } else {
+            ""
+        };
+
         code.push_str(&formatdoc! {r#"
-            impl {trait_name} for archmage::ScalarToken {{
+            {w512_gate}impl {trait_name} for archmage::ScalarToken {{
                 #[inline(always)]
                 fn bitcast_f32_to_i32(a: {f_array}) -> {i_array} {{
                     [{bitcast_f2i}]
@@ -4582,7 +4632,7 @@ fn generate_neon_convert_impls() -> String {
             }}
         }}
 
-        #[cfg(target_arch = "aarch64")]
+        #[cfg(all(target_arch = "aarch64", feature = "w512"))]
         impl F32x16Convert for archmage::NeonToken {{
             #[inline(always)]
             fn bitcast_f32_to_i32(a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
@@ -5033,7 +5083,7 @@ fn generate_wasm_convert_impls() -> String {
             }}
         }}
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(all(target_arch = "wasm32", feature = "w512"))]
         impl F32x16Convert for archmage::Wasm128Token {{
             #[inline(always)]
             fn bitcast_f32_to_i32(a: [v128; 4]) -> [v128; 4] {{ a }}

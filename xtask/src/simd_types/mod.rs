@@ -236,8 +236,10 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    };\n\n");
 
     // 512-bit generic types (2×256-bit polyfill via V3 backend, same X64V3Token)
+    // Gated behind `w512` feature — these aliases depend on the W512 generic
+    // wrappers which only exist when `w512` is enabled.
     code.push_str("    // 512-bit generic types (2×256-bit polyfill, same X64V3Token)\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"w512\"))]\n");
     code.push_str("    #[allow(non_camel_case_types)]\n");
     code.push_str("    mod _w512_aliases {\n");
     for w512_name in &w512_types {
@@ -258,7 +260,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
         code.push_str(&format!("        pub type {w512_name} = crate::simd::generic::{w512_name}<archmage::X64V3Token>;\n"));
     }
     code.push_str("    }\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"w512\"))]\n");
     code.push_str("    pub use _w512_aliases::*;\n\n");
 
     // Token and LANES constants — always available
@@ -297,7 +299,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
         ));
     }
     code.push_str("    }\n");
-    code.push_str("    #[cfg(all(target_arch = \"x86_64\", not(feature = \"avx512\")))]\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", not(feature = \"avx512\"), feature = \"w512\"))]\n");
     code.push_str("    #[allow(non_camel_case_types)]\n");
     code.push_str("    mod _w512_aliases {\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
@@ -307,11 +309,11 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
         ));
     }
     code.push_str("    }\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"w512\"))]\n");
     code.push_str("    pub use _w512_aliases::*;\n\n");
 
     // xN aliases (natural width = 512-bit)
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"w512\"))]\n");
     code.push_str("    pub use _w512_aliases::{\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
         let name = ty.name();
@@ -374,7 +376,7 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
         ));
     }
     code.push_str("    }\n");
-    code.push_str("    #[cfg(all(target_arch = \"x86_64\", not(feature = \"avx512\")))]\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", not(feature = \"avx512\"), feature = \"w512\"))]\n");
     code.push_str("    #[allow(non_camel_case_types)]\n");
     code.push_str("    mod _w512_aliases {\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
@@ -384,11 +386,11 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
         ));
     }
     code.push_str("    }\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"w512\"))]\n");
     code.push_str("    pub use _w512_aliases::*;\n\n");
 
     // xN aliases (natural width = 512-bit)
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
+    code.push_str("    #[cfg(all(target_arch = \"x86_64\", feature = \"w512\"))]\n");
     code.push_str("    pub use _w512_aliases::{\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W512) {
         let name = ty.name();
@@ -597,9 +599,10 @@ fn generate_scalar_namespace() -> String {
     }
     type_aliases.push('\n');
 
+    // W512 aliases are gated behind `w512` feature.
     for &(name, generic) in &w512_types {
         type_aliases.push_str(&format!(
-            "    pub type {name} = crate::simd::generic::{generic}<archmage::ScalarToken>;\n"
+            "    #[cfg(feature = \"w512\")]\n    pub type {name} = crate::simd::generic::{generic}<archmage::ScalarToken>;\n"
         ));
     }
 
@@ -981,7 +984,7 @@ fn test_f32x8_load_store_rgba_u8() {
 // 512-bit Tests (V3 polyfill: 2×256-bit)
 // ============================================================================
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
 mod w512_tests {
     use magetypes::simd::*;
     use archmage::{SimdToken, X64V3Token};

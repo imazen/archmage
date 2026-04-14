@@ -8458,6 +8458,7 @@ impl F32x8Convert for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl F32x16Convert for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(a: [f32; 16]) -> [i32; 16] {
@@ -8759,6 +8760,7 @@ impl U64x4Bitcast for archmage::ScalarToken {
         [a[0] as u64, a[1] as u64, a[2] as u64, a[3] as u64]
     }
 }
+#[cfg(feature = "w512")]
 impl F32x16Backend for archmage::ScalarToken {
     type Repr = [f32; 16];
 
@@ -8975,6 +8977,7 @@ impl F32x16Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl F64x8Backend for archmage::ScalarToken {
     type Repr = [f64; 8];
 
@@ -9191,6 +9194,7 @@ impl F64x8Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl I8x64Backend for archmage::ScalarToken {
     type Repr = [i8; 64];
 
@@ -9377,6 +9381,7 @@ impl I8x64Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl U8x64Backend for archmage::ScalarToken {
     type Repr = [u8; 64];
 
@@ -9556,6 +9561,7 @@ impl U8x64Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl I16x32Backend for archmage::ScalarToken {
     type Repr = [i16; 32];
 
@@ -9747,6 +9753,7 @@ impl I16x32Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl U16x32Backend for archmage::ScalarToken {
     type Repr = [u16; 32];
 
@@ -9931,6 +9938,7 @@ impl U16x32Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl I32x16Backend for archmage::ScalarToken {
     type Repr = [i32; 16];
 
@@ -10122,6 +10130,7 @@ impl I32x16Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl U32x16Backend for archmage::ScalarToken {
     type Repr = [u32; 16];
 
@@ -10306,6 +10315,7 @@ impl U32x16Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl I64x8Backend for archmage::ScalarToken {
     type Repr = [i64; 8];
 
@@ -10492,6 +10502,7 @@ impl I64x8Backend for archmage::ScalarToken {
     }
 }
 
+#[cfg(feature = "w512")]
 impl U64x8Backend for archmage::ScalarToken {
     type Repr = [u64; 8];
 

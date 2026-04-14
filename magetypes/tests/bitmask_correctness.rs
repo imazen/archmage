@@ -227,21 +227,27 @@ mod x86_tests {
     );
 
     // W512 (polyfill: 2× W256 on V3)
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         i8x64, i8x64, X64V3Token, token, i8, 64, -1i8, u64, mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         u8x64, u8x64, X64V3Token, token, u8, 64, 0x80u8, u64, mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         i16x32, i16x32, X64V3Token, token, i16, 32, -1i16, u64, mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         u16x32, u16x32, X64V3Token, token, u16, 32, 0x8000u16, u64, mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         i32x16, i32x16, X64V3Token, token, i32, 16, -1i32, u64, mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         u32x16,
         u32x16,
@@ -253,9 +259,11 @@ mod x86_tests {
         u64,
         mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         i64x8, i64x8, X64V3Token, token, i64, 8, -1i64, u64, mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         u64x8,
         u64x8,
@@ -464,6 +472,7 @@ mod scalar_tests {
     );
 
     // W512
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         i8x64,
         i8x64,
@@ -475,6 +484,7 @@ mod scalar_tests {
         u64,
         mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         u8x64,
         u8x64,
@@ -486,6 +496,7 @@ mod scalar_tests {
         u64,
         mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         i16x32,
         i16x32,
@@ -497,6 +508,7 @@ mod scalar_tests {
         u64,
         mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         u16x32,
         u16x32,
@@ -508,6 +520,7 @@ mod scalar_tests {
         u64,
         mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         i32x16,
         i32x16,
@@ -519,6 +532,7 @@ mod scalar_tests {
         u64,
         mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         u32x16,
         u32x16,
@@ -530,6 +544,7 @@ mod scalar_tests {
         u64,
         mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         i64x8,
         i64x8,
@@ -541,6 +556,7 @@ mod scalar_tests {
         u64,
         mask_n_u64
     );
+    #[cfg(feature = "w512")]
     bitmask_tests!(
         u64x8,
         u64x8,

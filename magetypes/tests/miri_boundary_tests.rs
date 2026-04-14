@@ -529,6 +529,7 @@ fn test_256bit_cast_slice_boundaries() {
 // 512-bit types (AVX-512)
 // =============================================================================
 
+#[cfg(feature = "w512")]
 mod w512_tests {
     use archmage::{SimdToken, X64V3Token};
 

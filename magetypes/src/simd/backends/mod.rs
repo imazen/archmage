@@ -66,34 +66,54 @@ pub use u64x2::U64x2Backend;
 mod u64x4;
 pub use u64x4::U64x4Backend;
 
+#[cfg(feature = "w512")]
 mod f32x16;
+#[cfg(feature = "w512")]
 pub use f32x16::F32x16Backend;
 
+#[cfg(feature = "w512")]
 mod f64x8;
+#[cfg(feature = "w512")]
 pub use f64x8::F64x8Backend;
 
+#[cfg(feature = "w512")]
 mod i8x64;
+#[cfg(feature = "w512")]
 pub use i8x64::I8x64Backend;
 
+#[cfg(feature = "w512")]
 mod u8x64;
+#[cfg(feature = "w512")]
 pub use u8x64::U8x64Backend;
 
+#[cfg(feature = "w512")]
 mod i16x32;
+#[cfg(feature = "w512")]
 pub use i16x32::I16x32Backend;
 
+#[cfg(feature = "w512")]
 mod u16x32;
+#[cfg(feature = "w512")]
 pub use u16x32::U16x32Backend;
 
+#[cfg(feature = "w512")]
 mod i32x16;
+#[cfg(feature = "w512")]
 pub use i32x16::I32x16Backend;
 
+#[cfg(feature = "w512")]
 mod u32x16;
+#[cfg(feature = "w512")]
 pub use u32x16::U32x16Backend;
 
+#[cfg(feature = "w512")]
 mod i64x8;
+#[cfg(feature = "w512")]
 pub use i64x8::I64x8Backend;
 
+#[cfg(feature = "w512")]
 mod u64x8;
+#[cfg(feature = "w512")]
 pub use u64x8::U64x8Backend;
 
 #[cfg(feature = "avx512")]
@@ -102,9 +122,10 @@ mod popcnt;
 pub use popcnt::*;
 
 mod convert;
+#[cfg(feature = "w512")]
+pub use convert::F32x16Convert;
 pub use convert::{
-    F32x4Convert, F32x8Convert, F32x16Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast,
-    U32x8Bitcast,
+    F32x4Convert, F32x8Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast, U32x8Bitcast,
 };
 
 mod convert_int;

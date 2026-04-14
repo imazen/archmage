@@ -238,9 +238,11 @@ macro_rules! float_tests {
 
 float_tests!(test_f32x4, f32x4, f32, 4);
 float_tests!(test_f32x8, f32x8, f32, 8);
+#[cfg(feature = "w512")]
 float_tests!(test_f32x16, f32x16, f32, 16);
 float_tests!(test_f64x2, f64x2, f64, 2);
 float_tests!(test_f64x4, f64x4, f64, 4);
+#[cfg(feature = "w512")]
 float_tests!(test_f64x8, f64x8, f64, 8);
 
 // ============================================================================
@@ -536,33 +538,41 @@ macro_rules! int_type_tests {
 // --- Signed integers with mul (i16, i32) ---
 int_type_tests!(signed_mul: test_i16x8, i16x8, i16, 8);
 int_type_tests!(signed_mul: test_i16x16, i16x16, i16, 16);
+#[cfg(feature = "w512")]
 int_type_tests!(signed_mul: test_i16x32, i16x32, i16, 32);
 int_type_tests!(signed_mul: test_i32x4, i32x4, i32, 4);
 int_type_tests!(signed_mul: test_i32x8, i32x8, i32, 8);
+#[cfg(feature = "w512")]
 int_type_tests!(signed_mul: test_i32x16, i32x16, i32, 16);
 
 // --- Signed integers without mul (i8, i64) ---
 int_type_tests!(signed: test_i8x16, i8x16, i8, 16);
 int_type_tests!(signed: test_i8x32, i8x32, i8, 32);
+#[cfg(feature = "w512")]
 int_type_tests!(signed: test_i8x64, i8x64, i8, 64);
 int_type_tests!(signed: test_i64x2, i64x2, i64, 2);
 int_type_tests!(signed: test_i64x4, i64x4, i64, 4);
+#[cfg(feature = "w512")]
 int_type_tests!(signed: test_i64x8, i64x8, i64, 8);
 
 // --- Unsigned integers with mul (u16, u32) ---
 int_type_tests!(unsigned_mul: test_u16x8, u16x8, u16, 8);
 int_type_tests!(unsigned_mul: test_u16x16, u16x16, u16, 16);
+#[cfg(feature = "w512")]
 int_type_tests!(unsigned_mul: test_u16x32, u16x32, u16, 32);
 int_type_tests!(unsigned_mul: test_u32x4, u32x4, u32, 4);
 int_type_tests!(unsigned_mul: test_u32x8, u32x8, u32, 8);
+#[cfg(feature = "w512")]
 int_type_tests!(unsigned_mul: test_u32x16, u32x16, u32, 16);
 
 // --- Unsigned integers without mul (u8, u64) ---
 int_type_tests!(unsigned: test_u8x16, u8x16, u8, 16);
 int_type_tests!(unsigned: test_u8x32, u8x32, u8, 32);
+#[cfg(feature = "w512")]
 int_type_tests!(unsigned: test_u8x64, u8x64, u8, 64);
 int_type_tests!(unsigned: test_u64x2, u64x2, u64, 2);
 int_type_tests!(unsigned: test_u64x4, u64x4, u64, 4);
+#[cfg(feature = "w512")]
 int_type_tests!(unsigned: test_u64x8, u64x8, u64, 8);
 
 // ============================================================================

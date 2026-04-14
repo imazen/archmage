@@ -71,26 +71,47 @@ pub use u32x8_impl::u32x8;
 pub use u64x2_impl::u64x2;
 pub use u64x4_impl::u64x4;
 
-// 512-bit generic wrapper types
+// 512-bit generic wrapper types (gated behind `w512` feature)
+#[cfg(feature = "w512")]
 mod f32x16_impl;
+#[cfg(feature = "w512")]
 mod f64x8_impl;
+#[cfg(feature = "w512")]
 mod i16x32_impl;
+#[cfg(feature = "w512")]
 mod i32x16_impl;
+#[cfg(feature = "w512")]
 mod i64x8_impl;
+#[cfg(feature = "w512")]
 mod i8x64_impl;
+#[cfg(feature = "w512")]
 mod transcendentals_f32x16;
+#[cfg(feature = "w512")]
 mod u16x32_impl;
+#[cfg(feature = "w512")]
 mod u32x16_impl;
+#[cfg(feature = "w512")]
 mod u64x8_impl;
+#[cfg(feature = "w512")]
 mod u8x64_impl;
 
+#[cfg(feature = "w512")]
 pub use f32x16_impl::f32x16;
+#[cfg(feature = "w512")]
 pub use f64x8_impl::f64x8;
+#[cfg(feature = "w512")]
 pub use i8x64_impl::i8x64;
+#[cfg(feature = "w512")]
 pub use i16x32_impl::i16x32;
+#[cfg(feature = "w512")]
 pub use i32x16_impl::i32x16;
+#[cfg(feature = "w512")]
 pub use i64x8_impl::i64x8;
+#[cfg(feature = "w512")]
 pub use u8x64_impl::u8x64;
+#[cfg(feature = "w512")]
 pub use u16x32_impl::u16x32;
+#[cfg(feature = "w512")]
 pub use u32x16_impl::u32x16;
+#[cfg(feature = "w512")]
 pub use u64x8_impl::u64x8;
