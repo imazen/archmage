@@ -49,6 +49,41 @@ pub fn dot_product(_token: SimdToken, a: &[f32], b: &[f32]) -> f32 {
 }
 
 // ============================================================================
+// #[autoversion] — explicit non-x86 tiers (issue #34 repro)
+// ============================================================================
+//
+// On 32-bit x86 (target_arch = "x86"), none of `v3` / `neon` / `wasm128`
+// are dispatchable — every variant is cfg'd out. The dispatcher's
+// `use archmage::SimdToken;` then has nothing to refer to and triggers
+// `unused_imports` warnings unless the macro suppresses them.
+//
+// The downstream symptom (per issue #34) is a warning like:
+//   warning: unused import: `entropy_score`
+// pointing at the user's fn declaration via the dispatcher's quote_spanned!.
+//
+// This crate compiles with `#![deny(warnings)]`, so any regression breaks
+// the build on i686.
+
+#[autoversion(v3, neon, wasm128)]
+pub fn entropy_score(_token: SimdToken, data: &[u8]) -> u32 {
+    let mut score = 0u32;
+    for &b in data {
+        score = score.wrapping_add(b as u32);
+    }
+    score
+}
+
+#[autoversion(v3, neon, wasm128)]
+pub fn premul_u8_impl(_token: SimdToken, buf: &mut [u8]) {
+    for chunk in buf.chunks_exact_mut(4) {
+        let a = chunk[3] as u16;
+        chunk[0] = ((chunk[0] as u16 * a + 127) / 255) as u8;
+        chunk[1] = ((chunk[1] as u16 * a + 127) / 255) as u8;
+        chunk[2] = ((chunk[2] as u16 * a + 127) / 255) as u8;
+    }
+}
+
+// ============================================================================
 // #[autoversion] with self receiver
 // ============================================================================
 
@@ -123,6 +158,16 @@ mod tests {
             let result = sum_squares_v3(token, &data);
             assert!((result - 30.0).abs() < 1e-6);
         }
+    }
+
+    /// Issue #34 repro: explicit non-x86 tier list dispatcher must compile
+    /// cleanly on every arch including i686 (where every cfg arm is excluded).
+    #[test]
+    fn issue_34_explicit_non_x86_tiers_compiles() {
+        let data = [1u8, 2, 3, 4];
+        let _ = entropy_score(&data);
+        let mut buf = [10u8, 20, 30, 200];
+        premul_u8_impl(&mut buf);
     }
 
     #[test]

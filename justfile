@@ -143,6 +143,7 @@ test-all-cpus: test-p4 test-nehalem test-haswell test-skylake test-icelake
 # Test on 32-bit x86 (via QEMU)
 test-i686:
     cross test --all-features --target i686-unknown-linux-gnu
+    cross test -p archmage-no-features-test --target i686-unknown-linux-gnu
 
 # Test on aarch64 (via QEMU) - lib, cross-platform, and feature intrinsic tests
 test-aarch64:

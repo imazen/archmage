@@ -196,6 +196,13 @@ jobs:
       - name: Test (cross/QEMU)
         run: cross test --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
+      # archmage-no-features-test compiles with #![deny(warnings)]. It
+      # exercises #[autoversion] with explicit non-x86 tier lists — the
+      # exact pattern that triggered issue #34's unused_imports warnings on
+      # 32-bit x86 (where every dispatch arm is cfg'd out).
+      - name: Test no-features-crate (cross/QEMU)
+        run: cross test -p archmage-no-features-test --target ${{ matrix.target }}
+
   # ==========================================================================
   # WASM SIMD128 testing
   # ==========================================================================
