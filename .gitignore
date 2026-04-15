@@ -19,6 +19,7 @@ copter-report/
 Cargo.lock
 .superwork/
 .claude/
+.workongoing
 .zenbench/
 .external-cache/
 Cargo.toml.original.txt
