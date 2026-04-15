@@ -13,9 +13,11 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+## 0.9.20 — 2026-04-15
+
 ### Fixed
 
-- `#[autoversion]` and `incant!` no longer emit `unused_imports` warnings on archs where every dispatch arm is cfg'd out (notably 32-bit x86 with `[v3, neon, wasm128]`-style tier lists). Downstream crates no longer need to sprinkle `#[cfg_attr(target_arch = "x86", allow(unused_imports))]` on every call site (#34)
+- `#[autoversion]` and `incant!` no longer emit `unused_imports` warnings on archs where every dispatch arm is cfg'd out (notably 32-bit x86 with `[v3, neon, wasm128]`-style tier lists). Downstream crates no longer need to sprinkle `#[cfg_attr(target_arch = "x86", allow(unused_imports))]` on every call site (#34, cae6284)
 
 ## 0.9.19 — 2026-04-14
 
