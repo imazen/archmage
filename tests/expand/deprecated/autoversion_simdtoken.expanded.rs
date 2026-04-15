@@ -10,6 +10,7 @@ fn process(data: &[f32; 4]) -> f32 {
         const SIMDTOKEN_DEPRECATED: () = ();
         let _ = SIMDTOKEN_DEPRECATED;
     }
+    #[allow(unused_imports)]
     use archmage::SimdToken;
     {
         if let Some(__t) = archmage::X64V4Token::summon() {

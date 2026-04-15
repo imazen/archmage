@@ -1,5 +1,6 @@
 use archmage::autoversion;
 fn inner(data: &[f32; 4]) -> f32 {
+    #[allow(unused_imports)]
     use archmage::SimdToken;
     {
         if let Some(__t) = archmage::X64V4Token::summon() {
@@ -50,6 +51,7 @@ fn inner_scalar(_token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {
     data.iter().sum()
 }
 fn outer(data: &[f32; 4], scale: f32) -> f32 {
+    #[allow(unused_imports)]
     use archmage::SimdToken;
     {
         if let Some(__t) = archmage::X64V4Token::summon() {

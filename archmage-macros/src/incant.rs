@@ -428,6 +428,10 @@ pub(crate) fn gen_incant_entry(
 
     let expanded = quote! {
         '__incant: {
+            // Suppress unused_imports on archs where every dispatch arm is
+            // cfg'd out (e.g., 32-bit x86 with [v3, neon, wasm128] tiers).
+            // See issue #34.
+            #[allow(unused_imports)]
             use archmage::SimdToken;
             #(#dispatch_arms)*
             #fallback_call

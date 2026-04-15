@@ -4,6 +4,7 @@ struct P {
 }
 impl P {
     fn apply(&self, x: f32) -> f32 {
+        #[allow(unused_imports)]
         use archmage::SimdToken;
         {
             if let Some(__t) = archmage::X64V4Token::summon() {

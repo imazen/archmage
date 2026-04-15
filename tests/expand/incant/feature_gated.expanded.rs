@@ -34,6 +34,7 @@ fn inner_scalar(_t: ScalarToken, x: f32) -> f32 {
 }
 fn dispatch(x: f32) -> f32 {
     '__incant: {
+        #[allow(unused_imports)]
         use archmage::SimdToken;
         {}
         inner_scalar(archmage::ScalarToken, x)

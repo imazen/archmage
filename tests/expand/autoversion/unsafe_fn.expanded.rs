@@ -1,5 +1,6 @@
 use archmage::autoversion;
 unsafe fn process(ptr: *const f32, len: usize) -> f32 {
+    #[allow(unused_imports)]
     use archmage::SimdToken;
     {
         if let Some(__t) = archmage::X64V4Token::summon() {

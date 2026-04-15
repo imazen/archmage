@@ -502,6 +502,11 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             #(#fn_attrs)*
             #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
                 #simdtoken_deprecation_in_body
+                // Suppress unused_imports on archs where every dispatch arm is
+                // cfg'd out (e.g., 32-bit x86 with [v3, neon, wasm128] tiers).
+                // The `use` carries the user's span, so a downstream warning
+                // would point at the user's fn declaration. See issue #34.
+                #[allow(unused_imports)]
                 use archmage::SimdToken;
                 #(#dispatch_arms)*
                 #fallback_call
@@ -519,6 +524,11 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             #(#fn_attrs)*
             #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
                 #simdtoken_deprecation_in_body
+                // Suppress unused_imports on archs where every dispatch arm is
+                // cfg'd out (e.g., 32-bit x86 with [v3, neon, wasm128] tiers).
+                // The `use` carries the user's span, so a downstream warning
+                // would point at the user's fn declaration. See issue #34.
+                #[allow(unused_imports)]
                 use archmage::SimdToken;
                 #(#dispatch_arms)*
                 #fallback_call

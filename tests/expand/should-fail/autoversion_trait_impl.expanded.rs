@@ -7,6 +7,7 @@ trait Process {
 }
 impl Process for Filter {
     fn process(&self, data: &[f32; 4]) -> f32 {
+        #[allow(unused_imports)]
         use archmage::SimdToken;
         {
             if let Some(__t) = archmage::X64V4Token::summon() {

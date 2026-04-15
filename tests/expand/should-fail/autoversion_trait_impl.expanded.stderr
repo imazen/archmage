@@ -1,43 +1,43 @@
 error[E0407]: method `process_v4` is not a member of trait `Process`
-  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:23:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:24:5
    |
-23 |       fn process_v4(&self, _token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
+24 |       fn process_v4(&self, _token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
    |       ^  ---------- help: there is an associated function with a similar name: `process`
    |  _____|
    | |
-24 | |         #[target_feature(
-25 | |             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,av...
-26 | |         )]
+25 | |         #[target_feature(
+26 | |             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,av...
+27 | |         )]
 ...  |
-45 | |         unsafe { __simd_inner_process_v4(self, _token, data) }
-46 | |     }
+46 | |         unsafe { __simd_inner_process_v4(self, _token, data) }
+47 | |     }
    | |_____^ not a member of trait `Process`
 
 error[E0407]: method `process_v3` is not a member of trait `Process`
-  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:49:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:50:5
    |
-49 |       fn process_v3(&self, _token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
+50 |       fn process_v3(&self, _token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
    |       ^  ---------- help: there is an associated function with a similar name: `process`
    |  _____|
    | |
-50 | |         #[target_feature(
-51 | |             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-52 | |         )]
+51 | |         #[target_feature(
+52 | |             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+53 | |         )]
 ...  |
-71 | |         unsafe { __simd_inner_process_v3(self, _token, data) }
-72 | |     }
+72 | |         unsafe { __simd_inner_process_v3(self, _token, data) }
+73 | |     }
    | |_____^ not a member of trait `Process`
 
 error[E0407]: method `process_scalar` is not a member of trait `Process`
-  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:74:5
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:75:5
    |
-74 | /     fn process_scalar(&self, _token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {
-75 | |         let _self = self;
-76 | |         let mut sum = 0.0f32;
-77 | |         for &x in data {
+75 | /     fn process_scalar(&self, _token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {
+76 | |         let _self = self;
+77 | |         let mut sum = 0.0f32;
+78 | |         for &x in data {
 ...  |
-82 | |         sum
-83 | |     }
+83 | |         sum
+84 | |     }
    | |_____^ not a member of trait `Process`
 
 warning: unused import: `archmage::autoversion`
@@ -49,9 +49,9 @@ warning: unused import: `archmage::autoversion`
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
 error[E0599]: no method named `process_v4` found for reference `&Filter` in the current scope
-  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:13:29
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:14:29
    |
-13 |                 return self.process_v4(__t, data);
+14 |                 return self.process_v4(__t, data);
    |                             ^^^^^^^^^^
    |
 help: there is a method `process` with a similar name, but with different arguments
@@ -61,9 +61,9 @@ help: there is a method `process` with a similar name, but with different argume
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0599]: no method named `process_v3` found for reference `&Filter` in the current scope
-  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:16:29
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:17:29
    |
-16 |                 return self.process_v3(__t, data);
+17 |                 return self.process_v3(__t, data);
    |                             ^^^^^^^^^^
    |
 help: there is a method `process` with a similar name, but with different arguments
@@ -73,9 +73,9 @@ help: there is a method `process` with a similar name, but with different argume
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0599]: no method named `process_scalar` found for reference `&Filter` in the current scope
-  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:19:14
+  --> tests/expand/should-fail/autoversion_trait_impl.expanded.rs:20:14
    |
-19 |         self.process_scalar(archmage::ScalarToken, data)
+20 |         self.process_scalar(archmage::ScalarToken, data)
    |              ^^^^^^^^^^^^^^
    |
 help: there is a method `process` with a similar name, but with different arguments

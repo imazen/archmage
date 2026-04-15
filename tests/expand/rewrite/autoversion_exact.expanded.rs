@@ -33,6 +33,7 @@ fn inner_scalar(_t: ScalarToken, x: f32) -> f32 {
     x
 }
 fn outer(x: f32) -> f32 {
+    #[allow(unused_imports)]
     use archmage::SimdToken;
     {
         if let Some(__t) = archmage::X64V3Token::summon() {
@@ -61,6 +62,7 @@ fn outer_v3(_token: archmage::X64V3Token, x: f32) -> f32 {
 #[allow(dead_code)]
 fn outer_scalar(_token: archmage::ScalarToken, x: f32) -> f32 {
     '__incant: {
+        #[allow(unused_imports)]
         use archmage::SimdToken;
         {
             if let Some(__t) = archmage::X64V3Token::summon() {

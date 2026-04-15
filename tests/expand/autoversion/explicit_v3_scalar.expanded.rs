@@ -1,5 +1,6 @@
 use archmage::autoversion;
 fn sum(data: &[f32; 4]) -> f32 {
+    #[allow(unused_imports)]
     use archmage::SimdToken;
     {
         if let Some(__t) = archmage::X64V3Token::summon() {
