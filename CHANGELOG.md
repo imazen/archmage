@@ -28,6 +28,7 @@
 ### Changed
 
 - CI runs magetypes integration tests on aarch64 (cross) and wasm32-wasip1 targets, not just x86 (#39, 9d34c81)
+- Moved magetypes-dependent benches (`asm_patterns`, `cbrt_variants`, `generic_vs_concrete`, `safe_memory_overhead`) from archmage to magetypes. These were failing to compile in the bench workflow because the magetypes dev-dep was removed from archmage in 0.9.18 (83519ca) but benches were missed. (3490d5f)
 
 ## 0.9.20 — 2026-04-15
 

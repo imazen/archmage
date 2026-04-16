@@ -17,22 +17,22 @@ jobs:
         include:
           - os: ubuntu-latest
             name: Linux x86_64
-            bench: summon_overhead asm_inspection asm_patterns
+            bench: summon_overhead|archmage asm_inspection|archmage asm_patterns|magetypes
           - os: ubuntu-24.04-arm
             name: Linux aarch64
-            bench: tokens
+            bench: tokens|archmage
           - os: macos-latest
             name: macOS aarch64
-            bench: tokens
+            bench: tokens|archmage
           - os: macos-26-intel
             name: macOS x86_64
-            bench: summon_overhead asm_inspection asm_patterns
+            bench: summon_overhead|archmage asm_inspection|archmage asm_patterns|magetypes
           - os: windows-latest
             name: Windows x86_64
-            bench: summon_overhead asm_inspection asm_patterns
+            bench: summon_overhead|archmage asm_inspection|archmage asm_patterns|magetypes
           - os: windows-11-arm
             name: Windows aarch64
-            bench: tokens
+            bench: tokens|archmage
     name: bench (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -47,9 +47,11 @@ jobs:
       - name: Run benchmarks
         shell: bash
         run: |
-          for bench in ${{ matrix.bench }}; do
-            echo "=== Running bench: $bench ==="
-            cargo bench --bench "$bench" --features "${{ env.FEATURES }}" -- --noplot 2>&1 | tee -a bench-output.txt
+          for entry in ${{ matrix.bench }}; do
+            bench="${entry%%|*}"
+            pkg="${entry##*|}"
+            echo "=== Running bench: $bench (package: $pkg) ==="
+            cargo bench -p "$pkg" --bench "$bench" --features "${{ env.FEATURES }}" -- --noplot 2>&1 | tee -a bench-output.txt
           done
 
       - name: Upload bench output

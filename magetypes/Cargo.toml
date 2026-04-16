@@ -35,9 +35,26 @@ avx512 = ["w512", "archmage/avx512"]
 # Core tokens and macros
 archmage = { version = "0.9.20", path = "..", default-features = false }
 
-# proptest depends on wait-timeout which doesn't compile on WASM
+# proptest and zenbench don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 proptest = "1.5"
+zenbench = { version = "0.1.2", features = ["criterion-compat"] }
+
+[[bench]]
+name = "asm_patterns"
+harness = false
+
+[[bench]]
+name = "cbrt_variants"
+harness = false
+
+[[bench]]
+name = "generic_vs_concrete"
+harness = false
+
+[[bench]]
+name = "safe_memory_overhead"
+harness = false
 
 [package.metadata.docs.rs]
 all-features = true

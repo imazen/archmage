@@ -80,22 +80,6 @@ harness = false
 name = "summon_overhead"
 harness = false
 
-[[bench]]
-name = "safe_memory_overhead"
-harness = false
-
-[[bench]]
-name = "asm_patterns"
-harness = false
-
-[[bench]]
-name = "generic_vs_concrete"
-harness = false
-
-[[bench]]
-name = "cbrt_variants"
-harness = false
-
 [package.metadata.docs.rs]
 features = ["std", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]
