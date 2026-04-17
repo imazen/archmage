@@ -204,6 +204,17 @@ parents = ["NeonToken"]
 doc = "Proof that NEON + CRC is available.\n\nCRC32 extension is common on most AArch64 CPUs (part of ARMv8.1-A baseline).\nAvailable on: Cortex-A53+, Apple M1+, Graviton 1+, Snapdragon 8xx."
 
 [[token]]
+name = "Arm64RdmToken"
+arch = "aarch64"
+features = ["neon", "rdm"]
+traits = ["HasNeon", "HasArm64Rdm", "Has128BitSimd"]
+display_name = "NEON+RDM"
+short_name = "arm_rdm"
+magetypes_namespace = "neon"
+parents = ["NeonToken"]
+doc = "Proof that NEON + FEAT_RDM (Rounding Doubling Multiply, ARMv8.1) is available.\n\nEnables SQRDMULH/SQRDMLAH/SQRDMLSH instructions for fixed-point signal\nprocessing — image quantization, audio DSP, polynomial arithmetic. A\nnarrower tier than Arm64V2Token: requires only RDM, not DotProd, FP16,\nor crypto.\n\nMandatory in ARMv8.1-A. Available on Cortex-A55+, Apple M1+,\nNeoverse N1+, Snapdragon 660+. Notably absent on Cortex-A53/A57/A72/A73\n— i.e. Raspberry Pi 4 and similar pre-2018 SBC silicon."
+
+[[token]]
 name = "Arm64V2Token"
 arch = "aarch64"
 features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]
@@ -224,6 +235,17 @@ short_name = "arm_v3"
 magetypes_namespace = "neon"
 parents = ["Arm64V2Token"]
 doc = "Proof that the full modern ARM SIMD feature set is available (Arm64-v3).\n\nArm64-v3 adds FHM, FCMA, SHA3, I8MM, and BF16 over Arm64-v2.\nAvailable on: Cortex-A510+, Apple M2+, Snapdragon X, Graviton 3+, Cobalt 100."
+
+[[token]]
+name = "Arm64Sve2Token"
+arch = "aarch64"
+features = ["neon", "sve", "sve2"]
+traits = ["HasNeon", "HasArm64Sve2", "Has128BitSimd"]
+display_name = "Arm64 SVE2"
+short_name = "arm_sve2"
+magetypes_namespace = "neon"
+parents = ["NeonToken"]
+doc = "**Experimental.** Proof that NEON + SVE + SVE2 is available.\n\nSVE2 (Armv9.0-A) adds variable-width SIMD on top of NEON, enabling\npredicated execution, gather/scatter, and 128–2048-bit vector widths.\n\nDetection works on stable Rust today (stdarch handles `sve`/`sve2`).\nExecuting SVE intrinsics from Rust currently requires nightly + the\n`stdarch_aarch64_sve` feature gate, and `repr(scalable)` types (RFC 3838)\nare not yet accepted — so direct use is limited to inline asm or hand-\nwritten target-feature functions until the type-system work lands.\n\nAvailable on: Cobalt 100 (Azure / GH `windows-11-arm` and `ubuntu-24.04-arm`\nrunners), Neoverse N2/V2, Graviton 3/4. **Not** available on Apple\nSilicon — Apple has not adopted SVE on any shipping core.\n\nThis token is shipped as a research preview; treat it as unstable until\nupstream Rust SVE support stabilizes."
 
 # ──── WASM ────
 
@@ -320,6 +342,22 @@ features = ["neon", "sha3"]
 parents = ["HasNeon"]
 magetypes_namespace = "neon"
 doc = "Marker trait for NEON + SHA3.\n\nSHA3 extension is available on ARMv8.2-A and later."
+
+[[trait]]
+name = "HasArm64Rdm"
+arch = "aarch64"
+features = ["neon", "rdm"]
+parents = ["HasNeon"]
+magetypes_namespace = "neon"
+doc = "Marker trait for NEON + FEAT_RDM (ARMv8.1 Rounding Doubling Multiply).\n\nEnables SQRDMULH/SQRDMLAH/SQRDMLSH. Mandatory in ARMv8.1-A; available\non essentially all post-2017 ARM silicon."
+
+[[trait]]
+name = "HasArm64Sve2"
+arch = "aarch64"
+features = ["neon", "sve", "sve2"]
+parents = ["HasNeon"]
+magetypes_namespace = "neon"
+doc = "**Experimental** marker trait for NEON + SVE + SVE2 (Armv9.0-A).\n\nDetection is stable on Rust 1.85; emitting SVE intrinsics from Rust\nstill requires nightly + `stdarch_aarch64_sve`, and scalable vector\ntypes (`repr(scalable)`) are not yet accepted (RFC 3838). Use inline\nasm or hand-written target-feature functions for now.\n\nAvailable on Cobalt 100 / Neoverse N2/V2 / Graviton 3/4. Not on Apple\nSilicon."
 
 [[trait]]
 name = "HasArm64V2"

@@ -4,7 +4,10 @@
 
 use crate::tokens::SimdToken;
 #[allow(deprecated)]
-use crate::tokens::{Has128BitSimd, HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3};
+use crate::tokens::{
+    Has128BitSimd, HasArm64Rdm, HasArm64Sve2, HasArm64V2, HasArm64V3, HasNeon, HasNeonAes,
+    HasNeonSha3,
+};
 use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 // Cache statics: 0 = unknown, 1 = unavailable, 2 = available
@@ -18,10 +21,14 @@ pub(super) static NEON_SHA3_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static NEON_SHA3_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static NEON_CRC_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static NEON_CRC_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static ARM64_RDM_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static ARM64_RDM_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static ARM64_V2_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static ARM64_V2_DISABLED: AtomicBool = AtomicBool::new(false);
 pub(super) static ARM64_V3_CACHE: AtomicU8 = AtomicU8::new(0);
 pub(super) static ARM64_V3_DISABLED: AtomicBool = AtomicBool::new(false);
+pub(super) static ARM64_SVE2_CACHE: AtomicU8 = AtomicU8::new(0);
+pub(super) static ARM64_SVE2_DISABLED: AtomicBool = AtomicBool::new(false);
 
 /// Proof that NEON is available.
 ///
@@ -123,8 +130,10 @@ impl NeonToken {
     /// - `NeonAesToken`
     /// - `NeonSha3Token`
     /// - `NeonCrcToken`
+    /// - `Arm64RdmToken`
     /// - `Arm64V2Token`
     /// - `Arm64V3Token`
+    /// - `Arm64Sve2Token`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
@@ -149,10 +158,14 @@ impl NeonToken {
             NEON_SHA3_CACHE.store(v, Ordering::Relaxed);
             NEON_CRC_DISABLED.store(disabled, Ordering::Relaxed);
             NEON_CRC_CACHE.store(v, Ordering::Relaxed);
+            ARM64_RDM_DISABLED.store(disabled, Ordering::Relaxed);
+            ARM64_RDM_CACHE.store(v, Ordering::Relaxed);
             ARM64_V2_DISABLED.store(disabled, Ordering::Relaxed);
             ARM64_V2_CACHE.store(v, Ordering::Relaxed);
             ARM64_V3_DISABLED.store(disabled, Ordering::Relaxed);
             ARM64_V3_CACHE.store(v, Ordering::Relaxed);
+            ARM64_SVE2_DISABLED.store(disabled, Ordering::Relaxed);
+            ARM64_SVE2_CACHE.store(v, Ordering::Relaxed);
             Ok(())
         }
     }
@@ -782,6 +795,210 @@ fn neon_crc_detect() -> Option<NeonCrcToken> {
     }
 }
 
+/// Proof that NEON + FEAT_RDM (Rounding Doubling Multiply, ARMv8.1) is available.
+///
+/// Enables SQRDMULH/SQRDMLAH/SQRDMLSH instructions for fixed-point signal
+/// processing — image quantization, audio DSP, polynomial arithmetic. A
+/// narrower tier than Arm64V2Token: requires only RDM, not DotProd, FP16,
+/// or crypto.
+///
+/// Mandatory in ARMv8.1-A. Available on Cortex-A55+, Apple M1+,
+/// Neoverse N1+, Snapdragon 660+. Notably absent on Cortex-A53/A57/A72/A73
+/// — i.e. Raspberry Pi 4 and similar pre-2018 SBC silicon.
+#[derive(Clone, Copy, Debug)]
+pub struct Arm64RdmToken {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for Arm64RdmToken {}
+
+impl SimdToken for Arm64RdmToken {
+    const NAME: &'static str = "NEON+RDM";
+    const TARGET_FEATURES: &'static str = "neon,rdm";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+rdm";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-rdm";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "rdm",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "rdm",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
+    #[inline(always)]
+    fn summon() -> Option<Self> {
+        // Compile-time fast path (suppressed by testable_dispatch)
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "rdm",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            Some(unsafe { Self::forge_token_dangerously() })
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "rdm",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            match ARM64_RDM_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => arm64_rdm_detect(),
+            }
+        }
+    }
+}
+
+#[cfg(feature = "forge-token-api")]
+impl Arm64RdmToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl Arm64RdmToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Arm64RdmToken {
+    /// Extract a NeonToken — guaranteed because NEON+RDM implies NEON.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn neon(self) -> NeonToken {
+        unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+impl Arm64RdmToken {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "rdm",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "rdm",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            ARM64_RDM_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            ARM64_RDM_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "rdm",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "rdm",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            Ok(ARM64_RDM_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+#[cfg(not(all(
+    target_feature = "neon",
+    target_feature = "rdm",
+    not(feature = "testable_dispatch")
+)))]
+#[cold]
+#[inline(never)]
+#[allow(deprecated)]
+fn arm64_rdm_detect() -> Option<Arm64RdmToken> {
+    let available =
+        crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("rdm");
+    ARM64_RDM_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+    if available {
+        Some(unsafe { Arm64RdmToken::forge_token_dangerously() })
+    } else {
+        None
+    }
+}
+
 /// Proof that the Arm64-v2 feature set is available.
 ///
 /// Arm64-v2 is archmage's second ARM tier, covering: NEON, CRC, RDM, DotProd,
@@ -909,6 +1126,14 @@ impl Arm64V2Token {
 }
 
 impl Arm64V2Token {
+    /// Extract a Arm64RdmToken — guaranteed because Arm64-v2 implies NEON+RDM.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn arm_rdm(self) -> Arm64RdmToken {
+        unsafe { Arm64RdmToken::forge_token_dangerously() }
+    }
     /// Extract a NeonAesToken — guaranteed because Arm64-v2 implies NEON+AES.
     ///
     /// Zero-cost: compiles away entirely.
@@ -1201,6 +1426,14 @@ impl Arm64V3Token {
 }
 
 impl Arm64V3Token {
+    /// Extract a Arm64RdmToken — guaranteed because Arm64-v3 implies NEON+RDM.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn arm_rdm(self) -> Arm64RdmToken {
+        unsafe { Arm64RdmToken::forge_token_dangerously() }
+    }
     /// Extract a Arm64V2Token — guaranteed because Arm64-v3 implies Arm64-v2.
     ///
     /// Zero-cost: compiles away entirely.
@@ -1388,6 +1621,227 @@ fn arm64_v3_detect() -> Option<Arm64V3Token> {
     }
 }
 
+/// **Experimental.** Proof that NEON + SVE + SVE2 is available.
+///
+/// SVE2 (Armv9.0-A) adds variable-width SIMD on top of NEON, enabling
+/// predicated execution, gather/scatter, and 128–2048-bit vector widths.
+///
+/// Detection works on stable Rust today (stdarch handles `sve`/`sve2`).
+/// Executing SVE intrinsics from Rust currently requires nightly + the
+/// `stdarch_aarch64_sve` feature gate, and `repr(scalable)` types (RFC 3838)
+/// are not yet accepted — so direct use is limited to inline asm or hand-
+/// written target-feature functions until the type-system work lands.
+///
+/// Available on: Cobalt 100 (Azure / GH `windows-11-arm` and `ubuntu-24.04-arm`
+/// runners), Neoverse N2/V2, Graviton 3/4. **Not** available on Apple
+/// Silicon — Apple has not adopted SVE on any shipping core.
+///
+/// This token is shipped as a research preview; treat it as unstable until
+/// upstream Rust SVE support stabilizes.
+#[derive(Clone, Copy, Debug)]
+pub struct Arm64Sve2Token {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for Arm64Sve2Token {}
+
+impl SimdToken for Arm64Sve2Token {
+    const NAME: &'static str = "Arm64 SVE2";
+    const TARGET_FEATURES: &'static str = "neon,sve,sve2";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+sve,+sve2";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-sve,-sve2";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "sve",
+            target_feature = "sve2",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "sve",
+            target_feature = "sve2",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            None
+        }
+    }
+
+    #[allow(deprecated)]
+    #[inline(always)]
+    fn summon() -> Option<Self> {
+        // Compile-time fast path (suppressed by testable_dispatch)
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "sve",
+            target_feature = "sve2",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            Some(unsafe { Self::forge_token_dangerously() })
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "sve",
+            target_feature = "sve2",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            match ARM64_SVE2_CACHE.load(Ordering::Relaxed) {
+                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                1 => None,
+                _ => arm64_sve2_detect(),
+            }
+        }
+    }
+}
+
+#[cfg(feature = "forge-token-api")]
+impl Arm64Sve2Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+#[cfg(not(feature = "forge-token-api"))]
+impl Arm64Sve2Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available. Using a forged token
+    /// when the feature is unavailable causes undefined behavior.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Arm64Sve2Token {
+    /// Extract a NeonToken — guaranteed because Arm64 SVE2 implies NEON.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[allow(deprecated)]
+    #[inline(always)]
+    pub fn neon(self) -> NeonToken {
+        unsafe { NeonToken::forge_token_dangerously() }
+    }
+}
+
+impl Arm64Sve2Token {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "sve",
+            target_feature = "sve2",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "sve",
+            target_feature = "sve2",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            ARM64_SVE2_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            ARM64_SVE2_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "neon",
+            target_feature = "sve",
+            target_feature = "sve2",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "neon",
+            target_feature = "sve",
+            target_feature = "sve2",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            Ok(ARM64_SVE2_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+#[cfg(not(all(
+    target_feature = "neon",
+    target_feature = "sve",
+    target_feature = "sve2",
+    not(feature = "testable_dispatch")
+)))]
+#[cold]
+#[inline(never)]
+#[allow(deprecated)]
+fn arm64_sve2_detect() -> Option<Arm64Sve2Token> {
+    let available = crate::is_aarch64_feature_available!("neon")
+        && crate::is_aarch64_feature_available!("sve")
+        && crate::is_aarch64_feature_available!("sve2");
+    ARM64_SVE2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
+    if available {
+        Some(unsafe { Arm64Sve2Token::forge_token_dangerously() })
+    } else {
+        None
+    }
+}
+
 /// Type alias for [`NeonToken`].
 pub type Arm64 = NeonToken;
 
@@ -1411,6 +1865,11 @@ impl NeonCrcToken {
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x5C2B1B4E;
 }
 
+impl Arm64RdmToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x73C19081;
+}
+
 impl Arm64V2Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB0231590;
@@ -1419,6 +1878,11 @@ impl Arm64V2Token {
 impl Arm64V3Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB2F6E2D5;
+}
+
+impl Arm64Sve2Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0xCEB5418E;
 }
 
 #[allow(deprecated)]
@@ -1430,9 +1894,15 @@ impl Has128BitSimd for NeonSha3Token {}
 #[allow(deprecated)]
 impl Has128BitSimd for NeonCrcToken {}
 #[allow(deprecated)]
+impl Has128BitSimd for Arm64RdmToken {}
+#[allow(deprecated)]
 impl Has128BitSimd for Arm64V2Token {}
 #[allow(deprecated)]
 impl Has128BitSimd for Arm64V3Token {}
+#[allow(deprecated)]
+impl Has128BitSimd for Arm64Sve2Token {}
+impl HasArm64Rdm for Arm64RdmToken {}
+impl HasArm64Sve2 for Arm64Sve2Token {}
 impl HasArm64V2 for Arm64V2Token {}
 impl HasArm64V2 for Arm64V3Token {}
 impl HasArm64V3 for Arm64V3Token {}
@@ -1440,8 +1910,10 @@ impl HasNeon for NeonToken {}
 impl HasNeon for NeonAesToken {}
 impl HasNeon for NeonSha3Token {}
 impl HasNeon for NeonCrcToken {}
+impl HasNeon for Arm64RdmToken {}
 impl HasNeon for Arm64V2Token {}
 impl HasNeon for Arm64V3Token {}
+impl HasNeon for Arm64Sve2Token {}
 impl HasNeonAes for NeonAesToken {}
 impl HasNeonAes for Arm64V2Token {}
 impl HasNeonAes for Arm64V3Token {}

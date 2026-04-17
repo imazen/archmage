@@ -54,12 +54,26 @@ testable_dispatch = []
 # Without this, it's pub(crate) only. Needed for testing token infrastructure
 # from external crates. The method is unsafe and deprecated — prefer summon().
 forge-token-api = []
+# **Experimental.** On Windows ARM64, route runtime feature detection through
+# the `winarm-cpufeatures` crate (registry-backed `ID_AA64*_EL1` decode +
+# `IsProcessorFeaturePresent`) instead of stdarch alone. Closes the gap
+# where `is_aarch64_feature_detected!` returns false for ~30 features that
+# are physically present on Cobalt 100 / Snapdragon X / etc. but unreachable
+# via Microsoft's `IsProcessorFeaturePresent` constants. No effect on
+# non-Windows-ARM targets.
+winarm-cpufeatures = ["dep:winarm-cpufeatures"]
 
 [dependencies]
 # Proc-macro crate for #[arcane], #[rite], #[autoversion], incant!, etc.
 archmage-macros = { version = "0.9.20", path = "archmage-macros" }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
 safe_unaligned_simd = { version = "0.2.5" }
+
+# Optional: Windows-on-ARM AArch64 detection extension (see `winarm-cpufeatures`
+# feature flag above). Only pulled in when explicitly enabled.
+[target.'cfg(all(target_os = "windows", target_arch = "aarch64"))'.dependencies]
+# Git dep until v0.1.0 lands on crates.io.
+winarm-cpufeatures = { git = "https://github.com/imazen/winarm-cpufeatures", optional = true }
 
 # Dev dependencies that don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

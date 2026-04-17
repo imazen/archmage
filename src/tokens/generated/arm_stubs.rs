@@ -4,7 +4,10 @@
 
 use crate::tokens::SimdToken;
 #[allow(deprecated)]
-use crate::tokens::{Has128BitSimd, HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3};
+use crate::tokens::{
+    Has128BitSimd, HasArm64Rdm, HasArm64Sve2, HasArm64V2, HasArm64V3, HasNeon, HasNeonAes,
+    HasNeonSha3,
+};
 
 /// Stub for NEON token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
@@ -270,6 +273,72 @@ impl NeonCrcToken {
     }
 }
 
+/// Stub for NEON+RDM token (not available on this architecture).
+#[derive(Clone, Copy, Debug)]
+pub struct Arm64RdmToken {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for Arm64RdmToken {}
+
+impl SimdToken for Arm64RdmToken {
+    const NAME: &'static str = "NEON+RDM";
+    const TARGET_FEATURES: &'static str = "neon,rdm";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+rdm";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-rdm";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
+
+    #[inline]
+    fn summon() -> Option<Self> {
+        None // Not available on this architecture
+    }
+}
+
+#[cfg(feature = "forge-token-api")]
+impl Arm64RdmToken {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Arm64RdmToken {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
+        })
+    }
+}
+
 /// Stub for Arm64-v2 token (not available on this architecture).
 #[derive(Clone, Copy, Debug)]
 pub struct Arm64V2Token {
@@ -407,6 +476,72 @@ impl Arm64V3Token {
     }
 }
 
+/// Stub for Arm64 SVE2 token (not available on this architecture).
+#[derive(Clone, Copy, Debug)]
+pub struct Arm64Sve2Token {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for Arm64Sve2Token {}
+
+impl SimdToken for Arm64Sve2Token {
+    const NAME: &'static str = "Arm64 SVE2";
+    const TARGET_FEATURES: &'static str = "neon,sve,sve2";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+neon,+sve,+sve2";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-neon,-sve,-sve2";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
+
+    #[inline]
+    fn summon() -> Option<Self> {
+        None // Not available on this architecture
+    }
+}
+
+#[cfg(feature = "forge-token-api")]
+impl Arm64Sve2Token {
+    /// Create a token without any checks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee the CPU feature is available.
+    #[deprecated(
+        since = "0.5.0",
+        note = "Pass tokens through from summon() instead of forging"
+    )]
+    #[inline(always)]
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Arm64Sve2Token {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
+        })
+    }
+}
+
 /// Type alias for [`NeonToken`].
 pub type Arm64 = NeonToken;
 
@@ -430,6 +565,11 @@ impl NeonCrcToken {
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x5C2B1B4E;
 }
 
+impl Arm64RdmToken {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x73C19081;
+}
+
 impl Arm64V2Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB0231590;
@@ -438,6 +578,11 @@ impl Arm64V2Token {
 impl Arm64V3Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB2F6E2D5;
+}
+
+impl Arm64Sve2Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0xCEB5418E;
 }
 
 #[allow(deprecated)]
@@ -449,9 +594,15 @@ impl Has128BitSimd for NeonSha3Token {}
 #[allow(deprecated)]
 impl Has128BitSimd for NeonCrcToken {}
 #[allow(deprecated)]
+impl Has128BitSimd for Arm64RdmToken {}
+#[allow(deprecated)]
 impl Has128BitSimd for Arm64V2Token {}
 #[allow(deprecated)]
 impl Has128BitSimd for Arm64V3Token {}
+#[allow(deprecated)]
+impl Has128BitSimd for Arm64Sve2Token {}
+impl HasArm64Rdm for Arm64RdmToken {}
+impl HasArm64Sve2 for Arm64Sve2Token {}
 impl HasArm64V2 for Arm64V2Token {}
 impl HasArm64V2 for Arm64V3Token {}
 impl HasArm64V3 for Arm64V3Token {}
@@ -459,8 +610,10 @@ impl HasNeon for NeonToken {}
 impl HasNeon for NeonAesToken {}
 impl HasNeon for NeonSha3Token {}
 impl HasNeon for NeonCrcToken {}
+impl HasNeon for Arm64RdmToken {}
 impl HasNeon for Arm64V2Token {}
 impl HasNeon for Arm64V3Token {}
+impl HasNeon for Arm64Sve2Token {}
 impl HasNeonAes for NeonAesToken {}
 impl HasNeonAes for Arm64V2Token {}
 impl HasNeonAes for Arm64V3Token {}

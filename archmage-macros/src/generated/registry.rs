@@ -159,11 +159,13 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
         "NeonAesToken" => Some(&["neon", "aes"]),
         "NeonSha3Token" => Some(&["neon", "sha3"]),
         "NeonCrcToken" => Some(&["neon", "crc"]),
+        "Arm64RdmToken" => Some(&["neon", "rdm"]),
         "Arm64V2Token" => Some(&["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]),
         "Arm64V3Token" => Some(&[
             "neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm",
             "bf16",
         ]),
+        "Arm64Sve2Token" => Some(&["neon", "sve", "sve2"]),
         "Wasm128Token" => Some(&["simd128"]),
         "Wasm128RelaxedToken" => Some(&["simd128", "relaxed-simd"]),
         _ => None,
@@ -215,6 +217,8 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
         "HasNeon" => Some(&["neon"]),
         "HasNeonAes" => Some(&["neon", "aes"]),
         "HasNeonSha3" => Some(&["neon", "sha3"]),
+        "HasArm64Rdm" => Some(&["neon", "rdm"]),
+        "HasArm64Sve2" => Some(&["neon", "sve", "sve2"]),
         "HasArm64V2" => Some(&["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]),
         "HasArm64V3" => Some(&[
             "neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm",
@@ -374,11 +378,13 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
         "NeonAesToken" => Some(&["neon", "aes"]),
         "NeonSha3Token" => Some(&["neon", "sha3"]),
         "NeonCrcToken" => Some(&["neon", "crc"]),
+        "Arm64RdmToken" => Some(&["neon", "rdm"]),
         "Arm64V2Token" => Some(&["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]),
         "Arm64V3Token" => Some(&[
             "neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm",
             "bf16",
         ]),
+        "Arm64Sve2Token" => Some(&["neon", "sve", "sve2"]),
         "Wasm128Token" => Some(&["simd128"]),
         "Wasm128RelaxedToken" => Some(&["simd128", "relaxed-simd"]),
 
@@ -403,8 +409,10 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
         "NeonAesToken" => Some("aarch64"),
         "NeonSha3Token" => Some("aarch64"),
         "NeonCrcToken" => Some("aarch64"),
+        "Arm64RdmToken" => Some("aarch64"),
         "Arm64V2Token" => Some("aarch64"),
         "Arm64V3Token" => Some("aarch64"),
+        "Arm64Sve2Token" => Some("aarch64"),
         "Wasm128Token" => Some("wasm32"),
         "Wasm128RelaxedToken" => Some("wasm32"),
         _ => None,
@@ -429,8 +437,10 @@ pub(crate) fn token_to_magetypes_namespace(token_name: &str) -> Option<&'static 
         "NeonAesToken" => Some("neon"),
         "NeonSha3Token" => Some("neon"),
         "NeonCrcToken" => Some("neon"),
+        "Arm64RdmToken" => Some("neon"),
         "Arm64V2Token" => Some("neon"),
         "Arm64V3Token" => Some("neon"),
+        "Arm64Sve2Token" => Some("neon"),
         "Wasm128Token" => Some("wasm128"),
         "Wasm128RelaxedToken" => Some("wasm128"),
         _ => None,
@@ -451,6 +461,8 @@ pub(crate) fn trait_to_magetypes_namespace(trait_name: &str) -> Option<&'static 
         "HasNeon" => Some("neon"),
         "HasNeonAes" => Some("neon"),
         "HasNeonSha3" => Some("neon"),
+        "HasArm64Rdm" => Some("neon"),
+        "HasArm64Sve2" => Some("neon"),
         "HasArm64V2" => Some("neon"),
         "HasArm64V3" => Some("neon"),
 
@@ -467,8 +479,10 @@ pub(crate) fn trait_to_magetypes_namespace(trait_name: &str) -> Option<&'static 
         "NeonAesToken" => Some("neon"),
         "NeonSha3Token" => Some("neon"),
         "NeonCrcToken" => Some("neon"),
+        "Arm64RdmToken" => Some("neon"),
         "Arm64V2Token" => Some("neon"),
         "Arm64V3Token" => Some("neon"),
+        "Arm64Sve2Token" => Some("neon"),
         "Wasm128Token" => Some("wasm128"),
         "Wasm128RelaxedToken" => Some("wasm128"),
 
@@ -490,6 +504,8 @@ pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {
         "HasNeon" => Some("aarch64"),
         "HasNeonAes" => Some("aarch64"),
         "HasNeonSha3" => Some("aarch64"),
+        "HasArm64Rdm" => Some("aarch64"),
+        "HasArm64Sve2" => Some("aarch64"),
         "HasArm64V2" => Some("aarch64"),
         "HasArm64V3" => Some("aarch64"),
 
@@ -506,8 +522,10 @@ pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {
         "NeonAesToken" => Some("aarch64"),
         "NeonSha3Token" => Some("aarch64"),
         "NeonCrcToken" => Some("aarch64"),
+        "Arm64RdmToken" => Some("aarch64"),
         "Arm64V2Token" => Some("aarch64"),
         "Arm64V3Token" => Some("aarch64"),
+        "Arm64Sve2Token" => Some("aarch64"),
         "Wasm128Token" => Some("wasm32"),
         "Wasm128RelaxedToken" => Some("wasm32"),
 
@@ -537,8 +555,10 @@ pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {
         "neon_aes" => Some("NeonAesToken"),
         "neon_sha3" => Some("NeonSha3Token"),
         "neon_crc" => Some("NeonCrcToken"),
+        "arm_rdm" => Some("Arm64RdmToken"),
         "arm_v2" => Some("Arm64V2Token"),
         "arm_v3" => Some("Arm64V3Token"),
+        "arm_sve2" => Some("Arm64Sve2Token"),
         "wasm128" => Some("Wasm128Token"),
         "wasm128_relaxed" => Some("Wasm128RelaxedToken"),
         _ => None,
@@ -563,8 +583,10 @@ pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'stati
         "NeonAesToken" => Some("neon_aes"),
         "NeonSha3Token" => Some("neon_sha3"),
         "NeonCrcToken" => Some("neon_crc"),
+        "Arm64RdmToken" => Some("arm_rdm"),
         "Arm64V2Token" => Some("arm_v2"),
         "Arm64V3Token" => Some("arm_v3"),
+        "Arm64Sve2Token" => Some("arm_sve2"),
         "Wasm128Token" => Some("wasm128"),
         "Wasm128RelaxedToken" => Some("wasm128_relaxed"),
         _ => None,
@@ -594,11 +616,13 @@ pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
             | ("neon_aes", "neon")
             | ("neon_sha3", "neon")
             | ("neon_crc", "neon")
-            | ("arm_v2", "neon" | "neon_aes" | "neon_crc")
+            | ("arm_rdm", "neon")
+            | ("arm_v2", "arm_rdm" | "neon" | "neon_aes" | "neon_crc")
             | (
                 "arm_v3",
-                "arm_v2" | "neon" | "neon_aes" | "neon_crc" | "neon_sha3"
+                "arm_rdm" | "arm_v2" | "neon" | "neon_aes" | "neon_crc" | "neon_sha3"
             )
+            | ("arm_sve2", "neon")
             | ("wasm128_relaxed", "wasm128")
     )
 }
@@ -622,8 +646,10 @@ pub(crate) fn expected_tier_tag(token_name: &str) -> Option<u32> {
         "NeonAesToken" => Some(0x8C16863D),
         "NeonSha3Token" => Some(0x8215198F),
         "NeonCrcToken" => Some(0x5C2B1B4E),
+        "Arm64RdmToken" => Some(0x73C19081),
         "Arm64V2Token" => Some(0xB0231590),
         "Arm64V3Token" => Some(0xB2F6E2D5),
+        "Arm64Sve2Token" => Some(0xCEB5418E),
         "Wasm128Token" => Some(0x1E0DF26B),
         "Wasm128RelaxedToken" => Some(0x821D5452),
         _ => None,
@@ -652,8 +678,10 @@ pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
     "NeonAesToken",
     "NeonSha3Token",
     "NeonCrcToken",
+    "Arm64RdmToken",
     "Arm64V2Token",
     "Arm64V3Token",
+    "Arm64Sve2Token",
     "Wasm128Token",
     "Wasm128RelaxedToken",
 ];
@@ -669,6 +697,8 @@ pub(crate) const ALL_TRAIT_NAMES: &[&str] = &[
     "HasNeon",
     "HasNeonAes",
     "HasNeonSha3",
+    "HasArm64Rdm",
+    "HasArm64Sve2",
     "HasArm64V2",
     "HasArm64V3",
 ];

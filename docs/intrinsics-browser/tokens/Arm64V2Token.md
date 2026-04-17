@@ -3,7 +3,7 @@
 Proof that the Arm64-v2 feature set is available.
 
 **Architecture:** aarch64 | **Features:** neon, crc, rdm, dotprod, fp16, aes, sha2
-**Total intrinsics:** 481 (437 safe, 44 unsafe, 46 stable, 435 unstable/unknown)
+**Total intrinsics:** 445 (401 safe, 44 unsafe, 10 stable, 435 unstable/unknown)
 
 ## Usage
 
@@ -34,46 +34,10 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 
 ## All Intrinsics
 
-### Stable, Safe (46 intrinsics)
+### Stable, Safe (10 intrinsics)
 
 | Name | Description | Instruction | Timing (H/Z4) |
 |------|-------------|-------------|---------------|
-| `vqrdmlah_lane_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlah_lane_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlah_laneq_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlah_laneq_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlah_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlah_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahh_lane_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahh_laneq_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahh_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahq_lane_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahq_lane_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahq_laneq_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahq_laneq_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahq_s16` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahq_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahs_lane_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahs_laneq_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlahs_s32` | Signed saturating rounding doubling multiply accumulate retu... | sqrdmlah | — |
-| `vqrdmlsh_lane_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlsh_lane_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlsh_laneq_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlsh_laneq_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlsh_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlsh_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshh_lane_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshh_laneq_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshh_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshq_lane_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshq_lane_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshq_laneq_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshq_laneq_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshq_s16` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshq_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshs_lane_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshs_laneq_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
-| `vqrdmlshs_s32` | Signed saturating rounding doubling multiply subtract return... | sqrdmlsh | — |
 | `vsha1cq_u32` | SHA1 hash update accelerator, choose | sha1c | — |
 | `vsha1h_u32` | SHA1 fixed rotate | sha1h | — |
 | `vsha1mq_u32` | SHA1 hash update accelerator, majority | sha1m | — |

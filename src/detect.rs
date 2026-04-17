@@ -645,24 +645,56 @@ macro_rules! __impl_aarch64_apple_or_runtime_check {
 #[macro_export]
 macro_rules! __impl_aarch64_runtime_only_check {
     ($feature:tt) => {{
-        #[cfg(target_arch = "aarch64")]
+        // On Windows-on-ARM with the `winarm-cpufeatures` feature enabled,
+        // route through that crate's full detection path (registry-backed
+        // ID_AA64*_EL1 reads + IsProcessorFeaturePresent). This recovers
+        // ~30 features that stdarch's IPFP-only Windows backend cannot see.
+        #[cfg(all(
+            target_os = "windows",
+            target_arch = "aarch64",
+            feature = "winarm-cpufeatures",
+        ))]
         {
-            #[cfg(feature = "std")]
+            $crate::__winarm_cpufeatures_detected!($feature)
+        }
+        #[cfg(not(all(
+            target_os = "windows",
+            target_arch = "aarch64",
+            feature = "winarm-cpufeatures",
+        )))]
+        {
+            #[cfg(target_arch = "aarch64")]
             {
-                std::arch::is_aarch64_feature_detected!($feature)
+                #[cfg(feature = "std")]
+                {
+                    std::arch::is_aarch64_feature_detected!($feature)
+                }
+                #[cfg(not(feature = "std"))]
+                {
+                    // In no_std, we can't do runtime detection without std
+                    // Fall back to compile-time only
+                    false
+                }
             }
-            #[cfg(not(feature = "std"))]
+            #[cfg(not(target_arch = "aarch64"))]
             {
-                // In no_std, we can't do runtime detection without std
-                // Fall back to compile-time only
                 false
             }
         }
-        #[cfg(not(target_arch = "aarch64"))]
-        {
-            false
-        }
     }};
+}
+
+/// **Experimental.** Bridge to the `winarm-cpufeatures` crate. Only
+/// instantiated when the cargo feature is enabled on Windows-on-ARM.
+#[cfg(all(
+    target_os = "windows",
+    target_arch = "aarch64",
+    feature = "winarm-cpufeatures",
+))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __winarm_cpufeatures_detected {
+    ($feature:tt) => {{ winarm_cpufeatures::detected_full!($feature) }};
 }
 
 // ============================================================================

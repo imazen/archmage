@@ -54,6 +54,23 @@ pub trait HasNeonAes: HasNeon {}
 /// SHA3 extension is available on ARMv8.2-A and later.
 pub trait HasNeonSha3: HasNeon {}
 
+/// Marker trait for NEON + FEAT_RDM (ARMv8.1 Rounding Doubling Multiply).
+///
+/// Enables SQRDMULH/SQRDMLAH/SQRDMLSH. Mandatory in ARMv8.1-A; available
+/// on essentially all post-2017 ARM silicon.
+pub trait HasArm64Rdm: HasNeon {}
+
+/// **Experimental** marker trait for NEON + SVE + SVE2 (Armv9.0-A).
+///
+/// Detection is stable on Rust 1.85; emitting SVE intrinsics from Rust
+/// still requires nightly + `stdarch_aarch64_sve`, and scalable vector
+/// types (`repr(scalable)`) are not yet accepted (RFC 3838). Use inline
+/// asm or hand-written target-feature functions for now.
+///
+/// Available on Cobalt 100 / Neoverse N2/V2 / Graviton 3/4. Not on Apple
+/// Silicon.
+pub trait HasArm64Sve2: HasNeon {}
+
 /// Marker trait for Arm64-v2 level.
 ///
 /// Arm64-v2 includes: NEON, CRC, RDM, DotProd, FP16, AES, SHA2.

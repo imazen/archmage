@@ -352,8 +352,10 @@ fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
 | `_v3` | `X64V3Token` | x86_64 | + AVX2, FMA, BMI2 |
 | `_v4` | `X64V4Token` | x86_64 | + AVX-512 |
 | `_neon` | `NeonToken` | aarch64 | NEON |
+| `_arm_rdm` | `Arm64RdmToken` | aarch64 | + RDM (ARMv8.1 fixed-point) |
 | `_arm_v2` | `Arm64V2Token` | aarch64 | + CRC, RDM, DotProd, AES, SHA2 |
 | `_arm_v3` | `Arm64V3Token` | aarch64 | + SHA3, I8MM, BF16 |
+| `_arm_sve2` | `Arm64Sve2Token` | aarch64 | + SVE, SVE2 (**experimental**) |
 | `_wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
 | `_scalar` | `ScalarToken` | any | No SIMD (always available) |
 
@@ -511,6 +513,11 @@ For the full testing API, see the [testing docs](https://imazen.github.io/archma
 | `macros` | yes | No-op (macros are always available). Kept for backwards compatibility |
 | `avx512` | no | AVX-512 tokens (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) |
 | `testable_dispatch` | no | Makes token disabling work with `-Ctarget-cpu=native` |
+| `winarm-cpufeatures` | no | **Experimental.** On Windows-on-ARM64, route runtime feature detection through [`winarm-cpufeatures`](https://github.com/imazen/winarm-cpufeatures) so `Arm64V2Token` / `Arm64V3Token` / `NeonSha3Token` / `Arm64RdmToken` light up correctly on Cobalt 100 / Snapdragon X / etc., where Microsoft's `IsProcessorFeaturePresent` doesn't expose `rdm`, `bf16`, `i8mm`, `sha3`, `rcpc2`, `paca`, `pacg`, `flagm`, `dpb2`, `lse2`, and ~20 others. No effect on non-Windows-ARM targets. Until `winarm-cpufeatures` is on crates.io, depends on it via git. |
+
+### Experimental tokens
+
+- **`Arm64Sve2Token`** — detection works on stable Rust (stdarch handles `sve` / `sve2`), and `#[target_feature(enable = "sve")]` is stable on 1.85, so you can write SVE2 functions today with inline asm. **However:** stdarch's SVE intrinsics module is nightly-only behind `stdarch_aarch64_sve`, and scalable vector types (`repr(scalable)`, [RFC 3838](https://github.com/rust-lang/rfcs/pull/3838)) are not yet accepted. Treat this token as a research preview until upstream Rust SVE support stabilizes. Available on Cobalt 100, Neoverse N2/V2, Graviton 3/4. Not on Apple Silicon.
 
 ## Acknowledgments
 
