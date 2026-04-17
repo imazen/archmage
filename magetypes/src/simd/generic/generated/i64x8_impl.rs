@@ -124,10 +124,12 @@ impl<T: I64x8Backend> i64x8<T> {
     }
 
     /// Wrap a repr without requiring a token value.
-    /// Only usable within the `generic` module (for cross-type conversions).
+    /// Only usable within magetypes (for cross-type / cross-width
+    /// conversions where the token has already been proven by the
+    /// caller's wider-type context).
     #[inline(always)]
     #[allow(dead_code)]
-    pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
+    pub(crate) fn from_repr_unchecked(repr: T::Repr) -> Self {
         Self(repr, PhantomData)
     }
 
