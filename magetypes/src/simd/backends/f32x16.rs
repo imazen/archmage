@@ -131,13 +131,13 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
     /// require splat to be tokenless — incompatible with the
     /// soundness fix that gated splat on a token value.
     #[inline(always)]
-    fn rcp_approx(a: Self::Repr) -> Self::Repr {
+    fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
         a
     }
 
     /// Fast reciprocal square root approximation — see [`rcp_approx`].
     #[inline(always)]
-    fn rsqrt_approx(a: Self::Repr) -> Self::Repr {
+    fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
     }
 
@@ -166,13 +166,13 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
     /// Precise reciprocal — defaults to delegating to rcp_approx.
     /// Backends override with Newton-Raphson refinement.
     #[inline(always)]
-    fn recip(a: Self::Repr) -> Self::Repr {
-        Self::rcp_approx(a)
+    fn recip(self, a: Self::Repr) -> Self::Repr {
+        Self::rcp_approx(self, a)
     }
 
     /// Precise reciprocal square root — see [`recip`].
     #[inline(always)]
-    fn rsqrt(a: Self::Repr) -> Self::Repr {
-        Self::rsqrt_approx(a)
+    fn rsqrt(self, a: Self::Repr) -> Self::Repr {
+        Self::rsqrt_approx(self, a)
     }
 }

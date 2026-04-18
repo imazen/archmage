@@ -465,11 +465,11 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             /// require splat to be tokenless — incompatible with the
             /// soundness fix that gated splat on a token value.
             #[inline(always)]
-            fn rcp_approx(a: Self::Repr) -> Self::Repr {{ a }}
+            fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
             /// Fast reciprocal square root approximation — see [`rcp_approx`].
             #[inline(always)]
-            fn rsqrt_approx(a: Self::Repr) -> Self::Repr {{ a }}
+            fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
             // ====== Bitwise ======
 
@@ -496,11 +496,11 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             /// Precise reciprocal — defaults to delegating to rcp_approx.
             /// Backends override with Newton-Raphson refinement.
             #[inline(always)]
-            fn recip(a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(a) }}
+            fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
             /// Precise reciprocal square root — see [`recip`].
             #[inline(always)]
-            fn rsqrt(a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(a) }}
+            fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
         }}
     "#,
         name = ty.name(),
@@ -1302,18 +1302,18 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             }}
 
             #[inline(always)]
-            fn rcp_approx(a: {v3_repr}) -> {v3_repr} {{
+            fn rcp_approx(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::rcp_approx(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::rcp_approx(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::rcp_approx(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::rcp_approx(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn rsqrt_approx(a: {v3_repr}) -> {v3_repr} {{
+            fn rsqrt_approx(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::rsqrt_approx(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::rsqrt_approx(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::rsqrt_approx(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::rsqrt_approx(self, a[1]),
                 ]
             }}
         "#});
@@ -2116,7 +2116,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn rcp_approx(a: {inner}) -> {inner} {{
+            fn rcp_approx(self, a: {inner}) -> {inner} {{
                 unsafe {{
                     let approx = _mm512_rcp14_{s}(a);
                     // One Newton-Raphson iteration: x' = x * (2 - a*x)
@@ -2126,7 +2126,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn rsqrt_approx(a: {inner}) -> {inner} {{
+            fn rsqrt_approx(self, a: {inner}) -> {inner} {{
                 unsafe {{
                     let approx = _mm512_rsqrt14_{s}(a);
                     // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)

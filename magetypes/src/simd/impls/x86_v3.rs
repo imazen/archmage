@@ -196,13 +196,40 @@ impl F32x4Backend for archmage::X64V3Token {
     // ====== Approximations ======
 
     #[inline(always)]
-    fn rcp_approx(a: __m128) -> __m128 {
+    fn rcp_approx(self, a: __m128) -> __m128 {
         unsafe { _mm_rcp_ps(a) }
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: __m128) -> __m128 {
+    fn rsqrt_approx(self, a: __m128) -> __m128 {
         unsafe { _mm_rsqrt_ps(a) }
+    }
+
+    // Newton-Raphson refinement over the *_approx variants. Constants
+    // built via value-based intrinsic splat directly (no token needed for
+    // the splat; this impl block is gated on the relevant target feature).
+    #[inline(always)]
+    fn recip(self, a: __m128) -> __m128 {
+        let approx = <Self as F32x4Backend>::rcp_approx(self, a);
+        let two = unsafe { _mm_set1_ps(2.0) };
+        <Self as F32x4Backend>::mul(
+            approx,
+            <Self as F32x4Backend>::sub(two, <Self as F32x4Backend>::mul(a, approx)),
+        )
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: __m128) -> __m128 {
+        let approx = <Self as F32x4Backend>::rsqrt_approx(self, a);
+        let half = unsafe { _mm_set1_ps(0.5) };
+        let three = unsafe { _mm_set1_ps(3.0) };
+        <Self as F32x4Backend>::mul(
+            <Self as F32x4Backend>::mul(half, approx),
+            <Self as F32x4Backend>::sub(
+                three,
+                <Self as F32x4Backend>::mul(a, <Self as F32x4Backend>::mul(approx, approx)),
+            ),
+        )
     }
 
     // ====== Bitwise ======
@@ -430,13 +457,40 @@ impl F32x8Backend for archmage::X64V3Token {
     // ====== Approximations ======
 
     #[inline(always)]
-    fn rcp_approx(a: __m256) -> __m256 {
+    fn rcp_approx(self, a: __m256) -> __m256 {
         unsafe { _mm256_rcp_ps(a) }
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: __m256) -> __m256 {
+    fn rsqrt_approx(self, a: __m256) -> __m256 {
         unsafe { _mm256_rsqrt_ps(a) }
+    }
+
+    // Newton-Raphson refinement over the *_approx variants. Constants
+    // built via value-based intrinsic splat directly (no token needed for
+    // the splat; this impl block is gated on the relevant target feature).
+    #[inline(always)]
+    fn recip(self, a: __m256) -> __m256 {
+        let approx = <Self as F32x8Backend>::rcp_approx(self, a);
+        let two = unsafe { _mm256_set1_ps(2.0) };
+        <Self as F32x8Backend>::mul(
+            approx,
+            <Self as F32x8Backend>::sub(two, <Self as F32x8Backend>::mul(a, approx)),
+        )
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: __m256) -> __m256 {
+        let approx = <Self as F32x8Backend>::rsqrt_approx(self, a);
+        let half = unsafe { _mm256_set1_ps(0.5) };
+        let three = unsafe { _mm256_set1_ps(3.0) };
+        <Self as F32x8Backend>::mul(
+            <Self as F32x8Backend>::mul(half, approx),
+            <Self as F32x8Backend>::sub(
+                three,
+                <Self as F32x8Backend>::mul(a, <Self as F32x8Backend>::mul(approx, approx)),
+            ),
+        )
     }
 
     // ====== Bitwise ======
@@ -4352,18 +4406,18 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn rcp_approx(a: [__m256; 2]) -> [__m256; 2] {
+    fn rcp_approx(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::rcp_approx(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::rcp_approx(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::rcp_approx(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::rcp_approx(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: [__m256; 2]) -> [__m256; 2] {
+    fn rsqrt_approx(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::rsqrt_approx(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::rsqrt_approx(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::rsqrt_approx(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::rsqrt_approx(self, a[1]),
         ]
     }
 
@@ -4644,18 +4698,18 @@ impl F64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn rcp_approx(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn rcp_approx(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::rcp_approx(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::rcp_approx(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::rcp_approx(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::rcp_approx(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn rsqrt_approx(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(self, a[1]),
         ]
     }
 

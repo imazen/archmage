@@ -200,7 +200,7 @@ impl F32x16Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn rcp_approx(a: __m512) -> __m512 {
+    fn rcp_approx(self, a: __m512) -> __m512 {
         unsafe {
             let approx = _mm512_rcp14_ps(a);
             // One Newton-Raphson iteration: x' = x * (2 - a*x)
@@ -210,7 +210,7 @@ impl F32x16Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: __m512) -> __m512 {
+    fn rsqrt_approx(self, a: __m512) -> __m512 {
         unsafe {
             let approx = _mm512_rsqrt14_ps(a);
             // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
@@ -428,7 +428,7 @@ impl F64x8Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn rcp_approx(a: __m512d) -> __m512d {
+    fn rcp_approx(self, a: __m512d) -> __m512d {
         unsafe {
             let approx = _mm512_rcp14_pd(a);
             // One Newton-Raphson iteration: x' = x * (2 - a*x)
@@ -438,7 +438,7 @@ impl F64x8Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: __m512d) -> __m512d {
+    fn rsqrt_approx(self, a: __m512d) -> __m512d {
         unsafe {
             let approx = _mm512_rsqrt14_pd(a);
             // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
@@ -2244,7 +2244,7 @@ impl F32x16Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn rcp_approx(a: __m512) -> __m512 {
+    fn rcp_approx(self, a: __m512) -> __m512 {
         unsafe {
             let approx = _mm512_rcp14_ps(a);
             // One Newton-Raphson iteration: x' = x * (2 - a*x)
@@ -2254,7 +2254,7 @@ impl F32x16Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: __m512) -> __m512 {
+    fn rsqrt_approx(self, a: __m512) -> __m512 {
         unsafe {
             let approx = _mm512_rsqrt14_ps(a);
             // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
@@ -2472,7 +2472,7 @@ impl F64x8Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn rcp_approx(a: __m512d) -> __m512d {
+    fn rcp_approx(self, a: __m512d) -> __m512d {
         unsafe {
             let approx = _mm512_rcp14_pd(a);
             // One Newton-Raphson iteration: x' = x * (2 - a*x)
@@ -2482,7 +2482,7 @@ impl F64x8Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: __m512d) -> __m512d {
+    fn rsqrt_approx(self, a: __m512d) -> __m512d {
         unsafe {
             let approx = _mm512_rsqrt14_pd(a);
             // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)

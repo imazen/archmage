@@ -134,7 +134,7 @@ pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
     /// can no longer construct a `1.0` constant. New backends MUST
     /// override.
     #[inline(always)]
-    fn rcp_approx(a: Self::Repr) -> Self::Repr {
+    fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
         a
     }
 
@@ -142,7 +142,7 @@ pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
     ///
     /// See [`rcp_approx`] for default-body rationale.
     #[inline(always)]
-    fn rsqrt_approx(a: Self::Repr) -> Self::Repr {
+    fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
     }
 
@@ -172,13 +172,13 @@ pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
     /// (which itself defaults to identity). Backends override with
     /// Newton-Raphson refinement using a native splat for the constant.
     #[inline(always)]
-    fn recip(a: Self::Repr) -> Self::Repr {
-        Self::rcp_approx(a)
+    fn recip(self, a: Self::Repr) -> Self::Repr {
+        Self::rcp_approx(self, a)
     }
 
     /// Precise reciprocal square root — see [`recip`] for rationale.
     #[inline(always)]
-    fn rsqrt(a: Self::Repr) -> Self::Repr {
-        Self::rsqrt_approx(a)
+    fn rsqrt(self, a: Self::Repr) -> Self::Repr {
+        Self::rsqrt_approx(self, a)
     }
 }

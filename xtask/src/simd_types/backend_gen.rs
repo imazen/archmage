@@ -762,13 +762,13 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             /// can no longer construct a `1.0` constant. New backends MUST
             /// override.
             #[inline(always)]
-            fn rcp_approx(a: Self::Repr) -> Self::Repr {{ a }}
+            fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
             /// Fast reciprocal square root approximation (~12-bit precision where available).
             ///
             /// See [`rcp_approx`] for default-body rationale.
             #[inline(always)]
-            fn rsqrt_approx(a: Self::Repr) -> Self::Repr {{ a }}
+            fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
             // ====== Bitwise ======
 
@@ -796,11 +796,11 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             /// (which itself defaults to identity). Backends override with
             /// Newton-Raphson refinement using a native splat for the constant.
             #[inline(always)]
-            fn recip(a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(a) }}
+            fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
             /// Precise reciprocal square root — see [`recip`] for rationale.
             #[inline(always)]
-            fn rsqrt(a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(a) }}
+            fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
         }}
     "#,
         name = ty.name(),
@@ -1149,13 +1149,34 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     let approx_section = if !rcp_fn.is_empty() {
         formatdoc! {r#"
             #[inline(always)]
-            fn rcp_approx(a: {inner}) -> {inner} {{
+            fn rcp_approx(self, a: {inner}) -> {inner} {{
                 unsafe {{ {p}_{rcp_fn}_{s}(a) }}
             }}
 
             #[inline(always)]
-            fn rsqrt_approx(a: {inner}) -> {inner} {{
+            fn rsqrt_approx(self, a: {inner}) -> {inner} {{
                 unsafe {{ {p}_{rsqrt_fn}_{s}(a) }}
+            }}
+
+            // Newton-Raphson refinement over the *_approx variants. Constants
+            // built via value-based intrinsic splat directly (no token needed for
+            // the splat; this impl block is gated on the relevant target feature).
+            #[inline(always)]
+            fn recip(self, a: {inner}) -> {inner} {{
+                let approx = <Self as {trait_name}>::rcp_approx(self, a);
+                let two = unsafe {{ {p}_set1_{s}(2.0) }};
+                <Self as {trait_name}>::mul(approx, <Self as {trait_name}>::sub(two, <Self as {trait_name}>::mul(a, approx)))
+            }}
+
+            #[inline(always)]
+            fn rsqrt(self, a: {inner}) -> {inner} {{
+                let approx = <Self as {trait_name}>::rsqrt_approx(self, a);
+                let half = unsafe {{ {p}_set1_{s}(0.5) }};
+                let three = unsafe {{ {p}_set1_{s}(3.0) }};
+                <Self as {trait_name}>::mul(
+                    <Self as {trait_name}>::mul(half, approx),
+                    <Self as {trait_name}>::sub(three, <Self as {trait_name}>::mul(a, <Self as {trait_name}>::mul(approx, approx))),
+                )
             }}
         "#}
     } else {
@@ -1910,12 +1931,12 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             // ====== Approximations ======
 
             #[inline(always)]
-            fn rcp_approx(a: {array}) -> {array} {{
+            fn rcp_approx(self, a: {array}) -> {array} {{
                 {rcp_lanes}
             }}
 
             #[inline(always)]
-            fn rsqrt_approx(a: {array}) -> {array} {{
+            fn rsqrt_approx(self, a: {array}) -> {array} {{
                 let mut r = [{zero_lit}; {lanes}];
                 for i in 0..{lanes} {{
                     r[i] = 1.0 / {elem}_sqrt(a[i]);
@@ -1926,13 +1947,13 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
             // Use FQS because ScalarToken implements multiple backend traits.
             #[inline(always)]
-            fn recip(a: {array}) -> {array} {{
-                <archmage::ScalarToken as {trait_name}>::rcp_approx(a)
+            fn recip(self, a: {array}) -> {array} {{
+                <archmage::ScalarToken as {trait_name}>::rcp_approx(archmage::ScalarToken, a)
             }}
 
             #[inline(always)]
-            fn rsqrt(a: {array}) -> {array} {{
-                <archmage::ScalarToken as {trait_name}>::rsqrt_approx(a)
+            fn rsqrt(self, a: {array}) -> {array} {{
+                <archmage::ScalarToken as {trait_name}>::rsqrt_approx(archmage::ScalarToken, a)
             }}
 
             // ====== Bitwise ======
@@ -2315,12 +2336,12 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             // ====== Approximations ======
 
             #[inline(always)]
-            fn rcp_approx(a: {repr}) -> {repr} {{
+            fn rcp_approx(self, a: {repr}) -> {repr} {{
                 {rcp_body}
             }}
 
             #[inline(always)]
-            fn rsqrt_approx(a: {repr}) -> {repr} {{
+            fn rsqrt_approx(self, a: {repr}) -> {repr} {{
                 {rsqrt_body}
             }}
 
@@ -2550,21 +2571,21 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             }}
 
             #[inline(always)]
-            fn rcp_approx(a: {repr}) -> {repr} {{ unsafe {{ vrecpeq_{ns}(a) }} }}
+            fn rcp_approx(self, a: {repr}) -> {repr} {{ unsafe {{ vrecpeq_{ns}(a) }} }}
             #[inline(always)]
-            fn rsqrt_approx(a: {repr}) -> {repr} {{ unsafe {{ vrsqrteq_{ns}(a) }} }}
+            fn rsqrt_approx(self, a: {repr}) -> {repr} {{ unsafe {{ vrsqrteq_{ns}(a) }} }}
             // Newton-Raphson refinement over the *_approx variants. Constants
             // built via vdupq_n_{ns} directly (NEON intrinsic; this impl block
             // is gated on the NEON target feature already).
             #[inline(always)]
-            fn recip(a: {repr}) -> {repr} {{
-                let approx = Self::rcp_approx(a);
+            fn recip(self, a: {repr}) -> {repr} {{
+                let approx = Self::rcp_approx(self, a);
                 let two = unsafe {{ vdupq_n_{ns}(2.0) }};
                 Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
             }}
             #[inline(always)]
-            fn rsqrt(a: {repr}) -> {repr} {{
-                let approx = Self::rsqrt_approx(a);
+            fn rsqrt(self, a: {repr}) -> {repr} {{
+                let approx = Self::rsqrt_approx(self, a);
                 let half = unsafe {{ vdupq_n_{ns}(0.5) }};
                 let three = unsafe {{ vdupq_n_{ns}(3.0) }};
                 Self::mul(
@@ -2793,26 +2814,26 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             }}
 
             #[inline(always)]
-            fn rcp_approx(a: {repr}) -> {repr} {{
+            fn rcp_approx(self, a: {repr}) -> {repr} {{
                 let one = {wp}_splat(1.0);
                 [{rcp_lanes}]
             }}
 
             #[inline(always)]
-            fn rsqrt_approx(a: {repr}) -> {repr} {{
+            fn rsqrt_approx(self, a: {repr}) -> {repr} {{
                 let one = {wp}_splat(1.0);
                 [{rsqrt_lanes}]
             }}
 
             // Override defaults: WASM has no fast approximation, already full precision
             #[inline(always)]
-            fn recip(a: {repr}) -> {repr} {{
-                <archmage::Wasm128Token as {trait_name}>::rcp_approx(a)
+            fn recip(self, a: {repr}) -> {repr} {{
+                <archmage::Wasm128Token as {trait_name}>::rcp_approx(archmage::Wasm128Token, a)
             }}
 
             #[inline(always)]
-            fn rsqrt(a: {repr}) -> {repr} {{
-                <archmage::Wasm128Token as {trait_name}>::rsqrt_approx(a)
+            fn rsqrt(self, a: {repr}) -> {repr} {{
+                <archmage::Wasm128Token as {trait_name}>::rsqrt_approx(archmage::Wasm128Token, a)
             }}
 
             #[inline(always)]
@@ -2984,13 +3005,13 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             }}
 
             #[inline(always)]
-            fn rcp_approx(a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), a) }}
+            fn rcp_approx(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), a) }}
             #[inline(always)]
-            fn rsqrt_approx(a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), {wp}_sqrt(a)) }}
+            fn rsqrt_approx(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), {wp}_sqrt(a)) }}
             #[inline(always)]
-            fn recip(a: v128) -> v128 {{ <archmage::Wasm128Token as {trait_name}>::rcp_approx(a) }}
+            fn recip(self, a: v128) -> v128 {{ <archmage::Wasm128Token as {trait_name}>::rcp_approx(archmage::Wasm128Token, a) }}
             #[inline(always)]
-            fn rsqrt(a: v128) -> v128 {{ <archmage::Wasm128Token as {trait_name}>::rsqrt_approx(a) }}
+            fn rsqrt(self, a: v128) -> v128 {{ <archmage::Wasm128Token as {trait_name}>::rsqrt_approx(archmage::Wasm128Token, a) }}
 
             #[inline(always)]
             fn not(a: v128) -> v128 {{ v128_not(a) }}

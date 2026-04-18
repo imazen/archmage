@@ -160,25 +160,25 @@ impl F32x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn rcp_approx(a: float32x4_t) -> float32x4_t {
+    fn rcp_approx(self, a: float32x4_t) -> float32x4_t {
         unsafe { vrecpeq_f32(a) }
     }
     #[inline(always)]
-    fn rsqrt_approx(a: float32x4_t) -> float32x4_t {
+    fn rsqrt_approx(self, a: float32x4_t) -> float32x4_t {
         unsafe { vrsqrteq_f32(a) }
     }
     // Newton-Raphson refinement over the *_approx variants. Constants
     // built via vdupq_n_f32 directly (NEON intrinsic; this impl block
     // is gated on the NEON target feature already).
     #[inline(always)]
-    fn recip(a: float32x4_t) -> float32x4_t {
-        let approx = Self::rcp_approx(a);
+    fn recip(self, a: float32x4_t) -> float32x4_t {
+        let approx = Self::rcp_approx(self, a);
         let two = unsafe { vdupq_n_f32(2.0) };
         Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
     }
     #[inline(always)]
-    fn rsqrt(a: float32x4_t) -> float32x4_t {
-        let approx = Self::rsqrt_approx(a);
+    fn rsqrt(self, a: float32x4_t) -> float32x4_t {
+        let approx = Self::rsqrt_approx(self, a);
         let half = unsafe { vdupq_n_f32(0.5) };
         let three = unsafe { vdupq_n_f32(3.0) };
         Self::mul(
@@ -464,12 +464,12 @@ impl F32x8Backend for archmage::NeonToken {
     // ====== Approximations ======
 
     #[inline(always)]
-    fn rcp_approx(a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+    fn rcp_approx(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
         unsafe { [vrecpeq_f32(a[0]), vrecpeq_f32(a[1])] }
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+    fn rsqrt_approx(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
         unsafe { [vrsqrteq_f32(a[0]), vrsqrteq_f32(a[1])] }
     }
 
@@ -684,25 +684,25 @@ impl F64x2Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn rcp_approx(a: float64x2_t) -> float64x2_t {
+    fn rcp_approx(self, a: float64x2_t) -> float64x2_t {
         unsafe { vrecpeq_f64(a) }
     }
     #[inline(always)]
-    fn rsqrt_approx(a: float64x2_t) -> float64x2_t {
+    fn rsqrt_approx(self, a: float64x2_t) -> float64x2_t {
         unsafe { vrsqrteq_f64(a) }
     }
     // Newton-Raphson refinement over the *_approx variants. Constants
     // built via vdupq_n_f64 directly (NEON intrinsic; this impl block
     // is gated on the NEON target feature already).
     #[inline(always)]
-    fn recip(a: float64x2_t) -> float64x2_t {
-        let approx = Self::rcp_approx(a);
+    fn recip(self, a: float64x2_t) -> float64x2_t {
+        let approx = Self::rcp_approx(self, a);
         let two = unsafe { vdupq_n_f64(2.0) };
         Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
     }
     #[inline(always)]
-    fn rsqrt(a: float64x2_t) -> float64x2_t {
-        let approx = Self::rsqrt_approx(a);
+    fn rsqrt(self, a: float64x2_t) -> float64x2_t {
+        let approx = Self::rsqrt_approx(self, a);
         let half = unsafe { vdupq_n_f64(0.5) };
         let three = unsafe { vdupq_n_f64(3.0) };
         Self::mul(
@@ -985,12 +985,12 @@ impl F64x4Backend for archmage::NeonToken {
     // ====== Approximations ======
 
     #[inline(always)]
-    fn rcp_approx(a: [float64x2_t; 2]) -> [float64x2_t; 2] {
+    fn rcp_approx(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe { [vrecpeq_f64(a[0]), vrecpeq_f64(a[1])] }
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: [float64x2_t; 2]) -> [float64x2_t; 2] {
+    fn rsqrt_approx(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe { [vrsqrteq_f64(a[0]), vrsqrteq_f64(a[1])] }
     }
 

@@ -271,25 +271,25 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Fast reciprocal approximation (~12-bit precision).
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
-        Self(T::rcp_approx(self.0), self.1)
+        Self(T::rcp_approx(self.1, self.0), self.1)
     }
 
     /// Precise reciprocal (Newton-Raphson refined).
     #[inline(always)]
     pub fn recip(self) -> Self {
-        Self(T::recip(self.0), self.1)
+        Self(T::recip(self.1, self.0), self.1)
     }
 
     /// Fast reciprocal square root approximation (~12-bit precision).
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
-        Self(T::rsqrt_approx(self.0), self.1)
+        Self(T::rsqrt_approx(self.1, self.0), self.1)
     }
 
     /// Precise reciprocal square root (Newton-Raphson refined).
     #[inline(always)]
     pub fn rsqrt(self) -> Self {
-        Self(T::rsqrt(self.0), self.1)
+        Self(T::rsqrt(self.1, self.0), self.1)
     }
 
     // ====== Bitwise ======

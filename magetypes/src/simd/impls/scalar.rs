@@ -327,12 +327,12 @@ impl F32x4Backend for archmage::ScalarToken {
     // ====== Approximations ======
 
     #[inline(always)]
-    fn rcp_approx(a: [f32; 4]) -> [f32; 4] {
+    fn rcp_approx(self, a: [f32; 4]) -> [f32; 4] {
         [1.0 / a[0], 1.0 / a[1], 1.0 / a[2], 1.0 / a[3]]
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: [f32; 4]) -> [f32; 4] {
+    fn rsqrt_approx(self, a: [f32; 4]) -> [f32; 4] {
         let mut r = [0.0f32; 4];
         for i in 0..4 {
             r[i] = 1.0 / f32_sqrt(a[i]);
@@ -343,13 +343,13 @@ impl F32x4Backend for archmage::ScalarToken {
     // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
     // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
-    fn recip(a: [f32; 4]) -> [f32; 4] {
-        <archmage::ScalarToken as F32x4Backend>::rcp_approx(a)
+    fn recip(self, a: [f32; 4]) -> [f32; 4] {
+        <archmage::ScalarToken as F32x4Backend>::rcp_approx(archmage::ScalarToken, a)
     }
 
     #[inline(always)]
-    fn rsqrt(a: [f32; 4]) -> [f32; 4] {
-        <archmage::ScalarToken as F32x4Backend>::rsqrt_approx(a)
+    fn rsqrt(self, a: [f32; 4]) -> [f32; 4] {
+        <archmage::ScalarToken as F32x4Backend>::rsqrt_approx(archmage::ScalarToken, a)
     }
 
     // ====== Bitwise ======
@@ -723,7 +723,7 @@ impl F32x8Backend for archmage::ScalarToken {
     // ====== Approximations ======
 
     #[inline(always)]
-    fn rcp_approx(a: [f32; 8]) -> [f32; 8] {
+    fn rcp_approx(self, a: [f32; 8]) -> [f32; 8] {
         [
             1.0 / a[0],
             1.0 / a[1],
@@ -737,7 +737,7 @@ impl F32x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: [f32; 8]) -> [f32; 8] {
+    fn rsqrt_approx(self, a: [f32; 8]) -> [f32; 8] {
         let mut r = [0.0f32; 8];
         for i in 0..8 {
             r[i] = 1.0 / f32_sqrt(a[i]);
@@ -748,13 +748,13 @@ impl F32x8Backend for archmage::ScalarToken {
     // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
     // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
-    fn recip(a: [f32; 8]) -> [f32; 8] {
-        <archmage::ScalarToken as F32x8Backend>::rcp_approx(a)
+    fn recip(self, a: [f32; 8]) -> [f32; 8] {
+        <archmage::ScalarToken as F32x8Backend>::rcp_approx(archmage::ScalarToken, a)
     }
 
     #[inline(always)]
-    fn rsqrt(a: [f32; 8]) -> [f32; 8] {
-        <archmage::ScalarToken as F32x8Backend>::rsqrt_approx(a)
+    fn rsqrt(self, a: [f32; 8]) -> [f32; 8] {
+        <archmage::ScalarToken as F32x8Backend>::rsqrt_approx(archmage::ScalarToken, a)
     }
 
     // ====== Bitwise ======
@@ -1066,12 +1066,12 @@ impl F64x2Backend for archmage::ScalarToken {
     // ====== Approximations ======
 
     #[inline(always)]
-    fn rcp_approx(a: [f64; 2]) -> [f64; 2] {
+    fn rcp_approx(self, a: [f64; 2]) -> [f64; 2] {
         [1.0 / a[0], 1.0 / a[1]]
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: [f64; 2]) -> [f64; 2] {
+    fn rsqrt_approx(self, a: [f64; 2]) -> [f64; 2] {
         let mut r = [0.0f64; 2];
         for i in 0..2 {
             r[i] = 1.0 / f64_sqrt(a[i]);
@@ -1082,13 +1082,13 @@ impl F64x2Backend for archmage::ScalarToken {
     // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
     // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
-    fn recip(a: [f64; 2]) -> [f64; 2] {
-        <archmage::ScalarToken as F64x2Backend>::rcp_approx(a)
+    fn recip(self, a: [f64; 2]) -> [f64; 2] {
+        <archmage::ScalarToken as F64x2Backend>::rcp_approx(archmage::ScalarToken, a)
     }
 
     #[inline(always)]
-    fn rsqrt(a: [f64; 2]) -> [f64; 2] {
-        <archmage::ScalarToken as F64x2Backend>::rsqrt_approx(a)
+    fn rsqrt(self, a: [f64; 2]) -> [f64; 2] {
+        <archmage::ScalarToken as F64x2Backend>::rsqrt_approx(archmage::ScalarToken, a)
     }
 
     // ====== Bitwise ======
@@ -1398,12 +1398,12 @@ impl F64x4Backend for archmage::ScalarToken {
     // ====== Approximations ======
 
     #[inline(always)]
-    fn rcp_approx(a: [f64; 4]) -> [f64; 4] {
+    fn rcp_approx(self, a: [f64; 4]) -> [f64; 4] {
         [1.0 / a[0], 1.0 / a[1], 1.0 / a[2], 1.0 / a[3]]
     }
 
     #[inline(always)]
-    fn rsqrt_approx(a: [f64; 4]) -> [f64; 4] {
+    fn rsqrt_approx(self, a: [f64; 4]) -> [f64; 4] {
         let mut r = [0.0f64; 4];
         for i in 0..4 {
             r[i] = 1.0 / f64_sqrt(a[i]);
@@ -1414,13 +1414,13 @@ impl F64x4Backend for archmage::ScalarToken {
     // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
     // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
-    fn recip(a: [f64; 4]) -> [f64; 4] {
-        <archmage::ScalarToken as F64x4Backend>::rcp_approx(a)
+    fn recip(self, a: [f64; 4]) -> [f64; 4] {
+        <archmage::ScalarToken as F64x4Backend>::rcp_approx(archmage::ScalarToken, a)
     }
 
     #[inline(always)]
-    fn rsqrt(a: [f64; 4]) -> [f64; 4] {
-        <archmage::ScalarToken as F64x4Backend>::rsqrt_approx(a)
+    fn rsqrt(self, a: [f64; 4]) -> [f64; 4] {
+        <archmage::ScalarToken as F64x4Backend>::rsqrt_approx(archmage::ScalarToken, a)
     }
 
     // ====== Bitwise ======
