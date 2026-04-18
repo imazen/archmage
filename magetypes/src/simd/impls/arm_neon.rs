@@ -60,7 +60,7 @@ impl F32x4Backend for archmage::NeonToken {
         unsafe { vdivq_f32(a, b) }
     }
     #[inline(always)]
-    fn neg(a: float32x4_t) -> float32x4_t {
+    fn neg(self, a: float32x4_t) -> float32x4_t {
         unsafe { vnegq_f32(a) }
     }
     #[inline(always)]
@@ -295,7 +295,7 @@ impl F32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+    fn neg(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
         unsafe { [vnegq_f32(a[0]), vnegq_f32(a[1])] }
     }
 
@@ -587,7 +587,7 @@ impl F64x2Backend for archmage::NeonToken {
         unsafe { vdivq_f64(a, b) }
     }
     #[inline(always)]
-    fn neg(a: float64x2_t) -> float64x2_t {
+    fn neg(self, a: float64x2_t) -> float64x2_t {
         unsafe { vnegq_f64(a) }
     }
     #[inline(always)]
@@ -819,7 +819,7 @@ impl F64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [float64x2_t; 2]) -> [float64x2_t; 2] {
+    fn neg(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe { [vnegq_f64(a[0]), vnegq_f64(a[1])] }
     }
 
@@ -1110,7 +1110,7 @@ impl I32x4Backend for archmage::NeonToken {
         unsafe { vmulq_s32(a, b) }
     }
     #[inline(always)]
-    fn neg(a: int32x4_t) -> int32x4_t {
+    fn neg(self, a: int32x4_t) -> int32x4_t {
         unsafe { vnegq_s32(a) }
     }
     #[inline(always)]
@@ -1281,7 +1281,7 @@ impl I32x8Backend for archmage::NeonToken {
         unsafe { [vmulq_s32(a[0], b[0]), vmulq_s32(a[1], b[1])] }
     }
     #[inline(always)]
-    fn neg(a: [int32x4_t; 2]) -> [int32x4_t; 2] {
+    fn neg(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
         unsafe { [vnegq_s32(a[0]), vnegq_s32(a[1])] }
     }
     #[inline(always)]
@@ -1814,7 +1814,7 @@ impl I64x2Backend for archmage::NeonToken {
         unsafe { vsubq_s64(a, b) }
     }
     #[inline(always)]
-    fn neg(a: int64x2_t) -> int64x2_t {
+    fn neg(self, a: int64x2_t) -> int64x2_t {
         unsafe { vnegq_s64(a) }
     }
     #[inline(always)]
@@ -1999,7 +1999,7 @@ impl I64x4Backend for archmage::NeonToken {
         unsafe { [vsubq_s64(a[0], b[0]), vsubq_s64(a[1], b[1])] }
     }
     #[inline(always)]
-    fn neg(a: [int64x2_t; 2]) -> [int64x2_t; 2] {
+    fn neg(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
         unsafe { [vnegq_s64(a[0]), vnegq_s64(a[1])] }
     }
     #[inline(always)]
@@ -2229,7 +2229,7 @@ impl I8x16Backend for archmage::NeonToken {
         unsafe { vsubq_s8(a, b) }
     }
     #[inline(always)]
-    fn neg(a: int8x16_t) -> int8x16_t {
+    fn neg(self, a: int8x16_t) -> int8x16_t {
         unsafe { vnegq_s8(a) }
     }
     #[inline(always)]
@@ -2399,7 +2399,7 @@ impl I8x32Backend for archmage::NeonToken {
         unsafe { [vsubq_s8(a[0], b[0]), vsubq_s8(a[1], b[1])] }
     }
     #[inline(always)]
-    fn neg(a: [int8x16_t; 2]) -> [int8x16_t; 2] {
+    fn neg(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
         unsafe { [vnegq_s8(a[0]), vnegq_s8(a[1])] }
     }
     #[inline(always)]
@@ -2913,7 +2913,7 @@ impl I16x8Backend for archmage::NeonToken {
         unsafe { vmulq_s16(a, b) }
     }
     #[inline(always)]
-    fn neg(a: int16x8_t) -> int16x8_t {
+    fn neg(self, a: int16x8_t) -> int16x8_t {
         unsafe { vnegq_s16(a) }
     }
     #[inline(always)]
@@ -3080,7 +3080,7 @@ impl I16x16Backend for archmage::NeonToken {
         unsafe { [vmulq_s16(a[0], b[0]), vmulq_s16(a[1], b[1])] }
     }
     #[inline(always)]
-    fn neg(a: [int16x8_t; 2]) -> [int16x8_t; 2] {
+    fn neg(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
         unsafe { [vnegq_s16(a[0]), vnegq_s16(a[1])] }
     }
     #[inline(always)]
@@ -4206,7 +4206,7 @@ impl F32x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [float32x4_t; 4]) -> [float32x4_t; 4] {
+    fn neg(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::neg(a[i]))
     }
 
@@ -4446,7 +4446,7 @@ impl F64x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [float64x2_t; 4]) -> [float64x2_t; 4] {
+    fn neg(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::neg(a[i]))
     }
 
@@ -4676,7 +4676,7 @@ impl I8x64Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [int8x16_t; 4]) -> [int8x16_t; 4] {
+    fn neg(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::neg(a[i]))
     }
 
@@ -4890,7 +4890,7 @@ impl U8x64Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
+    fn neg(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
         let z = <archmage::NeonToken as U8x16Backend>::zero();
         core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::sub(z, a[i]))
     }
@@ -5105,7 +5105,7 @@ impl I16x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [int16x8_t; 4]) -> [int16x8_t; 4] {
+    fn neg(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::neg(a[i]))
     }
 
@@ -5324,7 +5324,7 @@ impl U16x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
+    fn neg(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
         let z = <archmage::NeonToken as U16x8Backend>::zero();
         core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::sub(z, a[i]))
     }
@@ -5539,7 +5539,7 @@ impl I32x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [int32x4_t; 4]) -> [int32x4_t; 4] {
+    fn neg(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::neg(a[i]))
     }
 
@@ -5758,7 +5758,7 @@ impl U32x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
+    fn neg(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
         let z = <archmage::NeonToken as U32x4Backend>::zero();
         core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::sub(z, a[i]))
     }
@@ -5968,7 +5968,7 @@ impl I64x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [int64x2_t; 4]) -> [int64x2_t; 4] {
+    fn neg(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::neg(a[i]))
     }
 
@@ -6182,7 +6182,7 @@ impl U64x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn neg(a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
+    fn neg(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
         let z = <archmage::NeonToken as U64x2Backend>::zero();
         core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::sub(z, a[i]))
     }

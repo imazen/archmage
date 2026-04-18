@@ -6,7 +6,6 @@
 
 #![allow(clippy::should_implement_trait)]
 
-use core::marker::PhantomData;
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index,
     IndexMut, Neg, Sub, SubAssign,
@@ -23,8 +22,17 @@ use crate::simd::backends::I64x4Backend;
 /// `self: i64x4<T>` can re-supply it to backend operations that
 /// require a token value (e.g. `T::splat(token, v)`). This carries the
 /// token-as-feature-proof guarantee through every method call without
-/// runtime overhead — `T` is ZST, so `sizeof(i64x4<T>) == sizeof(T::Repr)`,
-/// and `#[repr(transparent)]` is preserved.
+/// runtime overhead — `T` is ZST, so `sizeof(i64x4<T>) == sizeof(T::Repr)`
+/// and `align_of(i64x4<T>) == align_of(T::Repr)` under `#[repr(C)]`.
+///
+/// # Layout
+///
+/// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
+/// and `T` is a 0-byte tail. Bitcasts between `i64x4<T>` values of
+/// different element-types are sound when the Repr types share a layout
+/// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
+/// `#[repr(transparent)]` cannot be used because Rust cannot prove at
+/// the struct definition site that a generic `T` is a 1-ZST.
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 ///
@@ -34,8 +42,8 @@ use crate::simd::backends::I64x4Backend;
 /// AVX2/NEON/WASM, and arithmetic right shift requires AVX-512 on x86.
 /// Operations like `min`, `max`, and `abs` are polyfilled where needed.
 #[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct i64x4<T: I64x4Backend>(T::Repr, T);
+#[repr(C)]
+pub struct i64x4<T: I64x4Backend>(pub(crate) T::Repr, pub(crate) T);
 
 impl<T: I64x4Backend> i64x4<T> {
     /// Number of i64 lanes.
@@ -205,7 +213,7 @@ impl<T: I64x4Backend> i64x4<T> {
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self(T::blend(mask.0, if_true.0, if_false.0), self.1)
+        Self(T::blend(mask.0, if_true.0, if_false.0), mask.1)
     }
 
     // ====== Reductions ======
@@ -307,7 +315,7 @@ impl<T: I64x4Backend> Neg for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Self(T::neg(self.0), self.1)
+        Self(T::neg(self.1, self.0), self.1)
     }
 }
 
@@ -382,7 +390,7 @@ impl<T: I64x4Backend> Add<i64> for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: i64) -> Self {
-        Self(T::add(self.0, T::splat(rhs)), self.1)
+        Self(T::add(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -390,7 +398,7 @@ impl<T: I64x4Backend> Sub<i64> for i64x4<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: i64) -> Self {
-        Self(T::sub(self.0, T::splat(rhs)), self.1)
+        Self(T::sub(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -447,7 +455,7 @@ impl<T: crate::simd::backends::I64x4Bitcast> i64x4<T> {
     /// Bitcast to f64x4 (reinterpret bits, no conversion).
     #[inline(always)]
     pub fn bitcast_to_f64(self) -> super::f64x4<T> {
-        super::f64x4::from_repr_unchecked(T::bitcast_i64_to_f64(self.0))
+        super::f64x4::from_repr_unchecked(self.1, T::bitcast_i64_to_f64(self.0))
     }
 
     /// Bitcast to f64x4 by reference (zero-cost).
@@ -492,7 +500,7 @@ impl i64x4<archmage::X64V3Token> {
 
     /// Create from a raw `__m256i` (token-gated, zero-cost).
     #[inline(always)]
-    pub fn from_m256i(_: archmage::X64V3Token, v: core::arch::x86_64::__m256i) -> Self {
-        Self(v, self.1)
+    pub fn from_m256i(token: archmage::X64V3Token, v: core::arch::x86_64::__m256i) -> Self {
+        Self(v, token)
     }
 }

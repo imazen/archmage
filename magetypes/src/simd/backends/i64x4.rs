@@ -53,7 +53,7 @@ pub trait I64x4Backend: SimdToken + Sealed + Copy + 'static {
     // NOTE: No `mul` — no native i64 multiply on most platforms before AVX-512.
 
     /// Lane-wise negation.
-    fn neg(a: Self::Repr) -> Self::Repr;
+    fn neg(self, a: Self::Repr) -> Self::Repr;
 
     // ====== Math ======
 

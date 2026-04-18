@@ -57,7 +57,7 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
     fn div(a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise negation.
-    fn neg(a: Self::Repr) -> Self::Repr;
+    fn neg(self, a: Self::Repr) -> Self::Repr;
 
     // ====== Math ======
 

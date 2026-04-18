@@ -69,7 +69,7 @@ impl F32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m128) -> __m128 {
+    fn neg(self, a: __m128) -> __m128 {
         unsafe { _mm_sub_ps(_mm_setzero_ps(), a) }
     }
 
@@ -294,7 +294,7 @@ impl F32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m256) -> __m256 {
+    fn neg(self, a: __m256) -> __m256 {
         unsafe { _mm256_sub_ps(_mm256_setzero_ps(), a) }
     }
 
@@ -528,7 +528,7 @@ impl F64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m128d) -> __m128d {
+    fn neg(self, a: __m128d) -> __m128d {
         unsafe { _mm_sub_pd(_mm_setzero_pd(), a) }
     }
 
@@ -738,7 +738,7 @@ impl F64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m256d) -> __m256d {
+    fn neg(self, a: __m256d) -> __m256d {
         unsafe { _mm256_sub_pd(_mm256_setzero_pd(), a) }
     }
 
@@ -952,7 +952,7 @@ impl I32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m128i) -> __m128i {
+    fn neg(self, a: __m128i) -> __m128i {
         unsafe { _mm_sub_epi32(_mm_setzero_si128(), a) }
     }
 
@@ -1146,7 +1146,7 @@ impl I32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m256i) -> __m256i {
+    fn neg(self, a: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi32(_mm256_setzero_si256(), a) }
     }
 
@@ -1713,7 +1713,7 @@ impl I64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m128i) -> __m128i {
+    fn neg(self, a: __m128i) -> __m128i {
         unsafe { _mm_sub_epi64(_mm_setzero_si128(), a) }
     }
 
@@ -1925,7 +1925,7 @@ impl I64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m256i) -> __m256i {
+    fn neg(self, a: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi64(_mm256_setzero_si256(), a) }
     }
 
@@ -2137,7 +2137,7 @@ impl I8x16Backend for archmage::X64V3Token {
         unsafe { _mm_sub_epi8(a, b) }
     }
     #[inline(always)]
-    fn neg(a: __m128i) -> __m128i {
+    fn neg(self, a: __m128i) -> __m128i {
         unsafe { _mm_sub_epi8(_mm_setzero_si128(), a) }
     }
 
@@ -2334,7 +2334,7 @@ impl I8x32Backend for archmage::X64V3Token {
         unsafe { _mm256_sub_epi8(a, b) }
     }
     #[inline(always)]
-    fn neg(a: __m256i) -> __m256i {
+    fn neg(self, a: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi8(_mm256_setzero_si256(), a) }
     }
 
@@ -2897,7 +2897,7 @@ impl I16x8Backend for archmage::X64V3Token {
         unsafe { _mm_mullo_epi16(a, b) }
     }
     #[inline(always)]
-    fn neg(a: __m128i) -> __m128i {
+    fn neg(self, a: __m128i) -> __m128i {
         unsafe { _mm_sub_epi16(_mm_setzero_si128(), a) }
     }
 
@@ -3086,7 +3086,7 @@ impl I16x16Backend for archmage::X64V3Token {
         unsafe { _mm256_mullo_epi16(a, b) }
     }
     #[inline(always)]
-    fn neg(a: __m256i) -> __m256i {
+    fn neg(self, a: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi16(_mm256_setzero_si256(), a) }
     }
 
@@ -4171,13 +4171,13 @@ impl F32x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: f32) -> [__m256; 2] {
-        let h = <archmage::X64V3Token as F32x8Backend>::splat(v);
+        let h = <archmage::X64V3Token as F32x8Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256; 2] {
-        let h = <archmage::X64V3Token as F32x8Backend>::zero();
+        let h = <archmage::X64V3Token as F32x8Backend>::zero(self);
         [h, h]
     }
 
@@ -4185,8 +4185,8 @@ impl F32x16Backend for archmage::X64V3Token {
     fn load(self, data: &[f32; 16]) -> [__m256; 2] {
         let (lo, hi) = data.split_at(8);
         [
-            <archmage::X64V3Token as F32x8Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as F32x8Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as F32x8Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as F32x8Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -4197,8 +4197,8 @@ impl F32x16Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..8]);
         hi.copy_from_slice(&arr[8..]);
         [
-            <archmage::X64V3Token as F32x8Backend>::from_array(lo),
-            <archmage::X64V3Token as F32x8Backend>::from_array(hi),
+            <archmage::X64V3Token as F32x8Backend>::from_array(self, lo),
+            <archmage::X64V3Token as F32x8Backend>::from_array(self, hi),
         ]
     }
 
@@ -4252,10 +4252,10 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256; 2]) -> [__m256; 2] {
+    fn neg(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::neg(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::neg(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::neg(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::neg(self, a[1]),
         ]
     }
 
@@ -4463,13 +4463,13 @@ impl F64x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: f64) -> [__m256d; 2] {
-        let h = <archmage::X64V3Token as F64x4Backend>::splat(v);
+        let h = <archmage::X64V3Token as F64x4Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256d; 2] {
-        let h = <archmage::X64V3Token as F64x4Backend>::zero();
+        let h = <archmage::X64V3Token as F64x4Backend>::zero(self);
         [h, h]
     }
 
@@ -4477,8 +4477,8 @@ impl F64x8Backend for archmage::X64V3Token {
     fn load(self, data: &[f64; 8]) -> [__m256d; 2] {
         let (lo, hi) = data.split_at(4);
         [
-            <archmage::X64V3Token as F64x4Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as F64x4Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as F64x4Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as F64x4Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -4489,8 +4489,8 @@ impl F64x8Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..4]);
         hi.copy_from_slice(&arr[4..]);
         [
-            <archmage::X64V3Token as F64x4Backend>::from_array(lo),
-            <archmage::X64V3Token as F64x4Backend>::from_array(hi),
+            <archmage::X64V3Token as F64x4Backend>::from_array(self, lo),
+            <archmage::X64V3Token as F64x4Backend>::from_array(self, hi),
         ]
     }
 
@@ -4544,10 +4544,10 @@ impl F64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn neg(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::neg(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::neg(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::neg(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::neg(self, a[1]),
         ]
     }
 
@@ -4755,13 +4755,13 @@ impl I8x64Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: i8) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as I8x32Backend>::splat(v);
+        let h = <archmage::X64V3Token as I8x32Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as I8x32Backend>::zero();
+        let h = <archmage::X64V3Token as I8x32Backend>::zero(self);
         [h, h]
     }
 
@@ -4769,8 +4769,8 @@ impl I8x64Backend for archmage::X64V3Token {
     fn load(self, data: &[i8; 64]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(32);
         [
-            <archmage::X64V3Token as I8x32Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as I8x32Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as I8x32Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as I8x32Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -4781,8 +4781,8 @@ impl I8x64Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..32]);
         hi.copy_from_slice(&arr[32..]);
         [
-            <archmage::X64V3Token as I8x32Backend>::from_array(lo),
-            <archmage::X64V3Token as I8x32Backend>::from_array(hi),
+            <archmage::X64V3Token as I8x32Backend>::from_array(self, lo),
+            <archmage::X64V3Token as I8x32Backend>::from_array(self, hi),
         ]
     }
 
@@ -4820,10 +4820,10 @@ impl I8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::neg(a[0]),
-            <archmage::X64V3Token as I8x32Backend>::neg(a[1]),
+            <archmage::X64V3Token as I8x32Backend>::neg(self, a[0]),
+            <archmage::X64V3Token as I8x32Backend>::neg(self, a[1]),
         ]
     }
 
@@ -4996,13 +4996,13 @@ impl U8x64Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: u8) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as U8x32Backend>::splat(v);
+        let h = <archmage::X64V3Token as U8x32Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as U8x32Backend>::zero();
+        let h = <archmage::X64V3Token as U8x32Backend>::zero(self);
         [h, h]
     }
 
@@ -5010,8 +5010,8 @@ impl U8x64Backend for archmage::X64V3Token {
     fn load(self, data: &[u8; 64]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(32);
         [
-            <archmage::X64V3Token as U8x32Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as U8x32Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as U8x32Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as U8x32Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -5022,8 +5022,8 @@ impl U8x64Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..32]);
         hi.copy_from_slice(&arr[32..]);
         [
-            <archmage::X64V3Token as U8x32Backend>::from_array(lo),
-            <archmage::X64V3Token as U8x32Backend>::from_array(hi),
+            <archmage::X64V3Token as U8x32Backend>::from_array(self, lo),
+            <archmage::X64V3Token as U8x32Backend>::from_array(self, hi),
         ]
     }
 
@@ -5061,8 +5061,8 @@ impl U8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256i; 2]) -> [__m256i; 2] {
-        let z = <archmage::X64V3Token as U8x32Backend>::zero();
+    fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        let z = <archmage::X64V3Token as U8x32Backend>::zero(self);
         [
             <archmage::X64V3Token as U8x32Backend>::sub(z, a[0]),
             <archmage::X64V3Token as U8x32Backend>::sub(z, a[1]),
@@ -5230,13 +5230,13 @@ impl I16x32Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: i16) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as I16x16Backend>::splat(v);
+        let h = <archmage::X64V3Token as I16x16Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as I16x16Backend>::zero();
+        let h = <archmage::X64V3Token as I16x16Backend>::zero(self);
         [h, h]
     }
 
@@ -5244,8 +5244,8 @@ impl I16x32Backend for archmage::X64V3Token {
     fn load(self, data: &[i16; 32]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(16);
         [
-            <archmage::X64V3Token as I16x16Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as I16x16Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as I16x16Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as I16x16Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -5256,8 +5256,8 @@ impl I16x32Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..16]);
         hi.copy_from_slice(&arr[16..]);
         [
-            <archmage::X64V3Token as I16x16Backend>::from_array(lo),
-            <archmage::X64V3Token as I16x16Backend>::from_array(hi),
+            <archmage::X64V3Token as I16x16Backend>::from_array(self, lo),
+            <archmage::X64V3Token as I16x16Backend>::from_array(self, hi),
         ]
     }
 
@@ -5303,10 +5303,10 @@ impl I16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::neg(a[0]),
-            <archmage::X64V3Token as I16x16Backend>::neg(a[1]),
+            <archmage::X64V3Token as I16x16Backend>::neg(self, a[0]),
+            <archmage::X64V3Token as I16x16Backend>::neg(self, a[1]),
         ]
     }
 
@@ -5479,13 +5479,13 @@ impl U16x32Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: u16) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as U16x16Backend>::splat(v);
+        let h = <archmage::X64V3Token as U16x16Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as U16x16Backend>::zero();
+        let h = <archmage::X64V3Token as U16x16Backend>::zero(self);
         [h, h]
     }
 
@@ -5493,8 +5493,8 @@ impl U16x32Backend for archmage::X64V3Token {
     fn load(self, data: &[u16; 32]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(16);
         [
-            <archmage::X64V3Token as U16x16Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as U16x16Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as U16x16Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as U16x16Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -5505,8 +5505,8 @@ impl U16x32Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..16]);
         hi.copy_from_slice(&arr[16..]);
         [
-            <archmage::X64V3Token as U16x16Backend>::from_array(lo),
-            <archmage::X64V3Token as U16x16Backend>::from_array(hi),
+            <archmage::X64V3Token as U16x16Backend>::from_array(self, lo),
+            <archmage::X64V3Token as U16x16Backend>::from_array(self, hi),
         ]
     }
 
@@ -5552,8 +5552,8 @@ impl U16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256i; 2]) -> [__m256i; 2] {
-        let z = <archmage::X64V3Token as U16x16Backend>::zero();
+    fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        let z = <archmage::X64V3Token as U16x16Backend>::zero(self);
         [
             <archmage::X64V3Token as U16x16Backend>::sub(z, a[0]),
             <archmage::X64V3Token as U16x16Backend>::sub(z, a[1]),
@@ -5721,13 +5721,13 @@ impl I32x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: i32) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as I32x8Backend>::splat(v);
+        let h = <archmage::X64V3Token as I32x8Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as I32x8Backend>::zero();
+        let h = <archmage::X64V3Token as I32x8Backend>::zero(self);
         [h, h]
     }
 
@@ -5735,8 +5735,8 @@ impl I32x16Backend for archmage::X64V3Token {
     fn load(self, data: &[i32; 16]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(8);
         [
-            <archmage::X64V3Token as I32x8Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as I32x8Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as I32x8Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as I32x8Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -5747,8 +5747,8 @@ impl I32x16Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..8]);
         hi.copy_from_slice(&arr[8..]);
         [
-            <archmage::X64V3Token as I32x8Backend>::from_array(lo),
-            <archmage::X64V3Token as I32x8Backend>::from_array(hi),
+            <archmage::X64V3Token as I32x8Backend>::from_array(self, lo),
+            <archmage::X64V3Token as I32x8Backend>::from_array(self, hi),
         ]
     }
 
@@ -5794,10 +5794,10 @@ impl I32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::neg(a[0]),
-            <archmage::X64V3Token as I32x8Backend>::neg(a[1]),
+            <archmage::X64V3Token as I32x8Backend>::neg(self, a[0]),
+            <archmage::X64V3Token as I32x8Backend>::neg(self, a[1]),
         ]
     }
 
@@ -5970,13 +5970,13 @@ impl U32x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: u32) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as U32x8Backend>::splat(v);
+        let h = <archmage::X64V3Token as U32x8Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as U32x8Backend>::zero();
+        let h = <archmage::X64V3Token as U32x8Backend>::zero(self);
         [h, h]
     }
 
@@ -5984,8 +5984,8 @@ impl U32x16Backend for archmage::X64V3Token {
     fn load(self, data: &[u32; 16]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(8);
         [
-            <archmage::X64V3Token as U32x8Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as U32x8Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as U32x8Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as U32x8Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -5996,8 +5996,8 @@ impl U32x16Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..8]);
         hi.copy_from_slice(&arr[8..]);
         [
-            <archmage::X64V3Token as U32x8Backend>::from_array(lo),
-            <archmage::X64V3Token as U32x8Backend>::from_array(hi),
+            <archmage::X64V3Token as U32x8Backend>::from_array(self, lo),
+            <archmage::X64V3Token as U32x8Backend>::from_array(self, hi),
         ]
     }
 
@@ -6043,8 +6043,8 @@ impl U32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256i; 2]) -> [__m256i; 2] {
-        let z = <archmage::X64V3Token as U32x8Backend>::zero();
+    fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        let z = <archmage::X64V3Token as U32x8Backend>::zero(self);
         [
             <archmage::X64V3Token as U32x8Backend>::sub(z, a[0]),
             <archmage::X64V3Token as U32x8Backend>::sub(z, a[1]),
@@ -6212,13 +6212,13 @@ impl I64x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: i64) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as I64x4Backend>::splat(v);
+        let h = <archmage::X64V3Token as I64x4Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as I64x4Backend>::zero();
+        let h = <archmage::X64V3Token as I64x4Backend>::zero(self);
         [h, h]
     }
 
@@ -6226,8 +6226,8 @@ impl I64x8Backend for archmage::X64V3Token {
     fn load(self, data: &[i64; 8]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(4);
         [
-            <archmage::X64V3Token as I64x4Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as I64x4Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as I64x4Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as I64x4Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -6238,8 +6238,8 @@ impl I64x8Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..4]);
         hi.copy_from_slice(&arr[4..]);
         [
-            <archmage::X64V3Token as I64x4Backend>::from_array(lo),
-            <archmage::X64V3Token as I64x4Backend>::from_array(hi),
+            <archmage::X64V3Token as I64x4Backend>::from_array(self, lo),
+            <archmage::X64V3Token as I64x4Backend>::from_array(self, hi),
         ]
     }
 
@@ -6277,10 +6277,10 @@ impl I64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::neg(a[0]),
-            <archmage::X64V3Token as I64x4Backend>::neg(a[1]),
+            <archmage::X64V3Token as I64x4Backend>::neg(self, a[0]),
+            <archmage::X64V3Token as I64x4Backend>::neg(self, a[1]),
         ]
     }
 
@@ -6453,13 +6453,13 @@ impl U64x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn splat(self, v: u64) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as U64x4Backend>::splat(v);
+        let h = <archmage::X64V3Token as U64x4Backend>::splat(self, v);
         [h, h]
     }
 
     #[inline(always)]
     fn zero(self) -> [__m256i; 2] {
-        let h = <archmage::X64V3Token as U64x4Backend>::zero();
+        let h = <archmage::X64V3Token as U64x4Backend>::zero(self);
         [h, h]
     }
 
@@ -6467,8 +6467,8 @@ impl U64x8Backend for archmage::X64V3Token {
     fn load(self, data: &[u64; 8]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(4);
         [
-            <archmage::X64V3Token as U64x4Backend>::load(lo.try_into().unwrap()),
-            <archmage::X64V3Token as U64x4Backend>::load(hi.try_into().unwrap()),
+            <archmage::X64V3Token as U64x4Backend>::load(self, lo.try_into().unwrap()),
+            <archmage::X64V3Token as U64x4Backend>::load(self, hi.try_into().unwrap()),
         ]
     }
 
@@ -6479,8 +6479,8 @@ impl U64x8Backend for archmage::X64V3Token {
         lo.copy_from_slice(&arr[..4]);
         hi.copy_from_slice(&arr[4..]);
         [
-            <archmage::X64V3Token as U64x4Backend>::from_array(lo),
-            <archmage::X64V3Token as U64x4Backend>::from_array(hi),
+            <archmage::X64V3Token as U64x4Backend>::from_array(self, lo),
+            <archmage::X64V3Token as U64x4Backend>::from_array(self, hi),
         ]
     }
 
@@ -6518,8 +6518,8 @@ impl U64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn neg(a: [__m256i; 2]) -> [__m256i; 2] {
-        let z = <archmage::X64V3Token as U64x4Backend>::zero();
+    fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        let z = <archmage::X64V3Token as U64x4Backend>::zero(self);
         [
             <archmage::X64V3Token as U64x4Backend>::sub(z, a[0]),
             <archmage::X64V3Token as U64x4Backend>::sub(z, a[1]),

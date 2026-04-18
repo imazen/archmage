@@ -407,7 +407,7 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
     if ty.signed {
         methods.push_str(&formatdoc! {r#"
             /// Lane-wise negation.
-            fn neg(a: Self::Repr) -> Self::Repr;
+            fn neg(self, a: Self::Repr) -> Self::Repr;
         "#});
     }
 
@@ -645,7 +645,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     if ty.signed {
         body.push_str(&formatdoc! {r#"
             #[inline(always)]
-            fn neg(a: {inner}) -> {inner} {{
+            fn neg(self, a: {inner}) -> {inner} {{
                 unsafe {{ {p}_sub_{arith_suf}({p}_setzero_si{bits}(), a) }}
             }}
         "#});
@@ -1248,7 +1248,7 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
         body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn neg(a: {array}) -> {array} {{ [{neg}] }}
+            fn neg(self, a: {array}) -> {array} {{ [{neg}] }}
         "#, neg = neg_items.join(", ")});
     }
 
@@ -1501,7 +1501,7 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     if ty.signed {
         body.push_str(&formatdoc! {r#"
             #[inline(always)]
-            fn neg(a: {nt}) -> {nt} {{ unsafe {{ vnegq_{ns}(a) }} }}
+            fn neg(self, a: {nt}) -> {nt} {{ unsafe {{ vnegq_{ns}(a) }} }}
         "#});
     }
 
@@ -1936,7 +1936,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
     if ty.signed {
         code.push_str(&formatdoc! {r#"
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
         "#, neg = unary_op(&format!("vnegq_{ns}"))});
     }
 
@@ -2199,7 +2199,7 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
     if ty.signed {
         body.push_str(&formatdoc! {r#"
             #[inline(always)]
-            fn neg(a: v128) -> v128 {{ {arith_wp}_neg(a) }}
+            fn neg(self, a: v128) -> v128 {{ {arith_wp}_neg(a) }}
         "#});
     }
 
@@ -2569,7 +2569,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
     if ty.signed {
         code.push_str(&formatdoc! {r#"
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
         "#, neg = unary_op(&format!("{signed_wp}_neg"))});
     }
 

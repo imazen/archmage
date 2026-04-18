@@ -113,7 +113,7 @@ impl F32x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [f32; 4]) -> [f32; 4] {
+    fn neg(self, a: [f32; 4]) -> [f32; 4] {
         [-a[0], -a[1], -a[2], -a[3]]
     }
 
@@ -489,7 +489,7 @@ impl F32x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [f32; 8]) -> [f32; 8] {
+    fn neg(self, a: [f32; 8]) -> [f32; 8] {
         [-a[0], -a[1], -a[2], -a[3], -a[4], -a[5], -a[6], -a[7]]
     }
 
@@ -874,7 +874,7 @@ impl F64x2Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [f64; 2]) -> [f64; 2] {
+    fn neg(self, a: [f64; 2]) -> [f64; 2] {
         [-a[0], -a[1]]
     }
 
@@ -1184,7 +1184,7 @@ impl F64x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [f64; 4]) -> [f64; 4] {
+    fn neg(self, a: [f64; 4]) -> [f64; 4] {
         [-a[0], -a[1], -a[2], -a[3]]
     }
 
@@ -1534,7 +1534,7 @@ impl I32x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i32; 4]) -> [i32; 4] {
+    fn neg(self, a: [i32; 4]) -> [i32; 4] {
         [
             a[0].wrapping_neg(),
             a[1].wrapping_neg(),
@@ -1796,7 +1796,7 @@ impl I32x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i32; 8]) -> [i32; 8] {
+    fn neg(self, a: [i32; 8]) -> [i32; 8] {
         [
             a[0].wrapping_neg(),
             a[1].wrapping_neg(),
@@ -2633,7 +2633,7 @@ impl I64x2Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i64; 2]) -> [i64; 2] {
+    fn neg(self, a: [i64; 2]) -> [i64; 2] {
         [a[0].wrapping_neg(), a[1].wrapping_neg()]
     }
 
@@ -2851,7 +2851,7 @@ impl I64x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i64; 4]) -> [i64; 4] {
+    fn neg(self, a: [i64; 4]) -> [i64; 4] {
         [
             a[0].wrapping_neg(),
             a[1].wrapping_neg(),
@@ -3111,7 +3111,7 @@ impl I8x16Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i8; 16]) -> [i8; 16] {
+    fn neg(self, a: [i8; 16]) -> [i8; 16] {
         [
             a[0].wrapping_neg(),
             a[1].wrapping_neg(),
@@ -3735,7 +3735,7 @@ impl I8x32Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i8; 32]) -> [i8; 32] {
+    fn neg(self, a: [i8; 32]) -> [i8; 32] {
         [
             a[0].wrapping_neg(),
             a[1].wrapping_neg(),
@@ -6125,7 +6125,7 @@ impl I16x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i16; 8]) -> [i16; 8] {
+    fn neg(self, a: [i16; 8]) -> [i16; 8] {
         [
             a[0].wrapping_neg(),
             a[1].wrapping_neg(),
@@ -6541,7 +6541,7 @@ impl I16x16Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i16; 16]) -> [i16; 16] {
+    fn neg(self, a: [i16; 16]) -> [i16; 16] {
         [
             a[0].wrapping_neg(),
             a[1].wrapping_neg(),
@@ -8815,7 +8815,7 @@ impl F32x16Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [f32; 16]) -> [f32; 16] {
+    fn neg(self, a: [f32; 16]) -> [f32; 16] {
         core::array::from_fn(|i| -a[i])
     }
 
@@ -9032,7 +9032,7 @@ impl F64x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [f64; 8]) -> [f64; 8] {
+    fn neg(self, a: [f64; 8]) -> [f64; 8] {
         core::array::from_fn(|i| -a[i])
     }
 
@@ -9239,7 +9239,7 @@ impl I8x64Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i8; 64]) -> [i8; 64] {
+    fn neg(self, a: [i8; 64]) -> [i8; 64] {
         core::array::from_fn(|i| a[i].wrapping_neg())
     }
 
@@ -9426,7 +9426,7 @@ impl U8x64Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [u8; 64]) -> [u8; 64] {
+    fn neg(self, a: [u8; 64]) -> [u8; 64] {
         core::array::from_fn(|i| (0u8).wrapping_sub(a[i]))
     }
 
@@ -9611,7 +9611,7 @@ impl I16x32Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i16; 32]) -> [i16; 32] {
+    fn neg(self, a: [i16; 32]) -> [i16; 32] {
         core::array::from_fn(|i| a[i].wrapping_neg())
     }
 
@@ -9803,7 +9803,7 @@ impl U16x32Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [u16; 32]) -> [u16; 32] {
+    fn neg(self, a: [u16; 32]) -> [u16; 32] {
         core::array::from_fn(|i| (0u16).wrapping_sub(a[i]))
     }
 
@@ -9988,7 +9988,7 @@ impl I32x16Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i32; 16]) -> [i32; 16] {
+    fn neg(self, a: [i32; 16]) -> [i32; 16] {
         core::array::from_fn(|i| a[i].wrapping_neg())
     }
 
@@ -10180,7 +10180,7 @@ impl U32x16Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [u32; 16]) -> [u32; 16] {
+    fn neg(self, a: [u32; 16]) -> [u32; 16] {
         core::array::from_fn(|i| (0u32).wrapping_sub(a[i]))
     }
 
@@ -10360,7 +10360,7 @@ impl I64x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [i64; 8]) -> [i64; 8] {
+    fn neg(self, a: [i64; 8]) -> [i64; 8] {
         core::array::from_fn(|i| a[i].wrapping_neg())
     }
 
@@ -10547,7 +10547,7 @@ impl U64x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn neg(a: [u64; 8]) -> [u64; 8] {
+    fn neg(self, a: [u64; 8]) -> [u64; 8] {
         core::array::from_fn(|i| (0u64).wrapping_sub(a[i]))
     }
 

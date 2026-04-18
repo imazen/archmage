@@ -55,7 +55,7 @@ impl F32x4Backend for archmage::Wasm128Token {
         f32x4_div(a, b)
     }
     #[inline(always)]
-    fn neg(a: v128) -> v128 {
+    fn neg(self, a: v128) -> v128 {
         f32x4_neg(a)
     }
     #[inline(always)]
@@ -245,7 +245,7 @@ impl F32x8Backend for archmage::Wasm128Token {
         [f32x4_div(a[0], b[0]), f32x4_div(a[1], b[1])]
     }
     #[inline(always)]
-    fn neg(a: [v128; 2]) -> [v128; 2] {
+    fn neg(self, a: [v128; 2]) -> [v128; 2] {
         [f32x4_neg(a[0]), f32x4_neg(a[1])]
     }
     #[inline(always)]
@@ -451,7 +451,7 @@ impl F64x2Backend for archmage::Wasm128Token {
         f64x2_div(a, b)
     }
     #[inline(always)]
-    fn neg(a: v128) -> v128 {
+    fn neg(self, a: v128) -> v128 {
         f64x2_neg(a)
     }
     #[inline(always)]
@@ -634,7 +634,7 @@ impl F64x4Backend for archmage::Wasm128Token {
         [f64x2_div(a[0], b[0]), f64x2_div(a[1], b[1])]
     }
     #[inline(always)]
-    fn neg(a: [v128; 2]) -> [v128; 2] {
+    fn neg(self, a: [v128; 2]) -> [v128; 2] {
         [f64x2_neg(a[0]), f64x2_neg(a[1])]
     }
     #[inline(always)]
@@ -828,7 +828,7 @@ impl I32x4Backend for archmage::Wasm128Token {
         i32x4_mul(a, b)
     }
     #[inline(always)]
-    fn neg(a: v128) -> v128 {
+    fn neg(self, a: v128) -> v128 {
         i32x4_neg(a)
     }
     #[inline(always)]
@@ -984,7 +984,7 @@ impl I32x8Backend for archmage::Wasm128Token {
         [i32x4_mul(a[0], b[0]), i32x4_mul(a[1], b[1])]
     }
     #[inline(always)]
-    fn neg(a: [v128; 2]) -> [v128; 2] {
+    fn neg(self, a: [v128; 2]) -> [v128; 2] {
         [i32x4_neg(a[0]), i32x4_neg(a[1])]
     }
     #[inline(always)]
@@ -1423,7 +1423,7 @@ impl I64x2Backend for archmage::Wasm128Token {
         i64x2_sub(a, b)
     }
     #[inline(always)]
-    fn neg(a: v128) -> v128 {
+    fn neg(self, a: v128) -> v128 {
         i64x2_neg(a)
     }
     #[inline(always)]
@@ -1580,7 +1580,7 @@ impl I64x4Backend for archmage::Wasm128Token {
         [i64x2_sub(a[0], b[0]), i64x2_sub(a[1], b[1])]
     }
     #[inline(always)]
-    fn neg(a: [v128; 2]) -> [v128; 2] {
+    fn neg(self, a: [v128; 2]) -> [v128; 2] {
         [i64x2_neg(a[0]), i64x2_neg(a[1])]
     }
     #[inline(always)]
@@ -1763,7 +1763,7 @@ impl I8x16Backend for archmage::Wasm128Token {
         i8x16_sub(a, b)
     }
     #[inline(always)]
-    fn neg(a: v128) -> v128 {
+    fn neg(self, a: v128) -> v128 {
         i8x16_neg(a)
     }
     #[inline(always)]
@@ -1914,7 +1914,7 @@ impl I8x32Backend for archmage::Wasm128Token {
         [i8x16_sub(a[0], b[0]), i8x16_sub(a[1], b[1])]
     }
     #[inline(always)]
-    fn neg(a: [v128; 2]) -> [v128; 2] {
+    fn neg(self, a: [v128; 2]) -> [v128; 2] {
         [i8x16_neg(a[0]), i8x16_neg(a[1])]
     }
     #[inline(always)]
@@ -2345,7 +2345,7 @@ impl I16x8Backend for archmage::Wasm128Token {
         i16x8_mul(a, b)
     }
     #[inline(always)]
-    fn neg(a: v128) -> v128 {
+    fn neg(self, a: v128) -> v128 {
         i16x8_neg(a)
     }
     #[inline(always)]
@@ -2500,7 +2500,7 @@ impl I16x16Backend for archmage::Wasm128Token {
         [i16x8_mul(a[0], b[0]), i16x8_mul(a[1], b[1])]
     }
     #[inline(always)]
-    fn neg(a: [v128; 2]) -> [v128; 2] {
+    fn neg(self, a: [v128; 2]) -> [v128; 2] {
         [i16x8_neg(a[0]), i16x8_neg(a[1])]
     }
     #[inline(always)]
@@ -3508,7 +3508,7 @@ impl F32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::neg(a[i]))
     }
 
@@ -3748,7 +3748,7 @@ impl F64x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::neg(a[i]))
     }
 
@@ -3978,7 +3978,7 @@ impl I8x64Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::neg(a[i]))
     }
 
@@ -4188,7 +4188,7 @@ impl U8x64Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         let z = <archmage::Wasm128Token as U8x16Backend>::zero();
         core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::sub(z, a[i]))
     }
@@ -4399,7 +4399,7 @@ impl I16x32Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::neg(a[i]))
     }
 
@@ -4614,7 +4614,7 @@ impl U16x32Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         let z = <archmage::Wasm128Token as U16x8Backend>::zero();
         core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::sub(z, a[i]))
     }
@@ -4825,7 +4825,7 @@ impl I32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::neg(a[i]))
     }
 
@@ -5040,7 +5040,7 @@ impl U32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         let z = <archmage::Wasm128Token as U32x4Backend>::zero();
         core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::sub(z, a[i]))
     }
@@ -5246,7 +5246,7 @@ impl I64x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::neg(a[i]))
     }
 
@@ -5456,7 +5456,7 @@ impl U64x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn neg(a: [v128; 4]) -> [v128; 4] {
+    fn neg(self, a: [v128; 4]) -> [v128; 4] {
         let z = <archmage::Wasm128Token as U64x2Backend>::zero();
         core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::sub(z, a[i]))
     }

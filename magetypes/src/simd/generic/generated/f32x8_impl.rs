@@ -21,7 +21,6 @@
 
 #![allow(clippy::should_implement_trait)]
 
-use core::marker::PhantomData;
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
     Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
@@ -38,13 +37,22 @@ use crate::simd::backends::F32x8Backend;
 /// `self: f32x8<T>` can re-supply it to backend operations that
 /// require a token value (e.g. `T::splat(token, v)`). This carries the
 /// token-as-feature-proof guarantee through every method call without
-/// runtime overhead — `T` is ZST, so `sizeof(f32x8<T>) == sizeof(T::Repr)`,
-/// and `#[repr(transparent)]` is preserved.
+/// runtime overhead — `T` is ZST, so `sizeof(f32x8<T>) == sizeof(T::Repr)`
+/// and `align_of(f32x8<T>) == align_of(T::Repr)` under `#[repr(C)]`.
+///
+/// # Layout
+///
+/// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
+/// and `T` is a 0-byte tail. Bitcasts between `f32x8<T>` values of
+/// different element-types are sound when the Repr types share a layout
+/// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
+/// `#[repr(transparent)]` cannot be used because Rust cannot prove at
+/// the struct definition site that a generic `T` is a 1-ZST.
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 #[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct f32x8<T: F32x8Backend>(T::Repr, T);
+#[repr(C)]
+pub struct f32x8<T: F32x8Backend>(pub(crate) T::Repr, pub(crate) T);
 
 // PhantomData is ZST, so f32x8<T> has the same size as T::Repr.
 
@@ -252,7 +260,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self(T::blend(mask.0, if_true.0, if_false.0), self.1)
+        Self(T::blend(mask.0, if_true.0, if_false.0), mask.1)
     }
 
     // ====== Reductions ======
@@ -350,7 +358,7 @@ impl<T: F32x8Backend> Neg for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Self(T::neg(self.0), self.1)
+        Self(T::neg(self.1, self.0), self.1)
     }
 }
 
@@ -439,7 +447,7 @@ impl<T: F32x8Backend> Add<f32> for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: f32) -> Self {
-        Self(T::add(self.0, T::splat(rhs)), self.1)
+        Self(T::add(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -447,7 +455,7 @@ impl<T: F32x8Backend> Sub<f32> for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: f32) -> Self {
-        Self(T::sub(self.0, T::splat(rhs)), self.1)
+        Self(T::sub(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -455,7 +463,7 @@ impl<T: F32x8Backend> Mul<f32> for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: f32) -> Self {
-        Self(T::mul(self.0, T::splat(rhs)), self.1)
+        Self(T::mul(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -463,7 +471,7 @@ impl<T: F32x8Backend> Div<f32> for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn div(self, rhs: f32) -> Self {
-        Self(T::div(self.0, T::splat(rhs)), self.1)
+        Self(T::div(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -520,31 +528,31 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
     /// Bitcast to i32x8 (reinterpret bits, no conversion).
     #[inline(always)]
     pub fn bitcast_to_i32(self) -> super::i32x8<T> {
-        super::i32x8::from_repr_unchecked(T::bitcast_f32_to_i32(self.0))
+        super::i32x8::from_repr_unchecked(self.1, T::bitcast_f32_to_i32(self.0))
     }
 
     /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
     #[inline(always)]
-    pub fn from_i32_bitcast(_: T, v: super::i32x8<T>) -> Self {
-        Self(T::bitcast_i32_to_f32(v.into_repr()), PhantomData)
+    pub fn from_i32_bitcast(token: T, v: super::i32x8<T>) -> Self {
+        Self(T::bitcast_i32_to_f32(v.into_repr()), token)
     }
 
     /// Convert to i32x8 with truncation toward zero.
     #[inline(always)]
     pub fn to_i32(self) -> super::i32x8<T> {
-        super::i32x8::from_repr_unchecked(T::convert_f32_to_i32(self.0))
+        super::i32x8::from_repr_unchecked(self.1, T::convert_f32_to_i32(self.0))
     }
 
     /// Convert to i32x8 with rounding to nearest.
     #[inline(always)]
     pub fn to_i32_round(self) -> super::i32x8<T> {
-        super::i32x8::from_repr_unchecked(T::convert_f32_to_i32_round(self.0))
+        super::i32x8::from_repr_unchecked(self.1, T::convert_f32_to_i32_round(self.0))
     }
 
     /// Create from i32x8 via numeric conversion.
     #[inline(always)]
-    pub fn from_i32(_: T, v: super::i32x8<T>) -> Self {
-        Self(T::convert_i32_to_f32(v.into_repr()), PhantomData)
+    pub fn from_i32(token: T, v: super::i32x8<T>) -> Self {
+        Self(T::convert_i32_to_f32(v.into_repr()), token)
     }
 
     // ====== Backward-compatible aliases (old generated API names) ======
@@ -605,7 +613,7 @@ impl f32x8<archmage::X64V3Token> {
 
     /// Create from a raw `__m256` (token-gated, zero-cost).
     #[inline(always)]
-    pub fn from_m256(_: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
-        Self(v, self.1)
+    pub fn from_m256(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
+        Self(v, token)
     }
 }

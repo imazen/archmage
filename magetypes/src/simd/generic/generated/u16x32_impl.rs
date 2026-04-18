@@ -6,7 +6,6 @@
 
 #![allow(clippy::should_implement_trait)]
 
-use core::marker::PhantomData;
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index,
     IndexMut, Mul, MulAssign, Sub, SubAssign,
@@ -23,13 +22,22 @@ use crate::simd::backends::U16x32Backend;
 /// `self: u16x32<T>` can re-supply it to backend operations that
 /// require a token value (e.g. `T::splat(token, v)`). This carries the
 /// token-as-feature-proof guarantee through every method call without
-/// runtime overhead — `T` is ZST, so `sizeof(u16x32<T>) == sizeof(T::Repr)`,
-/// and `#[repr(transparent)]` is preserved.
+/// runtime overhead — `T` is ZST, so `sizeof(u16x32<T>) == sizeof(T::Repr)`
+/// and `align_of(u16x32<T>) == align_of(T::Repr)` under `#[repr(C)]`.
+///
+/// # Layout
+///
+/// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
+/// and `T` is a 0-byte tail. Bitcasts between `u16x32<T>` values of
+/// different element-types are sound when the Repr types share a layout
+/// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
+/// `#[repr(transparent)]` cannot be used because Rust cannot prove at
+/// the struct definition site that a generic `T` is a 1-ZST.
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 #[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct u16x32<T: U16x32Backend>(T::Repr, T);
+#[repr(C)]
+pub struct u16x32<T: U16x32Backend>(pub(crate) T::Repr, pub(crate) T);
 
 impl<T: U16x32Backend> u16x32<T> {
     /// Number of u16 lanes.
@@ -194,7 +202,7 @@ impl<T: U16x32Backend> u16x32<T> {
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self(T::blend(mask.0, if_true.0, if_false.0), self.1)
+        Self(T::blend(mask.0, if_true.0, if_false.0), mask.1)
     }
 
     // ====== Reductions ======
@@ -366,7 +374,7 @@ impl<T: U16x32Backend> Add<u16> for u16x32<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: u16) -> Self {
-        Self(T::add(self.0, T::splat(rhs)), self.1)
+        Self(T::add(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -374,7 +382,7 @@ impl<T: U16x32Backend> Sub<u16> for u16x32<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: u16) -> Self {
-        Self(T::sub(self.0, T::splat(rhs)), self.1)
+        Self(T::sub(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -382,7 +390,7 @@ impl<T: U16x32Backend> Mul<u16> for u16x32<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: u16) -> Self {
-        Self(T::mul(self.0, T::splat(rhs)), self.1)
+        Self(T::mul(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -473,6 +481,6 @@ impl<T: crate::simd::backends::u16x32PopcntBackend> u16x32<T> {
     /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
     #[inline(always)]
     pub fn popcnt(self) -> Self {
-        Self(T::popcnt(self.0), core::marker::PhantomData)
+        Self(T::popcnt(self.0), self.1)
     }
 }

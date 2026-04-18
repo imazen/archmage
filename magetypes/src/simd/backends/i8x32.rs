@@ -50,7 +50,7 @@ pub trait I8x32Backend: SimdToken + Sealed + Copy + 'static {
     /// Lane-wise subtraction (wrapping).
     fn sub(a: Self::Repr, b: Self::Repr) -> Self::Repr;
     /// Lane-wise negation.
-    fn neg(a: Self::Repr) -> Self::Repr;
+    fn neg(self, a: Self::Repr) -> Self::Repr;
 
     // ====== Math ======
 

@@ -52,7 +52,7 @@ pub trait I16x8Backend: SimdToken + Sealed + Copy + 'static {
     /// Lane-wise multiplication (low 16 bits of product).
     fn mul(a: Self::Repr, b: Self::Repr) -> Self::Repr;
     /// Lane-wise negation.
-    fn neg(a: Self::Repr) -> Self::Repr;
+    fn neg(self, a: Self::Repr) -> Self::Repr;
 
     // ====== Math ======
 

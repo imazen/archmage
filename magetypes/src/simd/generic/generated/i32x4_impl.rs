@@ -6,7 +6,6 @@
 
 #![allow(clippy::should_implement_trait)]
 
-use core::marker::PhantomData;
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index,
     IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
@@ -23,13 +22,22 @@ use crate::simd::backends::I32x4Backend;
 /// `self: i32x4<T>` can re-supply it to backend operations that
 /// require a token value (e.g. `T::splat(token, v)`). This carries the
 /// token-as-feature-proof guarantee through every method call without
-/// runtime overhead — `T` is ZST, so `sizeof(i32x4<T>) == sizeof(T::Repr)`,
-/// and `#[repr(transparent)]` is preserved.
+/// runtime overhead — `T` is ZST, so `sizeof(i32x4<T>) == sizeof(T::Repr)`
+/// and `align_of(i32x4<T>) == align_of(T::Repr)` under `#[repr(C)]`.
+///
+/// # Layout
+///
+/// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
+/// and `T` is a 0-byte tail. Bitcasts between `i32x4<T>` values of
+/// different element-types are sound when the Repr types share a layout
+/// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
+/// `#[repr(transparent)]` cannot be used because Rust cannot prove at
+/// the struct definition site that a generic `T` is a 1-ZST.
 ///
 /// Construction requires a token value to prove CPU support at runtime.
 #[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct i32x4<T: I32x4Backend>(T::Repr, T);
+#[repr(C)]
+pub struct i32x4<T: I32x4Backend>(pub(crate) T::Repr, pub(crate) T);
 
 impl<T: I32x4Backend> i32x4<T> {
     /// Number of i32 lanes.
@@ -199,7 +207,7 @@ impl<T: I32x4Backend> i32x4<T> {
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self(T::blend(mask.0, if_true.0, if_false.0), self.1)
+        Self(T::blend(mask.0, if_true.0, if_false.0), mask.1)
     }
 
     // ====== Reductions ======
@@ -309,7 +317,7 @@ impl<T: I32x4Backend> Neg for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Self(T::neg(self.0), self.1)
+        Self(T::neg(self.1, self.0), self.1)
     }
 }
 
@@ -391,7 +399,7 @@ impl<T: I32x4Backend> Add<i32> for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: i32) -> Self {
-        Self(T::add(self.0, T::splat(rhs)), self.1)
+        Self(T::add(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -399,7 +407,7 @@ impl<T: I32x4Backend> Sub<i32> for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: i32) -> Self {
-        Self(T::sub(self.0, T::splat(rhs)), self.1)
+        Self(T::sub(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -407,7 +415,7 @@ impl<T: I32x4Backend> Mul<i32> for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: i32) -> Self {
-        Self(T::mul(self.0, T::splat(rhs)), self.1)
+        Self(T::mul(self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -464,13 +472,13 @@ impl<T: crate::simd::backends::F32x4Convert> i32x4<T> {
     /// Bitcast to f32x4 (reinterpret bits, no conversion).
     #[inline(always)]
     pub fn bitcast_to_f32(self) -> super::f32x4<T> {
-        super::f32x4::from_repr_unchecked(T::bitcast_i32_to_f32(self.0))
+        super::f32x4::from_repr_unchecked(self.1, T::bitcast_i32_to_f32(self.0))
     }
 
     /// Convert to f32x4 (numeric conversion).
     #[inline(always)]
     pub fn to_f32(self) -> super::f32x4<T> {
-        super::f32x4::from_repr_unchecked(T::convert_i32_to_f32(self.0))
+        super::f32x4::from_repr_unchecked(self.1, T::convert_i32_to_f32(self.0))
     }
 
     // ====== Backward-compatible aliases (old generated API names) ======
@@ -507,7 +515,7 @@ impl i32x4<archmage::X64V3Token> {
 
     /// Create from a raw `__m128i` (token-gated, zero-cost).
     #[inline(always)]
-    pub fn from_m128i(_: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
-        Self(v, self.1)
+    pub fn from_m128i(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
+        Self(v, token)
     }
 }

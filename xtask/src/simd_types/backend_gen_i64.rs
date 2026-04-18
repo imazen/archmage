@@ -166,7 +166,7 @@ pub(super) fn generate_i64_backend_trait(ty: &I64VecType) -> String {
             // NOTE: No `mul` — no native i64 multiply on most platforms before AVX-512.
 
             /// Lane-wise negation.
-            fn neg(a: Self::Repr) -> Self::Repr;
+            fn neg(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Math ======
 
@@ -369,7 +369,7 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn neg(a: {inner}) -> {inner} {{
+            fn neg(self, a: {inner}) -> {inner} {{
                 unsafe {{ {p}_sub_epi64({p}_setzero_si{bits}(), a) }}
             }}
 
@@ -696,7 +696,7 @@ fn generate_scalar_i64_impl(ty: &I64VecType) -> String {
             }}
 
             #[inline(always)]
-            fn neg(a: {array}) -> {array} {{
+            fn neg(self, a: {array}) -> {array} {{
                 {neg}
             }}
 
@@ -935,7 +935,7 @@ fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
             #[inline(always)]
             fn sub(a: int64x2_t, b: int64x2_t) -> int64x2_t {{ unsafe {{ vsubq_s64(a, b) }} }}
             #[inline(always)]
-            fn neg(a: int64x2_t) -> int64x2_t {{ unsafe {{ vnegq_s64(a) }} }}
+            fn neg(self, a: int64x2_t) -> int64x2_t {{ unsafe {{ vnegq_s64(a) }} }}
             #[inline(always)]
             fn min(a: int64x2_t, b: int64x2_t) -> int64x2_t {{
                 // NEON lacks native i64 min; polyfill via compare+select
@@ -1145,7 +1145,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             #[inline(always)]
             fn sub(a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{
                 // NEON lacks native i64 min; polyfill via compare+select per sub-vector
@@ -1384,7 +1384,7 @@ fn generate_wasm_native_i64_impl(ty: &I64VecType) -> String {
             #[inline(always)]
             fn sub(a: v128, b: v128) -> v128 {{ i64x2_sub(a, b) }}
             #[inline(always)]
-            fn neg(a: v128) -> v128 {{ i64x2_neg(a) }}
+            fn neg(self, a: v128) -> v128 {{ i64x2_neg(a) }}
             #[inline(always)]
             fn min(a: v128, b: v128) -> v128 {{
                 // WASM SIMD lacks native i64 min; polyfill via compare+select
@@ -1528,7 +1528,7 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
             #[inline(always)]
             fn sub(a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{
                 // WASM SIMD lacks native i64 min; polyfill via compare+select per sub-vector

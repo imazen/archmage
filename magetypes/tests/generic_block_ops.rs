@@ -108,9 +108,9 @@ fn f32x8_cast_slice_scalar_always_aligned() {
 
 #[test]
 fn f32x8_from_u8() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let bytes = [0u8, 128, 255, 1, 50, 100, 200, 42];
-        let v = f32x8::<X64V3Token>::from_u8(&bytes);
+        let v = f32x8::<X64V3Token>::from_u8(t, &bytes);
         let arr = v.to_array();
         assert_eq!(arr, [0.0, 128.0, 255.0, 1.0, 50.0, 100.0, 200.0, 42.0]);
     }
@@ -128,9 +128,9 @@ fn f32x8_to_u8() {
 
 #[test]
 fn f32x8_u8_roundtrip() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let input = [10u8, 20, 30, 40, 50, 60, 70, 80];
-        let v = f32x8::<X64V3Token>::from_u8(&input);
+        let v = f32x8::<X64V3Token>::from_u8(t, &input);
         let output = v.to_u8();
         assert_eq!(input, output);
     }
@@ -250,7 +250,7 @@ fn f32x8_deinterleave_interleave_roundtrip() {
 
 #[test]
 fn f32x8_load_8_rgba_u8() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         // 8 RGBA pixels: R=10*i, G=10*i+1, B=10*i+2, A=10*i+3
         let mut rgba = [0u8; 32];
         for i in 0..8 {
@@ -259,7 +259,7 @@ fn f32x8_load_8_rgba_u8() {
             rgba[i * 4 + 2] = (i * 10 + 2) as u8;
             rgba[i * 4 + 3] = (i * 10 + 3) as u8;
         }
-        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8(&rgba);
+        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8(t, &rgba);
         assert_eq!(
             r.to_array(),
             [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0]
@@ -298,12 +298,12 @@ fn f32x8_store_8_rgba_u8() {
 
 #[test]
 fn f32x8_rgba_load_store_roundtrip() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let mut rgba = [0u8; 32];
         for i in 0..32 {
             rgba[i] = i as u8;
         }
-        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8(&rgba);
+        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8(t, &rgba);
         let out = f32x8::<X64V3Token>::store_8_rgba_u8(r, g, b, a);
         assert_eq!(rgba, out);
     }
@@ -362,9 +362,9 @@ fn f32x8_transpose_double_is_identity() {
 
 #[test]
 fn f32x8_load_store_8x8() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let block: [f32; 64] = core::array::from_fn(|i| i as f32);
-        let rows = f32x8::<X64V3Token>::load_8x8(&block);
+        let rows = f32x8::<X64V3Token>::load_8x8(t, &block);
         for i in 0..8 {
             let arr = rows[i].to_array();
             for j in 0..8 {
@@ -448,9 +448,9 @@ fn f32x4_bytes_roundtrip() {
 
 #[test]
 fn f32x4_from_u8() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let bytes = [0u8, 128, 255, 42];
-        let v = f32x4::<X64V3Token>::from_u8(&bytes);
+        let v = f32x4::<X64V3Token>::from_u8(t, &bytes);
         assert_eq!(v.to_array(), [0.0, 128.0, 255.0, 42.0]);
     }
 }
@@ -465,9 +465,9 @@ fn f32x4_to_u8() {
 
 #[test]
 fn f32x4_u8_roundtrip() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let input = [10u8, 20, 30, 40];
-        let v = f32x4::<X64V3Token>::from_u8(&input);
+        let v = f32x4::<X64V3Token>::from_u8(t, &input);
         assert_eq!(v.to_u8(), input);
     }
 }
@@ -538,14 +538,14 @@ fn f32x4_interleave_4ch_roundtrip() {
 
 #[test]
 fn f32x4_load_4_rgba_u8() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let rgba = [
             10u8, 20, 30, 40, // pixel 0
             50, 60, 70, 80, // pixel 1
             90, 100, 110, 120, // pixel 2
             130, 140, 150, 160, // pixel 3
         ];
-        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8(&rgba);
+        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8(t, &rgba);
         assert_eq!(r.to_array(), [10.0, 50.0, 90.0, 130.0]);
         assert_eq!(g.to_array(), [20.0, 60.0, 100.0, 140.0]);
         assert_eq!(b.to_array(), [30.0, 70.0, 110.0, 150.0]);
@@ -572,9 +572,9 @@ fn f32x4_store_4_rgba_u8() {
 
 #[test]
 fn f32x4_rgba_roundtrip() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let rgba: [u8; 16] = core::array::from_fn(|i| (i * 15) as u8);
-        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8(&rgba);
+        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8(t, &rgba);
         let out = f32x4::<X64V3Token>::store_4_rgba_u8(r, g, b, a);
         assert_eq!(rgba, out);
     }
@@ -647,7 +647,7 @@ fn f32x8_scalar_as_array() {
 #[test]
 fn f32x8_scalar_from_u8() {
     let bytes = [0u8, 128, 255, 1, 50, 100, 200, 42];
-    let v = f32x8::<ScalarToken>::from_u8(&bytes);
+    let v = f32x8::<ScalarToken>::from_u8(ScalarToken, &bytes);
     assert_eq!(
         v.to_array(),
         [0.0, 128.0, 255.0, 1.0, 50.0, 100.0, 200.0, 42.0]
@@ -686,7 +686,7 @@ fn f32x8_scalar_rgba_roundtrip() {
     for i in 0..32 {
         rgba[i] = i as u8;
     }
-    let (r, g, b, a) = f32x8::<ScalarToken>::load_8_rgba_u8(&rgba);
+    let (r, g, b, a) = f32x8::<ScalarToken>::load_8_rgba_u8(ScalarToken, &rgba);
     let out = f32x8::<ScalarToken>::store_8_rgba_u8(r, g, b, a);
     assert_eq!(rgba, out);
 }
@@ -750,11 +750,11 @@ fn f32x8_v3_vs_scalar_transpose() {
 
 #[test]
 fn f32x8_v3_vs_scalar_rgba() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let rgba: [u8; 32] = core::array::from_fn(|i| (i * 7 + 13) as u8);
 
-        let (r1, g1, b1, a1) = f32x8::<X64V3Token>::load_8_rgba_u8(&rgba);
-        let (r2, g2, b2, a2) = f32x8::<ScalarToken>::load_8_rgba_u8(&rgba);
+        let (r1, g1, b1, a1) = f32x8::<X64V3Token>::load_8_rgba_u8(t, &rgba);
+        let (r2, g2, b2, a2) = f32x8::<ScalarToken>::load_8_rgba_u8(ScalarToken, &rgba);
 
         assert_eq!(r1.to_array(), r2.to_array());
         assert_eq!(g1.to_array(), g2.to_array());
@@ -857,11 +857,11 @@ fn f32x8_parity_transpose_8x8() {
 
 #[test]
 fn f32x8_parity_from_u8() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         use magetypes::simd::f32x8 as OldF32x8;
         let bytes = [10u8, 20, 30, 40, 50, 60, 70, 80];
-        let old = OldF32x8::from_u8(&bytes).to_array();
-        let new = f32x8::<X64V3Token>::from_u8(&bytes).to_array();
+        let old = OldF32x8::from_u8(t, &bytes).to_array();
+        let new = f32x8::<X64V3Token>::from_u8(t, &bytes).to_array();
         assert_eq!(old, new);
     }
 }
@@ -917,12 +917,12 @@ fn f32x4_parity_transpose_4x4() {
 
 #[test]
 fn f32x8_parity_load_store_rgba() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         use magetypes::simd::f32x8 as OldF32x8;
         let rgba: [u8; 32] = core::array::from_fn(|i| (i * 7 + 13) as u8);
 
-        let (or, og, ob, oa) = OldF32x8::load_8_rgba_u8(&rgba);
-        let (nr, ng, nb, na) = f32x8::<X64V3Token>::load_8_rgba_u8(&rgba);
+        let (or, og, ob, oa) = OldF32x8::load_8_rgba_u8(t, &rgba);
+        let (nr, ng, nb, na) = f32x8::<X64V3Token>::load_8_rgba_u8(t, &rgba);
 
         assert_eq!(or.to_array(), nr.to_array());
         assert_eq!(og.to_array(), ng.to_array());
@@ -936,8 +936,8 @@ fn f32x8_parity_load_store_rgba() {
 // ============================================================================
 
 /// Demonstrates a generic image processing function using block ops.
-fn brighten_pixels<T: F32x8Backend>(pixels: &mut [u8; 32], amount: f32) {
-    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8(pixels);
+fn brighten_pixels<T: F32x8Backend>(token: T, pixels: &mut [u8; 32], amount: f32) {
+    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8(token, pixels);
     // Use operator overloads — the scalar broadcast Add<f32> impl
     let r = r + amount;
     let g = g + amount;
@@ -947,15 +947,15 @@ fn brighten_pixels<T: F32x8Backend>(pixels: &mut [u8; 32], amount: f32) {
 
 #[test]
 fn generic_brighten_v3_and_scalar() {
-    if let Some(_) = X64V3Token::summon() {
+    if let Some(t) = X64V3Token::summon() {
         let mut pixels_v3 = [0u8; 32];
         let mut pixels_sc = [0u8; 32];
         for i in 0..32 {
             pixels_v3[i] = (i * 5) as u8;
             pixels_sc[i] = (i * 5) as u8;
         }
-        brighten_pixels::<X64V3Token>(&mut pixels_v3, 10.0);
-        brighten_pixels::<ScalarToken>(&mut pixels_sc, 10.0);
+        brighten_pixels::<X64V3Token>(t, &mut pixels_v3, 10.0);
+        brighten_pixels::<ScalarToken>(ScalarToken, &mut pixels_sc, 10.0);
         assert_eq!(pixels_v3, pixels_sc);
     }
 }

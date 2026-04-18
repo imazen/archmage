@@ -391,7 +391,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             fn div(a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise negation.
-            fn neg(a: Self::Repr) -> Self::Repr;
+            fn neg(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Math ======
 
@@ -592,7 +592,7 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
             fn sub(a: Self::Repr, b: Self::Repr) -> Self::Repr;
             {mul_section}
             /// Lane-wise negation.
-            fn neg(a: Self::Repr) -> Self::Repr;
+            fn neg(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Math ======
 
@@ -734,7 +734,7 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             fn div(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] / b[i]) }}
 
             #[inline(always)]
-            fn neg(a: {array}) -> {array} {{ core::array::from_fn(|i| -a[i]) }}
+            fn neg(self, a: {array}) -> {array} {{ core::array::from_fn(|i| -a[i]) }}
 
             #[inline(always)]
             fn min(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
@@ -971,7 +971,7 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
             fn sub(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_sub(b[i])) }}
             {mul_impl}
             #[inline(always)]
-            fn neg(a: {array}) -> {array} {{ {neg_impl} }}
+            fn neg(self, a: {array}) -> {array} {{ {neg_impl} }}
 
             #[inline(always)]
             fn min(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
@@ -1077,13 +1077,13 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn splat(self, v: {elem}) -> {v3_repr} {{
-                let h = <archmage::X64V3Token as {half_trait}>::splat(v);
+                let h = <archmage::X64V3Token as {half_trait}>::splat(self, v);
                 [h, h]
             }}
 
             #[inline(always)]
             fn zero(self) -> {v3_repr} {{
-                let h = <archmage::X64V3Token as {half_trait}>::zero();
+                let h = <archmage::X64V3Token as {half_trait}>::zero(self);
                 [h, h]
             }}
 
@@ -1091,8 +1091,8 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             fn load(self, data: &{array}) -> {v3_repr} {{
                 let (lo, hi) = data.split_at({half_lanes});
                 [
-                    <archmage::X64V3Token as {half_trait}>::load(lo.try_into().unwrap()),
-                    <archmage::X64V3Token as {half_trait}>::load(hi.try_into().unwrap()),
+                    <archmage::X64V3Token as {half_trait}>::load(self, lo.try_into().unwrap()),
+                    <archmage::X64V3Token as {half_trait}>::load(self, hi.try_into().unwrap()),
                 ]
             }}
 
@@ -1103,8 +1103,8 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
                 lo.copy_from_slice(&arr[..{half_lanes}]);
                 hi.copy_from_slice(&arr[{half_lanes}..]);
                 [
-                    <archmage::X64V3Token as {half_trait}>::from_array(lo),
-                    <archmage::X64V3Token as {half_trait}>::from_array(hi),
+                    <archmage::X64V3Token as {half_trait}>::from_array(self, lo),
+                    <archmage::X64V3Token as {half_trait}>::from_array(self, hi),
                 ]
             }}
 
@@ -1181,10 +1181,10 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn neg(a: {v3_repr}) -> {v3_repr} {{
+            fn neg(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::neg(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::neg(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::neg(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::neg(self, a[1]),
                 ]
             }}
         "#});
@@ -1192,8 +1192,8 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn neg(a: {v3_repr}) -> {v3_repr} {{
-                let z = <archmage::X64V3Token as {half_trait}>::zero();
+            fn neg(self, a: {v3_repr}) -> {v3_repr} {{
+                let z = <archmage::X64V3Token as {half_trait}>::zero(self);
                 [
                     <archmage::X64V3Token as {half_trait}>::sub(z, a[0]),
                     <archmage::X64V3Token as {half_trait}>::sub(z, a[1]),
@@ -1654,7 +1654,7 @@ fn generate_4way_polyfill_impl(
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{
+            fn neg(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::neg(a[i]))
             }}
         "#});
@@ -1662,7 +1662,7 @@ fn generate_4way_polyfill_impl(
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{
+            fn neg(self, a: {repr}) -> {repr} {{
                 let z = <archmage::{token} as {quarter_trait}>::zero();
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(z, a[i]))
             }}
@@ -1991,7 +1991,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn neg(a: {inner}) -> {inner} {{
+            fn neg(self, a: {inner}) -> {inner} {{
                 unsafe {{ _mm512_sub_{s}(_mm512_setzero_{s}(), a) }}
             }}
 
@@ -2244,7 +2244,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
     // neg: sub(zero, a) works for both signed and unsigned
     let neg_impl = formatdoc! {r#"
             #[inline(always)]
-            fn neg(a: __m512i) -> __m512i {{
+            fn neg(self, a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_sub_{epi}(_mm512_setzero_si512(), a) }}
             }}
     "#};

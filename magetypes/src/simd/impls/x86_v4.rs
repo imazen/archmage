@@ -75,7 +75,7 @@ impl F32x16Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512) -> __m512 {
+    fn neg(self, a: __m512) -> __m512 {
         unsafe { _mm512_sub_ps(_mm512_setzero_ps(), a) }
     }
 
@@ -303,7 +303,7 @@ impl F64x8Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512d) -> __m512d {
+    fn neg(self, a: __m512d) -> __m512d {
         unsafe { _mm512_sub_pd(_mm512_setzero_pd(), a) }
     }
 
@@ -521,7 +521,7 @@ impl I8x64Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi8(_mm512_setzero_si512(), a) }
     }
 
@@ -734,7 +734,7 @@ impl U8x64Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi8(_mm512_setzero_si512(), a) }
     }
 
@@ -941,7 +941,7 @@ impl I16x32Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi16(_mm512_setzero_si512(), a) }
     }
 
@@ -1140,7 +1140,7 @@ impl U16x32Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi16(_mm512_setzero_si512(), a) }
     }
 
@@ -1334,7 +1334,7 @@ impl I32x16Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), a) }
     }
 
@@ -1533,7 +1533,7 @@ impl U32x16Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), a) }
     }
 
@@ -1722,7 +1722,7 @@ impl I64x8Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi64(_mm512_setzero_si512(), a) }
     }
 
@@ -1916,7 +1916,7 @@ impl U64x8Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi64(_mm512_setzero_si512(), a) }
     }
 
@@ -2119,7 +2119,7 @@ impl F32x16Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512) -> __m512 {
+    fn neg(self, a: __m512) -> __m512 {
         unsafe { _mm512_sub_ps(_mm512_setzero_ps(), a) }
     }
 
@@ -2347,7 +2347,7 @@ impl F64x8Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512d) -> __m512d {
+    fn neg(self, a: __m512d) -> __m512d {
         unsafe { _mm512_sub_pd(_mm512_setzero_pd(), a) }
     }
 
@@ -2565,7 +2565,7 @@ impl I8x64Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi8(_mm512_setzero_si512(), a) }
     }
 
@@ -2778,7 +2778,7 @@ impl U8x64Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi8(_mm512_setzero_si512(), a) }
     }
 
@@ -2985,7 +2985,7 @@ impl I16x32Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi16(_mm512_setzero_si512(), a) }
     }
 
@@ -3184,7 +3184,7 @@ impl U16x32Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi16(_mm512_setzero_si512(), a) }
     }
 
@@ -3378,7 +3378,7 @@ impl I32x16Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), a) }
     }
 
@@ -3577,7 +3577,7 @@ impl U32x16Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), a) }
     }
 
@@ -3766,7 +3766,7 @@ impl I64x8Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi64(_mm512_setzero_si512(), a) }
     }
 
@@ -3960,7 +3960,7 @@ impl U64x8Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
-    fn neg(a: __m512i) -> __m512i {
+    fn neg(self, a: __m512i) -> __m512i {
         unsafe { _mm512_sub_epi64(_mm512_setzero_si512(), a) }
     }
 

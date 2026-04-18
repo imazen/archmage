@@ -105,7 +105,6 @@ fn gen_header(ty: &SimdType) -> String {
         {example_block}
         #![allow(clippy::should_implement_trait)]
 
-        use core::marker::PhantomData;
         {ops_str}
         use crate::simd::backends::{backend};
 
@@ -212,13 +211,22 @@ fn gen_struct(ty: &SimdType) -> String {
         /// `self: {name}<T>` can re-supply it to backend operations that
         /// require a token value (e.g. `T::splat(token, v)`). This carries the
         /// token-as-feature-proof guarantee through every method call without
-        /// runtime overhead — `T` is ZST, so `sizeof({name}<T>) == sizeof(T::Repr)`,
-        /// and `#[repr(transparent)]` is preserved.
+        /// runtime overhead — `T` is ZST, so `sizeof({name}<T>) == sizeof(T::Repr)`
+        /// and `align_of({name}<T>) == align_of(T::Repr)` under `#[repr(C)]`.
+        ///
+        /// # Layout
+        ///
+        /// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
+        /// and `T` is a 0-byte tail. Bitcasts between `{name}<T>` values of
+        /// different element-types are sound when the Repr types share a layout
+        /// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
+        /// `#[repr(transparent)]` cannot be used because Rust cannot prove at
+        /// the struct definition site that a generic `T` is a 1-ZST.
         ///
         /// Construction requires a token value to prove CPU support at runtime.
         {note_section}#[derive(Clone, Copy)]
-        #[repr(transparent)]
-        pub struct {name}<T: {backend}>(T::Repr, T);
+        #[repr(C)]
+        pub struct {name}<T: {backend}>(pub(crate) T::Repr, pub(crate) T);
         {phantom_comment}
     "}
 }
@@ -772,7 +780,7 @@ fn gen_operators(ty: &SimdType) -> String {
                 type Output = Self;
                 #[inline(always)]
                 fn neg(self) -> Self {{
-                    Self(T::neg(self.0), self.1)
+                    Self(T::neg(self.1, self.0), self.1)
                 }}
             }}
 
@@ -913,7 +921,7 @@ fn gen_scalar_op(name: &str, backend: &str, elem: &str, trait_name: &str, method
             type Output = Self;
             #[inline(always)]
             fn {method}(self, rhs: {elem}) -> Self {{
-                Self(T::{method}(self.0, T::splat(rhs)), self.1)
+                Self(T::{method}(self.0, T::splat(self.1, rhs)), self.1)
             }}
         }}
 
@@ -1038,8 +1046,8 @@ fn gen_platform(ty: &SimdType) -> String {
 
                     /// Create from a raw `{raw_type}` (token-gated, zero-cost).
                     #[inline(always)]
-                    pub fn {from_fn}(_: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
-                        Self(v, self.1)
+                    pub fn {from_fn}(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
+                        Self(v, token)
                     }}
                 }}
             "}
@@ -1101,7 +1109,7 @@ fn gen_popcnt(ty: &SimdType) -> String {
             /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
             #[inline(always)]
             pub fn popcnt(self) -> Self {{
-                Self(T::popcnt(self.0), core::marker::PhantomData)
+                Self(T::popcnt(self.0), self.1)
             }}
         }}
     "}

@@ -685,7 +685,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             fn div(a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise negation.
-            fn neg(a: Self::Repr) -> Self::Repr;
+            fn neg(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Math ======
 
@@ -1238,7 +1238,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn neg(a: {inner}) -> {inner} {{
+            fn neg(self, a: {inner}) -> {inner} {{
                 unsafe {{ {p}_sub_{s}({setzero}(), a) }}
             }}
 
@@ -1745,7 +1745,7 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             }}
 
             #[inline(always)]
-            fn neg(a: {array}) -> {array} {{
+            fn neg(self, a: {array}) -> {array} {{
                 {neg}
             }}
 
@@ -2205,7 +2205,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             }}
 
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{
+            fn neg(self, a: {repr}) -> {repr} {{
                 {neg_body}
             }}
 
@@ -2478,7 +2478,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn div(a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ vdivq_{ns}(a, b) }} }}
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{ unsafe {{ vnegq_{ns}(a) }} }}
+            fn neg(self, a: {repr}) -> {repr} {{ unsafe {{ vnegq_{ns}(a) }} }}
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ vminq_{ns}(a, b) }} }}
             #[inline(always)]
@@ -2732,7 +2732,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn div(a: {repr}, b: {repr}) -> {repr} {{ {div} }}
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{ {min} }}
             #[inline(always)]
@@ -2936,7 +2936,7 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn div(a: v128, b: v128) -> v128 {{ {wp}_div(a, b) }}
             #[inline(always)]
-            fn neg(a: v128) -> v128 {{ {wp}_neg(a) }}
+            fn neg(self, a: v128) -> v128 {{ {wp}_neg(a) }}
             #[inline(always)]
             fn min(a: v128, b: v128) -> v128 {{ {wp}_min(a, b) }}
             #[inline(always)]
@@ -3074,7 +3074,7 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
             fn mul(a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise negation.
-            fn neg(a: Self::Repr) -> Self::Repr;
+            fn neg(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Math ======
 
@@ -3385,7 +3385,7 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn neg(a: {inner}) -> {inner} {{
+            fn neg(self, a: {inner}) -> {inner} {{
                 unsafe {{ {p}_sub_epi32({p}_setzero_si{bits}(), a) }}
             }}
 
@@ -3851,7 +3851,7 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
             }}
 
             #[inline(always)]
-            fn neg(a: {array}) -> {array} {{
+            fn neg(self, a: {array}) -> {array} {{
                 {neg}
             }}
 
@@ -4229,7 +4229,7 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn mul(a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vmulq_s32(a, b) }} }}
             #[inline(always)]
-            fn neg(a: int32x4_t) -> int32x4_t {{ unsafe {{ vnegq_s32(a) }} }}
+            fn neg(self, a: int32x4_t) -> int32x4_t {{ unsafe {{ vnegq_s32(a) }} }}
             #[inline(always)]
             fn min(a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vminq_s32(a, b) }} }}
             #[inline(always)]
@@ -4419,7 +4419,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn mul(a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{ {min} }}
             #[inline(always)]
@@ -4782,7 +4782,7 @@ fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn mul(a: v128, b: v128) -> v128 {{ i32x4_mul(a, b) }}
             #[inline(always)]
-            fn neg(a: v128) -> v128 {{ i32x4_neg(a) }}
+            fn neg(self, a: v128) -> v128 {{ i32x4_neg(a) }}
             #[inline(always)]
             fn min(a: v128, b: v128) -> v128 {{ i32x4_min(a, b) }}
             #[inline(always)]
@@ -4914,7 +4914,7 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn mul(a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
             #[inline(always)]
-            fn neg(a: {repr}) -> {repr} {{ {neg} }}
+            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
             #[inline(always)]
             fn min(a: {repr}, b: {repr}) -> {repr} {{ {min} }}
             #[inline(always)]

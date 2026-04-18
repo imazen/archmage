@@ -89,12 +89,15 @@ impl<T: F32x4Backend> f32x4<T> {
 
     // ====== u8 Conversions ======
 
-    /// Load 4 u8 values and convert to f32x4.
+    /// Load 4 u8 values and convert to f32x4 (token-gated).
     ///
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[inline(always)]
-    pub fn from_u8(bytes: &[u8; 4]) -> Self {
-        Self::from_repr_unchecked(T::from_array(core::array::from_fn(|i| bytes[i] as f32)))
+    pub fn from_u8(token: T, bytes: &[u8; 4]) -> Self {
+        Self::from_repr_unchecked(
+            token,
+            T::from_array(token, core::array::from_fn(|i| bytes[i] as f32)),
+        )
     }
 
     /// Convert to 4 u8 values with saturation.
@@ -115,9 +118,10 @@ impl<T: F32x4Backend> f32x4<T> {
     /// ```
     #[inline(always)]
     pub fn interleave_lo(self, other: Self) -> Self {
+        let token = self.1;
         let a = self.to_array();
         let b = other.to_array();
-        Self::from_repr_unchecked(T::from_array([a[0], b[0], a[1], b[1]]))
+        Self::from_repr_unchecked(token, T::from_array(token, [a[0], b[0], a[1], b[1]]))
     }
 
     /// Interleave high elements.
@@ -127,19 +131,21 @@ impl<T: F32x4Backend> f32x4<T> {
     /// ```
     #[inline(always)]
     pub fn interleave_hi(self, other: Self) -> Self {
+        let token = self.1;
         let a = self.to_array();
         let b = other.to_array();
-        Self::from_repr_unchecked(T::from_array([a[2], b[2], a[3], b[3]]))
+        Self::from_repr_unchecked(token, T::from_array(token, [a[2], b[2], a[3], b[3]]))
     }
 
     /// Interleave two vectors: returns `(interleave_lo, interleave_hi)`.
     #[inline(always)]
     pub fn interleave(self, other: Self) -> (Self, Self) {
+        let token = self.1;
         let a = self.to_array();
         let b = other.to_array();
         (
-            Self::from_repr_unchecked(T::from_array([a[0], b[0], a[1], b[1]])),
-            Self::from_repr_unchecked(T::from_array([a[2], b[2], a[3], b[3]])),
+            Self::from_repr_unchecked(token, T::from_array(token, [a[0], b[0], a[1], b[1]])),
+            Self::from_repr_unchecked(token, T::from_array(token, [a[2], b[2], a[3], b[3]])),
         )
     }
 
@@ -169,21 +175,21 @@ impl<T: F32x4Backend> f32x4<T> {
 
     // ====== RGBA Load/Store ======
 
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
     ///
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[inline(always)]
-    pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+    pub fn load_4_rgba_u8(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
         let r: [f32; 4] = core::array::from_fn(|i| rgba[i * 4] as f32);
         let g: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
         let b: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
         let a: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 3] as f32);
         (
-            Self::from_repr_unchecked(T::from_array(r)),
-            Self::from_repr_unchecked(T::from_array(g)),
-            Self::from_repr_unchecked(T::from_array(b)),
-            Self::from_repr_unchecked(T::from_array(a)),
+            Self::from_repr_unchecked(token, T::from_array(token, r)),
+            Self::from_repr_unchecked(token, T::from_array(token, g)),
+            Self::from_repr_unchecked(token, T::from_array(token, b)),
+            Self::from_repr_unchecked(token, T::from_array(token, a)),
         )
     }
 
@@ -214,14 +220,15 @@ impl<T: F32x4Backend> f32x4<T> {
     /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
     #[inline(always)]
     pub fn transpose_4x4(rows: &mut [Self; 4]) {
+        let token = rows[0].1;
         let a = rows[0].to_array();
         let b = rows[1].to_array();
         let c = rows[2].to_array();
         let d = rows[3].to_array();
-        rows[0] = Self::from_repr_unchecked(T::from_array([a[0], b[0], c[0], d[0]]));
-        rows[1] = Self::from_repr_unchecked(T::from_array([a[1], b[1], c[1], d[1]]));
-        rows[2] = Self::from_repr_unchecked(T::from_array([a[2], b[2], c[2], d[2]]));
-        rows[3] = Self::from_repr_unchecked(T::from_array([a[3], b[3], c[3], d[3]]));
+        rows[0] = Self::from_repr_unchecked(token, T::from_array(token, [a[0], b[0], c[0], d[0]]));
+        rows[1] = Self::from_repr_unchecked(token, T::from_array(token, [a[1], b[1], c[1], d[1]]));
+        rows[2] = Self::from_repr_unchecked(token, T::from_array(token, [a[2], b[2], c[2], d[2]]));
+        rows[3] = Self::from_repr_unchecked(token, T::from_array(token, [a[3], b[3], c[3], d[3]]));
     }
 
     /// Transpose a 4x4 matrix, returning the transposed rows.
