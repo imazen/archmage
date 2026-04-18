@@ -19,11 +19,17 @@ use crate::simd::backends::F64x2Backend;
 /// `T` is a token type that proves CPU support for the required SIMD features.
 /// The inner representation is `T::Repr` (e.g., `__m128d` on x86, `float64x2_t` on ARM).
 ///
+/// **The token is stored** (as a zero-sized field) so methods receiving
+/// `self: f64x2<T>` can re-supply it to backend operations that
+/// require a token value (e.g. `T::splat(token, v)`). This carries the
+/// token-as-feature-proof guarantee through every method call without
+/// runtime overhead — `T` is ZST, so `sizeof(f64x2<T>) == sizeof(T::Repr)`,
+/// and `#[repr(transparent)]` is preserved.
+///
 /// Construction requires a token value to prove CPU support at runtime.
-/// After construction, operations don't need the token — it's baked into the type.
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct f64x2<T: F64x2Backend>(T::Repr, PhantomData<T>);
+pub struct f64x2<T: F64x2Backend>(T::Repr, T);
 
 impl<T: F64x2Backend> f64x2<T> {
     /// Number of f64 lanes.
@@ -33,33 +39,33 @@ impl<T: F64x2Backend> f64x2<T> {
 
     /// Broadcast scalar to all 2 lanes.
     #[inline(always)]
-    pub fn splat(_: T, v: f64) -> Self {
-        Self(T::splat(v), PhantomData)
+    pub fn splat(token: T, v: f64) -> Self {
+        Self(T::splat(token, v), token)
     }
 
     /// All lanes zero.
     #[inline(always)]
-    pub fn zero(_: T) -> Self {
-        Self(T::zero(), PhantomData)
+    pub fn zero(token: T) -> Self {
+        Self(T::zero(token), token)
     }
 
     /// Load from a `[f64; 2]` array.
     #[inline(always)]
-    pub fn load(_: T, data: &[f64; 2]) -> Self {
-        Self(T::load(data), PhantomData)
+    pub fn load(token: T, data: &[f64; 2]) -> Self {
+        Self(T::load(token, data), token)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub fn from_array(_: T, arr: [f64; 2]) -> Self {
-        Self(T::from_array(arr), PhantomData)
+    pub fn from_array(token: T, arr: [f64; 2]) -> Self {
+        Self(T::from_array(token, arr), token)
     }
 
     /// Create from slice. Panics if `slice.len() < 2`.
     #[inline(always)]
-    pub fn from_slice(_: T, slice: &[f64]) -> Self {
+    pub fn from_slice(token: T, slice: &[f64]) -> Self {
         let arr: [f64; 2] = slice[..2].try_into().unwrap();
-        Self(T::from_array(arr), PhantomData)
+        Self(T::from_array(token, arr), token)
     }
 
     /// Split a slice into SIMD-width chunks and a scalar remainder.
@@ -113,16 +119,17 @@ impl<T: F64x2Backend> f64x2<T> {
 
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
-    pub fn from_repr(_: T, repr: T::Repr) -> Self {
-        Self(repr, PhantomData)
+    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+        Self(repr, token)
     }
 
-    /// Wrap a repr without requiring a token value.
-    /// Only usable within the `generic` module (for cross-type conversions).
+    /// Wrap a repr with a token. Used by cross-type/cross-width helpers
+    /// in `simd::generic::*` where the token is already proven by the
+    /// caller's wider input type.
     #[inline(always)]
     #[allow(dead_code)]
-    pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
-        Self(repr, PhantomData)
+    pub(crate) fn from_repr_unchecked(token: T, repr: T::Repr) -> Self {
+        Self(repr, token)
     }
 
     // ====== Math ======
@@ -130,61 +137,61 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Lane-wise minimum.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
-        Self(T::min(self.0, other.0), PhantomData)
+        Self(T::min(self.0, other.0), self.1)
     }
 
     /// Lane-wise maximum.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
-        Self(T::max(self.0, other.0), PhantomData)
+        Self(T::max(self.0, other.0), self.1)
     }
 
     /// Clamp between lo and hi.
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
+        Self(T::clamp(self.0, lo.0, hi.0), self.1)
     }
 
     /// Square root.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
-        Self(T::sqrt(self.0), PhantomData)
+        Self(T::sqrt(self.0), self.1)
     }
 
     /// Absolute value.
     #[inline(always)]
     pub fn abs(self) -> Self {
-        Self(T::abs(self.0), PhantomData)
+        Self(T::abs(self.0), self.1)
     }
 
     /// Round toward negative infinity.
     #[inline(always)]
     pub fn floor(self) -> Self {
-        Self(T::floor(self.0), PhantomData)
+        Self(T::floor(self.0), self.1)
     }
 
     /// Round toward positive infinity.
     #[inline(always)]
     pub fn ceil(self) -> Self {
-        Self(T::ceil(self.0), PhantomData)
+        Self(T::ceil(self.0), self.1)
     }
 
     /// Round to nearest integer.
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self(T::round(self.0), PhantomData)
+        Self(T::round(self.0), self.1)
     }
 
     /// Fused multiply-add: `self * a + b`.
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
-        Self(T::mul_add(self.0, a.0, b.0), PhantomData)
+        Self(T::mul_add(self.0, a.0, b.0), self.1)
     }
 
     /// Fused multiply-sub: `self * a - b`.
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
-        Self(T::mul_sub(self.0, a.0, b.0), PhantomData)
+        Self(T::mul_sub(self.0, a.0, b.0), self.1)
     }
 
     // ====== Comparisons ======
@@ -192,43 +199,43 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Lane-wise equality (returns mask).
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
-        Self(T::simd_eq(self.0, other.0), PhantomData)
+        Self(T::simd_eq(self.0, other.0), self.1)
     }
 
     /// Lane-wise inequality (returns mask).
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
-        Self(T::simd_ne(self.0, other.0), PhantomData)
+        Self(T::simd_ne(self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than (returns mask).
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
-        Self(T::simd_lt(self.0, other.0), PhantomData)
+        Self(T::simd_lt(self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than-or-equal (returns mask).
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
-        Self(T::simd_le(self.0, other.0), PhantomData)
+        Self(T::simd_le(self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than (returns mask).
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
-        Self(T::simd_gt(self.0, other.0), PhantomData)
+        Self(T::simd_gt(self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than-or-equal (returns mask).
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
-        Self(T::simd_ge(self.0, other.0), PhantomData)
+        Self(T::simd_ge(self.0, other.0), self.1)
     }
 
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self(T::blend(mask.0, if_true.0, if_false.0), PhantomData)
+        Self(T::blend(mask.0, if_true.0, if_false.0), self.1)
     }
 
     // ====== Reductions ======
@@ -256,25 +263,25 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Fast reciprocal approximation (~12-bit precision).
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
-        Self(T::rcp_approx(self.0), PhantomData)
+        Self(T::rcp_approx(self.0), self.1)
     }
 
     /// Precise reciprocal (Newton-Raphson refined).
     #[inline(always)]
     pub fn recip(self) -> Self {
-        Self(T::recip(self.0), PhantomData)
+        Self(T::recip(self.0), self.1)
     }
 
     /// Fast reciprocal square root approximation (~12-bit precision).
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
-        Self(T::rsqrt_approx(self.0), PhantomData)
+        Self(T::rsqrt_approx(self.0), self.1)
     }
 
     /// Precise reciprocal square root (Newton-Raphson refined).
     #[inline(always)]
     pub fn rsqrt(self) -> Self {
-        Self(T::rsqrt(self.0), PhantomData)
+        Self(T::rsqrt(self.0), self.1)
     }
 
     // ====== Bitwise ======
@@ -282,7 +289,7 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Bitwise NOT.
     #[inline(always)]
     pub fn not(self) -> Self {
-        Self(T::not(self.0), PhantomData)
+        Self(T::not(self.0), self.1)
     }
 }
 
@@ -294,7 +301,7 @@ impl<T: F64x2Backend> Add for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Self(T::add(self.0, rhs.0), PhantomData)
+        Self(T::add(self.0, rhs.0), self.1)
     }
 }
 
@@ -302,7 +309,7 @@ impl<T: F64x2Backend> Sub for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Self(T::sub(self.0, rhs.0), PhantomData)
+        Self(T::sub(self.0, rhs.0), self.1)
     }
 }
 
@@ -310,7 +317,7 @@ impl<T: F64x2Backend> Mul for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
-        Self(T::mul(self.0, rhs.0), PhantomData)
+        Self(T::mul(self.0, rhs.0), self.1)
     }
 }
 
@@ -318,7 +325,7 @@ impl<T: F64x2Backend> Div for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn div(self, rhs: Self) -> Self {
-        Self(T::div(self.0, rhs.0), PhantomData)
+        Self(T::div(self.0, rhs.0), self.1)
     }
 }
 
@@ -326,7 +333,7 @@ impl<T: F64x2Backend> Neg for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Self(T::neg(self.0), PhantomData)
+        Self(T::neg(self.0), self.1)
     }
 }
 
@@ -334,7 +341,7 @@ impl<T: F64x2Backend> BitAnd for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self {
-        Self(T::bitand(self.0, rhs.0), PhantomData)
+        Self(T::bitand(self.0, rhs.0), self.1)
     }
 }
 
@@ -342,7 +349,7 @@ impl<T: F64x2Backend> BitOr for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self {
-        Self(T::bitor(self.0, rhs.0), PhantomData)
+        Self(T::bitor(self.0, rhs.0), self.1)
     }
 }
 
@@ -350,7 +357,7 @@ impl<T: F64x2Backend> BitXor for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self {
-        Self(T::bitxor(self.0, rhs.0), PhantomData)
+        Self(T::bitxor(self.0, rhs.0), self.1)
     }
 }
 
@@ -415,7 +422,7 @@ impl<T: F64x2Backend> Add<f64> for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: f64) -> Self {
-        Self(T::add(self.0, T::splat(rhs)), PhantomData)
+        Self(T::add(self.0, T::splat(rhs)), self.1)
     }
 }
 
@@ -423,7 +430,7 @@ impl<T: F64x2Backend> Sub<f64> for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: f64) -> Self {
-        Self(T::sub(self.0, T::splat(rhs)), PhantomData)
+        Self(T::sub(self.0, T::splat(rhs)), self.1)
     }
 }
 
@@ -431,7 +438,7 @@ impl<T: F64x2Backend> Mul<f64> for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: f64) -> Self {
-        Self(T::mul(self.0, T::splat(rhs)), PhantomData)
+        Self(T::mul(self.0, T::splat(rhs)), self.1)
     }
 }
 
@@ -439,7 +446,7 @@ impl<T: F64x2Backend> Div<f64> for f64x2<T> {
     type Output = Self;
     #[inline(always)]
     fn div(self, rhs: f64) -> Self {
-        Self(T::div(self.0, T::splat(rhs)), PhantomData)
+        Self(T::div(self.0, T::splat(rhs)), self.1)
     }
 }
 
@@ -508,6 +515,6 @@ impl f64x2<archmage::X64V3Token> {
     /// Create from a raw `__m128d` (token-gated, zero-cost).
     #[inline(always)]
     pub fn from_m128d(_: archmage::X64V3Token, v: core::arch::x86_64::__m128d) -> Self {
-        Self(v, PhantomData)
+        Self(v, self.1)
     }
 }

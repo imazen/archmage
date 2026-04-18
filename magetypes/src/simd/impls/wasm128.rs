@@ -12,19 +12,19 @@ impl F32x4Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: f32) -> v128 {
+    fn splat(self, v: f32) -> v128 {
         f32x4_splat(v)
     }
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         f32x4_splat(0.0)
     }
     #[inline(always)]
-    fn load(data: &[f32; 4]) -> v128 {
+    fn load(self, data: &[f32; 4]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
     #[inline(always)]
-    fn from_array(arr: [f32; 4]) -> v128 {
+    fn from_array(self, arr: [f32; 4]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
     #[inline(always)]
@@ -187,19 +187,19 @@ impl F32x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: f32) -> [v128; 2] {
+    fn splat(self, v: f32) -> [v128; 2] {
         let v4 = f32x4_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = f32x4_splat(0.0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 8]) -> [v128; 2] {
+    fn load(self, data: &[f32; 8]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().add(0).cast()),
@@ -209,7 +209,7 @@ impl F32x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 8]) -> [v128; 2] {
+    fn from_array(self, arr: [f32; 8]) -> [v128; 2] {
         <Self as F32x8Backend>::load(&arr)
     }
 
@@ -408,19 +408,19 @@ impl F64x2Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: f64) -> v128 {
+    fn splat(self, v: f64) -> v128 {
         f64x2_splat(v)
     }
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         f64x2_splat(0.0)
     }
     #[inline(always)]
-    fn load(data: &[f64; 2]) -> v128 {
+    fn load(self, data: &[f64; 2]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
     #[inline(always)]
-    fn from_array(arr: [f64; 2]) -> v128 {
+    fn from_array(self, arr: [f64; 2]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
     #[inline(always)]
@@ -576,19 +576,19 @@ impl F64x4Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: f64) -> [v128; 2] {
+    fn splat(self, v: f64) -> [v128; 2] {
         let v4 = f64x2_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = f64x2_splat(0.0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 4]) -> [v128; 2] {
+    fn load(self, data: &[f64; 4]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().add(0).cast()),
@@ -598,7 +598,7 @@ impl F64x4Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 4]) -> [v128; 2] {
+    fn from_array(self, arr: [f64; 4]) -> [v128; 2] {
         <Self as F64x4Backend>::load(&arr)
     }
 
@@ -789,19 +789,19 @@ impl I32x4Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: i32) -> v128 {
+    fn splat(self, v: i32) -> v128 {
         i32x4_splat(v)
     }
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         i32x4_splat(0)
     }
     #[inline(always)]
-    fn load(data: &[i32; 4]) -> v128 {
+    fn load(self, data: &[i32; 4]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
     #[inline(always)]
-    fn from_array(arr: [i32; 4]) -> v128 {
+    fn from_array(self, arr: [i32; 4]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
     #[inline(always)]
@@ -930,19 +930,19 @@ impl I32x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: i32) -> [v128; 2] {
+    fn splat(self, v: i32) -> [v128; 2] {
         let v4 = i32x4_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = i32x4_splat(0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 8]) -> [v128; 2] {
+    fn load(self, data: &[i32; 8]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().add(0).cast()),
@@ -952,7 +952,7 @@ impl I32x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 8]) -> [v128; 2] {
+    fn from_array(self, arr: [i32; 8]) -> [v128; 2] {
         <Self as I32x8Backend>::load(&arr)
     }
 
@@ -1097,19 +1097,19 @@ impl U32x4Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: u32) -> v128 {
+    fn splat(self, v: u32) -> v128 {
         u32x4_splat(v)
     }
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         u32x4_splat(0)
     }
     #[inline(always)]
-    fn load(data: &[u32; 4]) -> v128 {
+    fn load(self, data: &[u32; 4]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
     #[inline(always)]
-    fn from_array(arr: [u32; 4]) -> v128 {
+    fn from_array(self, arr: [u32; 4]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
     #[inline(always)]
@@ -1228,19 +1228,19 @@ impl U32x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: u32) -> [v128; 2] {
+    fn splat(self, v: u32) -> [v128; 2] {
         let v4 = u32x4_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = u32x4_splat(0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 8]) -> [v128; 2] {
+    fn load(self, data: &[u32; 8]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().add(0).cast()),
@@ -1250,7 +1250,7 @@ impl U32x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 8]) -> [v128; 2] {
+    fn from_array(self, arr: [u32; 8]) -> [v128; 2] {
         <Self as U32x8Backend>::load(&arr)
     }
 
@@ -1388,19 +1388,19 @@ impl I64x2Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: i64) -> v128 {
+    fn splat(self, v: i64) -> v128 {
         i64x2_splat(v)
     }
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         i64x2_splat(0i64)
     }
     #[inline(always)]
-    fn load(data: &[i64; 2]) -> v128 {
+    fn load(self, data: &[i64; 2]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
     #[inline(always)]
-    fn from_array(arr: [i64; 2]) -> v128 {
+    fn from_array(self, arr: [i64; 2]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
     #[inline(always)]
@@ -1530,19 +1530,19 @@ impl I64x4Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: i64) -> [v128; 2] {
+    fn splat(self, v: i64) -> [v128; 2] {
         let v2 = i64x2_splat(v);
         [v2, v2]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = i64x2_splat(0i64);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 4]) -> [v128; 2] {
+    fn load(self, data: &[i64; 4]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().add(0).cast()),
@@ -1552,7 +1552,7 @@ impl I64x4Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 4]) -> [v128; 2] {
+    fn from_array(self, arr: [i64; 4]) -> [v128; 2] {
         <Self as I64x4Backend>::load(&arr)
     }
 
@@ -1723,22 +1723,22 @@ impl I8x16Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: i8) -> v128 {
+    fn splat(self, v: i8) -> v128 {
         i8x16_splat(v)
     }
 
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         i8x16_splat(0)
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 16]) -> v128 {
+    fn load(self, data: &[i8; 16]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 16]) -> v128 {
+    fn from_array(self, arr: [i8; 16]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
 
@@ -1864,19 +1864,19 @@ impl I8x32Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: i8) -> [v128; 2] {
+    fn splat(self, v: i8) -> [v128; 2] {
         let v4 = i8x16_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = i8x16_splat(0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 32]) -> [v128; 2] {
+    fn load(self, data: &[i8; 32]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
@@ -1886,7 +1886,7 @@ impl I8x32Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 32]) -> [v128; 2] {
+    fn from_array(self, arr: [i8; 32]) -> [v128; 2] {
         <Self as I8x32Backend>::load(&arr)
     }
 
@@ -2024,22 +2024,22 @@ impl U8x16Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: u8) -> v128 {
+    fn splat(self, v: u8) -> v128 {
         u8x16_splat(v)
     }
 
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         u8x16_splat(0)
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 16]) -> v128 {
+    fn load(self, data: &[u8; 16]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 16]) -> v128 {
+    fn from_array(self, arr: [u8; 16]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
 
@@ -2153,19 +2153,19 @@ impl U8x32Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: u8) -> [v128; 2] {
+    fn splat(self, v: u8) -> [v128; 2] {
         let v4 = u8x16_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = u8x16_splat(0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 32]) -> [v128; 2] {
+    fn load(self, data: &[u8; 32]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
@@ -2175,7 +2175,7 @@ impl U8x32Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 32]) -> [v128; 2] {
+    fn from_array(self, arr: [u8; 32]) -> [v128; 2] {
         <Self as U8x32Backend>::load(&arr)
     }
 
@@ -2301,22 +2301,22 @@ impl I16x8Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: i16) -> v128 {
+    fn splat(self, v: i16) -> v128 {
         i16x8_splat(v)
     }
 
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         i16x8_splat(0)
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 8]) -> v128 {
+    fn load(self, data: &[i16; 8]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 8]) -> v128 {
+    fn from_array(self, arr: [i16; 8]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
 
@@ -2446,19 +2446,19 @@ impl I16x16Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: i16) -> [v128; 2] {
+    fn splat(self, v: i16) -> [v128; 2] {
         let v4 = i16x8_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = i16x8_splat(0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 16]) -> [v128; 2] {
+    fn load(self, data: &[i16; 16]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
@@ -2468,7 +2468,7 @@ impl I16x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 16]) -> [v128; 2] {
+    fn from_array(self, arr: [i16; 16]) -> [v128; 2] {
         <Self as I16x16Backend>::load(&arr)
     }
 
@@ -2610,22 +2610,22 @@ impl U16x8Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: u16) -> v128 {
+    fn splat(self, v: u16) -> v128 {
         u16x8_splat(v)
     }
 
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         u16x8_splat(0)
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 8]) -> v128 {
+    fn load(self, data: &[u16; 8]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 8]) -> v128 {
+    fn from_array(self, arr: [u16; 8]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
 
@@ -2743,19 +2743,19 @@ impl U16x16Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: u16) -> [v128; 2] {
+    fn splat(self, v: u16) -> [v128; 2] {
         let v4 = u16x8_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = u16x8_splat(0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 16]) -> [v128; 2] {
+    fn load(self, data: &[u16; 16]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
@@ -2765,7 +2765,7 @@ impl U16x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 16]) -> [v128; 2] {
+    fn from_array(self, arr: [u16; 16]) -> [v128; 2] {
         <Self as U16x16Backend>::load(&arr)
     }
 
@@ -2895,22 +2895,22 @@ impl U64x2Backend for archmage::Wasm128Token {
     type Repr = v128;
 
     #[inline(always)]
-    fn splat(v: u64) -> v128 {
+    fn splat(self, v: u64) -> v128 {
         u64x2_splat(v)
     }
 
     #[inline(always)]
-    fn zero() -> v128 {
+    fn zero(self) -> v128 {
         u64x2_splat(0)
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 2]) -> v128 {
+    fn load(self, data: &[u64; 2]) -> v128 {
         unsafe { v128_load(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 2]) -> v128 {
+    fn from_array(self, arr: [u64; 2]) -> v128 {
         unsafe { v128_load(arr.as_ptr().cast()) }
     }
 
@@ -3031,19 +3031,19 @@ impl U64x4Backend for archmage::Wasm128Token {
     type Repr = [v128; 2];
 
     #[inline(always)]
-    fn splat(v: u64) -> [v128; 2] {
+    fn splat(self, v: u64) -> [v128; 2] {
         let v4 = u64x2_splat(v);
         [v4, v4]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 2] {
+    fn zero(self) -> [v128; 2] {
         let z = u64x2_splat(0);
         [z, z]
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 4]) -> [v128; 2] {
+    fn load(self, data: &[u64; 4]) -> [v128; 2] {
         unsafe {
             [
                 v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
@@ -3053,7 +3053,7 @@ impl U64x4Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 4]) -> [v128; 2] {
+    fn from_array(self, arr: [u64; 4]) -> [v128; 2] {
         <Self as U64x4Backend>::load(&arr)
     }
 
@@ -3423,19 +3423,19 @@ impl F32x16Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: f32) -> [v128; 4] {
+    fn splat(self, v: f32) -> [v128; 4] {
         let q = <archmage::Wasm128Token as F32x4Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as F32x4Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 16]) -> [v128; 4] {
+    fn load(self, data: &[f32; 16]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as F32x4Backend>::load(data[0..4].try_into().unwrap()),
             <archmage::Wasm128Token as F32x4Backend>::load(data[4..8].try_into().unwrap()),
@@ -3445,7 +3445,7 @@ impl F32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 16]) -> [v128; 4] {
+    fn from_array(self, arr: [f32; 16]) -> [v128; 4] {
         let mut q0 = [0.0f32; 4];
         let mut q1 = [0.0f32; 4];
         let mut q2 = [0.0f32; 4];
@@ -3663,19 +3663,19 @@ impl F64x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: f64) -> [v128; 4] {
+    fn splat(self, v: f64) -> [v128; 4] {
         let q = <archmage::Wasm128Token as F64x2Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as F64x2Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 8]) -> [v128; 4] {
+    fn load(self, data: &[f64; 8]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as F64x2Backend>::load(data[0..2].try_into().unwrap()),
             <archmage::Wasm128Token as F64x2Backend>::load(data[2..4].try_into().unwrap()),
@@ -3685,7 +3685,7 @@ impl F64x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 8]) -> [v128; 4] {
+    fn from_array(self, arr: [f64; 8]) -> [v128; 4] {
         let mut q0 = [0.0f64; 2];
         let mut q1 = [0.0f64; 2];
         let mut q2 = [0.0f64; 2];
@@ -3903,19 +3903,19 @@ impl I8x64Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: i8) -> [v128; 4] {
+    fn splat(self, v: i8) -> [v128; 4] {
         let q = <archmage::Wasm128Token as I8x16Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as I8x16Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 64]) -> [v128; 4] {
+    fn load(self, data: &[i8; 64]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as I8x16Backend>::load(data[0..16].try_into().unwrap()),
             <archmage::Wasm128Token as I8x16Backend>::load(data[16..32].try_into().unwrap()),
@@ -3925,7 +3925,7 @@ impl I8x64Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 64]) -> [v128; 4] {
+    fn from_array(self, arr: [i8; 64]) -> [v128; 4] {
         let mut q0 = [0; 16];
         let mut q1 = [0; 16];
         let mut q2 = [0; 16];
@@ -4113,19 +4113,19 @@ impl U8x64Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: u8) -> [v128; 4] {
+    fn splat(self, v: u8) -> [v128; 4] {
         let q = <archmage::Wasm128Token as U8x16Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as U8x16Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 64]) -> [v128; 4] {
+    fn load(self, data: &[u8; 64]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as U8x16Backend>::load(data[0..16].try_into().unwrap()),
             <archmage::Wasm128Token as U8x16Backend>::load(data[16..32].try_into().unwrap()),
@@ -4135,7 +4135,7 @@ impl U8x64Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 64]) -> [v128; 4] {
+    fn from_array(self, arr: [u8; 64]) -> [v128; 4] {
         let mut q0 = [0; 16];
         let mut q1 = [0; 16];
         let mut q2 = [0; 16];
@@ -4319,19 +4319,19 @@ impl I16x32Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: i16) -> [v128; 4] {
+    fn splat(self, v: i16) -> [v128; 4] {
         let q = <archmage::Wasm128Token as I16x8Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as I16x8Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 32]) -> [v128; 4] {
+    fn load(self, data: &[i16; 32]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as I16x8Backend>::load(data[0..8].try_into().unwrap()),
             <archmage::Wasm128Token as I16x8Backend>::load(data[8..16].try_into().unwrap()),
@@ -4341,7 +4341,7 @@ impl I16x32Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 32]) -> [v128; 4] {
+    fn from_array(self, arr: [i16; 32]) -> [v128; 4] {
         let mut q0 = [0; 8];
         let mut q1 = [0; 8];
         let mut q2 = [0; 8];
@@ -4534,19 +4534,19 @@ impl U16x32Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: u16) -> [v128; 4] {
+    fn splat(self, v: u16) -> [v128; 4] {
         let q = <archmage::Wasm128Token as U16x8Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as U16x8Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 32]) -> [v128; 4] {
+    fn load(self, data: &[u16; 32]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as U16x8Backend>::load(data[0..8].try_into().unwrap()),
             <archmage::Wasm128Token as U16x8Backend>::load(data[8..16].try_into().unwrap()),
@@ -4556,7 +4556,7 @@ impl U16x32Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 32]) -> [v128; 4] {
+    fn from_array(self, arr: [u16; 32]) -> [v128; 4] {
         let mut q0 = [0; 8];
         let mut q1 = [0; 8];
         let mut q2 = [0; 8];
@@ -4745,19 +4745,19 @@ impl I32x16Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: i32) -> [v128; 4] {
+    fn splat(self, v: i32) -> [v128; 4] {
         let q = <archmage::Wasm128Token as I32x4Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as I32x4Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 16]) -> [v128; 4] {
+    fn load(self, data: &[i32; 16]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as I32x4Backend>::load(data[0..4].try_into().unwrap()),
             <archmage::Wasm128Token as I32x4Backend>::load(data[4..8].try_into().unwrap()),
@@ -4767,7 +4767,7 @@ impl I32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 16]) -> [v128; 4] {
+    fn from_array(self, arr: [i32; 16]) -> [v128; 4] {
         let mut q0 = [0; 4];
         let mut q1 = [0; 4];
         let mut q2 = [0; 4];
@@ -4960,19 +4960,19 @@ impl U32x16Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: u32) -> [v128; 4] {
+    fn splat(self, v: u32) -> [v128; 4] {
         let q = <archmage::Wasm128Token as U32x4Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as U32x4Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 16]) -> [v128; 4] {
+    fn load(self, data: &[u32; 16]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as U32x4Backend>::load(data[0..4].try_into().unwrap()),
             <archmage::Wasm128Token as U32x4Backend>::load(data[4..8].try_into().unwrap()),
@@ -4982,7 +4982,7 @@ impl U32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 16]) -> [v128; 4] {
+    fn from_array(self, arr: [u32; 16]) -> [v128; 4] {
         let mut q0 = [0; 4];
         let mut q1 = [0; 4];
         let mut q2 = [0; 4];
@@ -5171,19 +5171,19 @@ impl I64x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: i64) -> [v128; 4] {
+    fn splat(self, v: i64) -> [v128; 4] {
         let q = <archmage::Wasm128Token as I64x2Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as I64x2Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 8]) -> [v128; 4] {
+    fn load(self, data: &[i64; 8]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as I64x2Backend>::load(data[0..2].try_into().unwrap()),
             <archmage::Wasm128Token as I64x2Backend>::load(data[2..4].try_into().unwrap()),
@@ -5193,7 +5193,7 @@ impl I64x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 8]) -> [v128; 4] {
+    fn from_array(self, arr: [i64; 8]) -> [v128; 4] {
         let mut q0 = [0; 2];
         let mut q1 = [0; 2];
         let mut q2 = [0; 2];
@@ -5381,19 +5381,19 @@ impl U64x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
     #[inline(always)]
-    fn splat(v: u64) -> [v128; 4] {
+    fn splat(self, v: u64) -> [v128; 4] {
         let q = <archmage::Wasm128Token as U64x2Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [v128; 4] {
+    fn zero(self) -> [v128; 4] {
         let q = <archmage::Wasm128Token as U64x2Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 8]) -> [v128; 4] {
+    fn load(self, data: &[u64; 8]) -> [v128; 4] {
         [
             <archmage::Wasm128Token as U64x2Backend>::load(data[0..2].try_into().unwrap()),
             <archmage::Wasm128Token as U64x2Backend>::load(data[2..4].try_into().unwrap()),
@@ -5403,7 +5403,7 @@ impl U64x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 8]) -> [v128; 4] {
+    fn from_array(self, arr: [u64; 8]) -> [v128; 4] {
         let mut q0 = [0; 2];
         let mut q1 = [0; 2];
         let mut q2 = [0; 2];

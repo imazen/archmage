@@ -14,22 +14,22 @@ impl F32x4Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f32) -> __m128 {
+    fn splat(self, v: f32) -> __m128 {
         unsafe { _mm_set1_ps(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128 {
+    fn zero(self) -> __m128 {
         unsafe { _mm_setzero_ps() }
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 4]) -> __m128 {
+    fn load(self, data: &[f32; 4]) -> __m128 {
         unsafe { _mm_loadu_ps(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 4]) -> __m128 {
+    fn from_array(self, arr: [f32; 4]) -> __m128 {
         // SAFETY: [f32; 4] and __m128 have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -239,22 +239,22 @@ impl F32x8Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f32) -> __m256 {
+    fn splat(self, v: f32) -> __m256 {
         unsafe { _mm256_set1_ps(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256 {
+    fn zero(self) -> __m256 {
         unsafe { _mm256_setzero_ps() }
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 8]) -> __m256 {
+    fn load(self, data: &[f32; 8]) -> __m256 {
         unsafe { _mm256_loadu_ps(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 8]) -> __m256 {
+    fn from_array(self, arr: [f32; 8]) -> __m256 {
         // SAFETY: [f32; 8] and __m256 have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -473,22 +473,22 @@ impl F64x2Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f64) -> __m128d {
+    fn splat(self, v: f64) -> __m128d {
         unsafe { _mm_set1_pd(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128d {
+    fn zero(self) -> __m128d {
         unsafe { _mm_setzero_pd() }
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 2]) -> __m128d {
+    fn load(self, data: &[f64; 2]) -> __m128d {
         unsafe { _mm_loadu_pd(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 2]) -> __m128d {
+    fn from_array(self, arr: [f64; 2]) -> __m128d {
         // SAFETY: [f64; 2] and __m128d have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -683,22 +683,22 @@ impl F64x4Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f64) -> __m256d {
+    fn splat(self, v: f64) -> __m256d {
         unsafe { _mm256_set1_pd(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256d {
+    fn zero(self) -> __m256d {
         unsafe { _mm256_setzero_pd() }
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 4]) -> __m256d {
+    fn load(self, data: &[f64; 4]) -> __m256d {
         unsafe { _mm256_loadu_pd(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 4]) -> __m256d {
+    fn from_array(self, arr: [f64; 4]) -> __m256d {
         // SAFETY: [f64; 4] and __m256d have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -902,22 +902,22 @@ impl I32x4Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i32) -> __m128i {
+    fn splat(self, v: i32) -> __m128i {
         unsafe { _mm_set1_epi32(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128i {
+    fn zero(self) -> __m128i {
         unsafe { _mm_setzero_si128() }
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 4]) -> __m128i {
+    fn load(self, data: &[i32; 4]) -> __m128i {
         unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 4]) -> __m128i {
+    fn from_array(self, arr: [i32; 4]) -> __m128i {
         // SAFETY: [i32; 4] and __m128i have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -1096,22 +1096,22 @@ impl I32x8Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i32) -> __m256i {
+    fn splat(self, v: i32) -> __m256i {
         unsafe { _mm256_set1_epi32(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256i {
+    fn zero(self) -> __m256i {
         unsafe { _mm256_setzero_si256() }
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 8]) -> __m256i {
+    fn load(self, data: &[i32; 8]) -> __m256i {
         unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 8]) -> __m256i {
+    fn from_array(self, arr: [i32; 8]) -> __m256i {
         // SAFETY: [i32; 8] and __m256i have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -1293,22 +1293,22 @@ impl U32x4Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u32) -> __m128i {
+    fn splat(self, v: u32) -> __m128i {
         unsafe { _mm_set1_epi32(v as i32) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128i {
+    fn zero(self) -> __m128i {
         unsafe { _mm_setzero_si128() }
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 4]) -> __m128i {
+    fn load(self, data: &[u32; 4]) -> __m128i {
         unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 4]) -> __m128i {
+    fn from_array(self, arr: [u32; 4]) -> __m128i {
         // SAFETY: [u32; 4] and __m128i have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -1479,22 +1479,22 @@ impl U32x8Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u32) -> __m256i {
+    fn splat(self, v: u32) -> __m256i {
         unsafe { _mm256_set1_epi32(v as i32) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256i {
+    fn zero(self) -> __m256i {
         unsafe { _mm256_setzero_si256() }
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 8]) -> __m256i {
+    fn load(self, data: &[u32; 8]) -> __m256i {
         unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 8]) -> __m256i {
+    fn from_array(self, arr: [u32; 8]) -> __m256i {
         // SAFETY: [u32; 8] and __m256i have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -1668,22 +1668,22 @@ impl I64x2Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i64) -> __m128i {
+    fn splat(self, v: i64) -> __m128i {
         unsafe { _mm_set1_epi64x(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128i {
+    fn zero(self) -> __m128i {
         unsafe { _mm_setzero_si128() }
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 2]) -> __m128i {
+    fn load(self, data: &[i64; 2]) -> __m128i {
         unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 2]) -> __m128i {
+    fn from_array(self, arr: [i64; 2]) -> __m128i {
         // SAFETY: [i64; 2] and __m128i have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -1880,22 +1880,22 @@ impl I64x4Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i64) -> __m256i {
+    fn splat(self, v: i64) -> __m256i {
         unsafe { _mm256_set1_epi64x(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256i {
+    fn zero(self) -> __m256i {
         unsafe { _mm256_setzero_si256() }
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 4]) -> __m256i {
+    fn load(self, data: &[i64; 4]) -> __m256i {
         unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 4]) -> __m256i {
+    fn from_array(self, arr: [i64; 4]) -> __m256i {
         // SAFETY: [i64; 4] and __m256i have identical size and layout.
         unsafe { core::mem::transmute(arr) }
     }
@@ -2094,22 +2094,22 @@ impl I8x16Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i8) -> __m128i {
+    fn splat(self, v: i8) -> __m128i {
         unsafe { _mm_set1_epi8(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128i {
+    fn zero(self) -> __m128i {
         unsafe { _mm_setzero_si128() }
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 16]) -> __m128i {
+    fn load(self, data: &[i8; 16]) -> __m128i {
         unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 16]) -> __m128i {
+    fn from_array(self, arr: [i8; 16]) -> __m128i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2291,22 +2291,22 @@ impl I8x32Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i8) -> __m256i {
+    fn splat(self, v: i8) -> __m256i {
         unsafe { _mm256_set1_epi8(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256i {
+    fn zero(self) -> __m256i {
         unsafe { _mm256_setzero_si256() }
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 32]) -> __m256i {
+    fn load(self, data: &[i8; 32]) -> __m256i {
         unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 32]) -> __m256i {
+    fn from_array(self, arr: [i8; 32]) -> __m256i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2488,22 +2488,22 @@ impl U8x16Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u8) -> __m128i {
+    fn splat(self, v: u8) -> __m128i {
         unsafe { _mm_set1_epi8(v as i8) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128i {
+    fn zero(self) -> __m128i {
         unsafe { _mm_setzero_si128() }
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 16]) -> __m128i {
+    fn load(self, data: &[u8; 16]) -> __m128i {
         unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 16]) -> __m128i {
+    fn from_array(self, arr: [u8; 16]) -> __m128i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2669,22 +2669,22 @@ impl U8x32Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u8) -> __m256i {
+    fn splat(self, v: u8) -> __m256i {
         unsafe { _mm256_set1_epi8(v as i8) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256i {
+    fn zero(self) -> __m256i {
         unsafe { _mm256_setzero_si256() }
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 32]) -> __m256i {
+    fn load(self, data: &[u8; 32]) -> __m256i {
         unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 32]) -> __m256i {
+    fn from_array(self, arr: [u8; 32]) -> __m256i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2850,22 +2850,22 @@ impl I16x8Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i16) -> __m128i {
+    fn splat(self, v: i16) -> __m128i {
         unsafe { _mm_set1_epi16(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128i {
+    fn zero(self) -> __m128i {
         unsafe { _mm_setzero_si128() }
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 8]) -> __m128i {
+    fn load(self, data: &[i16; 8]) -> __m128i {
         unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 8]) -> __m128i {
+    fn from_array(self, arr: [i16; 8]) -> __m128i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3039,22 +3039,22 @@ impl I16x16Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i16) -> __m256i {
+    fn splat(self, v: i16) -> __m256i {
         unsafe { _mm256_set1_epi16(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256i {
+    fn zero(self) -> __m256i {
         unsafe { _mm256_setzero_si256() }
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 16]) -> __m256i {
+    fn load(self, data: &[i16; 16]) -> __m256i {
         unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 16]) -> __m256i {
+    fn from_array(self, arr: [i16; 16]) -> __m256i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3230,22 +3230,22 @@ impl U16x8Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u16) -> __m128i {
+    fn splat(self, v: u16) -> __m128i {
         unsafe { _mm_set1_epi16(v as i16) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128i {
+    fn zero(self) -> __m128i {
         unsafe { _mm_setzero_si128() }
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 8]) -> __m128i {
+    fn load(self, data: &[u16; 8]) -> __m128i {
         unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 8]) -> __m128i {
+    fn from_array(self, arr: [u16; 8]) -> __m128i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3411,22 +3411,22 @@ impl U16x16Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u16) -> __m256i {
+    fn splat(self, v: u16) -> __m256i {
         unsafe { _mm256_set1_epi16(v as i16) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256i {
+    fn zero(self) -> __m256i {
         unsafe { _mm256_setzero_si256() }
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 16]) -> __m256i {
+    fn load(self, data: &[u16; 16]) -> __m256i {
         unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 16]) -> __m256i {
+    fn from_array(self, arr: [u16; 16]) -> __m256i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3594,22 +3594,22 @@ impl U64x2Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u64) -> __m128i {
+    fn splat(self, v: u64) -> __m128i {
         unsafe { _mm_set1_epi64x(v as i64) }
     }
 
     #[inline(always)]
-    fn zero() -> __m128i {
+    fn zero(self) -> __m128i {
         unsafe { _mm_setzero_si128() }
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 2]) -> __m128i {
+    fn load(self, data: &[u64; 2]) -> __m128i {
         unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 2]) -> __m128i {
+    fn from_array(self, arr: [u64; 2]) -> __m128i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3779,22 +3779,22 @@ impl U64x4Backend for archmage::X64V3Token {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u64) -> __m256i {
+    fn splat(self, v: u64) -> __m256i {
         unsafe { _mm256_set1_epi64x(v as i64) }
     }
 
     #[inline(always)]
-    fn zero() -> __m256i {
+    fn zero(self) -> __m256i {
         unsafe { _mm256_setzero_si256() }
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 4]) -> __m256i {
+    fn load(self, data: &[u64; 4]) -> __m256i {
         unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 4]) -> __m256i {
+    fn from_array(self, arr: [u64; 4]) -> __m256i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -4170,19 +4170,19 @@ impl F32x16Backend for archmage::X64V3Token {
     type Repr = [__m256; 2];
 
     #[inline(always)]
-    fn splat(v: f32) -> [__m256; 2] {
+    fn splat(self, v: f32) -> [__m256; 2] {
         let h = <archmage::X64V3Token as F32x8Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256; 2] {
+    fn zero(self) -> [__m256; 2] {
         let h = <archmage::X64V3Token as F32x8Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 16]) -> [__m256; 2] {
+    fn load(self, data: &[f32; 16]) -> [__m256; 2] {
         let (lo, hi) = data.split_at(8);
         [
             <archmage::X64V3Token as F32x8Backend>::load(lo.try_into().unwrap()),
@@ -4191,7 +4191,7 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 16]) -> [__m256; 2] {
+    fn from_array(self, arr: [f32; 16]) -> [__m256; 2] {
         let mut lo = [0.0f32; 8];
         let mut hi = [0.0f32; 8];
         lo.copy_from_slice(&arr[..8]);
@@ -4462,19 +4462,19 @@ impl F64x8Backend for archmage::X64V3Token {
     type Repr = [__m256d; 2];
 
     #[inline(always)]
-    fn splat(v: f64) -> [__m256d; 2] {
+    fn splat(self, v: f64) -> [__m256d; 2] {
         let h = <archmage::X64V3Token as F64x4Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256d; 2] {
+    fn zero(self) -> [__m256d; 2] {
         let h = <archmage::X64V3Token as F64x4Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 8]) -> [__m256d; 2] {
+    fn load(self, data: &[f64; 8]) -> [__m256d; 2] {
         let (lo, hi) = data.split_at(4);
         [
             <archmage::X64V3Token as F64x4Backend>::load(lo.try_into().unwrap()),
@@ -4483,7 +4483,7 @@ impl F64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 8]) -> [__m256d; 2] {
+    fn from_array(self, arr: [f64; 8]) -> [__m256d; 2] {
         let mut lo = [0.0f64; 4];
         let mut hi = [0.0f64; 4];
         lo.copy_from_slice(&arr[..4]);
@@ -4754,19 +4754,19 @@ impl I8x64Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
 
     #[inline(always)]
-    fn splat(v: i8) -> [__m256i; 2] {
+    fn splat(self, v: i8) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as I8x32Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256i; 2] {
+    fn zero(self) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as I8x32Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 64]) -> [__m256i; 2] {
+    fn load(self, data: &[i8; 64]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(32);
         [
             <archmage::X64V3Token as I8x32Backend>::load(lo.try_into().unwrap()),
@@ -4775,7 +4775,7 @@ impl I8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 64]) -> [__m256i; 2] {
+    fn from_array(self, arr: [i8; 64]) -> [__m256i; 2] {
         let mut lo = [0; 32];
         let mut hi = [0; 32];
         lo.copy_from_slice(&arr[..32]);
@@ -4995,19 +4995,19 @@ impl U8x64Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
 
     #[inline(always)]
-    fn splat(v: u8) -> [__m256i; 2] {
+    fn splat(self, v: u8) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as U8x32Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256i; 2] {
+    fn zero(self) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as U8x32Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 64]) -> [__m256i; 2] {
+    fn load(self, data: &[u8; 64]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(32);
         [
             <archmage::X64V3Token as U8x32Backend>::load(lo.try_into().unwrap()),
@@ -5016,7 +5016,7 @@ impl U8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 64]) -> [__m256i; 2] {
+    fn from_array(self, arr: [u8; 64]) -> [__m256i; 2] {
         let mut lo = [0; 32];
         let mut hi = [0; 32];
         lo.copy_from_slice(&arr[..32]);
@@ -5229,19 +5229,19 @@ impl I16x32Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
 
     #[inline(always)]
-    fn splat(v: i16) -> [__m256i; 2] {
+    fn splat(self, v: i16) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as I16x16Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256i; 2] {
+    fn zero(self) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as I16x16Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 32]) -> [__m256i; 2] {
+    fn load(self, data: &[i16; 32]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(16);
         [
             <archmage::X64V3Token as I16x16Backend>::load(lo.try_into().unwrap()),
@@ -5250,7 +5250,7 @@ impl I16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 32]) -> [__m256i; 2] {
+    fn from_array(self, arr: [i16; 32]) -> [__m256i; 2] {
         let mut lo = [0; 16];
         let mut hi = [0; 16];
         lo.copy_from_slice(&arr[..16]);
@@ -5478,19 +5478,19 @@ impl U16x32Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
 
     #[inline(always)]
-    fn splat(v: u16) -> [__m256i; 2] {
+    fn splat(self, v: u16) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as U16x16Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256i; 2] {
+    fn zero(self) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as U16x16Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 32]) -> [__m256i; 2] {
+    fn load(self, data: &[u16; 32]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(16);
         [
             <archmage::X64V3Token as U16x16Backend>::load(lo.try_into().unwrap()),
@@ -5499,7 +5499,7 @@ impl U16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 32]) -> [__m256i; 2] {
+    fn from_array(self, arr: [u16; 32]) -> [__m256i; 2] {
         let mut lo = [0; 16];
         let mut hi = [0; 16];
         lo.copy_from_slice(&arr[..16]);
@@ -5720,19 +5720,19 @@ impl I32x16Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
 
     #[inline(always)]
-    fn splat(v: i32) -> [__m256i; 2] {
+    fn splat(self, v: i32) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as I32x8Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256i; 2] {
+    fn zero(self) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as I32x8Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 16]) -> [__m256i; 2] {
+    fn load(self, data: &[i32; 16]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(8);
         [
             <archmage::X64V3Token as I32x8Backend>::load(lo.try_into().unwrap()),
@@ -5741,7 +5741,7 @@ impl I32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 16]) -> [__m256i; 2] {
+    fn from_array(self, arr: [i32; 16]) -> [__m256i; 2] {
         let mut lo = [0; 8];
         let mut hi = [0; 8];
         lo.copy_from_slice(&arr[..8]);
@@ -5969,19 +5969,19 @@ impl U32x16Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
 
     #[inline(always)]
-    fn splat(v: u32) -> [__m256i; 2] {
+    fn splat(self, v: u32) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as U32x8Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256i; 2] {
+    fn zero(self) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as U32x8Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 16]) -> [__m256i; 2] {
+    fn load(self, data: &[u32; 16]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(8);
         [
             <archmage::X64V3Token as U32x8Backend>::load(lo.try_into().unwrap()),
@@ -5990,7 +5990,7 @@ impl U32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 16]) -> [__m256i; 2] {
+    fn from_array(self, arr: [u32; 16]) -> [__m256i; 2] {
         let mut lo = [0; 8];
         let mut hi = [0; 8];
         lo.copy_from_slice(&arr[..8]);
@@ -6211,19 +6211,19 @@ impl I64x8Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
 
     #[inline(always)]
-    fn splat(v: i64) -> [__m256i; 2] {
+    fn splat(self, v: i64) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as I64x4Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256i; 2] {
+    fn zero(self) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as I64x4Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 8]) -> [__m256i; 2] {
+    fn load(self, data: &[i64; 8]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(4);
         [
             <archmage::X64V3Token as I64x4Backend>::load(lo.try_into().unwrap()),
@@ -6232,7 +6232,7 @@ impl I64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 8]) -> [__m256i; 2] {
+    fn from_array(self, arr: [i64; 8]) -> [__m256i; 2] {
         let mut lo = [0; 4];
         let mut hi = [0; 4];
         lo.copy_from_slice(&arr[..4]);
@@ -6452,19 +6452,19 @@ impl U64x8Backend for archmage::X64V3Token {
     type Repr = [__m256i; 2];
 
     #[inline(always)]
-    fn splat(v: u64) -> [__m256i; 2] {
+    fn splat(self, v: u64) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as U64x4Backend>::splat(v);
         [h, h]
     }
 
     #[inline(always)]
-    fn zero() -> [__m256i; 2] {
+    fn zero(self) -> [__m256i; 2] {
         let h = <archmage::X64V3Token as U64x4Backend>::zero();
         [h, h]
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 8]) -> [__m256i; 2] {
+    fn load(self, data: &[u64; 8]) -> [__m256i; 2] {
         let (lo, hi) = data.split_at(4);
         [
             <archmage::X64V3Token as U64x4Backend>::load(lo.try_into().unwrap()),
@@ -6473,7 +6473,7 @@ impl U64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 8]) -> [__m256i; 2] {
+    fn from_array(self, arr: [u64; 8]) -> [__m256i; 2] {
         let mut lo = [0; 4];
         let mut hi = [0; 4];
         lo.copy_from_slice(&arr[..4]);

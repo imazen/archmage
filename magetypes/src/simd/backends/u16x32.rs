@@ -25,16 +25,16 @@ pub trait U16x32Backend: SimdToken + Sealed + Copy + 'static {
     // ====== Construction ======
 
     /// Broadcast scalar to all 32 lanes.
-    fn splat(v: u16) -> Self::Repr;
+    fn splat(self, v: u16) -> Self::Repr;
 
     /// All lanes zero.
-    fn zero() -> Self::Repr;
+    fn zero(self) -> Self::Repr;
 
     /// Load from an aligned array.
-    fn load(data: &[u16; 32]) -> Self::Repr;
+    fn load(self, data: &[u16; 32]) -> Self::Repr;
 
     /// Create from array (zero-cost transmute where possible).
-    fn from_array(arr: [u16; 32]) -> Self::Repr;
+    fn from_array(self, arr: [u16; 32]) -> Self::Repr;
 
     /// Store to array.
     fn store(repr: Self::Repr, out: &mut [u16; 32]);

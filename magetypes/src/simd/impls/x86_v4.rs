@@ -25,22 +25,22 @@ impl F32x16Backend for archmage::X64V4Token {
     type Repr = __m512;
 
     #[inline(always)]
-    fn splat(v: f32) -> __m512 {
+    fn splat(self, v: f32) -> __m512 {
         unsafe { _mm512_set1_ps(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512 {
+    fn zero(self) -> __m512 {
         unsafe { _mm512_setzero_ps() }
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 16]) -> __m512 {
+    fn load(self, data: &[f32; 16]) -> __m512 {
         unsafe { _mm512_loadu_ps(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 16]) -> __m512 {
+    fn from_array(self, arr: [f32; 16]) -> __m512 {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -253,22 +253,22 @@ impl F64x8Backend for archmage::X64V4Token {
     type Repr = __m512d;
 
     #[inline(always)]
-    fn splat(v: f64) -> __m512d {
+    fn splat(self, v: f64) -> __m512d {
         unsafe { _mm512_set1_pd(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512d {
+    fn zero(self) -> __m512d {
         unsafe { _mm512_setzero_pd() }
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 8]) -> __m512d {
+    fn load(self, data: &[f64; 8]) -> __m512d {
         unsafe { _mm512_loadu_pd(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 8]) -> __m512d {
+    fn from_array(self, arr: [f64; 8]) -> __m512d {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -481,22 +481,22 @@ impl I8x64Backend for archmage::X64V4Token {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: i8) -> __m512i {
+    fn splat(self, v: i8) -> __m512i {
         unsafe { _mm512_set1_epi8(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 64]) -> __m512i {
+    fn load(self, data: &[i8; 64]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 64]) -> __m512i {
+    fn from_array(self, arr: [i8; 64]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -694,22 +694,22 @@ impl U8x64Backend for archmage::X64V4Token {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: u8) -> __m512i {
+    fn splat(self, v: u8) -> __m512i {
         unsafe { _mm512_set1_epi8(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 64]) -> __m512i {
+    fn load(self, data: &[u8; 64]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 64]) -> __m512i {
+    fn from_array(self, arr: [u8; 64]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -896,22 +896,22 @@ impl I16x32Backend for archmage::X64V4Token {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: i16) -> __m512i {
+    fn splat(self, v: i16) -> __m512i {
         unsafe { _mm512_set1_epi16(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 32]) -> __m512i {
+    fn load(self, data: &[i16; 32]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 32]) -> __m512i {
+    fn from_array(self, arr: [i16; 32]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -1095,22 +1095,22 @@ impl U16x32Backend for archmage::X64V4Token {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: u16) -> __m512i {
+    fn splat(self, v: u16) -> __m512i {
         unsafe { _mm512_set1_epi16(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 32]) -> __m512i {
+    fn load(self, data: &[u16; 32]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 32]) -> __m512i {
+    fn from_array(self, arr: [u16; 32]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -1289,22 +1289,22 @@ impl I32x16Backend for archmage::X64V4Token {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: i32) -> __m512i {
+    fn splat(self, v: i32) -> __m512i {
         unsafe { _mm512_set1_epi32(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 16]) -> __m512i {
+    fn load(self, data: &[i32; 16]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 16]) -> __m512i {
+    fn from_array(self, arr: [i32; 16]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -1488,22 +1488,22 @@ impl U32x16Backend for archmage::X64V4Token {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: u32) -> __m512i {
+    fn splat(self, v: u32) -> __m512i {
         unsafe { _mm512_set1_epi32(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 16]) -> __m512i {
+    fn load(self, data: &[u32; 16]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 16]) -> __m512i {
+    fn from_array(self, arr: [u32; 16]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -1682,22 +1682,22 @@ impl I64x8Backend for archmage::X64V4Token {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: i64) -> __m512i {
+    fn splat(self, v: i64) -> __m512i {
         unsafe { _mm512_set1_epi64(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 8]) -> __m512i {
+    fn load(self, data: &[i64; 8]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 8]) -> __m512i {
+    fn from_array(self, arr: [i64; 8]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -1876,22 +1876,22 @@ impl U64x8Backend for archmage::X64V4Token {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: u64) -> __m512i {
+    fn splat(self, v: u64) -> __m512i {
         unsafe { _mm512_set1_epi64(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 8]) -> __m512i {
+    fn load(self, data: &[u64; 8]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 8]) -> __m512i {
+    fn from_array(self, arr: [u64; 8]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2069,22 +2069,22 @@ impl F32x16Backend for archmage::X64V4xToken {
     type Repr = __m512;
 
     #[inline(always)]
-    fn splat(v: f32) -> __m512 {
+    fn splat(self, v: f32) -> __m512 {
         unsafe { _mm512_set1_ps(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512 {
+    fn zero(self) -> __m512 {
         unsafe { _mm512_setzero_ps() }
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 16]) -> __m512 {
+    fn load(self, data: &[f32; 16]) -> __m512 {
         unsafe { _mm512_loadu_ps(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 16]) -> __m512 {
+    fn from_array(self, arr: [f32; 16]) -> __m512 {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2297,22 +2297,22 @@ impl F64x8Backend for archmage::X64V4xToken {
     type Repr = __m512d;
 
     #[inline(always)]
-    fn splat(v: f64) -> __m512d {
+    fn splat(self, v: f64) -> __m512d {
         unsafe { _mm512_set1_pd(v) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512d {
+    fn zero(self) -> __m512d {
         unsafe { _mm512_setzero_pd() }
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 8]) -> __m512d {
+    fn load(self, data: &[f64; 8]) -> __m512d {
         unsafe { _mm512_loadu_pd(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 8]) -> __m512d {
+    fn from_array(self, arr: [f64; 8]) -> __m512d {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2525,22 +2525,22 @@ impl I8x64Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: i8) -> __m512i {
+    fn splat(self, v: i8) -> __m512i {
         unsafe { _mm512_set1_epi8(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 64]) -> __m512i {
+    fn load(self, data: &[i8; 64]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 64]) -> __m512i {
+    fn from_array(self, arr: [i8; 64]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2738,22 +2738,22 @@ impl U8x64Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: u8) -> __m512i {
+    fn splat(self, v: u8) -> __m512i {
         unsafe { _mm512_set1_epi8(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 64]) -> __m512i {
+    fn load(self, data: &[u8; 64]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 64]) -> __m512i {
+    fn from_array(self, arr: [u8; 64]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -2940,22 +2940,22 @@ impl I16x32Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: i16) -> __m512i {
+    fn splat(self, v: i16) -> __m512i {
         unsafe { _mm512_set1_epi16(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 32]) -> __m512i {
+    fn load(self, data: &[i16; 32]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 32]) -> __m512i {
+    fn from_array(self, arr: [i16; 32]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3139,22 +3139,22 @@ impl U16x32Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: u16) -> __m512i {
+    fn splat(self, v: u16) -> __m512i {
         unsafe { _mm512_set1_epi16(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 32]) -> __m512i {
+    fn load(self, data: &[u16; 32]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 32]) -> __m512i {
+    fn from_array(self, arr: [u16; 32]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3333,22 +3333,22 @@ impl I32x16Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: i32) -> __m512i {
+    fn splat(self, v: i32) -> __m512i {
         unsafe { _mm512_set1_epi32(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 16]) -> __m512i {
+    fn load(self, data: &[i32; 16]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 16]) -> __m512i {
+    fn from_array(self, arr: [i32; 16]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3532,22 +3532,22 @@ impl U32x16Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: u32) -> __m512i {
+    fn splat(self, v: u32) -> __m512i {
         unsafe { _mm512_set1_epi32(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 16]) -> __m512i {
+    fn load(self, data: &[u32; 16]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 16]) -> __m512i {
+    fn from_array(self, arr: [u32; 16]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3726,22 +3726,22 @@ impl I64x8Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: i64) -> __m512i {
+    fn splat(self, v: i64) -> __m512i {
         unsafe { _mm512_set1_epi64(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 8]) -> __m512i {
+    fn load(self, data: &[i64; 8]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 8]) -> __m512i {
+    fn from_array(self, arr: [i64; 8]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 
@@ -3920,22 +3920,22 @@ impl U64x8Backend for archmage::X64V4xToken {
     type Repr = __m512i;
 
     #[inline(always)]
-    fn splat(v: u64) -> __m512i {
+    fn splat(self, v: u64) -> __m512i {
         unsafe { _mm512_set1_epi64(v as _) }
     }
 
     #[inline(always)]
-    fn zero() -> __m512i {
+    fn zero(self) -> __m512i {
         unsafe { _mm512_setzero_si512() }
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 8]) -> __m512i {
+    fn load(self, data: &[u64; 8]) -> __m512i {
         unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 8]) -> __m512i {
+    fn from_array(self, arr: [u64; 8]) -> __m512i {
         unsafe { core::mem::transmute(arr) }
     }
 

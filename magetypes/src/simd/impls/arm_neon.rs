@@ -12,22 +12,22 @@ impl F32x4Backend for archmage::NeonToken {
     type Repr = float32x4_t;
 
     #[inline(always)]
-    fn splat(v: f32) -> float32x4_t {
+    fn splat(self, v: f32) -> float32x4_t {
         unsafe { vdupq_n_f32(v) }
     }
 
     #[inline(always)]
-    fn zero() -> float32x4_t {
+    fn zero(self) -> float32x4_t {
         unsafe { vdupq_n_f32(0.0) }
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 4]) -> float32x4_t {
+    fn load(self, data: &[f32; 4]) -> float32x4_t {
         unsafe { vld1q_f32(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 4]) -> float32x4_t {
+    fn from_array(self, arr: [f32; 4]) -> float32x4_t {
         <Self as F32x4Backend>::load(&arr)
     }
 
@@ -167,6 +167,25 @@ impl F32x4Backend for archmage::NeonToken {
     fn rsqrt_approx(a: float32x4_t) -> float32x4_t {
         unsafe { vrsqrteq_f32(a) }
     }
+    // Newton-Raphson refinement over the *_approx variants. Constants
+    // built via vdupq_n_f32 directly (NEON intrinsic; this impl block
+    // is gated on the NEON target feature already).
+    #[inline(always)]
+    fn recip(a: float32x4_t) -> float32x4_t {
+        let approx = Self::rcp_approx(a);
+        let two = unsafe { vdupq_n_f32(2.0) };
+        Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
+    }
+    #[inline(always)]
+    fn rsqrt(a: float32x4_t) -> float32x4_t {
+        let approx = Self::rsqrt_approx(a);
+        let half = unsafe { vdupq_n_f32(0.5) };
+        let three = unsafe { vdupq_n_f32(3.0) };
+        Self::mul(
+            Self::mul(half, approx),
+            Self::sub(three, Self::mul(a, Self::mul(approx, approx))),
+        )
+    }
 
     #[inline(always)]
     fn not(a: float32x4_t) -> float32x4_t {
@@ -208,7 +227,7 @@ impl F32x8Backend for archmage::NeonToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f32) -> [float32x4_t; 2] {
+    fn splat(self, v: f32) -> [float32x4_t; 2] {
         unsafe {
             let v4 = vdupq_n_f32(v);
             [v4, v4]
@@ -216,7 +235,7 @@ impl F32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [float32x4_t; 2] {
+    fn zero(self) -> [float32x4_t; 2] {
         unsafe {
             let z = vdupq_n_f32(0.0);
             [z, z]
@@ -224,7 +243,7 @@ impl F32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 8]) -> [float32x4_t; 2] {
+    fn load(self, data: &[f32; 8]) -> [float32x4_t; 2] {
         unsafe {
             [
                 vld1q_f32(data.as_ptr().add(0)),
@@ -234,7 +253,7 @@ impl F32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 8]) -> [float32x4_t; 2] {
+    fn from_array(self, arr: [f32; 8]) -> [float32x4_t; 2] {
         <Self as F32x8Backend>::load(&arr)
     }
 
@@ -520,22 +539,22 @@ impl F64x2Backend for archmage::NeonToken {
     type Repr = float64x2_t;
 
     #[inline(always)]
-    fn splat(v: f64) -> float64x2_t {
+    fn splat(self, v: f64) -> float64x2_t {
         unsafe { vdupq_n_f64(v) }
     }
 
     #[inline(always)]
-    fn zero() -> float64x2_t {
+    fn zero(self) -> float64x2_t {
         unsafe { vdupq_n_f64(0.0) }
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 2]) -> float64x2_t {
+    fn load(self, data: &[f64; 2]) -> float64x2_t {
         unsafe { vld1q_f64(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 2]) -> float64x2_t {
+    fn from_array(self, arr: [f64; 2]) -> float64x2_t {
         <Self as F64x2Backend>::load(&arr)
     }
 
@@ -672,6 +691,25 @@ impl F64x2Backend for archmage::NeonToken {
     fn rsqrt_approx(a: float64x2_t) -> float64x2_t {
         unsafe { vrsqrteq_f64(a) }
     }
+    // Newton-Raphson refinement over the *_approx variants. Constants
+    // built via vdupq_n_f64 directly (NEON intrinsic; this impl block
+    // is gated on the NEON target feature already).
+    #[inline(always)]
+    fn recip(a: float64x2_t) -> float64x2_t {
+        let approx = Self::rcp_approx(a);
+        let two = unsafe { vdupq_n_f64(2.0) };
+        Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
+    }
+    #[inline(always)]
+    fn rsqrt(a: float64x2_t) -> float64x2_t {
+        let approx = Self::rsqrt_approx(a);
+        let half = unsafe { vdupq_n_f64(0.5) };
+        let three = unsafe { vdupq_n_f64(3.0) };
+        Self::mul(
+            Self::mul(half, approx),
+            Self::sub(three, Self::mul(a, Self::mul(approx, approx))),
+        )
+    }
 
     #[inline(always)]
     fn not(a: float64x2_t) -> float64x2_t {
@@ -713,7 +751,7 @@ impl F64x4Backend for archmage::NeonToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f64) -> [float64x2_t; 2] {
+    fn splat(self, v: f64) -> [float64x2_t; 2] {
         unsafe {
             let v4 = vdupq_n_f64(v);
             [v4, v4]
@@ -721,7 +759,7 @@ impl F64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [float64x2_t; 2] {
+    fn zero(self) -> [float64x2_t; 2] {
         unsafe {
             let z = vdupq_n_f64(0.0);
             [z, z]
@@ -729,7 +767,7 @@ impl F64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 4]) -> [float64x2_t; 2] {
+    fn load(self, data: &[f64; 4]) -> [float64x2_t; 2] {
         unsafe {
             [
                 vld1q_f64(data.as_ptr().add(0)),
@@ -739,7 +777,7 @@ impl F64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 4]) -> [float64x2_t; 2] {
+    fn from_array(self, arr: [f64; 4]) -> [float64x2_t; 2] {
         <Self as F64x4Backend>::load(&arr)
     }
 
@@ -1028,22 +1066,22 @@ impl I32x4Backend for archmage::NeonToken {
     type Repr = int32x4_t;
 
     #[inline(always)]
-    fn splat(v: i32) -> int32x4_t {
+    fn splat(self, v: i32) -> int32x4_t {
         unsafe { vdupq_n_s32(v) }
     }
 
     #[inline(always)]
-    fn zero() -> int32x4_t {
+    fn zero(self) -> int32x4_t {
         unsafe { vdupq_n_s32(0) }
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 4]) -> int32x4_t {
+    fn load(self, data: &[i32; 4]) -> int32x4_t {
         unsafe { vld1q_s32(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 4]) -> int32x4_t {
+    fn from_array(self, arr: [i32; 4]) -> int32x4_t {
         unsafe { vld1q_s32(arr.as_ptr()) }
     }
 
@@ -1185,7 +1223,7 @@ impl I32x8Backend for archmage::NeonToken {
     type Repr = [int32x4_t; 2];
 
     #[inline(always)]
-    fn splat(v: i32) -> [int32x4_t; 2] {
+    fn splat(self, v: i32) -> [int32x4_t; 2] {
         unsafe {
             let v4 = vdupq_n_s32(v);
             [v4, v4]
@@ -1193,7 +1231,7 @@ impl I32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [int32x4_t; 2] {
+    fn zero(self) -> [int32x4_t; 2] {
         unsafe {
             let z = vdupq_n_s32(0);
             [z, z]
@@ -1201,7 +1239,7 @@ impl I32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 8]) -> [int32x4_t; 2] {
+    fn load(self, data: &[i32; 8]) -> [int32x4_t; 2] {
         unsafe {
             [
                 vld1q_s32(data.as_ptr().add(0)),
@@ -1211,7 +1249,7 @@ impl I32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 8]) -> [int32x4_t; 2] {
+    fn from_array(self, arr: [i32; 8]) -> [int32x4_t; 2] {
         <Self as I32x8Backend>::load(&arr)
     }
 
@@ -1413,22 +1451,22 @@ impl U32x4Backend for archmage::NeonToken {
     type Repr = uint32x4_t;
 
     #[inline(always)]
-    fn splat(v: u32) -> uint32x4_t {
+    fn splat(self, v: u32) -> uint32x4_t {
         unsafe { vdupq_n_u32(v) }
     }
 
     #[inline(always)]
-    fn zero() -> uint32x4_t {
+    fn zero(self) -> uint32x4_t {
         unsafe { vdupq_n_u32(0) }
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 4]) -> uint32x4_t {
+    fn load(self, data: &[u32; 4]) -> uint32x4_t {
         unsafe { vld1q_u32(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 4]) -> uint32x4_t {
+    fn from_array(self, arr: [u32; 4]) -> uint32x4_t {
         unsafe { vld1q_u32(arr.as_ptr()) }
     }
 
@@ -1557,7 +1595,7 @@ impl U32x8Backend for archmage::NeonToken {
     type Repr = [uint32x4_t; 2];
 
     #[inline(always)]
-    fn splat(v: u32) -> [uint32x4_t; 2] {
+    fn splat(self, v: u32) -> [uint32x4_t; 2] {
         unsafe {
             let v4 = vdupq_n_u32(v);
             [v4, v4]
@@ -1565,7 +1603,7 @@ impl U32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [uint32x4_t; 2] {
+    fn zero(self) -> [uint32x4_t; 2] {
         unsafe {
             let z = vdupq_n_u32(0);
             [z, z]
@@ -1573,7 +1611,7 @@ impl U32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 8]) -> [uint32x4_t; 2] {
+    fn load(self, data: &[u32; 8]) -> [uint32x4_t; 2] {
         unsafe {
             [
                 vld1q_u32(data.as_ptr().add(0)),
@@ -1583,7 +1621,7 @@ impl U32x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 8]) -> [uint32x4_t; 2] {
+    fn from_array(self, arr: [u32; 8]) -> [uint32x4_t; 2] {
         <Self as U32x8Backend>::load(&arr)
     }
 
@@ -1736,22 +1774,22 @@ impl I64x2Backend for archmage::NeonToken {
     type Repr = int64x2_t;
 
     #[inline(always)]
-    fn splat(v: i64) -> int64x2_t {
+    fn splat(self, v: i64) -> int64x2_t {
         unsafe { vdupq_n_s64(v) }
     }
 
     #[inline(always)]
-    fn zero() -> int64x2_t {
+    fn zero(self) -> int64x2_t {
         unsafe { vdupq_n_s64(0i64) }
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 2]) -> int64x2_t {
+    fn load(self, data: &[i64; 2]) -> int64x2_t {
         unsafe { vld1q_s64(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 2]) -> int64x2_t {
+    fn from_array(self, arr: [i64; 2]) -> int64x2_t {
         unsafe { vld1q_s64(arr.as_ptr()) }
     }
 
@@ -1907,7 +1945,7 @@ impl I64x4Backend for archmage::NeonToken {
     type Repr = [int64x2_t; 2];
 
     #[inline(always)]
-    fn splat(v: i64) -> [int64x2_t; 2] {
+    fn splat(self, v: i64) -> [int64x2_t; 2] {
         unsafe {
             let v2 = vdupq_n_s64(v);
             [v2, v2]
@@ -1915,7 +1953,7 @@ impl I64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [int64x2_t; 2] {
+    fn zero(self) -> [int64x2_t; 2] {
         unsafe {
             let z = vdupq_n_s64(0i64);
             [z, z]
@@ -1923,7 +1961,7 @@ impl I64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 4]) -> [int64x2_t; 2] {
+    fn load(self, data: &[i64; 4]) -> [int64x2_t; 2] {
         unsafe {
             [
                 vld1q_s64(data.as_ptr().add(0)),
@@ -1933,7 +1971,7 @@ impl I64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 4]) -> [int64x2_t; 2] {
+    fn from_array(self, arr: [i64; 4]) -> [int64x2_t; 2] {
         <Self as I64x4Backend>::load(&arr)
     }
 
@@ -2151,22 +2189,22 @@ impl I8x16Backend for archmage::NeonToken {
     type Repr = int8x16_t;
 
     #[inline(always)]
-    fn splat(v: i8) -> int8x16_t {
+    fn splat(self, v: i8) -> int8x16_t {
         unsafe { vdupq_n_s8(v) }
     }
 
     #[inline(always)]
-    fn zero() -> int8x16_t {
+    fn zero(self) -> int8x16_t {
         unsafe { vdupq_n_s8(0) }
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 16]) -> int8x16_t {
+    fn load(self, data: &[i8; 16]) -> int8x16_t {
         unsafe { vld1q_s8(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 16]) -> int8x16_t {
+    fn from_array(self, arr: [i8; 16]) -> int8x16_t {
         unsafe { vld1q_s8(arr.as_ptr()) }
     }
 
@@ -2307,7 +2345,7 @@ impl I8x32Backend for archmage::NeonToken {
     type Repr = [int8x16_t; 2];
 
     #[inline(always)]
-    fn splat(v: i8) -> [int8x16_t; 2] {
+    fn splat(self, v: i8) -> [int8x16_t; 2] {
         unsafe {
             let v4 = vdupq_n_s8(v);
             [v4, v4]
@@ -2315,7 +2353,7 @@ impl I8x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [int8x16_t; 2] {
+    fn zero(self) -> [int8x16_t; 2] {
         unsafe {
             let z = vdupq_n_s8(0);
             [z, z]
@@ -2323,7 +2361,7 @@ impl I8x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 32]) -> [int8x16_t; 2] {
+    fn load(self, data: &[i8; 32]) -> [int8x16_t; 2] {
         unsafe {
             [
                 vld1q_s8(data.as_ptr().add(0)),
@@ -2333,7 +2371,7 @@ impl I8x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 32]) -> [int8x16_t; 2] {
+    fn from_array(self, arr: [i8; 32]) -> [int8x16_t; 2] {
         <Self as I8x32Backend>::load(&arr)
     }
 
@@ -2520,22 +2558,22 @@ impl U8x16Backend for archmage::NeonToken {
     type Repr = uint8x16_t;
 
     #[inline(always)]
-    fn splat(v: u8) -> uint8x16_t {
+    fn splat(self, v: u8) -> uint8x16_t {
         unsafe { vdupq_n_u8(v) }
     }
 
     #[inline(always)]
-    fn zero() -> uint8x16_t {
+    fn zero(self) -> uint8x16_t {
         unsafe { vdupq_n_u8(0) }
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 16]) -> uint8x16_t {
+    fn load(self, data: &[u8; 16]) -> uint8x16_t {
         unsafe { vld1q_u8(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 16]) -> uint8x16_t {
+    fn from_array(self, arr: [u8; 16]) -> uint8x16_t {
         unsafe { vld1q_u8(arr.as_ptr()) }
     }
 
@@ -2664,7 +2702,7 @@ impl U8x32Backend for archmage::NeonToken {
     type Repr = [uint8x16_t; 2];
 
     #[inline(always)]
-    fn splat(v: u8) -> [uint8x16_t; 2] {
+    fn splat(self, v: u8) -> [uint8x16_t; 2] {
         unsafe {
             let v4 = vdupq_n_u8(v);
             [v4, v4]
@@ -2672,7 +2710,7 @@ impl U8x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [uint8x16_t; 2] {
+    fn zero(self) -> [uint8x16_t; 2] {
         unsafe {
             let z = vdupq_n_u8(0);
             [z, z]
@@ -2680,7 +2718,7 @@ impl U8x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 32]) -> [uint8x16_t; 2] {
+    fn load(self, data: &[u8; 32]) -> [uint8x16_t; 2] {
         unsafe {
             [
                 vld1q_u8(data.as_ptr().add(0)),
@@ -2690,7 +2728,7 @@ impl U8x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 32]) -> [uint8x16_t; 2] {
+    fn from_array(self, arr: [u8; 32]) -> [uint8x16_t; 2] {
         <Self as U8x32Backend>::load(&arr)
     }
 
@@ -2831,22 +2869,22 @@ impl I16x8Backend for archmage::NeonToken {
     type Repr = int16x8_t;
 
     #[inline(always)]
-    fn splat(v: i16) -> int16x8_t {
+    fn splat(self, v: i16) -> int16x8_t {
         unsafe { vdupq_n_s16(v) }
     }
 
     #[inline(always)]
-    fn zero() -> int16x8_t {
+    fn zero(self) -> int16x8_t {
         unsafe { vdupq_n_s16(0) }
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 8]) -> int16x8_t {
+    fn load(self, data: &[i16; 8]) -> int16x8_t {
         unsafe { vld1q_s16(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 8]) -> int16x8_t {
+    fn from_array(self, arr: [i16; 8]) -> int16x8_t {
         unsafe { vld1q_s16(arr.as_ptr()) }
     }
 
@@ -2984,7 +3022,7 @@ impl I16x16Backend for archmage::NeonToken {
     type Repr = [int16x8_t; 2];
 
     #[inline(always)]
-    fn splat(v: i16) -> [int16x8_t; 2] {
+    fn splat(self, v: i16) -> [int16x8_t; 2] {
         unsafe {
             let v4 = vdupq_n_s16(v);
             [v4, v4]
@@ -2992,7 +3030,7 @@ impl I16x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [int16x8_t; 2] {
+    fn zero(self) -> [int16x8_t; 2] {
         unsafe {
             let z = vdupq_n_s16(0);
             [z, z]
@@ -3000,7 +3038,7 @@ impl I16x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 16]) -> [int16x8_t; 2] {
+    fn load(self, data: &[i16; 16]) -> [int16x8_t; 2] {
         unsafe {
             [
                 vld1q_s16(data.as_ptr().add(0)),
@@ -3010,7 +3048,7 @@ impl I16x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 16]) -> [int16x8_t; 2] {
+    fn from_array(self, arr: [i16; 16]) -> [int16x8_t; 2] {
         <Self as I16x16Backend>::load(&arr)
     }
 
@@ -3203,22 +3241,22 @@ impl U16x8Backend for archmage::NeonToken {
     type Repr = uint16x8_t;
 
     #[inline(always)]
-    fn splat(v: u16) -> uint16x8_t {
+    fn splat(self, v: u16) -> uint16x8_t {
         unsafe { vdupq_n_u16(v) }
     }
 
     #[inline(always)]
-    fn zero() -> uint16x8_t {
+    fn zero(self) -> uint16x8_t {
         unsafe { vdupq_n_u16(0) }
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 8]) -> uint16x8_t {
+    fn load(self, data: &[u16; 8]) -> uint16x8_t {
         unsafe { vld1q_u16(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 8]) -> uint16x8_t {
+    fn from_array(self, arr: [u16; 8]) -> uint16x8_t {
         unsafe { vld1q_u16(arr.as_ptr()) }
     }
 
@@ -3344,7 +3382,7 @@ impl U16x16Backend for archmage::NeonToken {
     type Repr = [uint16x8_t; 2];
 
     #[inline(always)]
-    fn splat(v: u16) -> [uint16x8_t; 2] {
+    fn splat(self, v: u16) -> [uint16x8_t; 2] {
         unsafe {
             let v4 = vdupq_n_u16(v);
             [v4, v4]
@@ -3352,7 +3390,7 @@ impl U16x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [uint16x8_t; 2] {
+    fn zero(self) -> [uint16x8_t; 2] {
         unsafe {
             let z = vdupq_n_u16(0);
             [z, z]
@@ -3360,7 +3398,7 @@ impl U16x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 16]) -> [uint16x8_t; 2] {
+    fn load(self, data: &[u16; 16]) -> [uint16x8_t; 2] {
         unsafe {
             [
                 vld1q_u16(data.as_ptr().add(0)),
@@ -3370,7 +3408,7 @@ impl U16x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 16]) -> [uint16x8_t; 2] {
+    fn from_array(self, arr: [u16; 16]) -> [uint16x8_t; 2] {
         <Self as U16x16Backend>::load(&arr)
     }
 
@@ -3515,22 +3553,22 @@ impl U64x2Backend for archmage::NeonToken {
     type Repr = uint64x2_t;
 
     #[inline(always)]
-    fn splat(v: u64) -> uint64x2_t {
+    fn splat(self, v: u64) -> uint64x2_t {
         unsafe { vdupq_n_u64(v) }
     }
 
     #[inline(always)]
-    fn zero() -> uint64x2_t {
+    fn zero(self) -> uint64x2_t {
         unsafe { vdupq_n_u64(0) }
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 2]) -> uint64x2_t {
+    fn load(self, data: &[u64; 2]) -> uint64x2_t {
         unsafe { vld1q_u64(data.as_ptr()) }
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 2]) -> uint64x2_t {
+    fn from_array(self, arr: [u64; 2]) -> uint64x2_t {
         unsafe { vld1q_u64(arr.as_ptr()) }
     }
 
@@ -3648,7 +3686,7 @@ impl U64x4Backend for archmage::NeonToken {
     type Repr = [uint64x2_t; 2];
 
     #[inline(always)]
-    fn splat(v: u64) -> [uint64x2_t; 2] {
+    fn splat(self, v: u64) -> [uint64x2_t; 2] {
         unsafe {
             let v4 = vdupq_n_u64(v);
             [v4, v4]
@@ -3656,7 +3694,7 @@ impl U64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn zero() -> [uint64x2_t; 2] {
+    fn zero(self) -> [uint64x2_t; 2] {
         unsafe {
             let z = vdupq_n_u64(0);
             [z, z]
@@ -3664,7 +3702,7 @@ impl U64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 4]) -> [uint64x2_t; 2] {
+    fn load(self, data: &[u64; 4]) -> [uint64x2_t; 2] {
         unsafe {
             [
                 vld1q_u64(data.as_ptr().add(0)),
@@ -3674,7 +3712,7 @@ impl U64x4Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 4]) -> [uint64x2_t; 2] {
+    fn from_array(self, arr: [u64; 4]) -> [uint64x2_t; 2] {
         <Self as U64x4Backend>::load(&arr)
     }
 
@@ -4083,19 +4121,19 @@ impl F32x16Backend for archmage::NeonToken {
     type Repr = [float32x4_t; 4];
 
     #[inline(always)]
-    fn splat(v: f32) -> [float32x4_t; 4] {
+    fn splat(self, v: f32) -> [float32x4_t; 4] {
         let q = <archmage::NeonToken as F32x4Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [float32x4_t; 4] {
+    fn zero(self) -> [float32x4_t; 4] {
         let q = <archmage::NeonToken as F32x4Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 16]) -> [float32x4_t; 4] {
+    fn load(self, data: &[f32; 16]) -> [float32x4_t; 4] {
         [
             <archmage::NeonToken as F32x4Backend>::load(data[0..4].try_into().unwrap()),
             <archmage::NeonToken as F32x4Backend>::load(data[4..8].try_into().unwrap()),
@@ -4105,7 +4143,7 @@ impl F32x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 16]) -> [float32x4_t; 4] {
+    fn from_array(self, arr: [f32; 16]) -> [float32x4_t; 4] {
         let mut q0 = [0.0f32; 4];
         let mut q1 = [0.0f32; 4];
         let mut q2 = [0.0f32; 4];
@@ -4323,19 +4361,19 @@ impl F64x8Backend for archmage::NeonToken {
     type Repr = [float64x2_t; 4];
 
     #[inline(always)]
-    fn splat(v: f64) -> [float64x2_t; 4] {
+    fn splat(self, v: f64) -> [float64x2_t; 4] {
         let q = <archmage::NeonToken as F64x2Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [float64x2_t; 4] {
+    fn zero(self) -> [float64x2_t; 4] {
         let q = <archmage::NeonToken as F64x2Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 8]) -> [float64x2_t; 4] {
+    fn load(self, data: &[f64; 8]) -> [float64x2_t; 4] {
         [
             <archmage::NeonToken as F64x2Backend>::load(data[0..2].try_into().unwrap()),
             <archmage::NeonToken as F64x2Backend>::load(data[2..4].try_into().unwrap()),
@@ -4345,7 +4383,7 @@ impl F64x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 8]) -> [float64x2_t; 4] {
+    fn from_array(self, arr: [f64; 8]) -> [float64x2_t; 4] {
         let mut q0 = [0.0f64; 2];
         let mut q1 = [0.0f64; 2];
         let mut q2 = [0.0f64; 2];
@@ -4563,19 +4601,19 @@ impl I8x64Backend for archmage::NeonToken {
     type Repr = [int8x16_t; 4];
 
     #[inline(always)]
-    fn splat(v: i8) -> [int8x16_t; 4] {
+    fn splat(self, v: i8) -> [int8x16_t; 4] {
         let q = <archmage::NeonToken as I8x16Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [int8x16_t; 4] {
+    fn zero(self) -> [int8x16_t; 4] {
         let q = <archmage::NeonToken as I8x16Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 64]) -> [int8x16_t; 4] {
+    fn load(self, data: &[i8; 64]) -> [int8x16_t; 4] {
         [
             <archmage::NeonToken as I8x16Backend>::load(data[0..16].try_into().unwrap()),
             <archmage::NeonToken as I8x16Backend>::load(data[16..32].try_into().unwrap()),
@@ -4585,7 +4623,7 @@ impl I8x64Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 64]) -> [int8x16_t; 4] {
+    fn from_array(self, arr: [i8; 64]) -> [int8x16_t; 4] {
         let mut q0 = [0; 16];
         let mut q1 = [0; 16];
         let mut q2 = [0; 16];
@@ -4777,19 +4815,19 @@ impl U8x64Backend for archmage::NeonToken {
     type Repr = [uint8x16_t; 4];
 
     #[inline(always)]
-    fn splat(v: u8) -> [uint8x16_t; 4] {
+    fn splat(self, v: u8) -> [uint8x16_t; 4] {
         let q = <archmage::NeonToken as U8x16Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [uint8x16_t; 4] {
+    fn zero(self) -> [uint8x16_t; 4] {
         let q = <archmage::NeonToken as U8x16Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 64]) -> [uint8x16_t; 4] {
+    fn load(self, data: &[u8; 64]) -> [uint8x16_t; 4] {
         [
             <archmage::NeonToken as U8x16Backend>::load(data[0..16].try_into().unwrap()),
             <archmage::NeonToken as U8x16Backend>::load(data[16..32].try_into().unwrap()),
@@ -4799,7 +4837,7 @@ impl U8x64Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 64]) -> [uint8x16_t; 4] {
+    fn from_array(self, arr: [u8; 64]) -> [uint8x16_t; 4] {
         let mut q0 = [0; 16];
         let mut q1 = [0; 16];
         let mut q2 = [0; 16];
@@ -4987,19 +5025,19 @@ impl I16x32Backend for archmage::NeonToken {
     type Repr = [int16x8_t; 4];
 
     #[inline(always)]
-    fn splat(v: i16) -> [int16x8_t; 4] {
+    fn splat(self, v: i16) -> [int16x8_t; 4] {
         let q = <archmage::NeonToken as I16x8Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [int16x8_t; 4] {
+    fn zero(self) -> [int16x8_t; 4] {
         let q = <archmage::NeonToken as I16x8Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 32]) -> [int16x8_t; 4] {
+    fn load(self, data: &[i16; 32]) -> [int16x8_t; 4] {
         [
             <archmage::NeonToken as I16x8Backend>::load(data[0..8].try_into().unwrap()),
             <archmage::NeonToken as I16x8Backend>::load(data[8..16].try_into().unwrap()),
@@ -5009,7 +5047,7 @@ impl I16x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 32]) -> [int16x8_t; 4] {
+    fn from_array(self, arr: [i16; 32]) -> [int16x8_t; 4] {
         let mut q0 = [0; 8];
         let mut q1 = [0; 8];
         let mut q2 = [0; 8];
@@ -5206,19 +5244,19 @@ impl U16x32Backend for archmage::NeonToken {
     type Repr = [uint16x8_t; 4];
 
     #[inline(always)]
-    fn splat(v: u16) -> [uint16x8_t; 4] {
+    fn splat(self, v: u16) -> [uint16x8_t; 4] {
         let q = <archmage::NeonToken as U16x8Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [uint16x8_t; 4] {
+    fn zero(self) -> [uint16x8_t; 4] {
         let q = <archmage::NeonToken as U16x8Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 32]) -> [uint16x8_t; 4] {
+    fn load(self, data: &[u16; 32]) -> [uint16x8_t; 4] {
         [
             <archmage::NeonToken as U16x8Backend>::load(data[0..8].try_into().unwrap()),
             <archmage::NeonToken as U16x8Backend>::load(data[8..16].try_into().unwrap()),
@@ -5228,7 +5266,7 @@ impl U16x32Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 32]) -> [uint16x8_t; 4] {
+    fn from_array(self, arr: [u16; 32]) -> [uint16x8_t; 4] {
         let mut q0 = [0; 8];
         let mut q1 = [0; 8];
         let mut q2 = [0; 8];
@@ -5421,19 +5459,19 @@ impl I32x16Backend for archmage::NeonToken {
     type Repr = [int32x4_t; 4];
 
     #[inline(always)]
-    fn splat(v: i32) -> [int32x4_t; 4] {
+    fn splat(self, v: i32) -> [int32x4_t; 4] {
         let q = <archmage::NeonToken as I32x4Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [int32x4_t; 4] {
+    fn zero(self) -> [int32x4_t; 4] {
         let q = <archmage::NeonToken as I32x4Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 16]) -> [int32x4_t; 4] {
+    fn load(self, data: &[i32; 16]) -> [int32x4_t; 4] {
         [
             <archmage::NeonToken as I32x4Backend>::load(data[0..4].try_into().unwrap()),
             <archmage::NeonToken as I32x4Backend>::load(data[4..8].try_into().unwrap()),
@@ -5443,7 +5481,7 @@ impl I32x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 16]) -> [int32x4_t; 4] {
+    fn from_array(self, arr: [i32; 16]) -> [int32x4_t; 4] {
         let mut q0 = [0; 4];
         let mut q1 = [0; 4];
         let mut q2 = [0; 4];
@@ -5640,19 +5678,19 @@ impl U32x16Backend for archmage::NeonToken {
     type Repr = [uint32x4_t; 4];
 
     #[inline(always)]
-    fn splat(v: u32) -> [uint32x4_t; 4] {
+    fn splat(self, v: u32) -> [uint32x4_t; 4] {
         let q = <archmage::NeonToken as U32x4Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [uint32x4_t; 4] {
+    fn zero(self) -> [uint32x4_t; 4] {
         let q = <archmage::NeonToken as U32x4Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 16]) -> [uint32x4_t; 4] {
+    fn load(self, data: &[u32; 16]) -> [uint32x4_t; 4] {
         [
             <archmage::NeonToken as U32x4Backend>::load(data[0..4].try_into().unwrap()),
             <archmage::NeonToken as U32x4Backend>::load(data[4..8].try_into().unwrap()),
@@ -5662,7 +5700,7 @@ impl U32x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 16]) -> [uint32x4_t; 4] {
+    fn from_array(self, arr: [u32; 16]) -> [uint32x4_t; 4] {
         let mut q0 = [0; 4];
         let mut q1 = [0; 4];
         let mut q2 = [0; 4];
@@ -5855,19 +5893,19 @@ impl I64x8Backend for archmage::NeonToken {
     type Repr = [int64x2_t; 4];
 
     #[inline(always)]
-    fn splat(v: i64) -> [int64x2_t; 4] {
+    fn splat(self, v: i64) -> [int64x2_t; 4] {
         let q = <archmage::NeonToken as I64x2Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [int64x2_t; 4] {
+    fn zero(self) -> [int64x2_t; 4] {
         let q = <archmage::NeonToken as I64x2Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 8]) -> [int64x2_t; 4] {
+    fn load(self, data: &[i64; 8]) -> [int64x2_t; 4] {
         [
             <archmage::NeonToken as I64x2Backend>::load(data[0..2].try_into().unwrap()),
             <archmage::NeonToken as I64x2Backend>::load(data[2..4].try_into().unwrap()),
@@ -5877,7 +5915,7 @@ impl I64x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 8]) -> [int64x2_t; 4] {
+    fn from_array(self, arr: [i64; 8]) -> [int64x2_t; 4] {
         let mut q0 = [0; 2];
         let mut q1 = [0; 2];
         let mut q2 = [0; 2];
@@ -6069,19 +6107,19 @@ impl U64x8Backend for archmage::NeonToken {
     type Repr = [uint64x2_t; 4];
 
     #[inline(always)]
-    fn splat(v: u64) -> [uint64x2_t; 4] {
+    fn splat(self, v: u64) -> [uint64x2_t; 4] {
         let q = <archmage::NeonToken as U64x2Backend>::splat(v);
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn zero() -> [uint64x2_t; 4] {
+    fn zero(self) -> [uint64x2_t; 4] {
         let q = <archmage::NeonToken as U64x2Backend>::zero();
         [q, q, q, q]
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 8]) -> [uint64x2_t; 4] {
+    fn load(self, data: &[u64; 8]) -> [uint64x2_t; 4] {
         [
             <archmage::NeonToken as U64x2Backend>::load(data[0..2].try_into().unwrap()),
             <archmage::NeonToken as U64x2Backend>::load(data[2..4].try_into().unwrap()),
@@ -6091,7 +6129,7 @@ impl U64x8Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 8]) -> [uint64x2_t; 4] {
+    fn from_array(self, arr: [u64; 8]) -> [uint64x2_t; 4] {
         let mut q0 = [0; 2];
         let mut q1 = [0; 2];
         let mut q2 = [0; 2];

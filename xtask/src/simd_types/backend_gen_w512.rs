@@ -359,16 +359,16 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             // ====== Construction ======
 
             /// Broadcast scalar to all {lanes} lanes.
-            fn splat(v: {elem}) -> Self::Repr;
+            fn splat(self, v: {elem}) -> Self::Repr;
 
             /// All lanes zero.
-            fn zero() -> Self::Repr;
+            fn zero(self) -> Self::Repr;
 
             /// Load from an aligned array.
-            fn load(data: &{array}) -> Self::Repr;
+            fn load(self, data: &{array}) -> Self::Repr;
 
             /// Create from array (zero-cost transmute where possible).
-            fn from_array(arr: {array}) -> Self::Repr;
+            fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
             fn store(repr: Self::Repr, out: &mut {array});
@@ -459,15 +459,17 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
 
             // ====== Approximations ======
 
-            /// Fast reciprocal approximation (~12-bit precision where available).
-            fn rcp_approx(a: Self::Repr) -> Self::Repr {{
-                Self::div(Self::splat(1.0), a)
-            }}
+            /// Fast reciprocal approximation. Default returns the input
+            /// unchanged; backends override with native intrinsics. The
+            /// previous default `Self::div(Self::splat(1.0), a)` would
+            /// require splat to be tokenless — incompatible with the
+            /// soundness fix that gated splat on a token value.
+            #[inline(always)]
+            fn rcp_approx(a: Self::Repr) -> Self::Repr {{ a }}
 
-            /// Fast reciprocal square root approximation (~12-bit precision where available).
-            fn rsqrt_approx(a: Self::Repr) -> Self::Repr {{
-                Self::div(Self::splat(1.0), Self::sqrt(a))
-            }}
+            /// Fast reciprocal square root approximation — see [`rcp_approx`].
+            #[inline(always)]
+            fn rsqrt_approx(a: Self::Repr) -> Self::Repr {{ a }}
 
             // ====== Bitwise ======
 
@@ -491,25 +493,14 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
                 Self::min(Self::max(a, lo), hi)
             }}
 
-            /// Precise reciprocal (Newton-Raphson from rcp_approx).
+            /// Precise reciprocal — defaults to delegating to rcp_approx.
+            /// Backends override with Newton-Raphson refinement.
             #[inline(always)]
-            fn recip(a: Self::Repr) -> Self::Repr {{
-                let approx = Self::rcp_approx(a);
-                let two = Self::splat(2.0);
-                Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
-            }}
+            fn recip(a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(a) }}
 
-            /// Precise reciprocal square root (Newton-Raphson from rsqrt_approx).
+            /// Precise reciprocal square root — see [`recip`].
             #[inline(always)]
-            fn rsqrt(a: Self::Repr) -> Self::Repr {{
-                let approx = Self::rsqrt_approx(a);
-                let half = Self::splat(0.5);
-                let three = Self::splat(3.0);
-                Self::mul(
-                    Self::mul(half, approx),
-                    Self::sub(three, Self::mul(a, Self::mul(approx, approx))),
-                )
-            }}
+            fn rsqrt(a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(a) }}
         }}
     "#,
         name = ty.name(),
@@ -575,16 +566,16 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
             // ====== Construction ======
 
             /// Broadcast scalar to all {lanes} lanes.
-            fn splat(v: {elem}) -> Self::Repr;
+            fn splat(self, v: {elem}) -> Self::Repr;
 
             /// All lanes zero.
-            fn zero() -> Self::Repr;
+            fn zero(self) -> Self::Repr;
 
             /// Load from an aligned array.
-            fn load(data: &{array}) -> Self::Repr;
+            fn load(self, data: &{array}) -> Self::Repr;
 
             /// Create from array (zero-cost transmute where possible).
-            fn from_array(arr: {array}) -> Self::Repr;
+            fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
             fn store(repr: Self::Repr, out: &mut {array});
@@ -713,16 +704,16 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             type Repr = {array};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {array} {{ [{elem_name}; {lanes}].map(|_| v) }}
+            fn splat(self, v: {elem}) -> {array} {{ [{elem_name}; {lanes}].map(|_| v) }}
 
             #[inline(always)]
-            fn zero() -> {array} {{ [{zero_lit}; {lanes}] }}
+            fn zero(self) -> {array} {{ [{zero_lit}; {lanes}] }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {array} {{ *data }}
+            fn load(self, data: &{array}) -> {array} {{ *data }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {array} {{ arr }}
+            fn from_array(self, arr: {array}) -> {array} {{ arr }}
 
             #[inline(always)]
             fn store(repr: {array}, out: &mut {array}) {{ *out = repr; }}
@@ -956,16 +947,16 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
             type Repr = {array};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {array} {{ [v; {lanes}] }}
+            fn splat(self, v: {elem}) -> {array} {{ [v; {lanes}] }}
 
             #[inline(always)]
-            fn zero() -> {array} {{ [{zero_lit}; {lanes}] }}
+            fn zero(self) -> {array} {{ [{zero_lit}; {lanes}] }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {array} {{ *data }}
+            fn load(self, data: &{array}) -> {array} {{ *data }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {array} {{ arr }}
+            fn from_array(self, arr: {array}) -> {array} {{ arr }}
 
             #[inline(always)]
             fn store(repr: {array}, out: &mut {array}) {{ *out = repr; }}
@@ -1085,19 +1076,19 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             type Repr = {v3_repr};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {v3_repr} {{
+            fn splat(self, v: {elem}) -> {v3_repr} {{
                 let h = <archmage::X64V3Token as {half_trait}>::splat(v);
                 [h, h]
             }}
 
             #[inline(always)]
-            fn zero() -> {v3_repr} {{
+            fn zero(self) -> {v3_repr} {{
                 let h = <archmage::X64V3Token as {half_trait}>::zero();
                 [h, h]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {v3_repr} {{
+            fn load(self, data: &{array}) -> {v3_repr} {{
                 let (lo, hi) = data.split_at({half_lanes});
                 [
                     <archmage::X64V3Token as {half_trait}>::load(lo.try_into().unwrap()),
@@ -1106,7 +1097,7 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {v3_repr} {{
+            fn from_array(self, arr: {array}) -> {v3_repr} {{
                 let mut lo = [{zero_lit}; {half_lanes}];
                 let mut hi = [{zero_lit}; {half_lanes}];
                 lo.copy_from_slice(&arr[..{half_lanes}]);
@@ -1554,19 +1545,19 @@ fn generate_4way_polyfill_impl(
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {repr} {{
+            fn splat(self, v: {elem}) -> {repr} {{
                 let q = <archmage::{token} as {quarter_trait}>::splat(v);
                 [q, q, q, q]
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 let q = <archmage::{token} as {quarter_trait}>::zero();
                 [q, q, q, q]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 [
                     <archmage::{token} as {quarter_trait}>::load(data[0..{q_lanes}].try_into().unwrap()),
                     <archmage::{token} as {quarter_trait}>::load(data[{q_lanes}..{q2}].try_into().unwrap()),
@@ -1576,7 +1567,7 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 let mut q0 = [{zero_lit}; {q_lanes}];
                 let mut q1 = [{zero_lit}; {q_lanes}];
                 let mut q2 = [{zero_lit}; {q_lanes}];
@@ -1950,22 +1941,22 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             type Repr = {inner};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {inner} {{
+            fn splat(self, v: {elem}) -> {inner} {{
                 unsafe {{ _mm512_set1_{s}(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> {inner} {{
+            fn zero(self) -> {inner} {{
                 unsafe {{ _mm512_setzero_{s}() }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {inner} {{
+            fn load(self, data: &{array}) -> {inner} {{
                 unsafe {{ _mm512_loadu_{s}(data.as_ptr()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {inner} {{
+            fn from_array(self, arr: {array}) -> {inner} {{
                 unsafe {{ core::mem::transmute(arr) }}
             }}
 
@@ -2300,22 +2291,22 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             type Repr = __m512i;
 
             #[inline(always)]
-            fn splat(v: {elem}) -> __m512i {{
+            fn splat(self, v: {elem}) -> __m512i {{
                 unsafe {{ _mm512_set1_{set1}(v as _) }}
             }}
 
             #[inline(always)]
-            fn zero() -> __m512i {{
+            fn zero(self) -> __m512i {{
                 unsafe {{ _mm512_setzero_si512() }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> __m512i {{
+            fn load(self, data: &{array}) -> __m512i {{
                 unsafe {{ _mm512_loadu_si512(data.as_ptr().cast()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> __m512i {{
+            fn from_array(self, arr: {array}) -> __m512i {{
                 unsafe {{ core::mem::transmute(arr) }}
             }}
 

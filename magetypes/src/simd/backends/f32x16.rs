@@ -25,16 +25,16 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
     // ====== Construction ======
 
     /// Broadcast scalar to all 16 lanes.
-    fn splat(v: f32) -> Self::Repr;
+    fn splat(self, v: f32) -> Self::Repr;
 
     /// All lanes zero.
-    fn zero() -> Self::Repr;
+    fn zero(self) -> Self::Repr;
 
     /// Load from an aligned array.
-    fn load(data: &[f32; 16]) -> Self::Repr;
+    fn load(self, data: &[f32; 16]) -> Self::Repr;
 
     /// Create from array (zero-cost transmute where possible).
-    fn from_array(arr: [f32; 16]) -> Self::Repr;
+    fn from_array(self, arr: [f32; 16]) -> Self::Repr;
 
     /// Store to array.
     fn store(repr: Self::Repr, out: &mut [f32; 16]);
@@ -125,14 +125,20 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Approximations ======
 
-    /// Fast reciprocal approximation (~12-bit precision where available).
+    /// Fast reciprocal approximation. Default returns the input
+    /// unchanged; backends override with native intrinsics. The
+    /// previous default `Self::div(Self::splat(1.0), a)` would
+    /// require splat to be tokenless — incompatible with the
+    /// soundness fix that gated splat on a token value.
+    #[inline(always)]
     fn rcp_approx(a: Self::Repr) -> Self::Repr {
-        Self::div(Self::splat(1.0), a)
+        a
     }
 
-    /// Fast reciprocal square root approximation (~12-bit precision where available).
+    /// Fast reciprocal square root approximation — see [`rcp_approx`].
+    #[inline(always)]
     fn rsqrt_approx(a: Self::Repr) -> Self::Repr {
-        Self::div(Self::splat(1.0), Self::sqrt(a))
+        a
     }
 
     // ====== Bitwise ======
@@ -157,23 +163,16 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
         Self::min(Self::max(a, lo), hi)
     }
 
-    /// Precise reciprocal (Newton-Raphson from rcp_approx).
+    /// Precise reciprocal — defaults to delegating to rcp_approx.
+    /// Backends override with Newton-Raphson refinement.
     #[inline(always)]
     fn recip(a: Self::Repr) -> Self::Repr {
-        let approx = Self::rcp_approx(a);
-        let two = Self::splat(2.0);
-        Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
+        Self::rcp_approx(a)
     }
 
-    /// Precise reciprocal square root (Newton-Raphson from rsqrt_approx).
+    /// Precise reciprocal square root — see [`recip`].
     #[inline(always)]
     fn rsqrt(a: Self::Repr) -> Self::Repr {
-        let approx = Self::rsqrt_approx(a);
-        let half = Self::splat(0.5);
-        let three = Self::splat(3.0);
-        Self::mul(
-            Self::mul(half, approx),
-            Self::sub(three, Self::mul(a, Self::mul(approx, approx))),
-        )
+        Self::rsqrt_approx(a)
     }
 }

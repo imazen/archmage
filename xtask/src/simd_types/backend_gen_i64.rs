@@ -138,16 +138,16 @@ pub(super) fn generate_i64_backend_trait(ty: &I64VecType) -> String {
             // ====== Construction ======
 
             /// Broadcast scalar to all {lanes} lanes.
-            fn splat(v: i64) -> Self::Repr;
+            fn splat(self, v: i64) -> Self::Repr;
 
             /// All lanes zero.
-            fn zero() -> Self::Repr;
+            fn zero(self) -> Self::Repr;
 
             /// Load from an aligned array.
-            fn load(data: &{array}) -> Self::Repr;
+            fn load(self, data: &{array}) -> Self::Repr;
 
             /// Create from array (zero-cost transmute where possible).
-            fn from_array(arr: {array}) -> Self::Repr;
+            fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
             fn store(repr: Self::Repr, out: &mut {array});
@@ -324,22 +324,22 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: i64) -> {inner} {{
+            fn splat(self, v: i64) -> {inner} {{
                 unsafe {{ {p}_set1_epi64x(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> {inner} {{
+            fn zero(self) -> {inner} {{
                 unsafe {{ {p}_setzero_si{bits}() }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {inner} {{
+            fn load(self, data: &{array}) -> {inner} {{
                 unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {inner} {{
+            fn from_array(self, arr: {array}) -> {inner} {{
                 // SAFETY: {array} and {inner} have identical size and layout.
                 unsafe {{ core::mem::transmute(arr) }}
             }}
@@ -654,22 +654,22 @@ fn generate_scalar_i64_impl(ty: &I64VecType) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: i64) -> {array} {{
+            fn splat(self, v: i64) -> {array} {{
                 [v; {lanes}]
             }}
 
             #[inline(always)]
-            fn zero() -> {array} {{
+            fn zero(self) -> {array} {{
                 [0i64; {lanes}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {array} {{
+            fn load(self, data: &{array}) -> {array} {{
                 *data
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {array} {{
+            fn from_array(self, arr: {array}) -> {array} {{
                 arr
             }}
 
@@ -899,22 +899,22 @@ fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
             type Repr = int64x2_t;
 
             #[inline(always)]
-            fn splat(v: i64) -> int64x2_t {{
+            fn splat(self, v: i64) -> int64x2_t {{
                 unsafe {{ vdupq_n_s64(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> int64x2_t {{
+            fn zero(self) -> int64x2_t {{
                 unsafe {{ vdupq_n_s64(0i64) }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> int64x2_t {{
+            fn load(self, data: &{array}) -> int64x2_t {{
                 unsafe {{ vld1q_s64(data.as_ptr()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> int64x2_t {{
+            fn from_array(self, arr: {array}) -> int64x2_t {{
                 unsafe {{ vld1q_s64(arr.as_ptr()) }}
             }}
 
@@ -1099,7 +1099,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: i64) -> {repr} {{
+            fn splat(self, v: i64) -> {repr} {{
                 unsafe {{
                     let v2 = vdupq_n_s64(v);
                     [{v2_copies}]
@@ -1107,7 +1107,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 unsafe {{
                     let z = vdupq_n_s64(0i64);
                     [{z_copies}]
@@ -1115,14 +1115,14 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{
                     [{load_lanes}]
                 }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
@@ -1363,13 +1363,13 @@ fn generate_wasm_native_i64_impl(ty: &I64VecType) -> String {
             type Repr = v128;
 
             #[inline(always)]
-            fn splat(v: i64) -> v128 {{ i64x2_splat(v) }}
+            fn splat(self, v: i64) -> v128 {{ i64x2_splat(v) }}
             #[inline(always)]
-            fn zero() -> v128 {{ i64x2_splat(0i64) }}
+            fn zero(self) -> v128 {{ i64x2_splat(0i64) }}
             #[inline(always)]
-            fn load(data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            fn load(self, data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
             #[inline(always)]
-            fn from_array(arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
+            fn from_array(self, arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
             #[inline(always)]
             fn store(repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
             #[inline(always)]
@@ -1486,26 +1486,26 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: i64) -> {repr} {{
+            fn splat(self, v: i64) -> {repr} {{
                 let v2 = i64x2_splat(v);
                 [{v2_copies}]
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 let z = i64x2_splat(0i64);
                 [{z_copies}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{
                     [{load_lanes}]
                 }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 

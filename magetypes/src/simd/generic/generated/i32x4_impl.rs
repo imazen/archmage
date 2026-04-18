@@ -19,11 +19,17 @@ use crate::simd::backends::I32x4Backend;
 /// `T` is a token type that proves CPU support for the required SIMD features.
 /// The inner representation is `T::Repr` (e.g., `__m128i` on x86, `int32x4_t` on ARM).
 ///
+/// **The token is stored** (as a zero-sized field) so methods receiving
+/// `self: i32x4<T>` can re-supply it to backend operations that
+/// require a token value (e.g. `T::splat(token, v)`). This carries the
+/// token-as-feature-proof guarantee through every method call without
+/// runtime overhead — `T` is ZST, so `sizeof(i32x4<T>) == sizeof(T::Repr)`,
+/// and `#[repr(transparent)]` is preserved.
+///
 /// Construction requires a token value to prove CPU support at runtime.
-/// After construction, operations don't need the token — it's baked into the type.
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct i32x4<T: I32x4Backend>(T::Repr, PhantomData<T>);
+pub struct i32x4<T: I32x4Backend>(T::Repr, T);
 
 impl<T: I32x4Backend> i32x4<T> {
     /// Number of i32 lanes.
@@ -33,33 +39,33 @@ impl<T: I32x4Backend> i32x4<T> {
 
     /// Broadcast scalar to all 4 lanes.
     #[inline(always)]
-    pub fn splat(_: T, v: i32) -> Self {
-        Self(T::splat(v), PhantomData)
+    pub fn splat(token: T, v: i32) -> Self {
+        Self(T::splat(token, v), token)
     }
 
     /// All lanes zero.
     #[inline(always)]
-    pub fn zero(_: T) -> Self {
-        Self(T::zero(), PhantomData)
+    pub fn zero(token: T) -> Self {
+        Self(T::zero(token), token)
     }
 
     /// Load from a `[i32; 4]` array.
     #[inline(always)]
-    pub fn load(_: T, data: &[i32; 4]) -> Self {
-        Self(T::load(data), PhantomData)
+    pub fn load(token: T, data: &[i32; 4]) -> Self {
+        Self(T::load(token, data), token)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub fn from_array(_: T, arr: [i32; 4]) -> Self {
-        Self(T::from_array(arr), PhantomData)
+    pub fn from_array(token: T, arr: [i32; 4]) -> Self {
+        Self(T::from_array(token, arr), token)
     }
 
     /// Create from slice. Panics if `slice.len() < 4`.
     #[inline(always)]
-    pub fn from_slice(_: T, slice: &[i32]) -> Self {
+    pub fn from_slice(token: T, slice: &[i32]) -> Self {
         let arr: [i32; 4] = slice[..4].try_into().unwrap();
-        Self(T::from_array(arr), PhantomData)
+        Self(T::from_array(token, arr), token)
     }
 
     /// Split a slice into SIMD-width chunks and a scalar remainder.
@@ -113,16 +119,17 @@ impl<T: I32x4Backend> i32x4<T> {
 
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
-    pub fn from_repr(_: T, repr: T::Repr) -> Self {
-        Self(repr, PhantomData)
+    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+        Self(repr, token)
     }
 
-    /// Wrap a repr without requiring a token value.
-    /// Only usable within the `generic` module (for cross-type conversions).
+    /// Wrap a repr with a token. Used by cross-type/cross-width helpers
+    /// in `simd::generic::*` where the token is already proven by the
+    /// caller's wider input type.
     #[inline(always)]
     #[allow(dead_code)]
-    pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
-        Self(repr, PhantomData)
+    pub(crate) fn from_repr_unchecked(token: T, repr: T::Repr) -> Self {
+        Self(repr, token)
     }
 
     // ====== Math ======
@@ -130,25 +137,25 @@ impl<T: I32x4Backend> i32x4<T> {
     /// Lane-wise minimum.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
-        Self(T::min(self.0, other.0), PhantomData)
+        Self(T::min(self.0, other.0), self.1)
     }
 
     /// Lane-wise maximum.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
-        Self(T::max(self.0, other.0), PhantomData)
+        Self(T::max(self.0, other.0), self.1)
     }
 
     /// Lane-wise absolute value.
     #[inline(always)]
     pub fn abs(self) -> Self {
-        Self(T::abs(self.0), PhantomData)
+        Self(T::abs(self.0), self.1)
     }
 
     /// Clamp between lo and hi.
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
+        Self(T::clamp(self.0, lo.0, hi.0), self.1)
     }
 
     // ====== Comparisons ======
@@ -156,43 +163,43 @@ impl<T: I32x4Backend> i32x4<T> {
     /// Lane-wise equality (returns mask).
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
-        Self(T::simd_eq(self.0, other.0), PhantomData)
+        Self(T::simd_eq(self.0, other.0), self.1)
     }
 
     /// Lane-wise inequality (returns mask).
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
-        Self(T::simd_ne(self.0, other.0), PhantomData)
+        Self(T::simd_ne(self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than (returns mask).
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
-        Self(T::simd_lt(self.0, other.0), PhantomData)
+        Self(T::simd_lt(self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than-or-equal (returns mask).
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
-        Self(T::simd_le(self.0, other.0), PhantomData)
+        Self(T::simd_le(self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than (returns mask).
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
-        Self(T::simd_gt(self.0, other.0), PhantomData)
+        Self(T::simd_gt(self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than-or-equal (returns mask).
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
-        Self(T::simd_ge(self.0, other.0), PhantomData)
+        Self(T::simd_ge(self.0, other.0), self.1)
     }
 
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self(T::blend(mask.0, if_true.0, if_false.0), PhantomData)
+        Self(T::blend(mask.0, if_true.0, if_false.0), self.1)
     }
 
     // ====== Reductions ======
@@ -208,19 +215,19 @@ impl<T: I32x4Backend> i32x4<T> {
     /// Shift left by constant.
     #[inline(always)]
     pub fn shl_const<const N: i32>(self) -> Self {
-        Self(T::shl_const::<N>(self.0), PhantomData)
+        Self(T::shl_const::<N>(self.0), self.1)
     }
 
     /// Arithmetic shift right by constant (sign-extending).
     #[inline(always)]
     pub fn shr_arithmetic_const<const N: i32>(self) -> Self {
-        Self(T::shr_arithmetic_const::<N>(self.0), PhantomData)
+        Self(T::shr_arithmetic_const::<N>(self.0), self.1)
     }
 
     /// Logical shift right by constant (zero-filling).
     #[inline(always)]
     pub fn shr_logical_const<const N: i32>(self) -> Self {
-        Self(T::shr_logical_const::<N>(self.0), PhantomData)
+        Self(T::shr_logical_const::<N>(self.0), self.1)
     }
 
     /// Alias for [`shl_const`](Self::shl_const).
@@ -246,7 +253,7 @@ impl<T: I32x4Backend> i32x4<T> {
     /// Bitwise NOT.
     #[inline(always)]
     pub fn not(self) -> Self {
-        Self(T::not(self.0), PhantomData)
+        Self(T::not(self.0), self.1)
     }
 
     // ====== Boolean ======
@@ -278,7 +285,7 @@ impl<T: I32x4Backend> Add for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Self(T::add(self.0, rhs.0), PhantomData)
+        Self(T::add(self.0, rhs.0), self.1)
     }
 }
 
@@ -286,7 +293,7 @@ impl<T: I32x4Backend> Sub for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Self(T::sub(self.0, rhs.0), PhantomData)
+        Self(T::sub(self.0, rhs.0), self.1)
     }
 }
 
@@ -294,7 +301,7 @@ impl<T: I32x4Backend> Mul for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
-        Self(T::mul(self.0, rhs.0), PhantomData)
+        Self(T::mul(self.0, rhs.0), self.1)
     }
 }
 
@@ -302,7 +309,7 @@ impl<T: I32x4Backend> Neg for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Self(T::neg(self.0), PhantomData)
+        Self(T::neg(self.0), self.1)
     }
 }
 
@@ -310,7 +317,7 @@ impl<T: I32x4Backend> BitAnd for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self {
-        Self(T::bitand(self.0, rhs.0), PhantomData)
+        Self(T::bitand(self.0, rhs.0), self.1)
     }
 }
 
@@ -318,7 +325,7 @@ impl<T: I32x4Backend> BitOr for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self {
-        Self(T::bitor(self.0, rhs.0), PhantomData)
+        Self(T::bitor(self.0, rhs.0), self.1)
     }
 }
 
@@ -326,7 +333,7 @@ impl<T: I32x4Backend> BitXor for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self {
-        Self(T::bitxor(self.0, rhs.0), PhantomData)
+        Self(T::bitxor(self.0, rhs.0), self.1)
     }
 }
 
@@ -384,7 +391,7 @@ impl<T: I32x4Backend> Add<i32> for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: i32) -> Self {
-        Self(T::add(self.0, T::splat(rhs)), PhantomData)
+        Self(T::add(self.0, T::splat(rhs)), self.1)
     }
 }
 
@@ -392,7 +399,7 @@ impl<T: I32x4Backend> Sub<i32> for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: i32) -> Self {
-        Self(T::sub(self.0, T::splat(rhs)), PhantomData)
+        Self(T::sub(self.0, T::splat(rhs)), self.1)
     }
 }
 
@@ -400,7 +407,7 @@ impl<T: I32x4Backend> Mul<i32> for i32x4<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: i32) -> Self {
-        Self(T::mul(self.0, T::splat(rhs)), PhantomData)
+        Self(T::mul(self.0, T::splat(rhs)), self.1)
     }
 }
 
@@ -501,6 +508,6 @@ impl i32x4<archmage::X64V3Token> {
     /// Create from a raw `__m128i` (token-gated, zero-cost).
     #[inline(always)]
     pub fn from_m128i(_: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
-        Self(v, PhantomData)
+        Self(v, self.1)
     }
 }

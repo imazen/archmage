@@ -369,16 +369,16 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
             // ====== Construction ======
 
             /// Broadcast scalar to all {lanes} lanes.
-            fn splat(v: {elem}) -> Self::Repr;
+            fn splat(self, v: {elem}) -> Self::Repr;
 
             /// All lanes zero.
-            fn zero() -> Self::Repr;
+            fn zero(self) -> Self::Repr;
 
             /// Load from an aligned array.
-            fn load(data: &{array}) -> Self::Repr;
+            fn load(self, data: &{array}) -> Self::Repr;
 
             /// Create from array (zero-cost transmute where possible).
-            fn from_array(arr: {array}) -> Self::Repr;
+            fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
             fn store(repr: Self::Repr, out: &mut {array});
@@ -587,22 +587,22 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {inner} {{
+            fn splat(self, v: {elem}) -> {inner} {{
                 unsafe {{ {p}_set1_{set1_suf}(v{set1_cast}) }}
             }}
 
             #[inline(always)]
-            fn zero() -> {inner} {{
+            fn zero(self) -> {inner} {{
                 unsafe {{ {p}_setzero_si{bits}() }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {inner} {{
+            fn load(self, data: &{array}) -> {inner} {{
                 unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {inner} {{
+            fn from_array(self, arr: {array}) -> {inner} {{
                 unsafe {{ core::mem::transmute(arr) }}
             }}
 
@@ -1203,16 +1203,16 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
             type Repr = {array};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {array} {{ [{splat_items}] }}
+            fn splat(self, v: {elem}) -> {array} {{ [{splat_items}] }}
 
             #[inline(always)]
-            fn zero() -> {array} {{ [0{elem}; {lanes}] }}
+            fn zero(self) -> {array} {{ [0{elem}; {lanes}] }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {array} {{ *data }}
+            fn load(self, data: &{array}) -> {array} {{ *data }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {array} {{ arr }}
+            fn from_array(self, arr: {array}) -> {array} {{ arr }}
 
             #[inline(always)]
             fn store(repr: {array}, out: &mut {array}) {{ *out = repr; }}
@@ -1454,22 +1454,22 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
             type Repr = {nt};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {nt} {{
+            fn splat(self, v: {elem}) -> {nt} {{
                 unsafe {{ vdupq_n_{ns}(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> {nt} {{
+            fn zero(self) -> {nt} {{
                 unsafe {{ vdupq_n_{ns}(0) }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {nt} {{
+            fn load(self, data: &{array}) -> {nt} {{
                 unsafe {{ vld1q_{ns}(data.as_ptr()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {nt} {{
+            fn from_array(self, arr: {array}) -> {nt} {{
                 unsafe {{ vld1q_{ns}(arr.as_ptr()) }}
             }}
 
@@ -1878,7 +1878,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {repr} {{
+            fn splat(self, v: {elem}) -> {repr} {{
                 unsafe {{
                     let v4 = vdupq_n_{ns}(v);
                     [{v4_copies}]
@@ -1886,7 +1886,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 unsafe {{
                     let z = vdupq_n_{ns}(0);
                     [{z_copies}]
@@ -1894,12 +1894,12 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{ [{load_body}] }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
@@ -2152,22 +2152,22 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
             type Repr = v128;
 
             #[inline(always)]
-            fn splat(v: {elem}) -> v128 {{
+            fn splat(self, v: {elem}) -> v128 {{
                 {wp}_splat(v)
             }}
 
             #[inline(always)]
-            fn zero() -> v128 {{
+            fn zero(self) -> v128 {{
                 {wp}_splat(0)
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> v128 {{
+            fn load(self, data: &{array}) -> v128 {{
                 unsafe {{ v128_load(data.as_ptr().cast()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> v128 {{
+            fn from_array(self, arr: {array}) -> v128 {{
                 unsafe {{ v128_load(arr.as_ptr().cast()) }}
             }}
 
@@ -2515,24 +2515,24 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {repr} {{
+            fn splat(self, v: {elem}) -> {repr} {{
                 let v4 = {wp}_splat(v);
                 [{v4_copies}]
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 let z = {wp}_splat(0);
                 [{z_copies}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 {load_body}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 

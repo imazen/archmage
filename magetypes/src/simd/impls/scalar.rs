@@ -61,22 +61,22 @@ impl F32x4Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f32) -> [f32; 4] {
+    fn splat(self, v: f32) -> [f32; 4] {
         [v; 4]
     }
 
     #[inline(always)]
-    fn zero() -> [f32; 4] {
+    fn zero(self) -> [f32; 4] {
         [0.0f32; 4]
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 4]) -> [f32; 4] {
+    fn load(self, data: &[f32; 4]) -> [f32; 4] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 4]) -> [f32; 4] {
+    fn from_array(self, arr: [f32; 4]) -> [f32; 4] {
         arr
     }
 
@@ -401,22 +401,22 @@ impl F32x8Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f32) -> [f32; 8] {
+    fn splat(self, v: f32) -> [f32; 8] {
         [v; 8]
     }
 
     #[inline(always)]
-    fn zero() -> [f32; 8] {
+    fn zero(self) -> [f32; 8] {
         [0.0f32; 8]
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 8]) -> [f32; 8] {
+    fn load(self, data: &[f32; 8]) -> [f32; 8] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 8]) -> [f32; 8] {
+    fn from_array(self, arr: [f32; 8]) -> [f32; 8] {
         arr
     }
 
@@ -822,22 +822,22 @@ impl F64x2Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f64) -> [f64; 2] {
+    fn splat(self, v: f64) -> [f64; 2] {
         [v; 2]
     }
 
     #[inline(always)]
-    fn zero() -> [f64; 2] {
+    fn zero(self) -> [f64; 2] {
         [0.0f64; 2]
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 2]) -> [f64; 2] {
+    fn load(self, data: &[f64; 2]) -> [f64; 2] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 2]) -> [f64; 2] {
+    fn from_array(self, arr: [f64; 2]) -> [f64; 2] {
         arr
     }
 
@@ -1132,22 +1132,22 @@ impl F64x4Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: f64) -> [f64; 4] {
+    fn splat(self, v: f64) -> [f64; 4] {
         [v; 4]
     }
 
     #[inline(always)]
-    fn zero() -> [f64; 4] {
+    fn zero(self) -> [f64; 4] {
         [0.0f64; 4]
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 4]) -> [f64; 4] {
+    fn load(self, data: &[f64; 4]) -> [f64; 4] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 4]) -> [f64; 4] {
+    fn from_array(self, arr: [f64; 4]) -> [f64; 4] {
         arr
     }
 
@@ -1472,22 +1472,22 @@ impl I32x4Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i32) -> [i32; 4] {
+    fn splat(self, v: i32) -> [i32; 4] {
         [v; 4]
     }
 
     #[inline(always)]
-    fn zero() -> [i32; 4] {
+    fn zero(self) -> [i32; 4] {
         [0i32; 4]
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 4]) -> [i32; 4] {
+    fn load(self, data: &[i32; 4]) -> [i32; 4] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 4]) -> [i32; 4] {
+    fn from_array(self, arr: [i32; 4]) -> [i32; 4] {
         arr
     }
 
@@ -1722,22 +1722,22 @@ impl I32x8Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i32) -> [i32; 8] {
+    fn splat(self, v: i32) -> [i32; 8] {
         [v; 8]
     }
 
     #[inline(always)]
-    fn zero() -> [i32; 8] {
+    fn zero(self) -> [i32; 8] {
         [0i32; 8]
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 8]) -> [i32; 8] {
+    fn load(self, data: &[i32; 8]) -> [i32; 8] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 8]) -> [i32; 8] {
+    fn from_array(self, arr: [i32; 8]) -> [i32; 8] {
         arr
     }
 
@@ -2069,22 +2069,22 @@ impl U32x4Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u32) -> [u32; 4] {
+    fn splat(self, v: u32) -> [u32; 4] {
         [v; 4]
     }
 
     #[inline(always)]
-    fn zero() -> [u32; 4] {
+    fn zero(self) -> [u32; 4] {
         [0u32; 4]
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 4]) -> [u32; 4] {
+    fn load(self, data: &[u32; 4]) -> [u32; 4] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 4]) -> [u32; 4] {
+    fn from_array(self, arr: [u32; 4]) -> [u32; 4] {
         arr
     }
 
@@ -2286,22 +2286,22 @@ impl U32x8Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: u32) -> [u32; 8] {
+    fn splat(self, v: u32) -> [u32; 8] {
         [v; 8]
     }
 
     #[inline(always)]
-    fn zero() -> [u32; 8] {
+    fn zero(self) -> [u32; 8] {
         [0u32; 8]
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 8]) -> [u32; 8] {
+    fn load(self, data: &[u32; 8]) -> [u32; 8] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 8]) -> [u32; 8] {
+    fn from_array(self, arr: [u32; 8]) -> [u32; 8] {
         arr
     }
 
@@ -2591,22 +2591,22 @@ impl I64x2Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i64) -> [i64; 2] {
+    fn splat(self, v: i64) -> [i64; 2] {
         [v; 2]
     }
 
     #[inline(always)]
-    fn zero() -> [i64; 2] {
+    fn zero(self) -> [i64; 2] {
         [0i64; 2]
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 2]) -> [i64; 2] {
+    fn load(self, data: &[i64; 2]) -> [i64; 2] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 2]) -> [i64; 2] {
+    fn from_array(self, arr: [i64; 2]) -> [i64; 2] {
         arr
     }
 
@@ -2799,22 +2799,22 @@ impl I64x4Backend for archmage::ScalarToken {
     // ====== Construction ======
 
     #[inline(always)]
-    fn splat(v: i64) -> [i64; 4] {
+    fn splat(self, v: i64) -> [i64; 4] {
         [v; 4]
     }
 
     #[inline(always)]
-    fn zero() -> [i64; 4] {
+    fn zero(self) -> [i64; 4] {
         [0i64; 4]
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 4]) -> [i64; 4] {
+    fn load(self, data: &[i64; 4]) -> [i64; 4] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 4]) -> [i64; 4] {
+    fn from_array(self, arr: [i64; 4]) -> [i64; 4] {
         arr
     }
 
@@ -3037,22 +3037,22 @@ impl I8x16Backend for archmage::ScalarToken {
     type Repr = [i8; 16];
 
     #[inline(always)]
-    fn splat(v: i8) -> [i8; 16] {
+    fn splat(self, v: i8) -> [i8; 16] {
         [v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v]
     }
 
     #[inline(always)]
-    fn zero() -> [i8; 16] {
+    fn zero(self) -> [i8; 16] {
         [0i8; 16]
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 16]) -> [i8; 16] {
+    fn load(self, data: &[i8; 16]) -> [i8; 16] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 16]) -> [i8; 16] {
+    fn from_array(self, arr: [i8; 16]) -> [i8; 16] {
         arr
     }
 
@@ -3626,7 +3626,7 @@ impl I8x32Backend for archmage::ScalarToken {
     type Repr = [i8; 32];
 
     #[inline(always)]
-    fn splat(v: i8) -> [i8; 32] {
+    fn splat(self, v: i8) -> [i8; 32] {
         [
             v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
             v, v, v,
@@ -3634,17 +3634,17 @@ impl I8x32Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn zero() -> [i8; 32] {
+    fn zero(self) -> [i8; 32] {
         [0i8; 32]
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 32]) -> [i8; 32] {
+    fn load(self, data: &[i8; 32]) -> [i8; 32] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 32]) -> [i8; 32] {
+    fn from_array(self, arr: [i8; 32]) -> [i8; 32] {
         arr
     }
 
@@ -4635,22 +4635,22 @@ impl U8x16Backend for archmage::ScalarToken {
     type Repr = [u8; 16];
 
     #[inline(always)]
-    fn splat(v: u8) -> [u8; 16] {
+    fn splat(self, v: u8) -> [u8; 16] {
         [v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v]
     }
 
     #[inline(always)]
-    fn zero() -> [u8; 16] {
+    fn zero(self) -> [u8; 16] {
         [0u8; 16]
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 16]) -> [u8; 16] {
+    fn load(self, data: &[u8; 16]) -> [u8; 16] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 16]) -> [u8; 16] {
+    fn from_array(self, arr: [u8; 16]) -> [u8; 16] {
         arr
     }
 
@@ -5158,7 +5158,7 @@ impl U8x32Backend for archmage::ScalarToken {
     type Repr = [u8; 32];
 
     #[inline(always)]
-    fn splat(v: u8) -> [u8; 32] {
+    fn splat(self, v: u8) -> [u8; 32] {
         [
             v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
             v, v, v,
@@ -5166,17 +5166,17 @@ impl U8x32Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn zero() -> [u8; 32] {
+    fn zero(self) -> [u8; 32] {
         [0u8; 32]
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 32]) -> [u8; 32] {
+    fn load(self, data: &[u8; 32]) -> [u8; 32] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 32]) -> [u8; 32] {
+    fn from_array(self, arr: [u8; 32]) -> [u8; 32] {
         arr
     }
 
@@ -6053,22 +6053,22 @@ impl I16x8Backend for archmage::ScalarToken {
     type Repr = [i16; 8];
 
     #[inline(always)]
-    fn splat(v: i16) -> [i16; 8] {
+    fn splat(self, v: i16) -> [i16; 8] {
         [v, v, v, v, v, v, v, v]
     }
 
     #[inline(always)]
-    fn zero() -> [i16; 8] {
+    fn zero(self) -> [i16; 8] {
         [0i16; 8]
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 8]) -> [i16; 8] {
+    fn load(self, data: &[i16; 8]) -> [i16; 8] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 8]) -> [i16; 8] {
+    fn from_array(self, arr: [i16; 8]) -> [i16; 8] {
         arr
     }
 
@@ -6445,22 +6445,22 @@ impl I16x16Backend for archmage::ScalarToken {
     type Repr = [i16; 16];
 
     #[inline(always)]
-    fn splat(v: i16) -> [i16; 16] {
+    fn splat(self, v: i16) -> [i16; 16] {
         [v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v]
     }
 
     #[inline(always)]
-    fn zero() -> [i16; 16] {
+    fn zero(self) -> [i16; 16] {
         [0i16; 16]
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 16]) -> [i16; 16] {
+    fn load(self, data: &[i16; 16]) -> [i16; 16] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 16]) -> [i16; 16] {
+    fn from_array(self, arr: [i16; 16]) -> [i16; 16] {
         arr
     }
 
@@ -7056,22 +7056,22 @@ impl U16x8Backend for archmage::ScalarToken {
     type Repr = [u16; 8];
 
     #[inline(always)]
-    fn splat(v: u16) -> [u16; 8] {
+    fn splat(self, v: u16) -> [u16; 8] {
         [v, v, v, v, v, v, v, v]
     }
 
     #[inline(always)]
-    fn zero() -> [u16; 8] {
+    fn zero(self) -> [u16; 8] {
         [0u16; 8]
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 8]) -> [u16; 8] {
+    fn load(self, data: &[u16; 8]) -> [u16; 8] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 8]) -> [u16; 8] {
+    fn from_array(self, arr: [u16; 8]) -> [u16; 8] {
         arr
     }
 
@@ -7406,22 +7406,22 @@ impl U16x16Backend for archmage::ScalarToken {
     type Repr = [u16; 16];
 
     #[inline(always)]
-    fn splat(v: u16) -> [u16; 16] {
+    fn splat(self, v: u16) -> [u16; 16] {
         [v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v]
     }
 
     #[inline(always)]
-    fn zero() -> [u16; 16] {
+    fn zero(self) -> [u16; 16] {
         [0u16; 16]
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 16]) -> [u16; 16] {
+    fn load(self, data: &[u16; 16]) -> [u16; 16] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 16]) -> [u16; 16] {
+    fn from_array(self, arr: [u16; 16]) -> [u16; 16] {
         arr
     }
 
@@ -7951,22 +7951,22 @@ impl U64x2Backend for archmage::ScalarToken {
     type Repr = [u64; 2];
 
     #[inline(always)]
-    fn splat(v: u64) -> [u64; 2] {
+    fn splat(self, v: u64) -> [u64; 2] {
         [v, v]
     }
 
     #[inline(always)]
-    fn zero() -> [u64; 2] {
+    fn zero(self) -> [u64; 2] {
         [0u64; 2]
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 2]) -> [u64; 2] {
+    fn load(self, data: &[u64; 2]) -> [u64; 2] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 2]) -> [u64; 2] {
+    fn from_array(self, arr: [u64; 2]) -> [u64; 2] {
         arr
     }
 
@@ -8125,22 +8125,22 @@ impl U64x4Backend for archmage::ScalarToken {
     type Repr = [u64; 4];
 
     #[inline(always)]
-    fn splat(v: u64) -> [u64; 4] {
+    fn splat(self, v: u64) -> [u64; 4] {
         [v, v, v, v]
     }
 
     #[inline(always)]
-    fn zero() -> [u64; 4] {
+    fn zero(self) -> [u64; 4] {
         [0u64; 4]
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 4]) -> [u64; 4] {
+    fn load(self, data: &[u64; 4]) -> [u64; 4] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 4]) -> [u64; 4] {
+    fn from_array(self, arr: [u64; 4]) -> [u64; 4] {
         arr
     }
 
@@ -8765,22 +8765,22 @@ impl F32x16Backend for archmage::ScalarToken {
     type Repr = [f32; 16];
 
     #[inline(always)]
-    fn splat(v: f32) -> [f32; 16] {
+    fn splat(self, v: f32) -> [f32; 16] {
         [0.0f32; 16].map(|_| v)
     }
 
     #[inline(always)]
-    fn zero() -> [f32; 16] {
+    fn zero(self) -> [f32; 16] {
         [0.0f32; 16]
     }
 
     #[inline(always)]
-    fn load(data: &[f32; 16]) -> [f32; 16] {
+    fn load(self, data: &[f32; 16]) -> [f32; 16] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [f32; 16]) -> [f32; 16] {
+    fn from_array(self, arr: [f32; 16]) -> [f32; 16] {
         arr
     }
 
@@ -8982,22 +8982,22 @@ impl F64x8Backend for archmage::ScalarToken {
     type Repr = [f64; 8];
 
     #[inline(always)]
-    fn splat(v: f64) -> [f64; 8] {
+    fn splat(self, v: f64) -> [f64; 8] {
         [0.0f64; 8].map(|_| v)
     }
 
     #[inline(always)]
-    fn zero() -> [f64; 8] {
+    fn zero(self) -> [f64; 8] {
         [0.0f64; 8]
     }
 
     #[inline(always)]
-    fn load(data: &[f64; 8]) -> [f64; 8] {
+    fn load(self, data: &[f64; 8]) -> [f64; 8] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [f64; 8]) -> [f64; 8] {
+    fn from_array(self, arr: [f64; 8]) -> [f64; 8] {
         arr
     }
 
@@ -9199,22 +9199,22 @@ impl I8x64Backend for archmage::ScalarToken {
     type Repr = [i8; 64];
 
     #[inline(always)]
-    fn splat(v: i8) -> [i8; 64] {
+    fn splat(self, v: i8) -> [i8; 64] {
         [v; 64]
     }
 
     #[inline(always)]
-    fn zero() -> [i8; 64] {
+    fn zero(self) -> [i8; 64] {
         [0; 64]
     }
 
     #[inline(always)]
-    fn load(data: &[i8; 64]) -> [i8; 64] {
+    fn load(self, data: &[i8; 64]) -> [i8; 64] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i8; 64]) -> [i8; 64] {
+    fn from_array(self, arr: [i8; 64]) -> [i8; 64] {
         arr
     }
 
@@ -9386,22 +9386,22 @@ impl U8x64Backend for archmage::ScalarToken {
     type Repr = [u8; 64];
 
     #[inline(always)]
-    fn splat(v: u8) -> [u8; 64] {
+    fn splat(self, v: u8) -> [u8; 64] {
         [v; 64]
     }
 
     #[inline(always)]
-    fn zero() -> [u8; 64] {
+    fn zero(self) -> [u8; 64] {
         [0; 64]
     }
 
     #[inline(always)]
-    fn load(data: &[u8; 64]) -> [u8; 64] {
+    fn load(self, data: &[u8; 64]) -> [u8; 64] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u8; 64]) -> [u8; 64] {
+    fn from_array(self, arr: [u8; 64]) -> [u8; 64] {
         arr
     }
 
@@ -9566,22 +9566,22 @@ impl I16x32Backend for archmage::ScalarToken {
     type Repr = [i16; 32];
 
     #[inline(always)]
-    fn splat(v: i16) -> [i16; 32] {
+    fn splat(self, v: i16) -> [i16; 32] {
         [v; 32]
     }
 
     #[inline(always)]
-    fn zero() -> [i16; 32] {
+    fn zero(self) -> [i16; 32] {
         [0; 32]
     }
 
     #[inline(always)]
-    fn load(data: &[i16; 32]) -> [i16; 32] {
+    fn load(self, data: &[i16; 32]) -> [i16; 32] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i16; 32]) -> [i16; 32] {
+    fn from_array(self, arr: [i16; 32]) -> [i16; 32] {
         arr
     }
 
@@ -9758,22 +9758,22 @@ impl U16x32Backend for archmage::ScalarToken {
     type Repr = [u16; 32];
 
     #[inline(always)]
-    fn splat(v: u16) -> [u16; 32] {
+    fn splat(self, v: u16) -> [u16; 32] {
         [v; 32]
     }
 
     #[inline(always)]
-    fn zero() -> [u16; 32] {
+    fn zero(self) -> [u16; 32] {
         [0; 32]
     }
 
     #[inline(always)]
-    fn load(data: &[u16; 32]) -> [u16; 32] {
+    fn load(self, data: &[u16; 32]) -> [u16; 32] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u16; 32]) -> [u16; 32] {
+    fn from_array(self, arr: [u16; 32]) -> [u16; 32] {
         arr
     }
 
@@ -9943,22 +9943,22 @@ impl I32x16Backend for archmage::ScalarToken {
     type Repr = [i32; 16];
 
     #[inline(always)]
-    fn splat(v: i32) -> [i32; 16] {
+    fn splat(self, v: i32) -> [i32; 16] {
         [v; 16]
     }
 
     #[inline(always)]
-    fn zero() -> [i32; 16] {
+    fn zero(self) -> [i32; 16] {
         [0; 16]
     }
 
     #[inline(always)]
-    fn load(data: &[i32; 16]) -> [i32; 16] {
+    fn load(self, data: &[i32; 16]) -> [i32; 16] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i32; 16]) -> [i32; 16] {
+    fn from_array(self, arr: [i32; 16]) -> [i32; 16] {
         arr
     }
 
@@ -10135,22 +10135,22 @@ impl U32x16Backend for archmage::ScalarToken {
     type Repr = [u32; 16];
 
     #[inline(always)]
-    fn splat(v: u32) -> [u32; 16] {
+    fn splat(self, v: u32) -> [u32; 16] {
         [v; 16]
     }
 
     #[inline(always)]
-    fn zero() -> [u32; 16] {
+    fn zero(self) -> [u32; 16] {
         [0; 16]
     }
 
     #[inline(always)]
-    fn load(data: &[u32; 16]) -> [u32; 16] {
+    fn load(self, data: &[u32; 16]) -> [u32; 16] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u32; 16]) -> [u32; 16] {
+    fn from_array(self, arr: [u32; 16]) -> [u32; 16] {
         arr
     }
 
@@ -10320,22 +10320,22 @@ impl I64x8Backend for archmage::ScalarToken {
     type Repr = [i64; 8];
 
     #[inline(always)]
-    fn splat(v: i64) -> [i64; 8] {
+    fn splat(self, v: i64) -> [i64; 8] {
         [v; 8]
     }
 
     #[inline(always)]
-    fn zero() -> [i64; 8] {
+    fn zero(self) -> [i64; 8] {
         [0; 8]
     }
 
     #[inline(always)]
-    fn load(data: &[i64; 8]) -> [i64; 8] {
+    fn load(self, data: &[i64; 8]) -> [i64; 8] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [i64; 8]) -> [i64; 8] {
+    fn from_array(self, arr: [i64; 8]) -> [i64; 8] {
         arr
     }
 
@@ -10507,22 +10507,22 @@ impl U64x8Backend for archmage::ScalarToken {
     type Repr = [u64; 8];
 
     #[inline(always)]
-    fn splat(v: u64) -> [u64; 8] {
+    fn splat(self, v: u64) -> [u64; 8] {
         [v; 8]
     }
 
     #[inline(always)]
-    fn zero() -> [u64; 8] {
+    fn zero(self) -> [u64; 8] {
         [0; 8]
     }
 
     #[inline(always)]
-    fn load(data: &[u64; 8]) -> [u64; 8] {
+    fn load(self, data: &[u64; 8]) -> [u64; 8] {
         *data
     }
 
     #[inline(always)]
-    fn from_array(arr: [u64; 8]) -> [u64; 8] {
+    fn from_array(self, arr: [u64; 8]) -> [u64; 8] {
         arr
     }
 

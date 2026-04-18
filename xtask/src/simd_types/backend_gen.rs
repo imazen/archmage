@@ -653,16 +653,16 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             // ====== Construction ======
 
             /// Broadcast scalar to all {lanes} lanes.
-            fn splat(v: {elem}) -> Self::Repr;
+            fn splat(self, v: {elem}) -> Self::Repr;
 
             /// All lanes zero.
-            fn zero() -> Self::Repr;
+            fn zero(self) -> Self::Repr;
 
             /// Load from an aligned array.
-            fn load(data: &{array}) -> Self::Repr;
+            fn load(self, data: &{array}) -> Self::Repr;
 
             /// Create from array (zero-cost transmute where possible).
-            fn from_array(arr: {array}) -> Self::Repr;
+            fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
             fn store(repr: Self::Repr, out: &mut {array});
@@ -755,17 +755,20 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             /// Fast reciprocal approximation (~12-bit precision where available).
             ///
-            /// On platforms without native approximation, falls back to full division.
-            fn rcp_approx(a: Self::Repr) -> Self::Repr {{
-                Self::div(Self::splat(1.0), a)
-            }}
+            /// **Default body returns the input unchanged** — every shipped
+            /// backend overrides this with a native intrinsic. The original
+            /// default `Self::div(Self::splat(1.0), a)` would require `splat`
+            /// to be tokenless; with the soundness fix on `splat`, the default
+            /// can no longer construct a `1.0` constant. New backends MUST
+            /// override.
+            #[inline(always)]
+            fn rcp_approx(a: Self::Repr) -> Self::Repr {{ a }}
 
             /// Fast reciprocal square root approximation (~12-bit precision where available).
             ///
-            /// On platforms without native approximation, falls back to 1/sqrt.
-            fn rsqrt_approx(a: Self::Repr) -> Self::Repr {{
-                Self::div(Self::splat(1.0), Self::sqrt(a))
-            }}
+            /// See [`rcp_approx`] for default-body rationale.
+            #[inline(always)]
+            fn rsqrt_approx(a: Self::Repr) -> Self::Repr {{ a }}
 
             // ====== Bitwise ======
 
@@ -789,27 +792,15 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
                 Self::min(Self::max(a, lo), hi)
             }}
 
-            /// Precise reciprocal (Newton-Raphson from rcp_approx).
+            /// Precise reciprocal — defaults to delegating to [`rcp_approx`]
+            /// (which itself defaults to identity). Backends override with
+            /// Newton-Raphson refinement using a native splat for the constant.
             #[inline(always)]
-            fn recip(a: Self::Repr) -> Self::Repr {{
-                let approx = Self::rcp_approx(a);
-                let two = Self::splat(2.0);
-                // x' = x * (2 - a*x)
-                Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
-            }}
+            fn recip(a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(a) }}
 
-            /// Precise reciprocal square root (Newton-Raphson from rsqrt_approx).
+            /// Precise reciprocal square root — see [`recip`] for rationale.
             #[inline(always)]
-            fn rsqrt(a: Self::Repr) -> Self::Repr {{
-                let approx = Self::rsqrt_approx(a);
-                let half = Self::splat(0.5);
-                let three = Self::splat(3.0);
-                // y' = 0.5 * y * (3 - x * y * y)
-                Self::mul(
-                    Self::mul(half, approx),
-                    Self::sub(three, Self::mul(a, Self::mul(approx, approx))),
-                )
-            }}
+            fn rsqrt(a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(a) }}
         }}
     "#,
         name = ty.name(),
@@ -1192,22 +1183,22 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {inner} {{
+            fn splat(self, v: {elem}) -> {inner} {{
                 unsafe {{ {set1}(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> {inner} {{
+            fn zero(self) -> {inner} {{
                 unsafe {{ {setzero}() }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {inner} {{
+            fn load(self, data: &{array}) -> {inner} {{
                 unsafe {{ {p}_loadu_{s}(data.as_ptr()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {inner} {{
+            fn from_array(self, arr: {array}) -> {inner} {{
                 // SAFETY: {array} and {inner} have identical size and layout.
                 unsafe {{ core::mem::transmute(arr) }}
             }}
@@ -1702,22 +1693,22 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {array} {{
+            fn splat(self, v: {elem}) -> {array} {{
                 [v; {lanes}]
             }}
 
             #[inline(always)]
-            fn zero() -> {array} {{
+            fn zero(self) -> {array} {{
                 [{zero_lit}; {lanes}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {array} {{
+            fn load(self, data: &{array}) -> {array} {{
                 *data
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {array} {{
+            fn from_array(self, arr: {array}) -> {array} {{
                 arr
             }}
 
@@ -2150,7 +2141,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {repr} {{
+            fn splat(self, v: {elem}) -> {repr} {{
                 unsafe {{
                     let v4 = vdupq_n_{ns}(v);
                     [{v4_copies}]
@@ -2158,7 +2149,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 unsafe {{
                     let z = vdupq_n_{ns}(0.0);
                     [{z_copies}]
@@ -2166,14 +2157,14 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{
                     [{load_lanes}]
                 }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
@@ -2447,22 +2438,22 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {repr} {{
+            fn splat(self, v: {elem}) -> {repr} {{
                 unsafe {{ vdupq_n_{ns}(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 unsafe {{ vdupq_n_{ns}(0.0) }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{ vld1q_{ns}(data.as_ptr()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
@@ -2562,6 +2553,25 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             fn rcp_approx(a: {repr}) -> {repr} {{ unsafe {{ vrecpeq_{ns}(a) }} }}
             #[inline(always)]
             fn rsqrt_approx(a: {repr}) -> {repr} {{ unsafe {{ vrsqrteq_{ns}(a) }} }}
+            // Newton-Raphson refinement over the *_approx variants. Constants
+            // built via vdupq_n_{ns} directly (NEON intrinsic; this impl block
+            // is gated on the NEON target feature already).
+            #[inline(always)]
+            fn recip(a: {repr}) -> {repr} {{
+                let approx = Self::rcp_approx(a);
+                let two = unsafe {{ vdupq_n_{ns}(2.0) }};
+                Self::mul(approx, Self::sub(two, Self::mul(a, approx)))
+            }}
+            #[inline(always)]
+            fn rsqrt(a: {repr}) -> {repr} {{
+                let approx = Self::rsqrt_approx(a);
+                let half = unsafe {{ vdupq_n_{ns}(0.5) }};
+                let three = unsafe {{ vdupq_n_{ns}(3.0) }};
+                Self::mul(
+                    Self::mul(half, approx),
+                    Self::sub(three, Self::mul(a, Self::mul(approx, approx))),
+                )
+            }}
 
             #[inline(always)]
             fn not(a: {repr}) -> {repr} {{
@@ -2676,26 +2686,26 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: {elem}) -> {repr} {{
+            fn splat(self, v: {elem}) -> {repr} {{
                 let v4 = {wp}_splat(v);
                 [{v4_copies}]
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 let z = {wp}_splat(0.0);
                 [{z_copies}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{
                     [{load_lanes}]
                 }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
@@ -2901,13 +2911,13 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             type Repr = v128;
 
             #[inline(always)]
-            fn splat(v: {elem}) -> v128 {{ {wp}_splat(v) }}
+            fn splat(self, v: {elem}) -> v128 {{ {wp}_splat(v) }}
             #[inline(always)]
-            fn zero() -> v128 {{ {wp}_splat(0.0) }}
+            fn zero(self) -> v128 {{ {wp}_splat(0.0) }}
             #[inline(always)]
-            fn load(data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            fn load(self, data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
             #[inline(always)]
-            fn from_array(arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
+            fn from_array(self, arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
             #[inline(always)]
             fn store(repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
             #[inline(always)]
@@ -3035,16 +3045,16 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
             // ====== Construction ======
 
             /// Broadcast scalar to all {lanes} lanes.
-            fn splat(v: i32) -> Self::Repr;
+            fn splat(self, v: i32) -> Self::Repr;
 
             /// All lanes zero.
-            fn zero() -> Self::Repr;
+            fn zero(self) -> Self::Repr;
 
             /// Load from an aligned array.
-            fn load(data: &{array}) -> Self::Repr;
+            fn load(self, data: &{array}) -> Self::Repr;
 
             /// Create from array (zero-cost transmute where possible).
-            fn from_array(arr: {array}) -> Self::Repr;
+            fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
             fn store(repr: Self::Repr, out: &mut {array});
@@ -3325,22 +3335,22 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: i32) -> {inner} {{
+            fn splat(self, v: i32) -> {inner} {{
                 unsafe {{ {p}_set1_epi32(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> {inner} {{
+            fn zero(self) -> {inner} {{
                 unsafe {{ {p}_setzero_si{bits}() }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {inner} {{
+            fn load(self, data: &{array}) -> {inner} {{
                 unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {inner} {{
+            fn from_array(self, arr: {array}) -> {inner} {{
                 // SAFETY: {array} and {inner} have identical size and layout.
                 unsafe {{ core::mem::transmute(arr) }}
             }}
@@ -3794,22 +3804,22 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: i32) -> {array} {{
+            fn splat(self, v: i32) -> {array} {{
                 [v; {lanes}]
             }}
 
             #[inline(always)]
-            fn zero() -> {array} {{
+            fn zero(self) -> {array} {{
                 [0i32; {lanes}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {array} {{
+            fn load(self, data: &{array}) -> {array} {{
                 *data
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {array} {{
+            fn from_array(self, arr: {array}) -> {array} {{
                 arr
             }}
 
@@ -4181,22 +4191,22 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
             type Repr = int32x4_t;
 
             #[inline(always)]
-            fn splat(v: i32) -> int32x4_t {{
+            fn splat(self, v: i32) -> int32x4_t {{
                 unsafe {{ vdupq_n_s32(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> int32x4_t {{
+            fn zero(self) -> int32x4_t {{
                 unsafe {{ vdupq_n_s32(0) }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> int32x4_t {{
+            fn load(self, data: &{array}) -> int32x4_t {{
                 unsafe {{ vld1q_s32(data.as_ptr()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> int32x4_t {{
+            fn from_array(self, arr: {array}) -> int32x4_t {{
                 unsafe {{ vld1q_s32(arr.as_ptr()) }}
             }}
 
@@ -4361,7 +4371,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: i32) -> {repr} {{
+            fn splat(self, v: i32) -> {repr} {{
                 unsafe {{
                     let v4 = vdupq_n_s32(v);
                     [{v4_copies}]
@@ -4369,7 +4379,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 unsafe {{
                     let z = vdupq_n_s32(0);
                     [{z_copies}]
@@ -4377,14 +4387,14 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{
                     [{load_lanes}]
                 }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
@@ -4749,13 +4759,13 @@ fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
             type Repr = v128;
 
             #[inline(always)]
-            fn splat(v: i32) -> v128 {{ i32x4_splat(v) }}
+            fn splat(self, v: i32) -> v128 {{ i32x4_splat(v) }}
             #[inline(always)]
-            fn zero() -> v128 {{ i32x4_splat(0) }}
+            fn zero(self) -> v128 {{ i32x4_splat(0) }}
             #[inline(always)]
-            fn load(data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            fn load(self, data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
             #[inline(always)]
-            fn from_array(arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
+            fn from_array(self, arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
             #[inline(always)]
             fn store(repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
             #[inline(always)]
@@ -4860,26 +4870,26 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: i32) -> {repr} {{
+            fn splat(self, v: i32) -> {repr} {{
                 let v4 = i32x4_splat(v);
                 [{v4_copies}]
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 let z = i32x4_splat(0);
                 [{z_copies}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{
                     [{load_lanes}]
                 }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
@@ -5187,16 +5197,16 @@ fn generate_u32_backend_trait(ty: &U32VecType) -> String {
             // ====== Construction ======
 
             /// Broadcast scalar to all {lanes} lanes.
-            fn splat(v: u32) -> Self::Repr;
+            fn splat(self, v: u32) -> Self::Repr;
 
             /// All lanes zero.
-            fn zero() -> Self::Repr;
+            fn zero(self) -> Self::Repr;
 
             /// Load from an aligned array.
-            fn load(data: &{array}) -> Self::Repr;
+            fn load(self, data: &{array}) -> Self::Repr;
 
             /// Create from array (zero-cost transmute where possible).
-            fn from_array(arr: {array}) -> Self::Repr;
+            fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
             fn store(repr: Self::Repr, out: &mut {array});
@@ -5335,22 +5345,22 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: u32) -> {inner} {{
+            fn splat(self, v: u32) -> {inner} {{
                 unsafe {{ {p}_set1_epi32(v as i32) }}
             }}
 
             #[inline(always)]
-            fn zero() -> {inner} {{
+            fn zero(self) -> {inner} {{
                 unsafe {{ {p}_setzero_si{bits}() }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {inner} {{
+            fn load(self, data: &{array}) -> {inner} {{
                 unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {inner} {{
+            fn from_array(self, arr: {array}) -> {inner} {{
                 // SAFETY: {array} and {inner} have identical size and layout.
                 unsafe {{ core::mem::transmute(arr) }}
             }}
@@ -5630,22 +5640,22 @@ fn generate_scalar_u32_impl(ty: &U32VecType) -> String {
             // ====== Construction ======
 
             #[inline(always)]
-            fn splat(v: u32) -> {array} {{
+            fn splat(self, v: u32) -> {array} {{
                 [v; {lanes}]
             }}
 
             #[inline(always)]
-            fn zero() -> {array} {{
+            fn zero(self) -> {array} {{
                 [0u32; {lanes}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {array} {{
+            fn load(self, data: &{array}) -> {array} {{
                 *data
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {array} {{
+            fn from_array(self, arr: {array}) -> {array} {{
                 arr
             }}
 
@@ -5863,22 +5873,22 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
             type Repr = uint32x4_t;
 
             #[inline(always)]
-            fn splat(v: u32) -> uint32x4_t {{
+            fn splat(self, v: u32) -> uint32x4_t {{
                 unsafe {{ vdupq_n_u32(v) }}
             }}
 
             #[inline(always)]
-            fn zero() -> uint32x4_t {{
+            fn zero(self) -> uint32x4_t {{
                 unsafe {{ vdupq_n_u32(0) }}
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> uint32x4_t {{
+            fn load(self, data: &{array}) -> uint32x4_t {{
                 unsafe {{ vld1q_u32(data.as_ptr()) }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> uint32x4_t {{
+            fn from_array(self, arr: {array}) -> uint32x4_t {{
                 unsafe {{ vld1q_u32(arr.as_ptr()) }}
             }}
 
@@ -6034,7 +6044,7 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: u32) -> {repr} {{
+            fn splat(self, v: u32) -> {repr} {{
                 unsafe {{
                     let v4 = vdupq_n_u32(v);
                     [{v4_copies}]
@@ -6042,7 +6052,7 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 unsafe {{
                     let z = vdupq_n_u32(0);
                     [{z_copies}]
@@ -6050,14 +6060,14 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{
                     [{load_lanes}]
                 }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
@@ -6261,13 +6271,13 @@ fn generate_wasm_native_u32_impl(ty: &U32VecType) -> String {
             type Repr = v128;
 
             #[inline(always)]
-            fn splat(v: u32) -> v128 {{ u32x4_splat(v) }}
+            fn splat(self, v: u32) -> v128 {{ u32x4_splat(v) }}
             #[inline(always)]
-            fn zero() -> v128 {{ u32x4_splat(0) }}
+            fn zero(self) -> v128 {{ u32x4_splat(0) }}
             #[inline(always)]
-            fn load(data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            fn load(self, data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
             #[inline(always)]
-            fn from_array(arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
+            fn from_array(self, arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
             #[inline(always)]
             fn store(repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
             #[inline(always)]
@@ -6366,26 +6376,26 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
             type Repr = {repr};
 
             #[inline(always)]
-            fn splat(v: u32) -> {repr} {{
+            fn splat(self, v: u32) -> {repr} {{
                 let v4 = u32x4_splat(v);
                 [{v4_copies}]
             }}
 
             #[inline(always)]
-            fn zero() -> {repr} {{
+            fn zero(self) -> {repr} {{
                 let z = u32x4_splat(0);
                 [{z_copies}]
             }}
 
             #[inline(always)]
-            fn load(data: &{array}) -> {repr} {{
+            fn load(self, data: &{array}) -> {repr} {{
                 unsafe {{
                     [{load_lanes}]
                 }}
             }}
 
             #[inline(always)]
-            fn from_array(arr: {array}) -> {repr} {{
+            fn from_array(self, arr: {array}) -> {repr} {{
                 <Self as {trait_name}>::load(&arr)
             }}
 
