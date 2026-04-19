@@ -1123,7 +1123,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]
@@ -1506,7 +1506,7 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]

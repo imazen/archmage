@@ -1546,23 +1546,23 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn splat(self, v: {elem}) -> {repr} {{
-                let q = <archmage::{token} as {quarter_trait}>::splat(v);
+                let q = <archmage::{token} as {quarter_trait}>::splat(self, v);
                 [q, q, q, q]
             }}
 
             #[inline(always)]
             fn zero(self) -> {repr} {{
-                let q = <archmage::{token} as {quarter_trait}>::zero();
+                let q = <archmage::{token} as {quarter_trait}>::zero(self);
                 [q, q, q, q]
             }}
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
                 [
-                    <archmage::{token} as {quarter_trait}>::load(data[0..{q_lanes}].try_into().unwrap()),
-                    <archmage::{token} as {quarter_trait}>::load(data[{q_lanes}..{q2}].try_into().unwrap()),
-                    <archmage::{token} as {quarter_trait}>::load(data[{q2}..{q3}].try_into().unwrap()),
-                    <archmage::{token} as {quarter_trait}>::load(data[{q3}..{lanes}].try_into().unwrap()),
+                    <archmage::{token} as {quarter_trait}>::load(self, data[0..{q_lanes}].try_into().unwrap()),
+                    <archmage::{token} as {quarter_trait}>::load(self, data[{q_lanes}..{q2}].try_into().unwrap()),
+                    <archmage::{token} as {quarter_trait}>::load(self, data[{q2}..{q3}].try_into().unwrap()),
+                    <archmage::{token} as {quarter_trait}>::load(self, data[{q3}..{lanes}].try_into().unwrap()),
                 ]
             }}
 
@@ -1577,10 +1577,10 @@ fn generate_4way_polyfill_impl(
                 q2.copy_from_slice(&arr[{q2_val}..{q3_val}]);
                 q3.copy_from_slice(&arr[{q3_val}..{lanes}]);
                 [
-                    <archmage::{token} as {quarter_trait}>::from_array(q0),
-                    <archmage::{token} as {quarter_trait}>::from_array(q1),
-                    <archmage::{token} as {quarter_trait}>::from_array(q2),
-                    <archmage::{token} as {quarter_trait}>::from_array(q3),
+                    <archmage::{token} as {quarter_trait}>::from_array(self, q0),
+                    <archmage::{token} as {quarter_trait}>::from_array(self, q1),
+                    <archmage::{token} as {quarter_trait}>::from_array(self, q2),
+                    <archmage::{token} as {quarter_trait}>::from_array(self, q3),
                 ]
             }}
 
@@ -1589,18 +1589,18 @@ fn generate_4way_polyfill_impl(
                 let (o01, o23) = out.split_at_mut({q2_val});
                 let (o0, o1) = o01.split_at_mut({q_lanes});
                 let (o2, o3) = o23.split_at_mut({q_lanes});
-                <archmage::{token} as {quarter_trait}>::store(repr[0], o0.try_into().unwrap());
-                <archmage::{token} as {quarter_trait}>::store(repr[1], o1.try_into().unwrap());
-                <archmage::{token} as {quarter_trait}>::store(repr[2], o2.try_into().unwrap());
-                <archmage::{token} as {quarter_trait}>::store(repr[3], o3.try_into().unwrap());
+                <archmage::{token} as {quarter_trait}>::store(self, repr[0], o0.try_into().unwrap());
+                <archmage::{token} as {quarter_trait}>::store(self, repr[1], o1.try_into().unwrap());
+                <archmage::{token} as {quarter_trait}>::store(self, repr[2], o2.try_into().unwrap());
+                <archmage::{token} as {quarter_trait}>::store(self, repr[3], o3.try_into().unwrap());
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {repr}) -> {array} {{
-                let a0 = <archmage::{token} as {quarter_trait}>::to_array(repr[0]);
-                let a1 = <archmage::{token} as {quarter_trait}>::to_array(repr[1]);
-                let a2 = <archmage::{token} as {quarter_trait}>::to_array(repr[2]);
-                let a3 = <archmage::{token} as {quarter_trait}>::to_array(repr[3]);
+                let a0 = <archmage::{token} as {quarter_trait}>::to_array(self, repr[0]);
+                let a1 = <archmage::{token} as {quarter_trait}>::to_array(self, repr[1]);
+                let a2 = <archmage::{token} as {quarter_trait}>::to_array(self, repr[2]);
+                let a3 = <archmage::{token} as {quarter_trait}>::to_array(self, repr[3]);
                 let mut out = [{zero_lit}; {lanes}];
                 out[0..{q_lanes}].copy_from_slice(&a0);
                 out[{q_lanes}..{q2_val}].copy_from_slice(&a1);
@@ -1611,12 +1611,12 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn add(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::add(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::add(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn sub(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(self, a[i], b[i]))
             }}
     "#,
         q2 = q_lanes * 2,
@@ -1631,12 +1631,12 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn div(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::div(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::div(self, a[i], b[i]))
             }}
         "#});
     } else if ty.elem_bits == 16 || ty.elem_bits == 32 {
@@ -1644,7 +1644,7 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(self, a[i], b[i]))
             }}
         "#});
     }
@@ -1655,7 +1655,7 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn neg(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::neg(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::neg(self, a[i]))
             }}
         "#});
     } else {
@@ -1663,8 +1663,8 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn neg(self, a: {repr}) -> {repr} {{
-                let z = <archmage::{token} as {quarter_trait}>::zero();
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(z, a[i]))
+                let z = <archmage::{token} as {quarter_trait}>::zero(self);
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(self, z, a[i]))
             }}
         "#});
     }
@@ -1673,12 +1673,12 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn min(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::min(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::min(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::max(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::max(self, a[i], b[i]))
             }}
     "#});
 
@@ -1687,57 +1687,57 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn sqrt(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sqrt(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sqrt(self, a[i]))
             }}
 
             #[inline(always)]
             fn abs(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(self, a[i]))
             }}
 
             #[inline(always)]
             fn floor(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::floor(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::floor(self, a[i]))
             }}
 
             #[inline(always)]
             fn ceil(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::ceil(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::ceil(self, a[i]))
             }}
 
             #[inline(always)]
             fn round(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::round(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::round(self, a[i]))
             }}
 
             #[inline(always)]
             fn mul_add(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_add(a[i], b[i], c[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_add(self, a[i], b[i], c[i]))
             }}
 
             #[inline(always)]
             fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_sub(a[i], b[i], c[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_sub(self, a[i], b[i], c[i]))
             }}
 
             #[inline(always)]
             fn reduce_add(self, a: {repr}) -> {elem} {{
-                <archmage::{token} as {quarter_trait}>::reduce_add(a[0])
-                    + <archmage::{token} as {quarter_trait}>::reduce_add(a[1])
-                    + <archmage::{token} as {quarter_trait}>::reduce_add(a[2])
-                    + <archmage::{token} as {quarter_trait}>::reduce_add(a[3])
+                <archmage::{token} as {quarter_trait}>::reduce_add(self, a[0])
+                    + <archmage::{token} as {quarter_trait}>::reduce_add(self, a[1])
+                    + <archmage::{token} as {quarter_trait}>::reduce_add(self, a[2])
+                    + <archmage::{token} as {quarter_trait}>::reduce_add(self, a[3])
             }}
 
             #[inline(always)]
             fn reduce_min(self, a: {repr}) -> {elem} {{
                 let m01 = {{
-                    let l = <archmage::{token} as {quarter_trait}>::reduce_min(a[0]);
-                    let r = <archmage::{token} as {quarter_trait}>::reduce_min(a[1]);
+                    let l = <archmage::{token} as {quarter_trait}>::reduce_min(self, a[0]);
+                    let r = <archmage::{token} as {quarter_trait}>::reduce_min(self, a[1]);
                     if l < r {{ l }} else {{ r }}
                 }};
                 let m23 = {{
-                    let l = <archmage::{token} as {quarter_trait}>::reduce_min(a[2]);
-                    let r = <archmage::{token} as {quarter_trait}>::reduce_min(a[3]);
+                    let l = <archmage::{token} as {quarter_trait}>::reduce_min(self, a[2]);
+                    let r = <archmage::{token} as {quarter_trait}>::reduce_min(self, a[3]);
                     if l < r {{ l }} else {{ r }}
                 }};
                 if m01 < m23 {{ m01 }} else {{ m23 }}
@@ -1746,13 +1746,13 @@ fn generate_4way_polyfill_impl(
             #[inline(always)]
             fn reduce_max(self, a: {repr}) -> {elem} {{
                 let m01 = {{
-                    let l = <archmage::{token} as {quarter_trait}>::reduce_max(a[0]);
-                    let r = <archmage::{token} as {quarter_trait}>::reduce_max(a[1]);
+                    let l = <archmage::{token} as {quarter_trait}>::reduce_max(self, a[0]);
+                    let r = <archmage::{token} as {quarter_trait}>::reduce_max(self, a[1]);
                     if l > r {{ l }} else {{ r }}
                 }};
                 let m23 = {{
-                    let l = <archmage::{token} as {quarter_trait}>::reduce_max(a[2]);
-                    let r = <archmage::{token} as {quarter_trait}>::reduce_max(a[3]);
+                    let l = <archmage::{token} as {quarter_trait}>::reduce_max(self, a[2]);
+                    let r = <archmage::{token} as {quarter_trait}>::reduce_max(self, a[3]);
                     if l > r {{ l }} else {{ r }}
                 }};
                 if m01 > m23 {{ m01 }} else {{ m23 }}
@@ -1765,7 +1765,7 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn abs(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(self, a[i]))
             }}
             "#});
         }
@@ -1782,10 +1782,10 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn reduce_add(self, a: {repr}) -> {elem} {{
-                <archmage::{token} as {quarter_trait}>::reduce_add(a[0])
-                    .wrapping_add(<archmage::{token} as {quarter_trait}>::reduce_add(a[1]))
-                    .wrapping_add(<archmage::{token} as {quarter_trait}>::reduce_add(a[2]))
-                    .wrapping_add(<archmage::{token} as {quarter_trait}>::reduce_add(a[3]))
+                <archmage::{token} as {quarter_trait}>::reduce_add(self, a[0])
+                    .wrapping_add(<archmage::{token} as {quarter_trait}>::reduce_add(self, a[1]))
+                    .wrapping_add(<archmage::{token} as {quarter_trait}>::reduce_add(self, a[2]))
+                    .wrapping_add(<archmage::{token} as {quarter_trait}>::reduce_add(self, a[3]))
             }}
 
             #[inline(always)]
@@ -1805,26 +1805,26 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn all_true(self, a: {repr}) -> bool {{
-                <archmage::{token} as {quarter_trait}>::all_true(a[0])
-                    && <archmage::{token} as {quarter_trait}>::all_true(a[1])
-                    && <archmage::{token} as {quarter_trait}>::all_true(a[2])
-                    && <archmage::{token} as {quarter_trait}>::all_true(a[3])
+                <archmage::{token} as {quarter_trait}>::all_true(self, a[0])
+                    && <archmage::{token} as {quarter_trait}>::all_true(self, a[1])
+                    && <archmage::{token} as {quarter_trait}>::all_true(self, a[2])
+                    && <archmage::{token} as {quarter_trait}>::all_true(self, a[3])
             }}
 
             #[inline(always)]
             fn any_true(self, a: {repr}) -> bool {{
-                <archmage::{token} as {quarter_trait}>::any_true(a[0])
-                    || <archmage::{token} as {quarter_trait}>::any_true(a[1])
-                    || <archmage::{token} as {quarter_trait}>::any_true(a[2])
-                    || <archmage::{token} as {quarter_trait}>::any_true(a[3])
+                <archmage::{token} as {quarter_trait}>::any_true(self, a[0])
+                    || <archmage::{token} as {quarter_trait}>::any_true(self, a[1])
+                    || <archmage::{token} as {quarter_trait}>::any_true(self, a[2])
+                    || <archmage::{token} as {quarter_trait}>::any_true(self, a[3])
             }}
 
             #[inline(always)]
             fn bitmask(self, a: {repr}) -> u64 {{
-                let q0 = <archmage::{token} as {quarter_trait}>::bitmask(a[0]) as u64;
-                let q1 = <archmage::{token} as {quarter_trait}>::bitmask(a[1]) as u64;
-                let q2 = <archmage::{token} as {quarter_trait}>::bitmask(a[2]) as u64;
-                let q3 = <archmage::{token} as {quarter_trait}>::bitmask(a[3]) as u64;
+                let q0 = <archmage::{token} as {quarter_trait}>::bitmask(self, a[0]) as u64;
+                let q1 = <archmage::{token} as {quarter_trait}>::bitmask(self, a[1]) as u64;
+                let q2 = <archmage::{token} as {quarter_trait}>::bitmask(self, a[2]) as u64;
+                let q3 = <archmage::{token} as {quarter_trait}>::bitmask(self, a[3]) as u64;
                 q0 | (q1 << {q_lanes}) | (q2 << {q2_lanes}) | (q3 << {q3_lanes})
             }}
         "#,
@@ -1838,57 +1838,57 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_eq(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_eq(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_ne(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_ne(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_lt(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_lt(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_le(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_le(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_gt(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_gt(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_ge(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_ge(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::blend(mask[i], if_true[i], if_false[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::blend(self, mask[i], if_true[i], if_false[i]))
             }}
 
             #[inline(always)]
             fn not(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::not(a[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::not(self, a[i]))
             }}
 
             #[inline(always)]
             fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitand(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitand(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitor(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitor(self, a[i], b[i]))
             }}
 
             #[inline(always)]
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitxor(a[i], b[i]))
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitxor(self, a[i], b[i]))
             }}
         }}
     "#});

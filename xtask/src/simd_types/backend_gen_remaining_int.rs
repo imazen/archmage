@@ -1900,7 +1900,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]
@@ -2471,7 +2471,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
     let trait_binary_op = |method: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| {
-                format!("<archmage::Wasm128Token as {native_trait}>::{method}(a[{i}], b[{i}])")
+                format!("<archmage::Wasm128Token as {native_trait}>::{method}(self, a[{i}], b[{i}])")
             })
             .collect();
         format!("[{}]", items.join(", "))
@@ -2533,7 +2533,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]

@@ -1948,12 +1948,12 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             // Use FQS because ScalarToken implements multiple backend traits.
             #[inline(always)]
             fn recip(self, a: {array}) -> {array} {{
-                <archmage::ScalarToken as {trait_name}>::rcp_approx(archmage::ScalarToken, a)
+                <Self as {trait_name}>::rcp_approx(self, a)
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {array}) -> {array} {{
-                <archmage::ScalarToken as {trait_name}>::rsqrt_approx(archmage::ScalarToken, a)
+                <Self as {trait_name}>::rsqrt_approx(self, a)
             }}
 
             // ====== Bitwise ======
@@ -2186,7 +2186,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]
@@ -2475,7 +2475,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]
@@ -2727,7 +2727,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]
@@ -2828,12 +2828,12 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             // Override defaults: WASM has no fast approximation, already full precision
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{
-                <archmage::Wasm128Token as {trait_name}>::rcp_approx(archmage::Wasm128Token, a)
+                <Self as {trait_name}>::rcp_approx(self, a)
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                <archmage::Wasm128Token as {trait_name}>::rsqrt_approx(archmage::Wasm128Token, a)
+                <Self as {trait_name}>::rsqrt_approx(self, a)
             }}
 
             #[inline(always)]
@@ -3009,9 +3009,9 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn rsqrt_approx(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), {wp}_sqrt(a)) }}
             #[inline(always)]
-            fn recip(self, a: v128) -> v128 {{ <archmage::Wasm128Token as {trait_name}>::rcp_approx(archmage::Wasm128Token, a) }}
+            fn recip(self, a: v128) -> v128 {{ <Self as {trait_name}>::rcp_approx(self, a) }}
             #[inline(always)]
-            fn rsqrt(self, a: v128) -> v128 {{ <archmage::Wasm128Token as {trait_name}>::rsqrt_approx(archmage::Wasm128Token, a) }}
+            fn rsqrt(self, a: v128) -> v128 {{ <Self as {trait_name}>::rsqrt_approx(self, a) }}
 
             #[inline(always)]
             fn not(self, a: v128) -> v128 {{ v128_not(a) }}
@@ -4416,7 +4416,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]
@@ -4911,7 +4911,7 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]
@@ -6089,7 +6089,7 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]
@@ -6417,7 +6417,7 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(&arr)
+                <Self as {trait_name}>::load(self, &arr)
             }}
 
             #[inline(always)]

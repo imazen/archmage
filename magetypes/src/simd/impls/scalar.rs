@@ -344,12 +344,12 @@ impl F32x4Backend for archmage::ScalarToken {
     // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
     fn recip(self, a: [f32; 4]) -> [f32; 4] {
-        <archmage::ScalarToken as F32x4Backend>::rcp_approx(archmage::ScalarToken, a)
+        <Self as F32x4Backend>::rcp_approx(self, a)
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [f32; 4]) -> [f32; 4] {
-        <archmage::ScalarToken as F32x4Backend>::rsqrt_approx(archmage::ScalarToken, a)
+        <Self as F32x4Backend>::rsqrt_approx(self, a)
     }
 
     // ====== Bitwise ======
@@ -749,12 +749,12 @@ impl F32x8Backend for archmage::ScalarToken {
     // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
     fn recip(self, a: [f32; 8]) -> [f32; 8] {
-        <archmage::ScalarToken as F32x8Backend>::rcp_approx(archmage::ScalarToken, a)
+        <Self as F32x8Backend>::rcp_approx(self, a)
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [f32; 8]) -> [f32; 8] {
-        <archmage::ScalarToken as F32x8Backend>::rsqrt_approx(archmage::ScalarToken, a)
+        <Self as F32x8Backend>::rsqrt_approx(self, a)
     }
 
     // ====== Bitwise ======
@@ -1083,12 +1083,12 @@ impl F64x2Backend for archmage::ScalarToken {
     // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
     fn recip(self, a: [f64; 2]) -> [f64; 2] {
-        <archmage::ScalarToken as F64x2Backend>::rcp_approx(archmage::ScalarToken, a)
+        <Self as F64x2Backend>::rcp_approx(self, a)
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [f64; 2]) -> [f64; 2] {
-        <archmage::ScalarToken as F64x2Backend>::rsqrt_approx(archmage::ScalarToken, a)
+        <Self as F64x2Backend>::rsqrt_approx(self, a)
     }
 
     // ====== Bitwise ======
@@ -1415,12 +1415,12 @@ impl F64x4Backend for archmage::ScalarToken {
     // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
     fn recip(self, a: [f64; 4]) -> [f64; 4] {
-        <archmage::ScalarToken as F64x4Backend>::rcp_approx(archmage::ScalarToken, a)
+        <Self as F64x4Backend>::rcp_approx(self, a)
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [f64; 4]) -> [f64; 4] {
-        <archmage::ScalarToken as F64x4Backend>::rsqrt_approx(archmage::ScalarToken, a)
+        <Self as F64x4Backend>::rsqrt_approx(self, a)
     }
 
     // ====== Bitwise ======
