@@ -14,8 +14,8 @@
 
 use archmage::{ScalarToken, SimdToken};
 use magetypes::simd::backends::{
-    F32x4Backend, F32x8Backend, F32x8Convert, F64x2Backend, I32x4Backend, U32x4Backend,
-    U8x16Backend,
+    F32x4Backend, F32x8Backend, F32x8Convert, F64x2Backend, I32x4Backend, U8x16Backend,
+    U32x4Backend,
 };
 
 // -------------------------------------------------------------------
@@ -125,7 +125,10 @@ fn sanctioned_math_min_sqrt_mul_add() {
 
     let s4 = <ScalarToken as F32x4Backend>::from_array(t, [1.0, 4.0, 9.0, 16.0]);
     let sr = <ScalarToken as F32x4Backend>::sqrt(t, s4);
-    assert_eq!(<ScalarToken as F32x4Backend>::to_array(t, sr), [1.0, 2.0, 3.0, 4.0]);
+    assert_eq!(
+        <ScalarToken as F32x4Backend>::to_array(t, sr),
+        [1.0, 2.0, 3.0, 4.0]
+    );
 
     let fa = <ScalarToken as F32x8Backend>::splat(t, 2.0);
     let fb = <ScalarToken as F32x8Backend>::splat(t, 3.0);
@@ -155,7 +158,10 @@ fn sanctioned_comparison_lt_blend() {
     let tt = <ScalarToken as F32x8Backend>::splat(t, 1.0);
     let ff = <ScalarToken as F32x8Backend>::splat(t, 2.0);
     let blended = <ScalarToken as F32x8Backend>::blend(t, mask_all_true, tt, ff);
-    assert_eq!(<ScalarToken as F32x8Backend>::to_array(t, blended), [1.0; 8]);
+    assert_eq!(
+        <ScalarToken as F32x8Backend>::to_array(t, blended),
+        [1.0; 8]
+    );
 }
 
 #[test]
@@ -179,10 +185,7 @@ fn sanctioned_bitwise_bitand_not() {
 
     let z = <ScalarToken as U32x4Backend>::zero(t);
     let n = <ScalarToken as U32x4Backend>::not(t, z);
-    assert_eq!(
-        <ScalarToken as U32x4Backend>::to_array(t, n),
-        [u32::MAX; 4]
-    );
+    assert_eq!(<ScalarToken as U32x4Backend>::to_array(t, n), [u32::MAX; 4]);
 }
 
 #[test]
@@ -190,7 +193,10 @@ fn sanctioned_shift_shl_const() {
     let t = ScalarToken::summon().unwrap();
     let a = <ScalarToken as I32x4Backend>::from_array(t, [1, 2, 3, 4]);
     let r = <ScalarToken as I32x4Backend>::shl_const::<2>(t, a);
-    assert_eq!(<ScalarToken as I32x4Backend>::to_array(t, r), [4, 8, 12, 16]);
+    assert_eq!(
+        <ScalarToken as I32x4Backend>::to_array(t, r),
+        [4, 8, 12, 16]
+    );
 }
 
 #[test]
@@ -204,10 +210,7 @@ fn sanctioned_boolean_all_true_bitmask() {
     assert!(!<ScalarToken as I32x4Backend>::all_true(t, zero));
 
     // bitmask: high bit of each u32 lane as a bitmask
-    let mixed = <ScalarToken as U32x4Backend>::from_array(
-        t,
-        [0x8000_0000, 0x0, 0xFFFF_FFFF, 0x0],
-    );
+    let mixed = <ScalarToken as U32x4Backend>::from_array(t, [0x8000_0000, 0x0, 0xFFFF_FFFF, 0x0]);
     let mask = <ScalarToken as U32x4Backend>::bitmask(t, mixed);
     assert_eq!(mask, 0b0101);
 }
