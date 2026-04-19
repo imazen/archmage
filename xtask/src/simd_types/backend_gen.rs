@@ -2345,22 +2345,26 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                 {rsqrt_body}
             }}
 
-            // Newton-Raphson refinement over the *_approx variants. Same
-            // formula as the native NEON impl; applied per sub-vector so
-            // the polyfilled wider type matches the precision of its
-            // native W128 peer (max error ~2 ULP instead of ~1/256).
+            // Newton-Raphson refinement over the *_approx variants. Two
+            // steps to match the native NEON impl — one step over NEON's
+            // 8-bit estimate reaches ~23-bit, two steps reach full f32
+            // precision (matches x86's single-step-over-12-bit precision).
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{
-                let approx = <Self as {trait_name}>::rcp_approx(self, a);
                 let two = unsafe {{ vdupq_n_{ns}(2.0) }};
+                let r0 = <Self as {trait_name}>::rcp_approx(self, a);
+                let r1 = {{ let approx = r0; {recip_body} }};
+                let approx = r1;
                 {recip_body}
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                let approx = <Self as {trait_name}>::rsqrt_approx(self, a);
                 let half = unsafe {{ vdupq_n_{ns}(0.5) }};
                 let three = unsafe {{ vdupq_n_{ns}(3.0) }};
+                let y0 = <Self as {trait_name}>::rsqrt_approx(self, a);
+                let y1 = {{ let approx = y0; {rsqrt_refined_body} }};
+                let approx = y1;
                 {rsqrt_refined_body}
             }}
 
@@ -2611,24 +2615,37 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             fn rcp_approx(self, a: {repr}) -> {repr} {{ unsafe {{ vrecpeq_{ns}(a) }} }}
             #[inline(always)]
             fn rsqrt_approx(self, a: {repr}) -> {repr} {{ unsafe {{ vrsqrteq_{ns}(a) }} }}
-            // Newton-Raphson refinement over the *_approx variants. Constants
-            // built via vdupq_n_{ns} directly (NEON intrinsic; this impl block
-            // is gated on the NEON target feature already).
+            // Newton-Raphson refinement over the *_approx variants. NEON
+            // starts from an 8-bit estimate (vs x86's 12-bit); one Newton
+            // step over 8-bit reaches ~23-bit, not full 24-bit f32 mantissa,
+            // so we apply two steps to match x86's single-step precision
+            // (1e-5 relative error everywhere). Constants built via
+            // vdupq_n_{ns} directly — NEON intrinsic, this impl block is
+            // already gated on the NEON target feature.
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{
-                let approx = <Self as {trait_name}>::rcp_approx(self, a);
                 let two = unsafe {{ vdupq_n_{ns}(2.0) }};
-                <Self as {trait_name}>::mul(self, approx, <Self as {trait_name}>::sub(self, two, <Self as {trait_name}>::mul(self, a, approx)))
+                // Newton step: r' = r * (2 - a*r)
+                let step = |r: {repr}| <Self as {trait_name}>::mul(
+                    self, r,
+                    <Self as {trait_name}>::sub(self, two, <Self as {trait_name}>::mul(self, a, r)),
+                );
+                let r0 = <Self as {trait_name}>::rcp_approx(self, a);
+                step(step(r0))
             }}
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                let approx = <Self as {trait_name}>::rsqrt_approx(self, a);
                 let half = unsafe {{ vdupq_n_{ns}(0.5) }};
                 let three = unsafe {{ vdupq_n_{ns}(3.0) }};
-                <Self as {trait_name}>::mul(self,
-                    <Self as {trait_name}>::mul(self, half, approx),
-                    <Self as {trait_name}>::sub(self, three, <Self as {trait_name}>::mul(self, a, <Self as {trait_name}>::mul(self, approx, approx))),
-                )
+                // Newton step: y' = 0.5 * y * (3 - a * y * y)
+                let step = |y: {repr}| <Self as {trait_name}>::mul(
+                    self,
+                    <Self as {trait_name}>::mul(self, half, y),
+                    <Self as {trait_name}>::sub(self, three,
+                        <Self as {trait_name}>::mul(self, a, <Self as {trait_name}>::mul(self, y, y))),
+                );
+                let y0 = <Self as {trait_name}>::rsqrt_approx(self, a);
+                step(step(y0))
             }}
 
             #[inline(always)]

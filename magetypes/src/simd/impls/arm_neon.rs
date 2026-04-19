@@ -167,37 +167,45 @@ impl F32x4Backend for archmage::NeonToken {
     fn rsqrt_approx(self, a: float32x4_t) -> float32x4_t {
         unsafe { vrsqrteq_f32(a) }
     }
-    // Newton-Raphson refinement over the *_approx variants. Constants
-    // built via vdupq_n_f32 directly (NEON intrinsic; this impl block
-    // is gated on the NEON target feature already).
+    // Newton-Raphson refinement over the *_approx variants. NEON
+    // starts from an 8-bit estimate (vs x86's 12-bit); one Newton
+    // step over 8-bit reaches ~23-bit, not full 24-bit f32 mantissa,
+    // so we apply two steps to match x86's single-step precision
+    // (1e-5 relative error everywhere). Constants built via
+    // vdupq_n_f32 directly — NEON intrinsic, this impl block is
+    // already gated on the NEON target feature.
     #[inline(always)]
     fn recip(self, a: float32x4_t) -> float32x4_t {
-        let approx = <Self as F32x4Backend>::rcp_approx(self, a);
         let two = unsafe { vdupq_n_f32(2.0) };
-        <Self as F32x4Backend>::mul(
-            self,
-            approx,
-            <Self as F32x4Backend>::sub(self, two, <Self as F32x4Backend>::mul(self, a, approx)),
-        )
+        // Newton step: r' = r * (2 - a*r)
+        let step = |r: float32x4_t| {
+            <Self as F32x4Backend>::mul(
+                self,
+                r,
+                <Self as F32x4Backend>::sub(self, two, <Self as F32x4Backend>::mul(self, a, r)),
+            )
+        };
+        let r0 = <Self as F32x4Backend>::rcp_approx(self, a);
+        step(step(r0))
     }
     #[inline(always)]
     fn rsqrt(self, a: float32x4_t) -> float32x4_t {
-        let approx = <Self as F32x4Backend>::rsqrt_approx(self, a);
         let half = unsafe { vdupq_n_f32(0.5) };
         let three = unsafe { vdupq_n_f32(3.0) };
-        <Self as F32x4Backend>::mul(
-            self,
-            <Self as F32x4Backend>::mul(self, half, approx),
-            <Self as F32x4Backend>::sub(
+        // Newton step: y' = 0.5 * y * (3 - a * y * y)
+        let step = |y: float32x4_t| {
+            <Self as F32x4Backend>::mul(
                 self,
-                three,
-                <Self as F32x4Backend>::mul(
+                <Self as F32x4Backend>::mul(self, half, y),
+                <Self as F32x4Backend>::sub(
                     self,
-                    a,
-                    <Self as F32x4Backend>::mul(self, approx, approx),
+                    three,
+                    <Self as F32x4Backend>::mul(self, a, <Self as F32x4Backend>::mul(self, y, y)),
                 ),
-            ),
-        )
+            )
+        };
+        let y0 = <Self as F32x4Backend>::rsqrt_approx(self, a);
+        step(step(y0))
     }
 
     #[inline(always)]
@@ -497,14 +505,24 @@ impl F32x8Backend for archmage::NeonToken {
         unsafe { [vrsqrteq_f32(a[0]), vrsqrteq_f32(a[1])] }
     }
 
-    // Newton-Raphson refinement over the *_approx variants. Same
-    // formula as the native NEON impl; applied per sub-vector so
-    // the polyfilled wider type matches the precision of its
-    // native W128 peer (max error ~2 ULP instead of ~1/256).
+    // Newton-Raphson refinement over the *_approx variants. Two
+    // steps to match the native NEON impl — one step over NEON's
+    // 8-bit estimate reaches ~23-bit, two steps reach full f32
+    // precision (matches x86's single-step-over-12-bit precision).
     #[inline(always)]
     fn recip(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        let approx = <Self as F32x8Backend>::rcp_approx(self, a);
         let two = unsafe { vdupq_n_f32(2.0) };
+        let r0 = <Self as F32x8Backend>::rcp_approx(self, a);
+        let r1 = {
+            let approx = r0;
+            unsafe {
+                [
+                    vmulq_f32(approx[0], vsubq_f32(two, vmulq_f32(a[0], approx[0]))),
+                    vmulq_f32(approx[1], vsubq_f32(two, vmulq_f32(a[1], approx[1]))),
+                ]
+            }
+        };
+        let approx = r1;
         unsafe {
             [
                 vmulq_f32(approx[0], vsubq_f32(two, vmulq_f32(a[0], approx[0]))),
@@ -515,9 +533,25 @@ impl F32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn rsqrt(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        let approx = <Self as F32x8Backend>::rsqrt_approx(self, a);
         let half = unsafe { vdupq_n_f32(0.5) };
         let three = unsafe { vdupq_n_f32(3.0) };
+        let y0 = <Self as F32x8Backend>::rsqrt_approx(self, a);
+        let y1 = {
+            let approx = y0;
+            unsafe {
+                [
+                    vmulq_f32(
+                        vmulq_f32(half, approx[0]),
+                        vsubq_f32(three, vmulq_f32(a[0], vmulq_f32(approx[0], approx[0]))),
+                    ),
+                    vmulq_f32(
+                        vmulq_f32(half, approx[1]),
+                        vsubq_f32(three, vmulq_f32(a[1], vmulq_f32(approx[1], approx[1]))),
+                    ),
+                ]
+            }
+        };
+        let approx = y1;
         unsafe {
             [
                 vmulq_f32(
@@ -750,37 +784,45 @@ impl F64x2Backend for archmage::NeonToken {
     fn rsqrt_approx(self, a: float64x2_t) -> float64x2_t {
         unsafe { vrsqrteq_f64(a) }
     }
-    // Newton-Raphson refinement over the *_approx variants. Constants
-    // built via vdupq_n_f64 directly (NEON intrinsic; this impl block
-    // is gated on the NEON target feature already).
+    // Newton-Raphson refinement over the *_approx variants. NEON
+    // starts from an 8-bit estimate (vs x86's 12-bit); one Newton
+    // step over 8-bit reaches ~23-bit, not full 24-bit f32 mantissa,
+    // so we apply two steps to match x86's single-step precision
+    // (1e-5 relative error everywhere). Constants built via
+    // vdupq_n_f64 directly — NEON intrinsic, this impl block is
+    // already gated on the NEON target feature.
     #[inline(always)]
     fn recip(self, a: float64x2_t) -> float64x2_t {
-        let approx = <Self as F64x2Backend>::rcp_approx(self, a);
         let two = unsafe { vdupq_n_f64(2.0) };
-        <Self as F64x2Backend>::mul(
-            self,
-            approx,
-            <Self as F64x2Backend>::sub(self, two, <Self as F64x2Backend>::mul(self, a, approx)),
-        )
+        // Newton step: r' = r * (2 - a*r)
+        let step = |r: float64x2_t| {
+            <Self as F64x2Backend>::mul(
+                self,
+                r,
+                <Self as F64x2Backend>::sub(self, two, <Self as F64x2Backend>::mul(self, a, r)),
+            )
+        };
+        let r0 = <Self as F64x2Backend>::rcp_approx(self, a);
+        step(step(r0))
     }
     #[inline(always)]
     fn rsqrt(self, a: float64x2_t) -> float64x2_t {
-        let approx = <Self as F64x2Backend>::rsqrt_approx(self, a);
         let half = unsafe { vdupq_n_f64(0.5) };
         let three = unsafe { vdupq_n_f64(3.0) };
-        <Self as F64x2Backend>::mul(
-            self,
-            <Self as F64x2Backend>::mul(self, half, approx),
-            <Self as F64x2Backend>::sub(
+        // Newton step: y' = 0.5 * y * (3 - a * y * y)
+        let step = |y: float64x2_t| {
+            <Self as F64x2Backend>::mul(
                 self,
-                three,
-                <Self as F64x2Backend>::mul(
+                <Self as F64x2Backend>::mul(self, half, y),
+                <Self as F64x2Backend>::sub(
                     self,
-                    a,
-                    <Self as F64x2Backend>::mul(self, approx, approx),
+                    three,
+                    <Self as F64x2Backend>::mul(self, a, <Self as F64x2Backend>::mul(self, y, y)),
                 ),
-            ),
-        )
+            )
+        };
+        let y0 = <Self as F64x2Backend>::rsqrt_approx(self, a);
+        step(step(y0))
     }
 
     #[inline(always)]
@@ -1077,14 +1119,24 @@ impl F64x4Backend for archmage::NeonToken {
         unsafe { [vrsqrteq_f64(a[0]), vrsqrteq_f64(a[1])] }
     }
 
-    // Newton-Raphson refinement over the *_approx variants. Same
-    // formula as the native NEON impl; applied per sub-vector so
-    // the polyfilled wider type matches the precision of its
-    // native W128 peer (max error ~2 ULP instead of ~1/256).
+    // Newton-Raphson refinement over the *_approx variants. Two
+    // steps to match the native NEON impl — one step over NEON's
+    // 8-bit estimate reaches ~23-bit, two steps reach full f32
+    // precision (matches x86's single-step-over-12-bit precision).
     #[inline(always)]
     fn recip(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        let approx = <Self as F64x4Backend>::rcp_approx(self, a);
         let two = unsafe { vdupq_n_f64(2.0) };
+        let r0 = <Self as F64x4Backend>::rcp_approx(self, a);
+        let r1 = {
+            let approx = r0;
+            unsafe {
+                [
+                    vmulq_f64(approx[0], vsubq_f64(two, vmulq_f64(a[0], approx[0]))),
+                    vmulq_f64(approx[1], vsubq_f64(two, vmulq_f64(a[1], approx[1]))),
+                ]
+            }
+        };
+        let approx = r1;
         unsafe {
             [
                 vmulq_f64(approx[0], vsubq_f64(two, vmulq_f64(a[0], approx[0]))),
@@ -1095,9 +1147,25 @@ impl F64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn rsqrt(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        let approx = <Self as F64x4Backend>::rsqrt_approx(self, a);
         let half = unsafe { vdupq_n_f64(0.5) };
         let three = unsafe { vdupq_n_f64(3.0) };
+        let y0 = <Self as F64x4Backend>::rsqrt_approx(self, a);
+        let y1 = {
+            let approx = y0;
+            unsafe {
+                [
+                    vmulq_f64(
+                        vmulq_f64(half, approx[0]),
+                        vsubq_f64(three, vmulq_f64(a[0], vmulq_f64(approx[0], approx[0]))),
+                    ),
+                    vmulq_f64(
+                        vmulq_f64(half, approx[1]),
+                        vsubq_f64(three, vmulq_f64(a[1], vmulq_f64(approx[1], approx[1]))),
+                    ),
+                ]
+            }
+        };
+        let approx = y1;
         unsafe {
             [
                 vmulq_f64(

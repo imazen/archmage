@@ -777,11 +777,24 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
 
     "#});
 
-    // Approximation ops — relative tolerance
+    // Approximation ops — relative tolerance.
+    //
+    // `_approx` variants: tolerance matches the tightest hardware spec we
+    // honor. ARMv8 specifies `vrecpeq_f32` / `vrsqrteq_f32` with max
+    // relative error ≤ 2⁻⁸ ≈ 3.91e-3 (x86 `_mm_rcp_ps` is tighter at
+    // 1.5 × 2⁻¹² ≈ 3.66e-4, and real ARM silicon typically delivers
+    // closer to that too). QEMU-user emulates NEON at the spec worst
+    // case, so 4e-3 is the correct universal bound. Anything tighter
+    // just encodes x86 precision as the contract.
+    //
+    // `recip` / `rsqrt`: Newton-refined. On x86 one Newton step over a
+    // 12-bit estimate reaches full f32 precision (~24-bit). On NEON
+    // we do two Newton steps over the 8-bit estimate to hit the same
+    // precision, so 1e-5 holds on all platforms.
     if elem == "f32" {
         for (op, tol) in &[
-            ("rcp_approx", "1e-3"),
-            ("rsqrt_approx", "1e-3"),
+            ("rcp_approx", "4e-3"),
+            ("rsqrt_approx", "4e-3"),
             ("recip", "1e-5"),
             ("rsqrt", "1e-5"),
         ] {
