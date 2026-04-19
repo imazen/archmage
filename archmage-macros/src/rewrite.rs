@@ -70,7 +70,7 @@ pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> 
             if let Ok(input) = syn::parse2::<IncantInput>(inner) {
                 // Rewrite this incant! call
                 let rewritten = rewrite_single_incant(&input, ctx);
-                result.extend(rewritten.into_iter());
+                result.extend(rewritten);
                 i += 3; // skip `incant`, `!`, `(...)`
                 continue;
             }
@@ -153,7 +153,8 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
     }
 
     // Sort upgrade tiers by priority descending (try highest first)
-    upgrade_tiers.sort_by(|a, b| b.priority.cmp(&a.priority));
+    // Highest priority first.
+    upgrade_tiers.sort_by_key(|rt| core::cmp::Reverse(rt.priority));
 
     let token_ident = &ctx.token_ident;
 

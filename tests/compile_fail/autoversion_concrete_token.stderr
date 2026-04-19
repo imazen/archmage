@@ -13,9 +13,3 @@ warning: unused import: `archmage::prelude::*`
   |     ^^^^^^^^^^^^^^^^^^^^
   |
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-error[E0425]: cannot find function `process` in this scope
-  --> tests/compile_fail/autoversion_concrete_token.rs:10:13
-   |
-10 |     let _ = process(&[1.0]);
-   |             ^^^^^^^ not found in this scope

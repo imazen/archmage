@@ -419,7 +419,7 @@ pub(crate) fn resolve_tiers(
         });
     }
 
-    tiers.sort_by(|a, b| b.tier.priority.cmp(&a.tier.priority));
+    tiers.sort_by_key(|rt| core::cmp::Reverse(rt.tier.priority));
 
     Ok(tiers)
 }
