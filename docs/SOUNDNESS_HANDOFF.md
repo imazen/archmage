@@ -1,6 +1,8 @@
 # Token-by-Self Soundness Refactor — Mission-Critical Handoff
 
-**Status as of HEAD (`fix/token-by-self-soundness`, commit `4e31ec9`):** magetypes compiles green on default / avx512 / no-default-features / w512 / all-features. All 1545 integration tests pass. Trait-side bypass closed; construction + `neg` + reciprocal surface self-gated; arithmetic / comparison / reduction / memory-op / bitwise / shift / math / `blend` surface still tokenless — see §6 status column and §7 inventory.
+**Status as of HEAD (`fix/token-by-self-soundness`, commit `4447922`):** **task #5 complete.** Every method on every backend trait now takes `self`. Fabricated `Repr` values (via `bytemuck/simd` feature or `mem::transmute` — documented escapes) cannot feed any backend operation without also presenting a `Self` token value. magetypes builds clean on default / avx512 / no-default-features / w512 / all-features. 1545 integration tests pass. The bypass-closure PoC (`<X64V3Token as F32x8Backend>::splat(7.0)` — and now any other backend method called UFCS without a token) fails to compile.
+
+**Previous status (commit `4e31ec9`):** construction + neg + reciprocal self-gated; arithmetic/comparison/reduction/memory/bitwise/shift/math/blend still tokenless.
 
 **Previous status (commit `5b0ecf3`):** WIP, ~402 compile errors. Trait-side bypass closed; cascade not converged.
 
@@ -219,17 +221,18 @@ Every path that produces or wraps a `Repr`, audited for token-gating:
 | `T::neg(a)` | ❌ | ✅ `T::neg(self, a)` | ✅ done (commit `4d74432`) |
 | `T::rcp_approx(a)` / `rsqrt_approx(a)` | ❌ | ✅ `T::rcp_approx(self, a)` etc. | ✅ done (commit `4e31ec9`) |
 | `T::recip(a)` / `rsqrt(a)` | ❌ | ✅ `T::recip(self, a)` etc. + x86 Newton override | ✅ done (commit `4e31ec9`) |
-| `T::add(a, b)` / `sub` / `mul` / `div` | ❌ no token, takes Reprs | ✅ `T::add(self, a, b)` | ❌ not yet |
-| `T::min` / `max` / `abs` / `sqrt` / `floor` / `ceil` / `round` | ❌ | ✅ `T::min(self, a, b)` etc. | ❌ not yet |
-| `T::mul_add` / `mul_sub` | ❌ | ✅ `T::mul_add(self, a, b, c)` | ❌ not yet |
-| `T::simd_eq` / `ne` / `lt` / `le` / `gt` / `ge` / `blend` | ❌ | ✅ `T::simd_eq(self, a, b)` etc. | ❌ not yet |
-| `T::reduce_add` / `reduce_min` / `reduce_max` | ❌ | ✅ `T::reduce_add(self, a)` | ❌ not yet |
-| `T::store(repr, &mut [..])` | ❌ | ✅ `T::store(self, repr, ..)` | ❌ not yet |
-| `T::to_array(repr) -> [..]` | ❌ | ✅ `T::to_array(self, repr)` | ❌ not yet |
-| `T::not` / `bitand` / `bitor` / `bitxor` | ❌ | ✅ `T::not(self, a)` etc. | ❌ not yet |
-| `T::shl_const::<N>` / `shr_logical_const` / `shr_arithmetic_const` | ❌ | ✅ `T::shl_const(self, a)` | ❌ not yet |
-| `T::all_true` / `any_true` / `bitmask` / `popcount` | ❌ | ✅ `T::all_true(self, a)` etc. | ❌ not yet |
-| `T::bitcast_*` / `convert_*` (convert traits) | ❌ | ✅ `T::bitcast_(self, a)` | ❌ not yet |
+| `T::add(a, b)` / `sub` / `mul` / `div` | ❌ no token, takes Reprs | ✅ `T::add(self, a, b)` | ✅ done (commit `4447922`) |
+| `T::min` / `max` / `abs` / `sqrt` / `floor` / `ceil` / `round` / `trunc` | ❌ | ✅ `T::min(self, a, b)` etc. | ✅ done (commit `4447922`) |
+| `T::mul_add` / `mul_sub` | ❌ | ✅ `T::mul_add(self, a, b, c)` | ✅ done (commit `4447922`) |
+| `T::simd_eq` / `ne` / `lt` / `le` / `gt` / `ge` / `blend` | ❌ | ✅ `T::simd_eq(self, a, b)` etc. | ✅ done (commit `4447922`) |
+| `T::reduce_add` / `reduce_min` / `reduce_max` | ❌ | ✅ `T::reduce_add(self, a)` | ✅ done (commit `4447922`) |
+| `T::store(repr, &mut [..])` | ❌ | ✅ `T::store(self, repr, ..)` | ✅ done (commit `4447922`) |
+| `T::to_array(repr) -> [..]` | ❌ | ✅ `T::to_array(self, repr)` | ✅ done (commit `4447922`) |
+| `T::not` / `bitand` / `bitor` / `bitxor` | ❌ | ✅ `T::not(self, a)` etc. | ✅ done (commit `4447922`) |
+| `T::shl_const::<N>` / `shr_logical_const` / `shr_arithmetic_const` | ❌ | ✅ `T::shl_const(self, a)` | ✅ done (commit `4447922`) |
+| `T::all_true` / `any_true` / `bitmask` / `popcount` / `popcnt` | ❌ | ✅ `T::all_true(self, a)` etc. | ✅ done (commit `4447922`) |
+| `T::clamp` (default body) | ❌ | ✅ fully-qualified `<Self as {trait}>::min/max` with `self` | ✅ done (commit `4447922`) |
+| `T::bitcast_*` / `convert_*` (convert traits) | ❌ | ✅ `T::bitcast_(self, a)` | ✅ done (commit `4447922`) |
 | `f32x8::splat(token, v)` (generic API) | ✅ takes token | ✅ unchanged shape | ✅ done |
 | `f32x8::from_repr(token, repr)` | ✅ | ✅ stores token | ✅ done |
 | `f32x8::from_repr_unchecked(repr)` | ⚠️ pub(super), no token | ✅ pub(crate), takes token | ✅ done |
@@ -244,7 +247,7 @@ Every path that produces or wraps a `Repr`, audited for token-gating:
 - `core::mem::transmute::<[f32; 8], __m256>(arr)` — `unsafe`, user opted in.
 - `core::mem::zeroed::<__m256>()` — `unsafe`, user opted in.
 
-A fabricated `Repr` is not a soundness break **as long as the methods that operate on it require a token**. Hence "full coverage" — if `add(a, b)` doesn't need a token, fabricated `Repr`s can be combined with arithmetic, and the bypass surfaces from a different angle.
+A fabricated `Repr` is not a soundness break **as long as the methods that operate on it require a token**. This property now holds across the full trait surface: every `add`/`sub`/`mul`/`div`/`min`/`max`/`store`/`to_array`/`reduce_add`/`bitand`/`shl_const`/`simd_eq`/`blend`/`bitcast_*`/`convert_*`/etc. method requires `self: Self` as its first argument. A bytemuck-fabricated `__m256` that never passed through `summon()` cannot be combined with any backend operation without also producing a `Self` value — and the only paths to `Self` remain `summon()`, extractor methods like `X64V4Token::v3()`, or the explicitly `unsafe` `forge_token_dangerously()`.
 
 ---
 
@@ -312,44 +315,17 @@ Memory-layout / interleave / transpose / pixel-channel ops. Heavy callers of `T:
 
 7. ✅ Convergence to 0 errors — achieved. Full feature matrix builds clean.
 
-### Remaining (this is where the next session starts)
+### Remaining (follow-up work — none blocks soundness)
 
-**Stage 2 full coverage — every remaining trait method gets `self`.** ~30 methods × ~30 traits. Mechanical but large. Per-category:
+The core soundness refactor is complete. The outstanding items below are polish, testing depth, and cross-arch verification — not additional API surgery.
 
-- **Memory**: `store`, `to_array`
-- **Arithmetic**: `add`, `sub`, `mul`, `div`
-- **Math**: `min`, `max`, `abs`, `sqrt`, `floor`, `ceil`, `round`, `trunc`, `mul_add`, `mul_sub`
-- **Comparison**: `simd_eq`, `simd_ne`, `simd_lt`, `simd_le`, `simd_gt`, `simd_ge`, `blend`
-- **Reduction**: `reduce_add`, `reduce_min`, `reduce_max`
-- **Bitwise**: `not`, `bitand`, `bitor`, `bitxor`
-- **Shift**: `shl_const`, `shr_logical_const`, `shr_arithmetic_const`
-- **Boolean**: `all_true`, `any_true`, `bitmask`, `popcount`
-- **Defaults**: `clamp` (trivial — delegates to `min`/`max`)
-- **Convert traits**: `bitcast_*`, `convert_*`
+**Cross-arch verification** — `cargo check --target aarch64-unknown-linux-gnu`, `--target wasm32-unknown-unknown`, `--target aarch64-pc-windows-msvc`. Each may surface backend-specific issues (e.g., a NEON impl that forgot a `self,` the perl sweep didn't catch). Fix individually.
 
-Pattern (per method, across all of backend_gen.rs / backend_gen_i64.rs / backend_gen_remaining_int.rs / backend_gen_w512.rs):
+**Adversarial test suite** — expand `magetypes/tests/bypass_closed.rs` to exercise every trait method UFCS-style and expect compile-fail without a token. Use `compile_fail` doctests for each method × each trait. This guards against any future patch that removes `self` from a method sig.
 
-```
-fn NAME(a: ...) -> ...       →  fn NAME(self, a: ...) -> ...
-fn NAME(a: ..., b: ...) ...  →  fn NAME(self, a: ..., b: ...) ...
-```
+**`const _: ()` size-assertion codegen** — add compile-time asserts in `xtask/src/simd_types/generic_gen/type_impl.rs` that `size_of::<{name}<T>>() == size_of::<T::Repr>()` and `align_of::<{name}<T>>() == align_of::<T::Repr>()`. If a token ever stops being a ZST, these fire at compile time.
 
-Then in impl bodies and default bodies:
-- `Self::NAME(a)` → `<Self as TraitName>::NAME(self, a)` (fully-qualified; avoids E0034 multi-trait ambiguity)
-- `<X64V3Token as HalfTrait>::NAME(a)` in V3 W512 polyfill → `<X64V3Token as HalfTrait>::NAME(self, a)`
-
-Generic callers (`xtask/src/simd_types/generic_gen/type_impl.rs`):
-- `T::NAME(self.0, ...)` → `T::NAME(self.1, self.0, ...)`
-
-For operator impls in `type_impl.rs`, the `gen_scalar_op` body already passes `self.1` to the inner `T::splat`. Extend the same pattern to the outer `T::add`/`sub`/`mul`/`div` call: `T::add(self.1, self.0, ...)`.
-
-Block-ops and transcendentals already thread `self.1`/`token` — no additional work in those files.
-
-**Cross-arch verification** — `cargo check --target aarch64-unknown-linux-gnu`, `--target wasm32-unknown-unknown`, `--target aarch64-pc-windows-msvc`. Each surfaces backend-specific issues.
-
-**Adversarial test suite** — port the `cross_width_adversarial.rs` pattern to a `bypass_adversarial.rs` test that exercises every trait method UFCS-style and expects compile-fail without a token. Use `compile_fail` doctests for each method × each trait.
-
-**Snapshot the bypass-closure assertion** — `magetypes/tests/bypass_closed.rs` is the smoke test. Expand to cover every trait. If anyone in the future loosens `self,` back to nothing, this test instantly fails.
+**Doc examples and README** — the struct layout note already explains `#[repr(C)]` + ZST trailing field. Check that `/docs/site/content/magetypes/` and `/magetypes/README.md` don't contradict the post-refactor API (particularly any surviving `#[repr(transparent)]` claims).
 
 ---
 
@@ -376,7 +352,9 @@ Block-ops and transcendentals already thread `self.1`/`token` — no additional 
 ## 10. Current branch state, concretely
 
 ```
-fix/token-by-self-soundness  HEAD = 4e31ec9
+fix/token-by-self-soundness  HEAD = 4447922
+  4447922 fix: complete task #5 — all backend trait methods now take `self`
+  00b7c5e docs: update soundness handoff with compile-green + partial task-5 state
   4e31ec9 fix: thread self through recip/rsqrt/rcp_approx/rsqrt_approx; x86 Newton refine
   4d74432 fix: drive token-by-self soundness cascade to green build
   687072b docs: mission-critical soundness handoff for next session
@@ -387,17 +365,20 @@ fix/token-by-self-soundness  HEAD = 4e31ec9
 ```
 $ cargo build -p magetypes 2>&1 | grep -c '^error'
 0
-$ cargo test -p magetypes --tests 2>&1 | grep 'test result'
-# 27 test binaries — all ok, 1545 tests passed, 0 failed
+$ cargo test -p magetypes --tests 2>&1 | grep -c 'test result: ok'
+27   # all 27 test binaries green
+$ cargo test -p magetypes --tests 2>&1 | grep -oE '[0-9]+ passed' | awk '{s+=$1}END{print s}'
+1545   # total tests passed; 0 failed
 ```
 
 Feature matrix all green: default, `--features avx512`, `--no-default-features`, `--features w512`, `--all-features`.
 
+**The soundness refactor is complete.** Every path that produces, wraps, or operates on a `Self::Repr` now requires a `Self` (token) value. The agent-found UFCS-bypass PoC (`<X64V3Token as F32x8Backend>::splat(7.0)`) and every other backend method invoked UFCS-style without a token fail to compile.
+
 Stash for next session:
-- `magetypes/tests/bypass_closed.rs` is the bypass-closure smoke test.
-- The PoC `<X64V3Token as F32x8Backend>::splat(7.0)` fails to compile — the trait-sig fix is real and holds.
-- The remaining soundness scope is §8 "Remaining" — arithmetic/comparison/reduction/memory/bitwise/shift/math/blend still take `Repr` without `self`. Fabricated `Repr` (via `bytemuck/simd` or `mem::transmute` — both opt-in / documented escapes per `Cargo.toml`) can still be combined with these methods. Closing that surface is the last stretch of the refactor.
-- Trait-sig change pattern is now well-established: commits `4d74432` (neg) and `4e31ec9` (recip/rsqrt surface) are good templates. Apply the same pattern to one method category at a time, regenerate after each, watch the error count drop monotonically.
+- `magetypes/tests/bypass_closed.rs` is the smoke test. The module-level compile_fail doctest still asserts the original PoC fails. Expanding this to cover every backend method × every trait is the main remaining task (polish — doesn't affect soundness).
+- Cross-arch verification (`cross test` on aarch64-unknown-linux-gnu / wasm32-wasip1 / aarch64-pc-windows-msvc) is recommended before release.
+- The full API-break summary is listed in the commit body of `4447922`.
 
 ---
 
