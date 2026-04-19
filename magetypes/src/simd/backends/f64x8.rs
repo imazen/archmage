@@ -37,24 +37,24 @@ pub trait F64x8Backend: SimdToken + Sealed + Copy + 'static {
     fn from_array(self, arr: [f64; 8]) -> Self::Repr;
 
     /// Store to array.
-    fn store(repr: Self::Repr, out: &mut [f64; 8]);
+    fn store(self, repr: Self::Repr, out: &mut [f64; 8]);
 
     /// Convert to array.
-    fn to_array(repr: Self::Repr) -> [f64; 8];
+    fn to_array(self, repr: Self::Repr) -> [f64; 8];
 
     // ====== Arithmetic ======
 
     /// Lane-wise addition.
-    fn add(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn add(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise subtraction.
-    fn sub(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn sub(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise multiplication.
-    fn mul(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise division.
-    fn div(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn div(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise negation.
     fn neg(self, a: Self::Repr) -> Self::Repr;
@@ -62,66 +62,66 @@ pub trait F64x8Backend: SimdToken + Sealed + Copy + 'static {
     // ====== Math ======
 
     /// Lane-wise minimum.
-    fn min(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise maximum.
-    fn max(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Square root.
-    fn sqrt(a: Self::Repr) -> Self::Repr;
+    fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
     /// Absolute value.
-    fn abs(a: Self::Repr) -> Self::Repr;
+    fn abs(self, a: Self::Repr) -> Self::Repr;
 
     /// Round toward negative infinity.
-    fn floor(a: Self::Repr) -> Self::Repr;
+    fn floor(self, a: Self::Repr) -> Self::Repr;
 
     /// Round toward positive infinity.
-    fn ceil(a: Self::Repr) -> Self::Repr;
+    fn ceil(self, a: Self::Repr) -> Self::Repr;
 
     /// Round to nearest integer.
-    fn round(a: Self::Repr) -> Self::Repr;
+    fn round(self, a: Self::Repr) -> Self::Repr;
 
     /// Fused multiply-add: a * b + c.
-    fn mul_add(a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+    fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
     /// Fused multiply-sub: a * b - c.
-    fn mul_sub(a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+    fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
     // ====== Comparisons ======
     // Return masks where each lane is all-1s (true) or all-0s (false).
 
     /// Lane-wise equality.
-    fn simd_eq(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_eq(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise inequality.
-    fn simd_ne(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_ne(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise less-than.
-    fn simd_lt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_lt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise less-than-or-equal.
-    fn simd_le(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_le(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise greater-than.
-    fn simd_gt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_gt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise greater-than-or-equal.
-    fn simd_ge(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_ge(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
-    fn blend(mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
+    fn blend(self, mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
 
     // ====== Reductions ======
 
     /// Sum all 8 lanes.
-    fn reduce_add(a: Self::Repr) -> f64;
+    fn reduce_add(self, a: Self::Repr) -> f64;
 
     /// Minimum across all 8 lanes.
-    fn reduce_min(a: Self::Repr) -> f64;
+    fn reduce_min(self, a: Self::Repr) -> f64;
 
     /// Maximum across all 8 lanes.
-    fn reduce_max(a: Self::Repr) -> f64;
+    fn reduce_max(self, a: Self::Repr) -> f64;
 
     // ====== Approximations ======
 
@@ -144,23 +144,23 @@ pub trait F64x8Backend: SimdToken + Sealed + Copy + 'static {
     // ====== Bitwise ======
 
     /// Bitwise NOT.
-    fn not(a: Self::Repr) -> Self::Repr;
+    fn not(self, a: Self::Repr) -> Self::Repr;
 
     /// Bitwise AND.
-    fn bitand(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn bitand(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Bitwise OR.
-    fn bitor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn bitor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Bitwise XOR.
-    fn bitxor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn bitxor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     // ====== Default implementations ======
 
     /// Clamp values between lo and hi.
     #[inline(always)]
-    fn clamp(a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
-        Self::min(Self::max(a, lo), hi)
+    fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
+        <Self as F64x8Backend>::min(self, <Self as F64x8Backend>::max(self, a, lo), hi)
     }
 
     /// Precise reciprocal — defaults to delegating to rcp_approx.

@@ -371,24 +371,24 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
-            fn store(repr: Self::Repr, out: &mut {array});
+            fn store(self, repr: Self::Repr, out: &mut {array});
 
             /// Convert to array.
-            fn to_array(repr: Self::Repr) -> {array};
+            fn to_array(self, repr: Self::Repr) -> {array};
 
             // ====== Arithmetic ======
 
             /// Lane-wise addition.
-            fn add(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn add(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise subtraction.
-            fn sub(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn sub(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise multiplication.
-            fn mul(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise division.
-            fn div(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn div(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise negation.
             fn neg(self, a: Self::Repr) -> Self::Repr;
@@ -396,66 +396,66 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             // ====== Math ======
 
             /// Lane-wise minimum.
-            fn min(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise maximum.
-            fn max(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Square root.
-            fn sqrt(a: Self::Repr) -> Self::Repr;
+            fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
             /// Absolute value.
-            fn abs(a: Self::Repr) -> Self::Repr;
+            fn abs(self, a: Self::Repr) -> Self::Repr;
 
             /// Round toward negative infinity.
-            fn floor(a: Self::Repr) -> Self::Repr;
+            fn floor(self, a: Self::Repr) -> Self::Repr;
 
             /// Round toward positive infinity.
-            fn ceil(a: Self::Repr) -> Self::Repr;
+            fn ceil(self, a: Self::Repr) -> Self::Repr;
 
             /// Round to nearest integer.
-            fn round(a: Self::Repr) -> Self::Repr;
+            fn round(self, a: Self::Repr) -> Self::Repr;
 
             /// Fused multiply-add: a * b + c.
-            fn mul_add(a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+            fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
             /// Fused multiply-sub: a * b - c.
-            fn mul_sub(a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+            fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
             // ====== Comparisons ======
             // Return masks where each lane is all-1s (true) or all-0s (false).
 
             /// Lane-wise equality.
-            fn simd_eq(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_eq(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise inequality.
-            fn simd_ne(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_ne(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise less-than.
-            fn simd_lt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_lt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise less-than-or-equal.
-            fn simd_le(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_le(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise greater-than.
-            fn simd_gt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_gt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise greater-than-or-equal.
-            fn simd_ge(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_ge(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
-            fn blend(mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
+            fn blend(self, mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
 
             // ====== Reductions ======
 
             /// Sum all {lanes} lanes.
-            fn reduce_add(a: Self::Repr) -> {elem};
+            fn reduce_add(self, a: Self::Repr) -> {elem};
 
             /// Minimum across all {lanes} lanes.
-            fn reduce_min(a: Self::Repr) -> {elem};
+            fn reduce_min(self, a: Self::Repr) -> {elem};
 
             /// Maximum across all {lanes} lanes.
-            fn reduce_max(a: Self::Repr) -> {elem};
+            fn reduce_max(self, a: Self::Repr) -> {elem};
 
             // ====== Approximations ======
 
@@ -474,23 +474,23 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             // ====== Bitwise ======
 
             /// Bitwise NOT.
-            fn not(a: Self::Repr) -> Self::Repr;
+            fn not(self, a: Self::Repr) -> Self::Repr;
 
             /// Bitwise AND.
-            fn bitand(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn bitand(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Bitwise OR.
-            fn bitor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn bitor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Bitwise XOR.
-            fn bitxor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn bitxor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             // ====== Default implementations ======
 
             /// Clamp values between lo and hi.
             #[inline(always)]
-            fn clamp(a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
-                Self::min(Self::max(a, lo), hi)
+            fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
 
             /// Precise reciprocal — defaults to delegating to rcp_approx.
@@ -521,7 +521,7 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
         formatdoc! {r#"
 
             /// Lane-wise absolute value.
-            fn abs(a: Self::Repr) -> Self::Repr;
+            fn abs(self, a: Self::Repr) -> Self::Repr;
         "#}
     } else {
         String::new()
@@ -532,7 +532,7 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
         formatdoc! {r#"
 
             /// Lane-wise multiplication (low bits of product).
-            fn mul(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
         "#}
     } else {
         String::new()
@@ -578,18 +578,18 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
             fn from_array(self, arr: {array}) -> Self::Repr;
 
             /// Store to array.
-            fn store(repr: Self::Repr, out: &mut {array});
+            fn store(self, repr: Self::Repr, out: &mut {array});
 
             /// Convert to array.
-            fn to_array(repr: Self::Repr) -> {array};
+            fn to_array(self, repr: Self::Repr) -> {array};
 
             // ====== Arithmetic ======
 
             /// Lane-wise addition.
-            fn add(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn add(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise subtraction.
-            fn sub(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn sub(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
             {mul_section}
             /// Lane-wise negation.
             fn neg(self, a: Self::Repr) -> Self::Repr;
@@ -597,82 +597,82 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
             // ====== Math ======
 
             /// Lane-wise minimum.
-            fn min(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise maximum.
-            fn max(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
             {abs_section}
             // ====== Comparisons ======
             // Return masks where each lane is all-1s (true) or all-0s (false).
 
             /// Lane-wise equality.
-            fn simd_eq(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_eq(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise inequality.
-            fn simd_ne(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_ne(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise less-than.
-            fn simd_lt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_lt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise less-than-or-equal.
-            fn simd_le(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_le(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise greater-than.
-            fn simd_gt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_gt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Lane-wise greater-than-or-equal.
-            fn simd_ge(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn simd_ge(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
-            fn blend(mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
+            fn blend(self, mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
 
             // ====== Reductions ======
 
             /// Sum all {lanes} lanes.
-            fn reduce_add(a: Self::Repr) -> {elem};
+            fn reduce_add(self, a: Self::Repr) -> {elem};
 
             // ====== Bitwise ======
 
             /// Bitwise NOT.
-            fn not(a: Self::Repr) -> Self::Repr;
+            fn not(self, a: Self::Repr) -> Self::Repr;
 
             /// Bitwise AND.
-            fn bitand(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn bitand(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Bitwise OR.
-            fn bitor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn bitor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             /// Bitwise XOR.
-            fn bitxor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn bitxor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
             // ====== Shifts ======
 
             /// Shift left by constant.
-            fn shl_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+            fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Arithmetic shift right by constant (sign-extending).
-            fn shr_arithmetic_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+            fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Logical shift right by constant (zero-filling).
-            fn shr_logical_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+            fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Boolean ======
 
             /// True if all lanes have their sign bit set (all-1s mask).
-            fn all_true(a: Self::Repr) -> bool;
+            fn all_true(self, a: Self::Repr) -> bool;
 
             /// True if any lane has its sign bit set (any all-1s mask lane).
-            fn any_true(a: Self::Repr) -> bool;
+            fn any_true(self, a: Self::Repr) -> bool;
 
             /// Extract the high bit of each lane as a bitmask.
-            fn bitmask(a: Self::Repr) -> u64;
+            fn bitmask(self, a: Self::Repr) -> u64;
 
             // ====== Default implementations ======
 
             /// Clamp values between lo and hi.
             #[inline(always)]
-            fn clamp(a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
-                Self::min(Self::max(a, lo), hi)
+            fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
         }}
     "#}
@@ -716,106 +716,106 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             fn from_array(self, arr: {array}) -> {array} {{ arr }}
 
             #[inline(always)]
-            fn store(repr: {array}, out: &mut {array}) {{ *out = repr; }}
+            fn store(self, repr: {array}, out: &mut {array}) {{ *out = repr; }}
 
             #[inline(always)]
-            fn to_array(repr: {array}) -> {array} {{ repr }}
+            fn to_array(self, repr: {array}) -> {array} {{ repr }}
 
             #[inline(always)]
-            fn add(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] + b[i]) }}
+            fn add(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] + b[i]) }}
 
             #[inline(always)]
-            fn sub(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] - b[i]) }}
+            fn sub(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] - b[i]) }}
 
             #[inline(always)]
-            fn mul(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i]) }}
+            fn mul(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i]) }}
 
             #[inline(always)]
-            fn div(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] / b[i]) }}
+            fn div(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] / b[i]) }}
 
             #[inline(always)]
             fn neg(self, a: {array}) -> {array} {{ core::array::from_fn(|i| -a[i]) }}
 
             #[inline(always)]
-            fn min(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
+            fn min(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
 
             #[inline(always)]
-            fn max(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }}) }}
+            fn max(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }}) }}
 
             #[inline(always)]
-            fn sqrt(a: {array}) -> {array} {{
+            fn sqrt(self, a: {array}) -> {array} {{
                 core::array::from_fn(|i| crate::nostd_math::{sqrt_fn}(a[i]))
             }}
 
             #[inline(always)]
-            fn abs(a: {array}) -> {array} {{
+            fn abs(self, a: {array}) -> {array} {{
                 core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() & {abs_mask}))
             }}
 
             #[inline(always)]
-            fn floor(a: {array}) -> {array} {{
+            fn floor(self, a: {array}) -> {array} {{
                 core::array::from_fn(|i| crate::nostd_math::{floor_fn}(a[i]))
             }}
 
             #[inline(always)]
-            fn ceil(a: {array}) -> {array} {{
+            fn ceil(self, a: {array}) -> {array} {{
                 core::array::from_fn(|i| crate::nostd_math::{ceil_fn}(a[i]))
             }}
 
             #[inline(always)]
-            fn round(a: {array}) -> {array} {{
+            fn round(self, a: {array}) -> {array} {{
                 core::array::from_fn(|i| crate::nostd_math::{round_fn}(a[i]))
             }}
 
             #[inline(always)]
-            fn mul_add(a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i] + c[i]) }}
+            fn mul_add(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i] + c[i]) }}
 
             #[inline(always)]
-            fn mul_sub(a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i] - c[i]) }}
+            fn mul_sub(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i] - c[i]) }}
 
             #[inline(always)]
-            fn simd_eq(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] == b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
+            fn simd_eq(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] == b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_ne(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] != b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
+            fn simd_ne(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] != b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_lt(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
+            fn simd_lt(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_le(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] <= b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
+            fn simd_le(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] <= b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_gt(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
+            fn simd_gt(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_ge(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] >= b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
+            fn simd_ge(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] >= b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn blend(mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
+            fn blend(self, mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
                 core::array::from_fn(|i| if mask[i].to_bits() != 0 {{ if_true[i] }} else {{ if_false[i] }})
             }}
 
             #[inline(always)]
-            fn reduce_add(a: {array}) -> {elem} {{ a.iter().sum() }}
+            fn reduce_add(self, a: {array}) -> {elem} {{ a.iter().sum() }}
 
             #[inline(always)]
-            fn reduce_min(a: {array}) -> {elem} {{ a.iter().copied().fold({elem}::INFINITY, {elem}::min) }}
+            fn reduce_min(self, a: {array}) -> {elem} {{ a.iter().copied().fold({elem}::INFINITY, {elem}::min) }}
 
             #[inline(always)]
-            fn reduce_max(a: {array}) -> {elem} {{ a.iter().copied().fold({elem}::NEG_INFINITY, {elem}::max) }}
+            fn reduce_max(self, a: {array}) -> {elem} {{ a.iter().copied().fold({elem}::NEG_INFINITY, {elem}::max) }}
 
             #[inline(always)]
-            fn not(a: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(!a[i].to_bits())) }}
+            fn not(self, a: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(!a[i].to_bits())) }}
 
             #[inline(always)]
-            fn bitand(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() & b[i].to_bits())) }}
+            fn bitand(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() & b[i].to_bits())) }}
 
             #[inline(always)]
-            fn bitor(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() | b[i].to_bits())) }}
+            fn bitor(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() | b[i].to_bits())) }}
 
             #[inline(always)]
-            fn bitxor(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() ^ b[i].to_bits())) }}
+            fn bitxor(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() ^ b[i].to_bits())) }}
         }}
     "#,
         elem_name = format!("{zero_lit}"),
@@ -840,7 +840,7 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
         formatdoc! {r#"
 
             #[inline(always)]
-            fn mul(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_mul(b[i])) }}
+            fn mul(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_mul(b[i])) }}
         "#}
     } else {
         String::new()
@@ -850,7 +850,7 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
         formatdoc! {r#"
 
             #[inline(always)]
-            fn abs(a: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_abs()) }}
+            fn abs(self, a: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_abs()) }}
         "#}
     } else {
         String::new()
@@ -959,81 +959,81 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
             fn from_array(self, arr: {array}) -> {array} {{ arr }}
 
             #[inline(always)]
-            fn store(repr: {array}, out: &mut {array}) {{ *out = repr; }}
+            fn store(self, repr: {array}, out: &mut {array}) {{ *out = repr; }}
 
             #[inline(always)]
-            fn to_array(repr: {array}) -> {array} {{ repr }}
+            fn to_array(self, repr: {array}) -> {array} {{ repr }}
 
             #[inline(always)]
-            fn add(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_add(b[i])) }}
+            fn add(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_add(b[i])) }}
 
             #[inline(always)]
-            fn sub(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_sub(b[i])) }}
+            fn sub(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_sub(b[i])) }}
             {mul_impl}
             #[inline(always)]
             fn neg(self, a: {array}) -> {array} {{ {neg_impl} }}
 
             #[inline(always)]
-            fn min(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
+            fn min(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
 
             #[inline(always)]
-            fn max(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }}) }}
+            fn max(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }}) }}
             {abs_impl}
             #[inline(always)]
-            fn simd_eq(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] == b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
+            fn simd_eq(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] == b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_ne(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] != b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
+            fn simd_ne(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] != b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_lt(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
+            fn simd_lt(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_le(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] <= b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
+            fn simd_le(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] <= b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_gt(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
+            fn simd_gt(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn simd_ge(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] >= b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
+            fn simd_ge(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] >= b[i] {{ !{zero_for_not} }} else {{ {zero_lit} }}) }}
 
             #[inline(always)]
-            fn blend(mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
+            fn blend(self, mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
                 core::array::from_fn(|i| if mask[i] != {zero_lit} {{ if_true[i] }} else {{ if_false[i] }})
             }}
 
             #[inline(always)]
-            fn reduce_add(a: {array}) -> {elem} {{ {reduce_add} }}
+            fn reduce_add(self, a: {array}) -> {elem} {{ {reduce_add} }}
 
             #[inline(always)]
-            fn not(a: {array}) -> {array} {{ core::array::from_fn(|i| !a[i]) }}
+            fn not(self, a: {array}) -> {array} {{ core::array::from_fn(|i| !a[i]) }}
 
             #[inline(always)]
-            fn bitand(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] & b[i]) }}
+            fn bitand(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] & b[i]) }}
 
             #[inline(always)]
-            fn bitor(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] | b[i]) }}
+            fn bitor(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] | b[i]) }}
 
             #[inline(always)]
-            fn bitxor(a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] ^ b[i]) }}
+            fn bitxor(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i] ^ b[i]) }}
 
             #[inline(always)]
-            fn shl_const<const N: i32>(a: {array}) -> {array} {{ {shl_body} }}
+            fn shl_const<const N: i32>(self, a: {array}) -> {array} {{ {shl_body} }}
 
             #[inline(always)]
-            fn shr_arithmetic_const<const N: i32>(a: {array}) -> {array} {{ {shr_arith_body} }}
+            fn shr_arithmetic_const<const N: i32>(self, a: {array}) -> {array} {{ {shr_arith_body} }}
 
             #[inline(always)]
-            fn shr_logical_const<const N: i32>(a: {array}) -> {array} {{ {shr_logical_body} }}
+            fn shr_logical_const<const N: i32>(self, a: {array}) -> {array} {{ {shr_logical_body} }}
 
             #[inline(always)]
-            fn all_true(a: {array}) -> bool {{ a.iter().all(|&v| v != {zero_lit}) }}
+            fn all_true(self, a: {array}) -> bool {{ a.iter().all(|&v| v != {zero_lit}) }}
 
             #[inline(always)]
-            fn any_true(a: {array}) -> bool {{ a.iter().any(|&v| v != {zero_lit}) }}
+            fn any_true(self, a: {array}) -> bool {{ a.iter().any(|&v| v != {zero_lit}) }}
 
             #[inline(always)]
-            fn bitmask(a: {array}) -> u64 {{ {bitmask_body} }}
+            fn bitmask(self, a: {array}) -> u64 {{ {bitmask_body} }}
         }}
     "#,
         zero_for_not = format!("0{elem}"),
@@ -1109,16 +1109,16 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             }}
 
             #[inline(always)]
-            fn store(repr: {v3_repr}, out: &mut {array}) {{
+            fn store(self, repr: {v3_repr}, out: &mut {array}) {{
                 let (lo, hi) = out.split_at_mut({half_lanes});
-                <archmage::X64V3Token as {half_trait}>::store(repr[0], lo.try_into().unwrap());
-                <archmage::X64V3Token as {half_trait}>::store(repr[1], hi.try_into().unwrap());
+                <archmage::X64V3Token as {half_trait}>::store(self, repr[0], lo.try_into().unwrap());
+                <archmage::X64V3Token as {half_trait}>::store(self, repr[1], hi.try_into().unwrap());
             }}
 
             #[inline(always)]
-            fn to_array(repr: {v3_repr}) -> {array} {{
-                let lo = <archmage::X64V3Token as {half_trait}>::to_array(repr[0]);
-                let hi = <archmage::X64V3Token as {half_trait}>::to_array(repr[1]);
+            fn to_array(self, repr: {v3_repr}) -> {array} {{
+                let lo = <archmage::X64V3Token as {half_trait}>::to_array(self, repr[0]);
+                let hi = <archmage::X64V3Token as {half_trait}>::to_array(self, repr[1]);
                 let mut out = [{zero_lit}; {lanes}];
                 out[..{half_lanes}].copy_from_slice(&lo);
                 out[{half_lanes}..].copy_from_slice(&hi);
@@ -1126,18 +1126,18 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             }}
 
             #[inline(always)]
-            fn add(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn add(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::add(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::add(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::add(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::add(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn sub(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn sub(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::sub(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::sub(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::sub(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::sub(self, a[1], b[1]),
                 ]
             }}
     "#};
@@ -1147,18 +1147,18 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn mul(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn mul(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::mul(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::mul(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::mul(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::mul(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn div(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn div(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::div(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::div(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::div(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::div(self, a[1], b[1]),
                 ]
             }}
         "#});
@@ -1167,10 +1167,10 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn mul(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn mul(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::mul(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::mul(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::mul(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::mul(self, a[1], b[1]),
                 ]
             }}
         "#});
@@ -1195,8 +1195,8 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             fn neg(self, a: {v3_repr}) -> {v3_repr} {{
                 let z = <archmage::X64V3Token as {half_trait}>::zero(self);
                 [
-                    <archmage::X64V3Token as {half_trait}>::sub(z, a[0]),
-                    <archmage::X64V3Token as {half_trait}>::sub(z, a[1]),
+                    <archmage::X64V3Token as {half_trait}>::sub(self, z, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::sub(self, z, a[1]),
                 ]
             }}
         "#});
@@ -1205,18 +1205,18 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
     code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn min(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn min(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::min(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::min(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::min(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::min(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn max(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn max(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::max(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::max(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::max(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::max(self, a[1], b[1]),
                 ]
             }}
     "#});
@@ -1226,78 +1226,78 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn sqrt(a: {v3_repr}) -> {v3_repr} {{
+            fn sqrt(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::sqrt(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::sqrt(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::sqrt(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::sqrt(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn abs(a: {v3_repr}) -> {v3_repr} {{
+            fn abs(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::abs(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::abs(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::abs(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::abs(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn floor(a: {v3_repr}) -> {v3_repr} {{
+            fn floor(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::floor(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::floor(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::floor(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::floor(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn ceil(a: {v3_repr}) -> {v3_repr} {{
+            fn ceil(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::ceil(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::ceil(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::ceil(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::ceil(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn round(a: {v3_repr}) -> {v3_repr} {{
+            fn round(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::round(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::round(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::round(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::round(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn mul_add(a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{
+            fn mul_add(self, a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::mul_add(a[0], b[0], c[0]),
-                    <archmage::X64V3Token as {half_trait}>::mul_add(a[1], b[1], c[1]),
+                    <archmage::X64V3Token as {half_trait}>::mul_add(self, a[0], b[0], c[0]),
+                    <archmage::X64V3Token as {half_trait}>::mul_add(self, a[1], b[1], c[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn mul_sub(a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{
+            fn mul_sub(self, a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::mul_sub(a[0], b[0], c[0]),
-                    <archmage::X64V3Token as {half_trait}>::mul_sub(a[1], b[1], c[1]),
+                    <archmage::X64V3Token as {half_trait}>::mul_sub(self, a[0], b[0], c[0]),
+                    <archmage::X64V3Token as {half_trait}>::mul_sub(self, a[1], b[1], c[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn reduce_add(a: {v3_repr}) -> {elem} {{
-                <archmage::X64V3Token as {half_trait}>::reduce_add(a[0])
-                    + <archmage::X64V3Token as {half_trait}>::reduce_add(a[1])
+            fn reduce_add(self, a: {v3_repr}) -> {elem} {{
+                <archmage::X64V3Token as {half_trait}>::reduce_add(self, a[0])
+                    + <archmage::X64V3Token as {half_trait}>::reduce_add(self, a[1])
             }}
 
             #[inline(always)]
-            fn reduce_min(a: {v3_repr}) -> {elem} {{
-                let lo = <archmage::X64V3Token as {half_trait}>::reduce_min(a[0]);
-                let hi = <archmage::X64V3Token as {half_trait}>::reduce_min(a[1]);
+            fn reduce_min(self, a: {v3_repr}) -> {elem} {{
+                let lo = <archmage::X64V3Token as {half_trait}>::reduce_min(self, a[0]);
+                let hi = <archmage::X64V3Token as {half_trait}>::reduce_min(self, a[1]);
                 if lo < hi {{ lo }} else {{ hi }}
             }}
 
             #[inline(always)]
-            fn reduce_max(a: {v3_repr}) -> {elem} {{
-                let lo = <archmage::X64V3Token as {half_trait}>::reduce_max(a[0]);
-                let hi = <archmage::X64V3Token as {half_trait}>::reduce_max(a[1]);
+            fn reduce_max(self, a: {v3_repr}) -> {elem} {{
+                let lo = <archmage::X64V3Token as {half_trait}>::reduce_max(self, a[0]);
+                let hi = <archmage::X64V3Token as {half_trait}>::reduce_max(self, a[1]);
                 if lo > hi {{ lo }} else {{ hi }}
             }}
 
@@ -1323,10 +1323,10 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn abs(a: {v3_repr}) -> {v3_repr} {{
+            fn abs(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::abs(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::abs(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::abs(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::abs(self, a[1]),
                 ]
             }}
             "#});
@@ -1343,51 +1343,51 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn reduce_add(a: {v3_repr}) -> {elem} {{
-                <archmage::X64V3Token as {half_trait}>::reduce_add(a[0])
-                    .wrapping_add(<archmage::X64V3Token as {half_trait}>::reduce_add(a[1]))
+            fn reduce_add(self, a: {v3_repr}) -> {elem} {{
+                <archmage::X64V3Token as {half_trait}>::reduce_add(self, a[0])
+                    .wrapping_add(<archmage::X64V3Token as {half_trait}>::reduce_add(self, a[1]))
             }}
 
             #[inline(always)]
-            fn shl_const<const N: i32>(a: {v3_repr}) -> {v3_repr} {{
+            fn shl_const<const N: i32>(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::shl_const::<N>(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::shl_const::<N>(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::shl_const::<N>(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::shl_const::<N>(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn shr_arithmetic_const<const N: i32>(a: {v3_repr}) -> {v3_repr} {{
+            fn shr_arithmetic_const<const N: i32>(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::{shr_arith_delegate}::<N>(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::{shr_arith_delegate}::<N>(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::{shr_arith_delegate}::<N>(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::{shr_arith_delegate}::<N>(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn shr_logical_const<const N: i32>(a: {v3_repr}) -> {v3_repr} {{
+            fn shr_logical_const<const N: i32>(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::shr_logical_const::<N>(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::shr_logical_const::<N>(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::shr_logical_const::<N>(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::shr_logical_const::<N>(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn all_true(a: {v3_repr}) -> bool {{
-                <archmage::X64V3Token as {half_trait}>::all_true(a[0])
-                    && <archmage::X64V3Token as {half_trait}>::all_true(a[1])
+            fn all_true(self, a: {v3_repr}) -> bool {{
+                <archmage::X64V3Token as {half_trait}>::all_true(self, a[0])
+                    && <archmage::X64V3Token as {half_trait}>::all_true(self, a[1])
             }}
 
             #[inline(always)]
-            fn any_true(a: {v3_repr}) -> bool {{
-                <archmage::X64V3Token as {half_trait}>::any_true(a[0])
-                    || <archmage::X64V3Token as {half_trait}>::any_true(a[1])
+            fn any_true(self, a: {v3_repr}) -> bool {{
+                <archmage::X64V3Token as {half_trait}>::any_true(self, a[0])
+                    || <archmage::X64V3Token as {half_trait}>::any_true(self, a[1])
             }}
 
             #[inline(always)]
-            fn bitmask(a: {v3_repr}) -> u64 {{
-                let lo = <archmage::X64V3Token as {half_trait}>::bitmask(a[0]) as u64;
-                let hi = <archmage::X64V3Token as {half_trait}>::bitmask(a[1]) as u64;
+            fn bitmask(self, a: {v3_repr}) -> u64 {{
+                let lo = <archmage::X64V3Token as {half_trait}>::bitmask(self, a[0]) as u64;
+                let hi = <archmage::X64V3Token as {half_trait}>::bitmask(self, a[1]) as u64;
                 lo | (hi << {half_lanes})
             }}
         "#});
@@ -1397,90 +1397,90 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
     code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn simd_eq(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn simd_eq(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::simd_eq(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::simd_eq(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::simd_eq(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::simd_eq(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn simd_ne(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn simd_ne(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::simd_ne(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::simd_ne(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::simd_ne(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::simd_ne(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn simd_lt(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn simd_lt(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::simd_lt(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::simd_lt(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::simd_lt(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::simd_lt(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn simd_le(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn simd_le(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::simd_le(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::simd_le(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::simd_le(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::simd_le(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn simd_gt(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn simd_gt(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::simd_gt(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::simd_gt(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::simd_gt(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::simd_gt(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn simd_ge(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn simd_ge(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::simd_ge(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::simd_ge(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::simd_ge(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::simd_ge(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn blend(mask: {v3_repr}, if_true: {v3_repr}, if_false: {v3_repr}) -> {v3_repr} {{
+            fn blend(self, mask: {v3_repr}, if_true: {v3_repr}, if_false: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::blend(mask[0], if_true[0], if_false[0]),
-                    <archmage::X64V3Token as {half_trait}>::blend(mask[1], if_true[1], if_false[1]),
+                    <archmage::X64V3Token as {half_trait}>::blend(self, mask[0], if_true[0], if_false[0]),
+                    <archmage::X64V3Token as {half_trait}>::blend(self, mask[1], if_true[1], if_false[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn not(a: {v3_repr}) -> {v3_repr} {{
+            fn not(self, a: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::not(a[0]),
-                    <archmage::X64V3Token as {half_trait}>::not(a[1]),
+                    <archmage::X64V3Token as {half_trait}>::not(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::not(self, a[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn bitand(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn bitand(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::bitand(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::bitand(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::bitand(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::bitand(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn bitor(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn bitor(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::bitor(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::bitor(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::bitor(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::bitor(self, a[1], b[1]),
                 ]
             }}
 
             #[inline(always)]
-            fn bitxor(a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+            fn bitxor(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
                 [
-                    <archmage::X64V3Token as {half_trait}>::bitxor(a[0], b[0]),
-                    <archmage::X64V3Token as {half_trait}>::bitxor(a[1], b[1]),
+                    <archmage::X64V3Token as {half_trait}>::bitxor(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::bitxor(self, a[1], b[1]),
                 ]
             }}
         }}
@@ -1585,7 +1585,7 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn store(repr: {repr}, out: &mut {array}) {{
+            fn store(self, repr: {repr}, out: &mut {array}) {{
                 let (o01, o23) = out.split_at_mut({q2_val});
                 let (o0, o1) = o01.split_at_mut({q_lanes});
                 let (o2, o3) = o23.split_at_mut({q_lanes});
@@ -1596,7 +1596,7 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn to_array(repr: {repr}) -> {array} {{
+            fn to_array(self, repr: {repr}) -> {array} {{
                 let a0 = <archmage::{token} as {quarter_trait}>::to_array(repr[0]);
                 let a1 = <archmage::{token} as {quarter_trait}>::to_array(repr[1]);
                 let a2 = <archmage::{token} as {quarter_trait}>::to_array(repr[2]);
@@ -1610,12 +1610,12 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn add(a: {repr}, b: {repr}) -> {repr} {{
+            fn add(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::add(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn sub(a: {repr}, b: {repr}) -> {repr} {{
+            fn sub(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(a[i], b[i]))
             }}
     "#,
@@ -1630,12 +1630,12 @@ fn generate_4way_polyfill_impl(
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn mul(a: {repr}, b: {repr}) -> {repr} {{
+            fn mul(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn div(a: {repr}, b: {repr}) -> {repr} {{
+            fn div(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::div(a[i], b[i]))
             }}
         "#});
@@ -1643,7 +1643,7 @@ fn generate_4way_polyfill_impl(
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn mul(a: {repr}, b: {repr}) -> {repr} {{
+            fn mul(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(a[i], b[i]))
             }}
         "#});
@@ -1672,12 +1672,12 @@ fn generate_4way_polyfill_impl(
     code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn min(a: {repr}, b: {repr}) -> {repr} {{
+            fn min(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::min(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn max(a: {repr}, b: {repr}) -> {repr} {{
+            fn max(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::max(a[i], b[i]))
             }}
     "#});
@@ -1686,42 +1686,42 @@ fn generate_4way_polyfill_impl(
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn sqrt(a: {repr}) -> {repr} {{
+            fn sqrt(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sqrt(a[i]))
             }}
 
             #[inline(always)]
-            fn abs(a: {repr}) -> {repr} {{
+            fn abs(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(a[i]))
             }}
 
             #[inline(always)]
-            fn floor(a: {repr}) -> {repr} {{
+            fn floor(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::floor(a[i]))
             }}
 
             #[inline(always)]
-            fn ceil(a: {repr}) -> {repr} {{
+            fn ceil(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::ceil(a[i]))
             }}
 
             #[inline(always)]
-            fn round(a: {repr}) -> {repr} {{
+            fn round(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::round(a[i]))
             }}
 
             #[inline(always)]
-            fn mul_add(a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+            fn mul_add(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_add(a[i], b[i], c[i]))
             }}
 
             #[inline(always)]
-            fn mul_sub(a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+            fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_sub(a[i], b[i], c[i]))
             }}
 
             #[inline(always)]
-            fn reduce_add(a: {repr}) -> {elem} {{
+            fn reduce_add(self, a: {repr}) -> {elem} {{
                 <archmage::{token} as {quarter_trait}>::reduce_add(a[0])
                     + <archmage::{token} as {quarter_trait}>::reduce_add(a[1])
                     + <archmage::{token} as {quarter_trait}>::reduce_add(a[2])
@@ -1729,7 +1729,7 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn reduce_min(a: {repr}) -> {elem} {{
+            fn reduce_min(self, a: {repr}) -> {elem} {{
                 let m01 = {{
                     let l = <archmage::{token} as {quarter_trait}>::reduce_min(a[0]);
                     let r = <archmage::{token} as {quarter_trait}>::reduce_min(a[1]);
@@ -1744,7 +1744,7 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn reduce_max(a: {repr}) -> {elem} {{
+            fn reduce_max(self, a: {repr}) -> {elem} {{
                 let m01 = {{
                     let l = <archmage::{token} as {quarter_trait}>::reduce_max(a[0]);
                     let r = <archmage::{token} as {quarter_trait}>::reduce_max(a[1]);
@@ -1764,7 +1764,7 @@ fn generate_4way_polyfill_impl(
             code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn abs(a: {repr}) -> {repr} {{
+            fn abs(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(a[i]))
             }}
             "#});
@@ -1781,7 +1781,7 @@ fn generate_4way_polyfill_impl(
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn reduce_add(a: {repr}) -> {elem} {{
+            fn reduce_add(self, a: {repr}) -> {elem} {{
                 <archmage::{token} as {quarter_trait}>::reduce_add(a[0])
                     .wrapping_add(<archmage::{token} as {quarter_trait}>::reduce_add(a[1]))
                     .wrapping_add(<archmage::{token} as {quarter_trait}>::reduce_add(a[2]))
@@ -1789,22 +1789,22 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn shl_const<const N: i32>(a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::shl_const::<N>(a[i]))
+            fn shl_const<const N: i32>(self, a: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::shl_const::<N>(self, a[i]))
             }}
 
             #[inline(always)]
-            fn shr_arithmetic_const<const N: i32>(a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::{shr_arith_delegate}::<N>(a[i]))
+            fn shr_arithmetic_const<const N: i32>(self, a: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::{shr_arith_delegate}::<N>(self, a[i]))
             }}
 
             #[inline(always)]
-            fn shr_logical_const<const N: i32>(a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::shr_logical_const::<N>(a[i]))
+            fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::shr_logical_const::<N>(self, a[i]))
             }}
 
             #[inline(always)]
-            fn all_true(a: {repr}) -> bool {{
+            fn all_true(self, a: {repr}) -> bool {{
                 <archmage::{token} as {quarter_trait}>::all_true(a[0])
                     && <archmage::{token} as {quarter_trait}>::all_true(a[1])
                     && <archmage::{token} as {quarter_trait}>::all_true(a[2])
@@ -1812,7 +1812,7 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn any_true(a: {repr}) -> bool {{
+            fn any_true(self, a: {repr}) -> bool {{
                 <archmage::{token} as {quarter_trait}>::any_true(a[0])
                     || <archmage::{token} as {quarter_trait}>::any_true(a[1])
                     || <archmage::{token} as {quarter_trait}>::any_true(a[2])
@@ -1820,7 +1820,7 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
-            fn bitmask(a: {repr}) -> u64 {{
+            fn bitmask(self, a: {repr}) -> u64 {{
                 let q0 = <archmage::{token} as {quarter_trait}>::bitmask(a[0]) as u64;
                 let q1 = <archmage::{token} as {quarter_trait}>::bitmask(a[1]) as u64;
                 let q2 = <archmage::{token} as {quarter_trait}>::bitmask(a[2]) as u64;
@@ -1837,57 +1837,57 @@ fn generate_4way_polyfill_impl(
     code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn simd_eq(a: {repr}, b: {repr}) -> {repr} {{
+            fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_eq(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn simd_ne(a: {repr}, b: {repr}) -> {repr} {{
+            fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_ne(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn simd_lt(a: {repr}, b: {repr}) -> {repr} {{
+            fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_lt(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn simd_le(a: {repr}, b: {repr}) -> {repr} {{
+            fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_le(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn simd_gt(a: {repr}, b: {repr}) -> {repr} {{
+            fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_gt(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn simd_ge(a: {repr}, b: {repr}) -> {repr} {{
+            fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_ge(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn blend(mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
+            fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::blend(mask[i], if_true[i], if_false[i]))
             }}
 
             #[inline(always)]
-            fn not(a: {repr}) -> {repr} {{
+            fn not(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::not(a[i]))
             }}
 
             #[inline(always)]
-            fn bitand(a: {repr}, b: {repr}) -> {repr} {{
+            fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitand(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn bitor(a: {repr}, b: {repr}) -> {repr} {{
+            fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitor(a[i], b[i]))
             }}
 
             #[inline(always)]
-            fn bitxor(a: {repr}, b: {repr}) -> {repr} {{
+            fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitxor(a[i], b[i]))
             }}
         }}
@@ -1961,32 +1961,32 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn store(repr: {inner}, out: &mut {array}) {{
+            fn store(self, repr: {inner}, out: &mut {array}) {{
                 unsafe {{ _mm512_storeu_{s}(out.as_mut_ptr(), repr) }}
             }}
 
             #[inline(always)]
-            fn to_array(repr: {inner}) -> {array} {{
+            fn to_array(self, repr: {inner}) -> {array} {{
                 unsafe {{ core::mem::transmute(repr) }}
             }}
 
             #[inline(always)]
-            fn add(a: {inner}, b: {inner}) -> {inner} {{
+            fn add(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_add_{s}(a, b) }}
             }}
 
             #[inline(always)]
-            fn sub(a: {inner}, b: {inner}) -> {inner} {{
+            fn sub(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_sub_{s}(a, b) }}
             }}
 
             #[inline(always)]
-            fn mul(a: {inner}, b: {inner}) -> {inner} {{
+            fn mul(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_mul_{s}(a, b) }}
             }}
 
             #[inline(always)]
-            fn div(a: {inner}, b: {inner}) -> {inner} {{
+            fn div(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_div_{s}(a, b) }}
             }}
 
@@ -1996,22 +1996,22 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn min(a: {inner}, b: {inner}) -> {inner} {{
+            fn min(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_min_{s}(a, b) }}
             }}
 
             #[inline(always)]
-            fn max(a: {inner}, b: {inner}) -> {inner} {{
+            fn max(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_max_{s}(a, b) }}
             }}
 
             #[inline(always)]
-            fn sqrt(a: {inner}) -> {inner} {{
+            fn sqrt(self, a: {inner}) -> {inner} {{
                 unsafe {{ _mm512_sqrt_{s}(a) }}
             }}
 
             #[inline(always)]
-            fn abs(a: {inner}) -> {inner} {{
+            fn abs(self, a: {inner}) -> {inner} {{
                 unsafe {{
                     let mask = _mm512_castsi512_{s}(_mm512_set1_{epi}({abs_mask}));
                     _mm512_and_{s}(a, mask)
@@ -2019,32 +2019,32 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn floor(a: {inner}) -> {inner} {{
+            fn floor(self, a: {inner}) -> {inner} {{
                 unsafe {{ _mm512_roundscale_{s}::<0x01>(a) }}
             }}
 
             #[inline(always)]
-            fn ceil(a: {inner}) -> {inner} {{
+            fn ceil(self, a: {inner}) -> {inner} {{
                 unsafe {{ _mm512_roundscale_{s}::<0x02>(a) }}
             }}
 
             #[inline(always)]
-            fn round(a: {inner}) -> {inner} {{
+            fn round(self, a: {inner}) -> {inner} {{
                 unsafe {{ _mm512_roundscale_{s}::<0x00>(a) }}
             }}
 
             #[inline(always)]
-            fn mul_add(a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+            fn mul_add(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
                 unsafe {{ _mm512_fmadd_{s}(a, b, c) }}
             }}
 
             #[inline(always)]
-            fn mul_sub(a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+            fn mul_sub(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
                 unsafe {{ _mm512_fmsub_{s}(a, b, c) }}
             }}
 
             #[inline(always)]
-            fn simd_eq(a: {inner}, b: {inner}) -> {inner} {{
+            fn simd_eq(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let mask = _mm512_cmp_{s}_mask::<_CMP_EQ_OQ>(a, b);
                     _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
@@ -2052,7 +2052,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_ne(a: {inner}, b: {inner}) -> {inner} {{
+            fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let mask = _mm512_cmp_{s}_mask::<_CMP_NEQ_UQ>(a, b);
                     _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
@@ -2060,7 +2060,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_lt(a: {inner}, b: {inner}) -> {inner} {{
+            fn simd_lt(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let mask = _mm512_cmp_{s}_mask::<_CMP_LT_OQ>(a, b);
                     _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
@@ -2068,7 +2068,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_le(a: {inner}, b: {inner}) -> {inner} {{
+            fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let mask = _mm512_cmp_{s}_mask::<_CMP_LE_OQ>(a, b);
                     _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
@@ -2076,7 +2076,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_gt(a: {inner}, b: {inner}) -> {inner} {{
+            fn simd_gt(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let mask = _mm512_cmp_{s}_mask::<_CMP_GT_OQ>(a, b);
                     _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
@@ -2084,7 +2084,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_ge(a: {inner}, b: {inner}) -> {inner} {{
+            fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{
                     let mask = _mm512_cmp_{s}_mask::<_CMP_GE_OQ>(a, b);
                     _mm512_castsi512_{s}(_mm512_maskz_set1_{epi}(mask, -1))
@@ -2092,7 +2092,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn blend(mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
+            fn blend(self, mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
                 unsafe {{
                     let mask_i = _mm512_cast{s}_si512(mask);
                     let k = _mm512_cmpneq_{epi}_mask(mask_i, _mm512_setzero_si512());
@@ -2101,17 +2101,17 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn reduce_add(a: {inner}) -> {elem} {{
+            fn reduce_add(self, a: {inner}) -> {elem} {{
                 unsafe {{ _mm512_reduce_add_{s}(a) }}
             }}
 
             #[inline(always)]
-            fn reduce_min(a: {inner}) -> {elem} {{
+            fn reduce_min(self, a: {inner}) -> {elem} {{
                 unsafe {{ _mm512_reduce_min_{s}(a) }}
             }}
 
             #[inline(always)]
-            fn reduce_max(a: {inner}) -> {elem} {{
+            fn reduce_max(self, a: {inner}) -> {elem} {{
                 unsafe {{ _mm512_reduce_max_{s}(a) }}
             }}
 
@@ -2140,7 +2140,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn not(a: {inner}) -> {inner} {{
+            fn not(self, a: {inner}) -> {inner} {{
                 unsafe {{
                     let all_ones = _mm512_castsi512_{s}(_mm512_set1_{epi}(-1));
                     _mm512_xor_{s}(a, all_ones)
@@ -2148,17 +2148,17 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn bitand(a: {inner}, b: {inner}) -> {inner} {{
+            fn bitand(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_and_{s}(a, b) }}
             }}
 
             #[inline(always)]
-            fn bitor(a: {inner}, b: {inner}) -> {inner} {{
+            fn bitor(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_or_{s}(a, b) }}
             }}
 
             #[inline(always)]
-            fn bitxor(a: {inner}, b: {inner}) -> {inner} {{
+            fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ _mm512_xor_{s}(a, b) }}
             }}
         }}
@@ -2220,7 +2220,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
         formatdoc! {r#"
 
             #[inline(always)]
-            fn mul(a: __m512i, b: __m512i) -> __m512i {{
+            fn mul(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{ _mm512_mullo_{epi}(a, b) }}
             }}
         "#}
@@ -2233,7 +2233,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
         formatdoc! {r#"
 
             #[inline(always)]
-            fn abs(a: __m512i) -> __m512i {{
+            fn abs(self, a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_abs_{epi}(a) }}
             }}
         "#}
@@ -2258,14 +2258,14 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             // Inline the shift body to avoid Self:: ambiguity (multiple backend traits)
             formatdoc! {r#"
             #[inline(always)]
-            fn shr_arithmetic_const<const N: i32>(a: __m512i) -> __m512i {{
+            fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_srl_{epi}(a, _mm_cvtsi32_si128(N)) }}
             }}
             "#}
         } else {
             formatdoc! {r#"
             #[inline(always)]
-            fn shr_arithmetic_const<const N: i32>(a: __m512i) -> __m512i {{
+            fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_sra_{epi}(a, _mm_cvtsi32_si128(N)) }}
             }}
             "#}
@@ -2273,13 +2273,13 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
 
         formatdoc! {r#"
             #[inline(always)]
-            fn shl_const<const N: i32>(a: __m512i) -> __m512i {{
+            fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_sll_{epi}(a, _mm_cvtsi32_si128(N)) }}
             }}
 
             {shr_arith}
             #[inline(always)]
-            fn shr_logical_const<const N: i32>(a: __m512i) -> __m512i {{
+            fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_srl_{epi}(a, _mm_cvtsi32_si128(N)) }}
             }}
         "#}
@@ -2311,38 +2311,38 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn store(repr: __m512i, out: &mut {array}) {{
+            fn store(self, repr: __m512i, out: &mut {array}) {{
                 unsafe {{ _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }}
             }}
 
             #[inline(always)]
-            fn to_array(repr: __m512i) -> {array} {{
+            fn to_array(self, repr: __m512i) -> {array} {{
                 unsafe {{ core::mem::transmute(repr) }}
             }}
 
             #[inline(always)]
-            fn add(a: __m512i, b: __m512i) -> __m512i {{
+            fn add(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{ _mm512_add_{epi}(a, b) }}
             }}
 
             #[inline(always)]
-            fn sub(a: __m512i, b: __m512i) -> __m512i {{
+            fn sub(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{ _mm512_sub_{epi}(a, b) }}
             }}
             {mul_impl}
             {neg_impl}
             #[inline(always)]
-            fn min(a: __m512i, b: __m512i) -> __m512i {{
+            fn min(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{ _mm512_min_{mm}(a, b) }}
             }}
 
             #[inline(always)]
-            fn max(a: __m512i, b: __m512i) -> __m512i {{
+            fn max(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{ _mm512_max_{mm}(a, b) }}
             }}
             {abs_impl}
             #[inline(always)]
-            fn simd_eq(a: __m512i, b: __m512i) -> __m512i {{
+            fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{
                     let mask = _mm512_cmpeq_{cmp_suffix}_mask(a, b);
                     _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
@@ -2350,7 +2350,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_ne(a: __m512i, b: __m512i) -> __m512i {{
+            fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{
                     let mask = _mm512_cmpneq_{cmp_suffix}_mask(a, b);
                     _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
@@ -2358,7 +2358,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_lt(a: __m512i, b: __m512i) -> __m512i {{
+            fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{
                     let mask = _mm512_cmplt_{cmp_suffix}_mask(a, b);
                     _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
@@ -2366,7 +2366,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_le(a: __m512i, b: __m512i) -> __m512i {{
+            fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{
                     let mask = _mm512_cmple_{cmp_suffix}_mask(a, b);
                     _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
@@ -2374,7 +2374,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_gt(a: __m512i, b: __m512i) -> __m512i {{
+            fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{
                     // GT = LT with swapped args
                     let mask = _mm512_cmplt_{cmp_suffix}_mask(b, a);
@@ -2383,7 +2383,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn simd_ge(a: __m512i, b: __m512i) -> __m512i {{
+            fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{
                     // GE = LE with swapped args
                     let mask = _mm512_cmple_{cmp_suffix}_mask(b, a);
@@ -2392,7 +2392,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn blend(mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {{
+            fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {{
                 unsafe {{
                     let k = _mm512_cmpneq_{blend_suffix}_mask(mask, _mm512_setzero_si512());
                     _mm512_mask_blend_{blend_suffix}(k, if_false, if_true)
@@ -2400,35 +2400,35 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn reduce_add(a: __m512i) -> {elem} {{
+            fn reduce_add(self, a: __m512i) -> {elem} {{
                 // No native integer reduce_add in AVX-512; use transmute to array
                 let arr: {array} = unsafe {{ core::mem::transmute(a) }};
                 arr.iter().copied().fold(0{elem}, {elem}::wrapping_add)
             }}
 
             #[inline(always)]
-            fn not(a: __m512i) -> __m512i {{
+            fn not(self, a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_xor_si512(a, _mm512_set1_{set1_signed}({set1_neg1})) }}
             }}
 
             #[inline(always)]
-            fn bitand(a: __m512i, b: __m512i) -> __m512i {{
+            fn bitand(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{ _mm512_and_si512(a, b) }}
             }}
 
             #[inline(always)]
-            fn bitor(a: __m512i, b: __m512i) -> __m512i {{
+            fn bitor(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{ _mm512_or_si512(a, b) }}
             }}
 
             #[inline(always)]
-            fn bitxor(a: __m512i, b: __m512i) -> __m512i {{
+            fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {{
                 unsafe {{ _mm512_xor_si512(a, b) }}
             }}
 
             {shift_impls}
             #[inline(always)]
-            fn all_true(a: __m512i) -> bool {{
+            fn all_true(self, a: __m512i) -> bool {{
                 unsafe {{
                     let mask = _mm512_cmpneq_{blend_suffix}_mask(a, _mm512_setzero_si512());
                     mask as u64 == {full_mask}
@@ -2436,7 +2436,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn any_true(a: __m512i) -> bool {{
+            fn any_true(self, a: __m512i) -> bool {{
                 unsafe {{
                     let mask = _mm512_cmpneq_{blend_suffix}_mask(a, _mm512_setzero_si512());
                     mask as u64 != 0
@@ -2444,7 +2444,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
 
             #[inline(always)]
-            fn bitmask(a: __m512i) -> u64 {{
+            fn bitmask(self, a: __m512i) -> u64 {{
                 unsafe {{
                     // Extract high bit of each lane: compare < 0 for signed interpretation
                     let zero = _mm512_setzero_si512();
@@ -2475,7 +2475,7 @@ fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
         // Inline the shift body to avoid Self:: ambiguity (multiple backend traits)
         formatdoc! {r#"
             #[inline(always)]
-            fn shr_arithmetic_const<const N: i32>(a: __m512i) -> __m512i {{
+            fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 unsafe {{
                     let count = _mm_cvtsi32_si128(N);
                     let shifted = _mm512_srl_epi16(a, count);
@@ -2487,7 +2487,7 @@ fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
     } else {
         formatdoc! {r#"
             #[inline(always)]
-            fn shr_arithmetic_const<const N: i32>(a: __m512i) -> __m512i {{
+            fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 unsafe {{
                     let count = _mm_cvtsi32_si128(N);
                     // Sign-extend bytes to 16-bit, shift, mask back to 8-bit
@@ -2506,7 +2506,7 @@ fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
 
     formatdoc! {r#"
             #[inline(always)]
-            fn shl_const<const N: i32>(a: __m512i) -> __m512i {{
+            fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 unsafe {{
                     let count = _mm_cvtsi32_si128(N);
                     let shifted = _mm512_sll_epi16(a, count);
@@ -2517,7 +2517,7 @@ fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
 
             {shr_arith}
             #[inline(always)]
-            fn shr_logical_const<const N: i32>(a: __m512i) -> __m512i {{
+            fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 unsafe {{
                     let count = _mm_cvtsi32_si128(N);
                     let shifted = _mm512_srl_epi16(a, count);
@@ -2571,7 +2571,7 @@ fn generate_popcnt_backend_trait(ty: &W512Type) -> String {
         /// Requires AVX-512 VPOPCNTDQ (32/64-bit) or BITALG (8/16-bit).
         pub trait {name}PopcntBackend: {trait_name} {{
             /// Count set bits in each lane.
-            fn popcnt(a: Self::Repr) -> Self::Repr;
+            fn popcnt(self, a: Self::Repr) -> Self::Repr;
         }}
     "#}
 }
@@ -2608,7 +2608,7 @@ fn generate_popcnt_impl(ty: &W512Type) -> String {
         #[cfg(target_arch = "x86_64")]
         impl {name}PopcntBackend for archmage::X64V4xToken {{
             #[inline(always)]
-            fn popcnt(a: __m512i) -> __m512i {{
+            fn popcnt(self, a: __m512i) -> __m512i {{
                 unsafe {{ _mm512_popcnt_{epi}(a) }}
             }}
         }}

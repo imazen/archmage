@@ -35,12 +35,12 @@ impl F32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128, out: &mut [f32; 4]) {
+    fn store(self, repr: __m128, out: &mut [f32; 4]) {
         unsafe { _mm_storeu_ps(out.as_mut_ptr(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128) -> [f32; 4] {
+    fn to_array(self, repr: __m128) -> [f32; 4] {
         let mut out = [0.0f32; 4];
         unsafe { _mm_storeu_ps(out.as_mut_ptr(), repr) };
         out
@@ -49,22 +49,22 @@ impl F32x4Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128, b: __m128) -> __m128 {
+    fn add(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_add_ps(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128, b: __m128) -> __m128 {
+    fn sub(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_sub_ps(a, b) }
     }
 
     #[inline(always)]
-    fn mul(a: __m128, b: __m128) -> __m128 {
+    fn mul(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_mul_ps(a, b) }
     }
 
     #[inline(always)]
-    fn div(a: __m128, b: __m128) -> __m128 {
+    fn div(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_div_ps(a, b) }
     }
 
@@ -76,22 +76,22 @@ impl F32x4Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128, b: __m128) -> __m128 {
+    fn min(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_min_ps(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m128, b: __m128) -> __m128 {
+    fn max(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_max_ps(a, b) }
     }
 
     #[inline(always)]
-    fn sqrt(a: __m128) -> __m128 {
+    fn sqrt(self, a: __m128) -> __m128 {
         unsafe { _mm_sqrt_ps(a) }
     }
 
     #[inline(always)]
-    fn abs(a: __m128) -> __m128 {
+    fn abs(self, a: __m128) -> __m128 {
         unsafe {
             let mask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFF_FFFFi32));
             _mm_and_ps(a, mask)
@@ -99,71 +99,71 @@ impl F32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn floor(a: __m128) -> __m128 {
+    fn floor(self, a: __m128) -> __m128 {
         unsafe { _mm_floor_ps(a) }
     }
 
     #[inline(always)]
-    fn ceil(a: __m128) -> __m128 {
+    fn ceil(self, a: __m128) -> __m128 {
         unsafe { _mm_ceil_ps(a) }
     }
 
     #[inline(always)]
-    fn round(a: __m128) -> __m128 {
+    fn round(self, a: __m128) -> __m128 {
         unsafe { _mm_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(a) }
     }
 
     #[inline(always)]
-    fn mul_add(a: __m128, b: __m128, c: __m128) -> __m128 {
+    fn mul_add(self, a: __m128, b: __m128, c: __m128) -> __m128 {
         unsafe { _mm_fmadd_ps(a, b, c) }
     }
 
     #[inline(always)]
-    fn mul_sub(a: __m128, b: __m128, c: __m128) -> __m128 {
+    fn mul_sub(self, a: __m128, b: __m128, c: __m128) -> __m128 {
         unsafe { _mm_fmsub_ps(a, b, c) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128, b: __m128) -> __m128 {
+    fn simd_eq(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_cmp_ps::<_CMP_EQ_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128, b: __m128) -> __m128 {
+    fn simd_ne(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_cmp_ps::<_CMP_NEQ_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128, b: __m128) -> __m128 {
+    fn simd_lt(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_cmp_ps::<_CMP_LT_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128, b: __m128) -> __m128 {
+    fn simd_le(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_cmp_ps::<_CMP_LE_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128, b: __m128) -> __m128 {
+    fn simd_gt(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_cmp_ps::<_CMP_GT_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128, b: __m128) -> __m128 {
+    fn simd_ge(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_cmp_ps::<_CMP_GE_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn blend(mask: __m128, if_true: __m128, if_false: __m128) -> __m128 {
+    fn blend(self, mask: __m128, if_true: __m128, if_false: __m128) -> __m128 {
         unsafe { _mm_blendv_ps(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128) -> f32 {
+    fn reduce_add(self, a: __m128) -> f32 {
         unsafe {
             let h1 = _mm_hadd_ps(a, a);
             let h2 = _mm_hadd_ps(h1, h1);
@@ -172,7 +172,7 @@ impl F32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn reduce_min(a: __m128) -> f32 {
+    fn reduce_min(self, a: __m128) -> f32 {
         unsafe {
             let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
             let m1 = _mm_min_ps(a, shuf);
@@ -183,7 +183,7 @@ impl F32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn reduce_max(a: __m128) -> f32 {
+    fn reduce_max(self, a: __m128) -> f32 {
         unsafe {
             let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
             let m1 = _mm_max_ps(a, shuf);
@@ -213,8 +213,9 @@ impl F32x4Backend for archmage::X64V3Token {
         let approx = <Self as F32x4Backend>::rcp_approx(self, a);
         let two = unsafe { _mm_set1_ps(2.0) };
         <Self as F32x4Backend>::mul(
+            self,
             approx,
-            <Self as F32x4Backend>::sub(two, <Self as F32x4Backend>::mul(a, approx)),
+            <Self as F32x4Backend>::sub(self, two, <Self as F32x4Backend>::mul(self, a, approx)),
         )
     }
 
@@ -224,10 +225,16 @@ impl F32x4Backend for archmage::X64V3Token {
         let half = unsafe { _mm_set1_ps(0.5) };
         let three = unsafe { _mm_set1_ps(3.0) };
         <Self as F32x4Backend>::mul(
-            <Self as F32x4Backend>::mul(half, approx),
+            self,
+            <Self as F32x4Backend>::mul(self, half, approx),
             <Self as F32x4Backend>::sub(
+                self,
                 three,
-                <Self as F32x4Backend>::mul(a, <Self as F32x4Backend>::mul(approx, approx)),
+                <Self as F32x4Backend>::mul(
+                    self,
+                    a,
+                    <Self as F32x4Backend>::mul(self, approx, approx),
+                ),
             ),
         )
     }
@@ -235,7 +242,7 @@ impl F32x4Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128) -> __m128 {
+    fn not(self, a: __m128) -> __m128 {
         unsafe {
             let ones = _mm_set1_epi32(-1);
             let as_int = _mm_castps_si128(a);
@@ -244,17 +251,17 @@ impl F32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn bitand(a: __m128, b: __m128) -> __m128 {
+    fn bitand(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_and_ps(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128, b: __m128) -> __m128 {
+    fn bitor(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_or_ps(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128, b: __m128) -> __m128 {
+    fn bitxor(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_xor_ps(a, b) }
     }
 }
@@ -287,12 +294,12 @@ impl F32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256, out: &mut [f32; 8]) {
+    fn store(self, repr: __m256, out: &mut [f32; 8]) {
         unsafe { _mm256_storeu_ps(out.as_mut_ptr(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256) -> [f32; 8] {
+    fn to_array(self, repr: __m256) -> [f32; 8] {
         let mut out = [0.0f32; 8];
         unsafe { _mm256_storeu_ps(out.as_mut_ptr(), repr) };
         out
@@ -301,22 +308,22 @@ impl F32x8Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256, b: __m256) -> __m256 {
+    fn add(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_add_ps(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256, b: __m256) -> __m256 {
+    fn sub(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_sub_ps(a, b) }
     }
 
     #[inline(always)]
-    fn mul(a: __m256, b: __m256) -> __m256 {
+    fn mul(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_mul_ps(a, b) }
     }
 
     #[inline(always)]
-    fn div(a: __m256, b: __m256) -> __m256 {
+    fn div(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_div_ps(a, b) }
     }
 
@@ -328,22 +335,22 @@ impl F32x8Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256, b: __m256) -> __m256 {
+    fn min(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_min_ps(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m256, b: __m256) -> __m256 {
+    fn max(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_max_ps(a, b) }
     }
 
     #[inline(always)]
-    fn sqrt(a: __m256) -> __m256 {
+    fn sqrt(self, a: __m256) -> __m256 {
         unsafe { _mm256_sqrt_ps(a) }
     }
 
     #[inline(always)]
-    fn abs(a: __m256) -> __m256 {
+    fn abs(self, a: __m256) -> __m256 {
         unsafe {
             let mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFF_FFFFi32));
             _mm256_and_ps(a, mask)
@@ -351,71 +358,71 @@ impl F32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn floor(a: __m256) -> __m256 {
+    fn floor(self, a: __m256) -> __m256 {
         unsafe { _mm256_floor_ps(a) }
     }
 
     #[inline(always)]
-    fn ceil(a: __m256) -> __m256 {
+    fn ceil(self, a: __m256) -> __m256 {
         unsafe { _mm256_ceil_ps(a) }
     }
 
     #[inline(always)]
-    fn round(a: __m256) -> __m256 {
+    fn round(self, a: __m256) -> __m256 {
         unsafe { _mm256_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(a) }
     }
 
     #[inline(always)]
-    fn mul_add(a: __m256, b: __m256, c: __m256) -> __m256 {
+    fn mul_add(self, a: __m256, b: __m256, c: __m256) -> __m256 {
         unsafe { _mm256_fmadd_ps(a, b, c) }
     }
 
     #[inline(always)]
-    fn mul_sub(a: __m256, b: __m256, c: __m256) -> __m256 {
+    fn mul_sub(self, a: __m256, b: __m256, c: __m256) -> __m256 {
         unsafe { _mm256_fmsub_ps(a, b, c) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256, b: __m256) -> __m256 {
+    fn simd_eq(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_cmp_ps::<_CMP_EQ_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256, b: __m256) -> __m256 {
+    fn simd_ne(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_cmp_ps::<_CMP_NEQ_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256, b: __m256) -> __m256 {
+    fn simd_lt(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_cmp_ps::<_CMP_LT_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256, b: __m256) -> __m256 {
+    fn simd_le(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_cmp_ps::<_CMP_LE_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256, b: __m256) -> __m256 {
+    fn simd_gt(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_cmp_ps::<_CMP_GT_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256, b: __m256) -> __m256 {
+    fn simd_ge(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_cmp_ps::<_CMP_GE_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn blend(mask: __m256, if_true: __m256, if_false: __m256) -> __m256 {
+    fn blend(self, mask: __m256, if_true: __m256, if_false: __m256) -> __m256 {
         unsafe { _mm256_blendv_ps(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256) -> f32 {
+    fn reduce_add(self, a: __m256) -> f32 {
         unsafe {
             let hi = _mm256_extractf128_ps::<1>(a);
             let lo = _mm256_castps256_ps128(a);
@@ -427,7 +434,7 @@ impl F32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn reduce_min(a: __m256) -> f32 {
+    fn reduce_min(self, a: __m256) -> f32 {
         unsafe {
             let hi = _mm256_extractf128_ps::<1>(a);
             let lo = _mm256_castps256_ps128(a);
@@ -441,7 +448,7 @@ impl F32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn reduce_max(a: __m256) -> f32 {
+    fn reduce_max(self, a: __m256) -> f32 {
         unsafe {
             let hi = _mm256_extractf128_ps::<1>(a);
             let lo = _mm256_castps256_ps128(a);
@@ -474,8 +481,9 @@ impl F32x8Backend for archmage::X64V3Token {
         let approx = <Self as F32x8Backend>::rcp_approx(self, a);
         let two = unsafe { _mm256_set1_ps(2.0) };
         <Self as F32x8Backend>::mul(
+            self,
             approx,
-            <Self as F32x8Backend>::sub(two, <Self as F32x8Backend>::mul(a, approx)),
+            <Self as F32x8Backend>::sub(self, two, <Self as F32x8Backend>::mul(self, a, approx)),
         )
     }
 
@@ -485,10 +493,16 @@ impl F32x8Backend for archmage::X64V3Token {
         let half = unsafe { _mm256_set1_ps(0.5) };
         let three = unsafe { _mm256_set1_ps(3.0) };
         <Self as F32x8Backend>::mul(
-            <Self as F32x8Backend>::mul(half, approx),
+            self,
+            <Self as F32x8Backend>::mul(self, half, approx),
             <Self as F32x8Backend>::sub(
+                self,
                 three,
-                <Self as F32x8Backend>::mul(a, <Self as F32x8Backend>::mul(approx, approx)),
+                <Self as F32x8Backend>::mul(
+                    self,
+                    a,
+                    <Self as F32x8Backend>::mul(self, approx, approx),
+                ),
             ),
         )
     }
@@ -496,7 +510,7 @@ impl F32x8Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256) -> __m256 {
+    fn not(self, a: __m256) -> __m256 {
         unsafe {
             let ones = _mm256_set1_epi32(-1);
             let as_int = _mm256_castps_si256(a);
@@ -505,17 +519,17 @@ impl F32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn bitand(a: __m256, b: __m256) -> __m256 {
+    fn bitand(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_and_ps(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256, b: __m256) -> __m256 {
+    fn bitor(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_or_ps(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256, b: __m256) -> __m256 {
+    fn bitxor(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_xor_ps(a, b) }
     }
 }
@@ -548,12 +562,12 @@ impl F64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128d, out: &mut [f64; 2]) {
+    fn store(self, repr: __m128d, out: &mut [f64; 2]) {
         unsafe { _mm_storeu_pd(out.as_mut_ptr(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128d) -> [f64; 2] {
+    fn to_array(self, repr: __m128d) -> [f64; 2] {
         let mut out = [0.0f64; 2];
         unsafe { _mm_storeu_pd(out.as_mut_ptr(), repr) };
         out
@@ -562,22 +576,22 @@ impl F64x2Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128d, b: __m128d) -> __m128d {
+    fn add(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_add_pd(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128d, b: __m128d) -> __m128d {
+    fn sub(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_sub_pd(a, b) }
     }
 
     #[inline(always)]
-    fn mul(a: __m128d, b: __m128d) -> __m128d {
+    fn mul(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_mul_pd(a, b) }
     }
 
     #[inline(always)]
-    fn div(a: __m128d, b: __m128d) -> __m128d {
+    fn div(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_div_pd(a, b) }
     }
 
@@ -589,22 +603,22 @@ impl F64x2Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128d, b: __m128d) -> __m128d {
+    fn min(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_min_pd(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m128d, b: __m128d) -> __m128d {
+    fn max(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_max_pd(a, b) }
     }
 
     #[inline(always)]
-    fn sqrt(a: __m128d) -> __m128d {
+    fn sqrt(self, a: __m128d) -> __m128d {
         unsafe { _mm_sqrt_pd(a) }
     }
 
     #[inline(always)]
-    fn abs(a: __m128d) -> __m128d {
+    fn abs(self, a: __m128d) -> __m128d {
         unsafe {
             let mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
             _mm_and_pd(a, mask)
@@ -612,71 +626,71 @@ impl F64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn floor(a: __m128d) -> __m128d {
+    fn floor(self, a: __m128d) -> __m128d {
         unsafe { _mm_floor_pd(a) }
     }
 
     #[inline(always)]
-    fn ceil(a: __m128d) -> __m128d {
+    fn ceil(self, a: __m128d) -> __m128d {
         unsafe { _mm_ceil_pd(a) }
     }
 
     #[inline(always)]
-    fn round(a: __m128d) -> __m128d {
+    fn round(self, a: __m128d) -> __m128d {
         unsafe { _mm_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(a) }
     }
 
     #[inline(always)]
-    fn mul_add(a: __m128d, b: __m128d, c: __m128d) -> __m128d {
+    fn mul_add(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
         unsafe { _mm_fmadd_pd(a, b, c) }
     }
 
     #[inline(always)]
-    fn mul_sub(a: __m128d, b: __m128d, c: __m128d) -> __m128d {
+    fn mul_sub(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
         unsafe { _mm_fmsub_pd(a, b, c) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128d, b: __m128d) -> __m128d {
+    fn simd_eq(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_cmp_pd::<_CMP_EQ_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128d, b: __m128d) -> __m128d {
+    fn simd_ne(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_cmp_pd::<_CMP_NEQ_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128d, b: __m128d) -> __m128d {
+    fn simd_lt(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_cmp_pd::<_CMP_LT_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128d, b: __m128d) -> __m128d {
+    fn simd_le(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_cmp_pd::<_CMP_LE_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128d, b: __m128d) -> __m128d {
+    fn simd_gt(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_cmp_pd::<_CMP_GT_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128d, b: __m128d) -> __m128d {
+    fn simd_ge(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_cmp_pd::<_CMP_GE_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn blend(mask: __m128d, if_true: __m128d, if_false: __m128d) -> __m128d {
+    fn blend(self, mask: __m128d, if_true: __m128d, if_false: __m128d) -> __m128d {
         unsafe { _mm_blendv_pd(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128d) -> f64 {
+    fn reduce_add(self, a: __m128d) -> f64 {
         unsafe {
             let h = _mm_hadd_pd(a, a);
             _mm_cvtsd_f64(h)
@@ -684,7 +698,7 @@ impl F64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn reduce_min(a: __m128d) -> f64 {
+    fn reduce_min(self, a: __m128d) -> f64 {
         unsafe {
             let shuf = _mm_shuffle_pd::<0b01>(a, a);
             let m = _mm_min_pd(a, shuf);
@@ -693,7 +707,7 @@ impl F64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn reduce_max(a: __m128d) -> f64 {
+    fn reduce_max(self, a: __m128d) -> f64 {
         unsafe {
             let shuf = _mm_shuffle_pd::<0b01>(a, a);
             let m = _mm_max_pd(a, shuf);
@@ -706,7 +720,7 @@ impl F64x2Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128d) -> __m128d {
+    fn not(self, a: __m128d) -> __m128d {
         unsafe {
             let ones = _mm_set1_epi64x(-1);
             let as_int = _mm_castpd_si128(a);
@@ -715,17 +729,17 @@ impl F64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn bitand(a: __m128d, b: __m128d) -> __m128d {
+    fn bitand(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_and_pd(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128d, b: __m128d) -> __m128d {
+    fn bitor(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_or_pd(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128d, b: __m128d) -> __m128d {
+    fn bitxor(self, a: __m128d, b: __m128d) -> __m128d {
         unsafe { _mm_xor_pd(a, b) }
     }
 }
@@ -758,12 +772,12 @@ impl F64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256d, out: &mut [f64; 4]) {
+    fn store(self, repr: __m256d, out: &mut [f64; 4]) {
         unsafe { _mm256_storeu_pd(out.as_mut_ptr(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256d) -> [f64; 4] {
+    fn to_array(self, repr: __m256d) -> [f64; 4] {
         let mut out = [0.0f64; 4];
         unsafe { _mm256_storeu_pd(out.as_mut_ptr(), repr) };
         out
@@ -772,22 +786,22 @@ impl F64x4Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256d, b: __m256d) -> __m256d {
+    fn add(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_add_pd(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256d, b: __m256d) -> __m256d {
+    fn sub(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_sub_pd(a, b) }
     }
 
     #[inline(always)]
-    fn mul(a: __m256d, b: __m256d) -> __m256d {
+    fn mul(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_mul_pd(a, b) }
     }
 
     #[inline(always)]
-    fn div(a: __m256d, b: __m256d) -> __m256d {
+    fn div(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_div_pd(a, b) }
     }
 
@@ -799,22 +813,22 @@ impl F64x4Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256d, b: __m256d) -> __m256d {
+    fn min(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_min_pd(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m256d, b: __m256d) -> __m256d {
+    fn max(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_max_pd(a, b) }
     }
 
     #[inline(always)]
-    fn sqrt(a: __m256d) -> __m256d {
+    fn sqrt(self, a: __m256d) -> __m256d {
         unsafe { _mm256_sqrt_pd(a) }
     }
 
     #[inline(always)]
-    fn abs(a: __m256d) -> __m256d {
+    fn abs(self, a: __m256d) -> __m256d {
         unsafe {
             let mask = _mm256_castsi256_pd(_mm256_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
             _mm256_and_pd(a, mask)
@@ -822,71 +836,71 @@ impl F64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn floor(a: __m256d) -> __m256d {
+    fn floor(self, a: __m256d) -> __m256d {
         unsafe { _mm256_floor_pd(a) }
     }
 
     #[inline(always)]
-    fn ceil(a: __m256d) -> __m256d {
+    fn ceil(self, a: __m256d) -> __m256d {
         unsafe { _mm256_ceil_pd(a) }
     }
 
     #[inline(always)]
-    fn round(a: __m256d) -> __m256d {
+    fn round(self, a: __m256d) -> __m256d {
         unsafe { _mm256_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(a) }
     }
 
     #[inline(always)]
-    fn mul_add(a: __m256d, b: __m256d, c: __m256d) -> __m256d {
+    fn mul_add(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
         unsafe { _mm256_fmadd_pd(a, b, c) }
     }
 
     #[inline(always)]
-    fn mul_sub(a: __m256d, b: __m256d, c: __m256d) -> __m256d {
+    fn mul_sub(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
         unsafe { _mm256_fmsub_pd(a, b, c) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256d, b: __m256d) -> __m256d {
+    fn simd_eq(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_cmp_pd::<_CMP_EQ_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256d, b: __m256d) -> __m256d {
+    fn simd_ne(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_cmp_pd::<_CMP_NEQ_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256d, b: __m256d) -> __m256d {
+    fn simd_lt(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_cmp_pd::<_CMP_LT_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256d, b: __m256d) -> __m256d {
+    fn simd_le(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_cmp_pd::<_CMP_LE_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256d, b: __m256d) -> __m256d {
+    fn simd_gt(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_cmp_pd::<_CMP_GT_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256d, b: __m256d) -> __m256d {
+    fn simd_ge(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_cmp_pd::<_CMP_GE_OQ>(a, b) }
     }
 
     #[inline(always)]
-    fn blend(mask: __m256d, if_true: __m256d, if_false: __m256d) -> __m256d {
+    fn blend(self, mask: __m256d, if_true: __m256d, if_false: __m256d) -> __m256d {
         unsafe { _mm256_blendv_pd(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256d) -> f64 {
+    fn reduce_add(self, a: __m256d) -> f64 {
         unsafe {
             let hi = _mm256_extractf128_pd::<1>(a);
             let lo = _mm256_castpd256_pd128(a);
@@ -897,7 +911,7 @@ impl F64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn reduce_min(a: __m256d) -> f64 {
+    fn reduce_min(self, a: __m256d) -> f64 {
         unsafe {
             let hi = _mm256_extractf128_pd::<1>(a);
             let lo = _mm256_castpd256_pd128(a);
@@ -909,7 +923,7 @@ impl F64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn reduce_max(a: __m256d) -> f64 {
+    fn reduce_max(self, a: __m256d) -> f64 {
         unsafe {
             let hi = _mm256_extractf128_pd::<1>(a);
             let lo = _mm256_castpd256_pd128(a);
@@ -925,7 +939,7 @@ impl F64x4Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256d) -> __m256d {
+    fn not(self, a: __m256d) -> __m256d {
         unsafe {
             let ones = _mm256_set1_epi64x(-1);
             let as_int = _mm256_castpd_si256(a);
@@ -934,17 +948,17 @@ impl F64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn bitand(a: __m256d, b: __m256d) -> __m256d {
+    fn bitand(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_and_pd(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256d, b: __m256d) -> __m256d {
+    fn bitor(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_or_pd(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256d, b: __m256d) -> __m256d {
+    fn bitxor(self, a: __m256d, b: __m256d) -> __m256d {
         unsafe { _mm256_xor_pd(a, b) }
     }
 }
@@ -977,12 +991,12 @@ impl I32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128i, out: &mut [i32; 4]) {
+    fn store(self, repr: __m128i, out: &mut [i32; 4]) {
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128i) -> [i32; 4] {
+    fn to_array(self, repr: __m128i) -> [i32; 4] {
         let mut out = [0i32; 4];
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
         out
@@ -991,17 +1005,17 @@ impl I32x4Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128i, b: __m128i) -> __m128i {
+    fn add(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_add_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128i, b: __m128i) -> __m128i {
+    fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_sub_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn mul(a: __m128i, b: __m128i) -> __m128i {
+    fn mul(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_mullo_epi32(a, b) }
     }
 
@@ -1013,29 +1027,29 @@ impl I32x4Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128i, b: __m128i) -> __m128i {
+    fn min(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_min_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m128i, b: __m128i) -> __m128i {
+    fn max(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_max_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn abs(a: __m128i) -> __m128i {
+    fn abs(self, a: __m128i) -> __m128i {
         unsafe { _mm_abs_epi32(a) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpeq_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi32(a, b);
             _mm_andnot_si128(eq, _mm_set1_epi32(-1))
@@ -1043,12 +1057,12 @@ impl I32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpgt_epi32(b, a) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let gt = _mm_cmpgt_epi32(a, b);
             _mm_andnot_si128(gt, _mm_set1_epi32(-1))
@@ -1056,12 +1070,12 @@ impl I32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpgt_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let lt = _mm_cmpgt_epi32(b, a);
             _mm_andnot_si128(lt, _mm_set1_epi32(-1))
@@ -1069,14 +1083,14 @@ impl I32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+    fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128i) -> i32 {
+    fn reduce_add(self, a: __m128i) -> i32 {
         unsafe {
             let hi = _mm_shuffle_epi32::<0b01_00_11_10>(a);
             let sum = _mm_add_epi32(a, hi);
@@ -1089,56 +1103,56 @@ impl I32x4Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128i) -> __m128i {
+    fn not(self, a: __m128i) -> __m128i {
         unsafe { _mm_andnot_si128(a, _mm_set1_epi32(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+    fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_and_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_or_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_slli_epi32::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_arithmetic_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srai_epi32::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srli_epi32::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m128i) -> bool {
+    fn all_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_ps(_mm_castsi128_ps(a)) == 0xF }
     }
 
     #[inline(always)]
-    fn any_true(a: __m128i) -> bool {
+    fn any_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_ps(_mm_castsi128_ps(a)) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m128i) -> u32 {
+    fn bitmask(self, a: __m128i) -> u32 {
         unsafe { _mm_movemask_ps(_mm_castsi128_ps(a)) as u32 }
     }
 }
@@ -1171,12 +1185,12 @@ impl I32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256i, out: &mut [i32; 8]) {
+    fn store(self, repr: __m256i, out: &mut [i32; 8]) {
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256i) -> [i32; 8] {
+    fn to_array(self, repr: __m256i) -> [i32; 8] {
         let mut out = [0i32; 8];
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
         out
@@ -1185,17 +1199,17 @@ impl I32x8Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256i, b: __m256i) -> __m256i {
+    fn add(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_add_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256i, b: __m256i) -> __m256i {
+    fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn mul(a: __m256i, b: __m256i) -> __m256i {
+    fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_mullo_epi32(a, b) }
     }
 
@@ -1207,29 +1221,29 @@ impl I32x8Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256i, b: __m256i) -> __m256i {
+    fn min(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_min_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m256i, b: __m256i) -> __m256i {
+    fn max(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_max_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn abs(a: __m256i) -> __m256i {
+    fn abs(self, a: __m256i) -> __m256i {
         unsafe { _mm256_abs_epi32(a) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpeq_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi32(a, b);
             _mm256_andnot_si256(eq, _mm256_set1_epi32(-1))
@@ -1237,12 +1251,12 @@ impl I32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpgt_epi32(b, a) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let gt = _mm256_cmpgt_epi32(a, b);
             _mm256_andnot_si256(gt, _mm256_set1_epi32(-1))
@@ -1250,12 +1264,12 @@ impl I32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpgt_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let lt = _mm256_cmpgt_epi32(b, a);
             _mm256_andnot_si256(lt, _mm256_set1_epi32(-1))
@@ -1263,14 +1277,14 @@ impl I32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+    fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256i) -> i32 {
+    fn reduce_add(self, a: __m256i) -> i32 {
         unsafe {
             let lo = _mm256_castsi256_si128(a);
             let hi = _mm256_extracti128_si256::<1>(a);
@@ -1286,56 +1300,56 @@ impl I32x8Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256i) -> __m256i {
+    fn not(self, a: __m256i) -> __m256i {
         unsafe { _mm256_andnot_si256(a, _mm256_set1_epi32(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+    fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_and_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_or_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_slli_epi32::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_arithmetic_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srai_epi32::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srli_epi32::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m256i) -> bool {
+    fn all_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(a)) == 0xFF }
     }
 
     #[inline(always)]
-    fn any_true(a: __m256i) -> bool {
+    fn any_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(a)) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m256i) -> u32 {
+    fn bitmask(self, a: __m256i) -> u32 {
         unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(a)) as u32 }
     }
 }
@@ -1368,12 +1382,12 @@ impl U32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128i, out: &mut [u32; 4]) {
+    fn store(self, repr: __m128i, out: &mut [u32; 4]) {
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128i) -> [u32; 4] {
+    fn to_array(self, repr: __m128i) -> [u32; 4] {
         let mut out = [0u32; 4];
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
         out
@@ -1382,41 +1396,41 @@ impl U32x4Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128i, b: __m128i) -> __m128i {
+    fn add(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_add_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128i, b: __m128i) -> __m128i {
+    fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_sub_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn mul(a: __m128i, b: __m128i) -> __m128i {
+    fn mul(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_mullo_epi32(a, b) }
     }
 
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128i, b: __m128i) -> __m128i {
+    fn min(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_min_epu32(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m128i, b: __m128i) -> __m128i {
+    fn max(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_max_epu32(a, b) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpeq_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi32(a, b);
             _mm_andnot_si128(eq, _mm_set1_epi32(-1))
@@ -1424,7 +1438,7 @@ impl U32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         // Unsigned comparison via bias trick: XOR both with 0x80000000
         // to convert to signed range, then use signed cmpgt.
         unsafe {
@@ -1436,35 +1450,35 @@ impl U32x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
-        <Self as U32x4Backend>::simd_gt(b, a)
+    fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
+        <Self as U32x4Backend>::simd_gt(self, b, a)
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let gt = <Self as U32x4Backend>::simd_gt(a, b);
+            let gt = <Self as U32x4Backend>::simd_gt(self, a, b);
             _mm_andnot_si128(gt, _mm_set1_epi32(-1))
         }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let lt = <Self as U32x4Backend>::simd_gt(b, a);
+            let lt = <Self as U32x4Backend>::simd_gt(self, b, a);
             _mm_andnot_si128(lt, _mm_set1_epi32(-1))
         }
     }
 
     #[inline(always)]
-    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+    fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128i) -> u32 {
+    fn reduce_add(self, a: __m128i) -> u32 {
         unsafe {
             let hi = _mm_shuffle_epi32::<0b01_00_11_10>(a);
             let sum = _mm_add_epi32(a, hi);
@@ -1477,51 +1491,51 @@ impl U32x4Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128i) -> __m128i {
+    fn not(self, a: __m128i) -> __m128i {
         unsafe { _mm_andnot_si128(a, _mm_set1_epi32(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+    fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_and_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_or_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_slli_epi32::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srli_epi32::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m128i) -> bool {
+    fn all_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_ps(_mm_castsi128_ps(a)) == 0xF }
     }
 
     #[inline(always)]
-    fn any_true(a: __m128i) -> bool {
+    fn any_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_ps(_mm_castsi128_ps(a)) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m128i) -> u32 {
+    fn bitmask(self, a: __m128i) -> u32 {
         unsafe { _mm_movemask_ps(_mm_castsi128_ps(a)) as u32 }
     }
 }
@@ -1554,12 +1568,12 @@ impl U32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256i, out: &mut [u32; 8]) {
+    fn store(self, repr: __m256i, out: &mut [u32; 8]) {
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256i) -> [u32; 8] {
+    fn to_array(self, repr: __m256i) -> [u32; 8] {
         let mut out = [0u32; 8];
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
         out
@@ -1568,41 +1582,41 @@ impl U32x8Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256i, b: __m256i) -> __m256i {
+    fn add(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_add_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256i, b: __m256i) -> __m256i {
+    fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn mul(a: __m256i, b: __m256i) -> __m256i {
+    fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_mullo_epi32(a, b) }
     }
 
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256i, b: __m256i) -> __m256i {
+    fn min(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_min_epu32(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m256i, b: __m256i) -> __m256i {
+    fn max(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_max_epu32(a, b) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpeq_epi32(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi32(a, b);
             _mm256_andnot_si256(eq, _mm256_set1_epi32(-1))
@@ -1610,7 +1624,7 @@ impl U32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         // Unsigned comparison via bias trick: XOR both with 0x80000000
         // to convert to signed range, then use signed cmpgt.
         unsafe {
@@ -1622,35 +1636,35 @@ impl U32x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
-        <Self as U32x8Backend>::simd_gt(b, a)
+    fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
+        <Self as U32x8Backend>::simd_gt(self, b, a)
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let gt = <Self as U32x8Backend>::simd_gt(a, b);
+            let gt = <Self as U32x8Backend>::simd_gt(self, a, b);
             _mm256_andnot_si256(gt, _mm256_set1_epi32(-1))
         }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let lt = <Self as U32x8Backend>::simd_gt(b, a);
+            let lt = <Self as U32x8Backend>::simd_gt(self, b, a);
             _mm256_andnot_si256(lt, _mm256_set1_epi32(-1))
         }
     }
 
     #[inline(always)]
-    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+    fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256i) -> u32 {
+    fn reduce_add(self, a: __m256i) -> u32 {
         unsafe {
             let lo = _mm256_castsi256_si128(a);
             let hi = _mm256_extracti128_si256::<1>(a);
@@ -1666,51 +1680,51 @@ impl U32x8Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256i) -> __m256i {
+    fn not(self, a: __m256i) -> __m256i {
         unsafe { _mm256_andnot_si256(a, _mm256_set1_epi32(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+    fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_and_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_or_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_slli_epi32::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srli_epi32::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m256i) -> bool {
+    fn all_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(a)) == 0xFF }
     }
 
     #[inline(always)]
-    fn any_true(a: __m256i) -> bool {
+    fn any_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(a)) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m256i) -> u32 {
+    fn bitmask(self, a: __m256i) -> u32 {
         unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(a)) as u32 }
     }
 }
@@ -1743,12 +1757,12 @@ impl I64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128i, out: &mut [i64; 2]) {
+    fn store(self, repr: __m128i, out: &mut [i64; 2]) {
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128i) -> [i64; 2] {
+    fn to_array(self, repr: __m128i) -> [i64; 2] {
         let mut out = [0i64; 2];
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
         out
@@ -1757,12 +1771,12 @@ impl I64x2Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128i, b: __m128i) -> __m128i {
+    fn add(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_add_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128i, b: __m128i) -> __m128i {
+    fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_sub_epi64(a, b) }
     }
 
@@ -1774,7 +1788,7 @@ impl I64x2Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128i, b: __m128i) -> __m128i {
+    fn min(self, a: __m128i, b: __m128i) -> __m128i {
         // Polyfill: compare+select (no native i64 min on AVX2)
         unsafe {
             let mask = _mm_cmpgt_epi64(a, b);
@@ -1783,7 +1797,7 @@ impl I64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn max(a: __m128i, b: __m128i) -> __m128i {
+    fn max(self, a: __m128i, b: __m128i) -> __m128i {
         // Polyfill: compare+select (no native i64 max on AVX2)
         unsafe {
             let mask = _mm_cmpgt_epi64(a, b);
@@ -1792,7 +1806,7 @@ impl I64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn abs(a: __m128i) -> __m128i {
+    fn abs(self, a: __m128i) -> __m128i {
         // Polyfill: (a ^ sign) - sign (two's complement trick)
         unsafe {
             let zero = _mm_setzero_si128();
@@ -1804,12 +1818,12 @@ impl I64x2Backend for archmage::X64V3Token {
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpeq_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi64(a, b);
             _mm_xor_si128(eq, _mm_set1_epi64x(-1))
@@ -1817,12 +1831,12 @@ impl I64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpgt_epi64(b, a) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let gt = _mm_cmpgt_epi64(a, b);
             _mm_xor_si128(gt, _mm_set1_epi64x(-1))
@@ -1830,12 +1844,12 @@ impl I64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpgt_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let lt = _mm_cmpgt_epi64(b, a);
             _mm_xor_si128(lt, _mm_set1_epi64x(-1))
@@ -1843,14 +1857,14 @@ impl I64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+    fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128i) -> i64 {
+    fn reduce_add(self, a: __m128i) -> i64 {
         unsafe {
             let hi = _mm_unpackhi_epi64(a, a);
             let sum = _mm_add_epi64(a, hi);
@@ -1862,34 +1876,34 @@ impl I64x2Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128i) -> __m128i {
+    fn not(self, a: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, _mm_set1_epi64x(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+    fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_and_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_or_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_slli_epi64::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_arithmetic_const<const N: i32>(self, a: __m128i) -> __m128i {
         // Polyfill: no native _srai_epi64 on AVX2.
         // Use logical shift + sign extension.
         unsafe {
@@ -1905,24 +1919,24 @@ impl I64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srli_epi64::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m128i) -> bool {
+    fn all_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) == 0x3 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m128i) -> bool {
+    fn any_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m128i) -> u32 {
+    fn bitmask(self, a: __m128i) -> u32 {
         unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) as u32 }
     }
 }
@@ -1955,12 +1969,12 @@ impl I64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256i, out: &mut [i64; 4]) {
+    fn store(self, repr: __m256i, out: &mut [i64; 4]) {
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256i) -> [i64; 4] {
+    fn to_array(self, repr: __m256i) -> [i64; 4] {
         let mut out = [0i64; 4];
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
         out
@@ -1969,12 +1983,12 @@ impl I64x4Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256i, b: __m256i) -> __m256i {
+    fn add(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_add_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256i, b: __m256i) -> __m256i {
+    fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi64(a, b) }
     }
 
@@ -1986,7 +2000,7 @@ impl I64x4Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256i, b: __m256i) -> __m256i {
+    fn min(self, a: __m256i, b: __m256i) -> __m256i {
         // Polyfill: compare+select (no native i64 min on AVX2)
         unsafe {
             let mask = _mm256_cmpgt_epi64(a, b);
@@ -1995,7 +2009,7 @@ impl I64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn max(a: __m256i, b: __m256i) -> __m256i {
+    fn max(self, a: __m256i, b: __m256i) -> __m256i {
         // Polyfill: compare+select (no native i64 max on AVX2)
         unsafe {
             let mask = _mm256_cmpgt_epi64(a, b);
@@ -2004,7 +2018,7 @@ impl I64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn abs(a: __m256i) -> __m256i {
+    fn abs(self, a: __m256i) -> __m256i {
         // Polyfill: (a ^ sign) - sign (two's complement trick)
         unsafe {
             let zero = _mm256_setzero_si256();
@@ -2016,12 +2030,12 @@ impl I64x4Backend for archmage::X64V3Token {
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpeq_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi64(a, b);
             _mm256_xor_si256(eq, _mm256_set1_epi64x(-1))
@@ -2029,12 +2043,12 @@ impl I64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpgt_epi64(b, a) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let gt = _mm256_cmpgt_epi64(a, b);
             _mm256_xor_si256(gt, _mm256_set1_epi64x(-1))
@@ -2042,12 +2056,12 @@ impl I64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpgt_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let lt = _mm256_cmpgt_epi64(b, a);
             _mm256_xor_si256(lt, _mm256_set1_epi64x(-1))
@@ -2055,14 +2069,14 @@ impl I64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+    fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256i) -> i64 {
+    fn reduce_add(self, a: __m256i) -> i64 {
         unsafe {
             let lo = _mm256_castsi256_si128(a);
             let hi = _mm256_extracti128_si256::<1>(a);
@@ -2076,34 +2090,34 @@ impl I64x4Backend for archmage::X64V3Token {
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256i) -> __m256i {
+    fn not(self, a: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, _mm256_set1_epi64x(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+    fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_and_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_or_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_slli_epi64::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_arithmetic_const<const N: i32>(self, a: __m256i) -> __m256i {
         // Polyfill: no native _srai_epi64 on AVX2.
         // Use logical shift + sign extension.
         unsafe {
@@ -2119,24 +2133,24 @@ impl I64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srli_epi64::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m256i) -> bool {
+    fn all_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) == 0xF }
     }
 
     #[inline(always)]
-    fn any_true(a: __m256i) -> bool {
+    fn any_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m256i) -> u32 {
+    fn bitmask(self, a: __m256i) -> u32 {
         unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) as u32 }
     }
 }
@@ -2168,12 +2182,12 @@ impl I8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128i, out: &mut [i8; 16]) {
+    fn store(self, repr: __m128i, out: &mut [i8; 16]) {
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128i) -> [i8; 16] {
+    fn to_array(self, repr: __m128i) -> [i8; 16] {
         let mut out = [0i8; 16];
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
         out
@@ -2182,12 +2196,12 @@ impl I8x16Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128i, b: __m128i) -> __m128i {
+    fn add(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_add_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128i, b: __m128i) -> __m128i {
+    fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_sub_epi8(a, b) }
     }
     #[inline(always)]
@@ -2198,28 +2212,28 @@ impl I8x16Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128i, b: __m128i) -> __m128i {
+    fn min(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_min_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m128i, b: __m128i) -> __m128i {
+    fn max(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_max_epi8(a, b) }
     }
     #[inline(always)]
-    fn abs(a: __m128i) -> __m128i {
+    fn abs(self, a: __m128i) -> __m128i {
         unsafe { _mm_abs_epi8(a) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpeq_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi8(a, b);
             _mm_andnot_si128(eq, _mm_set1_epi8(-1))
@@ -2227,12 +2241,12 @@ impl I8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpgt_epi8(b, a) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let gt = _mm_cmpgt_epi8(a, b);
             _mm_andnot_si128(gt, _mm_set1_epi8(-1))
@@ -2240,12 +2254,12 @@ impl I8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpgt_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let lt = _mm_cmpgt_epi8(b, a);
             _mm_andnot_si128(lt, _mm_set1_epi8(-1))
@@ -2253,44 +2267,44 @@ impl I8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+    fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128i) -> i8 {
-        let arr = <Self as I8x16Backend>::to_array(a);
+    fn reduce_add(self, a: __m128i) -> i8 {
+        let arr = <Self as I8x16Backend>::to_array(self, a);
         arr.iter().copied().fold(0i8, i8::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128i) -> __m128i {
+    fn not(self, a: __m128i) -> __m128i {
         unsafe { _mm_andnot_si128(a, _mm_set1_epi8(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+    fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_and_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_or_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, b) }
     }
 
     // ====== Shifts (polyfill via 16-bit) ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe {
             let shifted = _mm_slli_epi16::<N>(a);
             let mask = _mm_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
@@ -2299,7 +2313,7 @@ impl I8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe {
             let shifted = _mm_srli_epi16::<N>(a);
             let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2308,7 +2322,7 @@ impl I8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_arithmetic_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe {
             let shifted = _mm_srli_epi16::<N>(a);
             let byte_mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2323,17 +2337,17 @@ impl I8x16Backend for archmage::X64V3Token {
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m128i) -> bool {
+    fn all_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_epi8(a) == 0xFFFF_u32 as i32 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m128i) -> bool {
+    fn any_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_epi8(a) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m128i) -> u32 {
+    fn bitmask(self, a: __m128i) -> u32 {
         unsafe { _mm_movemask_epi8(a) as u32 }
     }
 }
@@ -2365,12 +2379,12 @@ impl I8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256i, out: &mut [i8; 32]) {
+    fn store(self, repr: __m256i, out: &mut [i8; 32]) {
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256i) -> [i8; 32] {
+    fn to_array(self, repr: __m256i) -> [i8; 32] {
         let mut out = [0i8; 32];
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
         out
@@ -2379,12 +2393,12 @@ impl I8x32Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256i, b: __m256i) -> __m256i {
+    fn add(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_add_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256i, b: __m256i) -> __m256i {
+    fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi8(a, b) }
     }
     #[inline(always)]
@@ -2395,28 +2409,28 @@ impl I8x32Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256i, b: __m256i) -> __m256i {
+    fn min(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_min_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m256i, b: __m256i) -> __m256i {
+    fn max(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_max_epi8(a, b) }
     }
     #[inline(always)]
-    fn abs(a: __m256i) -> __m256i {
+    fn abs(self, a: __m256i) -> __m256i {
         unsafe { _mm256_abs_epi8(a) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpeq_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi8(a, b);
             _mm256_andnot_si256(eq, _mm256_set1_epi8(-1))
@@ -2424,12 +2438,12 @@ impl I8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpgt_epi8(b, a) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let gt = _mm256_cmpgt_epi8(a, b);
             _mm256_andnot_si256(gt, _mm256_set1_epi8(-1))
@@ -2437,12 +2451,12 @@ impl I8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpgt_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let lt = _mm256_cmpgt_epi8(b, a);
             _mm256_andnot_si256(lt, _mm256_set1_epi8(-1))
@@ -2450,44 +2464,44 @@ impl I8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+    fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256i) -> i8 {
-        let arr = <Self as I8x32Backend>::to_array(a);
+    fn reduce_add(self, a: __m256i) -> i8 {
+        let arr = <Self as I8x32Backend>::to_array(self, a);
         arr.iter().copied().fold(0i8, i8::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256i) -> __m256i {
+    fn not(self, a: __m256i) -> __m256i {
         unsafe { _mm256_andnot_si256(a, _mm256_set1_epi8(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+    fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_and_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_or_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, b) }
     }
 
     // ====== Shifts (polyfill via 16-bit) ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe {
             let shifted = _mm256_slli_epi16::<N>(a);
             let mask = _mm256_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
@@ -2496,7 +2510,7 @@ impl I8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe {
             let shifted = _mm256_srli_epi16::<N>(a);
             let mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2505,7 +2519,7 @@ impl I8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_arithmetic_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe {
             let shifted = _mm256_srli_epi16::<N>(a);
             let byte_mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2520,17 +2534,17 @@ impl I8x32Backend for archmage::X64V3Token {
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m256i) -> bool {
+    fn all_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_epi8(a) == -1_i32 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m256i) -> bool {
+    fn any_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_epi8(a) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m256i) -> u32 {
+    fn bitmask(self, a: __m256i) -> u32 {
         unsafe { _mm256_movemask_epi8(a) as u32 }
     }
 }
@@ -2562,12 +2576,12 @@ impl U8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128i, out: &mut [u8; 16]) {
+    fn store(self, repr: __m128i, out: &mut [u8; 16]) {
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128i) -> [u8; 16] {
+    fn to_array(self, repr: __m128i) -> [u8; 16] {
         let mut out = [0u8; 16];
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
         out
@@ -2576,36 +2590,36 @@ impl U8x16Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128i, b: __m128i) -> __m128i {
+    fn add(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_add_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128i, b: __m128i) -> __m128i {
+    fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_sub_epi8(a, b) }
     }
 
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128i, b: __m128i) -> __m128i {
+    fn min(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_min_epu8(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m128i, b: __m128i) -> __m128i {
+    fn max(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_max_epu8(a, b) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpeq_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi8(a, b);
             _mm_andnot_si128(eq, _mm_set1_epi8(-1_i8))
@@ -2613,7 +2627,7 @@ impl U8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let bias = _mm_set1_epi8(i8::MIN);
             let sa = _mm_xor_si128(a, bias);
@@ -2623,65 +2637,65 @@ impl U8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
-        <Self as U8x16Backend>::simd_gt(b, a)
+    fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
+        <Self as U8x16Backend>::simd_gt(self, b, a)
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let gt = <Self as U8x16Backend>::simd_gt(a, b);
+            let gt = <Self as U8x16Backend>::simd_gt(self, a, b);
             _mm_andnot_si128(gt, _mm_set1_epi8(-1_i8))
         }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let lt = <Self as U8x16Backend>::simd_gt(b, a);
+            let lt = <Self as U8x16Backend>::simd_gt(self, b, a);
             _mm_andnot_si128(lt, _mm_set1_epi8(-1_i8))
         }
     }
 
     #[inline(always)]
-    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+    fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128i) -> u8 {
-        let arr = <Self as U8x16Backend>::to_array(a);
+    fn reduce_add(self, a: __m128i) -> u8 {
+        let arr = <Self as U8x16Backend>::to_array(self, a);
         arr.iter().copied().fold(0u8, u8::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128i) -> __m128i {
+    fn not(self, a: __m128i) -> __m128i {
         unsafe { _mm_andnot_si128(a, _mm_set1_epi8(-1_i8)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+    fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_and_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_or_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, b) }
     }
 
     // ====== Shifts (polyfill via 16-bit) ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe {
             let shifted = _mm_slli_epi16::<N>(a);
             let mask = _mm_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
@@ -2690,7 +2704,7 @@ impl U8x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe {
             let shifted = _mm_srli_epi16::<N>(a);
             let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2701,17 +2715,17 @@ impl U8x16Backend for archmage::X64V3Token {
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m128i) -> bool {
+    fn all_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_epi8(a) == 0xFFFF_u32 as i32 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m128i) -> bool {
+    fn any_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_epi8(a) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m128i) -> u32 {
+    fn bitmask(self, a: __m128i) -> u32 {
         unsafe { _mm_movemask_epi8(a) as u32 }
     }
 }
@@ -2743,12 +2757,12 @@ impl U8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256i, out: &mut [u8; 32]) {
+    fn store(self, repr: __m256i, out: &mut [u8; 32]) {
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256i) -> [u8; 32] {
+    fn to_array(self, repr: __m256i) -> [u8; 32] {
         let mut out = [0u8; 32];
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
         out
@@ -2757,36 +2771,36 @@ impl U8x32Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256i, b: __m256i) -> __m256i {
+    fn add(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_add_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256i, b: __m256i) -> __m256i {
+    fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi8(a, b) }
     }
 
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256i, b: __m256i) -> __m256i {
+    fn min(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_min_epu8(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m256i, b: __m256i) -> __m256i {
+    fn max(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_max_epu8(a, b) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpeq_epi8(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi8(a, b);
             _mm256_andnot_si256(eq, _mm256_set1_epi8(-1_i8))
@@ -2794,7 +2808,7 @@ impl U8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let bias = _mm256_set1_epi8(i8::MIN);
             let sa = _mm256_xor_si256(a, bias);
@@ -2804,65 +2818,65 @@ impl U8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
-        <Self as U8x32Backend>::simd_gt(b, a)
+    fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
+        <Self as U8x32Backend>::simd_gt(self, b, a)
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let gt = <Self as U8x32Backend>::simd_gt(a, b);
+            let gt = <Self as U8x32Backend>::simd_gt(self, a, b);
             _mm256_andnot_si256(gt, _mm256_set1_epi8(-1_i8))
         }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let lt = <Self as U8x32Backend>::simd_gt(b, a);
+            let lt = <Self as U8x32Backend>::simd_gt(self, b, a);
             _mm256_andnot_si256(lt, _mm256_set1_epi8(-1_i8))
         }
     }
 
     #[inline(always)]
-    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+    fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256i) -> u8 {
-        let arr = <Self as U8x32Backend>::to_array(a);
+    fn reduce_add(self, a: __m256i) -> u8 {
+        let arr = <Self as U8x32Backend>::to_array(self, a);
         arr.iter().copied().fold(0u8, u8::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256i) -> __m256i {
+    fn not(self, a: __m256i) -> __m256i {
         unsafe { _mm256_andnot_si256(a, _mm256_set1_epi8(-1_i8)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+    fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_and_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_or_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, b) }
     }
 
     // ====== Shifts (polyfill via 16-bit) ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe {
             let shifted = _mm256_slli_epi16::<N>(a);
             let mask = _mm256_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
@@ -2871,7 +2885,7 @@ impl U8x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe {
             let shifted = _mm256_srli_epi16::<N>(a);
             let mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2882,17 +2896,17 @@ impl U8x32Backend for archmage::X64V3Token {
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m256i) -> bool {
+    fn all_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_epi8(a) == -1_i32 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m256i) -> bool {
+    fn any_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_epi8(a) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m256i) -> u32 {
+    fn bitmask(self, a: __m256i) -> u32 {
         unsafe { _mm256_movemask_epi8(a) as u32 }
     }
 }
@@ -2924,12 +2938,12 @@ impl I16x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128i, out: &mut [i16; 8]) {
+    fn store(self, repr: __m128i, out: &mut [i16; 8]) {
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128i) -> [i16; 8] {
+    fn to_array(self, repr: __m128i) -> [i16; 8] {
         let mut out = [0i16; 8];
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
         out
@@ -2938,16 +2952,16 @@ impl I16x8Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128i, b: __m128i) -> __m128i {
+    fn add(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_add_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128i, b: __m128i) -> __m128i {
+    fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_sub_epi16(a, b) }
     }
     #[inline(always)]
-    fn mul(a: __m128i, b: __m128i) -> __m128i {
+    fn mul(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_mullo_epi16(a, b) }
     }
     #[inline(always)]
@@ -2958,28 +2972,28 @@ impl I16x8Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128i, b: __m128i) -> __m128i {
+    fn min(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_min_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m128i, b: __m128i) -> __m128i {
+    fn max(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_max_epi16(a, b) }
     }
     #[inline(always)]
-    fn abs(a: __m128i) -> __m128i {
+    fn abs(self, a: __m128i) -> __m128i {
         unsafe { _mm_abs_epi16(a) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpeq_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi16(a, b);
             _mm_andnot_si128(eq, _mm_set1_epi16(-1))
@@ -2987,12 +3001,12 @@ impl I16x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpgt_epi16(b, a) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let gt = _mm_cmpgt_epi16(a, b);
             _mm_andnot_si128(gt, _mm_set1_epi16(-1))
@@ -3000,12 +3014,12 @@ impl I16x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpgt_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let lt = _mm_cmpgt_epi16(b, a);
             _mm_andnot_si128(lt, _mm_set1_epi16(-1))
@@ -3013,71 +3027,71 @@ impl I16x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+    fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128i) -> i16 {
-        let arr = <Self as I16x8Backend>::to_array(a);
+    fn reduce_add(self, a: __m128i) -> i16 {
+        let arr = <Self as I16x8Backend>::to_array(self, a);
         arr.iter().copied().fold(0i16, i16::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128i) -> __m128i {
+    fn not(self, a: __m128i) -> __m128i {
         unsafe { _mm_andnot_si128(a, _mm_set1_epi16(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+    fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_and_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_or_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_slli_epi16::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srli_epi16::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_arithmetic_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srai_epi16::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m128i) -> bool {
+    fn all_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_epi8(a) == 0xFFFF_u32 as i32 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m128i) -> bool {
+    fn any_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_epi8(a) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m128i) -> u32 {
+    fn bitmask(self, a: __m128i) -> u32 {
         unsafe {
             let shifted = _mm_srai_epi16::<15>(a);
             let packed = _mm_packs_epi16(shifted, shifted);
@@ -3113,12 +3127,12 @@ impl I16x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256i, out: &mut [i16; 16]) {
+    fn store(self, repr: __m256i, out: &mut [i16; 16]) {
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256i) -> [i16; 16] {
+    fn to_array(self, repr: __m256i) -> [i16; 16] {
         let mut out = [0i16; 16];
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
         out
@@ -3127,16 +3141,16 @@ impl I16x16Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256i, b: __m256i) -> __m256i {
+    fn add(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_add_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256i, b: __m256i) -> __m256i {
+    fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi16(a, b) }
     }
     #[inline(always)]
-    fn mul(a: __m256i, b: __m256i) -> __m256i {
+    fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_mullo_epi16(a, b) }
     }
     #[inline(always)]
@@ -3147,28 +3161,28 @@ impl I16x16Backend for archmage::X64V3Token {
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256i, b: __m256i) -> __m256i {
+    fn min(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_min_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m256i, b: __m256i) -> __m256i {
+    fn max(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_max_epi16(a, b) }
     }
     #[inline(always)]
-    fn abs(a: __m256i) -> __m256i {
+    fn abs(self, a: __m256i) -> __m256i {
         unsafe { _mm256_abs_epi16(a) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpeq_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi16(a, b);
             _mm256_andnot_si256(eq, _mm256_set1_epi16(-1))
@@ -3176,12 +3190,12 @@ impl I16x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpgt_epi16(b, a) }
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let gt = _mm256_cmpgt_epi16(a, b);
             _mm256_andnot_si256(gt, _mm256_set1_epi16(-1))
@@ -3189,12 +3203,12 @@ impl I16x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpgt_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let lt = _mm256_cmpgt_epi16(b, a);
             _mm256_andnot_si256(lt, _mm256_set1_epi16(-1))
@@ -3202,71 +3216,71 @@ impl I16x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+    fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256i) -> i16 {
-        let arr = <Self as I16x16Backend>::to_array(a);
+    fn reduce_add(self, a: __m256i) -> i16 {
+        let arr = <Self as I16x16Backend>::to_array(self, a);
         arr.iter().copied().fold(0i16, i16::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256i) -> __m256i {
+    fn not(self, a: __m256i) -> __m256i {
         unsafe { _mm256_andnot_si256(a, _mm256_set1_epi16(-1)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+    fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_and_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_or_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_slli_epi16::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srli_epi16::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_arithmetic_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srai_epi16::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m256i) -> bool {
+    fn all_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_epi8(a) == -1_i32 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m256i) -> bool {
+    fn any_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_epi8(a) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m256i) -> u32 {
+    fn bitmask(self, a: __m256i) -> u32 {
         unsafe {
             let shifted = _mm256_srai_epi16::<15>(a);
             let lo = _mm256_castsi256_si128(shifted);
@@ -3304,12 +3318,12 @@ impl U16x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128i, out: &mut [u16; 8]) {
+    fn store(self, repr: __m128i, out: &mut [u16; 8]) {
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128i) -> [u16; 8] {
+    fn to_array(self, repr: __m128i) -> [u16; 8] {
         let mut out = [0u16; 8];
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
         out
@@ -3318,40 +3332,40 @@ impl U16x8Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128i, b: __m128i) -> __m128i {
+    fn add(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_add_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128i, b: __m128i) -> __m128i {
+    fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_sub_epi16(a, b) }
     }
     #[inline(always)]
-    fn mul(a: __m128i, b: __m128i) -> __m128i {
+    fn mul(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_mullo_epi16(a, b) }
     }
 
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128i, b: __m128i) -> __m128i {
+    fn min(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_min_epu16(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m128i, b: __m128i) -> __m128i {
+    fn max(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_max_epu16(a, b) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpeq_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi16(a, b);
             _mm_andnot_si128(eq, _mm_set1_epi16(-1_i16))
@@ -3359,7 +3373,7 @@ impl U16x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let bias = _mm_set1_epi16(i16::MIN);
             let sa = _mm_xor_si128(a, bias);
@@ -3369,87 +3383,87 @@ impl U16x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
-        <Self as U16x8Backend>::simd_gt(b, a)
+    fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
+        <Self as U16x8Backend>::simd_gt(self, b, a)
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let gt = <Self as U16x8Backend>::simd_gt(a, b);
+            let gt = <Self as U16x8Backend>::simd_gt(self, a, b);
             _mm_andnot_si128(gt, _mm_set1_epi16(-1_i16))
         }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let lt = <Self as U16x8Backend>::simd_gt(b, a);
+            let lt = <Self as U16x8Backend>::simd_gt(self, b, a);
             _mm_andnot_si128(lt, _mm_set1_epi16(-1_i16))
         }
     }
 
     #[inline(always)]
-    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+    fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128i) -> u16 {
-        let arr = <Self as U16x8Backend>::to_array(a);
+    fn reduce_add(self, a: __m128i) -> u16 {
+        let arr = <Self as U16x8Backend>::to_array(self, a);
         arr.iter().copied().fold(0u16, u16::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128i) -> __m128i {
+    fn not(self, a: __m128i) -> __m128i {
         unsafe { _mm_andnot_si128(a, _mm_set1_epi16(-1_i16)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+    fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_and_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_or_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_slli_epi16::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srli_epi16::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m128i) -> bool {
+    fn all_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_epi8(a) == 0xFFFF_u32 as i32 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m128i) -> bool {
+    fn any_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_epi8(a) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m128i) -> u32 {
+    fn bitmask(self, a: __m128i) -> u32 {
         unsafe {
             let shifted = _mm_srai_epi16::<15>(a);
             let packed = _mm_packs_epi16(shifted, shifted);
@@ -3485,12 +3499,12 @@ impl U16x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256i, out: &mut [u16; 16]) {
+    fn store(self, repr: __m256i, out: &mut [u16; 16]) {
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256i) -> [u16; 16] {
+    fn to_array(self, repr: __m256i) -> [u16; 16] {
         let mut out = [0u16; 16];
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
         out
@@ -3499,40 +3513,40 @@ impl U16x16Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256i, b: __m256i) -> __m256i {
+    fn add(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_add_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256i, b: __m256i) -> __m256i {
+    fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi16(a, b) }
     }
     #[inline(always)]
-    fn mul(a: __m256i, b: __m256i) -> __m256i {
+    fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_mullo_epi16(a, b) }
     }
 
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256i, b: __m256i) -> __m256i {
+    fn min(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_min_epu16(a, b) }
     }
 
     #[inline(always)]
-    fn max(a: __m256i, b: __m256i) -> __m256i {
+    fn max(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_max_epu16(a, b) }
     }
 
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpeq_epi16(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi16(a, b);
             _mm256_andnot_si256(eq, _mm256_set1_epi16(-1_i16))
@@ -3540,7 +3554,7 @@ impl U16x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let bias = _mm256_set1_epi16(i16::MIN);
             let sa = _mm256_xor_si256(a, bias);
@@ -3550,87 +3564,87 @@ impl U16x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
-        <Self as U16x16Backend>::simd_gt(b, a)
+    fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
+        <Self as U16x16Backend>::simd_gt(self, b, a)
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let gt = <Self as U16x16Backend>::simd_gt(a, b);
+            let gt = <Self as U16x16Backend>::simd_gt(self, a, b);
             _mm256_andnot_si256(gt, _mm256_set1_epi16(-1_i16))
         }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let lt = <Self as U16x16Backend>::simd_gt(b, a);
+            let lt = <Self as U16x16Backend>::simd_gt(self, b, a);
             _mm256_andnot_si256(lt, _mm256_set1_epi16(-1_i16))
         }
     }
 
     #[inline(always)]
-    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+    fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256i) -> u16 {
-        let arr = <Self as U16x16Backend>::to_array(a);
+    fn reduce_add(self, a: __m256i) -> u16 {
+        let arr = <Self as U16x16Backend>::to_array(self, a);
         arr.iter().copied().fold(0u16, u16::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256i) -> __m256i {
+    fn not(self, a: __m256i) -> __m256i {
         unsafe { _mm256_andnot_si256(a, _mm256_set1_epi16(-1_i16)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+    fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_and_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_or_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_slli_epi16::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srli_epi16::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m256i) -> bool {
+    fn all_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_epi8(a) == -1_i32 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m256i) -> bool {
+    fn any_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_epi8(a) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m256i) -> u32 {
+    fn bitmask(self, a: __m256i) -> u32 {
         unsafe {
             let shifted = _mm256_srai_epi16::<15>(a);
             let lo = _mm256_castsi256_si128(shifted);
@@ -3668,12 +3682,12 @@ impl U64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m128i, out: &mut [u64; 2]) {
+    fn store(self, repr: __m128i, out: &mut [u64; 2]) {
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m128i) -> [u64; 2] {
+    fn to_array(self, repr: __m128i) -> [u64; 2] {
         let mut out = [0u64; 2];
         unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
         out
@@ -3682,19 +3696,19 @@ impl U64x2Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m128i, b: __m128i) -> __m128i {
+    fn add(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_add_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m128i, b: __m128i) -> __m128i {
+    fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_sub_epi64(a, b) }
     }
 
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m128i, b: __m128i) -> __m128i {
+    fn min(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let bias = _mm_set1_epi64x(i64::MIN);
             let a_biased = _mm_xor_si128(a, bias);
@@ -3705,7 +3719,7 @@ impl U64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn max(a: __m128i, b: __m128i) -> __m128i {
+    fn max(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let bias = _mm_set1_epi64x(i64::MIN);
             let a_biased = _mm_xor_si128(a, bias);
@@ -3718,12 +3732,12 @@ impl U64x2Backend for archmage::X64V3Token {
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_cmpeq_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let eq = _mm_cmpeq_epi64(a, b);
             _mm_andnot_si128(eq, _mm_set1_epi64x(-1_i64))
@@ -3731,7 +3745,7 @@ impl U64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
             let bias = _mm_set1_epi64x(i64::MIN);
             let sa = _mm_xor_si128(a, bias);
@@ -3741,87 +3755,87 @@ impl U64x2Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m128i, b: __m128i) -> __m128i {
-        <Self as U64x2Backend>::simd_gt(b, a)
+    fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
+        <Self as U64x2Backend>::simd_gt(self, b, a)
     }
 
     #[inline(always)]
-    fn simd_le(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let gt = <Self as U64x2Backend>::simd_gt(a, b);
+            let gt = <Self as U64x2Backend>::simd_gt(self, a, b);
             _mm_andnot_si128(gt, _mm_set1_epi64x(-1_i64))
         }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m128i, b: __m128i) -> __m128i {
+    fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe {
-            let lt = <Self as U64x2Backend>::simd_gt(b, a);
+            let lt = <Self as U64x2Backend>::simd_gt(self, b, a);
             _mm_andnot_si128(lt, _mm_set1_epi64x(-1_i64))
         }
     }
 
     #[inline(always)]
-    fn blend(mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
+    fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         unsafe { _mm_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m128i) -> u64 {
-        let arr = <Self as U64x2Backend>::to_array(a);
+    fn reduce_add(self, a: __m128i) -> u64 {
+        let arr = <Self as U64x2Backend>::to_array(self, a);
         arr.iter().copied().fold(0u64, u64::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m128i) -> __m128i {
+    fn not(self, a: __m128i) -> __m128i {
         unsafe { _mm_andnot_si128(a, _mm_set1_epi64x(-1_i64)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m128i, b: __m128i) -> __m128i {
+    fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_and_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_or_si128(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m128i, b: __m128i) -> __m128i {
+    fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         unsafe { _mm_xor_si128(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_slli_epi64::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m128i) -> __m128i {
+    fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srli_epi64::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m128i) -> bool {
+    fn all_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) == 0x3 }
     }
 
     #[inline(always)]
-    fn any_true(a: __m128i) -> bool {
+    fn any_true(self, a: __m128i) -> bool {
         unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m128i) -> u32 {
+    fn bitmask(self, a: __m128i) -> u32 {
         unsafe { _mm_movemask_pd(_mm_castsi128_pd(a)) as u32 }
     }
 }
@@ -3853,12 +3867,12 @@ impl U64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: __m256i, out: &mut [u64; 4]) {
+    fn store(self, repr: __m256i, out: &mut [u64; 4]) {
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
     }
 
     #[inline(always)]
-    fn to_array(repr: __m256i) -> [u64; 4] {
+    fn to_array(self, repr: __m256i) -> [u64; 4] {
         let mut out = [0u64; 4];
         unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
         out
@@ -3867,19 +3881,19 @@ impl U64x4Backend for archmage::X64V3Token {
     // ====== Arithmetic ======
 
     #[inline(always)]
-    fn add(a: __m256i, b: __m256i) -> __m256i {
+    fn add(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_add_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn sub(a: __m256i, b: __m256i) -> __m256i {
+    fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_sub_epi64(a, b) }
     }
 
     // ====== Math ======
 
     #[inline(always)]
-    fn min(a: __m256i, b: __m256i) -> __m256i {
+    fn min(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let bias = _mm256_set1_epi64x(i64::MIN);
             let a_biased = _mm256_xor_si256(a, bias);
@@ -3890,7 +3904,7 @@ impl U64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn max(a: __m256i, b: __m256i) -> __m256i {
+    fn max(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let bias = _mm256_set1_epi64x(i64::MIN);
             let a_biased = _mm256_xor_si256(a, bias);
@@ -3903,12 +3917,12 @@ impl U64x4Backend for archmage::X64V3Token {
     // ====== Comparisons ======
 
     #[inline(always)]
-    fn simd_eq(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_cmpeq_epi64(a, b) }
     }
 
     #[inline(always)]
-    fn simd_ne(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let eq = _mm256_cmpeq_epi64(a, b);
             _mm256_andnot_si256(eq, _mm256_set1_epi64x(-1_i64))
@@ -3916,7 +3930,7 @@ impl U64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_gt(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
             let bias = _mm256_set1_epi64x(i64::MIN);
             let sa = _mm256_xor_si256(a, bias);
@@ -3926,87 +3940,87 @@ impl U64x4Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_lt(a: __m256i, b: __m256i) -> __m256i {
-        <Self as U64x4Backend>::simd_gt(b, a)
+    fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
+        <Self as U64x4Backend>::simd_gt(self, b, a)
     }
 
     #[inline(always)]
-    fn simd_le(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let gt = <Self as U64x4Backend>::simd_gt(a, b);
+            let gt = <Self as U64x4Backend>::simd_gt(self, a, b);
             _mm256_andnot_si256(gt, _mm256_set1_epi64x(-1_i64))
         }
     }
 
     #[inline(always)]
-    fn simd_ge(a: __m256i, b: __m256i) -> __m256i {
+    fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe {
-            let lt = <Self as U64x4Backend>::simd_gt(b, a);
+            let lt = <Self as U64x4Backend>::simd_gt(self, b, a);
             _mm256_andnot_si256(lt, _mm256_set1_epi64x(-1_i64))
         }
     }
 
     #[inline(always)]
-    fn blend(mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
+    fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         unsafe { _mm256_blendv_epi8(if_false, if_true, mask) }
     }
 
     // ====== Reductions ======
 
     #[inline(always)]
-    fn reduce_add(a: __m256i) -> u64 {
-        let arr = <Self as U64x4Backend>::to_array(a);
+    fn reduce_add(self, a: __m256i) -> u64 {
+        let arr = <Self as U64x4Backend>::to_array(self, a);
         arr.iter().copied().fold(0u64, u64::wrapping_add)
     }
 
     // ====== Bitwise ======
 
     #[inline(always)]
-    fn not(a: __m256i) -> __m256i {
+    fn not(self, a: __m256i) -> __m256i {
         unsafe { _mm256_andnot_si256(a, _mm256_set1_epi64x(-1_i64)) }
     }
 
     #[inline(always)]
-    fn bitand(a: __m256i, b: __m256i) -> __m256i {
+    fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_and_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_or_si256(a, b) }
     }
 
     #[inline(always)]
-    fn bitxor(a: __m256i, b: __m256i) -> __m256i {
+    fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         unsafe { _mm256_xor_si256(a, b) }
     }
 
     // ====== Shifts ======
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_slli_epi64::<N>(a) }
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: __m256i) -> __m256i {
+    fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srli_epi64::<N>(a) }
     }
 
     // ====== Boolean ======
 
     #[inline(always)]
-    fn all_true(a: __m256i) -> bool {
+    fn all_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) == 0xF }
     }
 
     #[inline(always)]
-    fn any_true(a: __m256i) -> bool {
+    fn any_true(self, a: __m256i) -> bool {
         unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) != 0 }
     }
 
     #[inline(always)]
-    fn bitmask(a: __m256i) -> u32 {
+    fn bitmask(self, a: __m256i) -> u32 {
         unsafe { _mm256_movemask_pd(_mm256_castsi256_pd(a)) as u32 }
     }
 }
@@ -4014,27 +4028,27 @@ impl U64x4Backend for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl F32x4Convert for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_f32_to_i32(a: __m128) -> __m128i {
+    fn bitcast_f32_to_i32(self, a: __m128) -> __m128i {
         unsafe { _mm_castps_si128(a) }
     }
 
     #[inline(always)]
-    fn bitcast_i32_to_f32(a: __m128i) -> __m128 {
+    fn bitcast_i32_to_f32(self, a: __m128i) -> __m128 {
         unsafe { _mm_castsi128_ps(a) }
     }
 
     #[inline(always)]
-    fn convert_f32_to_i32(a: __m128) -> __m128i {
+    fn convert_f32_to_i32(self, a: __m128) -> __m128i {
         unsafe { _mm_cvttps_epi32(a) }
     }
 
     #[inline(always)]
-    fn convert_f32_to_i32_round(a: __m128) -> __m128i {
+    fn convert_f32_to_i32_round(self, a: __m128) -> __m128i {
         unsafe { _mm_cvtps_epi32(a) }
     }
 
     #[inline(always)]
-    fn convert_i32_to_f32(a: __m128i) -> __m128 {
+    fn convert_i32_to_f32(self, a: __m128i) -> __m128 {
         unsafe { _mm_cvtepi32_ps(a) }
     }
 }
@@ -4042,27 +4056,27 @@ impl F32x4Convert for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl F32x8Convert for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_f32_to_i32(a: __m256) -> __m256i {
+    fn bitcast_f32_to_i32(self, a: __m256) -> __m256i {
         unsafe { _mm256_castps_si256(a) }
     }
 
     #[inline(always)]
-    fn bitcast_i32_to_f32(a: __m256i) -> __m256 {
+    fn bitcast_i32_to_f32(self, a: __m256i) -> __m256 {
         unsafe { _mm256_castsi256_ps(a) }
     }
 
     #[inline(always)]
-    fn convert_f32_to_i32(a: __m256) -> __m256i {
+    fn convert_f32_to_i32(self, a: __m256) -> __m256i {
         unsafe { _mm256_cvttps_epi32(a) }
     }
 
     #[inline(always)]
-    fn convert_f32_to_i32_round(a: __m256) -> __m256i {
+    fn convert_f32_to_i32_round(self, a: __m256) -> __m256i {
         unsafe { _mm256_cvtps_epi32(a) }
     }
 
     #[inline(always)]
-    fn convert_i32_to_f32(a: __m256i) -> __m256 {
+    fn convert_i32_to_f32(self, a: __m256i) -> __m256 {
         unsafe { _mm256_cvtepi32_ps(a) }
     }
 }
@@ -4070,27 +4084,27 @@ impl F32x8Convert for archmage::X64V3Token {
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
 impl F32x16Convert for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_f32_to_i32(a: [__m256; 2]) -> [__m256i; 2] {
+    fn bitcast_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {
         unsafe { [_mm256_castps_si256(a[0]), _mm256_castps_si256(a[1])] }
     }
 
     #[inline(always)]
-    fn bitcast_i32_to_f32(a: [__m256i; 2]) -> [__m256; 2] {
+    fn bitcast_i32_to_f32(self, a: [__m256i; 2]) -> [__m256; 2] {
         unsafe { [_mm256_castsi256_ps(a[0]), _mm256_castsi256_ps(a[1])] }
     }
 
     #[inline(always)]
-    fn convert_f32_to_i32(a: [__m256; 2]) -> [__m256i; 2] {
+    fn convert_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {
         unsafe { [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])] }
     }
 
     #[inline(always)]
-    fn convert_f32_to_i32_round(a: [__m256; 2]) -> [__m256i; 2] {
+    fn convert_f32_to_i32_round(self, a: [__m256; 2]) -> [__m256i; 2] {
         unsafe { [_mm256_cvtps_epi32(a[0]), _mm256_cvtps_epi32(a[1])] }
     }
 
     #[inline(always)]
-    fn convert_i32_to_f32(a: [__m256i; 2]) -> [__m256; 2] {
+    fn convert_i32_to_f32(self, a: [__m256i; 2]) -> [__m256; 2] {
         unsafe { [_mm256_cvtepi32_ps(a[0]), _mm256_cvtepi32_ps(a[1])] }
     }
 }
@@ -4098,12 +4112,12 @@ impl F32x16Convert for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl U32x4Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_u32_to_i32(a: __m128i) -> __m128i {
+    fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {
         a
     }
 
     #[inline(always)]
-    fn bitcast_i32_to_u32(a: __m128i) -> __m128i {
+    fn bitcast_i32_to_u32(self, a: __m128i) -> __m128i {
         a
     }
 }
@@ -4111,12 +4125,12 @@ impl U32x4Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl U32x8Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_u32_to_i32(a: __m256i) -> __m256i {
+    fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {
         a
     }
 
     #[inline(always)]
-    fn bitcast_i32_to_u32(a: __m256i) -> __m256i {
+    fn bitcast_i32_to_u32(self, a: __m256i) -> __m256i {
         a
     }
 }
@@ -4124,12 +4138,12 @@ impl U32x8Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl I64x2Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_i64_to_f64(a: __m128i) -> __m128d {
+    fn bitcast_i64_to_f64(self, a: __m128i) -> __m128d {
         unsafe { _mm_castsi128_pd(a) }
     }
 
     #[inline(always)]
-    fn bitcast_f64_to_i64(a: __m128d) -> __m128i {
+    fn bitcast_f64_to_i64(self, a: __m128d) -> __m128i {
         unsafe { _mm_castpd_si128(a) }
     }
 }
@@ -4137,12 +4151,12 @@ impl I64x2Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl I64x4Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_i64_to_f64(a: __m256i) -> __m256d {
+    fn bitcast_i64_to_f64(self, a: __m256i) -> __m256d {
         unsafe { _mm256_castsi256_pd(a) }
     }
 
     #[inline(always)]
-    fn bitcast_f64_to_i64(a: __m256d) -> __m256i {
+    fn bitcast_f64_to_i64(self, a: __m256d) -> __m256i {
         unsafe { _mm256_castpd_si256(a) }
     }
 }
@@ -4150,11 +4164,11 @@ impl I64x4Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl I8x16Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_i8_to_u8(a: __m128i) -> __m128i {
+    fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {
         a
     }
     #[inline(always)]
-    fn bitcast_u8_to_i8(a: __m128i) -> __m128i {
+    fn bitcast_u8_to_i8(self, a: __m128i) -> __m128i {
         a
     }
 }
@@ -4162,11 +4176,11 @@ impl I8x16Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl I8x32Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_i8_to_u8(a: __m256i) -> __m256i {
+    fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {
         a
     }
     #[inline(always)]
-    fn bitcast_u8_to_i8(a: __m256i) -> __m256i {
+    fn bitcast_u8_to_i8(self, a: __m256i) -> __m256i {
         a
     }
 }
@@ -4174,11 +4188,11 @@ impl I8x32Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl I16x8Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_i16_to_u16(a: __m128i) -> __m128i {
+    fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {
         a
     }
     #[inline(always)]
-    fn bitcast_u16_to_i16(a: __m128i) -> __m128i {
+    fn bitcast_u16_to_i16(self, a: __m128i) -> __m128i {
         a
     }
 }
@@ -4186,11 +4200,11 @@ impl I16x8Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl I16x16Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_i16_to_u16(a: __m256i) -> __m256i {
+    fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {
         a
     }
     #[inline(always)]
-    fn bitcast_u16_to_i16(a: __m256i) -> __m256i {
+    fn bitcast_u16_to_i16(self, a: __m256i) -> __m256i {
         a
     }
 }
@@ -4198,11 +4212,11 @@ impl I16x16Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl U64x2Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_u64_to_i64(a: __m128i) -> __m128i {
+    fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {
         a
     }
     #[inline(always)]
-    fn bitcast_i64_to_u64(a: __m128i) -> __m128i {
+    fn bitcast_i64_to_u64(self, a: __m128i) -> __m128i {
         a
     }
 }
@@ -4210,11 +4224,11 @@ impl U64x2Bitcast for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl U64x4Bitcast for archmage::X64V3Token {
     #[inline(always)]
-    fn bitcast_u64_to_i64(a: __m256i) -> __m256i {
+    fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {
         a
     }
     #[inline(always)]
-    fn bitcast_i64_to_u64(a: __m256i) -> __m256i {
+    fn bitcast_i64_to_u64(self, a: __m256i) -> __m256i {
         a
     }
 }
@@ -4257,16 +4271,16 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256; 2], out: &mut [f32; 16]) {
+    fn store(self, repr: [__m256; 2], out: &mut [f32; 16]) {
         let (lo, hi) = out.split_at_mut(8);
-        <archmage::X64V3Token as F32x8Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as F32x8Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as F32x8Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as F32x8Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256; 2]) -> [f32; 16] {
-        let lo = <archmage::X64V3Token as F32x8Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as F32x8Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256; 2]) -> [f32; 16] {
+        let lo = <archmage::X64V3Token as F32x8Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as F32x8Backend>::to_array(self, repr[1]);
         let mut out = [0.0f32; 16];
         out[..8].copy_from_slice(&lo);
         out[8..].copy_from_slice(&hi);
@@ -4274,34 +4288,34 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn add(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn sub(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::sub(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn mul(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::mul(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::mul(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::mul(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::mul(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn div(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn div(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::div(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::div(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::div(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::div(self, a[1], b[1]),
         ]
     }
 
@@ -4314,94 +4328,94 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn min(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn min(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn max(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sqrt(a: [__m256; 2]) -> [__m256; 2] {
+    fn sqrt(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::sqrt(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::sqrt(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::sqrt(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::sqrt(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn abs(a: [__m256; 2]) -> [__m256; 2] {
+    fn abs(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::abs(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::abs(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::abs(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::abs(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn floor(a: [__m256; 2]) -> [__m256; 2] {
+    fn floor(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::floor(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::floor(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::floor(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::floor(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn ceil(a: [__m256; 2]) -> [__m256; 2] {
+    fn ceil(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::ceil(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::ceil(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::ceil(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::ceil(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn round(a: [__m256; 2]) -> [__m256; 2] {
+    fn round(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::round(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::round(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::round(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::round(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul_add(a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
+    fn mul_add(self, a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::mul_add(a[0], b[0], c[0]),
-            <archmage::X64V3Token as F32x8Backend>::mul_add(a[1], b[1], c[1]),
+            <archmage::X64V3Token as F32x8Backend>::mul_add(self, a[0], b[0], c[0]),
+            <archmage::X64V3Token as F32x8Backend>::mul_add(self, a[1], b[1], c[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul_sub(a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
+    fn mul_sub(self, a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::mul_sub(a[0], b[0], c[0]),
-            <archmage::X64V3Token as F32x8Backend>::mul_sub(a[1], b[1], c[1]),
+            <archmage::X64V3Token as F32x8Backend>::mul_sub(self, a[0], b[0], c[0]),
+            <archmage::X64V3Token as F32x8Backend>::mul_sub(self, a[1], b[1], c[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256; 2]) -> f32 {
-        <archmage::X64V3Token as F32x8Backend>::reduce_add(a[0])
-            + <archmage::X64V3Token as F32x8Backend>::reduce_add(a[1])
+    fn reduce_add(self, a: [__m256; 2]) -> f32 {
+        <archmage::X64V3Token as F32x8Backend>::reduce_add(self, a[0])
+            + <archmage::X64V3Token as F32x8Backend>::reduce_add(self, a[1])
     }
 
     #[inline(always)]
-    fn reduce_min(a: [__m256; 2]) -> f32 {
-        let lo = <archmage::X64V3Token as F32x8Backend>::reduce_min(a[0]);
-        let hi = <archmage::X64V3Token as F32x8Backend>::reduce_min(a[1]);
+    fn reduce_min(self, a: [__m256; 2]) -> f32 {
+        let lo = <archmage::X64V3Token as F32x8Backend>::reduce_min(self, a[0]);
+        let hi = <archmage::X64V3Token as F32x8Backend>::reduce_min(self, a[1]);
         if lo < hi { lo } else { hi }
     }
 
     #[inline(always)]
-    fn reduce_max(a: [__m256; 2]) -> f32 {
-        let lo = <archmage::X64V3Token as F32x8Backend>::reduce_max(a[0]);
-        let hi = <archmage::X64V3Token as F32x8Backend>::reduce_max(a[1]);
+    fn reduce_max(self, a: [__m256; 2]) -> f32 {
+        let lo = <archmage::X64V3Token as F32x8Backend>::reduce_max(self, a[0]);
+        let hi = <archmage::X64V3Token as F32x8Backend>::reduce_max(self, a[1]);
         if lo > hi { lo } else { hi }
     }
 
@@ -4422,90 +4436,90 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn simd_eq(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn simd_ne(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn simd_lt(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn simd_le(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn simd_gt(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn simd_ge(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256; 2], if_true: [__m256; 2], if_false: [__m256; 2]) -> [__m256; 2] {
+    fn blend(self, mask: [__m256; 2], if_true: [__m256; 2], if_false: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as F32x8Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as F32x8Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as F32x8Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256; 2]) -> [__m256; 2] {
+    fn not(self, a: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::not(a[0]),
-            <archmage::X64V3Token as F32x8Backend>::not(a[1]),
+            <archmage::X64V3Token as F32x8Backend>::not(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn bitand(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn bitor(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+    fn bitxor(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
-            <archmage::X64V3Token as F32x8Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as F32x8Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as F32x8Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as F32x8Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -4549,16 +4563,16 @@ impl F64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256d; 2], out: &mut [f64; 8]) {
+    fn store(self, repr: [__m256d; 2], out: &mut [f64; 8]) {
         let (lo, hi) = out.split_at_mut(4);
-        <archmage::X64V3Token as F64x4Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as F64x4Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as F64x4Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as F64x4Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256d; 2]) -> [f64; 8] {
-        let lo = <archmage::X64V3Token as F64x4Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as F64x4Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256d; 2]) -> [f64; 8] {
+        let lo = <archmage::X64V3Token as F64x4Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as F64x4Backend>::to_array(self, repr[1]);
         let mut out = [0.0f64; 8];
         out[..4].copy_from_slice(&lo);
         out[4..].copy_from_slice(&hi);
@@ -4566,34 +4580,34 @@ impl F64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn add(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn sub(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::sub(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn mul(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::mul(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::mul(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::mul(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::mul(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn div(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn div(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::div(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::div(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::div(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::div(self, a[1], b[1]),
         ]
     }
 
@@ -4606,94 +4620,94 @@ impl F64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn min(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn min(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn max(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sqrt(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn sqrt(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::sqrt(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::sqrt(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::sqrt(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::sqrt(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn abs(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn abs(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::abs(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::abs(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::abs(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::abs(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn floor(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn floor(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::floor(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::floor(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::floor(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::floor(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn ceil(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn ceil(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::ceil(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::ceil(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::ceil(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::ceil(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn round(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn round(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::round(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::round(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::round(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::round(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul_add(a: [__m256d; 2], b: [__m256d; 2], c: [__m256d; 2]) -> [__m256d; 2] {
+    fn mul_add(self, a: [__m256d; 2], b: [__m256d; 2], c: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::mul_add(a[0], b[0], c[0]),
-            <archmage::X64V3Token as F64x4Backend>::mul_add(a[1], b[1], c[1]),
+            <archmage::X64V3Token as F64x4Backend>::mul_add(self, a[0], b[0], c[0]),
+            <archmage::X64V3Token as F64x4Backend>::mul_add(self, a[1], b[1], c[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul_sub(a: [__m256d; 2], b: [__m256d; 2], c: [__m256d; 2]) -> [__m256d; 2] {
+    fn mul_sub(self, a: [__m256d; 2], b: [__m256d; 2], c: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::mul_sub(a[0], b[0], c[0]),
-            <archmage::X64V3Token as F64x4Backend>::mul_sub(a[1], b[1], c[1]),
+            <archmage::X64V3Token as F64x4Backend>::mul_sub(self, a[0], b[0], c[0]),
+            <archmage::X64V3Token as F64x4Backend>::mul_sub(self, a[1], b[1], c[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256d; 2]) -> f64 {
-        <archmage::X64V3Token as F64x4Backend>::reduce_add(a[0])
-            + <archmage::X64V3Token as F64x4Backend>::reduce_add(a[1])
+    fn reduce_add(self, a: [__m256d; 2]) -> f64 {
+        <archmage::X64V3Token as F64x4Backend>::reduce_add(self, a[0])
+            + <archmage::X64V3Token as F64x4Backend>::reduce_add(self, a[1])
     }
 
     #[inline(always)]
-    fn reduce_min(a: [__m256d; 2]) -> f64 {
-        let lo = <archmage::X64V3Token as F64x4Backend>::reduce_min(a[0]);
-        let hi = <archmage::X64V3Token as F64x4Backend>::reduce_min(a[1]);
+    fn reduce_min(self, a: [__m256d; 2]) -> f64 {
+        let lo = <archmage::X64V3Token as F64x4Backend>::reduce_min(self, a[0]);
+        let hi = <archmage::X64V3Token as F64x4Backend>::reduce_min(self, a[1]);
         if lo < hi { lo } else { hi }
     }
 
     #[inline(always)]
-    fn reduce_max(a: [__m256d; 2]) -> f64 {
-        let lo = <archmage::X64V3Token as F64x4Backend>::reduce_max(a[0]);
-        let hi = <archmage::X64V3Token as F64x4Backend>::reduce_max(a[1]);
+    fn reduce_max(self, a: [__m256d; 2]) -> f64 {
+        let lo = <archmage::X64V3Token as F64x4Backend>::reduce_max(self, a[0]);
+        let hi = <archmage::X64V3Token as F64x4Backend>::reduce_max(self, a[1]);
         if lo > hi { lo } else { hi }
     }
 
@@ -4714,90 +4728,95 @@ impl F64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn simd_eq(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn simd_ne(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn simd_lt(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn simd_le(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn simd_gt(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn simd_ge(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256d; 2], if_true: [__m256d; 2], if_false: [__m256d; 2]) -> [__m256d; 2] {
+    fn blend(
+        self,
+        mask: [__m256d; 2],
+        if_true: [__m256d; 2],
+        if_false: [__m256d; 2],
+    ) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as F64x4Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as F64x4Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as F64x4Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256d; 2]) -> [__m256d; 2] {
+    fn not(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::not(a[0]),
-            <archmage::X64V3Token as F64x4Backend>::not(a[1]),
+            <archmage::X64V3Token as F64x4Backend>::not(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn bitand(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn bitor(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+    fn bitxor(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
         [
-            <archmage::X64V3Token as F64x4Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as F64x4Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as F64x4Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as F64x4Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -4841,16 +4860,16 @@ impl I8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256i; 2], out: &mut [i8; 64]) {
+    fn store(self, repr: [__m256i; 2], out: &mut [i8; 64]) {
         let (lo, hi) = out.split_at_mut(32);
-        <archmage::X64V3Token as I8x32Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as I8x32Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as I8x32Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as I8x32Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256i; 2]) -> [i8; 64] {
-        let lo = <archmage::X64V3Token as I8x32Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as I8x32Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256i; 2]) -> [i8; 64] {
+        let lo = <archmage::X64V3Token as I8x32Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as I8x32Backend>::to_array(self, repr[1]);
         let mut out = [0; 64];
         out[..32].copy_from_slice(&lo);
         out[32..].copy_from_slice(&hi);
@@ -4858,18 +4877,18 @@ impl I8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::sub(self, a[1], b[1]),
         ]
     }
 
@@ -4882,163 +4901,169 @@ impl I8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn min(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn min(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn max(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn abs(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn abs(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::abs(a[0]),
-            <archmage::X64V3Token as I8x32Backend>::abs(a[1]),
+            <archmage::X64V3Token as I8x32Backend>::abs(self, a[0]),
+            <archmage::X64V3Token as I8x32Backend>::abs(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256i; 2]) -> i8 {
-        <archmage::X64V3Token as I8x32Backend>::reduce_add(a[0])
-            .wrapping_add(<archmage::X64V3Token as I8x32Backend>::reduce_add(a[1]))
+    fn reduce_add(self, a: [__m256i; 2]) -> i8 {
+        <archmage::X64V3Token as I8x32Backend>::reduce_add(self, a[0]).wrapping_add(
+            <archmage::X64V3Token as I8x32Backend>::reduce_add(self, a[1]),
+        )
     }
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shl_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::shl_const::<N>(a[0]),
-            <archmage::X64V3Token as I8x32Backend>::shl_const::<N>(a[1]),
+            <archmage::X64V3Token as I8x32Backend>::shl_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I8x32Backend>::shl_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_arithmetic_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::shr_arithmetic_const::<N>(a[0]),
-            <archmage::X64V3Token as I8x32Backend>::shr_arithmetic_const::<N>(a[1]),
+            <archmage::X64V3Token as I8x32Backend>::shr_arithmetic_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I8x32Backend>::shr_arithmetic_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_logical_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as I8x32Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as I8x32Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I8x32Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn all_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I8x32Backend>::all_true(a[0])
-            && <archmage::X64V3Token as I8x32Backend>::all_true(a[1])
+    fn all_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as I8x32Backend>::all_true(self, a[0])
+            && <archmage::X64V3Token as I8x32Backend>::all_true(self, a[1])
     }
 
     #[inline(always)]
-    fn any_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I8x32Backend>::any_true(a[0])
-            || <archmage::X64V3Token as I8x32Backend>::any_true(a[1])
+    fn any_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as I8x32Backend>::any_true(self, a[0])
+            || <archmage::X64V3Token as I8x32Backend>::any_true(self, a[1])
     }
 
     #[inline(always)]
-    fn bitmask(a: [__m256i; 2]) -> u64 {
-        let lo = <archmage::X64V3Token as I8x32Backend>::bitmask(a[0]) as u64;
-        let hi = <archmage::X64V3Token as I8x32Backend>::bitmask(a[1]) as u64;
+    fn bitmask(self, a: [__m256i; 2]) -> u64 {
+        let lo = <archmage::X64V3Token as I8x32Backend>::bitmask(self, a[0]) as u64;
+        let hi = <archmage::X64V3Token as I8x32Backend>::bitmask(self, a[1]) as u64;
         lo | (hi << 32)
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_eq(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ne(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_lt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_le(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_gt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ge(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256i; 2], if_true: [__m256i; 2], if_false: [__m256i; 2]) -> [__m256i; 2] {
+    fn blend(
+        self,
+        mask: [__m256i; 2],
+        if_true: [__m256i; 2],
+        if_false: [__m256i; 2],
+    ) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as I8x32Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as I8x32Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as I8x32Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn not(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::not(a[0]),
-            <archmage::X64V3Token as I8x32Backend>::not(a[1]),
+            <archmage::X64V3Token as I8x32Backend>::not(self, a[0]),
+            <archmage::X64V3Token as I8x32Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitand(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitxor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I8x32Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as I8x32Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as I8x32Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as I8x32Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -5082,16 +5107,16 @@ impl U8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256i; 2], out: &mut [u8; 64]) {
+    fn store(self, repr: [__m256i; 2], out: &mut [u8; 64]) {
         let (lo, hi) = out.split_at_mut(32);
-        <archmage::X64V3Token as U8x32Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as U8x32Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as U8x32Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as U8x32Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256i; 2]) -> [u8; 64] {
-        let lo = <archmage::X64V3Token as U8x32Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as U8x32Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256i; 2]) -> [u8; 64] {
+        let lo = <archmage::X64V3Token as U8x32Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as U8x32Backend>::to_array(self, repr[1]);
         let mut out = [0; 64];
         out[..32].copy_from_slice(&lo);
         out[32..].copy_from_slice(&hi);
@@ -5099,18 +5124,18 @@ impl U8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::sub(self, a[1], b[1]),
         ]
     }
 
@@ -5118,161 +5143,167 @@ impl U8x64Backend for archmage::X64V3Token {
     fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
         let z = <archmage::X64V3Token as U8x32Backend>::zero(self);
         [
-            <archmage::X64V3Token as U8x32Backend>::sub(z, a[0]),
-            <archmage::X64V3Token as U8x32Backend>::sub(z, a[1]),
+            <archmage::X64V3Token as U8x32Backend>::sub(self, z, a[0]),
+            <archmage::X64V3Token as U8x32Backend>::sub(self, z, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn min(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn min(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn max(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256i; 2]) -> u8 {
-        <archmage::X64V3Token as U8x32Backend>::reduce_add(a[0])
-            .wrapping_add(<archmage::X64V3Token as U8x32Backend>::reduce_add(a[1]))
+    fn reduce_add(self, a: [__m256i; 2]) -> u8 {
+        <archmage::X64V3Token as U8x32Backend>::reduce_add(self, a[0]).wrapping_add(
+            <archmage::X64V3Token as U8x32Backend>::reduce_add(self, a[1]),
+        )
     }
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shl_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::shl_const::<N>(a[0]),
-            <archmage::X64V3Token as U8x32Backend>::shl_const::<N>(a[1]),
+            <archmage::X64V3Token as U8x32Backend>::shl_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U8x32Backend>::shl_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_arithmetic_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_logical_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn all_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U8x32Backend>::all_true(a[0])
-            && <archmage::X64V3Token as U8x32Backend>::all_true(a[1])
+    fn all_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as U8x32Backend>::all_true(self, a[0])
+            && <archmage::X64V3Token as U8x32Backend>::all_true(self, a[1])
     }
 
     #[inline(always)]
-    fn any_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U8x32Backend>::any_true(a[0])
-            || <archmage::X64V3Token as U8x32Backend>::any_true(a[1])
+    fn any_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as U8x32Backend>::any_true(self, a[0])
+            || <archmage::X64V3Token as U8x32Backend>::any_true(self, a[1])
     }
 
     #[inline(always)]
-    fn bitmask(a: [__m256i; 2]) -> u64 {
-        let lo = <archmage::X64V3Token as U8x32Backend>::bitmask(a[0]) as u64;
-        let hi = <archmage::X64V3Token as U8x32Backend>::bitmask(a[1]) as u64;
+    fn bitmask(self, a: [__m256i; 2]) -> u64 {
+        let lo = <archmage::X64V3Token as U8x32Backend>::bitmask(self, a[0]) as u64;
+        let hi = <archmage::X64V3Token as U8x32Backend>::bitmask(self, a[1]) as u64;
         lo | (hi << 32)
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_eq(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ne(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_lt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_le(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_gt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ge(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256i; 2], if_true: [__m256i; 2], if_false: [__m256i; 2]) -> [__m256i; 2] {
+    fn blend(
+        self,
+        mask: [__m256i; 2],
+        if_true: [__m256i; 2],
+        if_false: [__m256i; 2],
+    ) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as U8x32Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as U8x32Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as U8x32Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn not(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::not(a[0]),
-            <archmage::X64V3Token as U8x32Backend>::not(a[1]),
+            <archmage::X64V3Token as U8x32Backend>::not(self, a[0]),
+            <archmage::X64V3Token as U8x32Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitand(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitxor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U8x32Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as U8x32Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as U8x32Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as U8x32Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -5316,16 +5347,16 @@ impl I16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256i; 2], out: &mut [i16; 32]) {
+    fn store(self, repr: [__m256i; 2], out: &mut [i16; 32]) {
         let (lo, hi) = out.split_at_mut(16);
-        <archmage::X64V3Token as I16x16Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as I16x16Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as I16x16Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as I16x16Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256i; 2]) -> [i16; 32] {
-        let lo = <archmage::X64V3Token as I16x16Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as I16x16Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256i; 2]) -> [i16; 32] {
+        let lo = <archmage::X64V3Token as I16x16Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as I16x16Backend>::to_array(self, repr[1]);
         let mut out = [0; 32];
         out[..16].copy_from_slice(&lo);
         out[16..].copy_from_slice(&hi);
@@ -5333,26 +5364,26 @@ impl I16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::sub(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn mul(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::mul(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::mul(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::mul(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::mul(self, a[1], b[1]),
         ]
     }
 
@@ -5365,163 +5396,169 @@ impl I16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn min(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn min(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn max(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn abs(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn abs(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::abs(a[0]),
-            <archmage::X64V3Token as I16x16Backend>::abs(a[1]),
+            <archmage::X64V3Token as I16x16Backend>::abs(self, a[0]),
+            <archmage::X64V3Token as I16x16Backend>::abs(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256i; 2]) -> i16 {
-        <archmage::X64V3Token as I16x16Backend>::reduce_add(a[0])
-            .wrapping_add(<archmage::X64V3Token as I16x16Backend>::reduce_add(a[1]))
+    fn reduce_add(self, a: [__m256i; 2]) -> i16 {
+        <archmage::X64V3Token as I16x16Backend>::reduce_add(self, a[0]).wrapping_add(
+            <archmage::X64V3Token as I16x16Backend>::reduce_add(self, a[1]),
+        )
     }
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shl_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::shl_const::<N>(a[0]),
-            <archmage::X64V3Token as I16x16Backend>::shl_const::<N>(a[1]),
+            <archmage::X64V3Token as I16x16Backend>::shl_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I16x16Backend>::shl_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_arithmetic_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::shr_arithmetic_const::<N>(a[0]),
-            <archmage::X64V3Token as I16x16Backend>::shr_arithmetic_const::<N>(a[1]),
+            <archmage::X64V3Token as I16x16Backend>::shr_arithmetic_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I16x16Backend>::shr_arithmetic_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_logical_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as I16x16Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as I16x16Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I16x16Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn all_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I16x16Backend>::all_true(a[0])
-            && <archmage::X64V3Token as I16x16Backend>::all_true(a[1])
+    fn all_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as I16x16Backend>::all_true(self, a[0])
+            && <archmage::X64V3Token as I16x16Backend>::all_true(self, a[1])
     }
 
     #[inline(always)]
-    fn any_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I16x16Backend>::any_true(a[0])
-            || <archmage::X64V3Token as I16x16Backend>::any_true(a[1])
+    fn any_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as I16x16Backend>::any_true(self, a[0])
+            || <archmage::X64V3Token as I16x16Backend>::any_true(self, a[1])
     }
 
     #[inline(always)]
-    fn bitmask(a: [__m256i; 2]) -> u64 {
-        let lo = <archmage::X64V3Token as I16x16Backend>::bitmask(a[0]) as u64;
-        let hi = <archmage::X64V3Token as I16x16Backend>::bitmask(a[1]) as u64;
+    fn bitmask(self, a: [__m256i; 2]) -> u64 {
+        let lo = <archmage::X64V3Token as I16x16Backend>::bitmask(self, a[0]) as u64;
+        let hi = <archmage::X64V3Token as I16x16Backend>::bitmask(self, a[1]) as u64;
         lo | (hi << 16)
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_eq(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ne(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_lt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_le(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_gt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ge(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256i; 2], if_true: [__m256i; 2], if_false: [__m256i; 2]) -> [__m256i; 2] {
+    fn blend(
+        self,
+        mask: [__m256i; 2],
+        if_true: [__m256i; 2],
+        if_false: [__m256i; 2],
+    ) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as I16x16Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as I16x16Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as I16x16Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn not(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::not(a[0]),
-            <archmage::X64V3Token as I16x16Backend>::not(a[1]),
+            <archmage::X64V3Token as I16x16Backend>::not(self, a[0]),
+            <archmage::X64V3Token as I16x16Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitand(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitxor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I16x16Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as I16x16Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as I16x16Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as I16x16Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -5565,16 +5602,16 @@ impl U16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256i; 2], out: &mut [u16; 32]) {
+    fn store(self, repr: [__m256i; 2], out: &mut [u16; 32]) {
         let (lo, hi) = out.split_at_mut(16);
-        <archmage::X64V3Token as U16x16Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as U16x16Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as U16x16Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as U16x16Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256i; 2]) -> [u16; 32] {
-        let lo = <archmage::X64V3Token as U16x16Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as U16x16Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256i; 2]) -> [u16; 32] {
+        let lo = <archmage::X64V3Token as U16x16Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as U16x16Backend>::to_array(self, repr[1]);
         let mut out = [0; 32];
         out[..16].copy_from_slice(&lo);
         out[16..].copy_from_slice(&hi);
@@ -5582,26 +5619,26 @@ impl U16x32Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::sub(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn mul(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::mul(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::mul(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::mul(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::mul(self, a[1], b[1]),
         ]
     }
 
@@ -5609,161 +5646,167 @@ impl U16x32Backend for archmage::X64V3Token {
     fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
         let z = <archmage::X64V3Token as U16x16Backend>::zero(self);
         [
-            <archmage::X64V3Token as U16x16Backend>::sub(z, a[0]),
-            <archmage::X64V3Token as U16x16Backend>::sub(z, a[1]),
+            <archmage::X64V3Token as U16x16Backend>::sub(self, z, a[0]),
+            <archmage::X64V3Token as U16x16Backend>::sub(self, z, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn min(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn min(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn max(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256i; 2]) -> u16 {
-        <archmage::X64V3Token as U16x16Backend>::reduce_add(a[0])
-            .wrapping_add(<archmage::X64V3Token as U16x16Backend>::reduce_add(a[1]))
+    fn reduce_add(self, a: [__m256i; 2]) -> u16 {
+        <archmage::X64V3Token as U16x16Backend>::reduce_add(self, a[0]).wrapping_add(
+            <archmage::X64V3Token as U16x16Backend>::reduce_add(self, a[1]),
+        )
     }
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shl_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::shl_const::<N>(a[0]),
-            <archmage::X64V3Token as U16x16Backend>::shl_const::<N>(a[1]),
+            <archmage::X64V3Token as U16x16Backend>::shl_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U16x16Backend>::shl_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_arithmetic_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as U16x16Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as U16x16Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U16x16Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_logical_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as U16x16Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as U16x16Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U16x16Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn all_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U16x16Backend>::all_true(a[0])
-            && <archmage::X64V3Token as U16x16Backend>::all_true(a[1])
+    fn all_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as U16x16Backend>::all_true(self, a[0])
+            && <archmage::X64V3Token as U16x16Backend>::all_true(self, a[1])
     }
 
     #[inline(always)]
-    fn any_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U16x16Backend>::any_true(a[0])
-            || <archmage::X64V3Token as U16x16Backend>::any_true(a[1])
+    fn any_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as U16x16Backend>::any_true(self, a[0])
+            || <archmage::X64V3Token as U16x16Backend>::any_true(self, a[1])
     }
 
     #[inline(always)]
-    fn bitmask(a: [__m256i; 2]) -> u64 {
-        let lo = <archmage::X64V3Token as U16x16Backend>::bitmask(a[0]) as u64;
-        let hi = <archmage::X64V3Token as U16x16Backend>::bitmask(a[1]) as u64;
+    fn bitmask(self, a: [__m256i; 2]) -> u64 {
+        let lo = <archmage::X64V3Token as U16x16Backend>::bitmask(self, a[0]) as u64;
+        let hi = <archmage::X64V3Token as U16x16Backend>::bitmask(self, a[1]) as u64;
         lo | (hi << 16)
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_eq(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ne(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_lt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_le(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_gt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ge(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256i; 2], if_true: [__m256i; 2], if_false: [__m256i; 2]) -> [__m256i; 2] {
+    fn blend(
+        self,
+        mask: [__m256i; 2],
+        if_true: [__m256i; 2],
+        if_false: [__m256i; 2],
+    ) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as U16x16Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as U16x16Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as U16x16Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn not(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::not(a[0]),
-            <archmage::X64V3Token as U16x16Backend>::not(a[1]),
+            <archmage::X64V3Token as U16x16Backend>::not(self, a[0]),
+            <archmage::X64V3Token as U16x16Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitand(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitxor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U16x16Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as U16x16Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as U16x16Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as U16x16Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -5807,16 +5850,16 @@ impl I32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256i; 2], out: &mut [i32; 16]) {
+    fn store(self, repr: [__m256i; 2], out: &mut [i32; 16]) {
         let (lo, hi) = out.split_at_mut(8);
-        <archmage::X64V3Token as I32x8Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as I32x8Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as I32x8Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as I32x8Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256i; 2]) -> [i32; 16] {
-        let lo = <archmage::X64V3Token as I32x8Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as I32x8Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256i; 2]) -> [i32; 16] {
+        let lo = <archmage::X64V3Token as I32x8Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as I32x8Backend>::to_array(self, repr[1]);
         let mut out = [0; 16];
         out[..8].copy_from_slice(&lo);
         out[8..].copy_from_slice(&hi);
@@ -5824,26 +5867,26 @@ impl I32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::sub(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn mul(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::mul(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::mul(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::mul(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::mul(self, a[1], b[1]),
         ]
     }
 
@@ -5856,163 +5899,169 @@ impl I32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn min(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn min(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn max(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn abs(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn abs(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::abs(a[0]),
-            <archmage::X64V3Token as I32x8Backend>::abs(a[1]),
+            <archmage::X64V3Token as I32x8Backend>::abs(self, a[0]),
+            <archmage::X64V3Token as I32x8Backend>::abs(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256i; 2]) -> i32 {
-        <archmage::X64V3Token as I32x8Backend>::reduce_add(a[0])
-            .wrapping_add(<archmage::X64V3Token as I32x8Backend>::reduce_add(a[1]))
+    fn reduce_add(self, a: [__m256i; 2]) -> i32 {
+        <archmage::X64V3Token as I32x8Backend>::reduce_add(self, a[0]).wrapping_add(
+            <archmage::X64V3Token as I32x8Backend>::reduce_add(self, a[1]),
+        )
     }
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shl_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::shl_const::<N>(a[0]),
-            <archmage::X64V3Token as I32x8Backend>::shl_const::<N>(a[1]),
+            <archmage::X64V3Token as I32x8Backend>::shl_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I32x8Backend>::shl_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_arithmetic_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::shr_arithmetic_const::<N>(a[0]),
-            <archmage::X64V3Token as I32x8Backend>::shr_arithmetic_const::<N>(a[1]),
+            <archmage::X64V3Token as I32x8Backend>::shr_arithmetic_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I32x8Backend>::shr_arithmetic_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_logical_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as I32x8Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as I32x8Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I32x8Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn all_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I32x8Backend>::all_true(a[0])
-            && <archmage::X64V3Token as I32x8Backend>::all_true(a[1])
+    fn all_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as I32x8Backend>::all_true(self, a[0])
+            && <archmage::X64V3Token as I32x8Backend>::all_true(self, a[1])
     }
 
     #[inline(always)]
-    fn any_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I32x8Backend>::any_true(a[0])
-            || <archmage::X64V3Token as I32x8Backend>::any_true(a[1])
+    fn any_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as I32x8Backend>::any_true(self, a[0])
+            || <archmage::X64V3Token as I32x8Backend>::any_true(self, a[1])
     }
 
     #[inline(always)]
-    fn bitmask(a: [__m256i; 2]) -> u64 {
-        let lo = <archmage::X64V3Token as I32x8Backend>::bitmask(a[0]) as u64;
-        let hi = <archmage::X64V3Token as I32x8Backend>::bitmask(a[1]) as u64;
+    fn bitmask(self, a: [__m256i; 2]) -> u64 {
+        let lo = <archmage::X64V3Token as I32x8Backend>::bitmask(self, a[0]) as u64;
+        let hi = <archmage::X64V3Token as I32x8Backend>::bitmask(self, a[1]) as u64;
         lo | (hi << 8)
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_eq(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ne(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_lt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_le(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_gt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ge(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256i; 2], if_true: [__m256i; 2], if_false: [__m256i; 2]) -> [__m256i; 2] {
+    fn blend(
+        self,
+        mask: [__m256i; 2],
+        if_true: [__m256i; 2],
+        if_false: [__m256i; 2],
+    ) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as I32x8Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as I32x8Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as I32x8Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn not(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::not(a[0]),
-            <archmage::X64V3Token as I32x8Backend>::not(a[1]),
+            <archmage::X64V3Token as I32x8Backend>::not(self, a[0]),
+            <archmage::X64V3Token as I32x8Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitand(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitxor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I32x8Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as I32x8Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as I32x8Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as I32x8Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -6056,16 +6105,16 @@ impl U32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256i; 2], out: &mut [u32; 16]) {
+    fn store(self, repr: [__m256i; 2], out: &mut [u32; 16]) {
         let (lo, hi) = out.split_at_mut(8);
-        <archmage::X64V3Token as U32x8Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as U32x8Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as U32x8Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as U32x8Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256i; 2]) -> [u32; 16] {
-        let lo = <archmage::X64V3Token as U32x8Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as U32x8Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256i; 2]) -> [u32; 16] {
+        let lo = <archmage::X64V3Token as U32x8Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as U32x8Backend>::to_array(self, repr[1]);
         let mut out = [0; 16];
         out[..8].copy_from_slice(&lo);
         out[8..].copy_from_slice(&hi);
@@ -6073,26 +6122,26 @@ impl U32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::sub(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn mul(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn mul(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::mul(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::mul(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::mul(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::mul(self, a[1], b[1]),
         ]
     }
 
@@ -6100,161 +6149,167 @@ impl U32x16Backend for archmage::X64V3Token {
     fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
         let z = <archmage::X64V3Token as U32x8Backend>::zero(self);
         [
-            <archmage::X64V3Token as U32x8Backend>::sub(z, a[0]),
-            <archmage::X64V3Token as U32x8Backend>::sub(z, a[1]),
+            <archmage::X64V3Token as U32x8Backend>::sub(self, z, a[0]),
+            <archmage::X64V3Token as U32x8Backend>::sub(self, z, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn min(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn min(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn max(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256i; 2]) -> u32 {
-        <archmage::X64V3Token as U32x8Backend>::reduce_add(a[0])
-            .wrapping_add(<archmage::X64V3Token as U32x8Backend>::reduce_add(a[1]))
+    fn reduce_add(self, a: [__m256i; 2]) -> u32 {
+        <archmage::X64V3Token as U32x8Backend>::reduce_add(self, a[0]).wrapping_add(
+            <archmage::X64V3Token as U32x8Backend>::reduce_add(self, a[1]),
+        )
     }
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shl_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::shl_const::<N>(a[0]),
-            <archmage::X64V3Token as U32x8Backend>::shl_const::<N>(a[1]),
+            <archmage::X64V3Token as U32x8Backend>::shl_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U32x8Backend>::shl_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_arithmetic_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_logical_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn all_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U32x8Backend>::all_true(a[0])
-            && <archmage::X64V3Token as U32x8Backend>::all_true(a[1])
+    fn all_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as U32x8Backend>::all_true(self, a[0])
+            && <archmage::X64V3Token as U32x8Backend>::all_true(self, a[1])
     }
 
     #[inline(always)]
-    fn any_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U32x8Backend>::any_true(a[0])
-            || <archmage::X64V3Token as U32x8Backend>::any_true(a[1])
+    fn any_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as U32x8Backend>::any_true(self, a[0])
+            || <archmage::X64V3Token as U32x8Backend>::any_true(self, a[1])
     }
 
     #[inline(always)]
-    fn bitmask(a: [__m256i; 2]) -> u64 {
-        let lo = <archmage::X64V3Token as U32x8Backend>::bitmask(a[0]) as u64;
-        let hi = <archmage::X64V3Token as U32x8Backend>::bitmask(a[1]) as u64;
+    fn bitmask(self, a: [__m256i; 2]) -> u64 {
+        let lo = <archmage::X64V3Token as U32x8Backend>::bitmask(self, a[0]) as u64;
+        let hi = <archmage::X64V3Token as U32x8Backend>::bitmask(self, a[1]) as u64;
         lo | (hi << 8)
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_eq(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ne(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_lt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_le(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_gt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ge(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256i; 2], if_true: [__m256i; 2], if_false: [__m256i; 2]) -> [__m256i; 2] {
+    fn blend(
+        self,
+        mask: [__m256i; 2],
+        if_true: [__m256i; 2],
+        if_false: [__m256i; 2],
+    ) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as U32x8Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as U32x8Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as U32x8Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn not(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::not(a[0]),
-            <archmage::X64V3Token as U32x8Backend>::not(a[1]),
+            <archmage::X64V3Token as U32x8Backend>::not(self, a[0]),
+            <archmage::X64V3Token as U32x8Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitand(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitxor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U32x8Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as U32x8Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as U32x8Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as U32x8Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -6298,16 +6353,16 @@ impl I64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256i; 2], out: &mut [i64; 8]) {
+    fn store(self, repr: [__m256i; 2], out: &mut [i64; 8]) {
         let (lo, hi) = out.split_at_mut(4);
-        <archmage::X64V3Token as I64x4Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as I64x4Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as I64x4Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as I64x4Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256i; 2]) -> [i64; 8] {
-        let lo = <archmage::X64V3Token as I64x4Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as I64x4Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256i; 2]) -> [i64; 8] {
+        let lo = <archmage::X64V3Token as I64x4Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as I64x4Backend>::to_array(self, repr[1]);
         let mut out = [0; 8];
         out[..4].copy_from_slice(&lo);
         out[4..].copy_from_slice(&hi);
@@ -6315,18 +6370,18 @@ impl I64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::sub(self, a[1], b[1]),
         ]
     }
 
@@ -6339,163 +6394,169 @@ impl I64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn min(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn min(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn max(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn abs(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn abs(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::abs(a[0]),
-            <archmage::X64V3Token as I64x4Backend>::abs(a[1]),
+            <archmage::X64V3Token as I64x4Backend>::abs(self, a[0]),
+            <archmage::X64V3Token as I64x4Backend>::abs(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256i; 2]) -> i64 {
-        <archmage::X64V3Token as I64x4Backend>::reduce_add(a[0])
-            .wrapping_add(<archmage::X64V3Token as I64x4Backend>::reduce_add(a[1]))
+    fn reduce_add(self, a: [__m256i; 2]) -> i64 {
+        <archmage::X64V3Token as I64x4Backend>::reduce_add(self, a[0]).wrapping_add(
+            <archmage::X64V3Token as I64x4Backend>::reduce_add(self, a[1]),
+        )
     }
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shl_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::shl_const::<N>(a[0]),
-            <archmage::X64V3Token as I64x4Backend>::shl_const::<N>(a[1]),
+            <archmage::X64V3Token as I64x4Backend>::shl_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I64x4Backend>::shl_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_arithmetic_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::shr_arithmetic_const::<N>(a[0]),
-            <archmage::X64V3Token as I64x4Backend>::shr_arithmetic_const::<N>(a[1]),
+            <archmage::X64V3Token as I64x4Backend>::shr_arithmetic_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I64x4Backend>::shr_arithmetic_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_logical_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as I64x4Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as I64x4Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as I64x4Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn all_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I64x4Backend>::all_true(a[0])
-            && <archmage::X64V3Token as I64x4Backend>::all_true(a[1])
+    fn all_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as I64x4Backend>::all_true(self, a[0])
+            && <archmage::X64V3Token as I64x4Backend>::all_true(self, a[1])
     }
 
     #[inline(always)]
-    fn any_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I64x4Backend>::any_true(a[0])
-            || <archmage::X64V3Token as I64x4Backend>::any_true(a[1])
+    fn any_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as I64x4Backend>::any_true(self, a[0])
+            || <archmage::X64V3Token as I64x4Backend>::any_true(self, a[1])
     }
 
     #[inline(always)]
-    fn bitmask(a: [__m256i; 2]) -> u64 {
-        let lo = <archmage::X64V3Token as I64x4Backend>::bitmask(a[0]) as u64;
-        let hi = <archmage::X64V3Token as I64x4Backend>::bitmask(a[1]) as u64;
+    fn bitmask(self, a: [__m256i; 2]) -> u64 {
+        let lo = <archmage::X64V3Token as I64x4Backend>::bitmask(self, a[0]) as u64;
+        let hi = <archmage::X64V3Token as I64x4Backend>::bitmask(self, a[1]) as u64;
         lo | (hi << 4)
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_eq(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ne(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_lt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_le(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_gt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ge(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256i; 2], if_true: [__m256i; 2], if_false: [__m256i; 2]) -> [__m256i; 2] {
+    fn blend(
+        self,
+        mask: [__m256i; 2],
+        if_true: [__m256i; 2],
+        if_false: [__m256i; 2],
+    ) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as I64x4Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as I64x4Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as I64x4Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn not(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::not(a[0]),
-            <archmage::X64V3Token as I64x4Backend>::not(a[1]),
+            <archmage::X64V3Token as I64x4Backend>::not(self, a[0]),
+            <archmage::X64V3Token as I64x4Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitand(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitxor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as I64x4Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as I64x4Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as I64x4Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as I64x4Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }
@@ -6539,16 +6600,16 @@ impl U64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn store(repr: [__m256i; 2], out: &mut [u64; 8]) {
+    fn store(self, repr: [__m256i; 2], out: &mut [u64; 8]) {
         let (lo, hi) = out.split_at_mut(4);
-        <archmage::X64V3Token as U64x4Backend>::store(repr[0], lo.try_into().unwrap());
-        <archmage::X64V3Token as U64x4Backend>::store(repr[1], hi.try_into().unwrap());
+        <archmage::X64V3Token as U64x4Backend>::store(self, repr[0], lo.try_into().unwrap());
+        <archmage::X64V3Token as U64x4Backend>::store(self, repr[1], hi.try_into().unwrap());
     }
 
     #[inline(always)]
-    fn to_array(repr: [__m256i; 2]) -> [u64; 8] {
-        let lo = <archmage::X64V3Token as U64x4Backend>::to_array(repr[0]);
-        let hi = <archmage::X64V3Token as U64x4Backend>::to_array(repr[1]);
+    fn to_array(self, repr: [__m256i; 2]) -> [u64; 8] {
+        let lo = <archmage::X64V3Token as U64x4Backend>::to_array(self, repr[0]);
+        let hi = <archmage::X64V3Token as U64x4Backend>::to_array(self, repr[1]);
         let mut out = [0; 8];
         out[..4].copy_from_slice(&lo);
         out[4..].copy_from_slice(&hi);
@@ -6556,18 +6617,18 @@ impl U64x8Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn add(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::add(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::add(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::add(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::add(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn sub(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::sub(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::sub(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::sub(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::sub(self, a[1], b[1]),
         ]
     }
 
@@ -6575,161 +6636,167 @@ impl U64x8Backend for archmage::X64V3Token {
     fn neg(self, a: [__m256i; 2]) -> [__m256i; 2] {
         let z = <archmage::X64V3Token as U64x4Backend>::zero(self);
         [
-            <archmage::X64V3Token as U64x4Backend>::sub(z, a[0]),
-            <archmage::X64V3Token as U64x4Backend>::sub(z, a[1]),
+            <archmage::X64V3Token as U64x4Backend>::sub(self, z, a[0]),
+            <archmage::X64V3Token as U64x4Backend>::sub(self, z, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn min(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn min(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::min(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::min(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::min(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::min(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn max(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn max(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::max(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::max(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::max(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::max(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn reduce_add(a: [__m256i; 2]) -> u64 {
-        <archmage::X64V3Token as U64x4Backend>::reduce_add(a[0])
-            .wrapping_add(<archmage::X64V3Token as U64x4Backend>::reduce_add(a[1]))
+    fn reduce_add(self, a: [__m256i; 2]) -> u64 {
+        <archmage::X64V3Token as U64x4Backend>::reduce_add(self, a[0]).wrapping_add(
+            <archmage::X64V3Token as U64x4Backend>::reduce_add(self, a[1]),
+        )
     }
 
     #[inline(always)]
-    fn shl_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shl_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::shl_const::<N>(a[0]),
-            <archmage::X64V3Token as U64x4Backend>::shl_const::<N>(a[1]),
+            <archmage::X64V3Token as U64x4Backend>::shl_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U64x4Backend>::shl_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_arithmetic_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_arithmetic_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as U64x4Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as U64x4Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U64x4Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn shr_logical_const<const N: i32>(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn shr_logical_const<const N: i32>(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::shr_logical_const::<N>(a[0]),
-            <archmage::X64V3Token as U64x4Backend>::shr_logical_const::<N>(a[1]),
+            <archmage::X64V3Token as U64x4Backend>::shr_logical_const::<N>(self, a[0]),
+            <archmage::X64V3Token as U64x4Backend>::shr_logical_const::<N>(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn all_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U64x4Backend>::all_true(a[0])
-            && <archmage::X64V3Token as U64x4Backend>::all_true(a[1])
+    fn all_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as U64x4Backend>::all_true(self, a[0])
+            && <archmage::X64V3Token as U64x4Backend>::all_true(self, a[1])
     }
 
     #[inline(always)]
-    fn any_true(a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U64x4Backend>::any_true(a[0])
-            || <archmage::X64V3Token as U64x4Backend>::any_true(a[1])
+    fn any_true(self, a: [__m256i; 2]) -> bool {
+        <archmage::X64V3Token as U64x4Backend>::any_true(self, a[0])
+            || <archmage::X64V3Token as U64x4Backend>::any_true(self, a[1])
     }
 
     #[inline(always)]
-    fn bitmask(a: [__m256i; 2]) -> u64 {
-        let lo = <archmage::X64V3Token as U64x4Backend>::bitmask(a[0]) as u64;
-        let hi = <archmage::X64V3Token as U64x4Backend>::bitmask(a[1]) as u64;
+    fn bitmask(self, a: [__m256i; 2]) -> u64 {
+        let lo = <archmage::X64V3Token as U64x4Backend>::bitmask(self, a[0]) as u64;
+        let hi = <archmage::X64V3Token as U64x4Backend>::bitmask(self, a[1]) as u64;
         lo | (hi << 4)
     }
 
     #[inline(always)]
-    fn simd_eq(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_eq(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::simd_eq(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::simd_eq(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::simd_eq(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::simd_eq(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ne(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ne(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::simd_ne(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::simd_ne(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::simd_ne(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::simd_ne(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_lt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_lt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::simd_lt(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::simd_lt(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::simd_lt(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::simd_lt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_le(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_le(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::simd_le(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::simd_le(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::simd_le(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::simd_le(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_gt(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_gt(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::simd_gt(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::simd_gt(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::simd_gt(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::simd_gt(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn simd_ge(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn simd_ge(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::simd_ge(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::simd_ge(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::simd_ge(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::simd_ge(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn blend(mask: [__m256i; 2], if_true: [__m256i; 2], if_false: [__m256i; 2]) -> [__m256i; 2] {
+    fn blend(
+        self,
+        mask: [__m256i; 2],
+        if_true: [__m256i; 2],
+        if_false: [__m256i; 2],
+    ) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::blend(mask[0], if_true[0], if_false[0]),
-            <archmage::X64V3Token as U64x4Backend>::blend(mask[1], if_true[1], if_false[1]),
+            <archmage::X64V3Token as U64x4Backend>::blend(self, mask[0], if_true[0], if_false[0]),
+            <archmage::X64V3Token as U64x4Backend>::blend(self, mask[1], if_true[1], if_false[1]),
         ]
     }
 
     #[inline(always)]
-    fn not(a: [__m256i; 2]) -> [__m256i; 2] {
+    fn not(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::not(a[0]),
-            <archmage::X64V3Token as U64x4Backend>::not(a[1]),
+            <archmage::X64V3Token as U64x4Backend>::not(self, a[0]),
+            <archmage::X64V3Token as U64x4Backend>::not(self, a[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitand(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitand(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::bitand(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::bitand(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::bitand(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::bitand(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::bitor(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::bitor(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::bitor(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::bitor(self, a[1], b[1]),
         ]
     }
 
     #[inline(always)]
-    fn bitxor(a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+    fn bitxor(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
-            <archmage::X64V3Token as U64x4Backend>::bitxor(a[0], b[0]),
-            <archmage::X64V3Token as U64x4Backend>::bitxor(a[1], b[1]),
+            <archmage::X64V3Token as U64x4Backend>::bitxor(self, a[0], b[0]),
+            <archmage::X64V3Token as U64x4Backend>::bitxor(self, a[1], b[1]),
         ]
     }
 }

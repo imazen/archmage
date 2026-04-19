@@ -47,31 +47,31 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
             /// Bitcast to {int_type} (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn bitcast_to_i32(self) -> super::{int_type}<T> {{
-                super::{int_type}::from_repr_unchecked(self.1, T::bitcast_f32_to_i32(self.0))
+                super::{int_type}::from_repr_unchecked(self.1, T::bitcast_f32_to_i32(self.1, self.0))
             }}
 
             /// Create from {int_type} via bitcast (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn from_i32_bitcast(token: T, v: super::{int_type}<T>) -> Self {{
-                Self(T::bitcast_i32_to_f32(v.into_repr()), token)
+                Self(T::bitcast_i32_to_f32(token, v.into_repr()), token)
             }}
 
             /// Convert to {int_type} with truncation toward zero.
             #[inline(always)]
             pub fn to_i32(self) -> super::{int_type}<T> {{
-                super::{int_type}::from_repr_unchecked(self.1, T::convert_f32_to_i32(self.0))
+                super::{int_type}::from_repr_unchecked(self.1, T::convert_f32_to_i32(self.1, self.0))
             }}
 
             /// Convert to {int_type} with rounding to nearest.
             #[inline(always)]
             pub fn to_i32_round(self) -> super::{int_type}<T> {{
-                super::{int_type}::from_repr_unchecked(self.1, T::convert_f32_to_i32_round(self.0))
+                super::{int_type}::from_repr_unchecked(self.1, T::convert_f32_to_i32_round(self.1, self.0))
             }}
 
             /// Create from {int_type} via numeric conversion.
             #[inline(always)]
             pub fn from_i32(token: T, v: super::{int_type}<T>) -> Self {{
-                Self(T::convert_i32_to_f32(v.into_repr()), token)
+                Self(T::convert_i32_to_f32(token, v.into_repr()), token)
             }}
 
             // ====== Backward-compatible aliases (old generated API names) ======
@@ -118,13 +118,13 @@ pub(crate) fn gen_f32_i32_convert_on_int(src: &str, trait_bound: &str) -> String
             /// Bitcast to {float_type} (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn bitcast_to_f32(self) -> super::{float_type}<T> {{
-                super::{float_type}::from_repr_unchecked(self.1, T::bitcast_i32_to_f32(self.0))
+                super::{float_type}::from_repr_unchecked(self.1, T::bitcast_i32_to_f32(self.1, self.0))
             }}
 
             /// Convert to {float_type} (numeric conversion).
             #[inline(always)]
             pub fn to_f32(self) -> super::{float_type}<T> {{
-                super::{float_type}::from_repr_unchecked(self.1, T::convert_i32_to_f32(self.0))
+                super::{float_type}::from_repr_unchecked(self.1, T::convert_i32_to_f32(self.1, self.0))
             }}
 
             // ====== Backward-compatible aliases (old generated API names) ======
@@ -170,7 +170,7 @@ pub(crate) fn gen_signed_unsigned_bitcast(
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn bitcast_{target}(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{to_method}(self.0))
+                super::{target}::from_repr_unchecked(self.1, T::bitcast_{to_method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
@@ -212,7 +212,7 @@ pub(crate) fn gen_unsigned_signed_bitcast(
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn bitcast_{target}(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{from_method}(self.0))
+                super::{target}::from_repr_unchecked(self.1, T::bitcast_{from_method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
@@ -253,7 +253,7 @@ pub(crate) fn gen_u32_i32_bitcast(src: &str, target: &str, method: &str) -> Stri
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn bitcast_to_i32(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.0))
+                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
@@ -302,7 +302,7 @@ pub(crate) fn gen_u64_i64_bitcast(src: &str, target: &str, method: &str) -> Stri
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn bitcast_{target}(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.0))
+                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
@@ -353,7 +353,7 @@ pub(crate) fn gen_i64_f64_bitcast(
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn bitcast_to_f64(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.0))
+                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).

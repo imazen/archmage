@@ -20,7 +20,7 @@ fn splat_with_token_works() {
         // Sanctioned form: pass a real token.
         let r = <X64V3Token as F32x8Backend>::splat(t, 7.0);
         let mut out = [0.0f32; 8];
-        <X64V3Token as F32x8Backend>::store(r, &mut out);
+        <X64V3Token as F32x8Backend>::store(t, r, &mut out);
         assert_eq!(out, [7.0; 8]);
     }
 }

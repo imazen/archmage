@@ -282,7 +282,7 @@ fn gen_methods(ty: &SimdType) -> String {
         \x20   /// Sum all {lanes} lanes{wrapping_suffix}.
             #[inline(always)]
             pub fn reduce_add(self) -> {elem} {{
-                T::reduce_add(self.0)
+                T::reduce_add(self.1, self.0)
             }}
 
     "});
@@ -291,13 +291,13 @@ fn gen_methods(ty: &SimdType) -> String {
             \x20   /// Minimum across all {lanes} lanes.
                 #[inline(always)]
                 pub fn reduce_min(self) -> {elem} {{
-                    T::reduce_min(self.0)
+                    T::reduce_min(self.1, self.0)
                 }}
 
                 /// Maximum across all {lanes} lanes.
                 #[inline(always)]
                 pub fn reduce_max(self) -> {elem} {{
-                    T::reduce_max(self.0)
+                    T::reduce_max(self.1, self.0)
                 }}
 
         "});
@@ -321,7 +321,7 @@ fn gen_methods(ty: &SimdType) -> String {
         \x20   /// Bitwise NOT.
             #[inline(always)]
             pub fn not(self) -> Self {{
-                Self(T::not(self.0), self.1)
+                Self(T::not(self.1, self.0), self.1)
             }}
 
     "});
@@ -333,19 +333,19 @@ fn gen_methods(ty: &SimdType) -> String {
             \x20   /// True if all lanes have their {high_bit} set (all-1s mask).
                 #[inline(always)]
                 pub fn all_true(self) -> bool {{
-                    T::all_true(self.0)
+                    T::all_true(self.1, self.0)
                 }}
 
                 /// True if any lane has its {high_bit} set.
                 #[inline(always)]
                 pub fn any_true(self) -> bool {{
-                    T::any_true(self.0)
+                    T::any_true(self.1, self.0)
                 }}
 
                 /// Extract the high bit of each {elem_bits}-bit lane as a bitmask.
                 #[inline(always)]
                 pub fn bitmask(self) -> {bitmask_ty} {{
-                    T::bitmask(self.0)
+                    T::bitmask(self.1, self.0)
                 }}
 
         "});
@@ -399,13 +399,13 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
         \x20   /// Store to array.
             #[inline(always)]
             pub fn store(self, out: &mut [{elem}; {lanes}]) {{
-                T::store(self.0, out);
+                T::store(self.1, self.0, out);
             }}
 
             /// Convert to array.
             #[inline(always)]
             pub fn to_array(self) -> [{elem}; {lanes}] {{
-                T::to_array(self.0)
+                T::to_array(self.1, self.0)
             }}
 
             /// Get the underlying platform representation.
@@ -445,61 +445,61 @@ fn gen_float_math() -> String {
         \x20   /// Lane-wise minimum.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
-                Self(T::min(self.0, other.0), self.1)
+                Self(T::min(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise maximum.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
-                Self(T::max(self.0, other.0), self.1)
+                Self(T::max(self.1, self.0, other.0), self.1)
             }}
 
             /// Clamp between lo and hi.
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
-                Self(T::clamp(self.0, lo.0, hi.0), self.1)
+                Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
             }}
 
             /// Square root.
             #[inline(always)]
             pub fn sqrt(self) -> Self {{
-                Self(T::sqrt(self.0), self.1)
+                Self(T::sqrt(self.1, self.0), self.1)
             }}
 
             /// Absolute value.
             #[inline(always)]
             pub fn abs(self) -> Self {{
-                Self(T::abs(self.0), self.1)
+                Self(T::abs(self.1, self.0), self.1)
             }}
 
             /// Round toward negative infinity.
             #[inline(always)]
             pub fn floor(self) -> Self {{
-                Self(T::floor(self.0), self.1)
+                Self(T::floor(self.1, self.0), self.1)
             }}
 
             /// Round toward positive infinity.
             #[inline(always)]
             pub fn ceil(self) -> Self {{
-                Self(T::ceil(self.0), self.1)
+                Self(T::ceil(self.1, self.0), self.1)
             }}
 
             /// Round to nearest integer.
             #[inline(always)]
             pub fn round(self) -> Self {{
-                Self(T::round(self.0), self.1)
+                Self(T::round(self.1, self.0), self.1)
             }}
 
             /// Fused multiply-add: `self * a + b`.
             #[inline(always)]
             pub fn mul_add(self, a: Self, b: Self) -> Self {{
-                Self(T::mul_add(self.0, a.0, b.0), self.1)
+                Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
             }}
 
             /// Fused multiply-sub: `self * a - b`.
             #[inline(always)]
             pub fn mul_sub(self, a: Self, b: Self) -> Self {{
-                Self(T::mul_sub(self.0, a.0, b.0), self.1)
+                Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
             }}
 
     "}
@@ -516,13 +516,13 @@ fn gen_int_math(ty: &SimdType) -> String {
         \x20   /// Lane-wise minimum{unsigned_suffix}.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
-                Self(T::min(self.0, other.0), self.1)
+                Self(T::min(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise maximum{unsigned_suffix}.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
-                Self(T::max(self.0, other.0), self.1)
+                Self(T::max(self.1, self.0, other.0), self.1)
             }}
 
     "};
@@ -532,7 +532,7 @@ fn gen_int_math(ty: &SimdType) -> String {
             \x20   /// Lane-wise absolute value.
                 #[inline(always)]
                 pub fn abs(self) -> Self {{
-                    Self(T::abs(self.0), self.1)
+                    Self(T::abs(self.1, self.0), self.1)
                 }}
 
         "});
@@ -542,7 +542,7 @@ fn gen_int_math(ty: &SimdType) -> String {
         \x20   /// Clamp between lo and hi.
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
-                Self(T::clamp(self.0, lo.0, hi.0), self.1)
+                Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
             }}
 
     "});
@@ -555,43 +555,43 @@ fn gen_comparisons(signedness: &str) -> String {
         \x20   /// Lane-wise equality (returns mask).
             #[inline(always)]
             pub fn simd_eq(self, other: Self) -> Self {{
-                Self(T::simd_eq(self.0, other.0), self.1)
+                Self(T::simd_eq(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise inequality (returns mask).
             #[inline(always)]
             pub fn simd_ne(self, other: Self) -> Self {{
-                Self(T::simd_ne(self.0, other.0), self.1)
+                Self(T::simd_ne(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise less-than{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_lt(self, other: Self) -> Self {{
-                Self(T::simd_lt(self.0, other.0), self.1)
+                Self(T::simd_lt(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise less-than-or-equal{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_le(self, other: Self) -> Self {{
-                Self(T::simd_le(self.0, other.0), self.1)
+                Self(T::simd_le(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise greater-than{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_gt(self, other: Self) -> Self {{
-                Self(T::simd_gt(self.0, other.0), self.1)
+                Self(T::simd_gt(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise greater-than-or-equal{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_ge(self, other: Self) -> Self {{
-                Self(T::simd_ge(self.0, other.0), self.1)
+                Self(T::simd_ge(self.1, self.0, other.0), self.1)
             }}
 
             /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
             #[inline(always)]
             pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{
-                Self(T::blend(mask.0, if_true.0, if_false.0), mask.1)
+                Self(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
             }}
 
     "}
@@ -631,7 +631,7 @@ fn gen_shifts(ty: &SimdType) -> String {
         \x20   /// Shift left by constant.
             #[inline(always)]
             pub fn shl_const<const N: i32>(self) -> Self {{
-                Self(T::shl_const::<N>(self.0), self.1)
+                Self(T::shl_const::<N>(self.1, self.0), self.1)
             }}
 
     "};
@@ -641,7 +641,7 @@ fn gen_shifts(ty: &SimdType) -> String {
             \x20   /// Arithmetic shift right by constant (sign-extending).
                 #[inline(always)]
                 pub fn shr_arithmetic_const<const N: i32>(self) -> Self {{
-                    Self(T::shr_arithmetic_const::<N>(self.0), self.1)
+                    Self(T::shr_arithmetic_const::<N>(self.1, self.0), self.1)
                 }}
 
         "});
@@ -651,7 +651,7 @@ fn gen_shifts(ty: &SimdType) -> String {
         \x20   /// Logical shift right by constant (zero-filling).
             #[inline(always)]
             pub fn shr_logical_const<const N: i32>(self) -> Self {{
-                Self(T::shr_logical_const::<N>(self.0), self.1)
+                Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
             }}
 
             /// Alias for [`shl_const`](Self::shl_const).
@@ -798,7 +798,7 @@ fn gen_binary_op(name: &str, backend: &str, trait_name: &str, method: &str) -> S
             type Output = Self;
             #[inline(always)]
             fn {method}(self, rhs: Self) -> Self {{
-                Self(T::{method}(self.0, rhs.0), self.1)
+                Self(T::{method}(self.1, self.0, rhs.0), self.1)
             }}
         }}
 
@@ -921,7 +921,7 @@ fn gen_scalar_op(name: &str, backend: &str, elem: &str, trait_name: &str, method
             type Output = Self;
             #[inline(always)]
             fn {method}(self, rhs: {elem}) -> Self {{
-                Self(T::{method}(self.0, T::splat(self.1, rhs)), self.1)
+                Self(T::{method}(self.1, self.0, T::splat(self.1, rhs)), self.1)
             }}
         }}
 
@@ -975,7 +975,7 @@ fn gen_from_array(ty: &SimdType) -> String {
         impl<T: {backend}> From<{name}<T>> for [{elem}; {lanes}] {{
             #[inline(always)]
             fn from(v: {name}<T>) -> [{elem}; {lanes}] {{
-                T::to_array(v.0)
+                T::to_array(v.1, v.0)
             }}
         }}
 
@@ -993,7 +993,7 @@ fn gen_debug(ty: &SimdType) -> String {
 
         impl<T: {backend}> core::fmt::Debug for {name}<T> {{
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {{
-                let arr = T::to_array(self.0);
+                let arr = T::to_array(self.1, self.0);
                 f.debug_tuple(\"{name}\").field(&arr).finish()
             }}
         }}
@@ -1109,7 +1109,7 @@ fn gen_popcnt(ty: &SimdType) -> String {
             /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
             #[inline(always)]
             pub fn popcnt(self) -> Self {{
-                Self(T::popcnt(self.0), self.1)
+                Self(T::popcnt(self.1, self.0), self.1)
             }}
         }}
     "}
