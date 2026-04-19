@@ -227,43 +227,43 @@ fn test_implementation_names() {
         // W128 (SIMD128) - all 10 element types
         assert_eq!(
             wasm::w128::f32x4::implementation_name(),
-            "wasm::simd128::f32x4"
+            "wasm::wasm128::f32x4"
         );
         assert_eq!(
             wasm::w128::f64x2::implementation_name(),
-            "wasm::simd128::f64x2"
+            "wasm::wasm128::f64x2"
         );
         assert_eq!(
             wasm::w128::i8x16::implementation_name(),
-            "wasm::simd128::i8x16"
+            "wasm::wasm128::i8x16"
         );
         assert_eq!(
             wasm::w128::u8x16::implementation_name(),
-            "wasm::simd128::u8x16"
+            "wasm::wasm128::u8x16"
         );
         assert_eq!(
             wasm::w128::i16x8::implementation_name(),
-            "wasm::simd128::i16x8"
+            "wasm::wasm128::i16x8"
         );
         assert_eq!(
             wasm::w128::u16x8::implementation_name(),
-            "wasm::simd128::u16x8"
+            "wasm::wasm128::u16x8"
         );
         assert_eq!(
             wasm::w128::i32x4::implementation_name(),
-            "wasm::simd128::i32x4"
+            "wasm::wasm128::i32x4"
         );
         assert_eq!(
             wasm::w128::u32x4::implementation_name(),
-            "wasm::simd128::u32x4"
+            "wasm::wasm128::u32x4"
         );
         assert_eq!(
             wasm::w128::i64x2::implementation_name(),
-            "wasm::simd128::i64x2"
+            "wasm::wasm128::i64x2"
         );
         assert_eq!(
             wasm::w128::u64x2::implementation_name(),
-            "wasm::simd128::u64x2"
+            "wasm::wasm128::u64x2"
         );
     }
 
@@ -419,48 +419,48 @@ fn test_implementation_names() {
         // f32xN = f32x4, i32xN = i32x4, etc.
         assert_eq!(
             simd::wasm128::f32xN::implementation_name(),
-            "wasm::simd128::f32x4"
+            "wasm::wasm128::f32x4"
         );
         assert_eq!(
             simd::wasm128::f64xN::implementation_name(),
-            "wasm::simd128::f64x2"
+            "wasm::wasm128::f64x2"
         );
         assert_eq!(
             simd::wasm128::i8xN::implementation_name(),
-            "wasm::simd128::i8x16"
+            "wasm::wasm128::i8x16"
         );
         assert_eq!(
             simd::wasm128::u8xN::implementation_name(),
-            "wasm::simd128::u8x16"
+            "wasm::wasm128::u8x16"
         );
         assert_eq!(
             simd::wasm128::i16xN::implementation_name(),
-            "wasm::simd128::i16x8"
+            "wasm::wasm128::i16x8"
         );
         assert_eq!(
             simd::wasm128::u16xN::implementation_name(),
-            "wasm::simd128::u16x8"
+            "wasm::wasm128::u16x8"
         );
         assert_eq!(
             simd::wasm128::i32xN::implementation_name(),
-            "wasm::simd128::i32x4"
+            "wasm::wasm128::i32x4"
         );
         assert_eq!(
             simd::wasm128::u32xN::implementation_name(),
-            "wasm::simd128::u32x4"
+            "wasm::wasm128::u32x4"
         );
         assert_eq!(
             simd::wasm128::i64xN::implementation_name(),
-            "wasm::simd128::i64x2"
+            "wasm::wasm128::i64x2"
         );
         assert_eq!(
             simd::wasm128::u64xN::implementation_name(),
-            "wasm::simd128::u64x2"
+            "wasm::wasm128::u64x2"
         );
         // Also verify the non-aliased types are accessible
         assert_eq!(
             simd::wasm128::f32x4::implementation_name(),
-            "wasm::simd128::f32x4"
+            "wasm::wasm128::f32x4"
         );
     }
 }

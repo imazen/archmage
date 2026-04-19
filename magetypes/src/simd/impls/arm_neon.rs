@@ -497,6 +497,41 @@ impl F32x8Backend for archmage::NeonToken {
         unsafe { [vrsqrteq_f32(a[0]), vrsqrteq_f32(a[1])] }
     }
 
+    // Newton-Raphson refinement over the *_approx variants. Same
+    // formula as the native NEON impl; applied per sub-vector so
+    // the polyfilled wider type matches the precision of its
+    // native W128 peer (max error ~2 ULP instead of ~1/256).
+    #[inline(always)]
+    fn recip(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        let approx = <Self as F32x8Backend>::rcp_approx(self, a);
+        let two = unsafe { vdupq_n_f32(2.0) };
+        unsafe {
+            [
+                vmulq_f32(approx[0], vsubq_f32(two, vmulq_f32(a[0], approx[0]))),
+                vmulq_f32(approx[1], vsubq_f32(two, vmulq_f32(a[1], approx[1]))),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        let approx = <Self as F32x8Backend>::rsqrt_approx(self, a);
+        let half = unsafe { vdupq_n_f32(0.5) };
+        let three = unsafe { vdupq_n_f32(3.0) };
+        unsafe {
+            [
+                vmulq_f32(
+                    vmulq_f32(half, approx[0]),
+                    vsubq_f32(three, vmulq_f32(a[0], vmulq_f32(approx[0], approx[0]))),
+                ),
+                vmulq_f32(
+                    vmulq_f32(half, approx[1]),
+                    vsubq_f32(three, vmulq_f32(a[1], vmulq_f32(approx[1], approx[1]))),
+                ),
+            ]
+        }
+    }
+
     // ====== Bitwise ======
 
     #[inline(always)]
@@ -1040,6 +1075,41 @@ impl F64x4Backend for archmage::NeonToken {
     #[inline(always)]
     fn rsqrt_approx(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
         unsafe { [vrsqrteq_f64(a[0]), vrsqrteq_f64(a[1])] }
+    }
+
+    // Newton-Raphson refinement over the *_approx variants. Same
+    // formula as the native NEON impl; applied per sub-vector so
+    // the polyfilled wider type matches the precision of its
+    // native W128 peer (max error ~2 ULP instead of ~1/256).
+    #[inline(always)]
+    fn recip(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
+        let approx = <Self as F64x4Backend>::rcp_approx(self, a);
+        let two = unsafe { vdupq_n_f64(2.0) };
+        unsafe {
+            [
+                vmulq_f64(approx[0], vsubq_f64(two, vmulq_f64(a[0], approx[0]))),
+                vmulq_f64(approx[1], vsubq_f64(two, vmulq_f64(a[1], approx[1]))),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
+        let approx = <Self as F64x4Backend>::rsqrt_approx(self, a);
+        let half = unsafe { vdupq_n_f64(0.5) };
+        let three = unsafe { vdupq_n_f64(3.0) };
+        unsafe {
+            [
+                vmulq_f64(
+                    vmulq_f64(half, approx[0]),
+                    vsubq_f64(three, vmulq_f64(a[0], vmulq_f64(approx[0], approx[0]))),
+                ),
+                vmulq_f64(
+                    vmulq_f64(half, approx[1]),
+                    vsubq_f64(three, vmulq_f64(a[1], vmulq_f64(approx[1], approx[1]))),
+                ),
+            ]
+        }
     }
 
     // ====== Bitwise ======

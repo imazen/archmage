@@ -2345,6 +2345,25 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                 {rsqrt_body}
             }}
 
+            // Newton-Raphson refinement over the *_approx variants. Same
+            // formula as the native NEON impl; applied per sub-vector so
+            // the polyfilled wider type matches the precision of its
+            // native W128 peer (max error ~2 ULP instead of ~1/256).
+            #[inline(always)]
+            fn recip(self, a: {repr}) -> {repr} {{
+                let approx = <Self as {trait_name}>::rcp_approx(self, a);
+                let two = unsafe {{ vdupq_n_{ns}(2.0) }};
+                {recip_body}
+            }}
+
+            #[inline(always)]
+            fn rsqrt(self, a: {repr}) -> {repr} {{
+                let approx = <Self as {trait_name}>::rsqrt_approx(self, a);
+                let half = unsafe {{ vdupq_n_{ns}(0.5) }};
+                let three = unsafe {{ vdupq_n_{ns}(3.0) }};
+                {rsqrt_refined_body}
+            }}
+
             // ====== Bitwise ======
 
             #[inline(always)]
@@ -2412,6 +2431,24 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         reduce_max_body = reduce_combine(&format!("vmaxq_{ns}"), &format!("vpmaxq_{ns}")),
         rcp_body = unary_op(&format!("vrecpeq_{ns}")),
         rsqrt_body = unary_op(&format!("vrsqrteq_{ns}")),
+        recip_body = {
+            // r' = r * (2 - a*r)
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!(
+                    "vmulq_{ns}(approx[{i}], vsubq_{ns}(two, vmulq_{ns}(a[{i}], approx[{i}])))"
+                ))
+                .collect();
+            format!("unsafe {{ [{}] }}", items.join(", "))
+        },
+        rsqrt_refined_body = {
+            // r' = r * half * (3 - a*r*r)
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!(
+                    "vmulq_{ns}(vmulq_{ns}(half, approx[{i}]), vsubq_{ns}(three, vmulq_{ns}(a[{i}], vmulq_{ns}(approx[{i}], approx[{i}]))))"
+                ))
+                .collect();
+            format!("unsafe {{ [{}] }}", items.join(", "))
+        },
         not_body = bitwise_not_op(),
         and_body = bitwise_binary_op(&format!("vandq_u{}", if elem == "f32" { 32 } else { 64 })),
         or_body = bitwise_binary_op(&format!("vorrq_u{}", if elem == "f32" { 32 } else { 64 })),
