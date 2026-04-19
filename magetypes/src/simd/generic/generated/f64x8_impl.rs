@@ -56,6 +56,93 @@ pub struct f64x8<T: F64x8Backend>(pub(crate) T::Repr, pub(crate) T);
 
 // PhantomData is ZST, so f64x8<T> has the same size as T::Repr.
 
+// Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
+// field, so `sizeof/alignof(f64x8<T>) == sizeof/alignof(T::Repr)`
+// iff `T` is a 1-ZST. Every archmage token currently satisfies this;
+// if a future refactor adds a non-ZST field to a token, this const
+// assert fires at compile time.
+const _: () = {
+    assert!(
+        core::mem::size_of::<f64x8<archmage::ScalarToken>>()
+            == core::mem::size_of::<
+                <archmage::ScalarToken as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<f64x8<archmage::ScalarToken>>()
+            == core::mem::align_of::<
+                <archmage::ScalarToken as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(target_arch = "x86_64")]
+const _: () = {
+    assert!(
+        core::mem::size_of::<f64x8<archmage::X64V3Token>>()
+            == core::mem::size_of::<
+                <archmage::X64V3Token as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<f64x8<archmage::X64V3Token>>()
+            == core::mem::align_of::<
+                <archmage::X64V3Token as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+};
+
+// Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
+// `avx512` feature, which is how archmage exposes X64V4Token's
+// 512-bit backend impls.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+const _: () = {
+    assert!(
+        core::mem::size_of::<f64x8<archmage::X64V4Token>>()
+            == core::mem::size_of::<
+                <archmage::X64V4Token as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<f64x8<archmage::X64V4Token>>()
+            == core::mem::align_of::<
+                <archmage::X64V4Token as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(target_arch = "aarch64")]
+const _: () = {
+    assert!(
+        core::mem::size_of::<f64x8<archmage::NeonToken>>()
+            == core::mem::size_of::<
+                <archmage::NeonToken as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<f64x8<archmage::NeonToken>>()
+            == core::mem::align_of::<
+                <archmage::NeonToken as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+const _: () = {
+    assert!(
+        core::mem::size_of::<f64x8<archmage::Wasm128Token>>()
+            == core::mem::size_of::<
+                <archmage::Wasm128Token as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<f64x8<archmage::Wasm128Token>>()
+            == core::mem::align_of::<
+                <archmage::Wasm128Token as crate::simd::backends::F64x8Backend>::Repr,
+            >()
+    );
+};
+
 impl<T: F64x8Backend> f64x8<T> {
     /// Number of f64 lanes.
     pub const LANES: usize = 8;

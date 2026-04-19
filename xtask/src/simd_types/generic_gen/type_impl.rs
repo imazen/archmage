@@ -201,6 +201,8 @@ fn gen_struct(ty: &SimdType) -> String {
         String::new()
     };
 
+    let layout_asserts = gen_layout_asserts(ty);
+
     formatdoc! {"
         /// {lanes}-lane {elem} SIMD vector, generic over backend `T`.
         ///
@@ -227,8 +229,144 @@ fn gen_struct(ty: &SimdType) -> String {
         {note_section}#[derive(Clone, Copy)]
         #[repr(C)]
         pub struct {name}<T: {backend}>(pub(crate) T::Repr, pub(crate) T);
-        {phantom_comment}
+        {phantom_comment}{layout_asserts}
     "}
+}
+
+// ============================================================================
+// Compile-time layout assertions
+//
+// Under `#[repr(C)]` with a trailing ZST token field, the struct has the same
+// size and alignment as `T::Repr` *if and only if* `T` is a 1-ZST (zero size,
+// alignment of 1). All archmage tokens are currently 1-ZSTs, but that could
+// change if a future refactor adds a non-ZST field to a token (e.g. by accident
+// during a code cleanup). These asserts catch that regression at compile time.
+//
+// One assert is emitted unconditionally using `ScalarToken` (which implements
+// every backend trait and is always available). Platform-native tokens get
+// additional asserts gated by the matching `target_arch` (and `feature` for V4).
+// ============================================================================
+
+fn gen_layout_asserts(ty: &SimdType) -> String {
+    let name = ty.name();
+    let backend = backend_trait(ty);
+
+    // ScalarToken assert — always present, works on every target.
+    let scalar_block = formatdoc! {"
+
+        // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
+        // field, so `sizeof/alignof({name}<T>) == sizeof/alignof(T::Repr)`
+        // iff `T` is a 1-ZST. Every archmage token currently satisfies this;
+        // if a future refactor adds a non-ZST field to a token, this const
+        // assert fires at compile time.
+        const _: () = {{
+            assert!(
+                core::mem::size_of::<{name}<archmage::ScalarToken>>()
+                    == core::mem::size_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
+            );
+            assert!(
+                core::mem::align_of::<{name}<archmage::ScalarToken>>()
+                    == core::mem::align_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
+            );
+        }};
+    "};
+
+    // Native-token asserts gated by target_arch (and the w512/avx512 features
+    // for the 512-bit native path on x86).
+    let mut native_blocks = String::new();
+
+    // x86_64: all widths use X64V3Token for its backend impl, except that
+    // the W512 avx512 backend lives on X64V4Token behind a feature gate.
+    // We pick X64V3Token for W128/W256 (its Repr is the native `__m128`/
+    // `__m256`); for W512 we add two variants: one using V3's polyfill
+    // (`[__m256; 2]`), one using V4's native `__m512` under `feature = "avx512"`.
+    match ty.width {
+        SimdWidth::W128 | SimdWidth::W256 => {
+            native_blocks.push_str(&formatdoc! {r#"
+
+                #[cfg(target_arch = "x86_64")]
+                const _: () = {{
+                    assert!(
+                        core::mem::size_of::<{name}<archmage::X64V3Token>>()
+                            == core::mem::size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                    assert!(
+                        core::mem::align_of::<{name}<archmage::X64V3Token>>()
+                            == core::mem::align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                }};
+            "#});
+        }
+        SimdWidth::W512 => {
+            // W512 on V3 is the polyfill path (`[__m256; 2]`). The full file is
+            // gated on `feature = "w512"` already (see generic/generated/mod.rs),
+            // so we don't need an extra feature gate here.
+            native_blocks.push_str(&formatdoc! {r#"
+
+                #[cfg(target_arch = "x86_64")]
+                const _: () = {{
+                    assert!(
+                        core::mem::size_of::<{name}<archmage::X64V3Token>>()
+                            == core::mem::size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                    assert!(
+                        core::mem::align_of::<{name}<archmage::X64V3Token>>()
+                            == core::mem::align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                }};
+
+                // Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
+                // `avx512` feature, which is how archmage exposes X64V4Token's
+                // 512-bit backend impls.
+                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                const _: () = {{
+                    assert!(
+                        core::mem::size_of::<{name}<archmage::X64V4Token>>()
+                            == core::mem::size_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                    assert!(
+                        core::mem::align_of::<{name}<archmage::X64V4Token>>()
+                            == core::mem::align_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                }};
+            "#});
+        }
+    }
+
+    // aarch64 NEON — same backend trait; polyfill for wider-than-128 widths.
+    native_blocks.push_str(&formatdoc! {r#"
+
+        #[cfg(target_arch = "aarch64")]
+        const _: () = {{
+            assert!(
+                core::mem::size_of::<{name}<archmage::NeonToken>>()
+                    == core::mem::size_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
+            );
+            assert!(
+                core::mem::align_of::<{name}<archmage::NeonToken>>()
+                    == core::mem::align_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
+            );
+        }};
+    "#});
+
+    // wasm32 SIMD128 — gated on `target_feature = "simd128"` because the
+    // Wasm128Token only implements the backends on the +simd128 target.
+    native_blocks.push_str(&formatdoc! {r#"
+
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        const _: () = {{
+            assert!(
+                core::mem::size_of::<{name}<archmage::Wasm128Token>>()
+                    == core::mem::size_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
+            );
+            assert!(
+                core::mem::align_of::<{name}<archmage::Wasm128Token>>()
+                    == core::mem::align_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
+            );
+        }};
+    "#});
+
+    format!("{scalar_block}{native_blocks}")
 }
 
 // ============================================================================

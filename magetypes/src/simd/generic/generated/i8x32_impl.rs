@@ -39,6 +39,74 @@ use crate::simd::backends::I8x32Backend;
 #[repr(C)]
 pub struct i8x32<T: I8x32Backend>(pub(crate) T::Repr, pub(crate) T);
 
+// Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
+// field, so `sizeof/alignof(i8x32<T>) == sizeof/alignof(T::Repr)`
+// iff `T` is a 1-ZST. Every archmage token currently satisfies this;
+// if a future refactor adds a non-ZST field to a token, this const
+// assert fires at compile time.
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x32<archmage::ScalarToken>>()
+            == core::mem::size_of::<
+                <archmage::ScalarToken as crate::simd::backends::I8x32Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x32<archmage::ScalarToken>>()
+            == core::mem::align_of::<
+                <archmage::ScalarToken as crate::simd::backends::I8x32Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(target_arch = "x86_64")]
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x32<archmage::X64V3Token>>()
+            == core::mem::size_of::<
+                <archmage::X64V3Token as crate::simd::backends::I8x32Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x32<archmage::X64V3Token>>()
+            == core::mem::align_of::<
+                <archmage::X64V3Token as crate::simd::backends::I8x32Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(target_arch = "aarch64")]
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x32<archmage::NeonToken>>()
+            == core::mem::size_of::<
+                <archmage::NeonToken as crate::simd::backends::I8x32Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x32<archmage::NeonToken>>()
+            == core::mem::align_of::<
+                <archmage::NeonToken as crate::simd::backends::I8x32Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x32<archmage::Wasm128Token>>()
+            == core::mem::size_of::<
+                <archmage::Wasm128Token as crate::simd::backends::I8x32Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x32<archmage::Wasm128Token>>()
+            == core::mem::align_of::<
+                <archmage::Wasm128Token as crate::simd::backends::I8x32Backend>::Repr,
+            >()
+    );
+};
+
 impl<T: I8x32Backend> i8x32<T> {
     /// Number of i8 lanes.
     pub const LANES: usize = 32;
