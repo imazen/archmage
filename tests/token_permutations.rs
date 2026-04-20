@@ -1,4 +1,7 @@
 //! Tests for the token permutation test helper.
+//!
+//! Requires `archmage::testing`, which is gated on the `std` feature.
+#![cfg(feature = "std")]
 
 use archmage::SimdToken;
 use archmage::testing::{CompileTimePolicy, for_each_token_permutation, lock_token_testing};

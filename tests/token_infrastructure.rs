@@ -6,6 +6,9 @@
 //!
 //! Most tests here work on x86_64 using real tokens. Stub behavior is tested
 //! via the ARM/WASM tokens which are stubs on x86_64.
+//!
+//! Requires `archmage::testing::lock_token_testing`, gated on the `std` feature.
+#![cfg(feature = "std")]
 
 use archmage::testing::lock_token_testing;
 use archmage::{
