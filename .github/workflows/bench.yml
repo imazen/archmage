@@ -47,7 +47,8 @@ jobs:
       - name: Run benchmarks
         shell: bash
         run: |
-          for entry in ${{ matrix.bench }}; do
+          bench_list='${{ matrix.bench }}'
+          for entry in $bench_list; do
             bench="${entry%%|*}"
             pkg="${entry##*|}"
             echo "=== Running bench: $bench (package: $pkg) ==="
