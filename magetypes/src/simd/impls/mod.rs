@@ -11,6 +11,11 @@ mod x86_v3;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod x86_v4;
 
+// V4-family delegation of W128 / W256 f32 backends to V3 (hand-written —
+// future generators may take it over). V4 ⊃ V3, so delegating is sound.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+mod x86_v4_f32_delegated;
+
 #[cfg(target_arch = "aarch64")]
 mod arm_neon;
 

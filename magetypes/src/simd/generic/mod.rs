@@ -8,5 +8,9 @@
 //! by `cargo xtask generate`. This file is handwritten and should not be
 //! purged during regeneration.
 
+mod cross_width;
 mod generated;
+pub use cross_width::F32x8FromHalves;
+#[cfg(feature = "w512")]
+pub use cross_width::F32x16FromHalves;
 pub use generated::*;
