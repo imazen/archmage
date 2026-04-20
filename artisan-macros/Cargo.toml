@@ -20,6 +20,13 @@ proc-macro = true
 # the #[chain] declaration.
 artisan_test_hooks = []
 
+# Gate for the macrotest expansion-snapshot integration test. The test shells
+# out to `cargo expand`, which isn't installed in every CI job. Enabling this
+# feature turns the test on; default `cargo test` omits it entirely, so non-
+# expand CI jobs don't pay the cargo-expand install cost. The dedicated
+# expand-snapshots CI job runs with this feature on.
+run_expand_test = []
+
 [dependencies]
 syn = { version = "2.0.0", features = ["full", "parsing", "printing"] }
 quote = "1.0.0"
@@ -27,6 +34,15 @@ proc-macro2 = "1.0.0"
 
 [dev-dependencies]
 # Committed macro-expansion snapshots. Regenerate with `MACROTEST=overwrite
-# cargo test -p artisan-macros --test expand` and commit the updated
-# `*.expanded.rs` files next to their inputs in `tests/expand/`.
+# cargo test -p artisan-macros --features run_expand_test --test expand`
+# and commit the updated `*.expanded.rs` files next to their inputs in
+# `tests/expand/`.
 macrotest = "1.2.1"
+
+# Built only when run_expand_test is enabled; otherwise Cargo skips the whole
+# test target (no compilation, no warnings on non-x86 hosts). See the feature
+# definition above for the rationale.
+[[test]]
+name = "expand"
+path = "tests/expand.rs"
+required-features = ["run_expand_test"]

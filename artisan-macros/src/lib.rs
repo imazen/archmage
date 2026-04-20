@@ -416,10 +416,16 @@ impl Parse for ChainArgs {
 }
 
 fn detect_macro_for(arch: &str, span: Span) -> Result<TokenStream2> {
+    // Paths are routed through `::std::arch::` rather than `::std::` directly.
+    // The bare `::std::is_aarch64_feature_detected!` path, while documented as
+    // re-exported at std root, fails to resolve under some cross-compile
+    // configurations (observed on cross aarch64-unknown-linux-gnu via CI);
+    // the `std::arch::` path is the one archmage itself uses and it works
+    // consistently across all hosts/targets we care about.
     match arch {
-        "x86_64" | "x86" => Ok(quote! { ::std::is_x86_feature_detected }),
-        "aarch64" => Ok(quote! { ::std::is_aarch64_feature_detected }),
-        "arm" => Ok(quote! { ::std::is_arm_feature_detected }),
+        "x86_64" | "x86" => Ok(quote! { ::std::arch::is_x86_feature_detected }),
+        "aarch64" => Ok(quote! { ::std::arch::is_aarch64_feature_detected }),
+        "arm" => Ok(quote! { ::std::arch::is_arm_feature_detected }),
         "wasm32" => Err(Error::new(
             span,
             "wasm32 has no runtime feature detection; SIMD tiers on wasm must rely on \

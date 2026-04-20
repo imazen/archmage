@@ -151,19 +151,21 @@ jobs:
           workspaces: artisan-macros -> target
 
       - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-expand
 
       - name: Run macrotest expand
-        run: cargo test -p artisan-macros --manifest-path artisan-macros/Cargo.toml --test expand
+        run: cargo test -p artisan-macros --manifest-path artisan-macros/Cargo.toml --features run_expand_test --test expand
 
       - name: Fail if snapshots would change
         shell: bash
         run: |
           set +e
-          MACROTEST=overwrite cargo test -p artisan-macros --manifest-path artisan-macros/Cargo.toml --test expand
+          MACROTEST=overwrite cargo test -p artisan-macros --manifest-path artisan-macros/Cargo.toml --features run_expand_test --test expand
           if ! git diff --exit-code -- artisan-macros/tests/expand/; then
             echo "::error::expansion snapshots are out of date."
-            echo "::error::Regenerate locally with: MACROTEST=overwrite cargo test -p artisan-macros --test expand"
+            echo "::error::Regenerate locally with: MACROTEST=overwrite cargo test -p artisan-macros --features run_expand_test --test expand"
             echo "::error::Then commit the updated *.expanded.rs files."
             exit 1
           fi
