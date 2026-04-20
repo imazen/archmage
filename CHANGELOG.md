@@ -4,7 +4,6 @@
 
 ### QUEUED BREAKING CHANGES
 
-- Every `F32xN`/`I*xN`/`U*xN` backend trait method now takes `self` — closes the UFCS soundness bypass where `<X64V3Token as F32x8Backend>::splat(7.0)` let callers invoke SIMD primitives without holding a token. The generic wrapper now stores the token inline (`f32xN<T>(Repr, T)` with `#[repr(C)]` + compile-time layout assertions) so method dispatch through a value is the only path (4447892, f2a76fd, 4e31ec9, 4197620)
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 - Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)
@@ -14,21 +13,34 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+## 0.9.21 — 2026-04-20
+
+### Changed — narrow breaking
+
+- Every `F32xN` / `I*xN` / `U*xN` backend trait method now takes `self` as its first parameter. Closes the UFCS path where `<X64V3Token as F32x8Backend>::splat(7.0)` could invoke a backend primitive without holding a token. The generic wrapper changes from `f32xN<T>(Repr, PhantomData<T>)` to `#[repr(C)] f32xN<T>(Repr, T)`; token storage is inline and `const _: ()` asserts keep the layout identical to `T::Repr` (#40, 7876c81). The backend traits are sealed, so the only public methods whose signatures actually changed are the five conversion helpers in the next bullet. `cargo semver-checks` reports this as a major break; the shipping surface is narrow enough that a patch was preferred over forcing every downstream off `^0.9`.
+- `f32x4::from_u8`, `f32x4::load_4_rgba_u8`, `f32x8::from_u8`, `f32x8::load_8_rgba_u8`, `f32x8::load_8x8` — each gained a leading `token: T` parameter. These were the five associated functions on the generic wrappers that previously allowed constructing a SIMD value without a token (part of the UFCS gap fixed above). Callers on `^0.9` will see a compile error pointing at the missing first argument; the fix is to pass the token used elsewhere in the surrounding code (#40, 7876c81).
+
 ### Added
 
-- `magetypes/tests/bypass_closed.rs` + `magetypes/src/bypass_adversarial.rs` — adversarial soundness suite. 20 `compile_fail` doctests (one per trait-method category: construction, memory, arithmetic, math, comparison, reduction, bitwise, shift, boolean, bitcast) paired with 12 runtime-sanctioned counterparts. Uses `ScalarToken` so every target exercises the closure. (b635ae3)
-- Compile-time layout assertions in every generic `*_impl.rs` — the build fails if a token ever gains a non-ZST field, preventing the `#[repr(C)]` layout guarantee from silently breaking. (4197620)
+- Cross-width raise/lower for the f32 chain: `F32x8FromHalves` and `F32x16FromHalves` traits with `from_halves` / `low` / `high` / `split`, plus `f32x8<T>::from_halves(token, lo, hi)` and `f32x16<T>::from_halves(token, lo, hi)` generic constructors. Native AVX `vinsertf128` / AVX-512 `vinsertf32x8` / NEON + Wasm128 polyfill as appropriate. Closes the moxcms migration blocker for Double-variant interpolators (#38, 3ccf38d, closes #36).
+- Backend delegation: `X64V4Token`, `X64V4xToken`, and `Avx512Fp16Token` now implement `F32x4Backend` and `F32x8Backend` by delegating to `X64V3Token` via the `.v3()` extractor. Previously those tokens only had `F32x16Backend`, so generic code on narrower widths couldn't accept a V4 token at all (#38, 3ccf38d).
+- `magetypes/tests/cross_width_adversarial.rs` — 13 adversarial tests including `v4_native_matches_v3_polyfill` (AVX-512 `_mm512_insertf32x8` vs V3 polyfill bit-parity gate), lane-order checks, NaN / ±0 / ±inf round-trips, and a permutation sweep (#38, 3ccf38d).
+- `magetypes/tests/bypass_closed.rs` + `magetypes/src/bypass_adversarial.rs` — adversarial soundness suite. 20 `compile_fail` doctests (construction, memory, arithmetic, math, comparison, reduction, bitwise, shift, boolean, bitcast) paired with 12 runtime-sanctioned counterparts. Uses `ScalarToken` so every target exercises the closure (#40, b635ae3).
+- Compile-time layout assertions in every generic `*_impl.rs`. Build fails if a token ever gains a non-ZST field (#40, 4197620).
 
 ### Fixed
 
-- NEON `f32x8` polyfill `recip`/`rsqrt` use two-step Newton-Raphson for precision parity with single-width NEON (6ea5448)
-- `_approx` tolerance widened from 1e-3 → 4e-3 to match the ARM Architecture Reference Manual bound for `frecpe`/`frsqrte`; earlier value was tighter than the spec permits and failed under QEMU (9c48311)
-- ARM/WASM polyfill UFCS trait calls thread `self` correctly through every recip/rsqrt/rcp_approx/rsqrt_approx path (f2a76fd, 4e31ec9)
+- NEON `f32x8` polyfill `recip` / `rsqrt` use two-step Newton-Raphson for precision parity with single-width NEON (#40, 6ea5448).
+- `_approx` tolerance widened from 1e-3 → 4e-3 to match the ARM Architecture Reference Manual bound for `frecpe` / `frsqrte`; earlier value was tighter than the spec permits and failed under QEMU (#40, 9c48311).
+- ARM and WASM polyfill UFCS trait calls thread `self` correctly through every `recip` / `rsqrt` / `rcp_approx` / `rsqrt_approx` path (#40, f2a76fd, 4e31ec9).
+- Bench CI: matrix entries like `summon_overhead|archmage ...` were expanded into bash as bare pipe tokens, causing `syntax error near unexpected token '|'` on every runner. Assigning the matrix string to a single-quoted variable first makes bash treat `|` as literal (8089d5f).
+- `tests/token_permutations.rs` and `tests/token_infrastructure.rs` gated on `feature = "std"` — both imported `archmage::testing`, which is std-only, so they failed to compile under `cargo test --no-default-features` in `just ci`'s full-integration-test mode. CI's own no-default matrix used `--lib` and sidestepped the issue (fdd502e).
 
 ### Changed
 
-- CI runs magetypes integration tests on aarch64 (cross) and wasm32-wasip1 targets, not just x86 (#39, 9d34c81)
-- Moved magetypes-dependent benches (`asm_patterns`, `cbrt_variants`, `generic_vs_concrete`, `safe_memory_overhead`) from archmage to magetypes. These were failing to compile in the bench workflow because the magetypes dev-dep was removed from archmage in 0.9.18 (83519ca) but benches were missed. (3490d5f)
+- CI runs magetypes integration tests on aarch64 (via `cross`) and wasm32-wasip1 (via `wasmtime`) targets, not just x86 (#39, 9d34c81).
+- Moved magetypes-dependent benches (`asm_patterns`, `cbrt_variants`, `generic_vs_concrete`, `safe_memory_overhead`) from archmage to magetypes. The bench workflow was failing because the magetypes dev-dep was removed from archmage in 0.9.18 (83519ca) but these benches were missed (8c8c9e5).
+- `magetypes` allows `clippy::wrong_self_convention` crate-wide. Backend trait methods thread the CPU-feature token through `self` on every method (including `from_*` / `to_*`), which the lint's constructor heuristic doesn't apply to (4fd8f02).
 
 ## 0.9.20 — 2026-04-15
 
