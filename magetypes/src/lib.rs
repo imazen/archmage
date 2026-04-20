@@ -65,5 +65,11 @@ pub mod simd;
 mod width;
 pub use width::WidthDispatch;
 
+// Compile-fail adversarial doctests proving the UFCS-tokenless bypass is
+// closed on every backend trait category. Module contents are inert at
+// runtime; rustdoc compiles the `//!` doctests under `cargo test --doc`.
+#[doc(hidden)]
+pub mod bypass_adversarial;
+
 // Types are accessed via magetypes::simd::* - no root re-exports
 // This keeps the API stable during development

@@ -193,8 +193,16 @@ jobs:
       - name: Build (cross)
         run: cross build --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
-      - name: Test (cross/QEMU)
-        run: cross test --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
+      - name: Test archmage (cross/QEMU)
+        run: cross test -p archmage --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
+
+      # magetypes integration tests (scalar_parity, exhaustive_intrinsics,
+      # bypass_closed, generic_*, transcendental_*, polyfill_*, …) only
+      # run here when explicitly selected — bare `cross test` from the
+      # workspace root picks up only the root crate. Issue #39 tracks the
+      # NEON precision fix that made these pass under QEMU.
+      - name: Test magetypes (cross/QEMU)
+        run: cross test -p magetypes --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
       # archmage-no-features-test compiles with #![deny(warnings)]. It
       # exercises #[autoversion] with explicit non-x86 tier lists — the
@@ -235,32 +243,38 @@ jobs:
           RUSTFLAGS: "-C target-feature=+simd128"
         run: cargo build -p magetypes --target wasm32-wasip1
 
-      # Lib tests only — integration tests that use proptest pull wait-timeout
-      # which doesn't compile on WASM. Run specific integration tests separately.
+      # archmage's integration tests pull `proptest` + `wait-timeout` which
+      # don't compile on wasm32-wasip1, so stick to --lib + the two
+      # WASM-friendly integration tests for archmage.
       - name: Test archmage on WASM (wasmtime)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p archmage --lib --target wasm32-wasip1
+        run: cargo test -p archmage --lib --features "${{ env.FEATURES }}" --target wasm32-wasip1
 
+      - name: Test archmage wasm_intrinsics_exercise
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo test -p archmage --test wasm_intrinsics_exercise --features "${{ env.FEATURES }}" --target wasm32-wasip1
+
+      - name: Test archmage feature_consistency (WASM)
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo test -p archmage --test feature_consistency --features "${{ env.FEATURES }}" --target wasm32-wasip1
+
+      # magetypes integration tests compile cleanly on WASM and catch
+      # the WASM-specific polyfill bugs that `--lib` alone never sees
+      # (see commit 6ea5448 / issue #39). Runs the full integration
+      # suite: scalar_parity, exhaustive_intrinsics, bypass_closed,
+      # bypass_adversarial doctests, generic_*, transcendental_*,
+      # polyfill_parity, polyfill_verification, etc.
       - name: Test magetypes on WASM (wasmtime)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --lib --target wasm32-wasip1
-
-      # Run WASM-specific integration tests individually (avoids proptest dep)
-      - name: Test WASM intrinsics exercise
-        env:
-          RUSTFLAGS: "-C target-feature=+simd128"
-          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test --test wasm_intrinsics_exercise --target wasm32-wasip1
-
-      - name: Test feature consistency (WASM)
-        env:
-          RUSTFLAGS: "-C target-feature=+simd128"
-          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test --test feature_consistency --target wasm32-wasip1
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1
 
       - name: Run arch exercise (WASM)
         if: always()

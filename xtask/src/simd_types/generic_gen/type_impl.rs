@@ -105,7 +105,6 @@ fn gen_header(ty: &SimdType) -> String {
         {example_block}
         #![allow(clippy::should_implement_trait)]
 
-        use core::marker::PhantomData;
         {ops_str}
         use crate::simd::backends::{backend};
 
@@ -202,19 +201,172 @@ fn gen_struct(ty: &SimdType) -> String {
         String::new()
     };
 
+    let layout_asserts = gen_layout_asserts(ty);
+
     formatdoc! {"
         /// {lanes}-lane {elem} SIMD vector, generic over backend `T`.
         ///
         /// `T` is a token type that proves CPU support for the required SIMD features.
         /// The inner representation is `T::Repr` (e.g., {repr_doc}).
         ///
+        /// **The token is stored** (as a zero-sized field) so methods receiving
+        /// `self: {name}<T>` can re-supply it to backend operations that
+        /// require a token value (e.g. `T::splat(token, v)`). This carries the
+        /// token-as-feature-proof guarantee through every method call without
+        /// runtime overhead — `T` is ZST, so `sizeof({name}<T>) == sizeof(T::Repr)`
+        /// and `align_of({name}<T>) == align_of(T::Repr)` under `#[repr(C)]`.
+        ///
+        /// # Layout
+        ///
+        /// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
+        /// and `T` is a 0-byte tail. Bitcasts between `{name}<T>` values of
+        /// different element-types are sound when the Repr types share a layout
+        /// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
+        /// `#[repr(transparent)]` cannot be used because Rust cannot prove at
+        /// the struct definition site that a generic `T` is a 1-ZST.
+        ///
         /// Construction requires a token value to prove CPU support at runtime.
-        /// After construction, operations don't need the token — it's baked into the type.
         {note_section}#[derive(Clone, Copy)]
-        #[repr(transparent)]
-        pub struct {name}<T: {backend}>(T::Repr, PhantomData<T>);
-        {phantom_comment}
+        #[repr(C)]
+        pub struct {name}<T: {backend}>(pub(crate) T::Repr, pub(crate) T);
+        {phantom_comment}{layout_asserts}
     "}
+}
+
+// ============================================================================
+// Compile-time layout assertions
+//
+// Under `#[repr(C)]` with a trailing ZST token field, the struct has the same
+// size and alignment as `T::Repr` *if and only if* `T` is a 1-ZST (zero size,
+// alignment of 1). All archmage tokens are currently 1-ZSTs, but that could
+// change if a future refactor adds a non-ZST field to a token (e.g. by accident
+// during a code cleanup). These asserts catch that regression at compile time.
+//
+// One assert is emitted unconditionally using `ScalarToken` (which implements
+// every backend trait and is always available). Platform-native tokens get
+// additional asserts gated by the matching `target_arch` (and `feature` for V4).
+// ============================================================================
+
+fn gen_layout_asserts(ty: &SimdType) -> String {
+    let name = ty.name();
+    let backend = backend_trait(ty);
+
+    // ScalarToken assert — always present, works on every target.
+    let scalar_block = formatdoc! {"
+
+        // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
+        // field, so `sizeof/alignof({name}<T>) == sizeof/alignof(T::Repr)`
+        // iff `T` is a 1-ZST. Every archmage token currently satisfies this;
+        // if a future refactor adds a non-ZST field to a token, this const
+        // assert fires at compile time.
+        const _: () = {{
+            assert!(
+                core::mem::size_of::<{name}<archmage::ScalarToken>>()
+                    == core::mem::size_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
+            );
+            assert!(
+                core::mem::align_of::<{name}<archmage::ScalarToken>>()
+                    == core::mem::align_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
+            );
+        }};
+    "};
+
+    // Native-token asserts gated by target_arch (and the w512/avx512 features
+    // for the 512-bit native path on x86).
+    let mut native_blocks = String::new();
+
+    // x86_64: all widths use X64V3Token for its backend impl, except that
+    // the W512 avx512 backend lives on X64V4Token behind a feature gate.
+    // We pick X64V3Token for W128/W256 (its Repr is the native `__m128`/
+    // `__m256`); for W512 we add two variants: one using V3's polyfill
+    // (`[__m256; 2]`), one using V4's native `__m512` under `feature = "avx512"`.
+    match ty.width {
+        SimdWidth::W128 | SimdWidth::W256 => {
+            native_blocks.push_str(&formatdoc! {r#"
+
+                #[cfg(target_arch = "x86_64")]
+                const _: () = {{
+                    assert!(
+                        core::mem::size_of::<{name}<archmage::X64V3Token>>()
+                            == core::mem::size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                    assert!(
+                        core::mem::align_of::<{name}<archmage::X64V3Token>>()
+                            == core::mem::align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                }};
+            "#});
+        }
+        SimdWidth::W512 => {
+            // W512 on V3 is the polyfill path (`[__m256; 2]`). The full file is
+            // gated on `feature = "w512"` already (see generic/generated/mod.rs),
+            // so we don't need an extra feature gate here.
+            native_blocks.push_str(&formatdoc! {r#"
+
+                #[cfg(target_arch = "x86_64")]
+                const _: () = {{
+                    assert!(
+                        core::mem::size_of::<{name}<archmage::X64V3Token>>()
+                            == core::mem::size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                    assert!(
+                        core::mem::align_of::<{name}<archmage::X64V3Token>>()
+                            == core::mem::align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                }};
+
+                // Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
+                // `avx512` feature, which is how archmage exposes X64V4Token's
+                // 512-bit backend impls.
+                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                const _: () = {{
+                    assert!(
+                        core::mem::size_of::<{name}<archmage::X64V4Token>>()
+                            == core::mem::size_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                    assert!(
+                        core::mem::align_of::<{name}<archmage::X64V4Token>>()
+                            == core::mem::align_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
+                    );
+                }};
+            "#});
+        }
+    }
+
+    // aarch64 NEON — same backend trait; polyfill for wider-than-128 widths.
+    native_blocks.push_str(&formatdoc! {r#"
+
+        #[cfg(target_arch = "aarch64")]
+        const _: () = {{
+            assert!(
+                core::mem::size_of::<{name}<archmage::NeonToken>>()
+                    == core::mem::size_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
+            );
+            assert!(
+                core::mem::align_of::<{name}<archmage::NeonToken>>()
+                    == core::mem::align_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
+            );
+        }};
+    "#});
+
+    // wasm32 SIMD128 — gated on `target_feature = "simd128"` because the
+    // Wasm128Token only implements the backends on the +simd128 target.
+    native_blocks.push_str(&formatdoc! {r#"
+
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        const _: () = {{
+            assert!(
+                core::mem::size_of::<{name}<archmage::Wasm128Token>>()
+                    == core::mem::size_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
+            );
+            assert!(
+                core::mem::align_of::<{name}<archmage::Wasm128Token>>()
+                    == core::mem::align_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
+            );
+        }};
+    "#});
+
+    format!("{scalar_block}{native_blocks}")
 }
 
 // ============================================================================
@@ -268,7 +420,7 @@ fn gen_methods(ty: &SimdType) -> String {
         \x20   /// Sum all {lanes} lanes{wrapping_suffix}.
             #[inline(always)]
             pub fn reduce_add(self) -> {elem} {{
-                T::reduce_add(self.0)
+                T::reduce_add(self.1, self.0)
             }}
 
     "});
@@ -277,13 +429,13 @@ fn gen_methods(ty: &SimdType) -> String {
             \x20   /// Minimum across all {lanes} lanes.
                 #[inline(always)]
                 pub fn reduce_min(self) -> {elem} {{
-                    T::reduce_min(self.0)
+                    T::reduce_min(self.1, self.0)
                 }}
 
                 /// Maximum across all {lanes} lanes.
                 #[inline(always)]
                 pub fn reduce_max(self) -> {elem} {{
-                    T::reduce_max(self.0)
+                    T::reduce_max(self.1, self.0)
                 }}
 
         "});
@@ -307,7 +459,7 @@ fn gen_methods(ty: &SimdType) -> String {
         \x20   /// Bitwise NOT.
             #[inline(always)]
             pub fn not(self) -> Self {{
-                Self(T::not(self.0), PhantomData)
+                Self(T::not(self.1, self.0), self.1)
             }}
 
     "});
@@ -319,19 +471,19 @@ fn gen_methods(ty: &SimdType) -> String {
             \x20   /// True if all lanes have their {high_bit} set (all-1s mask).
                 #[inline(always)]
                 pub fn all_true(self) -> bool {{
-                    T::all_true(self.0)
+                    T::all_true(self.1, self.0)
                 }}
 
                 /// True if any lane has its {high_bit} set.
                 #[inline(always)]
                 pub fn any_true(self) -> bool {{
-                    T::any_true(self.0)
+                    T::any_true(self.1, self.0)
                 }}
 
                 /// Extract the high bit of each {elem_bits}-bit lane as a bitmask.
                 #[inline(always)]
                 pub fn bitmask(self) -> {bitmask_ty} {{
-                    T::bitmask(self.0)
+                    T::bitmask(self.1, self.0)
                 }}
 
         "});
@@ -342,36 +494,39 @@ fn gen_methods(ty: &SimdType) -> String {
 }
 
 fn gen_construction(elem: &str, lanes: usize) -> String {
+    // Token threading: backend trait construction methods now take `self`,
+    // and the generic struct stores `T` (ZST), so we pass the user's token
+    // through to the backend AND store it for later operator/method use.
     formatdoc! {"
         \x20   /// Broadcast scalar to all {lanes} lanes.
             #[inline(always)]
-            pub fn splat(_: T, v: {elem}) -> Self {{
-                Self(T::splat(v), PhantomData)
+            pub fn splat(token: T, v: {elem}) -> Self {{
+                Self(T::splat(token, v), token)
             }}
 
             /// All lanes zero.
             #[inline(always)]
-            pub fn zero(_: T) -> Self {{
-                Self(T::zero(), PhantomData)
+            pub fn zero(token: T) -> Self {{
+                Self(T::zero(token), token)
             }}
 
             /// Load from a `[{elem}; {lanes}]` array.
             #[inline(always)]
-            pub fn load(_: T, data: &[{elem}; {lanes}]) -> Self {{
-                Self(T::load(data), PhantomData)
+            pub fn load(token: T, data: &[{elem}; {lanes}]) -> Self {{
+                Self(T::load(token, data), token)
             }}
 
             /// Create from array (zero-cost where possible).
             #[inline(always)]
-            pub fn from_array(_: T, arr: [{elem}; {lanes}]) -> Self {{
-                Self(T::from_array(arr), PhantomData)
+            pub fn from_array(token: T, arr: [{elem}; {lanes}]) -> Self {{
+                Self(T::from_array(token, arr), token)
             }}
 
             /// Create from slice. Panics if `slice.len() < {lanes}`.
             #[inline(always)]
-            pub fn from_slice(_: T, slice: &[{elem}]) -> Self {{
+            pub fn from_slice(token: T, slice: &[{elem}]) -> Self {{
                 let arr: [{elem}; {lanes}] = slice[..{lanes}].try_into().unwrap();
-                Self(T::from_array(arr), PhantomData)
+                Self(T::from_array(token, arr), token)
             }}
 
     "}
@@ -382,13 +537,13 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
         \x20   /// Store to array.
             #[inline(always)]
             pub fn store(self, out: &mut [{elem}; {lanes}]) {{
-                T::store(self.0, out);
+                T::store(self.1, self.0, out);
             }}
 
             /// Convert to array.
             #[inline(always)]
             pub fn to_array(self) -> [{elem}; {lanes}] {{
-                T::to_array(self.0)
+                T::to_array(self.1, self.0)
             }}
 
             /// Get the underlying platform representation.
@@ -399,16 +554,17 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
 
             /// Wrap a platform representation (token-gated).
             #[inline(always)]
-            pub fn from_repr(_: T, repr: T::Repr) -> Self {{
-                Self(repr, PhantomData)
+            pub fn from_repr(token: T, repr: T::Repr) -> Self {{
+                Self(repr, token)
             }}
 
-            /// Wrap a repr without requiring a token value.
-            /// Only usable within the `generic` module (for cross-type conversions).
+            /// Wrap a repr with a token. Used by cross-type/cross-width helpers
+            /// in `simd::generic::*` where the token is already proven by the
+            /// caller's wider input type.
             #[inline(always)]
             #[allow(dead_code)]
-            pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {{
-                Self(repr, PhantomData)
+            pub(crate) fn from_repr_unchecked(token: T, repr: T::Repr) -> Self {{
+                Self(repr, token)
             }}
 
     "}
@@ -427,61 +583,61 @@ fn gen_float_math() -> String {
         \x20   /// Lane-wise minimum.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
-                Self(T::min(self.0, other.0), PhantomData)
+                Self(T::min(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise maximum.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
-                Self(T::max(self.0, other.0), PhantomData)
+                Self(T::max(self.1, self.0, other.0), self.1)
             }}
 
             /// Clamp between lo and hi.
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
-                Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
+                Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
             }}
 
             /// Square root.
             #[inline(always)]
             pub fn sqrt(self) -> Self {{
-                Self(T::sqrt(self.0), PhantomData)
+                Self(T::sqrt(self.1, self.0), self.1)
             }}
 
             /// Absolute value.
             #[inline(always)]
             pub fn abs(self) -> Self {{
-                Self(T::abs(self.0), PhantomData)
+                Self(T::abs(self.1, self.0), self.1)
             }}
 
             /// Round toward negative infinity.
             #[inline(always)]
             pub fn floor(self) -> Self {{
-                Self(T::floor(self.0), PhantomData)
+                Self(T::floor(self.1, self.0), self.1)
             }}
 
             /// Round toward positive infinity.
             #[inline(always)]
             pub fn ceil(self) -> Self {{
-                Self(T::ceil(self.0), PhantomData)
+                Self(T::ceil(self.1, self.0), self.1)
             }}
 
             /// Round to nearest integer.
             #[inline(always)]
             pub fn round(self) -> Self {{
-                Self(T::round(self.0), PhantomData)
+                Self(T::round(self.1, self.0), self.1)
             }}
 
             /// Fused multiply-add: `self * a + b`.
             #[inline(always)]
             pub fn mul_add(self, a: Self, b: Self) -> Self {{
-                Self(T::mul_add(self.0, a.0, b.0), PhantomData)
+                Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
             }}
 
             /// Fused multiply-sub: `self * a - b`.
             #[inline(always)]
             pub fn mul_sub(self, a: Self, b: Self) -> Self {{
-                Self(T::mul_sub(self.0, a.0, b.0), PhantomData)
+                Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
             }}
 
     "}
@@ -498,13 +654,13 @@ fn gen_int_math(ty: &SimdType) -> String {
         \x20   /// Lane-wise minimum{unsigned_suffix}.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
-                Self(T::min(self.0, other.0), PhantomData)
+                Self(T::min(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise maximum{unsigned_suffix}.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
-                Self(T::max(self.0, other.0), PhantomData)
+                Self(T::max(self.1, self.0, other.0), self.1)
             }}
 
     "};
@@ -514,7 +670,7 @@ fn gen_int_math(ty: &SimdType) -> String {
             \x20   /// Lane-wise absolute value.
                 #[inline(always)]
                 pub fn abs(self) -> Self {{
-                    Self(T::abs(self.0), PhantomData)
+                    Self(T::abs(self.1, self.0), self.1)
                 }}
 
         "});
@@ -524,7 +680,7 @@ fn gen_int_math(ty: &SimdType) -> String {
         \x20   /// Clamp between lo and hi.
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
-                Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
+                Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
             }}
 
     "});
@@ -537,43 +693,43 @@ fn gen_comparisons(signedness: &str) -> String {
         \x20   /// Lane-wise equality (returns mask).
             #[inline(always)]
             pub fn simd_eq(self, other: Self) -> Self {{
-                Self(T::simd_eq(self.0, other.0), PhantomData)
+                Self(T::simd_eq(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise inequality (returns mask).
             #[inline(always)]
             pub fn simd_ne(self, other: Self) -> Self {{
-                Self(T::simd_ne(self.0, other.0), PhantomData)
+                Self(T::simd_ne(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise less-than{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_lt(self, other: Self) -> Self {{
-                Self(T::simd_lt(self.0, other.0), PhantomData)
+                Self(T::simd_lt(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise less-than-or-equal{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_le(self, other: Self) -> Self {{
-                Self(T::simd_le(self.0, other.0), PhantomData)
+                Self(T::simd_le(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise greater-than{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_gt(self, other: Self) -> Self {{
-                Self(T::simd_gt(self.0, other.0), PhantomData)
+                Self(T::simd_gt(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise greater-than-or-equal{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_ge(self, other: Self) -> Self {{
-                Self(T::simd_ge(self.0, other.0), PhantomData)
+                Self(T::simd_ge(self.1, self.0, other.0), self.1)
             }}
 
             /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
             #[inline(always)]
             pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{
-                Self(T::blend(mask.0, if_true.0, if_false.0), PhantomData)
+                Self(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
             }}
 
     "}
@@ -584,25 +740,25 @@ fn gen_approximations() -> String {
         \x20   /// Fast reciprocal approximation (~12-bit precision).
             #[inline(always)]
             pub fn rcp_approx(self) -> Self {{
-                Self(T::rcp_approx(self.0), PhantomData)
+                Self(T::rcp_approx(self.1, self.0), self.1)
             }}
 
             /// Precise reciprocal (Newton-Raphson refined).
             #[inline(always)]
             pub fn recip(self) -> Self {{
-                Self(T::recip(self.0), PhantomData)
+                Self(T::recip(self.1, self.0), self.1)
             }}
 
             /// Fast reciprocal square root approximation (~12-bit precision).
             #[inline(always)]
             pub fn rsqrt_approx(self) -> Self {{
-                Self(T::rsqrt_approx(self.0), PhantomData)
+                Self(T::rsqrt_approx(self.1, self.0), self.1)
             }}
 
             /// Precise reciprocal square root (Newton-Raphson refined).
             #[inline(always)]
             pub fn rsqrt(self) -> Self {{
-                Self(T::rsqrt(self.0), PhantomData)
+                Self(T::rsqrt(self.1, self.0), self.1)
             }}
 
     "}
@@ -613,7 +769,7 @@ fn gen_shifts(ty: &SimdType) -> String {
         \x20   /// Shift left by constant.
             #[inline(always)]
             pub fn shl_const<const N: i32>(self) -> Self {{
-                Self(T::shl_const::<N>(self.0), PhantomData)
+                Self(T::shl_const::<N>(self.1, self.0), self.1)
             }}
 
     "};
@@ -623,7 +779,7 @@ fn gen_shifts(ty: &SimdType) -> String {
             \x20   /// Arithmetic shift right by constant (sign-extending).
                 #[inline(always)]
                 pub fn shr_arithmetic_const<const N: i32>(self) -> Self {{
-                    Self(T::shr_arithmetic_const::<N>(self.0), PhantomData)
+                    Self(T::shr_arithmetic_const::<N>(self.1, self.0), self.1)
                 }}
 
         "});
@@ -633,7 +789,7 @@ fn gen_shifts(ty: &SimdType) -> String {
         \x20   /// Logical shift right by constant (zero-filling).
             #[inline(always)]
             pub fn shr_logical_const<const N: i32>(self) -> Self {{
-                Self(T::shr_logical_const::<N>(self.0), PhantomData)
+                Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
             }}
 
             /// Alias for [`shl_const`](Self::shl_const).
@@ -762,7 +918,7 @@ fn gen_operators(ty: &SimdType) -> String {
                 type Output = Self;
                 #[inline(always)]
                 fn neg(self) -> Self {{
-                    Self(T::neg(self.0), PhantomData)
+                    Self(T::neg(self.1, self.0), self.1)
                 }}
             }}
 
@@ -780,7 +936,7 @@ fn gen_binary_op(name: &str, backend: &str, trait_name: &str, method: &str) -> S
             type Output = Self;
             #[inline(always)]
             fn {method}(self, rhs: Self) -> Self {{
-                Self(T::{method}(self.0, rhs.0), PhantomData)
+                Self(T::{method}(self.1, self.0, rhs.0), self.1)
             }}
         }}
 
@@ -903,7 +1059,7 @@ fn gen_scalar_op(name: &str, backend: &str, elem: &str, trait_name: &str, method
             type Output = Self;
             #[inline(always)]
             fn {method}(self, rhs: {elem}) -> Self {{
-                Self(T::{method}(self.0, T::splat(rhs)), PhantomData)
+                Self(T::{method}(self.1, self.0, T::splat(self.1, rhs)), self.1)
             }}
         }}
 
@@ -957,7 +1113,7 @@ fn gen_from_array(ty: &SimdType) -> String {
         impl<T: {backend}> From<{name}<T>> for [{elem}; {lanes}] {{
             #[inline(always)]
             fn from(v: {name}<T>) -> [{elem}; {lanes}] {{
-                T::to_array(v.0)
+                T::to_array(v.1, v.0)
             }}
         }}
 
@@ -975,7 +1131,7 @@ fn gen_debug(ty: &SimdType) -> String {
 
         impl<T: {backend}> core::fmt::Debug for {name}<T> {{
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {{
-                let arr = T::to_array(self.0);
+                let arr = T::to_array(self.1, self.0);
                 f.debug_tuple(\"{name}\").field(&arr).finish()
             }}
         }}
@@ -1028,8 +1184,8 @@ fn gen_platform(ty: &SimdType) -> String {
 
                     /// Create from a raw `{raw_type}` (token-gated, zero-cost).
                     #[inline(always)]
-                    pub fn {from_fn}(_: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
-                        Self(v, PhantomData)
+                    pub fn {from_fn}(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
+                        Self(v, token)
                     }}
                 }}
             "}
@@ -1091,7 +1247,7 @@ fn gen_popcnt(ty: &SimdType) -> String {
             /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
             #[inline(always)]
             pub fn popcnt(self) -> Self {{
-                Self(T::popcnt(self.0), core::marker::PhantomData)
+                Self(T::popcnt(self.1, self.0), self.1)
             }}
         }}
     "}

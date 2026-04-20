@@ -881,9 +881,9 @@ fn test_f32x8_transpose_8x8() {
 
 #[test]
 fn test_f32x8_load_store_8x8() {
-    if let Some(_token) = X64V3Token::summon() {
+    if let Some(token) = X64V3Token::summon() {
         let input: [f32; 64] = core::array::from_fn(|i| i as f32);
-        let rows = f32x8::load_8x8(&input);
+        let rows = f32x8::load_8x8(token, &input);
 
         // Verify load
         for i in 0..8 {
@@ -927,7 +927,7 @@ fn test_f32x4_4ch_interleave() {
 
 #[test]
 fn test_f32x4_load_store_rgba_u8() {
-    if let Some(_token) = archmage::X64V3Token::summon() {
+    if let Some(token) = archmage::X64V3Token::summon() {
         // 4 RGBA pixels: red, green, blue, white
         let rgba: [u8; 16] = [
             255, 0, 0, 255,     // red
@@ -936,7 +936,7 @@ fn test_f32x4_load_store_rgba_u8() {
             255, 255, 255, 255, // white
         ];
 
-        let (r, g, b, a) = f32x4::load_4_rgba_u8(&rgba);
+        let (r, g, b, a) = f32x4::load_4_rgba_u8(token, &rgba);
         assert_eq!(r.to_array(), [255.0, 0.0, 0.0, 255.0]);
         assert_eq!(g.to_array(), [0.0, 255.0, 0.0, 255.0]);
         assert_eq!(b.to_array(), [0.0, 0.0, 255.0, 255.0]);
@@ -950,7 +950,7 @@ fn test_f32x4_load_store_rgba_u8() {
 
 #[test]
 fn test_f32x8_load_store_rgba_u8() {
-    if let Some(_token) = X64V3Token::summon() {
+    if let Some(token) = X64V3Token::summon() {
         // 8 RGBA pixels
         let rgba: [u8; 32] = [
             255, 0, 0, 255,     // red
@@ -963,7 +963,7 @@ fn test_f32x8_load_store_rgba_u8() {
             128, 0, 255, 255,   // purple
         ];
 
-        let (r, g, b, a) = f32x8::load_8_rgba_u8(&rgba);
+        let (r, g, b, a) = f32x8::load_8_rgba_u8(token, &rgba);
         assert_eq!(r.to_array(), [255.0, 0.0, 0.0, 255.0, 128.0, 0.0, 255.0, 128.0]);
         assert_eq!(g.to_array(), [0.0, 255.0, 0.0, 255.0, 128.0, 0.0, 128.0, 0.0]);
         assert_eq!(b.to_array(), [0.0, 0.0, 255.0, 255.0, 128.0, 0.0, 0.0, 255.0]);

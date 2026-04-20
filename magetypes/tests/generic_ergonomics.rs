@@ -142,7 +142,7 @@ fn example_brightness() {
 // ============================================================================
 
 fn apply_gamma_correction<T: F32x8Backend + F32x8Convert>(token: T, rgba_pixels: &mut [u8; 32]) {
-    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8(rgba_pixels);
+    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8(token, rgba_pixels);
 
     // Normalize to [0, 1]
     let inv255 = f32x8::<T>::splat(token, 1.0 / 255.0);
@@ -188,8 +188,8 @@ fn example_gamma_correction() {
 // Example 5: Transpose — matrix operations
 // ============================================================================
 
-fn transpose_8x8_generic<T: F32x8Backend>(_token: T, matrix: &[f32; 64]) -> [f32; 64] {
-    let rows = f32x8::<T>::load_8x8(matrix);
+fn transpose_8x8_generic<T: F32x8Backend>(token: T, matrix: &[f32; 64]) -> [f32; 64] {
+    let rows = f32x8::<T>::load_8x8(token, matrix);
     let transposed = f32x8::<T>::transpose_8x8_copy(rows);
     let mut out = [0.0f32; 64];
     f32x8::<T>::store_8x8(&transposed, &mut out);
@@ -537,7 +537,7 @@ fn example_softmax() {
 // ============================================================================
 
 fn invert_pixels<T: F32x8Backend>(token: T, pixels: &[u8; 8]) -> [u8; 8] {
-    let v = f32x8::<T>::from_u8(pixels);
+    let v = f32x8::<T>::from_u8(token, pixels);
     let max = f32x8::<T>::splat(token, 255.0);
     let inverted = max - v;
     inverted.to_u8()

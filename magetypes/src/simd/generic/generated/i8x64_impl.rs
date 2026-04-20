@@ -6,7 +6,6 @@
 
 #![allow(clippy::should_implement_trait)]
 
-use core::marker::PhantomData;
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index,
     IndexMut, Neg, Sub, SubAssign,
@@ -19,11 +18,113 @@ use crate::simd::backends::I8x64Backend;
 /// `T` is a token type that proves CPU support for the required SIMD features.
 /// The inner representation is `T::Repr` (e.g., `__m512i` on AVX-512, `[i8; 64]` on scalar).
 ///
+/// **The token is stored** (as a zero-sized field) so methods receiving
+/// `self: i8x64<T>` can re-supply it to backend operations that
+/// require a token value (e.g. `T::splat(token, v)`). This carries the
+/// token-as-feature-proof guarantee through every method call without
+/// runtime overhead — `T` is ZST, so `sizeof(i8x64<T>) == sizeof(T::Repr)`
+/// and `align_of(i8x64<T>) == align_of(T::Repr)` under `#[repr(C)]`.
+///
+/// # Layout
+///
+/// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
+/// and `T` is a 0-byte tail. Bitcasts between `i8x64<T>` values of
+/// different element-types are sound when the Repr types share a layout
+/// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
+/// `#[repr(transparent)]` cannot be used because Rust cannot prove at
+/// the struct definition site that a generic `T` is a 1-ZST.
+///
 /// Construction requires a token value to prove CPU support at runtime.
-/// After construction, operations don't need the token — it's baked into the type.
 #[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct i8x64<T: I8x64Backend>(T::Repr, PhantomData<T>);
+#[repr(C)]
+pub struct i8x64<T: I8x64Backend>(pub(crate) T::Repr, pub(crate) T);
+
+// Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
+// field, so `sizeof/alignof(i8x64<T>) == sizeof/alignof(T::Repr)`
+// iff `T` is a 1-ZST. Every archmage token currently satisfies this;
+// if a future refactor adds a non-ZST field to a token, this const
+// assert fires at compile time.
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x64<archmage::ScalarToken>>()
+            == core::mem::size_of::<
+                <archmage::ScalarToken as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x64<archmage::ScalarToken>>()
+            == core::mem::align_of::<
+                <archmage::ScalarToken as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(target_arch = "x86_64")]
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x64<archmage::X64V3Token>>()
+            == core::mem::size_of::<
+                <archmage::X64V3Token as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x64<archmage::X64V3Token>>()
+            == core::mem::align_of::<
+                <archmage::X64V3Token as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+};
+
+// Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
+// `avx512` feature, which is how archmage exposes X64V4Token's
+// 512-bit backend impls.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x64<archmage::X64V4Token>>()
+            == core::mem::size_of::<
+                <archmage::X64V4Token as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x64<archmage::X64V4Token>>()
+            == core::mem::align_of::<
+                <archmage::X64V4Token as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(target_arch = "aarch64")]
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x64<archmage::NeonToken>>()
+            == core::mem::size_of::<
+                <archmage::NeonToken as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x64<archmage::NeonToken>>()
+            == core::mem::align_of::<
+                <archmage::NeonToken as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+};
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+const _: () = {
+    assert!(
+        core::mem::size_of::<i8x64<archmage::Wasm128Token>>()
+            == core::mem::size_of::<
+                <archmage::Wasm128Token as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+    assert!(
+        core::mem::align_of::<i8x64<archmage::Wasm128Token>>()
+            == core::mem::align_of::<
+                <archmage::Wasm128Token as crate::simd::backends::I8x64Backend>::Repr,
+            >()
+    );
+};
 
 impl<T: I8x64Backend> i8x64<T> {
     /// Number of i8 lanes.
@@ -33,33 +134,33 @@ impl<T: I8x64Backend> i8x64<T> {
 
     /// Broadcast scalar to all 64 lanes.
     #[inline(always)]
-    pub fn splat(_: T, v: i8) -> Self {
-        Self(T::splat(v), PhantomData)
+    pub fn splat(token: T, v: i8) -> Self {
+        Self(T::splat(token, v), token)
     }
 
     /// All lanes zero.
     #[inline(always)]
-    pub fn zero(_: T) -> Self {
-        Self(T::zero(), PhantomData)
+    pub fn zero(token: T) -> Self {
+        Self(T::zero(token), token)
     }
 
     /// Load from a `[i8; 64]` array.
     #[inline(always)]
-    pub fn load(_: T, data: &[i8; 64]) -> Self {
-        Self(T::load(data), PhantomData)
+    pub fn load(token: T, data: &[i8; 64]) -> Self {
+        Self(T::load(token, data), token)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub fn from_array(_: T, arr: [i8; 64]) -> Self {
-        Self(T::from_array(arr), PhantomData)
+    pub fn from_array(token: T, arr: [i8; 64]) -> Self {
+        Self(T::from_array(token, arr), token)
     }
 
     /// Create from slice. Panics if `slice.len() < 64`.
     #[inline(always)]
-    pub fn from_slice(_: T, slice: &[i8]) -> Self {
+    pub fn from_slice(token: T, slice: &[i8]) -> Self {
         let arr: [i8; 64] = slice[..64].try_into().unwrap();
-        Self(T::from_array(arr), PhantomData)
+        Self(T::from_array(token, arr), token)
     }
 
     /// Split a slice into SIMD-width chunks and a scalar remainder.
@@ -96,13 +197,13 @@ impl<T: I8x64Backend> i8x64<T> {
     /// Store to array.
     #[inline(always)]
     pub fn store(self, out: &mut [i8; 64]) {
-        T::store(self.0, out);
+        T::store(self.1, self.0, out);
     }
 
     /// Convert to array.
     #[inline(always)]
     pub fn to_array(self) -> [i8; 64] {
-        T::to_array(self.0)
+        T::to_array(self.1, self.0)
     }
 
     /// Get the underlying platform representation.
@@ -113,16 +214,17 @@ impl<T: I8x64Backend> i8x64<T> {
 
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
-    pub fn from_repr(_: T, repr: T::Repr) -> Self {
-        Self(repr, PhantomData)
+    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+        Self(repr, token)
     }
 
-    /// Wrap a repr without requiring a token value.
-    /// Only usable within the `generic` module (for cross-type conversions).
+    /// Wrap a repr with a token. Used by cross-type/cross-width helpers
+    /// in `simd::generic::*` where the token is already proven by the
+    /// caller's wider input type.
     #[inline(always)]
     #[allow(dead_code)]
-    pub(super) fn from_repr_unchecked(repr: T::Repr) -> Self {
-        Self(repr, PhantomData)
+    pub(crate) fn from_repr_unchecked(token: T, repr: T::Repr) -> Self {
+        Self(repr, token)
     }
 
     // ====== Math ======
@@ -130,25 +232,25 @@ impl<T: I8x64Backend> i8x64<T> {
     /// Lane-wise minimum.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
-        Self(T::min(self.0, other.0), PhantomData)
+        Self(T::min(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise maximum.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
-        Self(T::max(self.0, other.0), PhantomData)
+        Self(T::max(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise absolute value.
     #[inline(always)]
     pub fn abs(self) -> Self {
-        Self(T::abs(self.0), PhantomData)
+        Self(T::abs(self.1, self.0), self.1)
     }
 
     /// Clamp between lo and hi.
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(T::clamp(self.0, lo.0, hi.0), PhantomData)
+        Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
     }
 
     // ====== Comparisons ======
@@ -156,43 +258,43 @@ impl<T: I8x64Backend> i8x64<T> {
     /// Lane-wise equality (returns mask).
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
-        Self(T::simd_eq(self.0, other.0), PhantomData)
+        Self(T::simd_eq(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise inequality (returns mask).
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
-        Self(T::simd_ne(self.0, other.0), PhantomData)
+        Self(T::simd_ne(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than (returns mask).
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
-        Self(T::simd_lt(self.0, other.0), PhantomData)
+        Self(T::simd_lt(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than-or-equal (returns mask).
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
-        Self(T::simd_le(self.0, other.0), PhantomData)
+        Self(T::simd_le(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than (returns mask).
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
-        Self(T::simd_gt(self.0, other.0), PhantomData)
+        Self(T::simd_gt(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than-or-equal (returns mask).
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
-        Self(T::simd_ge(self.0, other.0), PhantomData)
+        Self(T::simd_ge(self.1, self.0, other.0), self.1)
     }
 
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self(T::blend(mask.0, if_true.0, if_false.0), PhantomData)
+        Self(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
     }
 
     // ====== Reductions ======
@@ -200,7 +302,7 @@ impl<T: I8x64Backend> i8x64<T> {
     /// Sum all 64 lanes (wrapping).
     #[inline(always)]
     pub fn reduce_add(self) -> i8 {
-        T::reduce_add(self.0)
+        T::reduce_add(self.1, self.0)
     }
 
     // ====== Shifts ======
@@ -208,19 +310,19 @@ impl<T: I8x64Backend> i8x64<T> {
     /// Shift left by constant.
     #[inline(always)]
     pub fn shl_const<const N: i32>(self) -> Self {
-        Self(T::shl_const::<N>(self.0), PhantomData)
+        Self(T::shl_const::<N>(self.1, self.0), self.1)
     }
 
     /// Arithmetic shift right by constant (sign-extending).
     #[inline(always)]
     pub fn shr_arithmetic_const<const N: i32>(self) -> Self {
-        Self(T::shr_arithmetic_const::<N>(self.0), PhantomData)
+        Self(T::shr_arithmetic_const::<N>(self.1, self.0), self.1)
     }
 
     /// Logical shift right by constant (zero-filling).
     #[inline(always)]
     pub fn shr_logical_const<const N: i32>(self) -> Self {
-        Self(T::shr_logical_const::<N>(self.0), PhantomData)
+        Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
     }
 
     /// Alias for [`shl_const`](Self::shl_const).
@@ -246,7 +348,7 @@ impl<T: I8x64Backend> i8x64<T> {
     /// Bitwise NOT.
     #[inline(always)]
     pub fn not(self) -> Self {
-        Self(T::not(self.0), PhantomData)
+        Self(T::not(self.1, self.0), self.1)
     }
 
     // ====== Boolean ======
@@ -254,19 +356,19 @@ impl<T: I8x64Backend> i8x64<T> {
     /// True if all lanes have their sign bit set (all-1s mask).
     #[inline(always)]
     pub fn all_true(self) -> bool {
-        T::all_true(self.0)
+        T::all_true(self.1, self.0)
     }
 
     /// True if any lane has its sign bit set.
     #[inline(always)]
     pub fn any_true(self) -> bool {
-        T::any_true(self.0)
+        T::any_true(self.1, self.0)
     }
 
     /// Extract the high bit of each 8-bit lane as a bitmask.
     #[inline(always)]
     pub fn bitmask(self) -> u64 {
-        T::bitmask(self.0)
+        T::bitmask(self.1, self.0)
     }
 }
 
@@ -278,7 +380,7 @@ impl<T: I8x64Backend> Add for i8x64<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Self(T::add(self.0, rhs.0), PhantomData)
+        Self(T::add(self.1, self.0, rhs.0), self.1)
     }
 }
 
@@ -286,7 +388,7 @@ impl<T: I8x64Backend> Sub for i8x64<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Self(T::sub(self.0, rhs.0), PhantomData)
+        Self(T::sub(self.1, self.0, rhs.0), self.1)
     }
 }
 
@@ -294,7 +396,7 @@ impl<T: I8x64Backend> Neg for i8x64<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Self(T::neg(self.0), PhantomData)
+        Self(T::neg(self.1, self.0), self.1)
     }
 }
 
@@ -302,7 +404,7 @@ impl<T: I8x64Backend> BitAnd for i8x64<T> {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self {
-        Self(T::bitand(self.0, rhs.0), PhantomData)
+        Self(T::bitand(self.1, self.0, rhs.0), self.1)
     }
 }
 
@@ -310,7 +412,7 @@ impl<T: I8x64Backend> BitOr for i8x64<T> {
     type Output = Self;
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self {
-        Self(T::bitor(self.0, rhs.0), PhantomData)
+        Self(T::bitor(self.1, self.0, rhs.0), self.1)
     }
 }
 
@@ -318,7 +420,7 @@ impl<T: I8x64Backend> BitXor for i8x64<T> {
     type Output = Self;
     #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self {
-        Self(T::bitxor(self.0, rhs.0), PhantomData)
+        Self(T::bitxor(self.1, self.0, rhs.0), self.1)
     }
 }
 
@@ -369,7 +471,7 @@ impl<T: I8x64Backend> Add<i8> for i8x64<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: i8) -> Self {
-        Self(T::add(self.0, T::splat(rhs)), PhantomData)
+        Self(T::add(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -377,7 +479,7 @@ impl<T: I8x64Backend> Sub<i8> for i8x64<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: i8) -> Self {
-        Self(T::sub(self.0, T::splat(rhs)), PhantomData)
+        Self(T::sub(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -411,7 +513,7 @@ impl<T: I8x64Backend> IndexMut<usize> for i8x64<T> {
 impl<T: I8x64Backend> From<i8x64<T>> for [i8; 64] {
     #[inline(always)]
     fn from(v: i8x64<T>) -> [i8; 64] {
-        T::to_array(v.0)
+        T::to_array(v.1, v.0)
     }
 }
 
@@ -421,7 +523,7 @@ impl<T: I8x64Backend> From<i8x64<T>> for [i8; 64] {
 
 impl<T: I8x64Backend> core::fmt::Debug for i8x64<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let arr = T::to_array(self.0);
+        let arr = T::to_array(self.1, self.0);
         f.debug_tuple("i8x64").field(&arr).finish()
     }
 }
@@ -468,6 +570,6 @@ impl<T: crate::simd::backends::i8x64PopcntBackend> i8x64<T> {
     /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
     #[inline(always)]
     pub fn popcnt(self) -> Self {
-        Self(T::popcnt(self.0), core::marker::PhantomData)
+        Self(T::popcnt(self.1, self.0), self.1)
     }
 }

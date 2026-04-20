@@ -25,111 +25,111 @@ pub trait I8x16Backend: SimdToken + Sealed + Copy + 'static {
     // ====== Construction ======
 
     /// Broadcast scalar to all 16 lanes.
-    fn splat(v: i8) -> Self::Repr;
+    fn splat(self, v: i8) -> Self::Repr;
 
     /// All lanes zero.
-    fn zero() -> Self::Repr;
+    fn zero(self) -> Self::Repr;
 
     /// Load from an aligned array.
-    fn load(data: &[i8; 16]) -> Self::Repr;
+    fn load(self, data: &[i8; 16]) -> Self::Repr;
 
     /// Create from array (zero-cost transmute where possible).
-    fn from_array(arr: [i8; 16]) -> Self::Repr;
+    fn from_array(self, arr: [i8; 16]) -> Self::Repr;
 
     /// Store to array.
-    fn store(repr: Self::Repr, out: &mut [i8; 16]);
+    fn store(self, repr: Self::Repr, out: &mut [i8; 16]);
 
     /// Convert to array.
-    fn to_array(repr: Self::Repr) -> [i8; 16];
+    fn to_array(self, repr: Self::Repr) -> [i8; 16];
 
     // ====== Arithmetic ======
 
     /// Lane-wise addition (wrapping).
-    fn add(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn add(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise subtraction (wrapping).
-    fn sub(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn sub(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
     /// Lane-wise negation.
-    fn neg(a: Self::Repr) -> Self::Repr;
+    fn neg(self, a: Self::Repr) -> Self::Repr;
 
     // ====== Math ======
 
     /// Lane-wise minimum.
-    fn min(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise maximum.
-    fn max(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
     /// Lane-wise absolute value.
-    fn abs(a: Self::Repr) -> Self::Repr;
+    fn abs(self, a: Self::Repr) -> Self::Repr;
 
     // ====== Comparisons ======
 
     /// Lane-wise equality.
-    fn simd_eq(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_eq(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise inequality.
-    fn simd_ne(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_ne(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise less-than.
-    fn simd_lt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_lt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise less-than-or-equal.
-    fn simd_le(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_le(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise greater-than.
-    fn simd_gt(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_gt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Lane-wise greater-than-or-equal.
-    fn simd_ge(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn simd_ge(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
-    fn blend(mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
+    fn blend(self, mask: Self::Repr, if_true: Self::Repr, if_false: Self::Repr) -> Self::Repr;
 
     // ====== Reductions ======
 
     /// Sum all 16 lanes (wrapping).
-    fn reduce_add(a: Self::Repr) -> i8;
+    fn reduce_add(self, a: Self::Repr) -> i8;
 
     // ====== Bitwise ======
 
     /// Bitwise NOT.
-    fn not(a: Self::Repr) -> Self::Repr;
+    fn not(self, a: Self::Repr) -> Self::Repr;
 
     /// Bitwise AND.
-    fn bitand(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn bitand(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Bitwise OR.
-    fn bitor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn bitor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// Bitwise XOR.
-    fn bitxor(a: Self::Repr, b: Self::Repr) -> Self::Repr;
+    fn bitxor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     // ====== Shifts ======
 
     /// Shift left by constant.
-    fn shl_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+    fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
     /// Logical shift right by constant (zero-filling).
-    fn shr_logical_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+    fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
     /// Arithmetic shift right by constant (sign-extending).
-    fn shr_arithmetic_const<const N: i32>(a: Self::Repr) -> Self::Repr;
+    fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
     // ====== Boolean ======
 
     /// True if all lanes have their sign bit set (all-1s mask).
-    fn all_true(a: Self::Repr) -> bool;
+    fn all_true(self, a: Self::Repr) -> bool;
 
     /// True if any lane has its sign bit set.
-    fn any_true(a: Self::Repr) -> bool;
+    fn any_true(self, a: Self::Repr) -> bool;
 
     /// Extract the high bit of each lane as a bitmask.
-    fn bitmask(a: Self::Repr) -> u32;
+    fn bitmask(self, a: Self::Repr) -> u32;
 
     // ====== Default implementations ======
 
     /// Clamp values between lo and hi.
     #[inline(always)]
-    fn clamp(a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
-        Self::min(Self::max(a, lo), hi)
+    fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
+        <Self as I8x16Backend>::min(self, <Self as I8x16Backend>::max(self, a, lo), hi)
     }
 }

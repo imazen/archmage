@@ -180,12 +180,12 @@ fn gen_f32x4_extras() -> String {
 
             // ====== u8 Conversions ======
 
-            /// Load 4 u8 values and convert to f32x4.
+            /// Load 4 u8 values and convert to f32x4 (token-gated).
             ///
             /// Values are in `[0.0, 255.0]`. Useful for image processing.
             #[inline(always)]
-            pub fn from_u8(bytes: &[u8; 4]) -> Self {{
-                Self::from_repr_unchecked(T::from_array(core::array::from_fn(|i| bytes[i] as f32)))
+            pub fn from_u8(token: T, bytes: &[u8; 4]) -> Self {{
+                Self::from_repr_unchecked(token, T::from_array(token, core::array::from_fn(|i| bytes[i] as f32)))
             }}
 
             /// Convert to 4 u8 values with saturation.
@@ -206,9 +206,10 @@ fn gen_f32x4_extras() -> String {
             /// ```
             #[inline(always)]
             pub fn interleave_lo(self, other: Self) -> Self {{
+                let token = self.1;
                 let a = self.to_array();
                 let b = other.to_array();
-                Self::from_repr_unchecked(T::from_array([a[0], b[0], a[1], b[1]]))
+                Self::from_repr_unchecked(token, T::from_array(token, [a[0], b[0], a[1], b[1]]))
             }}
 
             /// Interleave high elements.
@@ -218,19 +219,21 @@ fn gen_f32x4_extras() -> String {
             /// ```
             #[inline(always)]
             pub fn interleave_hi(self, other: Self) -> Self {{
+                let token = self.1;
                 let a = self.to_array();
                 let b = other.to_array();
-                Self::from_repr_unchecked(T::from_array([a[2], b[2], a[3], b[3]]))
+                Self::from_repr_unchecked(token, T::from_array(token, [a[2], b[2], a[3], b[3]]))
             }}
 
             /// Interleave two vectors: returns `(interleave_lo, interleave_hi)`.
             #[inline(always)]
             pub fn interleave(self, other: Self) -> (Self, Self) {{
+                let token = self.1;
                 let a = self.to_array();
                 let b = other.to_array();
                 (
-                    Self::from_repr_unchecked(T::from_array([a[0], b[0], a[1], b[1]])),
-                    Self::from_repr_unchecked(T::from_array([a[2], b[2], a[3], b[3]])),
+                    Self::from_repr_unchecked(token, T::from_array(token, [a[0], b[0], a[1], b[1]])),
+                    Self::from_repr_unchecked(token, T::from_array(token, [a[2], b[2], a[3], b[3]])),
                 )
             }}
 
@@ -260,21 +263,21 @@ fn gen_f32x4_extras() -> String {
 
             // ====== RGBA Load/Store ======
 
-            /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
+            /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
             ///
             /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
             /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
             #[inline(always)]
-            pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {{
+            pub fn load_4_rgba_u8(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {{
                 let r: [f32; 4] = core::array::from_fn(|i| rgba[i * 4] as f32);
                 let g: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
                 let b: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
                 let a: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 3] as f32);
                 (
-                    Self::from_repr_unchecked(T::from_array(r)),
-                    Self::from_repr_unchecked(T::from_array(g)),
-                    Self::from_repr_unchecked(T::from_array(b)),
-                    Self::from_repr_unchecked(T::from_array(a)),
+                    Self::from_repr_unchecked(token, T::from_array(token, r)),
+                    Self::from_repr_unchecked(token, T::from_array(token, g)),
+                    Self::from_repr_unchecked(token, T::from_array(token, b)),
+                    Self::from_repr_unchecked(token, T::from_array(token, a)),
                 )
             }}
 
@@ -305,14 +308,15 @@ fn gen_f32x4_extras() -> String {
             /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
             #[inline(always)]
             pub fn transpose_4x4(rows: &mut [Self; 4]) {{
+                let token = rows[0].1;
                 let a = rows[0].to_array();
                 let b = rows[1].to_array();
                 let c = rows[2].to_array();
                 let d = rows[3].to_array();
-                rows[0] = Self::from_repr_unchecked(T::from_array([a[0], b[0], c[0], d[0]]));
-                rows[1] = Self::from_repr_unchecked(T::from_array([a[1], b[1], c[1], d[1]]));
-                rows[2] = Self::from_repr_unchecked(T::from_array([a[2], b[2], c[2], d[2]]));
-                rows[3] = Self::from_repr_unchecked(T::from_array([a[3], b[3], c[3], d[3]]));
+                rows[0] = Self::from_repr_unchecked(token, T::from_array(token, [a[0], b[0], c[0], d[0]]));
+                rows[1] = Self::from_repr_unchecked(token, T::from_array(token, [a[1], b[1], c[1], d[1]]));
+                rows[2] = Self::from_repr_unchecked(token, T::from_array(token, [a[2], b[2], c[2], d[2]]));
+                rows[3] = Self::from_repr_unchecked(token, T::from_array(token, [a[3], b[3], c[3], d[3]]));
             }}
 
             /// Transpose a 4x4 matrix, returning the transposed rows.
@@ -334,12 +338,12 @@ fn gen_f32x8_extras() -> String {
 
             // ====== u8 Conversions ======
 
-            /// Load 8 u8 values and convert to f32x8.
+            /// Load 8 u8 values and convert to f32x8 (token-gated).
             ///
             /// Values are in `[0.0, 255.0]`. Useful for image processing.
             #[inline(always)]
-            pub fn from_u8(bytes: &[u8; 8]) -> Self {{
-                Self::from_repr_unchecked(T::from_array(core::array::from_fn(|i| bytes[i] as f32)))
+            pub fn from_u8(token: T, bytes: &[u8; 8]) -> Self {{
+                Self::from_repr_unchecked(token, T::from_array(token, core::array::from_fn(|i| bytes[i] as f32)))
             }}
 
             /// Convert to 8 u8 values with saturation.
@@ -361,9 +365,10 @@ fn gen_f32x8_extras() -> String {
             /// ```
             #[inline(always)]
             pub fn interleave_lo(self, other: Self) -> Self {{
+                let token = self.1;
                 let a = self.to_array();
                 let b = other.to_array();
-                Self::from_repr_unchecked(T::from_array([
+                Self::from_repr_unchecked(token, T::from_array(token, [
                     a[0], b[0], a[1], b[1], a[4], b[4], a[5], b[5],
                 ]))
             }}
@@ -376,9 +381,10 @@ fn gen_f32x8_extras() -> String {
             /// ```
             #[inline(always)]
             pub fn interleave_hi(self, other: Self) -> Self {{
+                let token = self.1;
                 let a = self.to_array();
                 let b = other.to_array();
-                Self::from_repr_unchecked(T::from_array([
+                Self::from_repr_unchecked(token, T::from_array(token, [
                     a[2], b[2], a[3], b[3], a[6], b[6], a[7], b[7],
                 ]))
             }}
@@ -386,13 +392,14 @@ fn gen_f32x8_extras() -> String {
             /// Interleave two vectors: returns `(interleave_lo, interleave_hi)`.
             #[inline(always)]
             pub fn interleave(self, other: Self) -> (Self, Self) {{
+                let token = self.1;
                 let a = self.to_array();
                 let b = other.to_array();
                 (
-                    Self::from_repr_unchecked(T::from_array([
+                    Self::from_repr_unchecked(token, T::from_array(token, [
                         a[0], b[0], a[1], b[1], a[4], b[4], a[5], b[5],
                     ])),
-                    Self::from_repr_unchecked(T::from_array([
+                    Self::from_repr_unchecked(token, T::from_array(token, [
                         a[2], b[2], a[3], b[3], a[6], b[6], a[7], b[7],
                     ])),
                 )
@@ -411,6 +418,7 @@ fn gen_f32x8_extras() -> String {
             /// Output: `[R_all, G_all, B_all, A_all]` — one f32x8 per channel.
             #[inline(always)]
             pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {{
+                let token = rgba[0].1;
                 let v: [[f32; 8]; 4] = core::array::from_fn(|i| rgba[i].to_array());
                 // Each input vector has 2 RGBA pixels (4 elements each)
                 // Pixel i: v[i/2][(i%2)*4 + channel]
@@ -419,10 +427,10 @@ fn gen_f32x8_extras() -> String {
                 let b: [f32; 8] = core::array::from_fn(|i| v[i / 2][(i % 2) * 4 + 2]);
                 let a: [f32; 8] = core::array::from_fn(|i| v[i / 2][(i % 2) * 4 + 3]);
                 [
-                    Self::from_repr_unchecked(T::from_array(r)),
-                    Self::from_repr_unchecked(T::from_array(g)),
-                    Self::from_repr_unchecked(T::from_array(b)),
-                    Self::from_repr_unchecked(T::from_array(a)),
+                    Self::from_repr_unchecked(token, T::from_array(token, r)),
+                    Self::from_repr_unchecked(token, T::from_array(token, g)),
+                    Self::from_repr_unchecked(token, T::from_array(token, b)),
+                    Self::from_repr_unchecked(token, T::from_array(token, a)),
                 ]
             }}
 
@@ -434,13 +442,14 @@ fn gen_f32x8_extras() -> String {
             /// This is the inverse of `deinterleave_4ch`.
             #[inline(always)]
             pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {{
+                let token = channels[0].1;
                 let r = channels[0].to_array();
                 let g = channels[1].to_array();
                 let b = channels[2].to_array();
                 let a = channels[3].to_array();
                 core::array::from_fn(|i| {{
                     let base = i * 2;
-                    Self::from_repr_unchecked(T::from_array([
+                    Self::from_repr_unchecked(token, T::from_array(token, [
                         r[base],
                         g[base],
                         b[base],
@@ -460,16 +469,16 @@ fn gen_f32x8_extras() -> String {
             /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
             /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
             #[inline(always)]
-            pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {{
+            pub fn load_8_rgba_u8(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {{
                 let r: [f32; 8] = core::array::from_fn(|i| rgba[i * 4] as f32);
                 let g: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
                 let b: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
                 let a: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 3] as f32);
                 (
-                    Self::from_repr_unchecked(T::from_array(r)),
-                    Self::from_repr_unchecked(T::from_array(g)),
-                    Self::from_repr_unchecked(T::from_array(b)),
-                    Self::from_repr_unchecked(T::from_array(a)),
+                    Self::from_repr_unchecked(token, T::from_array(token, r)),
+                    Self::from_repr_unchecked(token, T::from_array(token, g)),
+                    Self::from_repr_unchecked(token, T::from_array(token, b)),
+                    Self::from_repr_unchecked(token, T::from_array(token, a)),
                 )
             }}
 
@@ -500,9 +509,10 @@ fn gen_f32x8_extras() -> String {
             /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
             #[inline(always)]
             pub fn transpose_8x8(rows: &mut [Self; 8]) {{
+                let token = rows[0].1;
                 let r: [[f32; 8]; 8] = core::array::from_fn(|i| rows[i].to_array());
                 for i in 0..8 {{
-                    rows[i] = Self::from_repr_unchecked(T::from_array(core::array::from_fn(|j| r[j][i])));
+                    rows[i] = Self::from_repr_unchecked(token, T::from_array(token, core::array::from_fn(|j| r[j][i])));
                 }}
             }}
 
@@ -516,10 +526,10 @@ fn gen_f32x8_extras() -> String {
 
             /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
             #[inline(always)]
-            pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {{
+            pub fn load_8x8(token: T, block: &[f32; 64]) -> [Self; 8] {{
                 core::array::from_fn(|i| {{
                     let arr: [f32; 8] = block[i * 8..][..8].try_into().unwrap();
-                    Self::from_repr_unchecked(T::from_array(arr))
+                    Self::from_repr_unchecked(token, T::from_array(token, arr))
                 }})
             }}
 

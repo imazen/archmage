@@ -11,10 +11,12 @@ pub trait I8x16Bitcast:
 {
     /// Bitcast i8x16 to u8x16 (reinterpret bits).
     fn bitcast_i8_to_u8(
+        self,
         a: <Self as super::I8x16Backend>::Repr,
     ) -> <Self as super::U8x16Backend>::Repr;
     /// Bitcast u8x16 to i8x16 (reinterpret bits).
     fn bitcast_u8_to_i8(
+        self,
         a: <Self as super::U8x16Backend>::Repr,
     ) -> <Self as super::I8x16Backend>::Repr;
 }
@@ -25,10 +27,12 @@ pub trait I8x32Bitcast:
 {
     /// Bitcast i8x32 to u8x32 (reinterpret bits).
     fn bitcast_i8_to_u8(
+        self,
         a: <Self as super::I8x32Backend>::Repr,
     ) -> <Self as super::U8x32Backend>::Repr;
     /// Bitcast u8x32 to i8x32 (reinterpret bits).
     fn bitcast_u8_to_i8(
+        self,
         a: <Self as super::U8x32Backend>::Repr,
     ) -> <Self as super::I8x32Backend>::Repr;
 }
@@ -39,10 +43,12 @@ pub trait I16x8Bitcast:
 {
     /// Bitcast i16x8 to u16x8 (reinterpret bits).
     fn bitcast_i16_to_u16(
+        self,
         a: <Self as super::I16x8Backend>::Repr,
     ) -> <Self as super::U16x8Backend>::Repr;
     /// Bitcast u16x8 to i16x8 (reinterpret bits).
     fn bitcast_u16_to_i16(
+        self,
         a: <Self as super::U16x8Backend>::Repr,
     ) -> <Self as super::I16x8Backend>::Repr;
 }
@@ -53,10 +59,12 @@ pub trait I16x16Bitcast:
 {
     /// Bitcast i16x16 to u16x16 (reinterpret bits).
     fn bitcast_i16_to_u16(
+        self,
         a: <Self as super::I16x16Backend>::Repr,
     ) -> <Self as super::U16x16Backend>::Repr;
     /// Bitcast u16x16 to i16x16 (reinterpret bits).
     fn bitcast_u16_to_i16(
+        self,
         a: <Self as super::U16x16Backend>::Repr,
     ) -> <Self as super::I16x16Backend>::Repr;
 }
@@ -67,10 +75,12 @@ pub trait U64x2Bitcast:
 {
     /// Bitcast u64x2 to i64x2 (reinterpret bits).
     fn bitcast_u64_to_i64(
+        self,
         a: <Self as super::U64x2Backend>::Repr,
     ) -> <Self as super::I64x2Backend>::Repr;
     /// Bitcast i64x2 to u64x2 (reinterpret bits).
     fn bitcast_i64_to_u64(
+        self,
         a: <Self as super::I64x2Backend>::Repr,
     ) -> <Self as super::U64x2Backend>::Repr;
 }
@@ -81,10 +91,12 @@ pub trait U64x4Bitcast:
 {
     /// Bitcast u64x4 to i64x4 (reinterpret bits).
     fn bitcast_u64_to_i64(
+        self,
         a: <Self as super::U64x4Backend>::Repr,
     ) -> <Self as super::I64x4Backend>::Repr;
     /// Bitcast i64x4 to u64x4 (reinterpret bits).
     fn bitcast_i64_to_u64(
+        self,
         a: <Self as super::I64x4Backend>::Repr,
     ) -> <Self as super::U64x4Backend>::Repr;
 }

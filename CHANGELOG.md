@@ -4,6 +4,7 @@
 
 ### QUEUED BREAKING CHANGES
 
+- Every `F32xN`/`I*xN`/`U*xN` backend trait method now takes `self` — closes the UFCS soundness bypass where `<X64V3Token as F32x8Backend>::splat(7.0)` let callers invoke SIMD primitives without holding a token. The generic wrapper now stores the token inline (`f32xN<T>(Repr, T)` with `#[repr(C)]` + compile-time layout assertions) so method dispatch through a value is the only path (4447892, f2a76fd, 4e31ec9, 4197620)
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 - Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)
@@ -12,6 +13,21 @@
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
+
+### Added
+
+- `magetypes/tests/bypass_closed.rs` + `magetypes/src/bypass_adversarial.rs` — adversarial soundness suite. 20 `compile_fail` doctests (one per trait-method category: construction, memory, arithmetic, math, comparison, reduction, bitwise, shift, boolean, bitcast) paired with 12 runtime-sanctioned counterparts. Uses `ScalarToken` so every target exercises the closure. (b635ae3)
+- Compile-time layout assertions in every generic `*_impl.rs` — the build fails if a token ever gains a non-ZST field, preventing the `#[repr(C)]` layout guarantee from silently breaking. (4197620)
+
+### Fixed
+
+- NEON `f32x8` polyfill `recip`/`rsqrt` use two-step Newton-Raphson for precision parity with single-width NEON (6ea5448)
+- `_approx` tolerance widened from 1e-3 → 4e-3 to match the ARM Architecture Reference Manual bound for `frecpe`/`frsqrte`; earlier value was tighter than the spec permits and failed under QEMU (9c48311)
+- ARM/WASM polyfill UFCS trait calls thread `self` correctly through every recip/rsqrt/rcp_approx/rsqrt_approx path (f2a76fd, 4e31ec9)
+
+### Changed
+
+- CI runs magetypes integration tests on aarch64 (cross) and wasm32-wasip1 targets, not just x86 (#39, 9d34c81)
 
 ## 0.9.20 — 2026-04-15
 
