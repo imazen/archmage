@@ -35,6 +35,12 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![warn(missing_docs)]
+// Every backend trait method that accepts `self` threads the CPU-feature
+// token through the call. The clippy `from_*` / `to_*` self-convention rule
+// assumes constructor methods take no `self`; that assumption doesn't hold
+// here — `self` is the token (the feature-availability proof), not an
+// instance being converted.
+#![allow(clippy::wrong_self_convention)]
 
 #[cfg(feature = "std")]
 extern crate std;
