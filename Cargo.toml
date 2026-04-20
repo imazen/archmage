@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crate"]
+members = [".", "archmage-macros", "artisan-macros", "magetypes", "xtask", "tests/no-features-crate"]
 
 [workspace.package]
 version = "0.9.20"

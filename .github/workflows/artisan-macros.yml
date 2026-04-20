@@ -1,0 +1,235 @@
+name: artisan-macros
+
+# Dedicated CI for the artisan-macros crate. Runs only when artisan-macros or
+# its workflow change, so archmage's much larger CI doesn't double-run on
+# unrelated commits.
+#
+# Status: draft. Matrix mirrors archmage's own CI standards (x64 Linux +
+# Windows + macOS Intel, ARM64 Linux + Windows, 32-bit Linux via cross).
+# Windows ARM64 (windows-11-arm) added per the imazen global rule that every
+# crate must CI-test there.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'artisan-macros/**'
+      - '.github/workflows/artisan-macros.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'artisan-macros/**'
+      - '.github/workflows/artisan-macros.yml'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CI: true
+
+jobs:
+  # ==========================================================================
+  # Native x64 + ARM64 testing across OSes.
+  # ==========================================================================
+  test-native:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - windows-11-arm
+          - macos-26-intel
+          - macos-latest   # aarch64 macOS (Apple Silicon)
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: artisan-macros -> target
+
+      - name: Build
+        run: cargo build -p artisan-macros --manifest-path artisan-macros/Cargo.toml
+
+      - name: Test
+        run: cargo test -p artisan-macros --manifest-path artisan-macros/Cargo.toml
+
+      - name: Test with test-hooks feature
+        run: cargo test -p artisan-macros --manifest-path artisan-macros/Cargo.toml --features artisan_test_hooks
+
+  # ==========================================================================
+  # Cross-compiled targets (32-bit + ARM).
+  # ==========================================================================
+  test-cross:
+    name: Cross (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - i686-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - armv7-unknown-linux-gnueabihf
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: artisan-macros -> target
+
+      - name: Build (cross)
+        run: cross build -p artisan-macros --manifest-path artisan-macros/Cargo.toml --target ${{ matrix.target }}
+
+      - name: Test (cross / QEMU)
+        run: cross test -p artisan-macros --manifest-path artisan-macros/Cargo.toml --target ${{ matrix.target }}
+
+  # ==========================================================================
+  # Lint + formatting + docs.
+  # ==========================================================================
+  lint:
+    name: clippy / fmt / docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: artisan-macros -> target
+
+      - name: Check formatting
+        run: cargo fmt -p artisan-macros --manifest-path artisan-macros/Cargo.toml -- --check
+
+      - name: Clippy
+        run: cargo clippy -p artisan-macros --manifest-path artisan-macros/Cargo.toml --all-targets -- -D warnings
+
+      - name: Clippy (with test-hooks feature)
+        run: cargo clippy -p artisan-macros --manifest-path artisan-macros/Cargo.toml --all-targets --features artisan_test_hooks -- -D warnings
+
+      - name: Docs
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc -p artisan-macros --manifest-path artisan-macros/Cargo.toml --no-deps
+
+  # ==========================================================================
+  # Committed macro-expansion snapshot tests (macrotest + cargo-expand).
+  # Catches any drift between the proc-macro output and the committed
+  # tests/expand/*.expanded.rs files. Snapshots are x86_64-resolved (cargo
+  # expand strips non-host cfg branches), so this job only runs there.
+  # ==========================================================================
+  expand-snapshots:
+    name: Macro expansion snapshots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: artisan-macros -> target
+
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --locked
+
+      - name: Run macrotest expand
+        run: cargo test -p artisan-macros --manifest-path artisan-macros/Cargo.toml --test expand
+
+      - name: Fail if snapshots would change
+        shell: bash
+        run: |
+          set +e
+          MACROTEST=overwrite cargo test -p artisan-macros --manifest-path artisan-macros/Cargo.toml --test expand
+          if ! git diff --exit-code -- artisan-macros/tests/expand/; then
+            echo "::error::expansion snapshots are out of date."
+            echo "::error::Regenerate locally with: MACROTEST=overwrite cargo test -p artisan-macros --test expand"
+            echo "::error::Then commit the updated *.expanded.rs files."
+            exit 1
+          fi
+
+  # ==========================================================================
+  # Deliberate mismatch test: verify the feature-string compile-time check
+  # actually catches a mismatched declaration. Uses a shell heredoc to write
+  # a minimal test crate, expect-failures the build, and asserts the error
+  # mentions "feature-string mismatch".
+  # ==========================================================================
+  feature-mismatch-catches:
+    name: Feature-string mismatch is caught
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: artisan-macros -> target
+
+      - name: Build artisan-macros first (populate the lockfile)
+        run: cargo build -p artisan-macros --manifest-path artisan-macros/Cargo.toml
+
+      - name: Write deliberately-mismatched crate
+        shell: bash
+        run: |
+          mkdir -p /tmp/mismatch-test/src
+          cat > /tmp/mismatch-test/Cargo.toml <<'EOF'
+          [package]
+          name = "mismatch-test"
+          version = "0.0.0"
+          edition = "2024"
+          [dependencies]
+          artisan-macros = { path = "ARTISAN_PATH" }
+          EOF
+          sed -i "s|ARTISAN_PATH|$PWD/artisan-macros|" /tmp/mismatch-test/Cargo.toml
+          cat > /tmp/mismatch-test/src/lib.rs <<'EOF'
+          use artisan_macros::{cpu_tier, chain};
+          fn scalar(a: &[f32]) -> f32 { a.iter().sum() }
+          #[cpu_tier(enable = "avx2,fma")]
+          fn v3(a: &[f32]) -> f32 { a.iter().sum() }
+          // DELIBERATE mismatch: chain says bmi2, cpu_tier doesn't.
+          #[chain(
+              x86_64 = [v3 = "avx2,fma,bmi2"],
+              default = scalar,
+          )]
+          pub fn run(a: &[f32]) -> f32 {}
+          EOF
+
+      - name: Expect build to fail with clear error
+        shell: bash
+        run: |
+          set +e
+          output=$(cargo build --manifest-path /tmp/mismatch-test/Cargo.toml 2>&1)
+          status=$?
+          echo "$output"
+          if [ $status -eq 0 ]; then
+            echo "::error::mismatch test compiled successfully; feature-string check is not firing"
+            exit 1
+          fi
+          if ! echo "$output" | grep -q "feature-string mismatch"; then
+            echo "::error::mismatch test failed, but error does not mention 'feature-string mismatch'"
+            exit 1
+          fi
+          echo "mismatch correctly detected"

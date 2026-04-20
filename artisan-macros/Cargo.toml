@@ -1,0 +1,32 @@
+[package]
+name = "artisan-macros"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/imazen/archmage"
+description = "Auditable, convention-forward proc-macros for sound SIMD tier dispatch. Trampolines recurse into downgrades; users own feature strings and suffixes."
+keywords = ["simd", "dispatch", "target-feature", "macro"]
+categories = ["development-tools::procedural-macro-helpers", "hardware-support"]
+publish = false
+
+[lib]
+proc-macro = true
+
+[features]
+# Expose the thread-local force_max_tier test-hook API from generated code.
+# Unit tests inside the declaring crate get hooks automatically via cfg(test);
+# downstream integration tests need this feature flag on the crate that owns
+# the #[chain] declaration.
+artisan_test_hooks = []
+
+[dependencies]
+syn = { version = "2.0.0", features = ["full", "parsing", "printing"] }
+quote = "1.0.0"
+proc-macro2 = "1.0.0"
+
+[dev-dependencies]
+# Committed macro-expansion snapshots. Regenerate with `MACROTEST=overwrite
+# cargo test -p artisan-macros --test expand` and commit the updated
+# `*.expanded.rs` files next to their inputs in `tests/expand/`.
+macrotest = "1.2.1"
