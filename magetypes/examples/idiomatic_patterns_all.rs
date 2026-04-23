@@ -304,6 +304,11 @@ fn main() {
     println!("  [A] inline #[magetypes] scale_plane           OK");
 
     // --- Pattern B: extracted generic kernel ---
+    // Tolerance 1e-2: `dot` sums 17 FMA products; the SIMD order (mul_add
+    // across 2 chunks then reduce_add across 8 lanes, plus 1 scalar tail
+    // term) differs from the scalar reference's sequential sum. With integer
+    // values this range is exact, but 1e-2 gives slack for any floating-point
+    // reassociation a backend might introduce.
     let a: Vec<f32> = (1..=17).map(|i| i as f32).collect();
     let b: Vec<f32> = (1..=17).map(|i| (2 * i) as f32).collect();
     let expected: f32 = a.iter().zip(&b).map(|(x, y)| x * y).sum();

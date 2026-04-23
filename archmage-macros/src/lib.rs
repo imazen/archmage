@@ -406,6 +406,11 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     // `rite` is an optional leading flag that changes per-tier variants to use
     // `#[archmage::rite(import_intrinsics)]` (direct `#[target_feature]` + `#[inline]`)
     // instead of `#[archmage::arcane]` (safe wrapper + `#[target_feature]` inner).
+    //
+    // Assumption: `rite` is not and will not become a tier name. If that ever
+    // changes (e.g., a future hypothetical architecture uses "rite" as a tier
+    // short name), this parser will silently consume it as the flag. The tier
+    // registry in token-registry.toml should never declare a `short_name = "rite"`.
     let (rite_flag, tier_names): (bool, Vec<String>) = if attr.is_empty() {
         (
             false,

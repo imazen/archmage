@@ -256,29 +256,12 @@ fn scalar_rite_with_generics() {
 }
 
 // ============================================================================
-// Known gap: Token substitution in multi-tier #[rite] (TODO: separate task)
+// Note: nested-incant routing through multi-tier #[rite]
 // ============================================================================
-// The ideal use case — a `#[rite(v3, neon, wasm128, scalar)]` helper called
-// via nested `incant!` from inside a `#[magetypes]` body — requires
-// multi-tier `#[rite]` to substitute `Token` per tier (the way `#[magetypes]`
-// does: `Token` → `X64V3Token` in `_v3`, `Token` → `ScalarToken` in `_scalar`,
-// etc.). Today, multi-tier rite copies the signature verbatim, so all variants
-// share the user's token type.
-//
-// Workaround: use `#[magetypes]` for the helper instead. `incant!` rewriting
-// into a `#[magetypes]`-generated trampoline is already zero-cost — the
-// trampoline is `#[inline(always)]` and evaporates per SPEC-INCANT-REWRITING.md.
-//
-// When Token substitution lands in multi-tier `#[rite]`, the zero-boundary
-// property (direct `#[target_feature]` instead of arcane wrapper) becomes
-// accessible for nested-incant routing, and a test like the following can
-// be enabled:
-//
-//     #[rite(v3, neon, wasm128, scalar)]
-//     fn clamp01(_t: Token, x: f32) -> f32 { x.clamp(0.0, 1.0) }
-//     // ↓ Today: all variants share the user's chosen token type.
-//     // ↓ Wanted: each variant gets the matching tier's token type.
-//     #[magetypes(scalar)]
-//     fn process_impl(_t: ScalarToken, x: f32) -> f32 {
-//         incant!(clamp01(x)) * 2.0  // rewrites to clamp01_scalar(_t, x)
-//     }
+// Multi-tier `#[rite]` copies the user's signature verbatim across tiers (no
+// `Token` substitution per tier). That limits its use with `incant!` rewriting
+// to tokenless helpers or direct-name calls from matching-feature contexts.
+// For nested-incant routing through a per-tier family, use `#[magetypes]` —
+// or `#[magetypes(rite)]` (see tests/magetypes_rite_flag.rs) which combines
+// magetypes' per-tier Token substitution with rite-style direct
+// `#[target_feature]` wrapping.

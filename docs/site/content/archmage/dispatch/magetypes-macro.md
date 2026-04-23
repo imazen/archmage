@@ -86,6 +86,33 @@ fn process(token: Token, data: &[f32]) -> f32 { ... }
 
 Tier names accept the `_` prefix — `_v3` is identical to `v3`.
 
+## The `rite` Flag: Direct `#[target_feature]` Variants
+
+By default, non-fallback variants are wrapped with `#[archmage::arcane]` — each variant becomes a safe outer function + `#[target_feature]` inner sibling (the "trampoline" pattern). This lets the variant be called from any context, including non-target-feature dispatchers.
+
+`#[magetypes(rite, ...)]` changes the per-tier wrapping to `#[archmage::rite(import_intrinsics)]` — each variant gets `#[target_feature]` + `#[inline]` applied directly, with no sibling and no trampoline:
+
+```rust
+#[magetypes(rite, v3, scalar)]
+fn helper(_t: Token, x: f32) -> f32 {
+    x * x
+}
+
+// Expands to (x86_64):
+//   #[target_feature(enable = "avx2,fma,...")] #[inline]
+//   fn helper_v3(_t: archmage::X64V3Token, x: f32) -> f32 { x * x }
+//   #[inline]
+//   fn helper_scalar(_t: archmage::ScalarToken, x: f32) -> f32 { x * x }
+```
+
+**When to use `rite`:**
+- Inner helpers called from matching-feature contexts — another `#[arcane]` / `#[rite]` / arcane-flavored `#[magetypes]` body at the same tier. Rust 1.86+ allows safe calls between `#[target_feature]` functions when the caller's features ⊇ callee's, so a rite-flavored helper inlines into the caller's region with zero optimization boundary.
+
+**When NOT to use `rite`:**
+- Public API entry points dispatched via standalone `incant!`. The dispatcher has no `#[target_feature]`, so calling a bare `#[target_feature]` variant requires `unsafe` — which `incant!`'s current dispatcher does not emit. Use arcane-flavored `#[magetypes]` (default) at public boundaries, and reserve the `rite` flag for internal helpers.
+
+**Token substitution is unchanged** — the `rite` flag only changes the per-tier wrapping, not the `Token` → concrete-type replacement.
+
 ## `#[magetypes]` vs Manual Variants
 
 **Use `#[magetypes]`** when the function body is platform-independent (only the token type changes):
