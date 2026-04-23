@@ -523,6 +523,12 @@ impl Registry {
             out.push_str(&Self::format_feature_arm(&pattern, &macro_features));
         }
 
+        // ScalarToken — always available, no target features. Enables
+        // `#[rite(scalar)]` (tokenful, `token: ScalarToken`) and
+        // `#[rite(default)]` (tokenless) as fallback tiers that slot into
+        // incant!'s suffix convention alongside target-feature-bearing tiers.
+        out.push_str("        \"ScalarToken\" => Some(&[]),\n");
+
         out.push_str("        _ => None,\n");
         out.push_str("    }\n}\n");
     }
@@ -608,6 +614,9 @@ impl Registry {
                 out.push_str(&format!("        {pattern} => Some(\"{ns}\"),\n"));
             }
         }
+
+        // ScalarToken — always-available fallback namespace.
+        out.push_str("        \"ScalarToken\" => Some(\"scalar\"),\n");
 
         out.push_str("        _ => None,\n");
         out.push_str("    }\n}\n");
@@ -721,6 +730,10 @@ impl Registry {
             }
         }
 
+        // ScalarToken — tierless fallback. Enables `#[rite(scalar)]` and
+        // incant!'s scalar routing to share the suffix convention.
+        out.push_str("        \"scalar\" => Some(\"ScalarToken\"),\n");
+
         out.push_str("        _ => None,\n");
         out.push_str("    }\n}\n");
     }
@@ -742,6 +755,9 @@ impl Registry {
                 out.push_str(&format!("        {pattern} => Some(\"{short}\"),\n"));
             }
         }
+
+        // ScalarToken — tierless fallback.
+        out.push_str("        \"ScalarToken\" => Some(\"scalar\"),\n");
 
         out.push_str("        _ => None,\n");
         out.push_str("    }\n}\n");

@@ -28,13 +28,23 @@ pub(crate) struct RiteArgs {
     /// and `use magetypes::simd::backends::*;`.
     import_magetypes: bool,
     /// Tiers specified directly (e.g., `#[rite(v3)]` or `#[rite(v3, v4, neon)]`).
-    /// Stored as canonical token names (e.g., "X64V3Token").
+    /// Stored as canonical token names (e.g., "X64V3Token"), or the sentinel
+    /// "" for the `default` tier (tokenless fallback — no `#[target_feature]`,
+    /// no cfg-gating, no ScalarToken parameter).
     /// Single tier: generates one function (no suffix, no token parameter needed).
     /// Multiple tiers: generates suffixed variants (e.g., `fn_v3`, `fn_v4`, `fn_neon`).
     tier_tokens: Vec<String>,
     /// Additional cargo feature gate (same as arcane's cfg_feature).
     pub(crate) cfg_feature: Option<String>,
 }
+
+/// The sentinel used in `tier_tokens` for the `default` tier.
+///
+/// `default` (and `_default`) is a tokenless fallback — it generates a
+/// `fn_default(...)` variant with no `#[target_feature]`, no cfg-gating,
+/// and no ScalarToken parameter. Distinct from `scalar` which is tokenful
+/// (takes `ScalarToken` and participates in `incant!` token passing).
+pub(crate) const DEFAULT_TIER_SENTINEL: &str = "";
 
 impl Parse for RiteArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -57,6 +67,13 @@ impl Parse for RiteArgs {
                     let feat: Ident = content.parse()?;
                     args.cfg_feature = Some(feat.to_string());
                 }
+                "default" | "_default" => {
+                    // Tokenless fallback tier. No ScalarToken parameter, no
+                    // target_feature, no cfg-gating — just an `#[inline]`
+                    // variant named `_default` that slots into `incant!`'s
+                    // suffix convention for fully portable fallbacks.
+                    args.tier_tokens.push(String::from(DEFAULT_TIER_SENTINEL));
+                }
                 other => {
                     if let Some(canonical) = tier_to_canonical_token(other) {
                         args.tier_tokens.push(String::from(canonical));
@@ -65,7 +82,7 @@ impl Parse for RiteArgs {
                             ident.span(),
                             format!(
                                 "unknown rite argument: `{}`. Supported: tier names \
-                                 (v1, v2, v3, v4, neon, arm_v2, wasm128, ...), \
+                                 (v1, v2, v3, v4, neon, arm_v2, wasm128, scalar, default, ...), \
                                  `stub`, `import_intrinsics`, `import_magetypes`, `cfg(feature)`.",
                                 other
                             ),
@@ -104,17 +121,36 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         magetypes_namespace,
         token_type: _,
     } = if let Some(tier_token) = args.tier_tokens.first() {
-        // Tier specified directly (e.g., #[rite(v3)]) — no token param needed
-        let features = token_to_features(tier_token)
-            .expect("tier_to_canonical_token returned invalid token name")
-            .to_vec();
-        let target_arch = token_to_arch(tier_token);
-        let magetypes_namespace = token_to_magetypes_namespace(tier_token);
+        // Tier specified directly (e.g., #[rite(v3)]) — no token param needed.
+        // `default` tier (DEFAULT_TIER_SENTINEL) is tokenless: no features,
+        // no arch, no target_feature attribute.
+        let is_default = tier_token == DEFAULT_TIER_SENTINEL;
+        let features: Vec<&'static str> = if is_default {
+            Vec::new()
+        } else {
+            token_to_features(tier_token)
+                .expect("tier_to_canonical_token returned invalid token name")
+                .to_vec()
+        };
+        let target_arch = if is_default {
+            None
+        } else {
+            token_to_arch(tier_token)
+        };
+        let magetypes_namespace = if is_default {
+            None
+        } else {
+            token_to_magetypes_namespace(tier_token)
+        };
         TokenParamInfo {
             ident: Ident::new("_", proc_macro2::Span::call_site()),
             features,
             target_arch,
-            token_type_name: Some(tier_token.clone()),
+            token_type_name: if is_default {
+                None
+            } else {
+                Some(tier_token.clone())
+            },
             magetypes_namespace,
             token_type: None,
         }
@@ -187,17 +223,15 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body.clone(), &ctx);
     }
 
-    // Build a single target_feature attribute with all features comma-joined
-    let features_csv = features.join(",");
-    let target_feature_attrs: Vec<Attribute> =
-        vec![parse_quote!(#[target_feature(enable = #features_csv)])];
-
+    // Build the attribute list. Scalar tier has no features — emit only
+    // `#[inline]` without `#[target_feature]` (enable="" is a compile error).
+    let mut new_attrs: Vec<Attribute> = Vec::new();
+    if !features.is_empty() {
+        let features_csv = features.join(",");
+        new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
+    }
     // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
-    let inline_attr: Attribute = parse_quote!(#[inline]);
-
-    // Prepend attributes to the function, filtering user #[inline] to avoid duplicates
-    let mut new_attrs = target_feature_attrs;
-    new_attrs.push(inline_attr);
+    new_attrs.push(parse_quote!(#[inline]));
     for attr in filter_inline_attrs(&input_fn.attrs) {
         new_attrs.push(attr.clone());
     }
@@ -273,19 +307,34 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
     let mut variants = proc_macro2::TokenStream::new();
 
     for tier_token in &args.tier_tokens {
-        let features = match token_to_features(tier_token) {
-            Some(f) => f,
-            None => {
-                return syn::Error::new_spanned(
-                    &input_fn.sig,
-                    format!("unknown token `{tier_token}` in multi-tier #[rite]"),
-                )
-                .to_compile_error()
-                .into();
+        // `default` tier uses DEFAULT_TIER_SENTINEL (empty string) — tokenless,
+        // no features, no arch, suffix "_default", no imports.
+        let is_default = tier_token == DEFAULT_TIER_SENTINEL;
+        let features: &[&'static str] = if is_default {
+            &[]
+        } else {
+            match token_to_features(tier_token) {
+                Some(f) => f,
+                None => {
+                    return syn::Error::new_spanned(
+                        &input_fn.sig,
+                        format!("unknown token `{tier_token}` in multi-tier #[rite]"),
+                    )
+                    .to_compile_error()
+                    .into();
+                }
             }
         };
-        let target_arch = token_to_arch(tier_token);
-        let magetypes_namespace = token_to_magetypes_namespace(tier_token);
+        let target_arch = if is_default {
+            None
+        } else {
+            token_to_arch(tier_token)
+        };
+        let magetypes_namespace = if is_default {
+            None
+        } else {
+            token_to_magetypes_namespace(tier_token)
+        };
 
         // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature.
         #[cfg(not(feature = "avx512"))]
@@ -304,8 +353,12 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
                 .into();
         }
 
-        let suffix = canonical_token_to_tier_suffix(tier_token)
-            .expect("canonical token must have a tier suffix");
+        let suffix = if is_default {
+            "default"
+        } else {
+            canonical_token_to_tier_suffix(tier_token)
+                .expect("canonical token must have a tier suffix")
+        };
 
         // Build suffixed function name
         let suffixed_ident = format_ident!("{}_{}", fn_name, suffix);
@@ -327,14 +380,14 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
             variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body.clone(), &ctx);
         }
 
-        // Build a single target_feature attribute with all features comma-joined
-        let features_csv = features.join(",");
-        let target_feature_attrs: Vec<Attribute> =
-            vec![parse_quote!(#[target_feature(enable = #features_csv)])];
-        let inline_attr: Attribute = parse_quote!(#[inline]);
-
-        let mut new_attrs = target_feature_attrs;
-        new_attrs.push(inline_attr);
+        // Build the attribute list. Scalar tier has no features — emit only
+        // `#[inline]` without `#[target_feature]` (enable="" is a compile error).
+        let mut new_attrs: Vec<Attribute> = Vec::new();
+        if !features.is_empty() {
+            let features_csv = features.join(",");
+            new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
+        }
+        new_attrs.push(parse_quote!(#[inline]));
         for attr in filter_inline_attrs(&variant_fn.attrs) {
             new_attrs.push(attr.clone());
         }
