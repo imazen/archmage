@@ -11,12 +11,18 @@
 //!
 //! Patterns covered:
 //!   A. Inline `#[magetypes]`            — algorithm lives directly in the macro
-//!   B. Extracted generic kernel         — `fn<T: F32x8Backend>` reused from N entries
+//!   B. Extracted generic kernel         — `fn<T: F32x8Backend>` + thin `#[magetypes]` entry
 //!   C. Hand-tuned `#[arcane]` for one tier — slots into `incant!` by suffix
-//!   D. `#[rite]` multi-tier inner helper — internal helpers with per-tier features
-//!   E. `#[autoversion]`                 — scalar loop, compiler auto-vectorizes
-//!   F. Nested `incant!` rewriting       — zero-overhead cross-variant calls
-//!   G. Polyfill defaults                — `f32x8` everywhere; NEON/WASM split to 2×128
+//!   D. `#[autoversion]`                 — scalar loop, compiler auto-vectorizes per tier
+//!   E. Nested `incant!` rewriting       — zero-overhead cross-variant calls
+//!   F. Polyfill assertions              — confirm platform backend via `implementation_name()`
+//!
+//! Omitted:
+//!   - `#[rite]` multi-tier: generates `fn_v3`/`fn_v4`/… for inner helpers with
+//!     per-tier `#[target_feature]`. Useful when you want an inner helper with
+//!     explicit target-feature control outside the `#[magetypes]` body. Most
+//!     magetypes code uses a generic kernel (Pattern B) instead. No example
+//!     here because any contrived use would just duplicate Pattern B.
 //!
 //! Non-principles:
 //!   - No hand-written `#[arcane]` wrappers "per tier" around a generic kernel.
@@ -137,33 +143,11 @@ fn scale_plane_impl_v4x(token: X64V4xToken, plane: &mut [f32], factor: f32) {
 }
 
 // ============================================================================
-// Pattern D — #[rite] multi-tier inner helper + #[magetypes] counterpart
+// Shared helper used by Pattern E's pipeline
 // ============================================================================
-// `#[rite(v3, v4, neon, wasm128)]` generates per-tier copies of an inner
-// helper, each with its own `#[target_feature]` + `#[inline]`. No wrapper,
-// no optimization boundary — the matching-tier copy inlines into the
-// caller's target-feature region. `#[rite]` has no `scalar` tier; use
-// `#[magetypes]` if you need a scalar variant for `incant!` dispatch.
-//
-// Because Pattern F dispatches via nested `incant!` — which needs a scalar
-// fallback — we use `#[magetypes]` for `clamp01_impl` below. `#[rite]` would
-// be right for a helper called only from known-tier contexts (e.g. only from
-// inside a concrete `#[arcane(X64V3Token)]` body via its `_v3` suffix).
-//
-// Multi-tier rite example, for completeness; unused in the self-test.
-// `#[rite]` does NOT do `Token` substitution — each variant is the same body
-// with a different `#[target_feature]`. Signatures stay as-written.
-#[rite(v3, v4, neon, wasm128)]
-fn saturate_chunk(chunk: &mut [f32; 8]) {
-    for v in chunk {
-        if *v < 0.0 {
-            *v = 0.0;
-        }
-        if *v > 1.0 {
-            *v = 1.0;
-        }
-    }
-}
+// A plain `#[magetypes]` function the pipeline routes through via nested
+// `incant!`. Kept outside the numbered patterns — it's the thing being
+// dispatched to, not a pattern of its own.
 
 #[magetypes(v4, v3, neon, wasm128, scalar)]
 fn clamp01_impl(token: Token, plane: &mut [f32]) {
@@ -181,7 +165,7 @@ fn clamp01_impl(token: Token, plane: &mut [f32]) {
 }
 
 // ============================================================================
-// Pattern E — #[autoversion] for scalar that auto-vectorizes
+// Pattern D — #[autoversion] for scalar that auto-vectorizes
 // ============================================================================
 // Plain scalar body, recompiled under each tier's `#[target_feature]`. LLVM
 // auto-vectorizes each copy. `#[autoversion]` is the only generator that
@@ -198,7 +182,7 @@ fn apply_color_matrix(rgb: &mut [f32], mat: [[f32; 3]; 3]) {
 }
 
 // ============================================================================
-// Pattern F — Nested incant! rewriting
+// Pattern E — Nested incant! rewriting
 // ============================================================================
 // When `incant!(foo(args))` appears inside a tier-annotated body, the outer
 // macro rewrites it to the direct tier-matching call at compile time:
@@ -237,62 +221,64 @@ pub fn pipeline(plane: &mut [f32], bias: f32, factor: f32) {
 }
 
 // ============================================================================
-// Pattern G — Polyfill defaults (demonstrated by Patterns A/B/F)
+// Pattern F — Polyfill assertions: verify which backend ran per platform
 // ============================================================================
-// `scale_plane_impl` uses `f32x8` on every listed tier including `neon` and
-// `wasm128`. The polyfill emits 2×`f32x4` ops internally on 128-bit SIMD;
-// no hand-rolled half-split needed. Pick the width your algorithm wants —
-// the library handles the hardware split. Native on AVX2, polyfilled
-// elsewhere, same source.
-//
-// Verify what the compiled path actually is at runtime:
+// The SAME `#[magetypes]` body above runs on every platform. AVX2 lowers
+// `f32x8` to one 256-bit op; NEON and Wasm128 lower it to two 128-bit ops
+// (polyfill); scalar runs an array loop. This function asserts the actual
+// backend names via `implementation_name()` so a passing run proves the
+// polyfill claim — not just that the code compiles.
 
-fn print_implementations() {
-    // `implementation_name()` is defined for every concrete backend that has
-    // a `{Type}Backend` impl — native and polyfill. The SAME #[magetypes]
-    // body above runs on every platform; the lowering differs per tier.
+fn verify_polyfill_implementations() {
     use magetypes::simd::generic::{f32x4, f32x8};
 
-    println!(
-        "  f32x4 on ScalarToken: {}",
-        f32x4::<archmage::ScalarToken>::implementation_name()
+    // Scalar fallback is callable and named consistently on every arch.
+    assert_eq!(
+        f32x4::<archmage::ScalarToken>::implementation_name(),
+        "scalar::f32x4"
     );
-    println!(
-        "  f32x8 on ScalarToken: {}",
-        f32x8::<archmage::ScalarToken>::implementation_name()
+    assert_eq!(
+        f32x8::<archmage::ScalarToken>::implementation_name(),
+        "scalar::f32x8"
     );
 
     #[cfg(target_arch = "x86_64")]
     {
-        println!(
-            "  f32x4 on X64V3Token:  {}",
-            f32x4::<archmage::X64V3Token>::implementation_name()
+        assert_eq!(
+            f32x4::<archmage::X64V3Token>::implementation_name(),
+            "x86::v3::f32x4",
+            "f32x4 on x86-64 should be native v3 (SSE)"
         );
-        println!(
-            "  f32x8 on X64V3Token:  {}",
-            f32x8::<archmage::X64V3Token>::implementation_name()
+        assert_eq!(
+            f32x8::<archmage::X64V3Token>::implementation_name(),
+            "x86::v3::f32x8",
+            "f32x8 on x86-64 should be native v3 (AVX2) — one 256-bit op"
         );
     }
     #[cfg(target_arch = "aarch64")]
     {
-        println!(
-            "  f32x4 on NeonToken:   {}",
-            f32x4::<archmage::NeonToken>::implementation_name()
+        assert_eq!(
+            f32x4::<archmage::NeonToken>::implementation_name(),
+            "arm::neon::f32x4",
+            "f32x4 on aarch64 should be native NEON"
         );
-        println!(
-            "  f32x8 on NeonToken:   {}",
-            f32x8::<archmage::NeonToken>::implementation_name()
+        assert_eq!(
+            f32x8::<archmage::NeonToken>::implementation_name(),
+            "polyfill::neon::f32x8",
+            "f32x8 on aarch64 should polyfill to 2× NEON (128-bit)"
         );
     }
     #[cfg(target_arch = "wasm32")]
     {
-        println!(
-            "  f32x4 on Wasm128Token: {}",
-            f32x4::<archmage::Wasm128Token>::implementation_name()
+        assert_eq!(
+            f32x4::<archmage::Wasm128Token>::implementation_name(),
+            "wasm::wasm128::f32x4",
+            "f32x4 on wasm32 should be native SIMD128"
         );
-        println!(
-            "  f32x8 on Wasm128Token: {}",
-            f32x8::<archmage::Wasm128Token>::implementation_name()
+        assert_eq!(
+            f32x8::<archmage::Wasm128Token>::implementation_name(),
+            "polyfill::wasm128::f32x8",
+            "f32x8 on wasm32 should polyfill to 2× SIMD128"
         );
     }
 }
@@ -346,24 +332,24 @@ fn main() {
         println!("  [C] hand-tuned _v4x slotted via incant! suffix OK (fallback tier active)");
     }
 
-    // --- Pattern E: #[autoversion] ---
+    // --- Pattern D: #[autoversion] ---
     let mut rgb = vec![0.1f32, 0.5, 0.9, 0.2, 0.4, 0.8];
     let identity = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
     let before = rgb.clone();
     apply_color_matrix(&mut rgb, identity);
     assert!(
         approx_eq(&rgb, &before, 1e-6),
-        "[E] color matrix identity: {rgb:?}"
+        "[D] color matrix identity: {rgb:?}"
     );
     let swap_rgb_to_bgr = [[0.0, 0.0, 1.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]];
     apply_color_matrix(&mut rgb, swap_rgb_to_bgr);
     assert!(
         approx_eq(&rgb, &[0.9, 0.5, 0.1, 0.8, 0.4, 0.2], 1e-6),
-        "[E] color matrix swap: {rgb:?}"
+        "[D] color matrix swap: {rgb:?}"
     );
-    println!("  [E] #[autoversion] color matrix               OK");
+    println!("  [D] #[autoversion] color matrix               OK");
 
-    // --- Pattern F: nested incant! rewriting via pipeline ---
+    // --- Pattern E: nested incant! rewriting via pipeline ---
     // pipeline: x → clamp01(x + bias) * factor
     // Input 0.5, bias 0.3 → 0.8 → clamp → 0.8 → * 2.0 → 1.6
     // Input 2.0, bias -0.5 → 1.5 → clamp → 1.0 → * 2.0 → 2.0
@@ -375,14 +361,14 @@ fn main() {
         let expected = if i % 2 == 0 { 0.0f32 } else { 2.0f32 };
         assert!(
             (v - expected).abs() < 1e-5,
-            "[F] pipeline idx {i}: got {v}, expected {expected}"
+            "[E] pipeline idx {i}: got {v}, expected {expected}"
         );
     }
-    println!("  [F] nested incant! rewriting pipeline         OK");
+    println!("  [E] nested incant! rewriting pipeline         OK");
 
-    // --- Pattern G: polyfill visibility ---
-    println!("  [G] polyfill implementations:");
-    print_implementations();
+    // --- Pattern F: polyfill assertions (per-platform implementation_name) ---
+    verify_polyfill_implementations();
+    println!("  [F] polyfill implementation_name() assertions OK");
 
     println!("all patterns OK");
 }
