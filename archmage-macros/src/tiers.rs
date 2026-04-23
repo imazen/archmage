@@ -240,23 +240,6 @@ pub(crate) fn parse_one_tier(input: ParseStream) -> syn::Result<String> {
     Ok(format!("{prefix}{name}"))
 }
 
-/// Parse a comma-separated list of tier names, each optionally prefixed with `+`
-/// and/or followed by a cfg gate.
-///
-/// - **Override mode** (no `+`): `v3, neon, scalar` — replaces defaults entirely.
-/// - **Additive mode** (all `+`): `+arm_v2, +v1` — appends to defaults.
-/// - Mixing `+` and non-`+` entries is a compile error.
-pub(crate) fn parse_tier_names(input: ParseStream) -> syn::Result<Vec<String>> {
-    let mut names = Vec::new();
-    while !input.is_empty() {
-        names.push(parse_one_tier(input)?);
-        if input.peek(Token![,]) {
-            let _: Token![,] = input.parse()?;
-        }
-    }
-    Ok(names)
-}
-
 /// Look up a tier by name.
 ///
 /// Accepts `_v3` as well as `v3` — the leading `_` matches the name-mangling

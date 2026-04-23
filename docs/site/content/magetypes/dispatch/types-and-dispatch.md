@@ -3,97 +3,90 @@ title = "Types and Dispatch"
 weight = 1
 +++
 
-Magetypes vectors work with archmage's [`incant!`](@/archmage/dispatch/incant.md) macro for multi-platform dispatch. The generic backend pattern lets you write one function body that works across all architectures — `incant!` selects the best available token at runtime.
+Magetypes vectors work with archmage's [`incant!`](@/archmage/dispatch/incant.md) macro and the [`#[magetypes]`](@/archmage/dispatch/magetypes-macro.md) macro for multi-platform dispatch. You write one body, the macros generate the per-tier target-feature contexts, `incant!` dispatches at runtime.
 
-## The Generic Pattern
+**See [`magetypes/examples/idiomatic_patterns_all.rs`](https://github.com/imazen/archmage/blob/main/magetypes/examples/idiomatic_patterns_all.rs) — a single runnable file that exercises every pattern on this page.**
 
-Write your SIMD logic once with a generic backend bound, then wire it up with concrete `#[arcane]` wrappers and `incant!`:
+## The Default: `#[magetypes]` + `incant!`
+
+Write the algorithm once inside `#[magetypes]`. The macro generates one `#[arcane]`-wrapped variant per listed tier, substituting `Token` with the concrete token type. `define(...)` injects the matching-tier magetypes type aliases at the top of each variant body. `incant!` dispatches at runtime.
 
 ```rust
-use archmage::{arcane, incant, ScalarToken, X64V3Token};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
+use archmage::prelude::*;
 
-// 1. Generic function — no #[arcane], just #[inline(always)]
-//    This has no #[target_feature] of its own. It inherits the caller's
-//    features through inlining — without inlining, intrinsics become
-//    function calls (18x slower). Always use #[inline(always)].
-#[inline(always)]
-fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    f32x8::<T>::from_array(token, *data).reduce_add()
+#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
+fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
+    // `f32x8` is in scope via `define` — resolves to `f32x8<X64V3Token>` in
+    // the v3 variant, `f32x8<NeonToken>` in neon, etc.
+    let factor_v = f32x8::splat(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor_v).store(chunk);
+    }
+    for v in tail { *v *= factor; }
 }
 
-// 2. Concrete #[arcane] wrappers — one per tier
-//    #[arcane] needs a concrete token to know which #[target_feature] to emit.
-//    Generic bounds like F32x8Backend are unknown to it.
-#[arcane(import_intrinsics)]
-fn sum_impl_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    sum_impl(token, data)  // generic inlines here, gets AVX2+FMA
-}
-
-fn sum_impl_scalar(token: ScalarToken, data: &[f32; 8]) -> f32 {
-    sum_impl(token, data)
-}
-
-// 3. incant! dispatches to the best available variant at runtime
-pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum_impl(data), [v3, scalar])
+pub fn scale_plane(plane: &mut [f32], factor: f32) {
+    incant!(scale_plane_impl(plane, factor))
 }
 ```
 
-Why three layers? `#[arcane]` parses the token type from your function signature to choose which `#[target_feature]` attributes to emit. It only recognizes concrete tokens (`X64V3Token`, `NeonToken`, etc.) — not generic bounds like `F32x8Backend`. The generic function carries the algorithm; the `#[arcane]` wrappers provide the target-feature context; `incant!` picks the right wrapper at runtime.
+`define(...)` takes a list: `define(f32x8, u8x16, i16x8)` to inject several types. Without `define`, you can write `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;` manually at the top of the body — both forms work.
 
-**Polyfills are automatic.** `f32x8::<NeonToken>` compiles to two 128-bit NEON operations. `f32x8::<Wasm128Token>` compiles to two 128-bit SIMD128 operations. The same generic function works everywhere with zero code changes — on AVX2 it's one 256-bit operation, on narrower hardware it's polyfilled.
+**`#[magetypes]` IS the `#[arcane]` wrapper generator.** Do not write per-tier `#[arcane]` wrappers by hand around a generic kernel — the macro already does that for every tier in the list. Each generated variant has its own `#[target_feature]` region; `incant!` picks the highest available at runtime.
 
-A complete cross-platform version adds NEON and WASM wrappers:
+**Polyfills are automatic.** `f32x8::<NeonToken>` emits two 128-bit NEON ops; `f32x8::<Wasm128Token>` emits two 128-bit SIMD128 ops; `f32x8::<X64V3Token>` emits one 256-bit AVX2 op. The same body works everywhere. Pick the vector width your algorithm wants — `f32x8`, `f32x16`, `u8x16` — and the library handles the hardware split.
+
+## Extract a Generic Kernel When You Need Reuse
+
+If the same kernel is called from several entry points (or you want to share it with other crates), extract it as a generic function bounded on a backend trait. The `#[magetypes]` entry becomes a thin stub that passes its token through. `T` is inferred from the concrete `Token` in each tier.
 
 ```rust
-use archmage::{arcane, incant, ScalarToken, X64V3Token, NeonToken, Wasm128Token};
+use archmage::prelude::*;
 use magetypes::simd::{
-    generic::f32x8,
     backends::F32x8Backend,
+    generic::f32x8 as GenericF32x8,
 };
 
-#[inline(always)]
-fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    f32x8::<T>::from_array(token, *data).reduce_add()
+#[inline(always)]   // MANDATORY — see below
+fn dot_kernel<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
+    let mut acc = GenericF32x8::<T>::zero(token);
+    let chunks = a.len() / 8;
+    for i in 0..chunks {
+        let va = GenericF32x8::<T>::load(token, a[i * 8..][..8].try_into().unwrap());
+        let vb = GenericF32x8::<T>::load(token, b[i * 8..][..8].try_into().unwrap());
+        acc = va.mul_add(vb, acc);
+    }
+    let mut total = acc.reduce_add();
+    for i in (chunks * 8)..a.len() { total += a[i] * b[i]; }
+    total
 }
 
-#[arcane(import_intrinsics)]
-fn sum_impl_v3(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    sum_impl(token, data)
+#[magetypes(v4, v3, neon, wasm128, scalar)]
+fn dot_impl(token: Token, a: &[f32], b: &[f32]) -> f32 {
+    dot_kernel(token, a, b)   // T inferred — token has concrete type per tier
 }
 
-#[arcane(import_intrinsics)]
-fn sum_impl_neon(token: NeonToken, data: &[f32; 8]) -> f32 {
-    sum_impl(token, data)  // polyfilled: two f32x4 ops
-}
-
-#[arcane(import_intrinsics)]
-fn sum_impl_wasm128(token: Wasm128Token, data: &[f32; 8]) -> f32 {
-    sum_impl(token, data)  // polyfilled: two f32x4 ops
-}
-
-fn sum_impl_scalar(token: ScalarToken, data: &[f32; 8]) -> f32 {
-    sum_impl(token, data)
-}
-
-pub fn sum(data: &[f32; 8]) -> f32 {
-    incant!(sum_impl(data), [v3, neon, wasm128, scalar])
+pub fn dot(a: &[f32], b: &[f32]) -> f32 {
+    incant!(dot_impl(a, b))
 }
 ```
 
-## When Algorithms Differ Per Platform
+### Why `#[inline(always)]` is mandatory on the generic kernel
 
-Sometimes you want separate implementations to exploit architecture-specific strengths — different register widths, native instruction sequences, or algorithm shapes:
+`dot_kernel` has no `#[target_feature]` of its own. It inherits the caller's features through inlining. When `dot_impl_v3` (the V3 variant generated by `#[magetypes]`) calls `dot_kernel(token, ...)`, inlining puts the kernel's body inside the V3 variant's `#[target_feature(enable = "avx2,fma,...")]` region, and LLVM emits native AVX2 instructions.
+
+Without `#[inline(always)]`, the kernel body stays in its own default-features region, intrinsics become function calls, and performance regresses ~18× even inside a `#[magetypes]`-generated variant. See `magetypes/benches/generic_vs_concrete.rs` for the measurement.
+
+## When the Algorithm Genuinely Differs Per Platform
+
+Some kernels benefit from per-platform shapes — different widths, different instruction sequences, different memory layouts. Write one `#[arcane]` per affected tier. Name each variant `fn_<tier>` (e.g., `fn_v3`, `fn_neon`). `incant!` resolves by suffix and doesn't care which macro or hand-written function produced which variant.
 
 ```rust
-use archmage::{arcane, incant, ScalarToken, X64V3Token, NeonToken};
+use archmage::prelude::*;
 use magetypes::simd::generic::{f32x8, f32x4};
 
-// x86-64: use f32x8 (256-bit AVX2)
+// x86-64 v3: native 256-bit f32x8
 #[arcane(import_intrinsics)]
 fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = f32x8::<X64V3Token>::from_array(token, *a);
@@ -101,19 +94,13 @@ fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     (va * vb).reduce_add()
 }
 
-// AArch64: use f32x4 (128-bit NEON) — process in two halves
+// AArch64: native 128-bit f32x4, processed in two halves
 #[arcane(import_intrinsics)]
 fn dot_product_neon(token: NeonToken, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let sum1 = {
-        let va = f32x4::<NeonToken>::from_slice(token, &a[0..4]);
-        let vb = f32x4::<NeonToken>::from_slice(token, &b[0..4]);
-        (va * vb).reduce_add()
-    };
-    let sum2 = {
-        let va = f32x4::<NeonToken>::from_slice(token, &a[4..8]);
-        let vb = f32x4::<NeonToken>::from_slice(token, &b[4..8]);
-        (va * vb).reduce_add()
-    };
+    let sum1 = (f32x4::<NeonToken>::from_slice(token, &a[0..4])
+             * f32x4::<NeonToken>::from_slice(token, &b[0..4])).reduce_add();
+    let sum2 = (f32x4::<NeonToken>::from_slice(token, &a[4..8])
+             * f32x4::<NeonToken>::from_slice(token, &b[4..8])).reduce_add();
     sum1 + sum2
 }
 
@@ -126,43 +113,120 @@ pub fn dot_product(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 }
 ```
 
-When the algorithm is the same on every platform, the generic pattern from the previous section is cleaner. When you need platform-tuned implementations, write concrete variants and list the tiers explicitly. Include `scalar` in the tier list — it must be listed explicitly.
+In almost every case the "default" pattern above is fine — the polyfill path on NEON and WASM is already two-half processing, identical to what you'd hand-write. Reach for per-platform shapes only when a platform has an instruction the generic API can't express (e.g., AVX-512 mask-register shuffles on `_v4x`, cross-lane NEON permutes, WASM relaxed-SIMD ops).
 
-## The #[magetypes] Macro
+## Slotting One Hand-Tuned Tier Into an Existing `#[magetypes]` Family
 
-When the function body is truly platform-independent (only the token type changes), use [`#[magetypes]`](@/archmage/dispatch/magetypes-macro.md) to generate all variants automatically:
+When only one tier needs hand-tuning, leave the rest to `#[magetypes]` and add a standalone `#[arcane]` for the special tier. `incant!` picks it up by suffix convention — it doesn't care which macro (or hand-writing) produced which variant.
+
+Full recipe — reusing `scale_plane_impl` from the first section above, adding a `_v4x` specialization that uses native 512-bit `f32x16`:
 
 ```rust
-use archmage::{magetypes, incant};
+use archmage::prelude::*;
+use magetypes::simd::{
+    generic::f32x8 as GenericF32x8,
+    generic::f32x16 as GenericF32x16,
+};
 
-#[magetypes]
-fn validate(token: Token, threshold: f32) -> bool {
-    // Token is replaced with X64V3Token, NeonToken, ScalarToken, etc.
-    threshold > 0.0
+// Family generated by #[magetypes]: scale_plane_impl_v4, _v3, _neon, _wasm128, _scalar.
+// Omit v4x from this list — we hand-tune it below.
+#[magetypes(v4, v3, neon, wasm128, scalar)]
+fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
+    #[allow(non_camel_case_types)]
+    type f32x8 = GenericF32x8<Token>;
+
+    let factor_v = f32x8::splat(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor_v).store(chunk);
+    }
+    for v in tail { *v *= factor; }
 }
 
-// Generates: validate_v3, validate_neon, validate_wasm128, validate_scalar
-// Ready for incant!:
-pub fn validate(threshold: f32) -> bool {
-    incant!(validate(threshold), [v3, neon, wasm128, scalar])
+// Hand-tuned _v4x using native 512-bit f32x16 (on top of the avx512 feature gate).
+// The name `scale_plane_impl_v4x` matches incant!'s suffix convention exactly —
+// that's how it joins the family.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[arcane]
+fn scale_plane_impl_v4x(token: X64V4xToken, plane: &mut [f32], factor: f32) {
+    let factor_v = GenericF32x16::<X64V4xToken>::splat(token, factor);
+    let (chunks, tail) = GenericF32x16::<X64V4xToken>::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (GenericF32x16::<X64V4xToken>::load(token, chunk) * factor_v).store(chunk);
+    }
+    for v in tail { *v *= factor; }
+}
+
+// One public entry. The tier list includes the hand-tuned _v4x ahead of the
+// #[magetypes]-generated family. incant! routes by suffix.
+pub fn scale_plane(plane: &mut [f32], factor: f32) {
+    incant!(
+        scale_plane_impl(plane, factor),
+        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+    )
 }
 ```
 
-`#[magetypes]` does text substitution — `Token` becomes the concrete token type for each variant, and `#[arcane]` is applied to each generated function. This works when the function body doesn't depend on SIMD types that vary by backend.
+**Key rules for this pattern:**
+- The hand-written function name MUST be `<base>_<tier>` matching the existing family's prefix (here: `scale_plane_impl_v4x`).
+- Do NOT also list that tier in `#[magetypes]`'s tier list — the macro would generate a conflicting `_v4x`. (`v4x` is not in the `#[magetypes]` default list, but if you were hand-tuning `_v3`, you'd write `#[magetypes(v4, neon, wasm128, scalar)]`.)
+- The `incant!` tier list at the public entry includes all tiers you want considered — hand-written and generated alike.
 
-**Limitation:** `#[magetypes]` generates variants for all tiers, including `v4`. If your function uses `f32x8::<Token>`, the `v4` variant will fail because `X64V4Token` doesn't implement `F32x8Backend` (it uses `f32x16`). For generic SIMD code, use the three-layer pattern from the first section instead.
+## Nested `incant!` is Zero-Overhead
+
+When `incant!(foo(args))` appears inside a tier-annotated body (`#[magetypes]`, `#[autoversion]`, `#[arcane]`, or token-based `#[rite]`), the outer macro rewrites it to the direct tier-matching call at compile time. No dispatcher branch, no cache probe — the inner function inlines into the outer's `#[target_feature]` region.
+
+```rust
+#[magetypes(v4, v3, neon, wasm128, scalar)]
+fn pipeline_impl(token: Token, plane: &mut [f32], bias: f32, factor: f32) {
+    #[allow(non_camel_case_types)]
+    type f32x8 = GenericF32x8<Token>;
+
+    let bias_v = f32x8::splat(token, bias);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) + bias_v).store(chunk);
+    }
+    for v in tail { *v += bias; }
+
+    // Both of these are rewritten at compile time to direct _v3/_v4/_neon/
+    // _wasm128/_scalar calls matching the current variant. Zero dispatcher hops.
+    incant!(clamp01_impl(plane));
+    incant!(scale_plane_impl(plane, factor));
+}
+```
+
+See [SPEC-INCANT-REWRITING.md](https://github.com/imazen/archmage/blob/main/docs/SPEC-INCANT-REWRITING.md) for the rewriting rules and measurements (0.94 ns vs 5.6 ns with re-dispatch).
 
 ## Passthrough Dispatch
 
-When you already have a token and want to dispatch to specialized variants without re-summoning:
+When you already have a token (e.g., inside a generic wrapper) and want to dispatch to specialized variants without re-summoning:
 
 ```rust
 use archmage::{incant, IntoConcreteToken};
 
 fn process_inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
     incant!(compute(data) with token, [v3, neon, wasm128, scalar])
-    // Uses IntoConcreteToken to check what the token actually is
 }
 ```
 
 See [`incant!` Passthrough Mode](@/archmage/dispatch/incant.md) for details.
+
+## The `#[rite]` Escape Hatch
+
+`#[rite(v3, v4, neon, wasm128)]` generates per-tier copies of a function with `#[target_feature]` + `#[inline]` attached directly — no wrapper, no optimization boundary. Callable by suffix from matching contexts.
+
+`#[rite]` does NOT substitute `Token`. Each variant is the same body with a different `#[target_feature]`; the signature is taken verbatim (tokenless or with a concrete token type). `#[rite]` has no `scalar` tier — scalar has no features to enable. If you need scalar in a dispatch, use `#[magetypes]` or write a plain `fn foo_scalar(_: ScalarToken, ...)` yourself.
+
+Reach for `#[rite]` for short inner helpers inside an `#[arcane]` or `#[magetypes]` body where you want explicit `#[target_feature]` control without delegating through the generic-bound pattern. For most magetypes code, extracted generic kernels (above) are cleaner.
+
+## Choosing the Pattern
+
+| You have | Use |
+|---|---|
+| One algorithm, works on every platform | **`#[magetypes]` + `incant!`** — inline body with `GenericF32x8<Token>` |
+| One algorithm reused from multiple entry points | Extracted `#[inline(always)] fn<T: F32x8Backend>` + `#[magetypes]` + `incant!` |
+| Algorithm genuinely differs per platform | Hand-written `#[arcane]` per tier + `incant!` |
+| Mostly uniform + one tier needs hand-tuning | `#[magetypes]` for most + standalone `#[arcane]` for the one tier — both routed by one `incant!` |
+| Scalar loop the compiler auto-vectorizes well | `#[autoversion]` (own dispatcher — no `incant!` needed) |
+| Inner helper called from a specific tier's context | `#[rite(v3)]` or `#[rite(v3, v4, neon, wasm128)]` multi-tier |

@@ -341,6 +341,32 @@ fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
 
 `f32x8` wraps `__m256` on x86 with AVX2. On ARM/WASM, it's polyfilled with two `f32x4` operations — same API, automatic fallback. The `#[arcane]` wrapper lets LLVM optimize the entire loop as a single SIMD region.
 
+### Cross-platform in one body: `#[magetypes]`
+
+The `#[magetypes]` attribute generates one `#[arcane]`-wrapped variant per listed tier with the `Token` placeholder substituted to the concrete token type. Combined with the `define(...)` flag — which injects the matching-tier magetypes type aliases at the top of each variant body — one function covers every platform:
+
+```rust
+use archmage::prelude::*;
+
+#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
+fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
+    // `f32x8` is in scope — `f32x8<X64V3Token>` in the v3 variant,
+    // `f32x8<NeonToken>` in neon, `f32x8<ScalarToken>` in scalar, etc.
+    let factor_v = f32x8::splat(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor_v).store(chunk);
+    }
+    for v in tail { *v *= factor; }
+}
+
+pub fn scale_plane(plane: &mut [f32], factor: f32) {
+    incant!(scale_plane_impl(plane, factor))
+}
+```
+
+`#[magetypes(rite, ...)]` is a second flag that emits `#[rite]`-style direct `#[target_feature]` + `#[inline]` variants instead of `#[arcane]` wrappers — for inner helpers called from matching-feature contexts where the optimization-boundary cost matters. See the [idiomatic_patterns_all](magetypes/examples/idiomatic_patterns_all.rs) example for the full vocabulary.
+
 ## Tier naming conventions
 
 `incant!` and `#[autoversion]` dispatch to suffixed functions. `incant!(sum(data))` calls `sum_v3`, `sum_neon`, etc. These suffixes correspond to tokens:

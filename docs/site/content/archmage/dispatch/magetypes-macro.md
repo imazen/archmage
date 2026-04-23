@@ -86,6 +86,75 @@ fn process(token: Token, data: &[f32]) -> f32 { ... }
 
 Tier names accept the `_` prefix — `_v3` is identical to `v3`.
 
+## The `define(...)` Flag: Inject Magetypes Type Aliases
+
+Without `define`, idiomatic `#[magetypes]` bodies usually start with a boilerplate alias line per magetypes type used:
+
+```rust
+use magetypes::simd::generic::f32x8 as GenericF32x8;
+
+#[magetypes(v3, scalar)]
+fn scale(token: Token, plane: &mut [f32], factor: f32) {
+    #[allow(non_camel_case_types)]
+    type f32x8 = GenericF32x8<Token>;  // ← boilerplate
+    // ...
+}
+```
+
+`define(...)` takes a list of magetypes type names and injects those alias lines automatically at the top of each variant body:
+
+```rust
+#[magetypes(define(f32x8), v3, scalar)]
+fn scale(token: Token, plane: &mut [f32], factor: f32) {
+    // `f32x8` is already in scope as the matching-tier concrete type.
+    let factor_v = f32x8::splat(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor_v).store(chunk);
+    }
+    for v in tail { *v *= factor; }
+}
+```
+
+Multiple types: `define(f32x8, f32x4, u8x16, i16x8)`. Type names must match the magetypes generic types (`f32xN`, `fNxM`, `iNxM`, `uNxM`); typos surface as rustc resolution errors.
+
+Injected alias:
+
+```rust
+type <name> = ::magetypes::simd::generic::<name><Token>;
+```
+
+`Token` in the RHS is substituted per tier (same as the rest of the body), so each variant gets a correctly-typed alias. The aliases are function-local — they don't leak into outer scope and shadow any outer `f32x8` / etc. within the function body.
+
+Empty list `define()` is accepted as a no-op, so commenting out items doesn't produce a syntax error.
+
+## The `rite` Flag: Direct `#[target_feature]` Variants
+
+By default, non-fallback variants are wrapped with `#[archmage::arcane]` — each variant becomes a safe outer function + `#[target_feature]` inner sibling (the "trampoline" pattern). This lets the variant be called from any context, including non-target-feature dispatchers.
+
+`#[magetypes(rite, ...)]` changes the per-tier wrapping to `#[archmage::rite(import_intrinsics)]` — each variant gets `#[target_feature]` + `#[inline]` applied directly, with no sibling and no trampoline:
+
+```rust
+#[magetypes(rite, v3, scalar)]
+fn helper(_t: Token, x: f32) -> f32 {
+    x * x
+}
+
+// Expands to (x86_64):
+//   #[target_feature(enable = "avx2,fma,...")] #[inline]
+//   fn helper_v3(_t: archmage::X64V3Token, x: f32) -> f32 { x * x }
+//   #[inline]
+//   fn helper_scalar(_t: archmage::ScalarToken, x: f32) -> f32 { x * x }
+```
+
+**When to use `rite`:**
+- Inner helpers called from matching-feature contexts — another `#[arcane]` / `#[rite]` / arcane-flavored `#[magetypes]` body at the same tier. Rust 1.86+ allows safe calls between `#[target_feature]` functions when the caller's features ⊇ callee's, so a rite-flavored helper inlines into the caller's region with zero optimization boundary.
+
+**When NOT to use `rite`:**
+- Public API entry points dispatched via standalone `incant!`. The dispatcher has no `#[target_feature]`, so calling a bare `#[target_feature]` variant requires `unsafe` — which `incant!`'s current dispatcher does not emit. Use arcane-flavored `#[magetypes]` (default) at public boundaries, and reserve the `rite` flag for internal helpers.
+
+**Token substitution is unchanged** — the `rite` flag only changes the per-tier wrapping, not the `Token` → concrete-type replacement.
+
 ## `#[magetypes]` vs Manual Variants
 
 **Use `#[magetypes]`** when the function body is platform-independent (only the token type changes):

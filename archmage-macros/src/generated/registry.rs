@@ -166,6 +166,7 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
         ]),
         "Wasm128Token" => Some(&["simd128"]),
         "Wasm128RelaxedToken" => Some(&["simd128", "relaxed-simd"]),
+        "ScalarToken" => Some(&[]),
         _ => None,
     }
 }
@@ -433,6 +434,7 @@ pub(crate) fn token_to_magetypes_namespace(token_name: &str) -> Option<&'static 
         "Arm64V3Token" => Some("neon"),
         "Wasm128Token" => Some("wasm128"),
         "Wasm128RelaxedToken" => Some("wasm128"),
+        "ScalarToken" => Some("scalar"),
         _ => None,
     }
 }
@@ -541,6 +543,7 @@ pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {
         "arm_v3" => Some("Arm64V3Token"),
         "wasm128" => Some("Wasm128Token"),
         "wasm128_relaxed" => Some("Wasm128RelaxedToken"),
+        "scalar" => Some("ScalarToken"),
         _ => None,
     }
 }
@@ -567,6 +570,7 @@ pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'stati
         "Arm64V3Token" => Some("arm_v3"),
         "Wasm128Token" => Some("wasm128"),
         "Wasm128RelaxedToken" => Some("wasm128_relaxed"),
+        "ScalarToken" => Some("scalar"),
         _ => None,
     }
 }

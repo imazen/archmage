@@ -153,8 +153,10 @@ fn inner_work(token: X64V3Token, data: &[f32]) -> f32 {
 - Generic bounds break this chain — each function is a separate compilation unit
 - Even `#[inline(always)]` can't force inlining across trait object boundaries
 
-**Exception: magetypes backend generics are zero-cost inside `#[arcane]` — if they inline.**
-`f32x8::<T>` where `T: F32x8Backend` produces **identical assembly** to concrete `f32x8::<x64v3>` — but only when the generic function inlines into the `#[arcane]` caller. The generic function has no `#[target_feature]` of its own; it inherits the caller's features through inlining. **Mark generic SIMD helpers `#[inline(always)]`** to guarantee this. With `#[inline(never)]`, the same generic code is 18x slower even inside `#[arcane]` — intrinsics become function calls because the non-inlined function body compiles without target features. See `benches/generic_vs_concrete.rs`.
+**Exception: magetypes backend generics are zero-cost inside a `#[target_feature]` region — if they inline.**
+`f32x8::<T>` where `T: F32x8Backend` produces **identical assembly** to concrete `f32x8::<x64v3>` — but only when the generic function inlines into a `#[target_feature]`-enabled caller. The generic function has no `#[target_feature]` of its own; it inherits the caller's features through inlining. **Mark generic SIMD helpers `#[inline(always)]`** to guarantee this. With `#[inline(never)]`, the same generic code is 18x slower — intrinsics become function calls because the non-inlined function body compiles without target features. See `benches/generic_vs_concrete.rs`.
+
+**The normal caller is a `#[magetypes]`-generated variant, not a hand-written `#[arcane]`.** `#[magetypes]` IS the per-tier `#[arcane]` wrapper generator — given `#[magetypes(v4, v3, neon, wasm128, scalar)]`, it emits one `#[arcane]`-wrapped variant per listed tier with `Token` substituted to the concrete type. Your generic `#[inline(always)] fn<T: F32x8Backend>` kernel inlines into each of those variants; `T` is inferred from the concrete token at each call site. Do not hand-write per-tier `#[arcane]` wrappers around a generic kernel — the macro already does it. Reach for `#[arcane]` directly only at a public entry point for one tier, or to slot one hand-tuned variant into an existing `#[magetypes]` family by the `_<tier>` suffix. Canonical example: `magetypes/examples/idiomatic_patterns_all.rs`.
 
 **Downcasting is free:** Pass a higher token to a function expecting a lower one. Nested `#[arcane]` with downcasting preserves the inlining chain:
 

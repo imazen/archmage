@@ -401,14 +401,32 @@ pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStrea
 pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as LightFn);
 
-    // Parse optional tier list from attribute args: tier1, tier2(feature), ...
-    let tier_names: Vec<String> = if attr.is_empty() {
+    // Parse attribute args: [rite,] [define(type, ...),] tier1, tier2(feature), ...
+    //
+    // Special keywords:
+    //   `rite`: flag that changes per-tier variants to use
+    //           `#[archmage::rite(import_intrinsics)]` (direct
+    //           `#[target_feature]` + `#[inline]`) instead of
+    //           `#[archmage::arcane]` (safe wrapper + inner trampoline).
+    //
+    //   `define(name1, name2, ...)`: list of magetypes type names to inject
+    //           as local type aliases at the top of each variant body
+    //           (e.g., `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;`).
+    //           `Token` in the alias RHS is substituted per tier.
+    //
+    // Assumption: neither `rite` nor `define` is or will become a tier name.
+    // `token-registry.toml` must not declare `short_name = "rite"` or
+    // `short_name = "define"`.
+    let (rite_flag, defines, tier_names) =
+        match syn::parse::Parser::parse(parse_magetypes_attr, attr) {
+            Ok(parsed) => parsed,
+            Err(e) => return e.to_compile_error().into(),
+        };
+
+    let tier_names = if tier_names.is_empty() {
         DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect()
     } else {
-        match syn::parse::Parser::parse(parse_tier_names, attr) {
-            Ok(names) => names,
-            Err(e) => return e.to_compile_error().into(),
-        }
+        tier_names
     };
 
     // default_optional: tiers with cfg_feature are optional by default
@@ -421,7 +439,60 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
         Err(e) => return e.to_compile_error().into(),
     };
 
-    magetypes_impl(input_fn, &tiers)
+    magetypes_impl(input_fn, &tiers, rite_flag, &defines)
+}
+
+/// Parse `#[magetypes]` attributes: `rite` flag, `define(list)`, and tier names.
+///
+/// Returns `(rite_flag, defines, tier_names)`. Tier names preserve the
+/// `+`/`-` modifier prefixes and `(cfg(feat))` gates for the tier resolver.
+fn parse_magetypes_attr(
+    input: syn::parse::ParseStream,
+) -> syn::Result<(bool, Vec<String>, Vec<String>)> {
+    use syn::Token;
+    let mut rite_flag = false;
+    let mut defines = Vec::new();
+    let mut tier_names = Vec::new();
+
+    while !input.is_empty() {
+        // Peek the leading ident without consuming — `rite` and `define` are
+        // special, anything else is a tier name (possibly prefixed with +/-).
+        let peek_rite = input.peek(syn::Ident) && {
+            let fork = input.fork();
+            fork.parse::<syn::Ident>()
+                .is_ok_and(|i| i == "rite" && !fork.peek(syn::token::Paren))
+        };
+        let peek_define = input.peek(syn::Ident) && {
+            let fork = input.fork();
+            fork.parse::<syn::Ident>()
+                .is_ok_and(|i| i == "define" && fork.peek(syn::token::Paren))
+        };
+
+        if peek_rite {
+            let _: syn::Ident = input.parse()?;
+            rite_flag = true;
+        } else if peek_define {
+            let _: syn::Ident = input.parse()?;
+            let content;
+            syn::parenthesized!(content in input);
+            while !content.is_empty() {
+                let ty: syn::Ident = content.parse()?;
+                defines.push(ty.to_string());
+                if content.peek(Token![,]) {
+                    let _: Token![,] = content.parse()?;
+                }
+            }
+        } else {
+            // Fall through to tier-name parsing (preserves +/- prefix and cfg gates).
+            tier_names.push(parse_one_tier(input)?);
+        }
+
+        if input.peek(Token![,]) {
+            let _: Token![,] = input.parse()?;
+        }
+    }
+
+    Ok((rite_flag, defines, tier_names))
 }
 
 // =============================================================================
