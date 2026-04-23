@@ -28,10 +28,7 @@
 #![allow(dead_code)]
 
 use archmage::prelude::*;
-use magetypes::simd::{
-    backends::F32x8Backend,
-    generic::f32x8 as GenericF32x8,
-};
+use magetypes::simd::{backends::F32x8Backend, generic::f32x8 as GenericF32x8};
 
 // ============================================================================
 // Pattern A — Inline #[magetypes]
@@ -342,7 +339,9 @@ fn main() {
     }
     #[cfg(not(all(target_arch = "x86_64", feature = "avx512")))]
     {
-        println!("  [C] hand-tuned #[arcane] v4x (f32x16)         skipped (needs x86_64 + feature=avx512)");
+        println!(
+            "  [C] hand-tuned #[arcane] v4x (f32x16)         skipped (needs x86_64 + feature=avx512)"
+        );
     }
 
     // --- Pattern E: #[autoversion] ---
@@ -366,7 +365,9 @@ fn main() {
     // pipeline: x → clamp01(x + bias) * factor
     // Input 0.5, bias 0.3 → 0.8 → clamp → 0.8 → * 2.0 → 1.6
     // Input 2.0, bias -0.5 → 1.5 → clamp → 1.0 → * 2.0 → 2.0
-    let mut plane: Vec<f32> = (0..19).map(|i| if i % 2 == 0 { 0.5 } else { 2.0 }).collect();
+    let mut plane: Vec<f32> = (0..19)
+        .map(|i| if i % 2 == 0 { 0.5 } else { 2.0 })
+        .collect();
     pipeline(&mut plane, -0.5, 2.0);
     for (i, &v) in plane.iter().enumerate() {
         let expected = if i % 2 == 0 { 0.0f32 } else { 2.0f32 };
