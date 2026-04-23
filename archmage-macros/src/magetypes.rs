@@ -6,9 +6,25 @@ use quote::{ToTokens, quote};
 use crate::common::*;
 use crate::tiers::*;
 
-pub(crate) fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> TokenStream {
+/// Generate per-tier variants of the input function.
+///
+/// When `rite_flag` is false (default), non-fallback variants are wrapped
+/// with `#[archmage::arcane]` (safe outer wrapper + `#[target_feature]`
+/// inner via trampoline). When true, variants are annotated with
+/// `#[archmage::rite(import_intrinsics)]` — direct `#[target_feature]` +
+/// `#[inline]`, no trampoline, no optimization boundary. The rite form is
+/// only safe to call from matching-feature contexts (another `#[arcane]`,
+/// `#[rite]`, or `#[magetypes]`-generated variant, or via `incant!`
+/// rewriting inside such a context). Standalone `incant!` dispatch at a
+/// public boundary is NOT supported for rite-flavored magetypes because the
+/// non-tier dispatcher can't safely call a bare `#[target_feature]` fn.
+pub(crate) fn magetypes_impl(
+    mut input_fn: LightFn,
+    tiers: &[ResolvedTier],
+    rite_flag: bool,
+) -> TokenStream {
     // Strip user-provided #[arcane] / #[rite] to prevent double-wrapping
-    // (magetypes auto-adds #[arcane] on non-scalar variants)
+    // (magetypes auto-adds one of them on non-scalar variants)
     input_fn
         .attrs
         .retain(|attr| !attr.path().is_ident("arcane") && !attr.path().is_ident("rite"));
@@ -68,10 +84,21 @@ pub(crate) fn magetypes_impl(mut input_fn: LightFn, tiers: &[ResolvedTier]) -> T
         };
 
         variants.push(if tier.name != "scalar" && tier.name != "default" {
-            // Non-fallback variants get #[arcane] so target_feature is applied
+            // Non-fallback variants carry target_feature. The `rite` flag
+            // chooses which macro applies it:
+            //   - #[archmage::arcane]: safe wrapper + #[target_feature] inner
+            //     (trampoline pattern; callable from any context)
+            //   - #[archmage::rite(import_intrinsics)]: direct #[target_feature]
+            //     + #[inline], no wrapper (only callable from matching-feature
+            //     contexts, e.g. via `incant!` rewriting from another tier body)
+            let wrapper = if rite_flag {
+                quote! { #[archmage::rite(import_intrinsics)] }
+            } else {
+                quote! { #[archmage::arcane] }
+            };
             quote! {
                 #cfg_guard
-                #[archmage::arcane]
+                #wrapper
                 #variant_tokens
             }
         } else {

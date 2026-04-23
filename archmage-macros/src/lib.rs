@@ -401,12 +401,29 @@ pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStrea
 pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as LightFn);
 
-    // Parse optional tier list from attribute args: tier1, tier2(feature), ...
-    let tier_names: Vec<String> = if attr.is_empty() {
-        DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect()
+    // Parse optional tier list from attribute args: [rite,] tier1, tier2(feature), ...
+    //
+    // `rite` is an optional leading flag that changes per-tier variants to use
+    // `#[archmage::rite(import_intrinsics)]` (direct `#[target_feature]` + `#[inline]`)
+    // instead of `#[archmage::arcane]` (safe wrapper + `#[target_feature]` inner).
+    let (rite_flag, tier_names): (bool, Vec<String>) = if attr.is_empty() {
+        (
+            false,
+            DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
+        )
     } else {
         match syn::parse::Parser::parse(parse_tier_names, attr) {
-            Ok(names) => names,
+            Ok(mut names) => {
+                let rite = names.first().is_some_and(|n| n == "rite");
+                if rite {
+                    names.remove(0);
+                }
+                // If the tier list was just `rite` alone (no tiers), fall back to defaults.
+                if rite && names.is_empty() {
+                    names = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
+                }
+                (rite, names)
+            }
             Err(e) => return e.to_compile_error().into(),
         }
     };
@@ -421,7 +438,7 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
         Err(e) => return e.to_compile_error().into(),
     };
 
-    magetypes_impl(input_fn, &tiers)
+    magetypes_impl(input_fn, &tiers, rite_flag)
 }
 
 // =============================================================================
