@@ -527,8 +527,15 @@ impl<T: U16x32Backend> core::fmt::Debug for u16x32<T> {
 }
 
 // ============================================================================
-// Platform-specific implementation info
+// Platform-specific concrete impls
 // ============================================================================
+
+impl u16x32<archmage::ScalarToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "scalar::u16x32"
+    }
+}
 
 #[cfg(target_arch = "x86_64")]
 impl u16x32<archmage::X64V3Token> {
@@ -551,6 +558,22 @@ impl u16x32<archmage::X64V4xToken> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "x86::v4x::u16x32"
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl u16x32<archmage::NeonToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::neon_512::u16x32"
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl u16x32<archmage::Wasm128Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::wasm128_512::u16x32"
     }
 }
 

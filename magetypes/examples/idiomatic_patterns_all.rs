@@ -249,35 +249,53 @@ pub fn pipeline(plane: &mut [f32], bias: f32, factor: f32) {
 // Verify what the compiled path actually is at runtime:
 
 fn print_implementations() {
-    // The polyfill is implicit: the SAME `#[magetypes(v4, v3, neon, wasm128,
-    // scalar)]` body runs on every platform. AVX2 (v3) lowers `f32x8` to one
-    // 256-bit op; NEON and Wasm128 lower it to two 128-bit ops; scalar runs
-    // an 8-element array loop. No source change.
-    //
-    // Runtime arch tag for this build:
-    #[cfg(target_arch = "x86_64")]
-    let arch = "x86_64";
-    #[cfg(target_arch = "aarch64")]
-    let arch = "aarch64";
-    #[cfg(target_arch = "wasm32")]
-    let arch = "wasm32";
-    #[cfg(not(any(
-        target_arch = "x86_64",
-        target_arch = "aarch64",
-        target_arch = "wasm32"
-    )))]
-    let arch = "other";
-    println!("  running on: {arch}");
+    // `implementation_name()` is defined for every concrete backend that has
+    // a `{Type}Backend` impl — native and polyfill. The SAME #[magetypes]
+    // body above runs on every platform; the lowering differs per tier.
+    use magetypes::simd::generic::{f32x4, f32x8};
 
-    // `implementation_name()` on the concrete x86-v3 wrapper confirms which
-    // native SIMD impl f32x8 picked. It's only defined for V3 (the native
-    // 256-bit backend); NEON and Wasm128 polyfill through pairs of 128-bit
-    // ops, so there's no separate native impl to name.
-    #[cfg(target_arch = "x86_64")]
     println!(
-        "  f32x8 on X64V3Token: {}",
-        magetypes::simd::generic::f32x8::<archmage::X64V3Token>::implementation_name()
+        "  f32x4 on ScalarToken: {}",
+        f32x4::<archmage::ScalarToken>::implementation_name()
     );
+    println!(
+        "  f32x8 on ScalarToken: {}",
+        f32x8::<archmage::ScalarToken>::implementation_name()
+    );
+
+    #[cfg(target_arch = "x86_64")]
+    {
+        println!(
+            "  f32x4 on X64V3Token:  {}",
+            f32x4::<archmage::X64V3Token>::implementation_name()
+        );
+        println!(
+            "  f32x8 on X64V3Token:  {}",
+            f32x8::<archmage::X64V3Token>::implementation_name()
+        );
+    }
+    #[cfg(target_arch = "aarch64")]
+    {
+        println!(
+            "  f32x4 on NeonToken:   {}",
+            f32x4::<archmage::NeonToken>::implementation_name()
+        );
+        println!(
+            "  f32x8 on NeonToken:   {}",
+            f32x8::<archmage::NeonToken>::implementation_name()
+        );
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        println!(
+            "  f32x4 on Wasm128Token: {}",
+            f32x4::<archmage::Wasm128Token>::implementation_name()
+        );
+        println!(
+            "  f32x8 on Wasm128Token: {}",
+            f32x8::<archmage::Wasm128Token>::implementation_name()
+        );
+    }
 }
 
 // ============================================================================

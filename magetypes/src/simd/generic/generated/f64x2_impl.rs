@@ -575,6 +575,13 @@ impl<T: F64x2Backend> core::fmt::Debug for f64x2<T> {
 // Platform-specific concrete impls
 // ============================================================================
 
+impl f64x2<archmage::ScalarToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "scalar::f64x2"
+    }
+}
+
 #[cfg(target_arch = "x86_64")]
 impl f64x2<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
@@ -592,5 +599,21 @@ impl f64x2<archmage::X64V3Token> {
     #[inline(always)]
     pub fn from_m128d(token: archmage::X64V3Token, v: core::arch::x86_64::__m128d) -> Self {
         Self(v, token)
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl f64x2<archmage::NeonToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "arm::neon::f64x2"
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl f64x2<archmage::Wasm128Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "wasm::wasm128::f64x2"
     }
 }

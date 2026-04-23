@@ -536,6 +536,13 @@ impl<T: crate::simd::backends::I16x8Bitcast> u16x8<T> {
 // Platform-specific concrete impls
 // ============================================================================
 
+impl u16x8<archmage::ScalarToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "scalar::u16x8"
+    }
+}
+
 #[cfg(target_arch = "x86_64")]
 impl u16x8<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
@@ -553,5 +560,21 @@ impl u16x8<archmage::X64V3Token> {
     #[inline(always)]
     pub fn from_m128i(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
         Self(v, token)
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl u16x8<archmage::NeonToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "arm::neon::u16x8"
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl u16x8<archmage::Wasm128Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "wasm::wasm128::u16x8"
     }
 }

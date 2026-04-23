@@ -1159,16 +1159,30 @@ fn gen_cross_type(ty: &SimdType) -> String {
 fn gen_platform(ty: &SimdType) -> String {
     let name = ty.name();
 
+    // ScalarToken is available on every architecture; its impl is always compiled.
+    // All other backends are cfg-gated on target_arch (and `feature = "avx512"` /
+    // `feature = "w512"` where applicable).
+    let scalar_block = formatdoc! {"
+        // ============================================================================
+        // Platform-specific concrete impls
+        // ============================================================================
+
+        impl {name}<archmage::ScalarToken> {{
+            /// Implementation identifier for this backend.
+            pub const fn implementation_name() -> &'static str {{
+                \"scalar::{name}\"
+            }}
+        }}
+    "};
+
     match ty.width {
-        SimdWidth::W128 | SimdWidth::W256 => {
+        SimdWidth::W128 => {
+            // W128 is native on every platform.
             let raw_type = x86_raw_type(ty);
             let from_fn = from_raw_fn_name(ty);
 
             formatdoc! {"
-                // ============================================================================
-                // Platform-specific concrete impls
-                // ============================================================================
-
+                {scalar_block}
                 #[cfg(target_arch = \"x86_64\")]
                 impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
@@ -1188,13 +1202,83 @@ fn gen_platform(ty: &SimdType) -> String {
                         Self(v, token)
                     }}
                 }}
+
+                #[cfg(target_arch = \"aarch64\")]
+                impl {name}<archmage::NeonToken> {{
+                    /// Implementation identifier for this backend.
+                    pub const fn implementation_name() -> &'static str {{
+                        \"arm::neon::{name}\"
+                    }}
+                }}
+
+                #[cfg(target_arch = \"wasm32\")]
+                impl {name}<archmage::Wasm128Token> {{
+                    /// Implementation identifier for this backend.
+                    pub const fn implementation_name() -> &'static str {{
+                        \"wasm::wasm128::{name}\"
+                    }}
+                }}
+            "}
+        }
+        SimdWidth::W256 => {
+            // W256 is native on x86 (AVX2); polyfilled on NEON and WASM via pairs of W128.
+            let raw_type = x86_raw_type(ty);
+            let from_fn = from_raw_fn_name(ty);
+
+            formatdoc! {"
+                {scalar_block}
+                #[cfg(target_arch = \"x86_64\")]
+                impl {name}<archmage::X64V3Token> {{
+                    /// Implementation identifier for this backend.
+                    pub const fn implementation_name() -> &'static str {{
+                        \"x86::v3::{name}\"
+                    }}
+
+                    /// Get the raw `{raw_type}` value.
+                    #[inline(always)]
+                    pub fn raw(self) -> core::arch::x86_64::{raw_type} {{
+                        self.0
+                    }}
+
+                    /// Create from a raw `{raw_type}` (token-gated, zero-cost).
+                    #[inline(always)]
+                    pub fn {from_fn}(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
+                        Self(v, token)
+                    }}
+                }}
+
+                #[cfg(target_arch = \"aarch64\")]
+                impl {name}<archmage::NeonToken> {{
+                    /// Implementation identifier for this backend.
+                    pub const fn implementation_name() -> &'static str {{
+                        \"polyfill::neon::{name}\"
+                    }}
+                }}
+
+                #[cfg(target_arch = \"wasm32\")]
+                impl {name}<archmage::Wasm128Token> {{
+                    /// Implementation identifier for this backend.
+                    pub const fn implementation_name() -> &'static str {{
+                        \"polyfill::wasm128::{name}\"
+                    }}
+                }}
             "}
         }
         SimdWidth::W512 => {
+            // W512 is native on x86 with AVX-512 (V4/V4x); polyfilled elsewhere
+            // (on V3 via pairs of W256, on NEON/WASM via quads of W128).
+            // W512 types are gated on the `w512` cargo feature; scalar included.
             formatdoc! {"
                 // ============================================================================
-                // Platform-specific implementation info
+                // Platform-specific concrete impls
                 // ============================================================================
+
+                impl {name}<archmage::ScalarToken> {{
+                    /// Implementation identifier for this backend.
+                    pub const fn implementation_name() -> &'static str {{
+                        \"scalar::{name}\"
+                    }}
+                }}
 
                 #[cfg(target_arch = \"x86_64\")]
                 impl {name}<archmage::X64V3Token> {{
@@ -1217,6 +1301,22 @@ fn gen_platform(ty: &SimdType) -> String {
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"x86::v4x::{name}\"
+                    }}
+                }}
+
+                #[cfg(target_arch = \"aarch64\")]
+                impl {name}<archmage::NeonToken> {{
+                    /// Implementation identifier for this backend.
+                    pub const fn implementation_name() -> &'static str {{
+                        \"polyfill::neon_512::{name}\"
+                    }}
+                }}
+
+                #[cfg(target_arch = \"wasm32\")]
+                impl {name}<archmage::Wasm128Token> {{
+                    /// Implementation identifier for this backend.
+                    pub const fn implementation_name() -> &'static str {{
+                        \"polyfill::wasm128_512::{name}\"
                     }}
                 }}
             "}

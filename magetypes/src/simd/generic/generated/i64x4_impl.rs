@@ -553,6 +553,13 @@ impl<T: crate::simd::backends::I64x4Bitcast> i64x4<T> {
 // Platform-specific concrete impls
 // ============================================================================
 
+impl i64x4<archmage::ScalarToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "scalar::i64x4"
+    }
+}
+
 #[cfg(target_arch = "x86_64")]
 impl i64x4<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
@@ -570,5 +577,21 @@ impl i64x4<archmage::X64V3Token> {
     #[inline(always)]
     pub fn from_m256i(token: archmage::X64V3Token, v: core::arch::x86_64::__m256i) -> Self {
         Self(v, token)
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl i64x4<archmage::NeonToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::neon::i64x4"
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl i64x4<archmage::Wasm128Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::wasm128::i64x4"
     }
 }

@@ -671,8 +671,15 @@ impl<T: crate::simd::backends::F32x16Convert> f32x16<T> {
 }
 
 // ============================================================================
-// Platform-specific implementation info
+// Platform-specific concrete impls
 // ============================================================================
+
+impl f32x16<archmage::ScalarToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "scalar::f32x16"
+    }
+}
 
 #[cfg(target_arch = "x86_64")]
 impl f32x16<archmage::X64V3Token> {
@@ -695,5 +702,21 @@ impl f32x16<archmage::X64V4xToken> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "x86::v4x::f32x16"
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl f32x16<archmage::NeonToken> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::neon_512::f32x16"
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl f32x16<archmage::Wasm128Token> {
+    /// Implementation identifier for this backend.
+    pub const fn implementation_name() -> &'static str {
+        "polyfill::wasm128_512::f32x16"
     }
 }
