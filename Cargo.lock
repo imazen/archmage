@@ -360,7 +360,9 @@ name = "magetypes"
 version = "0.9.21"
 dependencies = [
  "archmage",
+ "macrotest",
  "proptest",
+ "trybuild",
  "zenbench",
 ]
 

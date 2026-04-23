@@ -35,10 +35,12 @@ avx512 = ["w512", "archmage/avx512"]
 # Core tokens and macros
 archmage = { version = "0.9.21", path = "..", default-features = false }
 
-# proptest and zenbench don't support WASM
+# proptest and zenbench don't support WASM; trybuild/macrotest require host execution
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 proptest = "1.5"
 zenbench = { version = "0.1.2", features = ["criterion-compat"] }
+trybuild = "1.0"
+macrotest = "1.2.1"
 
 [[bench]]
 name = "asm_patterns"
