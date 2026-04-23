@@ -249,29 +249,35 @@ pub fn pipeline(plane: &mut [f32], bias: f32, factor: f32) {
 // Verify what the compiled path actually is at runtime:
 
 fn print_implementations() {
-    use magetypes::simd::generic::f32x8;
+    // The polyfill is implicit: the SAME `#[magetypes(v4, v3, neon, wasm128,
+    // scalar)]` body runs on every platform. AVX2 (v3) lowers `f32x8` to one
+    // 256-bit op; NEON and Wasm128 lower it to two 128-bit ops; scalar runs
+    // an 8-element array loop. No source change.
+    //
+    // Runtime arch tag for this build:
+    #[cfg(target_arch = "x86_64")]
+    let arch = "x86_64";
+    #[cfg(target_arch = "aarch64")]
+    let arch = "aarch64";
+    #[cfg(target_arch = "wasm32")]
+    let arch = "wasm32";
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )))]
+    let arch = "other";
+    println!("  running on: {arch}");
 
-    // `implementation_name()` is defined on each f32x8<ConcreteToken> that has
-    // a native SIMD backend. On avx512-enabled builds, f32x8::<X64V4Token>
-    // delegates to the V3 backend (there's no separate 256-bit AVX-512 impl
-    // for f32x8), so its implementation_name() lives on the V3 concrete impl.
+    // `implementation_name()` on the concrete x86-v3 wrapper confirms which
+    // native SIMD impl f32x8 picked. It's only defined for V3 (the native
+    // 256-bit backend); NEON and Wasm128 polyfill through pairs of 128-bit
+    // ops, so there's no separate native impl to name.
     #[cfg(target_arch = "x86_64")]
     println!(
-        "  f32x8 on X64V3Token:   {}",
-        f32x8::<archmage::X64V3Token>::implementation_name()
+        "  f32x8 on X64V3Token: {}",
+        magetypes::simd::generic::f32x8::<archmage::X64V3Token>::implementation_name()
     );
-    #[cfg(target_arch = "aarch64")]
-    println!(
-        "  f32x8 on NeonToken:    {}",
-        f32x8::<archmage::NeonToken>::implementation_name()
-    );
-    #[cfg(target_arch = "wasm32")]
-    println!(
-        "  f32x8 on Wasm128Token: {}",
-        f32x8::<archmage::Wasm128Token>::implementation_name()
-    );
-    // `implementation_name()` is only defined on concrete platform backends,
-    // not on `ScalarToken` — the scalar path uses generic array ops.
 }
 
 // ============================================================================
