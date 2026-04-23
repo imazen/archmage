@@ -9,17 +9,15 @@ Magetypes vectors work with archmage's [`incant!`](@/archmage/dispatch/incant.md
 
 ## The Default: `#[magetypes]` + `incant!`
 
-Write the algorithm once inside `#[magetypes]`. The macro generates one `#[arcane]`-wrapped variant per listed tier, substituting `Token` with the concrete token type. `incant!` dispatches at runtime.
+Write the algorithm once inside `#[magetypes]`. The macro generates one `#[arcane]`-wrapped variant per listed tier, substituting `Token` with the concrete token type. `define(...)` injects the matching-tier magetypes type aliases at the top of each variant body. `incant!` dispatches at runtime.
 
 ```rust
 use archmage::prelude::*;
-use magetypes::simd::generic::f32x8 as GenericF32x8;
 
-#[magetypes(v4, v3, neon, wasm128, scalar)]
+#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
 fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
-    #[allow(non_camel_case_types)]
-    type f32x8 = GenericF32x8<Token>;   // Token replaced per tier
-
+    // `f32x8` is in scope via `define` — resolves to `f32x8<X64V3Token>` in
+    // the v3 variant, `f32x8<NeonToken>` in neon, etc.
     let factor_v = f32x8::splat(token, factor);
     let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
     for chunk in chunks {
@@ -32,6 +30,8 @@ pub fn scale_plane(plane: &mut [f32], factor: f32) {
     incant!(scale_plane_impl(plane, factor))
 }
 ```
+
+`define(...)` takes a list: `define(f32x8, u8x16, i16x8)` to inject several types. Without `define`, you can write `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;` manually at the top of the body — both forms work.
 
 **`#[magetypes]` IS the `#[arcane]` wrapper generator.** Do not write per-tier `#[arcane]` wrappers by hand around a generic kernel — the macro already does that for every tier in the list. Each generated variant has its own `#[target_feature]` region; `incant!` picks the highest available at runtime.
 

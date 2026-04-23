@@ -37,17 +37,18 @@ use archmage::prelude::*;
 use magetypes::simd::{backends::F32x8Backend, generic::f32x8 as GenericF32x8};
 
 // ============================================================================
-// Pattern A — Inline #[magetypes]
+// Pattern A — Inline #[magetypes] with define(...)
 // ============================================================================
 // The default. The algorithm lives directly inside a `#[magetypes]` function.
 // `Token` is substituted per tier; `#[magetypes]` generates an `#[arcane]`-
 // wrapped variant for each listed tier. No hand-written wrappers.
+//
+// `define(f32x8)` injects `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;`
+// at the top of each variant body — eliminates the boilerplate alias users
+// previously had to write manually. Multiple types: `define(f32x8, u8x16, ...)`.
 
-#[magetypes(v4, v3, neon, wasm128, scalar)]
+#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
 fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
-    #[allow(non_camel_case_types)]
-    type f32x8 = GenericF32x8<Token>;
-
     let factor_v = f32x8::splat(token, factor);
     let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
     for chunk in chunks {
@@ -149,10 +150,8 @@ fn scale_plane_impl_v4x(token: X64V4xToken, plane: &mut [f32], factor: f32) {
 // `incant!`. Kept outside the numbered patterns — it's the thing being
 // dispatched to, not a pattern of its own.
 
-#[magetypes(v4, v3, neon, wasm128, scalar)]
+#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
 fn clamp01_impl(token: Token, plane: &mut [f32]) {
-    #[allow(non_camel_case_types)]
-    type f32x8 = GenericF32x8<Token>;
     let lo = f32x8::splat(token, 0.0);
     let hi = f32x8::splat(token, 1.0);
     let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
@@ -191,11 +190,8 @@ fn apply_color_matrix(rgb: &mut [f32], mat: [[f32; 3]; 3]) {
 // outer's `#[target_feature]` region. Verified in SPEC-INCANT-REWRITING.md
 // (0.94 ns vs 5.6 ns with dispatcher rehop).
 
-#[magetypes(v4, v3, neon, wasm128, scalar)]
+#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
 fn pipeline_impl(token: Token, plane: &mut [f32], bias: f32, factor: f32) {
-    #[allow(non_camel_case_types)]
-    type f32x8 = GenericF32x8<Token>;
-
     // Step 1: add bias in-place.
     let bias_v = f32x8::splat(token, bias);
     let (chunks, tail) = f32x8::partition_slice_mut(token, plane);

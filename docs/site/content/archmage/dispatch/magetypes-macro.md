@@ -86,6 +86,48 @@ fn process(token: Token, data: &[f32]) -> f32 { ... }
 
 Tier names accept the `_` prefix — `_v3` is identical to `v3`.
 
+## The `define(...)` Flag: Inject Magetypes Type Aliases
+
+Without `define`, idiomatic `#[magetypes]` bodies usually start with a boilerplate alias line per magetypes type used:
+
+```rust
+use magetypes::simd::generic::f32x8 as GenericF32x8;
+
+#[magetypes(v3, scalar)]
+fn scale(token: Token, plane: &mut [f32], factor: f32) {
+    #[allow(non_camel_case_types)]
+    type f32x8 = GenericF32x8<Token>;  // ← boilerplate
+    // ...
+}
+```
+
+`define(...)` takes a list of magetypes type names and injects those alias lines automatically at the top of each variant body:
+
+```rust
+#[magetypes(define(f32x8), v3, scalar)]
+fn scale(token: Token, plane: &mut [f32], factor: f32) {
+    // `f32x8` is already in scope as the matching-tier concrete type.
+    let factor_v = f32x8::splat(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor_v).store(chunk);
+    }
+    for v in tail { *v *= factor; }
+}
+```
+
+Multiple types: `define(f32x8, f32x4, u8x16, i16x8)`. Type names must match the magetypes generic types (`f32xN`, `fNxM`, `iNxM`, `uNxM`); typos surface as rustc resolution errors.
+
+Injected alias:
+
+```rust
+type <name> = ::magetypes::simd::generic::<name><Token>;
+```
+
+`Token` in the RHS is substituted per tier (same as the rest of the body), so each variant gets a correctly-typed alias. The aliases are function-local — they don't leak into outer scope and shadow any outer `f32x8` / etc. within the function body.
+
+Empty list `define()` is accepted as a no-op, so commenting out items doesn't produce a syntax error.
+
 ## The `rite` Flag: Direct `#[target_feature]` Variants
 
 By default, non-fallback variants are wrapped with `#[archmage::arcane]` — each variant becomes a safe outer function + `#[target_feature]` inner sibling (the "trampoline" pattern). This lets the variant be called from any context, including non-target-feature dispatchers.

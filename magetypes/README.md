@@ -8,13 +8,12 @@ Token-gated SIMD vector types. Write one kernel, run on AVX2, AVX-512, NEON, WAS
 
 ```rust
 use archmage::prelude::*;
-use magetypes::simd::generic::f32x8 as GenericF32x8;
 
-#[magetypes(v4, v3, neon, wasm128, scalar)]
+#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
 fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
-    #[allow(non_camel_case_types)]
-    type f32x8 = GenericF32x8<Token>;   // Token replaced per tier
-
+    // `f32x8` is in scope via `define` — resolves to `f32x8<X64V3Token>` in
+    // the v3 variant, `f32x8<NeonToken>` in neon, etc. `Token` is likewise
+    // substituted per tier for parameters and return types.
     let factor_v = f32x8::splat(token, factor);
     let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
     for chunk in chunks {
@@ -28,7 +27,7 @@ pub fn scale_plane(plane: &mut [f32], factor: f32) {
 }
 ```
 
-That's it. One algorithm, every platform. `#[magetypes]` generates five `#[arcane]`-wrapped variants (`_v4`, `_v3`, `_neon`, `_wasm128`, `_scalar`), each with its own `#[target_feature]`. `incant!` picks the highest available at runtime. `partition_slice_mut` gives you aligned `&mut [f32; 8]` chunks plus a scalar tail with no interior bounds checks.
+That's it. One algorithm, every platform. `#[magetypes]` generates five `#[arcane]`-wrapped variants (`_v4`, `_v3`, `_neon`, `_wasm128`, `_scalar`), each with its own `#[target_feature]`. `define(f32x8)` injects `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;` at the top of each variant — no boilerplate alias line. Multiple types: `define(f32x8, u8x16, i16x8)`. `incant!` picks the highest available at runtime.
 
 **`#[magetypes]` IS the `#[arcane]` wrapper generator.** Do not write per-tier `#[arcane]` wrappers around a generic kernel by hand — the macro already does that. This is the single biggest source of confusion, so it bears repeating.
 
