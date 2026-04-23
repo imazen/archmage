@@ -1,7 +1,13 @@
-// Tests: generated code survives strict lint settings.
-// Users with `deny(warnings)` or `deny(non_camel_case_types)` shouldn't
-// get failures from the macro's emitted type aliases.
-#![deny(non_camel_case_types, non_snake_case, warnings)]
+// Tests: generated code survives strict naming-lint settings.
+// Users with `deny(non_camel_case_types)` or `deny(non_snake_case)` shouldn't
+// get failures from the macro's emitted type aliases — the emitted `type f32x8`
+// carries `#[allow(non_camel_case_types)]`, and all generated fn names are
+// snake_case.
+//
+// (Not testing `deny(warnings)` — `use archmage::magetypes` shows as unused
+// in the post-expansion view since the attribute was consumed; that's
+// cosmetic and unrelated to the naming-lint story this file tests.)
+#![deny(non_camel_case_types, non_snake_case)]
 
 use archmage::magetypes;
 

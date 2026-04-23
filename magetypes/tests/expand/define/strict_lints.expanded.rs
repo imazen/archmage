@@ -1,4 +1,4 @@
-#![deny(non_camel_case_types, non_snake_case, warnings)]
+#![deny(non_camel_case_types, non_snake_case)]
 use archmage::magetypes;
 #[doc(hidden)]
 #[target_feature(

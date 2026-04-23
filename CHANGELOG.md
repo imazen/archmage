@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### QUEUED BREAKING CHANGES
+
+- Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
+- Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
+- Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)
+- Remove `_self = Type` from `#[autoversion]` — plain `self` works in sibling mode; `#[autoversion]` can't do trait impls anyway
+- Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
+- Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
+- Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
+- Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
+
+## 0.9.22 — 2026-04-23
+
 ### Added
 
 - `#[magetypes(define(f32x8, u8x16, ...), ...)]` — inject `type <name> = ::magetypes::simd::generic::<name><Token>;` aliases at the top of each per-tier variant body. Eliminates the `#[allow(non_camel_case_types)] type f32x8 = GenericF32x8<Token>;` boilerplate users previously wrote at the top of every `#[magetypes]` body. `Token` is substituted per tier (`f32x8<X64V3Token>` in the v3 variant, `f32x8<ScalarToken>` in scalar, etc.) (40617c6).
@@ -16,17 +29,7 @@
 - `docs/site/content/magetypes/dispatch/types-and-dispatch.md` — rewritten. Led with "generic `fn<T: F32x8Backend>` + hand-written `#[arcane]` wrapper per tier + `incant!`" as the canonical pattern, which was a consistent source of user misread. `#[magetypes]` IS the per-tier `#[arcane]` wrapper generator; users don't hand-write wrappers. Also dropped the stale "X64V4Token doesn't implement F32x8Backend" limitation (it does, via delegation — see 0.9.21 changelog) (38785cc).
 - `docs/site/content/archmage/concepts/arcane.md`, `CLAUDE.md`, `magetypes/README.md` — coordinated doc fixes to eliminate the `#[magetypes]` wrapper confusion across every reader entry point (e6123e4).
 - `docs/site/content/archmage/dispatch/magetypes-macro.md` — added sections documenting the `rite` flag and the `define(...)` flag as they ship (e735aef, 40617c6).
-
-### QUEUED BREAKING CHANGES
-
-- Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
-- Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
-- Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)
-- Remove `_self = Type` from `#[autoversion]` — plain `self` works in sibling mode; `#[autoversion]` can't do trait impls anyway
-- Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
-- Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
-- Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
-- Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
+- Release-prep doc updates: top-level `README.md` SIMD-types section surfaces `define()` + `rite` flags; magetypes first-types tutorial page closes with "One Body, Every Platform" section linking to types-and-dispatch (639602b).
 
 ## 0.9.21 — 2026-04-20
 
