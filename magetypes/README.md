@@ -1,192 +1,125 @@
-# magetypes
+# magetypes ![CI](https://img.shields.io/github/actions/workflow/status/imazen/archmage/ci.yml?style=flat-square&label=CI) ![crates.io](https://img.shields.io/crates/v/magetypes?style=flat-square) [![lib.rs](https://img.shields.io/crates/v/magetypes?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/magetypes) ![docs.rs](https://img.shields.io/docsrs/magetypes?style=flat-square) ![License](https://img.shields.io/crates/l/magetypes?style=flat-square)
 
-Token-gated SIMD types with natural operators.
-
-[![Crates.io](https://img.shields.io/crates/v/magetypes.svg)](https://crates.io/crates/magetypes)
-[![Documentation](https://docs.rs/magetypes/badge.svg)](https://docs.rs/magetypes)
-[![License](https://img.shields.io/crates/l/magetypes.svg)](LICENSE)
+Token-gated SIMD vector types. Write one kernel, run on AVX2, AVX-512, NEON, WASM SIMD128, or scalar — the `#[magetypes]` macro generates the per-tier target-feature contexts; `incant!` dispatches at runtime. No `unsafe`, `#![forbid(unsafe_code)]`-compatible.
 
 **[Intrinsics Browser](https://imazen.github.io/archmage/intrinsics/)** · [Tutorial Book](https://imazen.github.io/archmage/) · [API Docs](https://docs.rs/magetypes)
 
-## Overview
-
-`magetypes` provides SIMD vector types (`f32x8`, `i32x4`, etc.) that require [archmage](https://crates.io/crates/archmage) tokens for safe construction. This ensures SIMD operations are only performed when CPU features have been verified at runtime.
-
-**Key features:**
-- Natural operators (`+`, `-`, `*`, `/`, `&`, `|`, `^`)
-- Token-gated construction (safe by design)
-- Zero-cost abstractions (compiles to raw SIMD instructions)
-- Cross-platform (x86-64 with AVX2/AVX-512, AArch64 with NEON, WASM with SIMD128)
-
-## Quick Start
-
-```rust
-use archmage::{X64V3Token, SimdToken};
-use magetypes::simd::f32x8;
-
-fn main() {
-    // Token proves CPU supports AVX2+FMA
-    if let Some(token) = X64V3Token::summon() {
-        let a = f32x8::splat(token, 1.0);
-        let b = f32x8::splat(token, 2.0);
-        let c = a + b;  // Natural operators!
-
-        println!("Result: {:?}", c.to_array());
-    }
-}
-```
-
-## Available Types
-
-### x86-64 (x86-64-v3 - 128-bit)
-`f32x4`, `f64x2`, `i8x16`, `i16x8`, `i32x4`, `i64x2`, `u8x16`, `u16x8`, `u32x4`, `u64x2`
-
-### x86-64 (x86-64-v3 - 256-bit)
-`f32x8`, `f64x4`, `i8x32`, `i16x16`, `i32x8`, `i64x4`, `u8x32`, `u16x16`, `u32x8`, `u64x4`
-
-### x86-64 (AVX-512 - 512-bit, requires `avx512` feature)
-`f32x16`, `f64x8`, `i8x64`, `i16x32`, `i32x16`, `i64x8`, `u8x64`, `u16x32`, `u32x16`, `u64x8`
-
-### AArch64 (NEON - 128-bit)
-`f32x4`, `f64x2`, `i8x16`, `i16x8`, `i32x4`, `i64x2`, `u8x16`, `u16x8`, `u32x4`, `u64x2`
-
-### WASM (SIMD128 - 128-bit)
-`f32x4`, `f64x2`, `i8x16`, `i16x8`, `i32x4`, `i64x2`, `u8x16`, `u16x8`, `u32x4`, `u64x2`
-
-Build with `RUSTFLAGS="-C target-feature=+simd128"` for WASM targets.
-
-```rust
-// WASM example - no runtime detection needed
-use archmage::{Wasm128Token, SimdToken};
-use magetypes::simd::f32x4;
-
-// When compiled with +simd128, token is always available
-let token = Wasm128Token::summon().unwrap();
-let a = f32x4::splat(token, 1.0);
-let b = f32x4::splat(token, 2.0);
-let c = a + b;
-```
-
-## Token-Gated Construction
-
-All constructors require a token proving CPU support:
-
-```rust
-// Load from array
-let v = f32x8::load(token, &data);
-
-// Broadcast scalar
-let v = f32x8::splat(token, 42.0);
-
-// Zero vector
-let v = f32x8::zero(token);
-
-// From array (zero-cost transmute)
-let v = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-
-// From bytes
-let v = f32x8::from_bytes(token, &bytes);
-```
-
-## Per-Token Namespaces
-
-Each token level has a namespace with `f32xN` type aliases at the natural width, a `Token` type alias, and `LANES_*` constants:
-
-| Namespace | Token | `f32xN` | `LANES_F32` |
-|-----------|-------|---------|-------------|
-| `magetypes::simd::v3` | `X64V3Token` | `f32x8` | 8 |
-| `magetypes::simd::v4` | `X64V4Token` | `f32x16` | 16 |
-| `magetypes::simd::neon` | `NeonToken` | `f32x4` | 4 |
-| `magetypes::simd::wasm128` | `Wasm128Token` | `f32x4` | 4 |
-
-Each namespace also includes narrower native types and wider polyfilled types. For example, `v3` includes native 128-bit types and polyfilled 512-bit types (emulated via 2x256-bit ops).
-
-### Scalar polyfills
-
-`magetypes::simd::scalar` provides `f32x1`, `f64x1`, `i32x1`, etc. — single-element types with the same API as SIMD types, taking `ScalarToken`. These are used for scalar fallback code.
-
-## Platform Support
-
-| Platform | Status | Token | Vector Sizes |
-|----------|--------|-------|--------------|
-| x86-64 | **Full** | `X64V3Token`, `X64V4Token` | 128, 256, 512-bit |
-| AArch64 | **Full** | `NeonToken` | 128-bit |
-| WASM | **Full** | `Wasm128Token` | 128-bit |
-
-## Features
-
-- **`std`** (default): Enable std library support
-- **`avx512`**: Enable 512-bit types for AVX-512
-
-## Mixed Dispatch: Generic + Specialized + Auto-Vectorized
-
-The full pattern: `#[magetypes]` generates generic variants from one function body, a manual `#[arcane]` adds a hand-tuned specialization for one tier, and `#[autoversion]` auto-vectorizes scalar code. All three produce the same `_suffix` naming convention, so one `incant!` dispatches to them all.
+## The canonical pattern
 
 ```rust
 use archmage::prelude::*;
 use magetypes::simd::generic::f32x8 as GenericF32x8;
 
-// 1. Generic algorithm — #[magetypes] generates _v4, _v3, _neon, _wasm128, _scalar
 #[magetypes(v4, v3, neon, wasm128, scalar)]
-fn process_impl(token: Token, data: &mut [f32], scale: f32) {
+fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
     #[allow(non_camel_case_types)]
-    type f32x8 = GenericF32x8<Token>;
-    let scale_v = f32x8::splat(token, scale);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, data);
+    type f32x8 = GenericF32x8<Token>;   // Token replaced per tier
+
+    let factor_v = f32x8::splat(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
     for chunk in chunks {
-        let v = f32x8::load(token, chunk);
-        (v * scale_v).store(chunk);
+        (f32x8::load(token, chunk) * factor_v).store(chunk);
     }
-    for v in tail { *v *= scale; }
+    for v in tail { *v *= factor; }
 }
 
-// 2. Manual specialization for v4x — uses safe AVX-512 intrinsics
-//    not available in the generic f32x8 API. The _v4x suffix matches
-//    incant!'s naming convention.
+pub fn scale_plane(plane: &mut [f32], factor: f32) {
+    incant!(scale_plane_impl(plane, factor))
+}
+```
+
+That's it. One algorithm, every platform. `#[magetypes]` generates five `#[arcane]`-wrapped variants (`_v4`, `_v3`, `_neon`, `_wasm128`, `_scalar`), each with its own `#[target_feature]`. `incant!` picks the highest available at runtime. `partition_slice_mut` gives you aligned `&mut [f32; 8]` chunks plus a scalar tail with no interior bounds checks.
+
+**`#[magetypes]` IS the `#[arcane]` wrapper generator.** Do not write per-tier `#[arcane]` wrappers around a generic kernel by hand — the macro already does that. This is the single biggest source of confusion, so it bears repeating.
+
+## Pick the width your algorithm wants; polyfills handle the hardware split
+
+`f32x8` on AVX2 → one 256-bit op. On NEON → two 128-bit ops. On WASM SIMD128 → two 128-bit ops. Same source, no code change.
+
+| Width | x86-64 | AArch64 | WASM |
+|---|---|---|---|
+| 128-bit (`f32x4`, `u8x16`, …) | Native (SSE/AVX) | Native (NEON) | Native (SIMD128) |
+| 256-bit (`f32x8`, `u8x32`, …) | Native (AVX2) | Polyfill (2× NEON) | Polyfill (2× SIMD128) |
+| 512-bit (`f32x16`, `u8x64`, …, feature `w512`) | Native (AVX-512) | Polyfill (4× NEON) | Polyfill (4× SIMD128) |
+
+Default to the width your algorithm is shaped for. Processing 8 floats at a time? Write `f32x8`. Per-pixel RGBA? Write `f32x4`. Don't downshift to 128-bit "because NEON is 128-bit" — the polyfill is equivalent to hand-rolling the split and runs substantially faster than scalar.
+
+## Runnable reference: `examples/idiomatic_patterns_all.rs`
+
+A single file that exercises and self-tests every pattern below. Runs on x86-64 (±`avx512`), aarch64 (via `cross`/QEMU), and wasm32-wasip1 (via `wasmtime`).
+
+```bash
+cargo run --release --example idiomatic_patterns_all
+cargo run --release --example idiomatic_patterns_all --features avx512
+```
+
+Read it when in doubt about what correct magetypes code looks like.
+
+## Pattern catalog
+
+### A. Inline `#[magetypes]` — the default
+
+Shown above. Algorithm inside the macro body, `GenericF32x8<Token>` with a local `type f32x8` alias. Dispatched by `incant!`.
+
+### B. Extracted generic kernel for reuse
+
+When the same kernel is called from multiple entry points, extract it as a generic function bounded on a backend trait. `T` is inferred at each `#[magetypes]`-generated variant's call site:
+
+```rust
+use magetypes::simd::{backends::F32x8Backend, generic::f32x8 as GenericF32x8};
+
+#[inline(always)]   // MANDATORY — inherits target features through inlining
+fn dot_kernel<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
+    let mut acc = GenericF32x8::<T>::zero(token);
+    for i in 0..a.len() / 8 {
+        let va = GenericF32x8::<T>::load(token, a[i*8..][..8].try_into().unwrap());
+        let vb = GenericF32x8::<T>::load(token, b[i*8..][..8].try_into().unwrap());
+        acc = va.mul_add(vb, acc);
+    }
+    acc.reduce_add() /* + scalar tail */
+}
+
+#[magetypes(v4, v3, neon, wasm128, scalar)]
+fn dot_impl(token: Token, a: &[f32], b: &[f32]) -> f32 {
+    dot_kernel(token, a, b)      // T inferred from concrete Token
+}
+
+pub fn dot(a: &[f32], b: &[f32]) -> f32 { incant!(dot_impl(a, b)) }
+```
+
+**Why `#[inline(always)]` is non-negotiable:** the generic function has no `#[target_feature]` of its own. It inherits the caller's features through inlining. Without it, intrinsics become function calls and the path regresses ~18× even inside a `#[magetypes]`-generated variant. See `benches/generic_vs_concrete.rs`.
+
+### C. Slot a hand-tuned tier into an existing `#[magetypes]` family
+
+When one tier benefits from something the generic API can't express (AVX-512 mask shuffles, cross-lane NEON permutes), write a standalone `#[arcane]` named to match the suffix convention. `incant!` doesn't care which macro or which hand-written function produced which variant — it resolves by name:
+
+```rust
+use magetypes::simd::generic::f32x16 as GenericF32x16;
+
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[arcane]
-fn process_impl_v4x(_token: X64V4xToken, data: &mut [f32], scale: f32) {
-    let scale_v = _mm512_set1_ps(scale);
-    for chunk in data.chunks_exact_mut(16) {
-        let v = _mm512_loadu_ps(chunk.as_ptr());
-        _mm512_storeu_ps(chunk.as_mut_ptr(), _mm512_mul_ps(v, scale_v));
+fn scale_plane_impl_v4x(token: X64V4xToken, plane: &mut [f32], factor: f32) {
+    let factor_v = GenericF32x16::<X64V4xToken>::splat(token, factor);
+    let (chunks, tail) = GenericF32x16::<X64V4xToken>::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (GenericF32x16::<X64V4xToken>::load(token, chunk) * factor_v).store(chunk);
     }
-    // ... scalar tail
+    for v in tail { *v *= factor; }
 }
 
-// 3. One incant! dispatches to ALL variants — generated + manual.
-//    v4x(cfg(avx512)) feature-gates that tier: excluded if the avx512
-//    cargo feature isn't enabled by the downstream crate.
-pub fn process(data: &mut [f32], scale: f32) {
-    incant!(process_impl(data, scale),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]);
+pub fn scale_plane_fast(plane: &mut [f32], factor: f32) {
+    incant!(scale_plane_impl(plane, factor),
+            [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar])
 }
 ```
 
-`incant!` doesn't know or care which macro generated each variant — it just looks for functions named `process_impl_v4x`, `process_impl_v4`, etc.
+The `_v4x` name slots into the tier list. Everything else is served by `#[magetypes]`'s generated variants.
 
-### `#[rite]` multi-tier — suffixed inner helpers
+### D. `#[autoversion]` for scalar loops the compiler vectorizes
 
-`#[rite(v3, v4, neon)]` generates `_v3`, `_v4`, `_neon` suffixed copies of a helper function, each with `#[target_feature]` + `#[inline]`. Use for inner functions called from `#[arcane]` entry points — zero dispatch overhead, just inlining:
-
-```rust
-// Generates accumulate_v3, accumulate_v4, accumulate_neon — all inlined
-#[rite(v3, v4, neon, import_intrinsics)]
-fn accumulate(data: &[f32; 8], acc: f32) -> f32 {
-    let v = _mm256_loadu_ps(data.as_ptr());
-    // ...
-    acc
-}
-```
-
-### `#[autoversion]` — Auto-Vectorized Scalar Code
-
-For loops that LLVM auto-vectorizes well, skip magetypes entirely. `#[autoversion]` generates tier variants AND a dispatcher from plain scalar code:
+Plain scalar body, recompiled per tier with different `#[target_feature]`; LLVM auto-vectorizes each copy. `#[autoversion]` is the only generator that emits its own dispatcher — call it directly, no `incant!` needed:
 
 ```rust
-use archmage::autoversion;
-
-/// Compiles to vfmadd231ps (AVX2), fmla (NEON), etc. — zero manual SIMD.
 #[autoversion]
 fn apply_color_matrix(rgb: &mut [f32], mat: [[f32; 3]; 3]) {
     for pixel in rgb.chunks_exact_mut(3) {
@@ -196,108 +129,83 @@ fn apply_color_matrix(rgb: &mut [f32], mat: [[f32; 3]; 3]) {
         pixel[2] = mat[2][0] * r + mat[2][1] * g + mat[2][2] * b;
     }
 }
-
-// Call directly — autoversion generated the dispatcher too:
-apply_color_matrix(&mut pixels, matrix);
+// apply_color_matrix(&mut rgb, mat);  // dispatcher is built in
 ```
 
-### When to use which
+### E. Nested `incant!` is zero-overhead
 
-| Approach | Use when | Dispatch |
+Inside any tier-annotated body (`#[magetypes]`, `#[autoversion]`, `#[arcane]`, token-based `#[rite]`), `incant!(foo(args))` is rewritten to the direct tier-matching call at compile time. No dispatcher branch, no cache probe — the callee inlines into the caller's `#[target_feature]` region.
+
+```rust
+#[magetypes(v4, v3, neon, wasm128, scalar)]
+fn pipeline_impl(token: Token, plane: &mut [f32], bias: f32, factor: f32) {
+    // ... bias each lane ...
+
+    // These two calls are rewritten per tier:
+    //   V3 variant: incant!(clamp01_impl(plane)) → clamp01_impl_v3(token, plane)
+    //   NEON:                                     → clamp01_impl_neon(token, plane)
+    // Zero dispatcher hops.
+    incant!(clamp01_impl(plane));
+    incant!(scale_plane_impl(plane, factor));
+}
+```
+
+See [SPEC-INCANT-REWRITING.md](https://github.com/imazen/archmage/blob/main/docs/SPEC-INCANT-REWRITING.md) for the rules and measurements (0.94 ns vs 5.6 ns with redispatch).
+
+### F. `#[rite]` for explicit target-feature inner helpers
+
+`#[rite(v3, v4, neon, wasm128)]` generates per-tier copies of a function with `#[target_feature]` + `#[inline]` attached directly — no wrapper, no optimization boundary. Callable by suffix from matching contexts.
+
+- `#[rite]` does NOT substitute `Token`. Each variant is the same body with a different `#[target_feature]`; the signature is verbatim (tokenless or concrete token type).
+- `#[rite]` has **no `scalar` tier** — scalar has no features to enable. For scalar fallback, use `#[magetypes]` or a plain `fn foo_scalar(_: ScalarToken, ...)`.
+
+Reach for `#[rite]` when you want explicit target-feature control inside an `#[arcane]`/`#[magetypes]` body without delegating through the generic-bound pattern. For most magetypes code, the extracted generic kernel (Pattern B) is cleaner.
+
+## The five macros
+
+| Macro | What it does | Generates | Own dispatcher? |
+|---|---|---|---|
+| `#[arcane]` | Wraps a function with `#[target_feature]` via a safe outer `fn` + `unsafe { ... }` inner call | 1 function (wrapper + sibling) | No |
+| `#[rite]` | Applies `#[target_feature]` + `#[inline]` directly, no wrapper | 1 (single-tier) or N (multi-tier) | No |
+| `#[magetypes]` | Per-tier copies with `Token` substituted, each wrapped like `#[arcane]` | N per listed tier | No |
+| `#[autoversion]` | Per-tier copies of scalar body, bundled dispatcher | N + 1 dispatcher | **Yes** |
+| `incant!` | Runtime dispatch to pre-existing `_v3`/`_v4`/`_neon`/… variants; rewrites to direct calls inside tier-annotated bodies | 0 (just dispatches) | The dispatcher itself |
+
+All five share the `_<tier>` suffix convention, so `incant!` routes across variants generated by any combination of them. A single `incant!` call can dispatch to: a `#[magetypes]`-generated `_v3`, a hand-written `#[arcane]` `_v4x`, a `#[rite(v3, v4, neon)]` `_neon`, and a manually-written `_scalar` — it doesn't care who authored which.
+
+## Types
+
+| Category | Types |
+|---|---|
+| 128-bit | `f32x4`, `f64x2`, `i8x16`, `i16x8`, `i32x4`, `i64x2`, `u8x16`, `u16x8`, `u32x4`, `u64x2` |
+| 256-bit | `f32x8`, `f64x4`, `i8x32`, `i16x16`, `i32x8`, `i64x4`, `u8x32`, `u16x16`, `u32x8`, `u64x4` |
+| 512-bit (feature `w512`, default) | `f32x16`, `f64x8`, `i8x64`, `i16x32`, `i32x16`, `i64x8`, `u8x64`, `u16x32`, `u32x16`, `u64x8` |
+
+Native on x86-64 (AVX2, AVX-512 with `avx512` feature); polyfilled on NEON/WASM via pairs or quads of 128-bit ops. Same API on every architecture.
+
+## Cargo features
+
+| Feature | Default | Effect |
 |---|---|---|
-| `#[magetypes]` + `incant!` | You need explicit SIMD types (`f32x8`, `i32x4`) | Manual `incant!` |
-| `#[arcane]` + `incant!` | One tier needs hand-tuned intrinsics | Manual `incant!` |
-| `#[autoversion]` | Scalar code that LLVM auto-vectorizes well | Built-in |
-| All three mixed | Most tiers are generic, one needs intrinsics, entry is auto-vectorized | One `incant!` handles all |
+| `std` | yes | Enable std (disable for `no_std + alloc`) |
+| `w512` | yes | 512-bit types (`f32x16`, …), polyfilled on non-AVX-512 targets |
+| `avx512` | no | Native AVX-512 impls on x86-64 (implies `w512`) |
 
-### Attribute parameter reference
+## Platform support
 
-| Parameter | `#[arcane]` | `#[rite]` | `#[magetypes]` | `#[autoversion]` |
-|---|---|---|---|---|
-| Tier names (`v3`, `neon`, ...) | — | **Yes** (suffixed variants) | **Yes** (suffixed variants) | **Yes** (suffixed + dispatcher) |
-| `+tier` / `-tier` modifiers | — | — | **Yes** | **Yes** |
-| `tier(cfg(feature))` gate | — | — | **Yes** | **Yes** |
-| `import_intrinsics` | **Yes** | **Yes** | auto | auto |
-| `import_magetypes` | **Yes** | **Yes** | auto | auto |
-| `cfg(feature)` | **Yes** | **Yes** | — | **Yes** |
-| `_self = Type` | **Yes** | — | — | **Yes** |
-| `nested` | **Yes** | — | — | — |
-| `inline_always` | **Yes** (nightly) | — | — | — |
+| Target | Status | Tokens |
+|---|---|---|
+| x86-64 | Full | `X64V3Token` (AVX2+FMA), `X64V4Token`/`X64V4xToken` (AVX-512) |
+| aarch64 | Full | `NeonToken`, `Arm64V2Token`, `Arm64V3Token` |
+| wasm32 | Full | `Wasm128Token` (build with `-C target-feature=+simd128`) |
 
-**Tier suffixes:** `_v1`, `_v2`, `_x64_crypto`, `_v3`, `_v3_crypto`, `_v4`, `_v4x`, `_neon`, `_neon_aes`, `_neon_sha3`, `_neon_crc`, `_arm_v2`, `_arm_v3`, `_wasm128`, `_wasm128_relaxed`, `_scalar`, `_default`.
-
-**Default tiers** (when no list given): `v4(avx512)`, `v3`, `neon`, `wasm128`, `scalar`.
-
-### Plain `incant!` dispatch
-
-For simpler cases without mixing, write suffixed variants directly:
-
-```rust
-use archmage::incant;
-#[cfg(target_arch = "x86_64")]
-use magetypes::simd::f32x8;
-
-#[cfg(target_arch = "x86_64")]
-fn dot_product_v3(token: archmage::X64V3Token, a: &[f32], b: &[f32]) -> f32 {
-    let mut acc = f32x8::zero(token);
-    for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-        let va = f32x8::from_array(token, a_chunk.try_into().unwrap());
-        let vb = f32x8::from_array(token, b_chunk.try_into().unwrap());
-        acc = va.mul_add(vb, acc);
-    }
-    acc.reduce_add()
-}
-
-fn dot_product_scalar(_token: archmage::ScalarToken, a: &[f32], b: &[f32]) -> f32 {
-    a.iter().zip(b).map(|(x, y)| x * y).sum()
-}
-
-pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
-    incant!(dot_product(a, b))
-}
-```
-
-Explicit tier lists, feature gates, and modifiers all work: `incant!(dot_product(a, b), [v3, neon, scalar])`, `incant!(dot_product(a, b), [v4(cfg(avx512)), v3, scalar])`, `incant!(dot_product(a, b), [+arm_v2])`.
-
-This works with `#![forbid(unsafe_code)]` — magetypes methods handle unsafe internally via `#[inline(always)]`.
-
-## Using with #[arcane] and #[rite]
-
-`#[arcane]` reads the token type from the signature to emit `#[target_feature]`. It generates a wrapper that crosses the boundary without `unsafe` at the call site — but the wrapper creates an LLVM optimization boundary. `#[rite]` applies `#[target_feature]` + `#[inline]` directly, with no wrapper and no boundary. It works in three modes: token-based (`#[rite]`), tier-based (`#[rite(v3)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants).
-
-**`#[rite]` should be your default.** Use `#[arcane]` only at the entry point (the first call from non-SIMD code), and `#[rite]` for everything called from within SIMD code. Both are compatible with `#![forbid(unsafe_code)]`.
-
-```rust
-use archmage::prelude::*;
-use magetypes::simd::f32x8;
-
-#[arcane(import_intrinsics)]
-pub fn dot_product(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
-    let mut acc = f32x8::zero(token);
-    for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-        acc = accumulate(token, acc, a_chunk, b_chunk);
-    }
-    acc.reduce_add()
-}
-
-#[rite(import_intrinsics)]
-fn accumulate(token: X64V3Token, acc: f32x8, a: &[f32], b: &[f32]) -> f32x8 {
-    let va = f32x8::from_array(token, a.try_into().unwrap());
-    let vb = f32x8::from_array(token, b.try_into().unwrap());
-    va.mul_add(vb, acc)
-}
-```
-
-`#[rite]` inlines with zero overhead. `#[arcane]` creates a wrapper (and an optimization boundary). Use `#[rite]` for everything called from SIMD code.
+Same generic API on every platform. Cross-architecture behavioral differences (signed-shift semantics, NaN propagation, signed-zero negation, FMA rounding) are documented in `CLAUDE.md` under "Known Cross-Architecture Behavioral Differences."
 
 ## Relationship to archmage
 
-`magetypes` depends on `archmage` for:
-- Token types (`X64V3Token`, `Arm64`, etc.)
-- The `#[arcane]` and `#[rite]` macros
-- Runtime CPU feature detection
+`magetypes` depends on [`archmage`](https://crates.io/crates/archmage) for tokens, the `#[arcane]` / `#[rite]` / `#[magetypes]` / `#[autoversion]` macros, `incant!`, and runtime CPU feature detection.
 
-Use `archmage` directly when you need raw intrinsics. Use `magetypes` when you want ergonomic SIMD types with operators.
+Use `archmage` directly when you want raw intrinsics behind a token. Use `magetypes` when you want portable SIMD types with natural operators. Both are compatible with `#![forbid(unsafe_code)]` — the `unsafe` lives inside proc-macro output, not in your source.
 
 ## License
 

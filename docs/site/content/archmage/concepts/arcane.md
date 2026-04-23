@@ -9,6 +9,8 @@ weight = 3
 
 For functions called from other SIMD code, use [`#[rite]`](@/archmage/concepts/rite.md) instead — it inlines into the caller, avoiding the target-feature boundary. `#[rite]` works in three modes: token-based (`#[rite(import_intrinsics)]`), tier-based (`#[rite(v3, import_intrinsics)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon, import_intrinsics)]` — generates suffixed variants).
 
+> **You usually don't hand-write `#[arcane]` per tier.** [`#[magetypes]`](@/archmage/dispatch/magetypes-macro.md) and [`#[autoversion]`](@/archmage/dispatch/autoversion.md) generate `#[arcane]`-wrapped functions for every tier in their list — one per variant. Reach for `#[arcane]` directly when (a) you're writing a single tier's public entry point with hand-tuned intrinsics, or (b) you're adding one hand-tuned tier alongside a `#[magetypes]` family (slotted in by the `_<tier>` suffix that `incant!` resolves by name).
+
 > **Rust 1.87+ safety**: Inside the generated `#[target_feature]` function, value-based SIMD intrinsics (arithmetic, shuffle, compare, bitwise) are safe — no `unsafe` needed. Only pointer-based memory operations remain unsafe; use `import_intrinsics` to get safe memory ops that take references instead of raw pointers.
 
 ## How It Works
