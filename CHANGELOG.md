@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Added
+
+- `#[magetypes(define(f32x8, u8x16, ...), ...)]` — inject `type <name> = ::magetypes::simd::generic::<name><Token>;` aliases at the top of each per-tier variant body. Eliminates the `#[allow(non_camel_case_types)] type f32x8 = GenericF32x8<Token>;` boilerplate users previously wrote at the top of every `#[magetypes]` body. `Token` is substituted per tier (`f32x8<X64V3Token>` in the v3 variant, `f32x8<ScalarToken>` in scalar, etc.) (40617c6).
+- `#[magetypes(rite, ...)]` — flag that makes each per-tier variant use `#[archmage::rite(import_intrinsics)]` (direct `#[target_feature]` + `#[inline]`) instead of `#[archmage::arcane]` (safe wrapper + inner trampoline). For inner helpers called from matching-feature contexts, this eliminates the optimization boundary entirely. Not for public API dispatch — the scalar variant of an arcane-flavored magetypes falls through to the standard incant! dispatcher, which can't safely call a bare `#[target_feature]` rite variant (e735aef).
+- `#[rite(scalar)]` and `#[rite(default)]` — two tokenless/featureless tiers for `#[rite]`. `scalar` takes `ScalarToken` (tokenful — fits incant!'s token-passing rewriting); `default` is tokenless. Both emit `#[inline]` with no `#[target_feature]` and no cfg-gating, callable from any context. Enables `#[rite(v3, v4, neon, wasm128, scalar)]` multi-tier as a full suffix-convention family for incant! routing (7c4e932).
+- `implementation_name()` emitted on every concrete `{Type}Backend` impl, not just `X64V3Token`. Now available on `f32xN<NeonToken>`, `f32xN<Wasm128Token>`, `f32xN<ScalarToken>`, and AVX-512 variants. Names follow the `<arch>::<tier>::<type>` / `polyfill::<tier>::<type>` / `scalar::<type>` scheme documented in polyfills.md — which was aspirational before this commit and now matches the code (34793c0, closes the gap in polyfills.md:67-88).
+- `magetypes/tests/expand/` — parallel macro-expansion snapshot test harness. Covers features whose emitted code references `::magetypes::simd::generic::*` (specifically `#[magetypes(define(...))]` and `#[magetypes(rite, ...)]`) — these can't be tested in archmage's `tests/expand/` because archmage has no `magetypes` dependency. Three test groups: snapshot diff, unexpanded compile, and expanded compile (32031cb).
+- `magetypes/examples/idiomatic_patterns_all.rs` — runnable reference for every idiomatic magetypes + archmage pattern in one file. Self-tests A: inline `#[magetypes]`, B: extracted generic kernel, C: hand-tuned `_v4x` slotted by suffix, D: `#[autoversion]`, E: nested `incant!` rewriting, F: polyfill `implementation_name()` assertions. Passes on x86_64 (±avx512), aarch64, wasm32-wasip1 (9161d7c, updated by 40617c6).
+
+### Changed
+
+- `docs/site/content/magetypes/dispatch/types-and-dispatch.md` — rewritten. Led with "generic `fn<T: F32x8Backend>` + hand-written `#[arcane]` wrapper per tier + `incant!`" as the canonical pattern, which was a consistent source of user misread. `#[magetypes]` IS the per-tier `#[arcane]` wrapper generator; users don't hand-write wrappers. Also dropped the stale "X64V4Token doesn't implement F32x8Backend" limitation (it does, via delegation — see 0.9.21 changelog) (38785cc).
+- `docs/site/content/archmage/concepts/arcane.md`, `CLAUDE.md`, `magetypes/README.md` — coordinated doc fixes to eliminate the `#[magetypes]` wrapper confusion across every reader entry point (e6123e4).
+- `docs/site/content/archmage/dispatch/magetypes-macro.md` — added sections documenting the `rite` flag and the `define(...)` flag as they ship (e735aef, 40617c6).
+
 ### QUEUED BREAKING CHANGES
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)

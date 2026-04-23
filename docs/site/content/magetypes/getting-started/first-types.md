@@ -178,8 +178,30 @@ The backend methods are all `#[inline(always)]`, but that only helps once the ge
 
 See [Polyfills — Performance](@/magetypes/cross-platform/polyfills.md#performance-generic-concrete-inside-arcane-when-inlined) for benchmark data.
 
+## One Body, Every Platform: `#[magetypes]`
+
+The generic pattern above works when you want explicit control over each tier wrapper. For the common case — one algorithm, every platform — the `#[magetypes]` macro generates all the per-tier variants for you, and the `define(...)` flag injects the type aliases:
+
+```rust
+use archmage::prelude::*;
+
+#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
+fn process_impl(token: Token, data: &[f32; 8]) -> f32 {
+    // `f32x8` is in scope via `define` — substituted to
+    // f32x8<X64V3Token> in the v3 variant, f32x8<NeonToken> in neon, etc.
+    f32x8::from_array(token, *data).reduce_add()
+}
+
+pub fn process(data: &[f32; 8]) -> f32 {
+    incant!(process_impl(data))
+}
+```
+
+`#[magetypes]` substitutes the `Token` placeholder per tier. `define(f32x8)` injects the alias line at the top of each variant body — no manual `type f32x8 = GenericF32x8<Token>;` boilerplate. See [Types and Dispatch](@/magetypes/dispatch/types-and-dispatch.md) for the full idiomatic patterns.
+
 ## Next Steps
 
+- [Types and Dispatch](@/magetypes/dispatch/types-and-dispatch.md) — the idiomatic `#[magetypes]` + `incant!` patterns
 - [Type Overview](@/magetypes/types/overview.md) — full list of available types per platform
 - [Arithmetic & Comparisons](@/magetypes/operations/operators.md) — operators, FMA, min/max
 - [Reductions](@/magetypes/operations/reductions.md) — `reduce_add`, `reduce_max`, `reduce_min`
