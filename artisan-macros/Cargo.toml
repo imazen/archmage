@@ -1,0 +1,48 @@
+[package]
+name = "artisan-macros"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/imazen/archmage"
+description = "Auditable, convention-forward proc-macros for sound SIMD tier dispatch. Trampolines recurse into downgrades; users own feature strings and suffixes."
+keywords = ["simd", "dispatch", "target-feature", "macro"]
+categories = ["development-tools::procedural-macro-helpers", "hardware-support"]
+publish = false
+
+[lib]
+proc-macro = true
+
+[features]
+# Expose the thread-local force_max_tier test-hook API from generated code.
+# Unit tests inside the declaring crate get hooks automatically via cfg(test);
+# downstream integration tests need this feature flag on the crate that owns
+# the #[chain] declaration.
+artisan_test_hooks = []
+
+# Gate for the macrotest expansion-snapshot integration test. The test shells
+# out to `cargo expand`, which isn't installed in every CI job. Enabling this
+# feature turns the test on; default `cargo test` omits it entirely, so non-
+# expand CI jobs don't pay the cargo-expand install cost. The dedicated
+# expand-snapshots CI job runs with this feature on.
+run_expand_test = []
+
+[dependencies]
+syn = { version = "2.0.0", features = ["full", "parsing", "printing"] }
+quote = "1.0.0"
+proc-macro2 = "1.0.0"
+
+[dev-dependencies]
+# Committed macro-expansion snapshots. Regenerate with `MACROTEST=overwrite
+# cargo test -p artisan-macros --features run_expand_test --test expand`
+# and commit the updated `*.expanded.rs` files next to their inputs in
+# `tests/expand/`.
+macrotest = "1.2.1"
+
+# Built only when run_expand_test is enabled; otherwise Cargo skips the whole
+# test target (no compilation, no warnings on non-x86 hosts). See the feature
+# definition above for the rationale.
+[[test]]
+name = "expand"
+path = "tests/expand.rs"
+required-features = ["run_expand_test"]

@@ -95,6 +95,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "artisan-macros"
+version = "0.0.0"
+dependencies = [
+ "macrotest",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
