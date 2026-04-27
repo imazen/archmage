@@ -54,31 +54,23 @@ testable_dispatch = []
 # Without this, it's pub(crate) only. Needed for testing token infrastructure
 # from external crates. The method is unsafe and deprecated — prefer summon().
 forge-token-api = []
-# On Windows-on-ARM, route runtime aarch64 feature detection through the
-# `winarm-cpufeatures` crate. Compared to stdarch's IPFP-only Windows
-# backend, this picks up ~30 extra features by decoding the
-# `ID_AA64*_EL1` registers exposed under
-# `HKLM\…\CentralProcessor\0\CP <hex>`. The `registry` feature on
-# winarm-cpufeatures is opted into here per archmage's request — sandboxed
-# callers can still disable the registry path at runtime via
-# `winarm_cpufeatures::set_registry_enabled(false)`. No-op on
-# non-Windows-ARM targets.
-winarm-cpufeatures = ["dep:winarm-cpufeatures", "winarm-cpufeatures/registry"]
 
 [dependencies]
 # Proc-macro crate for #[arcane], #[rite], #[autoversion], incant!, etc.
 archmage-macros = { version = "0.9.23", path = "archmage-macros" }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
 safe_unaligned_simd = { version = "0.2.5" }
-# Optional: Windows-on-ARM AArch64 detection extension. Listed at top
-# level (not target-scoped) so cargo features see it on every host —
-# `macrotest`'s synthesized manifests in particular drop target-scoped
-# entries. The crate's body is `#[cfg(target_os = "windows",
-# target_arch = "aarch64")]` internally, so on non-Windows-ARM the
-# checkout compiles to an empty rlib. Activated only when archmage's
-# `winarm-cpufeatures` feature is on, and the macro bridge in
-# `src/detect.rs` is itself cfg-gated to Windows-ARM regardless.
-winarm-cpufeatures = { version = "0.1.0", optional = true, default-features = false }
+
+# Windows-on-ARM aarch64 detection. Pulled in unconditionally on this
+# target combo so every aarch64 token's `summon()` slow path goes
+# through the registry-backed `ID_AA64*_EL1` decoder + IPFP — recovering
+# ~30 feature names that stdarch's IPFP-only Windows backend cannot
+# see. Sandboxed callers can disable the registry layer at runtime via
+# `winarm_cpufeatures::set_registry_enabled(false)`. The crate is
+# `#[cfg(target_os = "windows", target_arch = "aarch64")]` internally,
+# so this entry never resolves on any other target.
+[target.'cfg(all(target_os = "windows", target_arch = "aarch64"))'.dependencies]
+winarm-cpufeatures = { version = "0.1.0", default-features = false, features = ["registry"] }
 
 # Dev dependencies that don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

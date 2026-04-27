@@ -413,6 +413,41 @@ fn test_arm_token_hierarchy() {
     }
 }
 
+/// Hardware assertion: GH `windows-11-arm` and `ubuntu-24.04-arm` runners
+/// are both Neoverse N2 / Cobalt 100 — Armv9.0-A with the full V3 feature
+/// set (sha3, fp16, fhm, fcma, bf16, i8mm, dotprod, rdm, sha2, aes, crc).
+/// On those runners every Arm64* token must summon. If any of these stop
+/// summoning, the detection path regressed.
+///
+/// Gated by `cargo test -- --ignored cobalt100_runner`. CI runs it
+/// explicitly on the windows-11-arm matrix entry; local runs on other
+/// hardware (Snapdragon X, Apple M-series, Graviton) skip it.
+#[test]
+#[ignore = "requires Neoverse N2 / Cobalt 100 — `cargo test -- --ignored cobalt100_runner`"]
+fn cobalt100_runner_must_summon_full_arm64_v3() {
+    assert!(NeonToken::summon().is_some(), "Cobalt 100 must have Neon");
+    assert!(
+        NeonAesToken::summon().is_some(),
+        "Cobalt 100 must have NeonAes"
+    );
+    assert!(
+        NeonCrcToken::summon().is_some(),
+        "Cobalt 100 must have NeonCrc"
+    );
+    assert!(
+        NeonSha3Token::summon().is_some(),
+        "Cobalt 100 must have NeonSha3"
+    );
+    assert!(
+        Arm64V2Token::summon().is_some(),
+        "Cobalt 100 must summon Arm64V2 (rdm/dotprod/crc/sha2/aes/fp16 all present)"
+    );
+    assert!(
+        Arm64V3Token::summon().is_some(),
+        "Cobalt 100 must summon Arm64V3 (V2 + sha3/fhm/fcma/i8mm/bf16 all present)"
+    );
+}
+
 // =============================================================================
 // Nightly-Only / Missing Features (documented)
 // =============================================================================

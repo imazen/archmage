@@ -4,7 +4,8 @@
 
 ### Added
 
-- Optional `winarm-cpufeatures` cargo feature: on Windows-on-ARM, route `__impl_aarch64_runtime_only_check!` (and therefore every aarch64 token's `summon()` slow path) through the `winarm-cpufeatures` crate's `is_aarch64_feature_detected_fast!` macro. Recovers ~30 feature names that stdarch's `IsProcessorFeaturePresent`-only Windows backend cannot see, by decoding the `ID_AA64*_EL1` registers exposed under `HKLM\…\CentralProcessor\0\CP <hex>`. Activates `winarm-cpufeatures/registry`; sandboxed callers can disable the registry path at runtime via `winarm_cpufeatures::set_registry_enabled(false)`. No-op on non-Windows-ARM targets — the dep compiles to an empty rlib elsewhere.
+- Windows-on-ARM detection now routes unconditionally through `winarm-cpufeatures` (registry-backed `ID_AA64*_EL1` decoder + `IsProcessorFeaturePresent`). Every aarch64 token's `summon()` slow path inherits the wider coverage automatically — recovers ~30 feature names that stdarch's IPFP-only Windows backend cannot see. Sandboxed callers can disable the registry layer at runtime via `winarm_cpufeatures::set_registry_enabled(false)`. The dep is target-scoped to `cfg(all(target_os = "windows", target_arch = "aarch64"))` and the crate is internally cfg-gated to that combo, so it never resolves on any other target. No cargo feature flag required.
+- `cobalt100_runner_must_summon_full_arm64_v3` test in `arm_feature_intrinsics`. Hardware assertion that the GH `windows-11-arm` and `ubuntu-24.04-arm` runners (both Neoverse N2 / Cobalt 100) detect the full V2 + V3 token set. CI runs it via `--ignored` on those two matrix entries; without it a detection regression on Windows would silently degrade `summon()` to `None` and the existing implication tests would skip with no failure.
 
 ### QUEUED BREAKING CHANGES
 

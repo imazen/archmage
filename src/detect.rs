@@ -645,22 +645,16 @@ macro_rules! __impl_aarch64_apple_or_runtime_check {
 #[macro_export]
 macro_rules! __impl_aarch64_runtime_only_check {
     ($feature:tt) => {{
-        // Windows-on-ARM with `winarm-cpufeatures` enabled: route through
-        // the registry-backed ID_AA64*_EL1 decoder + IPFP. Recovers ~30
-        // feature names that stdarch's IPFP-only Windows backend cannot see.
-        #[cfg(all(
-            target_os = "windows",
-            target_arch = "aarch64",
-            feature = "winarm-cpufeatures",
-        ))]
+        // Windows-on-ARM: route through `winarm-cpufeatures`'s
+        // registry-backed ID_AA64*_EL1 decoder + IPFP, recovering the
+        // ~30 feature names that stdarch's IPFP-only Windows backend
+        // cannot see. Always on; opt out at runtime via
+        // `winarm_cpufeatures::set_registry_enabled(false)`.
+        #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
         {
             $crate::__winarm_cpufeatures_detected!($feature)
         }
-        #[cfg(not(all(
-            target_os = "windows",
-            target_arch = "aarch64",
-            feature = "winarm-cpufeatures",
-        )))]
+        #[cfg(not(all(target_os = "windows", target_arch = "aarch64")))]
         {
             #[cfg(target_arch = "aarch64")]
             {
@@ -684,23 +678,15 @@ macro_rules! __impl_aarch64_runtime_only_check {
 }
 
 /// Bridge to the `winarm-cpufeatures` crate. Only instantiated on
-/// Windows-on-ARM when the `winarm-cpufeatures` cargo feature is on.
-#[cfg(all(
-    target_os = "windows",
-    target_arch = "aarch64",
-    feature = "winarm-cpufeatures",
-))]
+/// Windows-on-ARM, where the dep is unconditionally pulled in.
+#[cfg(all(target_os = "windows", target_arch = "aarch64"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __winarm_cpufeatures_detected {
     ($feature:tt) => {{ $crate::detect::__priv_winarm::is_aarch64_feature_detected_fast!($feature) }};
 }
 
-#[cfg(all(
-    target_os = "windows",
-    target_arch = "aarch64",
-    feature = "winarm-cpufeatures",
-))]
+#[cfg(all(target_os = "windows", target_arch = "aarch64"))]
 #[doc(hidden)]
 pub mod __priv_winarm {
     #[doc(hidden)]

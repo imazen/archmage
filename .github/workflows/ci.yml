@@ -135,6 +135,15 @@ jobs:
       - name: Run token infrastructure tests (serialized)
         run: cargo test --features "${{ env.FEATURES }}" --test token_infrastructure -- --test-threads=1
 
+      # Cobalt 100 / Neoverse N2 hardware assertions. GH `windows-11-arm`
+      # and `ubuntu-24.04-arm` are both this CPU, so we know V2 + V3 must
+      # detect. On Windows this is the load-bearing assertion that the
+      # `winarm-cpufeatures` registry-backed path is actually working;
+      # without it, a regression in detection silently degrades to skip.
+      - name: Cobalt 100 token-detection hardware assertions
+        if: matrix.os == 'windows-11-arm' || matrix.os == 'ubuntu-24.04-arm'
+        run: cargo test --features "${{ env.FEATURES }}" --test arm_feature_intrinsics -- --ignored cobalt100_runner_must_summon_full_arm64_v3
+
       - name: CPU survey
         if: always()
         shell: bash
