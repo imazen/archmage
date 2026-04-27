@@ -70,7 +70,7 @@ safe_unaligned_simd = { version = "0.2.5" }
 # `#[cfg(target_os = "windows", target_arch = "aarch64")]` internally,
 # so this entry never resolves on any other target.
 [target.'cfg(all(target_os = "windows", target_arch = "aarch64"))'.dependencies]
-winarm-cpufeatures = { version = "0.1.1", default-features = false, features = ["registry"] }
+winarm-cpufeatures = { version = "0.1.2", default-features = false, features = ["registry"] }
 
 # Dev dependencies that don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
