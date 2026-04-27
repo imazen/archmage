@@ -75,6 +75,7 @@ dependencies = [
  "macrotest",
  "safe_unaligned_simd",
  "trybuild",
+ "winarm-cpufeatures",
  "zenbench",
 ]
 
@@ -914,6 +915,12 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "winarm-cpufeatures"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cd9e6df6e303bcf9c4bce60eb2071d230b7f7f364f104da91815e968396f592"
 
 [[package]]
 name = "windows"

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Optional `winarm-cpufeatures` cargo feature: on Windows-on-ARM, route `__impl_aarch64_runtime_only_check!` (and therefore every aarch64 token's `summon()` slow path) through the `winarm-cpufeatures` crate's `is_aarch64_feature_detected_fast!` macro. Recovers ~30 feature names that stdarch's `IsProcessorFeaturePresent`-only Windows backend cannot see, by decoding the `ID_AA64*_EL1` registers exposed under `HKLM\…\CentralProcessor\0\CP <hex>`. Activates `winarm-cpufeatures/registry`; sandboxed callers can disable the registry path at runtime via `winarm_cpufeatures::set_registry_enabled(false)`. No-op on non-Windows-ARM targets — the dep compiles to an empty rlib elsewhere.
+
 ### QUEUED BREAKING CHANGES
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
