@@ -674,9 +674,13 @@ If ANY check fails:
 **Release process:**
 1. Update the version in `[workspace.package]` in the root `Cargo.toml` (single source of truth — all crates inherit via `version.workspace = true`)
 2. Update internal dep version strings (`archmage-macros = { version = "X.Y.Z", ... }` in root, `archmage = { version = "X.Y.Z", ... }` in magetypes)
-3. Commit the version bump, push to main
-4. Wait for CI to pass on main
-5. Create a GitHub release with matching tags — the release workflow handles `cargo publish`
+3. Update `CHANGELOG.md` (move `[Unreleased]` entries into a new `[X.Y.Z] - YYYY-MM-DD` section)
+4. Commit the version bump, push to main
+5. Tag and create the three GitHub releases — **don't wait for main CI to go green first.** The release workflow itself blocks on CI, so creating releases early is safe. Just `git tag` + `git push --tags` + `gh release create` immediately after pushing the release commit. The publish job won't run until CI is green; if CI fails, fix and re-tag.
+
+   Tag/release order (respect dep chain): `archmage-macros-v{version}` → `v{version}` (archmage) → `magetypes-v{version}`.
+
+   `gh release create <tag>` infers the target from the pushed tag — do NOT pass `--target <sha>` (GitHub rejects it as `target_commitish is invalid` once the tag exists).
 
 **Git tags are MANDATORY for every publish.** Tags MUST match published versions:
 
