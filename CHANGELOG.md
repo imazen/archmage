@@ -13,6 +13,13 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+## 0.9.23 — 2026-04-26
+
+### Fixed
+
+- `#[magetypes(..., -scalar)]` (and `incant!` / `#[autoversion]` tier lists with `-scalar` or `-default`) now actually drop the fallback variant. Previously the resolver auto-appended `scalar` *after* `-scalar` had removed it, silently undoing the removal and breaking the documented "piecewise tier blocks" pattern with `the name foo_scalar is defined multiple times`. Pure additive lists and override mode are unchanged — auto-append still protects users who omit the fallback without opting out (#47, closes #46, 1eae110).
+- `archmage-macros` doctest in `src/magetypes.rs` no longer fails: an indented snippet in a doc comment was being parsed as a runnable doctest referencing `::magetypes::` (a circular dep) and an unbound `Token`. Moved to a fenced `text` block (#47, 1eae110).
+
 ## 0.9.22 — 2026-04-23
 
 ### Added
