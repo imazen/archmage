@@ -676,9 +676,19 @@ If ANY check fails:
 2. Update internal dep version strings (`archmage-macros = { version = "X.Y.Z", ... }` in root, `archmage = { version = "X.Y.Z", ... }` in magetypes)
 3. Update `CHANGELOG.md` (move `[Unreleased]` entries into a new `[X.Y.Z] - YYYY-MM-DD` section)
 4. Commit the version bump, push to main
-5. Tag and create the three GitHub releases — **don't wait for main CI to go green first.** The release workflow itself blocks on CI, so creating releases early is safe. Just `git tag` + `git push --tags` + `gh release create` immediately after pushing the release commit. The publish job won't run until CI is green; if CI fails, fix and re-tag.
+5. Push **all three tags** but create only **one** GitHub release. The publish workflow (`.github/workflows/publish.yml`) only triggers correctly on `v{version}`-format tags; the per-crate tags (`archmage-macros-v{version}`, `magetypes-v{version}`) must exist (the workflow's `check-tags` step verifies all three exist and point to the same commit) but must NOT be turned into GitHub releases. Creating GitHub releases for the per-crate tags fires spurious publish-workflow runs that fail at the tag-format check.
 
-   Tag/release order (respect dep chain): `archmage-macros-v{version}` → `v{version}` (archmage) → `magetypes-v{version}`.
+   Concrete sequence after pushing the release commit:
+
+   ```bash
+   git tag v{version} archmage-macros-v{version} magetypes-v{version} <commit>
+   git push origin v{version} archmage-macros-v{version} magetypes-v{version}
+   gh release create v{version} --title "v{version}" --notes-file <notes>   # only this one
+   ```
+
+   The single `v{version}` GitHub release fires one publish workflow run that publishes all three crates in dep order (archmage-macros → archmage → magetypes).
+
+   **Don't wait for main CI to go green first.** The publish workflow has its own `pre-publish-check` job that blocks on tests; if it fails, fix and re-tag.
 
    `gh release create <tag>` infers the target from the pushed tag — do NOT pass `--target <sha>` (GitHub rejects it as `target_commitish is invalid` once the tag exists).
 
