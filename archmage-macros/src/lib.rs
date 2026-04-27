@@ -1082,6 +1082,27 @@ mod tests {
     }
 
     #[test]
+    fn resolve_subtractive_removes_scalar() {
+        // -scalar must actually remove scalar — auto-append must not undo it
+        let tiers = resolve_tier_names(&["-scalar"], true);
+        assert!(
+            !tiers.iter().any(|t| t == "scalar"),
+            "expected scalar to be removed, got {tiers:?}"
+        );
+    }
+
+    #[test]
+    fn resolve_subtractive_removes_scalar_with_other_modifiers() {
+        // [-scalar, +arm_v2] — scalar removed, arm_v2 added, no scalar re-injected
+        let tiers = resolve_tier_names(&["-scalar", "+arm_v2"], true);
+        assert!(
+            !tiers.iter().any(|t| t == "scalar"),
+            "expected scalar to be removed, got {tiers:?}"
+        );
+        assert!(tiers.contains(&"arm_v2".to_string()));
+    }
+
+    #[test]
     fn resolve_mixed_add_remove() {
         let tiers = resolve_tier_names(&["-neon", "-wasm128", "+v1"], true);
         assert!(tiers.contains(&"v1".to_string()));

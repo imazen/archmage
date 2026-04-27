@@ -303,6 +303,10 @@ pub(crate) fn resolve_tiers(
     // re-apply the descriptor's cfg_feature on them. Writing +v4 means "I want
     // v4 exactly as written, without the automatic avx512 gate."
     let mut user_overrides: Vec<String> = Vec::new();
+    // Tracks whether the user explicitly removed the scalar/default fallback
+    // via `-scalar` or `-default`. Used to suppress the auto-append below so
+    // that `[-scalar]` actually drops the scalar variant.
+    let mut fallback_explicitly_removed = false;
     let effective_names: Vec<String> = if any_modifier {
         let mut names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
         for raw in tier_names {
@@ -330,6 +334,9 @@ pub(crate) fn resolve_tiers(
             if is_removal {
                 if let Some(pos) = pos {
                     names.remove(pos);
+                }
+                if is_fallback {
+                    fallback_explicitly_removed = true;
                 }
                 // Removing a tier that's not in defaults is a silent no-op
             } else if let Some(pos) = pos {
@@ -394,7 +401,7 @@ pub(crate) fn resolve_tiers(
         ));
     }
 
-    if !has_scalar && !has_default {
+    if !has_scalar && !has_default && !fallback_explicitly_removed {
         tiers.push(ResolvedTier {
             tier: find_tier("scalar").unwrap(),
             feature_gate: None,
