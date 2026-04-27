@@ -679,18 +679,25 @@ macro_rules! __impl_aarch64_runtime_only_check {
 
 /// Bridge to the `winarm-cpufeatures` crate. Only instantiated on
 /// Windows-on-ARM, where the dep is unconditionally pulled in.
+///
+/// Routes through `_full` (not `_fast`) — `_fast` is IPFP-only by
+/// design and never reads the registry, so registry-only names like
+/// `fhm`, `fcma`, `sha3`, `i8mm`, `bf16` would silently report `false`
+/// on Cobalt 100 / Snapdragon X. `_full` consults the registry-backed
+/// `ID_AA64*_EL1` decoder, which is the coverage archmage's tokens
+/// actually need. (Required winarm-cpufeatures ≥ 0.1.1.)
 #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __winarm_cpufeatures_detected {
-    ($feature:tt) => {{ $crate::detect::__priv_winarm::is_aarch64_feature_detected_fast!($feature) }};
+    ($feature:tt) => {{ $crate::detect::__priv_winarm::is_aarch64_feature_detected_full!($feature) }};
 }
 
 #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
 #[doc(hidden)]
 pub mod __priv_winarm {
     #[doc(hidden)]
-    pub use ::winarm_cpufeatures::is_aarch64_feature_detected_fast;
+    pub use ::winarm_cpufeatures::is_aarch64_feature_detected_full;
 }
 
 // ============================================================================
