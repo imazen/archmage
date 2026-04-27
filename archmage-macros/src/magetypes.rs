@@ -22,7 +22,9 @@ use crate::tiers::*;
 /// `defines` is a list of magetypes type names (e.g. `["f32x8", "u16x16"]`)
 /// to inject as local type aliases at the top of each variant's body:
 ///
-///     type f32x8 = ::magetypes::simd::generic::f32x8<Token>;
+/// ```text
+/// type f32x8 = ::magetypes::simd::generic::f32x8<Token>;
+/// ```
 ///
 /// The alias's `Token` is substituted to the concrete token type for each
 /// tier (same as the rest of the body). This eliminates the boilerplate
