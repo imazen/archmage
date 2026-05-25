@@ -389,9 +389,10 @@ impl f32x4 {
     #[inline(always)]
     pub fn reduce_add(self) -> f32 {
         unsafe {
-            let h1 = _mm_hadd_ps(self.0, self.0);
-            let h2 = _mm_hadd_ps(h1, h1);
-            _mm_cvtss_f32(h2)
+            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(self.0, self.0);
+            let s1 = _mm_add_ps(self.0, shuf);
+            let s2 = _mm_add_ps(s1, _mm_movehl_ps(s1, s1));
+            _mm_cvtss_f32(s2)
         }
     }
 

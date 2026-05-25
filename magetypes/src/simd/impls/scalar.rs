@@ -303,7 +303,7 @@ impl F32x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn reduce_add(self, a: [f32; 4]) -> f32 {
-        a[0] + a[1] + a[2] + a[3]
+        (a[0] + a[1]) + (a[2] + a[3])
     }
 
     #[inline(always)]
@@ -699,7 +699,7 @@ impl F32x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn reduce_add(self, a: [f32; 8]) -> f32 {
-        a[0] + a[1] + a[2] + a[3] + a[4] + a[5] + a[6] + a[7]
+        ((a[0] + a[4]) + (a[1] + a[5])) + ((a[2] + a[6]) + (a[3] + a[7]))
     }
 
     #[inline(always)]

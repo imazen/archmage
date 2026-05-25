@@ -338,10 +338,8 @@ impl f32x4 {
     /// Reduce: sum all lanes
     #[inline(always)]
     pub fn reduce_add(self) -> f32 {
-        f32x4_extract_lane::<0>(self.0)
-            + f32x4_extract_lane::<1>(self.0)
-            + f32x4_extract_lane::<2>(self.0)
-            + f32x4_extract_lane::<3>(self.0)
+        (f32x4_extract_lane::<0>(self.0) + f32x4_extract_lane::<1>(self.0))
+            + (f32x4_extract_lane::<2>(self.0) + f32x4_extract_lane::<3>(self.0))
     }
 
     /// Reduce: max of all lanes

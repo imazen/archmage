@@ -542,7 +542,14 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
     let lanes = ty.lanes();
     let extract_fn = Wasm::extract_lane_intrinsic(ty.elem);
 
-    let reduce_body = match lanes {
+    // Adjacent-pair bracketing for f32x4 — matches x86/NEON tree shape.
+    // Integer and f64 types keep linear (associative / only 2 lanes).
+    let reduce_body = if ty.elem.is_float() && lanes == 4 {
+        format!(
+            "({extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0)) + ({extract_fn}::<2>(self.0) + {extract_fn}::<3>(self.0))"
+        )
+    } else {
+        match lanes {
         2 => format!("{extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0)"),
         4 => format!(
             "{extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0) + {extract_fn}::<2>(self.0) + {extract_fn}::<3>(self.0)"
@@ -556,6 +563,7 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
         _ => formatdoc! {r#"
             let arr = self.to_array();
             arr.iter().copied().sum()"#},
+    }
     };
 
     let mut code = formatdoc! {r#"

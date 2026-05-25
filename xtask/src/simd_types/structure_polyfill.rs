@@ -374,9 +374,10 @@ fn generate_polyfill_type(elem: ElementType, platform: &PlatformConfig) -> Strin
         code.push_str(&gen_lo_hi_unary("abs", "Absolute value"));
     }
 
-    // reduce_add
+    // reduce_add — for floats, cross-block lanewise add first to match the
+    // native NEON/x86 adjacent-pair tree. Fewer ops and consistent.
     let reduce_add_body = if elem.is_float() {
-        "self.lo.reduce_add() + self.hi.reduce_add()"
+        "(self.lo + self.hi).reduce_add()"
     } else {
         "self.lo.reduce_add().wrapping_add(self.hi.reduce_add())"
     };
@@ -688,9 +689,10 @@ fn generate_w512_polyfill_type(elem: ElementType, platform: &W512PlatformConfig)
         code.push_str(&gen_lo_hi_unary("abs", "Absolute value"));
     }
 
-    // reduce_add
+    // reduce_add — for floats, cross-block lanewise add first to match the
+    // native NEON/x86 adjacent-pair tree. Fewer ops and consistent.
     let reduce_add_body = if elem.is_float() {
-        "self.lo.reduce_add() + self.hi.reduce_add()"
+        "(self.lo + self.hi).reduce_add()"
     } else {
         "self.lo.reduce_add().wrapping_add(self.hi.reduce_add())"
     };

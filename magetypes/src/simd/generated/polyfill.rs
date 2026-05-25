@@ -189,7 +189,7 @@ pub mod v3 {
         /// Reduce: sum all lanes
         #[inline(always)]
         pub fn reduce_add(self) -> f32 {
-            self.lo.reduce_add() + self.hi.reduce_add()
+            (self.lo + self.hi).reduce_add()
         }
 
         /// Reduce: max of all lanes
@@ -635,7 +635,7 @@ pub mod v3 {
         /// Reduce: sum all lanes
         #[inline(always)]
         pub fn reduce_add(self) -> f64 {
-            self.lo.reduce_add() + self.hi.reduce_add()
+            (self.lo + self.hi).reduce_add()
         }
 
         /// Reduce: max of all lanes
@@ -3987,7 +3987,7 @@ pub mod neon {
         /// Reduce: sum all lanes
         #[inline(always)]
         pub fn reduce_add(self) -> f32 {
-            self.lo.reduce_add() + self.hi.reduce_add()
+            (self.lo + self.hi).reduce_add()
         }
 
         /// Reduce: max of all lanes
@@ -4433,7 +4433,7 @@ pub mod neon {
         /// Reduce: sum all lanes
         #[inline(always)]
         pub fn reduce_add(self) -> f64 {
-            self.lo.reduce_add() + self.hi.reduce_add()
+            (self.lo + self.hi).reduce_add()
         }
 
         /// Reduce: max of all lanes
@@ -7785,7 +7785,7 @@ pub mod wasm128 {
         /// Reduce: sum all lanes
         #[inline(always)]
         pub fn reduce_add(self) -> f32 {
-            self.lo.reduce_add() + self.hi.reduce_add()
+            (self.lo + self.hi).reduce_add()
         }
 
         /// Reduce: max of all lanes
@@ -8231,7 +8231,7 @@ pub mod wasm128 {
         /// Reduce: sum all lanes
         #[inline(always)]
         pub fn reduce_add(self) -> f64 {
-            self.lo.reduce_add() + self.hi.reduce_add()
+            (self.lo + self.hi).reduce_add()
         }
 
         /// Reduce: max of all lanes
@@ -11578,7 +11578,7 @@ pub mod v3_512 {
         /// Reduce: sum all lanes
         #[inline(always)]
         pub fn reduce_add(self) -> f32 {
-            self.lo.reduce_add() + self.hi.reduce_add()
+            (self.lo + self.hi).reduce_add()
         }
 
         /// Reduce: max of all lanes
@@ -12013,7 +12013,7 @@ pub mod v3_512 {
         /// Reduce: sum all lanes
         #[inline(always)]
         pub fn reduce_add(self) -> f64 {
-            self.lo.reduce_add() + self.hi.reduce_add()
+            (self.lo + self.hi).reduce_add()
         }
 
         /// Reduce: max of all lanes

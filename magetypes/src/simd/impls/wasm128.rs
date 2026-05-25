@@ -125,10 +125,8 @@ impl F32x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn reduce_add(self, a: v128) -> f32 {
-        f32x4_extract_lane::<0>(a)
-            + f32x4_extract_lane::<1>(a)
-            + f32x4_extract_lane::<2>(a)
-            + f32x4_extract_lane::<3>(a)
+        (f32x4_extract_lane::<0>(a) + f32x4_extract_lane::<1>(a))
+            + (f32x4_extract_lane::<2>(a) + f32x4_extract_lane::<3>(a))
     }
     #[inline(always)]
     fn reduce_min(self, a: v128) -> f32 {
@@ -329,14 +327,9 @@ impl F32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn reduce_add(self, a: [v128; 2]) -> f32 {
-        f32x4_extract_lane::<0>(a[0])
-            + f32x4_extract_lane::<1>(a[0])
-            + f32x4_extract_lane::<2>(a[0])
-            + f32x4_extract_lane::<3>(a[0])
-            + f32x4_extract_lane::<0>(a[1])
-            + f32x4_extract_lane::<1>(a[1])
-            + f32x4_extract_lane::<2>(a[1])
-            + f32x4_extract_lane::<3>(a[1])
+        let m = f32x4_add(a[0], a[1]);
+        (f32x4_extract_lane::<0>(m) + f32x4_extract_lane::<1>(m))
+            + (f32x4_extract_lane::<2>(m) + f32x4_extract_lane::<3>(m))
     }
 
     #[inline(always)]

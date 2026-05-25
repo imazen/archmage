@@ -1420,12 +1420,16 @@ fn generate_x86_reduce_add(ty: &FloatVecType) -> String {
         "_mm_hadd_pd"
     };
 
+    // f32 uses shuffle+add instead of _mm_hadd_ps — same adjacent-pair tree
+    // `(v0+v1)+(v2+v3)`, fewer µops (2 vs 3 per step on Skylake/Zen).
+    // f64 keeps _mm_hadd_pd — benchmarks show no difference at 2 f64 lanes.
     match (ty.elem, ty.width_bits) {
         ("f32", 128) => formatdoc! {"
                 unsafe {{
-                    let h1 = {hadd}(a, a);
-                    let h2 = {hadd}(h1, h1);
-                    {cvt}(h2)
+                    let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
+                    let s1 = _mm_add_ps(a, shuf);
+                    let s2 = _mm_add_ps(s1, _mm_movehl_ps(s1, s1));
+                    {cvt}(s2)
                 }}"},
         ("f64", 128) => formatdoc! {"
                 unsafe {{
@@ -1436,10 +1440,11 @@ fn generate_x86_reduce_add(ty: &FloatVecType) -> String {
                 unsafe {{
                     let hi = {p}_extractf128_{s}::<1>(a);
                     let lo = {p}_cast{s}256_{s}128(a);
-                    let sum = _mm_add_{s}(lo, hi);
-                    let h1 = {hadd}(sum, sum);
-                    let h2 = {hadd}(h1, h1);
-                    {cvt}(h2)
+                    let sum = _mm_add_ps(lo, hi);
+                    let shuf = _mm_shuffle_ps::<0b10_11_00_01>(sum, sum);
+                    let s1 = _mm_add_ps(sum, shuf);
+                    let s2 = _mm_add_ps(s1, _mm_movehl_ps(s1, s1));
+                    {cvt}(s2)
                 }}"},
         ("f64", 256) => formatdoc! {"
                 unsafe {{
@@ -1696,9 +1701,19 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
         format!("[{}]", items.join(", "))
     };
 
+    // Adjacent-pair tree for f32 — matches x86 v3 and NEON reduce_add
+    // shape. Better ILP than linear left-fold and stays consistent across
+    // backends (#50). f64 with 2 or 4 lanes has no meaningful difference.
     let reduce_add = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}]")).collect();
-        items.join(" + ")
+        match (elem, lanes) {
+            ("f32", 4) => "(a[0] + a[1]) + (a[2] + a[3])".to_string(),
+            ("f32", 8) => "((a[0] + a[4]) + (a[1] + a[5])) + ((a[2] + a[6]) + (a[3] + a[7]))"
+                .to_string(),
+            _ => {
+                let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}]")).collect();
+                items.join(" + ")
+            }
+        }
     };
 
     // Helper functions (f32_sqrt etc.) are emitted once per element type
@@ -2731,15 +2746,26 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         format!("[{}]", items.join(", "))
     };
 
-    // Reductions: extract all lanes and fold
+    // Cross-block add then adjacent-pair per-block tree (#50). For f32
+    // this matches the NEON f32x8 shape: `vaddq(a[0],a[1])` → `vpaddq×2`.
+    // Fewer total ops and consistent tree.
     let reduce_add_body = || -> String {
-        let mut items = Vec::new();
-        for i in 0..sub_count {
-            for j in 0..native_lanes {
-                items.push(format!("{wp}_extract_lane::<{j}>(a[{i}])"));
+        if elem == "f32" && sub_count >= 2 {
+            let mut body = format!("let m = {wp}_add(a[0], a[1]);\n");
+            for i in 2..sub_count {
+                body.push_str(&format!("        let m = {wp}_add(m, a[{i}]);\n"));
             }
+            body.push_str(&format!("        ({wp}_extract_lane::<0>(m) + {wp}_extract_lane::<1>(m)) + ({wp}_extract_lane::<2>(m) + {wp}_extract_lane::<3>(m))"));
+            body
+        } else {
+            let mut items = Vec::new();
+            for i in 0..sub_count {
+                for j in 0..native_lanes {
+                    items.push(format!("{wp}_extract_lane::<{j}>(a[{i}])"));
+                }
+            }
+            items.join("\n            + ")
         }
-        items.join("\n            + ")
     };
 
     let reduce_minmax = |combine: &str, fold_method: &str| -> String {
@@ -2966,12 +2992,18 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
     let wp = ty.wasm_prefix();
     let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
 
-    // Reduction: extract all lanes
+    // Adjacent-pair tree for f32x4 to match x86/NEON shape (#50).
     let reduce_add_body = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|j| format!("{wp}_extract_lane::<{j}>(a)"))
-            .collect();
-        items.join(" + ")
+        if elem == "f32" && lanes == 4 {
+            format!(
+                "({wp}_extract_lane::<0>(a) + {wp}_extract_lane::<1>(a)) + ({wp}_extract_lane::<2>(a) + {wp}_extract_lane::<3>(a))"
+            )
+        } else {
+            let items: Vec<String> = (0..lanes)
+                .map(|j| format!("{wp}_extract_lane::<{j}>(a)"))
+                .collect();
+            items.join(" + ")
+        }
     };
 
     let reduce_minmax = |fold_method: &str| -> String {

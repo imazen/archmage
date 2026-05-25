@@ -394,9 +394,10 @@ impl f32x8 {
             let hi = _mm256_extractf128_ps::<1>(self.0);
             let lo = _mm256_castps256_ps128(self.0);
             let sum = _mm_add_ps(lo, hi);
-            let h1 = _mm_hadd_ps(sum, sum);
-            let h2 = _mm_hadd_ps(h1, h1);
-            _mm_cvtss_f32(h2)
+            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(sum, sum);
+            let s1 = _mm_add_ps(sum, shuf);
+            let s2 = _mm_add_ps(s1, _mm_movehl_ps(s1, s1));
+            _mm_cvtss_f32(s2)
         }
     }
 

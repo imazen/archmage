@@ -165,9 +165,10 @@ impl F32x4Backend for archmage::X64V3Token {
     #[inline(always)]
     fn reduce_add(self, a: __m128) -> f32 {
         unsafe {
-            let h1 = _mm_hadd_ps(a, a);
-            let h2 = _mm_hadd_ps(h1, h1);
-            _mm_cvtss_f32(h2)
+            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
+            let s1 = _mm_add_ps(a, shuf);
+            let s2 = _mm_add_ps(s1, _mm_movehl_ps(s1, s1));
+            _mm_cvtss_f32(s2)
         }
     }
 
@@ -427,9 +428,10 @@ impl F32x8Backend for archmage::X64V3Token {
             let hi = _mm256_extractf128_ps::<1>(a);
             let lo = _mm256_castps256_ps128(a);
             let sum = _mm_add_ps(lo, hi);
-            let h1 = _mm_hadd_ps(sum, sum);
-            let h2 = _mm_hadd_ps(h1, h1);
-            _mm_cvtss_f32(h2)
+            let shuf = _mm_shuffle_ps::<0b10_11_00_01>(sum, sum);
+            let s1 = _mm_add_ps(sum, shuf);
+            let s2 = _mm_add_ps(s1, _mm_movehl_ps(s1, s1));
+            _mm_cvtss_f32(s2)
         }
     }
 
