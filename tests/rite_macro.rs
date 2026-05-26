@@ -1837,3 +1837,58 @@ fn test_rite_multi_tier_coexists_with_single() {
     let m1 = unsafe { multi_tier_uses_single_v1(&[10.0, 20.0, 30.0, 40.0]) };
     assert_eq!(m1, 100.0);
 }
+
+// ============================================================================
+// Issue #48: `+`/`-` tier modifiers in #[rite]
+// ============================================================================
+
+// `(v3, -scalar)` — `-scalar` is a no-op (scalar never listed), so this is the
+// single-tier v3 form. Proves the muscle-memory grammar parses AND runs.
+#[rite(v3, -scalar)]
+fn modifier_minus_scalar(a: &[f32; 8]) -> [f32; 8] {
+    unsafe {
+        let v = _mm256_loadu_ps(a.as_ptr());
+        let doubled = _mm256_add_ps(v, v);
+        let mut out = [0.0f32; 8];
+        _mm256_storeu_ps(out.as_mut_ptr(), doubled);
+        out
+    }
+}
+
+// `(+v3, +neon)` — all-`+`, two tiers → multi-tier: `_v3` (x86) + `_neon` (arm).
+#[rite(+v3, +neon)]
+fn modifier_plus_multi(data: &[f32; 4]) -> f32 {
+    data.iter().sum()
+}
+
+// `(v3, +v4, -scalar)` — plain + `+` + `-` mixed → multi-tier `_v3` + `_v4`.
+#[rite(v3, +v4, -scalar)]
+fn modifier_mixed(data: &[f32; 4]) -> f32 {
+    data.iter().sum()
+}
+
+#[test]
+fn rite_modifier_minus_scalar_runs() {
+    if X64V3Token::summon().is_some() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let got = unsafe { modifier_minus_scalar(&a) };
+        assert_eq!(got, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
+    }
+}
+
+#[test]
+fn rite_modifier_plus_multi_emits_v3_variant() {
+    if X64V3Token::summon().is_some() {
+        // Multi-tier emits a `_v3` suffixed variant.
+        let got = unsafe { modifier_plus_multi_v3(&[1.0, 2.0, 3.0, 4.0]) };
+        assert_eq!(got, 10.0);
+    }
+}
+
+#[test]
+fn rite_modifier_mixed_emits_v3_variant() {
+    if X64V3Token::summon().is_some() {
+        let got = unsafe { modifier_mixed_v3(&[1.0, 2.0, 3.0, 4.0]) };
+        assert_eq!(got, 10.0);
+    }
+}

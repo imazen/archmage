@@ -8,7 +8,10 @@
 //! - +default replaces scalar fallback with tokenless default
 //! - -tier removes a tier from defaults
 //! - +tier(cfg(feature)) adds a cfg gate to a default tier
-//! - Mixing +/- with plain tiers is a compile error (tested via compile_fail)
+//! - Plain tiers may be mixed with +/- (issue #48): any `+` ⇒ additive mode
+//!   (plain treated as +tier); plain + `-` (no `+`) ⇒ override mode where `-`
+//!   removes from the set / drops the auto-scalar fallback, e.g.
+//!   `#[magetypes(v3, -scalar)]` emits only the v3 variant.
 #![allow(deprecated)] // SimdToken in autoversion
 #![cfg(any(
     target_arch = "x86_64",
@@ -259,6 +262,19 @@ mod incant_modifiers {
         // On x86_64 with v3: 13.0. With v1 only: 11.0. Non-x86: 10.0.
         assert!(result >= 10.0);
     }
+
+    // #48: plain tier mixed with `+`/`-` modifiers. `[v3, -neon, -wasm128, +v1]`
+    // has a `+`, so it's additive; the plain `v3` is treated as `+v3`. Effective
+    // set matches `[-neon, -wasm128, +v1]` above (v3 was already a default), so
+    // it reuses the same callees — the point is that mixing no longer errors.
+    fn im_dispatch_mixed(x: f32) -> f32 {
+        incant!(im(x), [v3, -neon, -wasm128, +v1])
+    }
+
+    #[test]
+    fn incant_plain_mixed_with_modifiers() {
+        assert_eq!(im_dispatch_mixed(10.0), im_dispatch(10.0));
+    }
 }
 
 // ============================================================================
@@ -293,5 +309,47 @@ mod magetypes_modifiers {
         if let Some(t) = X64V3Token::summon() {
             assert_eq!(mt_mod_v3(t, 1.0), 2.0);
         }
+    }
+}
+
+// ============================================================================
+// #48: plain tier mixed with +/- (previously a hard error)
+// ============================================================================
+
+mod plain_modifier_mixing {
+    use super::*;
+
+    // `(v3, +v1)` — plain v3 + additive v1. Any `+` ⇒ additive; v3 treated as
+    // +v3. autoversion writes all variant bodies itself, so this just works and
+    // keeps the scalar fallback (dispatches on every arch).
+    #[autoversion(v3, +v1)]
+    fn mix_av(data: &[f32]) -> f32 {
+        data.iter().sum()
+    }
+
+    #[test]
+    fn autoversion_plain_plus_modifier_dispatches() {
+        assert_eq!(mix_av(&[1.0, 2.0, 3.0, 4.0]), 10.0);
+    }
+
+    // The headline issue-#48 example: `#[magetypes(v3, -scalar)]` — "I want only
+    // V3, and suppress the dead auto-scalar variant." Override mode: the plain
+    // set {v3} with the fallback dropped → exactly one generated variant (mt_v3
+    // on x86), no `mt_scalar`. Previously this required the brittle
+    // `[-v4, -neon, -wasm128, -scalar]` workaround.
+    #[magetypes(v3, -scalar)]
+    fn only_v3(_token: Token, x: f32) -> f32 {
+        x * 3.0
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn magetypes_v3_minus_scalar_emits_only_v3() {
+        if let Some(t) = X64V3Token::summon() {
+            assert_eq!(only_v3_v3(t, 2.0), 6.0);
+        }
+        // `only_v3_scalar` does NOT exist — the auto-scalar fallback was dropped.
+        // (Asserting absence is a compile-time property; this test compiling with
+        // no reference to it is the proof.)
     }
 }

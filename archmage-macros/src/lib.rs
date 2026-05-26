@@ -1121,10 +1121,15 @@ mod tests {
     }
 
     #[test]
-    fn resolve_mixing_plus_and_plain_is_error() {
+    fn resolve_mixing_plus_and_plain_is_additive() {
+        // #48: mixing `+tier` with plain `tier` is now allowed. Any `+` ⇒
+        // additive mode; the plain tier is treated as `+tier`. Both v1 and v3
+        // end up present (atop the defaults).
         let names: Vec<String> = vec!["+v1".into(), "v3".into()];
-        let result = resolve_tiers(&names, proc_macro2::Span::call_site(), true);
-        assert!(result.is_err());
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), true).unwrap();
+        let suffixes: Vec<&str> = tiers.iter().map(|t| t.tier.suffix).collect();
+        assert!(suffixes.contains(&"v1"));
+        assert!(suffixes.contains(&"v3"));
     }
 
     #[test]

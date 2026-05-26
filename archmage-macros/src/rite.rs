@@ -50,48 +50,112 @@ impl Parse for RiteArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut args = RiteArgs::default();
 
+        // Tier list, assembled with `+`/`-` modifier support (issue #48).
+        // `#[rite]` has no dispatch-default set (it only emits the variants you
+        // ask for), so the modifiers operate on the *explicit* list: plain and
+        // `+tier` add a tier, `-tier` removes a previously-listed tier. This
+        // keeps the grammar uniform with `#[magetypes]` / `incant!` so muscle
+        // memory like `#[rite(v3, -scalar)]` parses (and means "just v3" here).
+        let mut additions: Vec<String> = Vec::new();
+        let mut removals: Vec<String> = Vec::new();
+
+        // Map a tier ident to its `tier_tokens` entry (canonical token name, or
+        // the empty sentinel for `default`/`_default`). `None` ⇒ not a tier.
+        let resolve_tier = |name: &str| -> Option<String> {
+            if name == "default" || name == "_default" {
+                Some(String::from(DEFAULT_TIER_SENTINEL))
+            } else {
+                tier_to_canonical_token(name).map(String::from)
+            }
+        };
+
         while !input.is_empty() {
-            let ident: Ident = input.parse()?;
-            match ident.to_string().as_str() {
-                "stub" => {
-                    return Err(syn::Error::new(
-                        ident.span(),
-                        "`stub` has been removed. Use `incant!` for cross-arch dispatch instead.",
-                    ));
+            // A `+`/`-` prefix is only valid before a tier name (never a keyword).
+            if input.peek(Token![+]) || input.peek(Token![-]) {
+                let is_removal = input.peek(Token![-]);
+                if is_removal {
+                    let _: Token![-] = input.parse()?;
+                } else {
+                    let _: Token![+] = input.parse()?;
                 }
-                "import_intrinsics" => args.import_intrinsics = true,
-                "import_magetypes" => args.import_magetypes = true,
-                "cfg" => {
-                    let content;
-                    syn::parenthesized!(content in input);
-                    let feat: Ident = content.parse()?;
-                    args.cfg_feature = Some(feat.to_string());
-                }
-                "default" | "_default" => {
-                    // Tokenless fallback tier. No ScalarToken parameter, no
-                    // target_feature, no cfg-gating — just an `#[inline]`
-                    // variant named `_default` that slots into `incant!`'s
-                    // suffix convention for fully portable fallbacks.
-                    args.tier_tokens.push(String::from(DEFAULT_TIER_SENTINEL));
-                }
-                other => {
-                    if let Some(canonical) = tier_to_canonical_token(other) {
-                        args.tier_tokens.push(String::from(canonical));
-                    } else {
+                let ident: Ident = input.parse()?;
+                let name = ident.to_string();
+                match resolve_tier(&name) {
+                    Some(entry) => {
+                        if is_removal {
+                            removals.push(entry);
+                        } else {
+                            additions.push(entry);
+                        }
+                    }
+                    None => {
                         return Err(syn::Error::new(
                             ident.span(),
                             format!(
-                                "unknown rite argument: `{}`. Supported: tier names \
-                                 (v1, v2, v3, v4, neon, arm_v2, wasm128, scalar, default, ...), \
-                                 `stub`, `import_intrinsics`, `import_magetypes`, `cfg(feature)`.",
-                                other
+                                "`{name}` after `{}` is not a tier name. \
+                                 `+`/`-` modifiers apply only to tiers \
+                                 (v1, v2, v3, v4, neon, arm_v2, wasm128, scalar, default, ...).",
+                                if is_removal { "-" } else { "+" }
                             ),
                         ));
+                    }
+                }
+            } else {
+                let ident: Ident = input.parse()?;
+                match ident.to_string().as_str() {
+                    "stub" => {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "`stub` has been removed. Use `incant!` for cross-arch dispatch instead.",
+                        ));
+                    }
+                    "import_intrinsics" => args.import_intrinsics = true,
+                    "import_magetypes" => args.import_magetypes = true,
+                    "cfg" => {
+                        let content;
+                        syn::parenthesized!(content in input);
+                        let feat: Ident = content.parse()?;
+                        args.cfg_feature = Some(feat.to_string());
+                    }
+                    "default" | "_default" => {
+                        // Tokenless fallback tier. No ScalarToken parameter, no
+                        // target_feature, no cfg-gating — just an `#[inline]`
+                        // variant named `_default` that slots into `incant!`'s
+                        // suffix convention for fully portable fallbacks.
+                        additions.push(String::from(DEFAULT_TIER_SENTINEL));
+                    }
+                    other => {
+                        if let Some(canonical) = tier_to_canonical_token(other) {
+                            additions.push(String::from(canonical));
+                        } else {
+                            return Err(syn::Error::new(
+                                ident.span(),
+                                format!(
+                                    "unknown rite argument: `{}`. Supported: tier names \
+                                     (v1, v2, v3, v4, neon, arm_v2, wasm128, scalar, default, ...), \
+                                     optional `+`/`-` tier modifiers, \
+                                     `stub`, `import_intrinsics`, `import_magetypes`, `cfg(feature)`.",
+                                    other
+                                ),
+                            ));
+                        }
                     }
                 }
             }
             if input.peek(Token![,]) {
                 let _: Token![,] = input.parse()?;
+            }
+        }
+
+        // Resolve additions minus removals, preserving first-seen order and
+        // de-duplicating (so `#[rite(v3, v3)]` is one variant, `#[rite(v3, -v3)]`
+        // is none).
+        for entry in additions {
+            if removals.contains(&entry) {
+                continue;
+            }
+            if !args.tier_tokens.contains(&entry) {
+                args.tier_tokens.push(entry);
             }
         }
 
@@ -451,4 +515,89 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
     }
 
     variants.into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(args: &str) -> RiteArgs {
+        syn::parse_str::<RiteArgs>(args).expect("RiteArgs should parse")
+    }
+
+    #[test]
+    fn single_tier() {
+        assert_eq!(parse("v3").tier_tokens, vec!["X64V3Token"]);
+    }
+
+    #[test]
+    fn multi_tier() {
+        assert_eq!(
+            parse("v3, v4").tier_tokens,
+            vec!["X64V3Token", "X64V4Token"]
+        );
+    }
+
+    #[test]
+    fn minus_scalar_is_noop_when_absent() {
+        // #48: `#[rite(v3, -scalar)]` parses and emits just the v3 variant.
+        assert_eq!(parse("v3, -scalar").tier_tokens, vec!["X64V3Token"]);
+    }
+
+    #[test]
+    fn minus_removes_listed_tier() {
+        // scalar added then removed → only v3 remains.
+        assert_eq!(parse("v3, scalar, -scalar").tier_tokens, vec!["X64V3Token"]);
+    }
+
+    #[test]
+    fn plus_prefix_adds() {
+        assert_eq!(
+            parse("+v3, +neon").tier_tokens,
+            vec!["X64V3Token", "NeonToken"]
+        );
+    }
+
+    #[test]
+    fn plain_and_plus_mix() {
+        assert_eq!(
+            parse("v3, +v4, -scalar").tier_tokens,
+            vec!["X64V3Token", "X64V4Token"]
+        );
+    }
+
+    #[test]
+    fn minus_cancels_plain() {
+        // `-v3` removes the `v3` addition → no tiers.
+        assert!(parse("v3, -v3").tier_tokens.is_empty());
+    }
+
+    #[test]
+    fn dedup() {
+        assert_eq!(parse("v3, v3").tier_tokens, vec!["X64V3Token"]);
+    }
+
+    #[test]
+    fn default_sentinel() {
+        assert_eq!(parse("default").tier_tokens, vec![DEFAULT_TIER_SENTINEL]);
+        assert_eq!(parse("v3, -default").tier_tokens, vec!["X64V3Token"]);
+    }
+
+    #[test]
+    fn tiers_coexist_with_keywords() {
+        let a = parse("v3, import_intrinsics");
+        assert_eq!(a.tier_tokens, vec!["X64V3Token"]);
+        assert!(a.import_intrinsics);
+    }
+
+    #[test]
+    fn minus_before_keyword_errors() {
+        assert!(syn::parse_str::<RiteArgs>("+import_intrinsics").is_err());
+        assert!(syn::parse_str::<RiteArgs>("-cfg").is_err());
+    }
+
+    #[test]
+    fn underscore_prefix_accepted() {
+        assert_eq!(parse("_v3, -_scalar").tier_tokens, vec!["X64V3Token"]);
+    }
 }

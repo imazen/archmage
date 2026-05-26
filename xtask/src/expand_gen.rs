@@ -269,6 +269,41 @@ fn gen_rite_tests(files: &mut Vec<TestFile>) {
                   fn main() {}\n"
             .to_string(),
     });
+
+    // #48: `+`/`-` tier modifiers. rite has no dispatch-default set, so the
+    // modifiers operate on the explicit list.
+    //
+    // `(v3, -scalar)` — `-scalar` is a no-op (scalar was never added), so this
+    // is the single-tier v3 form. Demonstrates the muscle-memory grammar parses.
+    files.push(TestFile {
+        path: "rite/modifier_minus_scalar.rs".to_string(),
+        content: "use archmage::rite;\n\
+                  #[rite(v3, -scalar)]\n\
+                  fn helper(a: f32) -> f32 { a * 2.0 }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+
+    // `(+v3, +neon)` — all-`+`, two tiers → multi-tier (fn_v3, fn_neon).
+    files.push(TestFile {
+        path: "rite/modifier_plus_multi.rs".to_string(),
+        content: "use archmage::rite;\n\
+                  #[rite(+v3, +neon)]\n\
+                  fn compute(data: &[f32; 4]) -> f32 { data.iter().sum() }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+
+    // `(v3, +v4, -scalar)` — plain + `+` + `-` mixed → multi-tier (fn_v3, fn_v4);
+    // the `-scalar` drops a fallback that was never listed (no-op).
+    files.push(TestFile {
+        path: "rite/modifier_mixed.rs".to_string(),
+        content: "use archmage::rite;\n\
+                  #[rite(v3, +v4, -scalar)]\n\
+                  fn compute(data: &[f32; 4]) -> f32 { data.iter().sum() }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
 }
 
 // ============================================================================

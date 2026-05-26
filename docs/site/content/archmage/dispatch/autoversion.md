@@ -198,7 +198,7 @@ fn process(data: &[f32]) -> f32 { ... }
 fn process(data: &[f32]) -> f32 { ... }
 ```
 
-All entries must be `+`/`-` (modifier mode) or none (override mode) — mixing is a compile error.
+Plain tiers may be mixed with `+`/`-` modifiers (issue #48). Any `+` entry makes the list additive (a plain tier is treated as `+tier`); `-` with no `+` makes it an override of the plain tiers (`-` drops the fallback). An all-plain list replaces the defaults.
 
 ## Feature-gated tiers
 

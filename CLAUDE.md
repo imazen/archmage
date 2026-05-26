@@ -348,10 +348,16 @@ incant!(sum(data), [-neon, -wasm128])   // remove tiers
 incant!(sum(data), [+v4])               // make v4 unconditional (no avx512 gate)
 incant!(sum(data), [+default])          // replace scalar with tokenless default
 incant!(sum(data), [-neon, +v1])        // combine freely
+incant!(sum(data), [v3, +v1])           // plain + modifier (issue #48): additive
+incant!(sum(data), [v3, -scalar])       // plain + `-`: override set {v3}, drop fallback
 ```
 
-All entries must be `+`/`-` (modifier mode) or none (override mode) — mixing is a compile error.
-`default` and `scalar` are interchangeable fallback slots (`+default` replaces `scalar`).
+Plain tiers may be mixed with `+`/`-` (issue #48). Mode is chosen automatically:
+any `+` ⇒ **additive** (start from defaults; a plain tier is treated as `+tier`).
+`-` with no `+` ⇒ **override** using the plain tiers, where `-tier` removes from
+that set and `-scalar`/`-default` drop the auto-appended fallback. All-plain stays
+override (replace defaults). `default` and `scalar` are interchangeable fallback
+slots (`+default` replaces `scalar`).
 
 Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`,
 `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
@@ -401,7 +407,9 @@ the `_` prefix — `_v3` is identical to `v3`.
 **Feature-gated tiers:** `#[autoversion(v4(cfg(avx512)), v3, neon)]`. Shorthand `v4(avx512)` also works.
 
 **Tier list modifiers:** `#[autoversion(+arm_v2)]` adds to defaults, `#[autoversion(-wasm128)]`
-removes. All entries must be `+`/`-` or none — mixing is a compile error.
+removes. Plain tiers may be mixed with `+`/`-` (issue #48): any `+` ⇒ additive (plain
+treated as `+tier`); `-` with no `+` ⇒ override using the plain tiers (`-` drops the
+fallback). All-plain stays override.
 
 **Self receivers:** `#[autoversion(_self = MyType)]` — use `_self` in body.
 

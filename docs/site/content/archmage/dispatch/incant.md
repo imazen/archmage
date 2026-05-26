@@ -239,7 +239,7 @@ incant!(process(data), [+neon(cfg(neon))])
 incant!(process(data), [-neon, -wasm128, +v1])
 ```
 
-All entries in a tier list must be modifiers (`+`/`-`) or all must be plain names — mixing is a compile error. `+default` replaces `scalar` as the fallback slot.
+Plain tier names may be mixed with `+`/`-` modifiers (issue #48). The mode is chosen automatically: any `+` entry makes the list **additive** (start from the defaults; a plain tier is treated as `+tier`), while `-` entries with no `+` make it an **override** of the plain tiers (where `-tier` removes from the set and `-scalar`/`-default` drop the auto-appended fallback — e.g. `[v3, -scalar]` resolves to just `v3`). An all-plain list still replaces the defaults. `+default` replaces `scalar` as the fallback slot.
 
 ## Token Position
 
