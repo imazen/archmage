@@ -226,11 +226,16 @@ fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
 
 #[arcane]
 fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
-    let sum = _mm256_hadd_ps(v, v);
-    let sum = _mm256_hadd_ps(sum, sum);
-    let low = _mm256_castps256_ps128(sum);
-    let high = _mm256_extractf128_ps::<1>(sum);
-    _mm_cvtss_f32(_mm_add_ss(low, high))
+    // Fold 256→128, then the movehdup/movehl reduction. (Avoid
+    // `_mm256_hadd_ps` for horizontal sums — it's slower, 3 µops/6c vs
+    // 2 µops/4c for shuffle+add, and operates within 128-bit lanes.)
+    let low = _mm256_castps256_ps128(v);
+    let high = _mm256_extractf128_ps::<1>(v);
+    let q = _mm_add_ps(low, high);
+    let shuf = _mm_movehdup_ps(q);
+    let sums = _mm_add_ps(q, shuf);
+    let shuf = _mm_movehl_ps(shuf, sums);
+    _mm_cvtss_f32(_mm_add_ss(sums, shuf))
 }
 
 fn main() {
@@ -281,7 +286,7 @@ let result = sum_of_squares(&my_data);
 
 `#[autoversion]` generates a separate copy of your function for each architecture tier — each compiled with `#[target_feature]` to unlock the auto-vectorizer — plus a runtime dispatcher that picks the best one. On x86-64 with AVX2+FMA, that loop compiles to `vfmadd231ps` (8 floats per cycle). On ARM, you get `fmla`. The `_scalar` fallback compiles without SIMD features as a safety net.
 
-The macro auto-injects a hidden `SimdToken` parameter internally — you don't need to add one. The generated dispatcher has your original signature. You can optionally write `_token: SimdToken` if you prefer the explicit style, but it's not required.
+Write the function tokenless, as above — the generated dispatcher keeps your original signature and each per-tier variant gets its concrete token injected automatically. (An explicit `_token: SimdToken` parameter is still accepted but deprecated since 0.9.11 and slated for removal in v1.0 — don't add one.)
 
 **What gets generated** (default tiers):
 
@@ -376,7 +381,8 @@ pub fn scale_plane(plane: &mut [f32], factor: f32) {
 | `_v1` | `X64V1Token` | x86_64 | SSE2 (baseline) |
 | `_v2` | `X64V2Token` | x86_64 | + SSE4.2, POPCNT |
 | `_v3` | `X64V3Token` | x86_64 | + AVX2, FMA, BMI2 |
-| `_v4` | `X64V4Token` | x86_64 | + AVX-512 |
+| `_v4` | `X64V4Token` | x86_64 | + AVX-512 F/BW/CD/DQ/VL |
+| `_v4x` | `X64V4xToken` | x86_64 | + VBMI, VNNI, GFNI, VAES, … (Ice Lake, Zen 4+) |
 | `_neon` | `NeonToken` | aarch64 | NEON |
 | `_arm_v2` | `Arm64V2Token` | aarch64 | + CRC, RDM, DotProd, AES, SHA2 |
 | `_arm_v3` | `Arm64V3Token` | aarch64 | + SHA3, I8MM, BF16 |
@@ -385,7 +391,7 @@ pub fn scale_plane(plane: &mut [f32], factor: f32) {
 
 By default, `incant!` tries `_v4` (if the `avx512` feature is enabled), `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon, scalar])`. Tier names accept the `_` prefix — `_v3` is identical to `v3`, matching the suffix on generated function names.
 
-Instead of restating the entire default list, use modifiers: `[+arm_v2]` adds a tier, `[-wasm128]` removes one, `[+v4]` makes v4 unconditional. Gate a tier on a Cargo feature with `v4(cfg(avx512))` (shorthand: `v4(avx512)`). All entries must be modifiers or all plain — mixing is a compile error.
+Instead of restating the entire default list, use modifiers: `[+arm_v2]` adds a tier, `[-wasm128]` removes one, `[+v4]` makes v4 unconditional. Gate a tier on a Cargo feature with `v4(cfg(avx512))` (shorthand: `v4(avx512)`). Plain tiers may be mixed with modifiers: any `+` makes the list additive (a plain tier is treated as `+tier`); a plain list with `-` removals (no `+`) overrides the defaults with the plain tiers and drops the named fallback — so `[v3, -scalar]` resolves to just `v3`.
 
 Always include `scalar` (or `default`) in explicit tier lists — it documents the fallback path. (Currently auto-appended if omitted; will become a compile error in v1.0.)
 
@@ -427,7 +433,7 @@ Each variant's first parameter is the matching token type — `_v3` takes `X64V3
 
 Gate a tier on a Cargo feature with the `tier(cfg(feature))` syntax: `incant!(sum(data), [v4(cfg(avx512)), v3, neon, scalar])`. The shorthand `v4(avx512)` also works.
 
-Use modifiers to tweak the default tier list without restating it: `[+arm_v2]` adds a tier, `[-wasm128]` removes one. All entries must be modifiers or all plain.
+Use modifiers to tweak the default tier list without restating it: `[+arm_v2]` adds a tier, `[-wasm128]` removes one. Plain tiers may be mixed with `+`/`-` (any `+` ⇒ additive; plain + `-` with no `+` ⇒ override the plain set and drop the named fallback, e.g. `[v3, -scalar]` → just `v3`).
 
 Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
 
@@ -450,7 +456,9 @@ Inside `#[arcane]` or `#[autoversion]` bodies, `incant!` is automatically rewrit
 | `X64CryptoToken` | | V2 + PCLMULQDQ, AES-NI | Westmere 2010+ |
 | `X64V3Token` | — | + AVX2, FMA, BMI2 | Haswell 2013+, Zen 1+ |
 | `X64V3CryptoToken` | | V3 + VPCLMULQDQ, VAES | Zen 3+ 2020, Alder Lake 2021+ |
-| `X64V4Token` | `Server64` | + AVX-512 (requires `avx512` feature) | Skylake-X 2017+, Zen 4+ |
+| `X64V4Token` | `Server64` | + AVX-512 F/BW/CD/DQ/VL (requires `avx512` feature) | Skylake-X 2017+, Zen 4+ |
+| `X64V4xToken` | | V4 + VBMI, VNNI, VBMI2, BITALG, GFNI, VAES, VPCLMULQDQ (requires `avx512`) | Ice Lake 2019+, Zen 4+ |
+| `Avx512Fp16Token` | | + AVX-512 FP16 (requires `avx512`) | Sapphire Rapids 2023+ |
 | `NeonToken` | `Arm64` | NEON | All 64-bit ARM |
 | `Arm64V2Token` | | + CRC, RDM, DotProd, FP16, AES, SHA2 | A55+, M1+, Graviton 2+ |
 | `Arm64V3Token` | | + FHM, FCMA, SHA3, I8MM, BF16 | A510+, M2+, Snapdragon X |

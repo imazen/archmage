@@ -94,11 +94,9 @@ fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 {
 // Token-based: same behavior, token threaded through
 #[rite(import_intrinsics)]
 fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
-    let sum = _mm256_hadd_ps(v, v);
-    let sum = _mm256_hadd_ps(sum, sum);
-    let low = _mm256_castps256_ps128(sum);
-    let high = _mm256_extractf128_ps::<1>(sum);
-    _mm_cvtss_f32(_mm_add_ss(low, high))
+    let mut lanes = [0.0f32; 8];
+    _mm256_storeu_ps(&mut lanes, v);
+    lanes.iter().sum::<f32>()
 }
 ```
 
@@ -158,9 +156,9 @@ The tier name (`v3`) maps to the same features as `X64V3Token`. No token appears
 #[rite(v3, v4, import_intrinsics)]
 fn process(data: &[f32; 4]) -> f32 {
     let v = _mm_loadu_ps(data);
-    let sum = _mm_hadd_ps(v, v);
-    let sum = _mm_hadd_ps(sum, sum);
-    _mm_cvtss_f32(sum)
+    let mut lanes = [0.0f32; 4];
+    _mm_storeu_ps(&mut lanes, v);
+    lanes.iter().sum::<f32>()
 }
 
 // Generated — two suffixed variants:
@@ -170,9 +168,9 @@ fn process(data: &[f32; 4]) -> f32 {
 fn process_v3(data: &[f32; 4]) -> f32 {
     use archmage::intrinsics::x86_64::*;
     let v = _mm_loadu_ps(data);
-    let sum = _mm_hadd_ps(v, v);
-    let sum = _mm_hadd_ps(sum, sum);
-    _mm_cvtss_f32(sum)
+    let mut lanes = [0.0f32; 4];
+    _mm_storeu_ps(&mut lanes, v);
+    lanes.iter().sum::<f32>()
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -181,9 +179,9 @@ fn process_v3(data: &[f32; 4]) -> f32 {
 fn process_v4(data: &[f32; 4]) -> f32 {
     use archmage::intrinsics::x86_64::*;
     let v = _mm_loadu_ps(data);
-    let sum = _mm_hadd_ps(v, v);
-    let sum = _mm_hadd_ps(sum, sum);
-    _mm_cvtss_f32(sum)
+    let mut lanes = [0.0f32; 4];
+    _mm_storeu_ps(&mut lanes, v);
+    lanes.iter().sum::<f32>()
 }
 ```
 
@@ -262,9 +260,9 @@ All options (`import_intrinsics`, `import_magetypes`) work with multi-tier:
 #[rite(v3, v4, import_intrinsics)]
 fn process(data: &[f32; 4]) -> f32 {
     let v = _mm_loadu_ps(data);
-    let sum = _mm_hadd_ps(v, v);
-    let sum = _mm_hadd_ps(sum, sum);
-    _mm_cvtss_f32(sum)
+    let mut lanes = [0.0f32; 4];
+    _mm_storeu_ps(&mut lanes, v);
+    lanes.iter().sum::<f32>()
 }
 // Generates: process_v3(), process_v4() on x86_64
 // Cfg'd out on other architectures

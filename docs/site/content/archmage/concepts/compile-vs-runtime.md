@@ -75,11 +75,9 @@ fn outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
 #[rite(import_intrinsics)]
 fn inner(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_loadu_ps(data);
-    let sum = _mm256_hadd_ps(v, v);
-    let sum = _mm256_hadd_ps(sum, sum);
-    let low = _mm256_castps256_ps128(sum);
-    let high = _mm256_extractf128_ps::<1>(sum);
-    _mm_cvtss_f32(_mm_add_ss(low, high))
+    let mut lanes = [0.0f32; 8];
+    _mm256_storeu_ps(&mut lanes, v);
+    lanes.iter().sum::<f32>()
 }
 ```
 

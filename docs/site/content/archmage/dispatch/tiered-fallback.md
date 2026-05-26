@@ -100,17 +100,20 @@ pub fn sum_f32(data: &[f32]) -> f32 {
 #[arcane(import_intrinsics)]
 fn sum_avx2(token: X64V3Token, data: &[f32]) -> f32 {
     let mut acc = _mm256_setzero_ps();
-    for chunk in data.chunks_exact(8) {
-        let v = _mm256_loadu_ps(chunk.as_ptr());
+    let chunks = data.chunks_exact(8);
+    let remainder = chunks.remainder();
+    for chunk in chunks {
+        // Safe load: import_intrinsics shadows _mm256_loadu_ps with the
+        // reference form, so pass &[f32; 8] — not a raw pointer.
+        let v = _mm256_loadu_ps(chunk.try_into().unwrap());
         acc = _mm256_add_ps(acc, v);
     }
-    // Horizontal sum: hadd twice, then 128-bit halves
-    let sum = _mm256_hadd_ps(acc, acc);
-    let sum = _mm256_hadd_ps(sum, sum);
-    let low = _mm256_castps256_ps128(sum);
-    let high = _mm256_extractf128_ps::<1>(sum);
-    let mut total = _mm_cvtss_f32(_mm_add_ss(low, high));
-    for &x in data.chunks_exact(8).remainder() {
+    // Reduce 8 lanes → scalar. (Store + sum is clear and avoids _mm256_hadd_ps,
+    // which is slower and reduces within 128-bit lanes.)
+    let mut lanes = [0.0f32; 8];
+    _mm256_storeu_ps(&mut lanes, acc);
+    let mut total = lanes.iter().sum::<f32>();
+    for &x in remainder {
         total += x;
     }
     total

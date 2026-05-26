@@ -58,11 +58,9 @@ use archmage::{incant, arcane};
 #[arcane(import_intrinsics)]
 fn sum_v3(_token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_loadu_ps(data);
-    let sum = _mm256_hadd_ps(v, v);
-    let sum = _mm256_hadd_ps(sum, sum);
-    let low = _mm256_castps256_ps128(sum);
-    let high = _mm256_extractf128_ps::<1>(sum);
-    _mm_cvtss_f32(_mm_add_ss(low, high))
+    let mut lanes = [0.0f32; 8];
+    _mm256_storeu_ps(&mut lanes, v);
+    lanes.iter().sum::<f32>()
 }
 
 fn sum_scalar(data: &[f32; 8]) -> f32 {
@@ -156,11 +154,9 @@ fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let va = _mm256_loadu_ps(a);
     let vb = _mm256_loadu_ps(b);
     let mul = _mm256_mul_ps(va, vb);
-    let sum = _mm256_hadd_ps(mul, mul);
-    let sum = _mm256_hadd_ps(sum, sum);
-    let low = _mm256_castps256_ps128(sum);
-    let high = _mm256_extractf128_ps::<1>(sum);
-    _mm_cvtss_f32(_mm_add_ss(low, high))
+    let mut lanes = [0.0f32; 8];
+    _mm256_storeu_ps(&mut lanes, mul);
+    lanes.iter().sum::<f32>()
 }
 
 // NEON variant (128-bit, process two halves)

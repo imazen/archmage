@@ -57,13 +57,10 @@ fn distance_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
     let vb = _mm256_loadu_ps(b);
     let diff = _mm256_sub_ps(va, vb);
     let sq = _mm256_mul_ps(diff, diff);
-    // Horizontal sum
-    let sum = _mm256_hadd_ps(sq, sq);
-    let sum = _mm256_hadd_ps(sum, sum);
-    let low = _mm256_castps256_ps128(sum);
-    let high = _mm256_extractf128_ps::<1>(sum);
-    let total = _mm_add_ss(low, high);
-    _mm_cvtss_f32(_mm_sqrt_ss(total))
+    // Horizontal sum → scalar (store + sum; avoids the slower _mm256_hadd_ps)
+    let mut lanes = [0.0f32; 8];
+    _mm256_storeu_ps(&mut lanes, sq);
+    lanes.iter().sum::<f32>().sqrt()
 }
 ```
 
