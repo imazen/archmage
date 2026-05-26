@@ -700,8 +700,12 @@ macro_rules! __winarm_cpufeatures_detected {
         const __FEAT: ::core::option::Option<$crate::detect::__priv_winarm::Feature> =
             $crate::detect::__priv_winarm::Feature::from_name($feature);
         match __FEAT {
+            // Route through the single registry-aware entry point. The macro
+            // deliberately does NOT name a winarm detection API directly —
+            // see `registry_aware_detected` for why, and the
+            // `winarm_registry_path_guard` test for enforcement.
             ::core::option::Option::Some(f) => {
-                $crate::detect::__priv_winarm::Features::current_full().has(f)
+                $crate::detect::__priv_winarm::registry_aware_detected(f)
             }
             ::core::option::Option::None => false,
         }
@@ -711,7 +715,35 @@ macro_rules! __winarm_cpufeatures_detected {
 #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
 #[doc(hidden)]
 pub mod __priv_winarm {
+    // NOTE: only `Feature` + `Features` are re-exported. The IPFP-only
+    // `is_aarch64_feature_detected_fast!` macro is intentionally NOT
+    // re-exported here, so the bridge macro cannot reach it via this path.
     pub use ::winarm_cpufeatures::{Feature, Features};
+
+    /// The ONE registry-aware detection entry point archmage uses on
+    /// Windows-on-ARM.
+    ///
+    /// MUST call [`Features::current_full`] — the only `winarm-cpufeatures`
+    /// API that consults the `ID_AA64*_EL1` registry decoder. It must NEVER
+    /// be changed to `Features::current()`, `is_detected`, `query_fast`, or
+    /// `is_aarch64_feature_detected_fast!`: those are IPFP-only and silently
+    /// drop the ~30 registry-classified feature names Windows'
+    /// `IsProcessorFeaturePresent` cannot see (`fhm`, `fcma`, `sm4`,
+    /// `lse128`, `paca`, `pacg`, `bti`, `mte`, `flagm`, `rcpc2`/`rcpc3`,
+    /// `rand`, …). With the IPFP-only path, `Arm64V2Token` /
+    /// `Arm64V3Token::summon()` return `None` on hardware that has those
+    /// features (Cobalt 100, Snapdragon X, Graviton 3+), making the
+    /// `registry` Cargo feature inert.
+    ///
+    /// This regression compiles cleanly and passes every test except the
+    /// `#[ignore]`'d `cobalt100_runner_must_summon_full_arm64_v3` hardware
+    /// assertion on the `windows-11-arm` CI runner. The
+    /// `winarm_registry_path_guard` test guards this function's body on
+    /// every platform so the regression can't land silently.
+    #[inline]
+    pub fn registry_aware_detected(feat: Feature) -> bool {
+        Features::current_full().has(feat)
+    }
 }
 
 // ============================================================================
