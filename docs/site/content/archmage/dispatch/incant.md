@@ -28,6 +28,8 @@ flowchart TD
 
 Variants for other architectures are excluded by `#[cfg(target_arch)]` at compile time — you don't need `_neon` when compiling for x86-64, for example. You must define every variant in your tier list, plus `_scalar`.
 
+> **`incant!` targets must be safe-wrapped — use `#[arcane]`, not `#[rite]`.** `incant!` calls each variant from a cold (non-`#[target_feature]`) context, so the variant must be safe to call from there. `#[arcane]` (and `#[magetypes]`) generate a safe wrapper; `#[rite]` does not — calling a `#[rite]` variant from `incant!` is a compile error (`E0133`, requires `unsafe`). Reach `#[rite]` helpers *from inside* an `#[arcane]`/`#[magetypes]` variant instead.
+
 ### Passthrough Mode
 
 {% mermaid() %}

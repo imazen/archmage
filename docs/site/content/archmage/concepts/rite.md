@@ -9,6 +9,8 @@ weight = 4
 
 For most code, `#[arcane]` works for both entry points and helpers (LLVM inlines the wrapper when features match). `#[rite]` is useful when you want explicit `#[target_feature]` without a wrapper, or when generating multi-tier suffixed variants.
 
+> Because `#[rite]` has no safe wrapper, you **cannot** use a `#[rite]` function as an `incant!` dispatch target — `incant!` calls variants from cold code, and a wrapperless `#[target_feature]` call there is a compile error (`E0133`). Use `#[arcane]` for `incant!` targets; reach `#[rite]` helpers from *inside* a matching-feature `#[arcane]`/`#[magetypes]` body.
+
 ## Three Modes
 
 `#[rite]` works in three modes:
