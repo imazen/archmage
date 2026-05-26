@@ -2,11 +2,6 @@
 
 ## [Unreleased]
 
-### Added
-
-- Windows-on-ARM detection now routes unconditionally through `winarm-cpufeatures` ≥ 0.1.2 via `Features::current_full().has(Feature::from_name(...))`. The `__winarm_cpufeatures_detected!` bridge macro folds each string-literal feature name to a `Feature` discriminant at compile time (using winarm's new `pub const fn from_name`), then bit-tests a single cached snapshot — no per-call name dispatch, and the full snapshot path includes the registry-decoded `ID_AA64*_EL1` layer. Every aarch64 token's `summon()` slow path inherits the wider coverage automatically: recovers ~30 feature names that stdarch's IPFP-only Windows backend cannot see (`fhm`, `fcma`, `sha3`, `i8mm`, `bf16`, `paca`, `bti`, `dpb`, `flagm`, `mte`, `frintts`, `sm4`, the SVE2 variants, SME, FP8, …). Sandboxed callers can disable the registry layer at runtime via `winarm_cpufeatures::set_registry_enabled(false)`. The dep is target-scoped to `cfg(all(target_os = "windows", target_arch = "aarch64"))` and the crate is internally cfg-gated to that combo, so it never resolves on any other target. No cargo feature flag required. (Initial wiring went through `_fast`, which is IPFP-only and silently dropped registry-classified names — the Cobalt 100 hardware assertion below caught it before any release.)
-- `cobalt100_runner_must_summon_full_arm64_v3` test in `arm_feature_intrinsics`. Hardware assertion that the GH `windows-11-arm` and `ubuntu-24.04-arm` runners (both Neoverse N2 / Cobalt 100) detect the full V2 + V3 token set. CI runs it via `--ignored` on those two matrix entries; without it a detection regression on Windows would silently degrade `summon()` to `None` and the existing implication tests would skip with no failure.
-
 ### QUEUED BREAKING CHANGES
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
@@ -17,6 +12,27 @@
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
+
+## [0.9.24] - 2026-05-26
+
+### Added
+
+- Windows-on-ARM detection now routes unconditionally through `winarm-cpufeatures` ≥ 0.1.2 via `Features::current_full().has(Feature::from_name(...))`. The `__winarm_cpufeatures_detected!` bridge macro folds each string-literal feature name to a `Feature` discriminant at compile time (using winarm's new `pub const fn from_name`), then bit-tests a single cached snapshot — no per-call name dispatch, and the full snapshot path includes the registry-decoded `ID_AA64*_EL1` layer. Every aarch64 token's `summon()` slow path inherits the wider coverage automatically: recovers ~30 feature names that stdarch's IPFP-only Windows backend cannot see (`fhm`, `fcma`, `sha3`, `i8mm`, `bf16`, `paca`, `bti`, `dpb`, `flagm`, `mte`, `frintts`, `sm4`, the SVE2 variants, SME, FP8, …). Sandboxed callers can disable the registry layer at runtime via `winarm_cpufeatures::set_registry_enabled(false)`. The dep is target-scoped to `cfg(all(target_os = "windows", target_arch = "aarch64"))` and the crate is internally cfg-gated to that combo, so it never resolves on any other target. No cargo feature flag required (962fceb, e13907d, 7fd6749).
+- `cobalt100_runner_must_summon_full_arm64_v3` test in `arm_feature_intrinsics`. Hardware assertion that the GH `windows-11-arm` and `ubuntu-24.04-arm` runners (both Neoverse N2 / Cobalt 100) detect the full V2 + V3 token set. CI runs it via `--ignored` on those two matrix entries; without it a detection regression on Windows would silently degrade `summon()` to `None` and the existing implication tests would skip with no failure (e13907d).
+- Tier lists across `incant!`, `#[autoversion]`, `#[magetypes]`, and `#[rite]` now accept plain tiers **mixed** with `+`/`-` modifiers, and `#[rite]` gains `+`/`-` support. Any `+` makes the list additive (a plain tier is treated as `+tier`); a plain list with `-` removals and no `+` overrides the defaults with the plain tiers and drops the named fallback — so `#[magetypes(v3, -scalar)]` resolves to just `v3`, replacing the brittle `[-v4, -neon, -wasm128, -scalar]` workaround (#48, e365a6b).
+- `magetypes/tests/incant_chain_combinations.rs` — combinatorial coverage threading `incant!` through chains that mix every macro kind; documents that `incant!` cold-dispatch targets must be safe-wrapped (`#[arcane]`/`#[magetypes]`/plain/`#[autoversion]`-default), not `#[rite]` (67fdb89).
+
+### Changed
+
+- `f32` `reduce_add` now uses the adjacent-pair tree `(v0+v1)+(v2+v3)` consistently across x86 v3 (128/256-bit), NEON, WASM, scalar, and the polyfill. x86 replaces `_mm_hadd_ps`/`_mm256_hadd_ps` with `shuffle+add` (same tree, ~6–8 % faster on Zen 4: 3 µops → 2 µops). **x86 v3, NEON, and AVX-512 numeric results are unchanged; WASM, scalar, and polyfilled `f32` `reduce_add` now match x86/NEON** — wide-magnitude `f32` sums that previously diverged across those backends are now consistent. `f64` and AVX-512 512-bit reductions are untouched (f6452e4, a9ef9f2).
+
+### Fixed
+
+- Hardened the Windows-on-ARM bridge against silently reverting to the IPFP-only `_fast` path (which skips the registry decoder and drops the ~30 registry-classified features above). The bridge funnels through a single `registry_aware_detected()` → `Features::current_full()` entry point, guarded by a cross-platform source-scan test (`winarm_registry_path_guard`) that fails on every CI lane — not just the lone `windows-11-arm` runner — if the fast path creeps back (6ade322).
+
+### Docs
+
+- README: add the `_v4x` tier and the `X64V4xToken` / `Avx512Fp16Token` rows; correct the tier-mixing rules (#48 made mixing legal); replace the `_mm256_hadd_ps` horizontal-sum example; stop recommending the deprecated `_token: SimdToken` `#[autoversion]` parameter. docs/site: sweep `hadd` reductions out of the concept/dispatch examples, fix a raw-pointer load, and note that `incant!` dispatch targets must be safe-wrapped — `#[arcane]`, not `#[rite]` (78fbe95, 5dd73c8).
 
 ## 0.9.23 — 2026-04-26
 
