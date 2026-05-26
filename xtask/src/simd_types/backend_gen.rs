@@ -1707,8 +1707,9 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
     let reduce_add = || -> String {
         match (elem, lanes) {
             ("f32", 4) => "(a[0] + a[1]) + (a[2] + a[3])".to_string(),
-            ("f32", 8) => "((a[0] + a[4]) + (a[1] + a[5])) + ((a[2] + a[6]) + (a[3] + a[7]))"
-                .to_string(),
+            ("f32", 8) => {
+                "((a[0] + a[4]) + (a[1] + a[5])) + ((a[2] + a[6]) + (a[3] + a[7]))".to_string()
+            }
             _ => {
                 let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}]")).collect();
                 items.join(" + ")

@@ -550,20 +550,20 @@ fn generate_horizontal_ops(ty: &SimdType) -> String {
         )
     } else {
         match lanes {
-        2 => format!("{extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0)"),
-        4 => format!(
-            "{extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0) + {extract_fn}::<2>(self.0) + {extract_fn}::<3>(self.0)"
-        ),
-        8 => formatdoc! {r#"
+            2 => format!("{extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0)"),
+            4 => format!(
+                "{extract_fn}::<0>(self.0) + {extract_fn}::<1>(self.0) + {extract_fn}::<2>(self.0) + {extract_fn}::<3>(self.0)"
+            ),
+            8 => formatdoc! {r#"
             let arr = self.to_array();
             arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7]"#},
-        16 => formatdoc! {r#"
+            16 => formatdoc! {r#"
             let arr = self.to_array();
             arr.iter().copied().fold(0{elem}, |a, b| a.wrapping_add(b))"#},
-        _ => formatdoc! {r#"
+            _ => formatdoc! {r#"
             let arr = self.to_array();
             arr.iter().copied().sum()"#},
-    }
+        }
     };
 
     let mut code = formatdoc! {r#"
