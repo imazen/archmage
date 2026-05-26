@@ -266,6 +266,9 @@ mod cross_kind_chains {
 // 4. Permutation sweep — every cold dispatcher correct on every host tier
 // ============================================================================
 
+// `archmage::testing` (permutation harness) requires `std`; the other tests
+// in this file run under no_std too.
+#[cfg(feature = "std")]
 #[test]
 fn all_chains_correct_across_token_permutations() {
     use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
