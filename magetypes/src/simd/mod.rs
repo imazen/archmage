@@ -50,6 +50,9 @@ mod impls;
 /// Generic SIMD types parameterized by backend (e.g., `generic::f32x8<x64v3>`).
 pub mod generic;
 
+// Branchless, vectorized f16 ↔ f32 converters (generic over backend token).
+pub use generic::{f16_to_f32_slice, f16_to_f32x4, f32_to_f16_slice, f32_to_f16x4};
+
 // ============================================================================
 // Type aliases: map the 10 migrated type names to their generic versions.
 //

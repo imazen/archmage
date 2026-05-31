@@ -13,6 +13,10 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+### Added
+
+- magetypes: branchless, vectorized **f16 (IEEE-754 binary16) ↔ f32** converters in `simd::generic::convert_f16`, generic over the backend token (`T: F32x4Convert`), so NEON / WASM128 / SSE / scalar all get a straight-line SIMD path instead of an element-by-element software decode. Re-exported at `simd::{f16_to_f32x4, f32_to_f16x4, f16_to_f32_slice, f32_to_f16_slice}` and `simd::generic::*`. Decode uses Fabian Giesen's magic-multiply (`2^112` rescale, branchless Inf/NaN fixup); encode uses Giesen's `float_to_half_full_rtne` (RTNE magic-add, subnormal-flush, ±Inf saturation, NaN→canonical qNaN). Verified **bit-identical to a scalar IEEE reference exhaustively**: all 65 536 f16 decode inputs (incl. NaN bit patterns) and **all 2³² f32 encode inputs** (finite/Inf; NaN→NaN per the documented payload-may-differ contract) — `tests/convert_f16_exhaustive.rs`. Pure safe arithmetic (no `unsafe`, no intrinsics), so correctness is arch-independent. Additive only (semver-minor); `cargo semver-checks` reports no breaking change. Native F16C (x86) / `vcvt_f16_f32` (NEON) intrinsic routing is a perf follow-up.
+
 ## [0.9.24] - 2026-05-26
 
 ### Added
