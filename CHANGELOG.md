@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- archmage: anchor root-level paths in `include` with leading `/` to prevent `docs/site/themes/goyo` git submodule files from leaking into published tarballs via gitignore-style glob depth-matching (e.g. `LICENSE*` was matching `docs/site/themes/goyo/LICENSE`)
+
 ### QUEUED BREAKING CHANGES
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)

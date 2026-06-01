@@ -25,11 +25,13 @@ include = [
     "tests/**",
     "examples/**",
     "token-registry.toml",
-    "Cargo.toml",
-    "Cargo.lock",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE*",
+    # Anchor root-level files with leading slash so they don't match inside
+    # the docs/site/themes/goyo git submodule (gitignore-style: no slash → any depth).
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE*",
 ]
 
 [features]
