@@ -181,22 +181,6 @@ fn exhaustive_decode<T: F16Convert>(token: T) {
     );
 }
 
-#[test]
-fn decode_exhaustive_scalar() {
-    exhaustive_decode(archmage::ScalarToken);
-}
-
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn decode_exhaustive_x64v3() {
-    use archmage::SimdToken;
-    if let Some(t) = archmage::X64V3Token::summon() {
-        exhaustive_decode(t);
-    } else {
-        eprintln!("X64V3Token not available on this host — scalar path covers correctness");
-    }
-}
-
 // ============================================================================
 // Encode: every f16-roundtrip value, the boundary bands exhaustively, and a
 // dense strided sweep of the whole f32 range.
@@ -331,114 +315,129 @@ fn encode_dense_sweep<T: F16Convert>(token: T) {
     );
 }
 
-#[test]
-fn encode_f16_roundtrip_scalar() {
-    encode_f16_roundtrip(archmage::ScalarToken);
-}
+// ============================================================================
+// Portable (scalar-token) tests — no architecture gate. These run everywhere
+// and prove the branchless software kernel against the oracle.
+// ============================================================================
+mod scalar {
+    use super::*;
 
-#[test]
-fn encode_boundary_bands_scalar() {
-    encode_boundary_bands(archmage::ScalarToken);
-}
-
-#[test]
-fn encode_dense_sweep_scalar() {
-    encode_dense_sweep(archmage::ScalarToken);
-}
-
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn encode_f16_roundtrip_x64v3() {
-    use archmage::SimdToken;
-    if let Some(t) = archmage::X64V3Token::summon() {
-        encode_f16_roundtrip(t);
+    #[test]
+    fn decode_exhaustive_scalar() {
+        exhaustive_decode(archmage::ScalarToken);
     }
-}
 
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn encode_boundary_bands_x64v3() {
-    use archmage::SimdToken;
-    if let Some(t) = archmage::X64V3Token::summon() {
-        encode_boundary_bands(t);
+    #[test]
+    fn encode_f16_roundtrip_scalar() {
+        encode_f16_roundtrip(archmage::ScalarToken);
+    }
+
+    #[test]
+    fn encode_boundary_bands_scalar() {
+        encode_boundary_bands(archmage::ScalarToken);
+    }
+
+    #[test]
+    fn encode_dense_sweep_scalar() {
+        encode_dense_sweep(archmage::ScalarToken);
+    }
+
+    // ========================================================================
+    // Slice helpers: tail handling (lengths not a multiple of 4) and parity with
+    // the in-register kernel.
+    // ========================================================================
+
+    #[test]
+    fn slice_decode_matches_reference_all_lengths() {
+        // Cover every tail residue (0..7) over a buffer that includes subnormals,
+        // Inf, and assorted normals.
+        let samples: [u16; 7] = [0x0000, 0x0001, 0x3C00, 0x7BFF, 0x7C00, 0xC000, 0x83FF];
+        for len in 1..=64usize {
+            let input: Vec<u16> = (0..len).map(|i| samples[i % samples.len()]).collect();
+            let mut out = vec![0.0f32; len];
+            archmage::ScalarToken.f16_to_f32_slice(&input, &mut out);
+            for (i, (&h, &got)) in input.iter().zip(out.iter()).enumerate() {
+                assert_eq!(
+                    got.to_bits(),
+                    ref_f16_to_f32(h).to_bits(),
+                    "slice decode mismatch at len={len} idx={i} h={h:#06x}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn slice_encode_matches_reference_all_lengths() {
+        let samples: [f32; 7] = [0.0, 1.0, -2.5, 65504.0, 1e-7, f32::INFINITY, -0.0];
+        for len in 1..=64usize {
+            let input: Vec<f32> = (0..len).map(|i| samples[i % samples.len()]).collect();
+            let mut out = vec![0u16; len];
+            archmage::ScalarToken.f32_to_f16_slice(&input, &mut out);
+            for (i, (&x, &got)) in input.iter().zip(out.iter()).enumerate() {
+                assert_eq!(
+                    got,
+                    ref_f32_to_f16(x),
+                    "slice encode mismatch at len={len} idx={i} x={x}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn slice_roundtrip_decode_then_encode_is_identity() {
+        // Every f16 bit pattern decoded then re-encoded must return itself
+        // (excluding NaN payload, which the encode canonicalizes). Under Miri the
+        // 65 536-element slice round-trip is sub-sampled — see MIRI_F16_STRIDE.
+        let input: Vec<u16> = (0u32..=0xFFFF)
+            .step_by(MIRI_F16_STRIDE)
+            .map(|v| v as u16)
+            .collect();
+        let mut f32buf = vec![0.0f32; input.len()];
+        let mut back = vec![0u16; input.len()];
+        archmage::ScalarToken.f16_to_f32_slice(&input, &mut f32buf);
+        archmage::ScalarToken.f32_to_f16_slice(&f32buf, &mut back);
+        let mut nonnan_diffs = 0u64;
+        for (&h, &r) in input.iter().zip(back.iter()) {
+            if is_f16_nan(h) {
+                assert!(
+                    is_f16_nan(r),
+                    "NaN f16 {h:#06x} did not round-trip to a NaN ({r:#06x})"
+                );
+            } else if h != r {
+                nonnan_diffs += 1;
+                eprintln!("roundtrip non-identity h={h:#06x} -> {r:#06x}");
+            }
+        }
+        assert_eq!(
+            nonnan_diffs, 0,
+            "f16→f32→f16 round-trip was not identity for finite values"
+        );
+    }
+
+    // ========================================================================
+    // Truly exhaustive 2³² encode sweep — slow, run with `--ignored`.
+    // ========================================================================
+
+    #[test]
+    #[ignore = "full 2^32 f32 sweep is slow (~minutes in debug); run explicitly to certify encode"]
+    fn encode_full_2pow32_scalar() {
+        let token = archmage::ScalarToken;
+        let mut mismatches = 0u64;
+        let mut bits: u64 = 0;
+        while bits <= 0xFFFF_FFFF {
+            mismatches += check_encode(token, f32::from_bits(bits as u32));
+            bits += 1;
+        }
+        assert_eq!(
+            mismatches, 0,
+            "f32→f16 encode diverged somewhere in the full 2^32 sweep"
+        );
     }
 }
 
 // ============================================================================
-// Slice helpers: tail handling (lengths not a multiple of 4) and parity with
-// the in-register kernel.
-// ============================================================================
-
-#[test]
-fn slice_decode_matches_reference_all_lengths() {
-    // Cover every tail residue (0..7) over a buffer that includes subnormals,
-    // Inf, and assorted normals.
-    let samples: [u16; 7] = [0x0000, 0x0001, 0x3C00, 0x7BFF, 0x7C00, 0xC000, 0x83FF];
-    for len in 1..=64usize {
-        let input: Vec<u16> = (0..len).map(|i| samples[i % samples.len()]).collect();
-        let mut out = vec![0.0f32; len];
-        archmage::ScalarToken.f16_to_f32_slice(&input, &mut out);
-        for (i, (&h, &got)) in input.iter().zip(out.iter()).enumerate() {
-            assert_eq!(
-                got.to_bits(),
-                ref_f16_to_f32(h).to_bits(),
-                "slice decode mismatch at len={len} idx={i} h={h:#06x}"
-            );
-        }
-    }
-}
-
-#[test]
-fn slice_encode_matches_reference_all_lengths() {
-    let samples: [f32; 7] = [0.0, 1.0, -2.5, 65504.0, 1e-7, f32::INFINITY, -0.0];
-    for len in 1..=64usize {
-        let input: Vec<f32> = (0..len).map(|i| samples[i % samples.len()]).collect();
-        let mut out = vec![0u16; len];
-        archmage::ScalarToken.f32_to_f16_slice(&input, &mut out);
-        for (i, (&x, &got)) in input.iter().zip(out.iter()).enumerate() {
-            assert_eq!(
-                got,
-                ref_f32_to_f16(x),
-                "slice encode mismatch at len={len} idx={i} x={x}"
-            );
-        }
-    }
-}
-
-#[test]
-fn slice_roundtrip_decode_then_encode_is_identity() {
-    // Every f16 bit pattern decoded then re-encoded must return itself
-    // (excluding NaN payload, which the encode canonicalizes). Under Miri the
-    // 65 536-element slice round-trip is sub-sampled — see MIRI_F16_STRIDE.
-    let input: Vec<u16> = (0u32..=0xFFFF)
-        .step_by(MIRI_F16_STRIDE)
-        .map(|v| v as u16)
-        .collect();
-    let mut f32buf = vec![0.0f32; input.len()];
-    let mut back = vec![0u16; input.len()];
-    archmage::ScalarToken.f16_to_f32_slice(&input, &mut f32buf);
-    archmage::ScalarToken.f32_to_f16_slice(&f32buf, &mut back);
-    let mut nonnan_diffs = 0u64;
-    for (&h, &r) in input.iter().zip(back.iter()) {
-        if is_f16_nan(h) {
-            assert!(
-                is_f16_nan(r),
-                "NaN f16 {h:#06x} did not round-trip to a NaN ({r:#06x})"
-            );
-        } else if h != r {
-            nonnan_diffs += 1;
-            eprintln!("roundtrip non-identity h={h:#06x} -> {r:#06x}");
-        }
-    }
-    assert_eq!(
-        nonnan_diffs, 0,
-        "f16→f32→f16 round-trip was not identity for finite values"
-    );
-}
-
-// ============================================================================
-// Native F16C hardware path: exhaustive bit-identity vs the oracle AND vs the
-// software kernel.
+// Native F16C hardware path (x86-64): exhaustive bit-identity vs the oracle AND
+// vs the software kernel.
 //
 // `F16Convert::f16_to_f32_slice` / `F16Convert::f32_to_f16_slice` dispatch to
 // x86-64 F16C (`vcvtph2ps` / `vcvtps2ph`) when handed an `X64V3Token` whose CPU
@@ -454,235 +453,270 @@ fn slice_roundtrip_decode_then_encode_is_identity() {
 //
 // On a host without F16C the tests print a notice and pass; correctness on
 // such hosts is covered by the always-run scalar tests above.
+//
+// The whole module carries the x86_64 arch gate at the module boundary, so
+// the gate is applied once — a new x86 test added here inherits it.
 // ============================================================================
-
-/// All 65 536 f16 decoded through the F16C slice path must match the oracle
-/// bit-for-bit (every length residue 0..7 exercised so the 8-/4-wide chunks
-/// and the scalar tail are all hit).
 #[cfg(target_arch = "x86_64")]
-#[test]
-fn native_f16c_decode_exhaustive_vs_oracle() {
-    use archmage::SimdToken;
-    let Some(token) = archmage::X64V3Token::summon() else {
-        eprintln!("X64V3Token (F16C) not available on this host — scalar path covers correctness");
-        return;
-    };
-    // Decode the whole 0..=0xFFFF block at once (exercises the 8-wide chunk
-    // loop heavily), then also at every short length to exercise the 4-wide
-    // chunk and the 0..7 scalar tail.
-    let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
-    let mut out = vec![0f32; all.len()];
-    token.f16_to_f32_slice(&all, &mut out);
-    for (&h, &got) in all.iter().zip(out.iter()) {
-        // F16C bit-identity contract: exact for finite/subnormal/Inf. For a
-        // NaN input `vcvtph2ps` returns the hardware-quieted NaN whose payload
-        // differs from the software widening — both are valid f32 NaNs (the
-        // documented benign divergence). Assert finite/Inf exactly; require
-        // only NaN-ness for NaN inputs.
-        if is_f16_nan(h) {
-            assert!(
-                got.is_nan(),
-                "F16C decode of NaN f16 {h:#06x} produced a non-NaN f32 ({:#010x})",
-                got.to_bits()
-            );
+mod x86_f16c {
+    use super::*;
+
+    #[test]
+    fn decode_exhaustive_x64v3() {
+        use archmage::SimdToken;
+        if let Some(t) = archmage::X64V3Token::summon() {
+            exhaustive_decode(t);
         } else {
-            assert_eq!(
-                got.to_bits(),
-                ref_f16_to_f32(h).to_bits(),
-                "F16C decode mismatch vs oracle h={h:#06x}"
-            );
+            eprintln!("X64V3Token not available on this host — scalar path covers correctness");
         }
     }
-    // Tail-residue sweep: lengths 1..=64 starting at varied offsets.
-    for start in [0usize, 1, 2, 3, 5, 7] {
-        for len in 1..=64usize {
-            let input: Vec<u16> = (0..len).map(|i| ((start + i) & 0xFFFF) as u16).collect();
-            let mut o = vec![0f32; len];
-            token.f16_to_f32_slice(&input, &mut o);
-            for (&h, &got) in input.iter().zip(o.iter()) {
-                if is_f16_nan(h) {
-                    assert!(got.is_nan(), "F16C decode (tail) NaN f16 {h:#06x} not NaN");
-                } else {
-                    assert_eq!(
-                        got.to_bits(),
-                        ref_f16_to_f32(h).to_bits(),
-                        "F16C decode mismatch (tail) start={start} len={len} h={h:#06x}"
-                    );
+
+    #[test]
+    fn encode_f16_roundtrip_x64v3() {
+        use archmage::SimdToken;
+        if let Some(t) = archmage::X64V3Token::summon() {
+            encode_f16_roundtrip(t);
+        }
+    }
+
+    #[test]
+    fn encode_boundary_bands_x64v3() {
+        use archmage::SimdToken;
+        if let Some(t) = archmage::X64V3Token::summon() {
+            encode_boundary_bands(t);
+        }
+    }
+
+    /// All 65 536 f16 decoded through the F16C slice path must match the oracle
+    /// bit-for-bit (every length residue 0..7 exercised so the 8-/4-wide chunks
+    /// and the scalar tail are all hit).
+    #[test]
+    fn native_f16c_decode_exhaustive_vs_oracle() {
+        use archmage::SimdToken;
+        let Some(token) = archmage::X64V3Token::summon() else {
+            eprintln!(
+                "X64V3Token (F16C) not available on this host — scalar path covers correctness"
+            );
+            return;
+        };
+        // Decode the whole 0..=0xFFFF block at once (exercises the 8-wide chunk
+        // loop heavily), then also at every short length to exercise the 4-wide
+        // chunk and the 0..7 scalar tail.
+        let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
+        let mut out = vec![0f32; all.len()];
+        token.f16_to_f32_slice(&all, &mut out);
+        for (&h, &got) in all.iter().zip(out.iter()) {
+            // F16C bit-identity contract: exact for finite/subnormal/Inf. For a
+            // NaN input `vcvtph2ps` returns the hardware-quieted NaN whose payload
+            // differs from the software widening — both are valid f32 NaNs (the
+            // documented benign divergence). Assert finite/Inf exactly; require
+            // only NaN-ness for NaN inputs.
+            if is_f16_nan(h) {
+                assert!(
+                    got.is_nan(),
+                    "F16C decode of NaN f16 {h:#06x} produced a non-NaN f32 ({:#010x})",
+                    got.to_bits()
+                );
+            } else {
+                assert_eq!(
+                    got.to_bits(),
+                    ref_f16_to_f32(h).to_bits(),
+                    "F16C decode mismatch vs oracle h={h:#06x}"
+                );
+            }
+        }
+        // Tail-residue sweep: lengths 1..=64 starting at varied offsets.
+        for start in [0usize, 1, 2, 3, 5, 7] {
+            for len in 1..=64usize {
+                let input: Vec<u16> = (0..len).map(|i| ((start + i) & 0xFFFF) as u16).collect();
+                let mut o = vec![0f32; len];
+                token.f16_to_f32_slice(&input, &mut o);
+                for (&h, &got) in input.iter().zip(o.iter()) {
+                    if is_f16_nan(h) {
+                        assert!(got.is_nan(), "F16C decode (tail) NaN f16 {h:#06x} not NaN");
+                    } else {
+                        assert_eq!(
+                            got.to_bits(),
+                            ref_f16_to_f32(h).to_bits(),
+                            "F16C decode mismatch (tail) start={start} len={len} h={h:#06x}"
+                        );
+                    }
                 }
             }
         }
     }
-}
 
-/// The F16C decode path must be byte-for-byte identical to the branchless
-/// software decode path over all 65 536 f16 (finite/subnormal/Inf), with the
-/// documented NaN-only payload divergence (both produce a valid f32 NaN). This
-/// is the strongest guarantee that the two backends are interchangeable for
-/// real data.
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn native_f16c_decode_matches_software_exhaustive() {
-    use archmage::SimdToken;
-    let Some(hw) = archmage::X64V3Token::summon() else {
-        eprintln!("X64V3Token (F16C) not available — skipping native-vs-software decode parity");
-        return;
-    };
-    let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
-    let mut hw_out = vec![0f32; all.len()];
-    let mut sw_out = vec![0f32; all.len()];
-    hw.f16_to_f32_slice(&all, &mut hw_out);
-    archmage::ScalarToken.f16_to_f32_slice(&all, &mut sw_out);
-    let mut nan_payload_diffs = 0u64;
-    for (i, (&a, &b)) in hw_out.iter().zip(sw_out.iter()).enumerate() {
-        let h = all[i];
-        if a.to_bits() == b.to_bits() {
-            // Where they agree on a NaN input, it must be a *quiet* f16 NaN:
-            // the software widening already has the mantissa MSB set, so the
-            // hardware quieting is a no-op and the bits match.
-            continue;
-        }
-        // A divergence is only permitted on an f16 *signaling* NaN input
-        // (top mantissa bit clear): `vcvtph2ps` quiets it (sets the f32
-        // mantissa MSB) while the software path preserves the signaling
-        // payload. Both results must still be f32 NaNs.
-        assert!(
-            is_f16_nan(h) && (h & 0x0200) == 0 && a.is_nan() && b.is_nan(),
-            "F16C vs software decode differ on a non-(signaling-NaN) value at idx={i} h={h:#06x}: hw={:#010x} sw={:#010x}",
-            a.to_bits(),
-            b.to_bits()
-        );
-        nan_payload_diffs += 1;
-    }
-    // The divergence set is exactly the f16 signaling NaNs: payloads in
-    // 0x001..=0x1FF (top mantissa bit clear) × 2 signs = 511 × 2 = 1022.
-    assert_eq!(
-        nan_payload_diffs, 1022,
-        "expected the HW/SW decode divergence to be exactly the 1022 f16 signaling-NaN patterns"
-    );
-}
-
-/// The F16C encode path must match the oracle over the boundary bands and a
-/// dense strided sweep (NaN payload tolerated, like the software encode test).
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn native_f16c_encode_vs_oracle() {
-    use archmage::SimdToken;
-    let Some(token) = archmage::X64V3Token::summon() else {
-        eprintln!("X64V3Token (F16C) not available — scalar encode tests cover correctness");
-        return;
-    };
-
-    // Build a single big input vector covering: every f16-roundtrip value, the
-    // subnormal-flush band, the overflow-to-Inf band, and a dense strided f32
-    // sweep — then encode it through the F16C slice path in one call.
-    let mut inputs: Vec<f32> = Vec::new();
-    for hv in 0u32..=0xFFFF {
-        inputs.push(ref_f16_to_f32(hv as u16));
-    }
-    let step: u32 = if cfg!(debug_assertions) { 251 } else { 1 };
-    let mut bits = 100u32 << 23;
-    let sub_hi = 113u32 << 23;
-    while bits < sub_hi {
-        inputs.push(f32::from_bits(bits));
-        inputs.push(f32::from_bits(bits | 0x8000_0000));
-        bits += step;
-    }
-    let ov_lo = (127u32 + 16) << 23;
-    let ov_hi = 255u32 << 23;
-    let mut bits = ov_lo;
-    loop {
-        inputs.push(f32::from_bits(bits));
-        inputs.push(f32::from_bits(bits | 0x8000_0000));
-        if bits >= ov_hi {
-            break;
-        }
-        let near = bits.saturating_sub(ov_lo) < 4096 || ov_hi.saturating_sub(bits) < 4096;
-        let s = if cfg!(debug_assertions) && !near {
-            251
-        } else {
-            1
-        };
-        bits = (bits + s).min(ov_hi);
-    }
-    let stride: u32 = 1009;
-    let mut bits: u32 = 0;
-    loop {
-        inputs.push(f32::from_bits(bits));
-        let (next, ov) = bits.overflowing_add(stride);
-        if ov {
-            break;
-        }
-        bits = next;
-    }
-
-    let mut out = vec![0u16; inputs.len()];
-    token.f32_to_f16_slice(&inputs, &mut out);
-    let mut mismatches = 0u64;
-    for (&x, &got) in inputs.iter().zip(out.iter()) {
-        let want = ref_f32_to_f16(x);
-        if want == got {
-            continue;
-        }
-        if x.is_nan() {
-            assert!(
-                is_f16_nan(want) && is_f16_nan(got),
-                "F16C NaN encode produced non-NaN: x={x:?} want={want:#06x} got={got:#06x}"
+    /// The F16C decode path must be byte-for-byte identical to the branchless
+    /// software decode path over all 65 536 f16 (finite/subnormal/Inf), with the
+    /// documented NaN-only payload divergence (both produce a valid f32 NaN). This
+    /// is the strongest guarantee that the two backends are interchangeable for
+    /// real data.
+    #[test]
+    fn native_f16c_decode_matches_software_exhaustive() {
+        use archmage::SimdToken;
+        let Some(hw) = archmage::X64V3Token::summon() else {
+            eprintln!(
+                "X64V3Token (F16C) not available — skipping native-vs-software decode parity"
             );
-            continue;
+            return;
+        };
+        let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
+        let mut hw_out = vec![0f32; all.len()];
+        let mut sw_out = vec![0f32; all.len()];
+        hw.f16_to_f32_slice(&all, &mut hw_out);
+        archmage::ScalarToken.f16_to_f32_slice(&all, &mut sw_out);
+        let mut nan_payload_diffs = 0u64;
+        for (i, (&a, &b)) in hw_out.iter().zip(sw_out.iter()).enumerate() {
+            let h = all[i];
+            if a.to_bits() == b.to_bits() {
+                // Where they agree on a NaN input, it must be a *quiet* f16 NaN:
+                // the software widening already has the mantissa MSB set, so the
+                // hardware quieting is a no-op and the bits match.
+                continue;
+            }
+            // A divergence is only permitted on an f16 *signaling* NaN input
+            // (top mantissa bit clear): `vcvtph2ps` quiets it (sets the f32
+            // mantissa MSB) while the software path preserves the signaling
+            // payload. Both results must still be f32 NaNs.
+            assert!(
+                is_f16_nan(h) && (h & 0x0200) == 0 && a.is_nan() && b.is_nan(),
+                "F16C vs software decode differ on a non-(signaling-NaN) value at idx={i} h={h:#06x}: hw={:#010x} sw={:#010x}",
+                a.to_bits(),
+                b.to_bits()
+            );
+            nan_payload_diffs += 1;
         }
-        mismatches += 1;
-        if mismatches <= 16 {
-            eprintln!("F16C encode mismatch x={x:e} want={want:#06x} got={got:#06x}");
-        }
-    }
-    assert_eq!(
-        mismatches, 0,
-        "F16C encode diverged from the oracle on {mismatches} finite inputs"
-    );
-}
-
-/// The F16C encode path must match the software encode path bit-for-bit for
-/// every finite/inf input (NaN payload tolerated) — over the f16-roundtrip
-/// grid plus a dense f32 sweep.
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn native_f16c_encode_matches_software() {
-    use archmage::SimdToken;
-    let Some(hw) = archmage::X64V3Token::summon() else {
-        eprintln!("X64V3Token (F16C) not available — skipping native-vs-software encode parity");
-        return;
-    };
-    let mut inputs: Vec<f32> = (0u32..=0xFFFF)
-        .map(|hv| ref_f16_to_f32(hv as u16))
-        .collect();
-    let stride: u32 = 1009;
-    let mut bits: u32 = 0;
-    loop {
-        inputs.push(f32::from_bits(bits));
-        let (next, ov) = bits.overflowing_add(stride);
-        if ov {
-            break;
-        }
-        bits = next;
-    }
-    let mut hw_out = vec![0u16; inputs.len()];
-    let mut sw_out = vec![0u16; inputs.len()];
-    hw.f32_to_f16_slice(&inputs, &mut hw_out);
-    archmage::ScalarToken.f32_to_f16_slice(&inputs, &mut sw_out);
-    for (i, ((&x, &a), &b)) in inputs
-        .iter()
-        .zip(hw_out.iter())
-        .zip(sw_out.iter())
-        .enumerate()
-    {
-        if a == b {
-            continue;
-        }
-        // NaN inputs: both must be f16 NaN; payload may differ between HW and SW.
-        assert!(
-            x.is_nan() && is_f16_nan(a) && is_f16_nan(b),
-            "F16C vs software encode differ at idx={i} x={x:e}: hw={a:#06x} sw={b:#06x}"
+        // The divergence set is exactly the f16 signaling NaNs: payloads in
+        // 0x001..=0x1FF (top mantissa bit clear) × 2 signs = 511 × 2 = 1022.
+        assert_eq!(
+            nan_payload_diffs, 1022,
+            "expected the HW/SW decode divergence to be exactly the 1022 f16 signaling-NaN patterns"
         );
+    }
+
+    /// The F16C encode path must match the oracle over the boundary bands and a
+    /// dense strided sweep (NaN payload tolerated, like the software encode test).
+    #[test]
+    fn native_f16c_encode_vs_oracle() {
+        use archmage::SimdToken;
+        let Some(token) = archmage::X64V3Token::summon() else {
+            eprintln!("X64V3Token (F16C) not available — scalar encode tests cover correctness");
+            return;
+        };
+
+        // Build a single big input vector covering: every f16-roundtrip value, the
+        // subnormal-flush band, the overflow-to-Inf band, and a dense strided f32
+        // sweep — then encode it through the F16C slice path in one call.
+        let mut inputs: Vec<f32> = Vec::new();
+        for hv in 0u32..=0xFFFF {
+            inputs.push(ref_f16_to_f32(hv as u16));
+        }
+        let step: u32 = if cfg!(debug_assertions) { 251 } else { 1 };
+        let mut bits = 100u32 << 23;
+        let sub_hi = 113u32 << 23;
+        while bits < sub_hi {
+            inputs.push(f32::from_bits(bits));
+            inputs.push(f32::from_bits(bits | 0x8000_0000));
+            bits += step;
+        }
+        let ov_lo = (127u32 + 16) << 23;
+        let ov_hi = 255u32 << 23;
+        let mut bits = ov_lo;
+        loop {
+            inputs.push(f32::from_bits(bits));
+            inputs.push(f32::from_bits(bits | 0x8000_0000));
+            if bits >= ov_hi {
+                break;
+            }
+            let near = bits.saturating_sub(ov_lo) < 4096 || ov_hi.saturating_sub(bits) < 4096;
+            let s = if cfg!(debug_assertions) && !near {
+                251
+            } else {
+                1
+            };
+            bits = (bits + s).min(ov_hi);
+        }
+        let stride: u32 = 1009;
+        let mut bits: u32 = 0;
+        loop {
+            inputs.push(f32::from_bits(bits));
+            let (next, ov) = bits.overflowing_add(stride);
+            if ov {
+                break;
+            }
+            bits = next;
+        }
+
+        let mut out = vec![0u16; inputs.len()];
+        token.f32_to_f16_slice(&inputs, &mut out);
+        let mut mismatches = 0u64;
+        for (&x, &got) in inputs.iter().zip(out.iter()) {
+            let want = ref_f32_to_f16(x);
+            if want == got {
+                continue;
+            }
+            if x.is_nan() {
+                assert!(
+                    is_f16_nan(want) && is_f16_nan(got),
+                    "F16C NaN encode produced non-NaN: x={x:?} want={want:#06x} got={got:#06x}"
+                );
+                continue;
+            }
+            mismatches += 1;
+            if mismatches <= 16 {
+                eprintln!("F16C encode mismatch x={x:e} want={want:#06x} got={got:#06x}");
+            }
+        }
+        assert_eq!(
+            mismatches, 0,
+            "F16C encode diverged from the oracle on {mismatches} finite inputs"
+        );
+    }
+
+    /// The F16C encode path must match the software encode path bit-for-bit for
+    /// every finite/inf input (NaN payload tolerated) — over the f16-roundtrip
+    /// grid plus a dense f32 sweep.
+    #[test]
+    fn native_f16c_encode_matches_software() {
+        use archmage::SimdToken;
+        let Some(hw) = archmage::X64V3Token::summon() else {
+            eprintln!(
+                "X64V3Token (F16C) not available — skipping native-vs-software encode parity"
+            );
+            return;
+        };
+        let mut inputs: Vec<f32> = (0u32..=0xFFFF)
+            .map(|hv| ref_f16_to_f32(hv as u16))
+            .collect();
+        let stride: u32 = 1009;
+        let mut bits: u32 = 0;
+        loop {
+            inputs.push(f32::from_bits(bits));
+            let (next, ov) = bits.overflowing_add(stride);
+            if ov {
+                break;
+            }
+            bits = next;
+        }
+        let mut hw_out = vec![0u16; inputs.len()];
+        let mut sw_out = vec![0u16; inputs.len()];
+        hw.f32_to_f16_slice(&inputs, &mut hw_out);
+        archmage::ScalarToken.f32_to_f16_slice(&inputs, &mut sw_out);
+        for (i, ((&x, &a), &b)) in inputs
+            .iter()
+            .zip(hw_out.iter())
+            .zip(sw_out.iter())
+            .enumerate()
+        {
+            if a == b {
+                continue;
+            }
+            // NaN inputs: both must be f16 NaN; payload may differ between HW and SW.
+            assert!(
+                x.is_nan() && is_f16_nan(a) && is_f16_nan(b),
+                "F16C vs software encode differ at idx={i} x={x:e}: hw={a:#06x} sw={b:#06x}"
+            );
+        }
     }
 }
 
@@ -715,288 +749,269 @@ fn native_f16c_encode_matches_software() {
 // that gate so the parity test expects software-vs-software on the pre-1.94
 // fallback even when the CPU presents `fp16` — the exact condition the CI
 // matrix's 1.93 cell runs under QEMU `-cpu max`.
+//
+// The whole module carries the aarch64 arch gate at the module boundary, so
+// the gate is applied once — a new aarch64 test added here inherits it.
 // ============================================================================
-
-/// Whether the NEON-f16 hardware kernel is compiled into this build — mirrors
-/// the `#[rustversion::since(1.94)]` gate on `neon_f16_decode_hw` /
-/// `neon_f16_encode_hw`. `true` only on rustc ≥ 1.94.
 #[cfg(target_arch = "aarch64")]
-#[rustversion::since(1.94)]
-fn neon_f16_hw_compiled() -> bool {
-    true
-}
+mod aarch64_neon {
+    use super::*;
 
-/// Pre-stabilization toolchain (rustc < 1.94): the HW kernel is not compiled,
-/// so a `NeonToken` always runs the software path — even on `fp16` hardware.
-#[cfg(target_arch = "aarch64")]
-#[rustversion::before(1.94)]
-fn neon_f16_hw_compiled() -> bool {
-    false
-}
-
-/// All 65 536 f16 decoded through the `NeonToken` slice path must match the
-/// oracle bit-for-bit (every length residue 0..7 exercised so the 4-wide chunk
-/// and the scalar tail are both hit). On `fp16`-capable hardware this is the
-/// `vcvt_f32_f16` path; otherwise the software kernel — both must match.
-#[cfg(target_arch = "aarch64")]
-#[test]
-fn native_neon_f16_decode_exhaustive_vs_oracle() {
-    use archmage::SimdToken;
-    let Some(token) = archmage::NeonToken::summon() else {
-        eprintln!("NeonToken not available on this host — scalar path covers correctness");
-        return;
-    };
-    let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
-    let mut out = vec![0f32; all.len()];
-    token.f16_to_f32_slice(&all, &mut out);
-    for (&h, &got) in all.iter().zip(out.iter()) {
-        // For a NaN input `vcvt_f32_f16` returns the hardware-quieted NaN whose
-        // payload may differ from the software widening — both are valid f32
-        // NaNs (the documented benign divergence). Assert finite/Inf exactly;
-        // require only NaN-ness for NaN inputs.
-        if is_f16_nan(h) {
-            assert!(
-                got.is_nan(),
-                "NEON-f16 decode of NaN f16 {h:#06x} produced a non-NaN f32 ({:#010x})",
-                got.to_bits()
-            );
-        } else {
-            assert_eq!(
-                got.to_bits(),
-                ref_f16_to_f32(h).to_bits(),
-                "NEON-f16 decode mismatch vs oracle h={h:#06x}"
-            );
-        }
+    /// Whether the NEON-f16 hardware kernel is compiled into this build — mirrors
+    /// the `#[rustversion::since(1.94)]` gate on `neon_f16_decode_hw` /
+    /// `neon_f16_encode_hw`. `true` only on rustc ≥ 1.94.
+    #[rustversion::since(1.94)]
+    fn neon_f16_hw_compiled() -> bool {
+        true
     }
-    // Tail-residue sweep: lengths 1..=64 starting at varied offsets.
-    for start in [0usize, 1, 2, 3, 5, 7] {
-        for len in 1..=64usize {
-            let input: Vec<u16> = (0..len).map(|i| ((start + i) & 0xFFFF) as u16).collect();
-            let mut o = vec![0f32; len];
-            token.f16_to_f32_slice(&input, &mut o);
-            for (&h, &got) in input.iter().zip(o.iter()) {
-                if is_f16_nan(h) {
-                    assert!(
-                        got.is_nan(),
-                        "NEON-f16 decode (tail) NaN f16 {h:#06x} not NaN"
-                    );
-                } else {
-                    assert_eq!(
-                        got.to_bits(),
-                        ref_f16_to_f32(h).to_bits(),
-                        "NEON-f16 decode mismatch (tail) start={start} len={len} h={h:#06x}"
-                    );
+
+    /// Pre-stabilization toolchain (rustc < 1.94): the HW kernel is not compiled,
+    /// so a `NeonToken` always runs the software path — even on `fp16` hardware.
+    #[rustversion::before(1.94)]
+    fn neon_f16_hw_compiled() -> bool {
+        false
+    }
+
+    /// All 65 536 f16 decoded through the `NeonToken` slice path must match the
+    /// oracle bit-for-bit (every length residue 0..7 exercised so the 4-wide chunk
+    /// and the scalar tail are both hit). On `fp16`-capable hardware this is the
+    /// `vcvt_f32_f16` path; otherwise the software kernel — both must match.
+    #[test]
+    fn native_neon_f16_decode_exhaustive_vs_oracle() {
+        use archmage::SimdToken;
+        let Some(token) = archmage::NeonToken::summon() else {
+            eprintln!("NeonToken not available on this host — scalar path covers correctness");
+            return;
+        };
+        let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
+        let mut out = vec![0f32; all.len()];
+        token.f16_to_f32_slice(&all, &mut out);
+        for (&h, &got) in all.iter().zip(out.iter()) {
+            // For a NaN input `vcvt_f32_f16` returns the hardware-quieted NaN whose
+            // payload may differ from the software widening — both are valid f32
+            // NaNs (the documented benign divergence). Assert finite/Inf exactly;
+            // require only NaN-ness for NaN inputs.
+            if is_f16_nan(h) {
+                assert!(
+                    got.is_nan(),
+                    "NEON-f16 decode of NaN f16 {h:#06x} produced a non-NaN f32 ({:#010x})",
+                    got.to_bits()
+                );
+            } else {
+                assert_eq!(
+                    got.to_bits(),
+                    ref_f16_to_f32(h).to_bits(),
+                    "NEON-f16 decode mismatch vs oracle h={h:#06x}"
+                );
+            }
+        }
+        // Tail-residue sweep: lengths 1..=64 starting at varied offsets.
+        for start in [0usize, 1, 2, 3, 5, 7] {
+            for len in 1..=64usize {
+                let input: Vec<u16> = (0..len).map(|i| ((start + i) & 0xFFFF) as u16).collect();
+                let mut o = vec![0f32; len];
+                token.f16_to_f32_slice(&input, &mut o);
+                for (&h, &got) in input.iter().zip(o.iter()) {
+                    if is_f16_nan(h) {
+                        assert!(
+                            got.is_nan(),
+                            "NEON-f16 decode (tail) NaN f16 {h:#06x} not NaN"
+                        );
+                    } else {
+                        assert_eq!(
+                            got.to_bits(),
+                            ref_f16_to_f32(h).to_bits(),
+                            "NEON-f16 decode mismatch (tail) start={start} len={len} h={h:#06x}"
+                        );
+                    }
                 }
             }
         }
     }
-}
 
-/// The `NeonToken` decode path must be byte-for-byte identical to the
-/// `ScalarToken` software decode path over all 65 536 f16
-/// (finite/subnormal/Inf), with the documented NaN-only payload divergence. On
-/// `fp16` hardware this proves the `vcvt_f32_f16` path matches software; on a
-/// CPU without `fp16` both sides are the software kernel and the divergence
-/// count is 0.
-#[cfg(target_arch = "aarch64")]
-#[test]
-fn native_neon_f16_decode_matches_software_exhaustive() {
-    use archmage::SimdToken;
-    let Some(hw) = archmage::NeonToken::summon() else {
-        eprintln!("NeonToken not available — skipping native-vs-software decode parity");
-        return;
-    };
-    // The NEON-f16 hardware kernel only EXISTS on rustc ≥ 1.94 (it is gated by
-    // `#[rustversion::since(1.94)]` in `convert_f16.rs`). The HW path is taken
-    // iff that kernel is compiled AND the CPU presents `fp16` at runtime. On
-    // rustc < 1.94 a `NeonToken` runs the software kernel even on `fp16`
-    // hardware (e.g. QEMU `-cpu max`), so the divergence count is 0 — this is
-    // exactly the pre-1.94 fallback the CI matrix's 1.93 cell exercises, and it
-    // must NOT expect the 1022-NaN HW divergence.
-    let hw_compiled = neon_f16_hw_compiled();
-    let fp16 = hw_compiled && archmage::Arm64V2Token::summon().is_some();
-    let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
-    let mut hw_out = vec![0f32; all.len()];
-    let mut sw_out = vec![0f32; all.len()];
-    hw.f16_to_f32_slice(&all, &mut hw_out);
-    archmage::ScalarToken.f16_to_f32_slice(&all, &mut sw_out);
-    let mut nan_payload_diffs = 0u64;
-    for (i, (&a, &b)) in hw_out.iter().zip(sw_out.iter()).enumerate() {
-        let h = all[i];
-        if a.to_bits() == b.to_bits() {
-            continue;
-        }
-        // A divergence is only permitted on an f16 *signaling* NaN input (top
-        // mantissa bit clear): `vcvt_f32_f16` quiets it (sets the f32 mantissa
-        // MSB) while the software path preserves the signaling payload. Both
-        // results must still be f32 NaNs.
-        assert!(
-            is_f16_nan(h) && (h & 0x0200) == 0 && a.is_nan() && b.is_nan(),
-            "NEON-f16 vs software decode differ on a non-(signaling-NaN) value at idx={i} h={h:#06x}: hw={:#010x} sw={:#010x}",
-            a.to_bits(),
-            b.to_bits()
-        );
-        nan_payload_diffs += 1;
-    }
-    if fp16 {
-        // Hardware path active: the divergence set is exactly the f16 signaling
-        // NaNs — payloads in 0x001..=0x1FF (top mantissa bit clear) × 2 signs =
-        // 511 × 2 = 1022. Identical to the x86 F16C path's divergence count.
-        assert_eq!(
-            nan_payload_diffs, 1022,
-            "expected the NEON-f16/software decode divergence to be exactly the 1022 f16 \
-             signaling-NaN patterns (got {nan_payload_diffs}); fp16 was detected"
-        );
-    } else {
-        // Software path: either `fp16` is absent at runtime, or the toolchain
-        // is < 1.94 so the HW kernel was never compiled. Either way `NeonToken`
-        // ran the software kernel — byte-identical to `ScalarToken`.
-        assert_eq!(
-            nan_payload_diffs, 0,
-            "software path (no fp16 or rustc < 1.94): NeonToken should be byte-identical \
-             to the ScalarToken software path (hw_compiled={hw_compiled})"
-        );
-    }
-}
-
-/// The `NeonToken` encode path must match the oracle over the boundary bands
-/// and a dense strided sweep (NaN payload tolerated, like the software encode
-/// test).
-#[cfg(target_arch = "aarch64")]
-#[test]
-fn native_neon_f16_encode_vs_oracle() {
-    use archmage::SimdToken;
-    let Some(token) = archmage::NeonToken::summon() else {
-        eprintln!("NeonToken not available — scalar encode tests cover correctness");
-        return;
-    };
-    let mut inputs: Vec<f32> = Vec::new();
-    for hv in 0u32..=0xFFFF {
-        inputs.push(ref_f16_to_f32(hv as u16));
-    }
-    let step: u32 = if cfg!(debug_assertions) { 251 } else { 1 };
-    let mut bits = 100u32 << 23;
-    let sub_hi = 113u32 << 23;
-    while bits < sub_hi {
-        inputs.push(f32::from_bits(bits));
-        inputs.push(f32::from_bits(bits | 0x8000_0000));
-        bits += step;
-    }
-    let ov_lo = (127u32 + 16) << 23;
-    let ov_hi = 255u32 << 23;
-    let mut bits = ov_lo;
-    loop {
-        inputs.push(f32::from_bits(bits));
-        inputs.push(f32::from_bits(bits | 0x8000_0000));
-        if bits >= ov_hi {
-            break;
-        }
-        let near = bits.saturating_sub(ov_lo) < 4096 || ov_hi.saturating_sub(bits) < 4096;
-        let s = if cfg!(debug_assertions) && !near {
-            251
-        } else {
-            1
+    /// The `NeonToken` decode path must be byte-for-byte identical to the
+    /// `ScalarToken` software decode path over all 65 536 f16
+    /// (finite/subnormal/Inf), with the documented NaN-only payload divergence. On
+    /// `fp16` hardware this proves the `vcvt_f32_f16` path matches software; on a
+    /// CPU without `fp16` both sides are the software kernel and the divergence
+    /// count is 0.
+    #[test]
+    fn native_neon_f16_decode_matches_software_exhaustive() {
+        use archmage::SimdToken;
+        let Some(hw) = archmage::NeonToken::summon() else {
+            eprintln!("NeonToken not available — skipping native-vs-software decode parity");
+            return;
         };
-        bits = (bits + s).min(ov_hi);
-    }
-    let stride: u32 = 1009;
-    let mut bits: u32 = 0;
-    loop {
-        inputs.push(f32::from_bits(bits));
-        let (next, ov) = bits.overflowing_add(stride);
-        if ov {
-            break;
-        }
-        bits = next;
-    }
-
-    let mut out = vec![0u16; inputs.len()];
-    token.f32_to_f16_slice(&inputs, &mut out);
-    let mut mismatches = 0u64;
-    for (&x, &got) in inputs.iter().zip(out.iter()) {
-        let want = ref_f32_to_f16(x);
-        if want == got {
-            continue;
-        }
-        if x.is_nan() {
+        // The NEON-f16 hardware kernel only EXISTS on rustc ≥ 1.94 (it is gated by
+        // `#[rustversion::since(1.94)]` in `convert_f16.rs`). The HW path is taken
+        // iff that kernel is compiled AND the CPU presents `fp16` at runtime. On
+        // rustc < 1.94 a `NeonToken` runs the software kernel even on `fp16`
+        // hardware (e.g. QEMU `-cpu max`), so the divergence count is 0 — this is
+        // exactly the pre-1.94 fallback the CI matrix's 1.93 cell exercises, and it
+        // must NOT expect the 1022-NaN HW divergence.
+        let hw_compiled = neon_f16_hw_compiled();
+        let fp16 = hw_compiled && archmage::Arm64V2Token::summon().is_some();
+        let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
+        let mut hw_out = vec![0f32; all.len()];
+        let mut sw_out = vec![0f32; all.len()];
+        hw.f16_to_f32_slice(&all, &mut hw_out);
+        archmage::ScalarToken.f16_to_f32_slice(&all, &mut sw_out);
+        let mut nan_payload_diffs = 0u64;
+        for (i, (&a, &b)) in hw_out.iter().zip(sw_out.iter()).enumerate() {
+            let h = all[i];
+            if a.to_bits() == b.to_bits() {
+                continue;
+            }
+            // A divergence is only permitted on an f16 *signaling* NaN input (top
+            // mantissa bit clear): `vcvt_f32_f16` quiets it (sets the f32 mantissa
+            // MSB) while the software path preserves the signaling payload. Both
+            // results must still be f32 NaNs.
             assert!(
-                is_f16_nan(want) && is_f16_nan(got),
-                "NEON-f16 NaN encode produced non-NaN: x={x:?} want={want:#06x} got={got:#06x}"
+                is_f16_nan(h) && (h & 0x0200) == 0 && a.is_nan() && b.is_nan(),
+                "NEON-f16 vs software decode differ on a non-(signaling-NaN) value at idx={i} h={h:#06x}: hw={:#010x} sw={:#010x}",
+                a.to_bits(),
+                b.to_bits()
             );
-            continue;
+            nan_payload_diffs += 1;
         }
-        mismatches += 1;
-        if mismatches <= 16 {
-            eprintln!("NEON-f16 encode mismatch x={x:e} want={want:#06x} got={got:#06x}");
+        if fp16 {
+            // Hardware path active: the divergence set is exactly the f16 signaling
+            // NaNs — payloads in 0x001..=0x1FF (top mantissa bit clear) × 2 signs =
+            // 511 × 2 = 1022. Identical to the x86 F16C path's divergence count.
+            assert_eq!(
+                nan_payload_diffs, 1022,
+                "expected the NEON-f16/software decode divergence to be exactly the 1022 f16 \
+                 signaling-NaN patterns (got {nan_payload_diffs}); fp16 was detected"
+            );
+        } else {
+            // Software path: either `fp16` is absent at runtime, or the toolchain
+            // is < 1.94 so the HW kernel was never compiled. Either way `NeonToken`
+            // ran the software kernel — byte-identical to `ScalarToken`.
+            assert_eq!(
+                nan_payload_diffs, 0,
+                "software path (no fp16 or rustc < 1.94): NeonToken should be byte-identical \
+                 to the ScalarToken software path (hw_compiled={hw_compiled})"
+            );
         }
     }
-    assert_eq!(
-        mismatches, 0,
-        "NEON-f16 encode diverged from the oracle on {mismatches} finite inputs"
-    );
-}
 
-/// The `NeonToken` encode path must match the `ScalarToken` software encode
-/// path bit-for-bit for every finite/Inf input (NaN payload tolerated) — over
-/// the f16-roundtrip grid plus a dense f32 sweep.
-#[cfg(target_arch = "aarch64")]
-#[test]
-fn native_neon_f16_encode_matches_software() {
-    use archmage::SimdToken;
-    let Some(hw) = archmage::NeonToken::summon() else {
-        eprintln!("NeonToken not available — skipping native-vs-software encode parity");
-        return;
-    };
-    let mut inputs: Vec<f32> = (0u32..=0xFFFF)
-        .map(|hv| ref_f16_to_f32(hv as u16))
-        .collect();
-    let stride: u32 = 1009;
-    let mut bits: u32 = 0;
-    loop {
-        inputs.push(f32::from_bits(bits));
-        let (next, ov) = bits.overflowing_add(stride);
-        if ov {
-            break;
+    /// The `NeonToken` encode path must match the oracle over the boundary bands
+    /// and a dense strided sweep (NaN payload tolerated, like the software encode
+    /// test).
+    #[test]
+    fn native_neon_f16_encode_vs_oracle() {
+        use archmage::SimdToken;
+        let Some(token) = archmage::NeonToken::summon() else {
+            eprintln!("NeonToken not available — scalar encode tests cover correctness");
+            return;
+        };
+        let mut inputs: Vec<f32> = Vec::new();
+        for hv in 0u32..=0xFFFF {
+            inputs.push(ref_f16_to_f32(hv as u16));
         }
-        bits = next;
-    }
-    let mut hw_out = vec![0u16; inputs.len()];
-    let mut sw_out = vec![0u16; inputs.len()];
-    hw.f32_to_f16_slice(&inputs, &mut hw_out);
-    archmage::ScalarToken.f32_to_f16_slice(&inputs, &mut sw_out);
-    for (i, ((&x, &a), &b)) in inputs
-        .iter()
-        .zip(hw_out.iter())
-        .zip(sw_out.iter())
-        .enumerate()
-    {
-        if a == b {
-            continue;
+        let step: u32 = if cfg!(debug_assertions) { 251 } else { 1 };
+        let mut bits = 100u32 << 23;
+        let sub_hi = 113u32 << 23;
+        while bits < sub_hi {
+            inputs.push(f32::from_bits(bits));
+            inputs.push(f32::from_bits(bits | 0x8000_0000));
+            bits += step;
         }
-        // NaN inputs: both must be f16 NaN; payload may differ between HW and SW.
-        assert!(
-            x.is_nan() && is_f16_nan(a) && is_f16_nan(b),
-            "NEON-f16 vs software encode differ at idx={i} x={x:e}: hw={a:#06x} sw={b:#06x}"
+        let ov_lo = (127u32 + 16) << 23;
+        let ov_hi = 255u32 << 23;
+        let mut bits = ov_lo;
+        loop {
+            inputs.push(f32::from_bits(bits));
+            inputs.push(f32::from_bits(bits | 0x8000_0000));
+            if bits >= ov_hi {
+                break;
+            }
+            let near = bits.saturating_sub(ov_lo) < 4096 || ov_hi.saturating_sub(bits) < 4096;
+            let s = if cfg!(debug_assertions) && !near {
+                251
+            } else {
+                1
+            };
+            bits = (bits + s).min(ov_hi);
+        }
+        let stride: u32 = 1009;
+        let mut bits: u32 = 0;
+        loop {
+            inputs.push(f32::from_bits(bits));
+            let (next, ov) = bits.overflowing_add(stride);
+            if ov {
+                break;
+            }
+            bits = next;
+        }
+
+        let mut out = vec![0u16; inputs.len()];
+        token.f32_to_f16_slice(&inputs, &mut out);
+        let mut mismatches = 0u64;
+        for (&x, &got) in inputs.iter().zip(out.iter()) {
+            let want = ref_f32_to_f16(x);
+            if want == got {
+                continue;
+            }
+            if x.is_nan() {
+                assert!(
+                    is_f16_nan(want) && is_f16_nan(got),
+                    "NEON-f16 NaN encode produced non-NaN: x={x:?} want={want:#06x} got={got:#06x}"
+                );
+                continue;
+            }
+            mismatches += 1;
+            if mismatches <= 16 {
+                eprintln!("NEON-f16 encode mismatch x={x:e} want={want:#06x} got={got:#06x}");
+            }
+        }
+        assert_eq!(
+            mismatches, 0,
+            "NEON-f16 encode diverged from the oracle on {mismatches} finite inputs"
         );
     }
-}
 
-// ============================================================================
-// Truly exhaustive 2³² encode sweep — slow, run with `--ignored`.
-// ============================================================================
-
-#[test]
-#[ignore = "full 2^32 f32 sweep is slow (~minutes in debug); run explicitly to certify encode"]
-fn encode_full_2pow32_scalar() {
-    let token = archmage::ScalarToken;
-    let mut mismatches = 0u64;
-    let mut bits: u64 = 0;
-    while bits <= 0xFFFF_FFFF {
-        mismatches += check_encode(token, f32::from_bits(bits as u32));
-        bits += 1;
+    /// The `NeonToken` encode path must match the `ScalarToken` software encode
+    /// path bit-for-bit for every finite/Inf input (NaN payload tolerated) — over
+    /// the f16-roundtrip grid plus a dense f32 sweep.
+    #[test]
+    fn native_neon_f16_encode_matches_software() {
+        use archmage::SimdToken;
+        let Some(hw) = archmage::NeonToken::summon() else {
+            eprintln!("NeonToken not available — skipping native-vs-software encode parity");
+            return;
+        };
+        let mut inputs: Vec<f32> = (0u32..=0xFFFF)
+            .map(|hv| ref_f16_to_f32(hv as u16))
+            .collect();
+        let stride: u32 = 1009;
+        let mut bits: u32 = 0;
+        loop {
+            inputs.push(f32::from_bits(bits));
+            let (next, ov) = bits.overflowing_add(stride);
+            if ov {
+                break;
+            }
+            bits = next;
+        }
+        let mut hw_out = vec![0u16; inputs.len()];
+        let mut sw_out = vec![0u16; inputs.len()];
+        hw.f32_to_f16_slice(&inputs, &mut hw_out);
+        archmage::ScalarToken.f32_to_f16_slice(&inputs, &mut sw_out);
+        for (i, ((&x, &a), &b)) in inputs
+            .iter()
+            .zip(hw_out.iter())
+            .zip(sw_out.iter())
+            .enumerate()
+        {
+            if a == b {
+                continue;
+            }
+            // NaN inputs: both must be f16 NaN; payload may differ between HW and SW.
+            assert!(
+                x.is_nan() && is_f16_nan(a) && is_f16_nan(b),
+                "NEON-f16 vs software encode differ at idx={i} x={x:e}: hw={a:#06x} sw={b:#06x}"
+            );
+        }
     }
-    assert_eq!(
-        mismatches, 0,
-        "f32→f16 encode diverged somewhere in the full 2^32 sweep"
-    );
 }
