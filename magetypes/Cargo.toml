@@ -56,6 +56,10 @@ macrotest = "1.2.1"
 rustversion = "1.0.22"
 
 [[bench]]
+name = "f16_convert"
+harness = false
+
+[[bench]]
 name = "asm_patterns"
 harness = false
 
