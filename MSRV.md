@@ -221,17 +221,17 @@ across **1.93 / 1.94 / stable / nightly** (`fail-fast: false`):
 - **1.94** — the stabilization version: the gate flips on, the HW kernel
   compiles, the intrinsic resolves.
 - **stable** — ongoing coverage.
-- **nightly** — the opportunistic path + the nightly-probe scaffold (below).
+- **nightly** — ongoing coverage of the HW path on nightly toolchains.
 
 aarch64 is exercised under QEMU (`-cpu max`, so `fp16` is present and the HW
 path is actually taken on ≥ 1.94) via the `.cargo/config.toml` runner — the same
 pattern the existing `test-cross` job uses.
 
-### Nightly-only case — the try-compile probe scaffold
+### Nightly-only case — the try-compile probe pattern (not currently shipped)
 
-There is **no nightly-only intrinsic in archmage today**, so this is a documented
-*scaffold* (a real example would replace the placeholder cfg name + snippet). The
-shape, when one is needed:
+There is **no nightly-only intrinsic in archmage today**, so **no `build.rs`
+ships** (keeping build time + complexity at zero for downstream consumers). This
+is the documented pattern to re-introduce when one is actually needed:
 
 1. A `build.rs` (re-introduced for this case only) that, **gated on
    `version_check`/`rustversion`-style nightly detection**, try-compiles a tiny
@@ -240,7 +240,7 @@ shape, when one is needed:
    `cargo:rustc-check-cfg`).
 2. The path is gated `#[rustversion::nightly] #[cfg(archmage_nightly_<name>)]`,
    with a `#[rustversion::not(nightly)]`-or-`cfg(not(...))` software fallback.
-3. The CI nightly cell exercises that the scaffold compiles.
+3. A CI nightly cell exercises that the probe + gated path compile.
 
 The probe (not a version compare) is correct here precisely because the answer
 "does *this* nightly still accept this feature + intrinsic" can change build to

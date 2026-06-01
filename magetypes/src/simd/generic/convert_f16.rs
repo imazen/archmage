@@ -394,44 +394,14 @@ fn neon_f16_encode(token: archmage::NeonToken, input: &[f32], output: &mut [u16]
 // wins over version-matching).
 //
 // A *stable* intrinsic has a nameable stabilization version → `rustversion`
-// gate + CI matrix (above). A *nightly-only* intrinsic has none, and its
-// `#![feature(<gate>)]` can be renamed/removed between nightlies, so a blind
-// feature gate breaks. The robust answer is a try-compile probe, run ONLY under
-// nightly (`magetypes/build.rs`), that enables the path iff it compiles on THIS
-// nightly. archmage has no nightly-only intrinsic today, so the probe currently
-// sets `archmage_nightly_probe_example` from a trivially-stable placeholder
-// snippet — this const wires that cfg into real source so the pattern compiles
-// end-to-end and the CI nightly cell exercises it. Replace with a real
-// nightly-intrinsic gate when one is needed (see the `build.rs` module docs).
-//
-// `#[rustversion::nightly]` ensures the consuming item only exists under
-// nightly; the `cfg(archmage_nightly_probe_example)` adds the "and it actually
-// compiled" half. On stable/beta neither the build-script probe nor this item
-// is active — zero cost.
-
-/// `true` iff built on a nightly toolchain where the nightly-probe scaffold's
-/// placeholder snippet compiled (`magetypes/build.rs` set
-/// `archmage_nightly_probe_example`). A real nightly-only intrinsic gate would
-/// drive its own `#[rustversion::nightly] #[cfg(archmage_nightly_<name>)]`
-/// hardware kernel the same way the `since(1.94)` gate drives the NEON-f16 one.
-#[rustversion::nightly]
-#[cfg(archmage_nightly_probe_example)]
-#[allow(dead_code)]
-pub(crate) const NIGHTLY_PROBE_OK: bool = true;
-
-/// Fallback for stable/beta, or a nightly where the probe snippet failed: the
-/// nightly-only path is not compiled. Mirrors the `cfg(not(..))` software
-/// fallback a real nightly intrinsic gate would carry.
-#[rustversion::not(nightly)]
-#[allow(dead_code)]
-pub(crate) const NIGHTLY_PROBE_OK: bool = false;
-
-/// Nightly toolchain where the probe snippet did NOT set the cfg (e.g. a real
-/// nightly intrinsic that this nightly no longer accepts).
-#[rustversion::nightly]
-#[cfg(not(archmage_nightly_probe_example))]
-#[allow(dead_code)]
-pub(crate) const NIGHTLY_PROBE_OK: bool = false;
+// gate + CI matrix (above), no build script. A *nightly-only* intrinsic (no
+// stable version to name, and a `#![feature(<gate>)]` that can be renamed/
+// removed between nightlies) would instead want a try-compile probe in a
+// `build.rs`, run only under nightly — the pattern is documented in MSRV.md
+// ("Nightly-only case"). archmage has no such intrinsic today, so no build
+// script ships: stable/beta builds pay zero probe cost and there is nothing to
+// gate. Re-introduce the probe (and its `archmage_nightly_<name>` cfg) when a
+// real nightly-only intrinsic actually needs it.
 
 /// HW-capable toolchain (rustc ≥ 1.94): try the NEON-f16 hardware decode when
 /// the CPU proves `fp16`, else the branchless software kernel.

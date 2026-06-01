@@ -239,8 +239,7 @@ jobs:
   #   * 1.94    — the stabilization version: the gate flips on, the HW kernel
   #               compiles, `vcvt_*` resolves.
   #   * stable  — ongoing coverage of the HW path.
-  #   * nightly — the opportunistic path + the nightly-probe scaffold
-  #               (`magetypes/build.rs`, gated `#[rustversion::nightly]`).
+  #   * nightly — ongoing coverage of the HW path on nightly toolchains.
   #
   # aarch64 runs under QEMU via `cross`; `QEMU_CPU=max` advertises `fp16` so the
   # HW path is actually TAKEN on ≥ 1.94 (the test asserts the exact 1022 f16
